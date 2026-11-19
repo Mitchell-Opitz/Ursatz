@@ -8,10 +8,10 @@
 #include <theory/style/style_profile.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
@@ -126,7 +126,7 @@ static int test_statistics(void) {
         composer_style_destroy(blend);
     }
     /* half and half: a label's frequency is the mean of the two */
-    ComposerStyleWeights half = composer_style_weights_all((ComposerRatio){1, 2});
+    ComposerStyleWeights half = composer_style_weights_all((Rational){1, 2});
     ComposerStyle *blend = NULL;
     assert(composer_style_blend(chorales, sonatinas, &half, &blend) == COMPOSER_STYLE_OK);
     StyleStatistic *a = NULL, *b = NULL, *m = NULL;
@@ -201,11 +201,11 @@ static int test_labels(void) {
     ComposerStyle *chorales = load(CHORALES);
     labels = composer_style_labels_create();
     assert(composer_style_labels_add_form(labels, "hybrid", bars, 1));
-    ComposerRatio closeness;
+    Rational closeness;
     assert(composer_style_closeness(chorales, labels, &closeness));
     /* hybrid is the form chorales has most of: 8 of 11, the largest, so 1; a phrase of 4 bars is 13 of 36, the largest, so 1 (re-measured at
        P41 B7 with the re-recorded fixture: it was 9 of 10 and 7 of 8, closeness 15/16) */
-    assert(closeness.numerator == closeness.denominator);
+    assert(closeness.num == closeness.den);
     composer_style_labels_destroy(labels);
     composer_style_destroy(chorales);
     printf("the form labels are the Analyzer's words\n");
@@ -223,7 +223,7 @@ static unsigned long long fnv(const char *text) {
 }
 
 /* A sentence in C major 4/4 grown from a motive, 8 bars, ending in a PAC. */
-static PiecePlan *sentence_plan(Motive *motive) {
+static Plan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -240,7 +240,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
     request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
@@ -260,19 +260,19 @@ static double dimension_distance(const StyleComparison *comparison, StyleDimensi
 /* A sentence composed under style (NULL for none), measured against both pure styles. */
 static Run compose_sentence(unsigned long seed, const ComposerStyle *style, const ComposerStyle *measured[2]) {
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
-    config.style_weight = (ComposerRatio){1, 1};
+    config.style_weight = (Rational){1, 1};
     ComposeOutcome outcome;
     Run run;
     memset(&run, 0, sizeof(run));
     run.complete = compose_run(plan, &config, &outcome) == PIECE_OK;
     if (run.complete) {
-        char *json = plan_to_json(plan, NULL);
+        char *json = plan_to_json(plan, test_plan_producer(), NULL);
         assert(json);
         run.hash = fnv(json);
         free(json);

@@ -4,17 +4,12 @@
 #include <ursatz_composer/harmony_motive.h>
 #include <theory/tonality/roman_numeral_grammar.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 
-/*
- * The chords of developed motives (R-344): what the motives stage wrote on each idea's motive node (its motive_tones)
- * read as chords over the cells of a harmony target.
- */
-
 /* The motive_tones constraint of a node, or NULL. */
-static const PlanMotiveTones *node_tones(const PiecePlan *plan, NodeId node) {
+const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
@@ -23,6 +18,11 @@ static const PlanMotiveTones *node_tones(const PiecePlan *plan, NodeId node) {
     }
     return NULL;
 }
+
+/*
+ * The chords of developed motives (R-344): what the motives stage wrote on each idea's motive node (its motive_tones)
+ * read as chords over the cells of a harmony target.
+ */
 
 /*
  * One diatonic chord of the numeral, one cell long. A motive writes its harmony as degrees whatever the mode ("I" for
@@ -98,7 +98,7 @@ static void free_cells(PhraseRequest *request) {
     }
 }
 
-void harmony_motive_read(const PiecePlan *plan, PhraseRequest *request) {
+void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     request->has_motive = false;
     memset(request->motive_fixed, 0, sizeof(request->motive_fixed));
@@ -190,12 +190,12 @@ typedef struct {
     Fill fills[FILLS_PER_RUN];
 } RunFills;
 
-static bool motive_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+static bool motive_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
     return (harmony_prolong_read_request_given(plan, target, out) || harmony_phrase_read_request_given(plan, target, out)) &&
            out->has_motive && out->lead.num == 0 && out->tail.num == 0;
 }
 
-static bool motive_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool motive_applies(const Plan *plan, FillTarget target, void *context) {
     PhraseRequest *request = malloc(sizeof(*request));
     (void)context;
     bool applies = request && harmony_is_target(target) && motive_read_request(plan, (LaneSpanId)target.id, request);
@@ -469,7 +469,7 @@ static bool whole_fits(const PhraseRequest *request, const PhraseChord *chords, 
     return true;
 }
 
-static bool motive_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool motive_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     PhraseRequest *request = malloc(sizeof(*request));
     RunFills *runs = malloc(MAX_RUNS * sizeof(*runs));
@@ -540,7 +540,7 @@ static bool motive_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return memory;
 }
 
-static PlanResult motive_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult motive_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     return harmony_progression_apply(plan, target, candidate, motive_read_request);
 }
@@ -549,8 +549,8 @@ FillResult harmony_motive_register(FillOperatorRegistry *registry) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_MOTIVE_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span over developed motives";
-    operator_.generator.supported_outputs = "PiecePlan harmony lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span over developed motives";
+    operator_.generator.supported_outputs = "Plan harmony lane spans";
     operator_.generator.configuration_description = "none";
     operator_.generator.constraints_description = "the chords of the ideas' developed motives, the phrase model for the cells left open";
     operator_.generator.deterministic = true;

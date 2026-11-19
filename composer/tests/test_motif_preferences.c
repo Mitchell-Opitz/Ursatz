@@ -103,8 +103,8 @@ static void defaults_change_nothing(void) {
     explicit_defaults.leaps_per_motif = 11;
     explicit_defaults.leap_recovery = false;
     explicit_defaults.pickup_from_accent = false;
-    explicit_defaults.contrast_fidelity_min.numerator = 0;
-    explicit_defaults.contrast_fidelity_min.denominator = 1;
+    explicit_defaults.contrast_fidelity_min.num = 0;
+    explicit_defaults.contrast_fidelity_min.den = 1;
     explicit_defaults.long_on_weak = 0;
     explicit_defaults.final_long = false;
     /* the rhythm settings of phase L2 (R-439) too */
@@ -551,8 +551,8 @@ static void close_contrast(void) {
     double lowest_off = 1.0;
     double lowest_on = 1.0;
     for (int on = 0; on < 2; on++) {
-        preferences.contrast_fidelity_min.numerator = on ? 1 : 0;
-        preferences.contrast_fidelity_min.denominator = on ? 2 : 1;
+        preferences.contrast_fidelity_min.num = on ? 1 : 0;
+        preferences.contrast_fidelity_min.den = on ? 2 : 1;
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Motive motive = make(4, seed, &preferences);
             assert(motive.feature_count == 2);
@@ -1384,8 +1384,8 @@ static void each_setting_still_gives_motives(void) {
     MotiveRandomPreferences pickup = base;
     pickup.pickup_from_accent = true;
     MotiveRandomPreferences contrast = base;
-    contrast.contrast_fidelity_min.numerator = 1;
-    contrast.contrast_fidelity_min.denominator = 2;
+    contrast.contrast_fidelity_min.num = 1;
+    contrast.contrast_fidelity_min.den = 2;
     MotiveRandomPreferences weak = base;
     weak.long_on_weak = 20;
     MotiveRandomPreferences final_long = base;

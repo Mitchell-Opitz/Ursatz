@@ -1,6 +1,6 @@
 # Motive documents
 
-The motive document and its motive analysis, as the plan format embeds them (see the [plan format](plan-format.md)). Back to the [docs index](README.md).
+The motive document and its motive analysis, as the plan format embeds them (see the [plan format](../../library/docs/modules/plan-format.md)). Back to the [docs index](README.md).
 
 ## Motive documents
 

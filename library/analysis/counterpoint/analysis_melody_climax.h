@@ -24,11 +24,10 @@
  *   by_leap             the first occurrence is approached by a leap from a note in the span (CLIMAX_BY_LEAP's condition)
  *   final_note          the first occurrence is the span's last note (what CLIMAX_NOT_FINAL forbids)
  *
- * The shell holds every occurrence's note id. uncertainty = 1 - the least confidence of the span's notes (the climax
+ * uncertainty = 1 - the least confidence of the span's notes (the climax
  * depends on all their pitches).
  */
 
-#define STANDARD_COUNTERPOINT_CLIMAX_CLAIM_TYPE "standard-counterpoint/melodic-climax"
 #define STANDARD_COUNTERPOINT_CLIMAX_LISTED 16
 
 typedef struct {
@@ -50,8 +49,6 @@ typedef struct {
     char span_id[64];
     StandardCounterpointClimaxClaim claim;
     double uncertainty;
-    Structure *shell;               /* owned: the occurrences' note ids */
-    Interpretation *interpretation; /* owned */
 } StandardCounterpointClimax;
 
 typedef struct {

@@ -4,25 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/counterpoint/analysis_melody_emit.h"
 #include "model/core/rational.h"
-#include "model/core/value.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"
 
-static void destroy_label(StandardCounterpointNctLabel *label) {
-    interpretation_destroy(label->interpretation);
-    structure_destroy(label->shell);
-    memset(label, 0, sizeof(*label));
-}
-
 void standard_counterpoint_nct_labels_destroy(StandardCounterpointNctLabels *labels) {
     if (labels == NULL) {
         return;
-    }
-    for (size_t i = 0; i < labels->count; i++) {
-        destroy_label(&labels->items[i]);
     }
     free(labels->items);
     labels->items = NULL;
@@ -56,13 +45,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels(const S
             snprintf(claim->ref, sizeof(claim->ref), "%s", note->nct_ref);
         }
         label->uncertainty = 1.0 - note->confidence;
-        const char *ids[1] = {note->note_id};
-        if (!standard_counterpoint_melody_emit("melodic-nct", note->note_id, ids, 1,
-                                               STANDARD_COUNTERPOINT_NCT_CLAIM_TYPE, claim, sizeof(*claim),
-                                               label->uncertainty, &label->shell, &label->interpretation)) {
-            standard_counterpoint_nct_labels_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         found.count++;
     }
     if (found.count == 0) {
@@ -150,18 +132,9 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels_with(co
     return status;
 }
 
-static void destroy_counts(StandardCounterpointNctCounts *counts) {
-    interpretation_destroy(counts->interpretation);
-    structure_destroy(counts->shell);
-    memset(counts, 0, sizeof(*counts));
-}
-
 void standard_counterpoint_nct_count_list_destroy(StandardCounterpointNctCountList *list) {
     if (list == NULL) {
         return;
-    }
-    for (size_t i = 0; i < list->count; i++) {
-        destroy_counts(&list->items[i]);
     }
     free(list->items);
     list->items = NULL;
@@ -199,18 +172,13 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_counts(const S
         memset(&claim, 0, sizeof(claim));
         claim.span_first = (int)span->first;
         claim.span_last = (int)span->last;
-        const char **ids = (const char **)calloc(span->last - span->first + 1, sizeof(char *));
-        if (ids == NULL) {
-            standard_counterpoint_nct_count_list_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         double least = 1.0;
         for (size_t i = span->first; i <= span->last; i++) {
             const StandardCounterpointMelodyNote *note = &line->notes[i];
             if (!note->present) {
                 continue;
             }
-            ids[claim.note_count++] = note->note_id;
+            claim.note_count++;
             switch (note->nct) {
                 case STANDARD_COUNTERPOINT_NCT_CHORD_TONE:
                     claim.chord_tones++;
@@ -228,21 +196,12 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_counts(const S
             }
         }
         if (claim.note_count == 0) {
-            free(ids);
             continue;
         }
         StandardCounterpointNctCounts *counts = &found.items[found.count];
         snprintf(counts->span_id, sizeof(counts->span_id), "%s", span->id);
         counts->claim = claim;
         counts->uncertainty = 1.0 - least;
-        bool ok = standard_counterpoint_melody_emit("nct-counts", span->id, ids, (size_t)claim.note_count,
-                                                    STANDARD_COUNTERPOINT_NCT_COUNTS_CLAIM_TYPE, &claim, sizeof(claim),
-                                                    counts->uncertainty, &counts->shell, &counts->interpretation);
-        free(ids);
-        if (!ok) {
-            standard_counterpoint_nct_count_list_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         found.count++;
     }
     if (found.count == 0) {

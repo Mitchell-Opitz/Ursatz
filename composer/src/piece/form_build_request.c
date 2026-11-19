@@ -6,14 +6,15 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_schema.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
-#include "piece/form_return_internal.h"
+#include "material/form_return_internal.h"
+#include "structure/form_record.h"
 #include "piece/piece_internal.h"
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /*
@@ -112,14 +113,15 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
         return PIECE_ERR_NULL;
     }
     size_t cells;
-    if (!grow_cells_per_bar(&request->meter, &cells) || analysis_key_tonic_pitch_class(&request->key) < 0 ||
-        analysis_key_tonic_pitch_class(&request->key) > 11 ||
-        !composer_key_valid(&request->key) ||
+    if (!grow_cells_per_bar(&request->meter, &cells) || spelled_key_tonic_pitch_class(&request->key) < 0 ||
+        spelled_key_tonic_pitch_class(&request->key) > 11 ||
+        !plan_key_valid(&request->key) ||
         request->meter.beats_per_bar <= 0 || request->meter.beat_unit <= 0 ||
         request->section_count > PIECE_STRUCTURE_MAX_SECTIONS || (request->has_accompaniment && request->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     size_t beats = 0;
     bool body = false;
     int last_part = PIECE_PART_INTRO;
@@ -294,13 +296,13 @@ static bool section_construction(const PieceRequest *request, const PieceSection
 }
 
 /* The key over the start of a span, when one key span holds it. */
-static bool key_over(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
+static bool key_over(const Plan *plan, PlanSpan span, SpelledKey *out) {
     LaneSpanId ids[2];
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1 ||
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
         return false;
     }
-    *out = plan_lane_span_payload(plan, ids[0])->key;
+    *out = plan_lane_span_payload(plan, ids[0])->region;
     return true;
 }
 
@@ -309,12 +311,12 @@ static bool key_over(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
  * theme's lanes do (plan_give_section). False when the plan has no theme section, no m0, or is in another mode.
  */
 static bool theme_motive(const PieceRequest *request, const PieceSection *section, Motive *out) {
-    const PiecePlan *theme_plan = section->theme_plan;
+    const Plan *theme_plan = section->theme_plan;
     NodeId theme = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     NodeId source = theme_plan ? grow_find_source(theme_plan) : PLAN_NODE_NONE;
     PlanSpan span;
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     if (theme == PLAN_NODE_NONE || source == PLAN_NODE_NONE) {
         return false;
     }
@@ -323,7 +325,7 @@ static bool theme_motive(const PieceRequest *request, const PieceSection *sectio
         composer_key_is_minor(&key) != composer_key_is_minor(&request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
-    int shift = util_pitch_class(analysis_key_tonic_pitch_class(&request->key) - analysis_key_tonic_pitch_class(&key));
+    int shift = util_pitch_class(spelled_key_tonic_pitch_class(&request->key) - spelled_key_tonic_pitch_class(&key));
     shift = shift > 6 ? shift - 12 : shift;
     for (size_t i = 0; i < out->note_count; i++) {
         if (out->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
@@ -356,7 +358,7 @@ static const Motive *basic_motive(const PieceRequest *request, Motive *storage) 
 }
 
 /* The section of a plan that a piece part and id name, or PLAN_NODE_NONE. */
-static NodeId find_part_section(const PiecePlan *plan, const PieceSection *section) {
+static NodeId find_part_section(const Plan *plan, const PieceSection *section) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
@@ -371,16 +373,16 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
 }
 
 /* The piece's basic motive as the realized loop plan holds it (m0, in the request's key). */
-static bool loop_motive(const PieceRequest *request, const PiecePlan *loop_plan, Motive *out) {
+static bool loop_motive(const PieceRequest *request, const Plan *loop_plan, Motive *out) {
     NodeId source = grow_find_source(loop_plan);
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     if (source == PLAN_NODE_NONE) {
         return false;
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           composer_key_is_minor(&key) == composer_key_is_minor(&request->key) && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&request->key) &&
+           composer_key_is_minor(&key) == composer_key_is_minor(&request->key) && spelled_key_tonic_pitch_class(&key) == spelled_key_tonic_pitch_class(&request->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 
@@ -428,13 +430,13 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
     return true;
 }
 
-static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *request, const AnalysisKey *key, const PieceSection *section,
+static PieceResult add_request_section(Plan *plan, const PieceRequest *request, const SpelledKey *key, const PieceSection *section,
                                        size_t start_beats, const Motive *motive, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
     SectionPairing pairing;
     SectionConstruction construction;
     /* A theme fill is the theme it was composed as: its archetype, pairing and cadences, not the request's. */
-    const PiecePlan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
+    const Plan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
     NodeId given = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     if (section->fill == PIECE_FILL_THEME && given == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
@@ -511,8 +513,8 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = *key; /* the section's own region, else the home key */
+        constraint.kind = PLAN_CONSTRAINT_REGION;
+        constraint.params.region = *key; /* the section's own region, else the home key */
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && request->has_accompaniment) {
@@ -561,19 +563,19 @@ typedef struct {
  * span for each run of sections in one key, the seam in the first body section's key and the material in the home key (R-610). A
  * span reached by a relation is named by it and its anchor.
  */
-static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId form_id, const PieceRequest *request,
+static PieceResult add_key_lane(Plan *plan, const FormSpec *form, NodeId form_id, const PieceRequest *request,
                                 const PieceRegion *regions, bool regional, size_t laid, bool loop_plan, Rational bar, PlanSpan span_form,
                                 PlanSpan material) {
     PlanLanePayload payload;
     LaneSpanId lane;
     memset(&payload, 0, sizeof(payload));
     if (!regional) {
-        payload.key = request->key;
-        PieceResult result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, span_form, &payload, &lane));
+        payload.region = request->key;
+        PieceResult result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_REGION, 0, span_form, &payload, &lane));
         return result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     KeyRun runs[PIECE_STRUCTURE_MAX_SECTIONS + 2];
-    AnalysisKey keys[PIECE_STRUCTURE_MAX_SECTIONS + 2];
+    SpelledKey keys[PIECE_STRUCTURE_MAX_SECTIONS + 2];
     size_t count = 0;
     Rational at = {0, 1};
     PieceResult result = PIECE_OK;
@@ -582,7 +584,7 @@ static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId fo
             continue;
         }
         Rational length = beats_of(&request->meter, request->sections[i].description.beats);
-        if (count > 0 && analysis_key_equals(&keys[count - 1], &regions[i].key)) {
+        if (count > 0 && spelled_key_equals(&keys[count - 1], &regions[i].key)) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(runs[count - 1].span.length, length, &runs[count - 1].span.length)));
         } else {
             runs[count].span.start = at;
@@ -594,8 +596,8 @@ static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId fo
     }
     /* The seam bar after the loop's end, then the material: the first body section's key, then home. */
     if (result == PIECE_OK && !loop_plan) {
-        AnalysisKey seam_key = regions[first_body_index(form, request)].key;
-        if (count > 0 && analysis_key_equals(&keys[count - 1], &seam_key)) {
+        SpelledKey seam_key = regions[first_body_index(form, request)].key;
+        if (count > 0 && spelled_key_equals(&keys[count - 1], &seam_key)) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(runs[count - 1].span.length, bar, &runs[count - 1].span.length)));
         } else {
             runs[count].span.start = at;
@@ -609,7 +611,7 @@ static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId fo
         memset(&home, 0, sizeof(home));
         Rational end = {0, 1};
         result = piece_result_of_plan(plan_result_of_rational(rational_add(runs[count - 1].span.start, runs[count - 1].span.length, &end)));
-        if (result == PIECE_OK && analysis_key_equals(&keys[count - 1], &request->key)) {
+        if (result == PIECE_OK && spelled_key_equals(&keys[count - 1], &request->key)) {
             result = piece_result_of_plan(plan_result_of_rational(rational_sub(span_form.length, runs[count - 1].span.start, &runs[count - 1].span.length)));
         } else if (result == PIECE_OK) {
             runs[count].span.start = end;
@@ -621,8 +623,8 @@ static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId fo
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = keys[i];
-        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, runs[i].span, &payload, &lane));
+        payload.region = keys[i];
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_REGION, 0, runs[i].span, &payload, &lane));
         if (result == PIECE_OK && runs[i].region && runs[i].region->relation[0] != '\0') {
             const PieceRegion *region = runs[i].region;
             result = piece_result_of_plan(plan_lane_span_set_key_relation(
@@ -638,8 +640,8 @@ static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId fo
  * The plan of the request. With a loop plan it is the ending version (R-172): the intro and the body Given from the
  * realized loop, the turnaround and the seam left out, the ending laid out open after the body.
  */
-PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *request, const PiecePlan *loop_plan,
-                                    PiecePlan **out) {
+PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *request, const Plan *loop_plan,
+                                    Plan **out) {
     if (!form || !request || !out) {
         return PIECE_ERR_NULL;
     }
@@ -649,7 +651,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         return result;
     }
     size_t cells;
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     Motive theme_storage;
     const Motive *motive = basic_motive(request, &theme_storage);
     if (loop_plan) {
@@ -734,7 +737,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     if (motive && !grow_motive_fits_idea(motive, bar, basic_bars)) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
@@ -823,8 +826,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         if (result == PIECE_OK) {
             PlanConstraint key;
             memset(&key, 0, sizeof(key));
-            key.kind = PLAN_CONSTRAINT_KEY;
-            key.params.key = regions[first_body_index(form, &copy)].key; /* the seam is the first body section's key */
+            key.kind = PLAN_CONSTRAINT_REGION;
+            key.params.region = regions[first_body_index(form, &copy)].key; /* the seam is the first body section's key */
             result = piece_add_constraint(plan, seam, &key);
         }
     }
@@ -863,7 +866,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     return PIECE_OK;
 }
 
-PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *request, PiecePlan **out) {
+PieceResult piece_build_ending(const Plan *loop_plan, const PieceRequest *request, Plan **out) {
     if (!loop_plan || !request || !out) {
         if (out) {
             *out = NULL;

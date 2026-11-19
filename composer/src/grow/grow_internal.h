@@ -1,49 +1,22 @@
 #ifndef URSATZ_COMPOSER_GROW_INTERNAL_H
 #define URSATZ_COMPOSER_GROW_INTERNAL_H
 
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "motive/motive_fidelity.h"
+#include "structure/plan_util.h"
 
 /* The bars the material section holds: room for the motive and every motive made from it. */
 #define GROW_MATERIAL_BARS 8
 #define GROW_THEME_NAME "theme"
-#define GROW_MATERIAL_NAME "material"
-#define GROW_SOURCE_NAME "m0"
 #define GROW_ACCOMPANIMENT_NAME "acc"
 /* The material nodes of the slot motives: "s1" contrasting, "s2" continuation, "s3" cadential (grow.h GrowSlot). */
 
-/* The pitch of the note an open bass, melody or inner voice span holds until an operator writes it. */
-#define BASS_PLACEHOLDER 40
-#define MELODY_PLACEHOLDER 60
-#define INNER_PLACEHOLDER 55
 #define GROW_PAYLOAD_MAGIC 0x47525731UL
 /* Fragments of the basic idea are this many notes at most; the first is the leading ones of the motive. */
 #define GROW_FRAGMENT_MAX 3
-
-/*
- * The motives the ideas of a theme are made from, by slot: slot k is the motive node m<k> in the material. The slot
- * is the idea's place, and what an idea is depends on the pairing:
- *   1  a presentation's repetition, or the contrasting idea of an antecedent or a compound basic idea
- *   2  a continuation's first fragment, a consequent's restated basic idea, or a cadential ending's first idea
- *   3  a continuation's second fragment, a consequent's contrasting idea, or a cadential ending's second idea
- *   4  a continuation's cadential idea
- */
-typedef enum {
-    GROW_PLACE_BASIC,
-    GROW_PLACE_REPETITION,
-    GROW_PLACE_FRAGMENT_1,
-    GROW_PLACE_FRAGMENT_2,
-    GROW_PLACE_CADENTIAL,
-    GROW_PLACE_COUNT,
-    GROW_PLACE_CONTRAST = GROW_PLACE_REPETITION,
-    GROW_PLACE_RESTATED = GROW_PLACE_FRAGMENT_1,
-    GROW_PLACE_CONSEQUENT_CONTRAST = GROW_PLACE_FRAGMENT_2,
-    GROW_PLACE_CADENTIAL_1 = GROW_PLACE_FRAGMENT_1,
-    GROW_PLACE_CADENTIAL_2 = GROW_PLACE_FRAGMENT_2
-} GrowPlace;
 
 /* How a presentation repeats its basic idea (ch. V). */
 typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
@@ -89,7 +62,7 @@ typedef struct {
     unsigned long magic;
     size_t bars;
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     CadenceType cadence;
     SectionPairing pairing;
     GrowLayout layout;                 /* where each idea lies (grow_layout_of) */
@@ -188,14 +161,14 @@ typedef struct {
     NodeId section;
     PlanSpan span;
     PlanMeter meter;
-    AnalysisKey key;                   /* the key the section starts in */
+    SpelledKey key;                   /* the key the section starts in */
     bool has_start_change;         /* the key before the section is another, which the section opens */
     bool pedal;                    /* the presentation is written over a dominant pedal (R-446); kept only in the home key */
     bool transition;               /* the section is a transition (R-504): its continuation liquidates to the upbeat chord */
     bool independent;              /* its motive is a motive of its own in the material (R-504): not m0, not made from it */
-    AnalysisKey from_key;              /* that key; read only with has_start_change */
+    SpelledKey from_key;              /* that key; read only with has_start_change */
     bool has_end_change;           /* the second half of the section is in another key, which it opens */
-    AnalysisKey end_key;               /* that key; read only with has_end_change */
+    SpelledKey end_key;               /* that key; read only with has_end_change */
     CadenceType cadence;
     CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
@@ -224,7 +197,7 @@ typedef struct {
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     const GrowThemeSpec *spec;
     const GrowThemeRequest *request;
     GrowLayout layout;       /* the spec's layout */
@@ -244,8 +217,6 @@ typedef struct {
     NodeId extension_node[SECTION_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
-/* A length of count units. */
-Rational grow_scaled(Rational unit, size_t count);
 /* A node of the theme, Realized, starting `start` after the theme's start and `length` long. */
 PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, Rational start, Rational length,
                          const char *name, NodeId *out);
@@ -268,15 +239,9 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref, const Motive *motive);
 
 /* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
-bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
+bool grow_read_keys(const Plan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
-/*
- * The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
- * the two fragments and the cadential idea (apply takes a bar for every one it makes).
- */
-#define GROW_MADE_NODES 5
-
-size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
+size_t grow_first_free_bar(const Plan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
 
 /*
  * Free phrases (R-170): a section with a FREE_PHRASE constraint is a phrase of any length in beats, laid out as one
@@ -284,10 +249,10 @@ size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan mate
  */
 #define GROW_FREE_MAGIC 0x47465231UL
 typedef struct GrowFreeSpec GrowFreeSpec;
-bool grow_free_applies(const PiecePlan *plan, FillTarget target);
-bool grow_free_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_free_applies(const Plan *plan, FillTarget target);
+bool grow_free_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out);
-PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpec *spec);
+PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *spec);
 /* The checker's verdict on a free phrase candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *total);
 
@@ -297,10 +262,10 @@ const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *
  */
 #define GROW_LIQUIDATE_MAGIC 0x474C5131UL
 typedef struct GrowLiquidateSpec GrowLiquidateSpec;
-bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target);
-bool grow_liquidate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_liquidate_applies(const Plan *plan, FillTarget target);
+bool grow_liquidate_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                              FillCandidateList *out);
-PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLiquidateSpec *spec);
+PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquidateSpec *spec);
 /* The checker's verdict on a liquidation candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, unsigned *total);
 
@@ -311,10 +276,10 @@ const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, 
  */
 #define GROW_CODA_MAGIC 0x47434F31UL
 typedef struct GrowCodaSpec GrowCodaSpec;
-bool grow_coda_applies(const PiecePlan *plan, FillTarget target);
-bool grow_coda_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_coda_applies(const Plan *plan, FillTarget target);
+bool grow_coda_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out);
-PlanResult grow_coda_apply(PiecePlan *plan, FillTarget target, const GrowCodaSpec *spec);
+PlanResult grow_coda_apply(Plan *plan, FillTarget target, const GrowCodaSpec *spec);
 /* The checker's verdict on a coda candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *total);
 /* The main theme head: m0's leading notes that fit `half` (a half bar), 3 at most and 2 at least, as a literal motive with V for its own harmony. */
@@ -354,17 +319,6 @@ bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec);
 /* The bars the made motives of the spec's extensions take in the material, one bar at least each. */
 size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
 /*
- * The bars of a construction as grow_layout_of lays them out (R-468): its beginning and its ending with their stretches
- * and repeats, the idea after an evaded cadence (not in the ending) and the addition (after it).
- */
-typedef struct {
-    size_t beginning;
-    size_t ending;
-    size_t evaded;
-    size_t addition;
-} GrowConstructionBars;
-void grow_construction_bars(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionBars *out);
-/*
  * Where the ideas and the extensions of a construction lie, as grow_construction_describe counts them: 0-based first bars
  * and bars, a stretched idea with its stretch, an extension with its bars made explicit (a stretch spans the idea it
  * lengthens). An idea the pairing does not have has 0 bars; `halves` are the halves' bars, the ending with the idea after an
@@ -378,13 +332,11 @@ typedef struct {
     size_t extension_bars[SECTION_CONSTRUCTION_EXTENSIONS];
 } GrowConstructionSpans;
 void grow_construction_spans(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionSpans *out);
-/* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
-size_t grow_construction_extra_bars(const SectionPairing *pairing, const SectionConstruction *construction);
 /*
  * The sentence grow_construction_describe writes for the theme section's CONSTRUCTION and THEME_PAIRING constraints, ""
  * (and 0) for a section without a construction.
  */
-size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size);
+size_t grow_section_describe(const Plan *plan, NodeId section, char *text, size_t size);
 /* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
 size_t grow_extension_material_bars(const SectionPairing *pairing, const SectionConstruction *construction);
 /*
@@ -443,12 +395,8 @@ GrowSlot grow_idea_slot(const SectionPairing *pairing, GrowPlace idea, bool *fir
 bool grow_slot_used(const SectionPairing *pairing, GrowSlot slot, size_t *units);
 /* Whether the idea's motive is one given for it: its own (R-206), or its slot's for the slot's first idea. */
 bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea);
-/* The place an idea has under a pairing; false when the pairing has no such idea. */
-bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place);
-/* The eighths of the theme the idea at a place has. */
-size_t grow_place_units(const SectionPairing *pairing, GrowPlace place);
 /* The material node of an idea's own motive ("i<k>"), else PLAN_NODE_NONE. */
-NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea);
+NodeId grow_find_idea_node(const Plan *plan, GrowIdea idea);
 /* The name of the idea's material node. */
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size);
 /* Whether the idea is a segment of m0 (a continuation's fragment, ch. VIII), and the segment when it is. */
@@ -458,7 +406,7 @@ const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea);
 /* The motive node an idea's motive ref names: its slot's own node, else the build's source. */
 NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea);
 /* The material node of the slot's motive ("s1" to "s3"), else PLAN_NODE_NONE. */
-NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot);
+NodeId grow_find_slot_node(const Plan *plan, GrowSlot slot);
 /* The name of the slot's material node; NULL for the basic slot. */
 const char *grow_slot_node_name(GrowSlot slot);
 
@@ -484,12 +432,6 @@ bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const Sect
                                  CadenceType cadence, CadenceType first, const SectionConstruction *construction);
 /* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
-
-/* The cells in a bar the harmony operators place chords on; false for a meter they do not support. */
-bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
-
-/* The length of a bar of the meter. */
-Rational grow_bar_length(const PlanMeter *meter);
 
 /* How a motif compares with the idea it fills: shorter (grown to the idea), as long (placed as written), longer. */
 typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit;
@@ -522,9 +464,9 @@ bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, 
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
-NodeId grow_find_source(const PiecePlan *plan);
+NodeId grow_find_source(const Plan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out);
+bool grow_read_motive(const Plan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out);
 
 /*
  * One segment of a motive as a motive of its own: its notes from time 0 (no pickup), with the source's meter and key, the
@@ -571,15 +513,15 @@ MotiveScore grow_fidelity_minimum_in(const GrowFidelityTable *table, GrowDevelop
  * feature of basic when its notes are m0's, else the proposal) and sets *from_segment; a liquidation by segments is made
  * from m0 whole. basic may be NULL. False when the span has no MOTIVE_REF or its nodes cannot be read.
  */
-bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
+bool grow_idea_fidelity_source(const Plan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
                                PlanMotiveRef *ref, bool *from_segment);
 /*
  * The notes the idea's melody span holds inside its motive node's length (onsets from the span's start, the pickup part of
  * the length), as a motive in the key and meter of the lanes over the span. False when no note falls inside.
  */
-bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
+bool grow_idea_realized(const Plan *plan, LaneSpanId melody, Motive *out);
 /* The two above and motive_fidelity. */
-bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
+bool grow_idea_fidelity(const Plan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
 
 /*
  * Whether the ref itself makes the idea differ from its source (a liquidation, a fragment by notes, an inversion, any relation
@@ -625,10 +567,41 @@ typedef struct {
  * A cadential idea is for its cadence: it is refused under its minimum (its score only; the search never reaches its residue)
  * but ranked by the melody rules alone, which put the cadence tone first.
  */
-bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_fidelity_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
-NodeId grow_find_theme(const PiecePlan *plan, bool open_only);
+NodeId grow_find_theme(const Plan *plan, bool open_only);
+
+/* --- shared by the files that grow a theme (grow_theme.c reads, grow_idea.c, grow_contrast.c and grow_draw.c draw, grow_apply.c applies) --- */
+
+/* How many candidates are drawn for each one asked for before the search is given up. */
+#define DRAWS_PER_CANDIDATE 6
+/* The most gaps Given material leaves in one idea or one subphrase for one lane. */
+#define GROW_MAX_GAPS 16
+
+/* Reads the request of a target; false when the target is not one grow-theme grows. */
+bool grow_read_request(const Plan *plan, FillTarget target, GrowThemeRequest *out);
+/* Whether two developments are the same kind of change by the same amount. */
+bool grow_same_kind(const MotiveRelationStep *a, const MotiveRelationStep *b);
+/* The bars of the material section the spec's motives take. */
+size_t grow_derived_bars(const GrowThemeSpec *spec, Rational bar);
+/* The bars of the material section's span, a bar each. */
+size_t grow_count_bars(PlanSpan material_span, Rational bar);
+/* Draws a spec (the candidates of one seed); false when it does not come out. */
+bool grow_draw_spec(const Plan *plan, const GrowThemeRequest *request, const GrowContext *shared, FillRng *rng, GrowThemeSpec *spec);
+/* Whether two specs are the same theme. */
+bool grow_same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b);
+/* The label of a spec, as the candidate list shows it. */
+void grow_spec_label(const GrowThemeSpec *spec, char *label, size_t size);
+/* Applies a candidate to the plan: the nodes, the targets and the motives of the theme. */
+PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
+
+/* The widest interval of the motive, in semitones. */
+int grow_widest_leap(const Motive *motive);
+/* Whether the two motives have the same pitches and durations, note for note. */
+bool grow_same_notes(const Motive *a, const Motive *b);
+/* Whether every pitch of the motive is within the range a form may have, so the melody has room to place it. */
+bool grow_motive_in_form_range(const Motive *motive);
 
 #endif

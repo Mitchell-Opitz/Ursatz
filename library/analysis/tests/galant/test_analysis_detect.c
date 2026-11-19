@@ -18,7 +18,6 @@ static void test_ascending_five_six_with_applied_chords(void) {
     assert(claim->first_segment == 0 && claim->last_segment == 5 && strcmp(claim->kind_name, "five-six") == 0);
     assert(near_to(claim->unit_share, 1.0) && near_to(claim->soprano_bonus, 0.1) && near_to(claim->confidence, 1.0));
     assert(strcmp(claim->stages[1].segment_id, "s1") == 0 && claim->stages[1].soprano_degree == 6 && claim->stages[3].root_degree == 7);
-    assert(matches.items[0].relationship != NULL && matches.items[0].interpretation != NULL);
     scale_sequence_matches_destroy(&matches);
     run_destroy(&run);
 }

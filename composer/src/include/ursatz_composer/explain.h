@@ -8,7 +8,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/rejection.h>
 
 /*
@@ -99,19 +99,19 @@ typedef enum {
  * Builds the explanation of a compose run on plan (the plan compose_run filled; the outcome is not changed). Stages
  * that did not run have no records and add nothing. EXPLAIN_ERR_NULL for a NULL argument.
  */
-ExplainResult explain_build(const PiecePlan *plan, const ComposeOutcome *outcome, Explanation *out);
+ExplainResult explain_build(const Plan *plan, const ComposeOutcome *outcome, Explanation *out);
 
 /*
  * The same for a grow: the stages of its records, the one theme section `theme`, what it was heard as, its analyzer
  * check (NULL when it was not made) and the rejections to show (the grow's own, GrowOutcome.rejections, are added to
  * the ones given; extra may be NULL when extra_count is 0).
  */
-ExplainResult explain_build_grow(const PiecePlan *plan, NodeId theme, const GrowOutcome *outcome,
+ExplainResult explain_build_grow(const Plan *plan, NodeId theme, const GrowOutcome *outcome,
                                  const AnalyzerCheck *check, const ComposeRejection *extra, size_t extra_count,
                                  Explanation *out);
 
 /* A rejection for a run an analyzer check threw away, from that check of `section`: reason "analyzer", its items that disagree. */
-ExplainResult explain_analyzer_rejection(const PiecePlan *plan, NodeId section, const AnalyzerCheck *check, size_t round,
+ExplainResult explain_analyzer_rejection(const Plan *plan, NodeId section, const AnalyzerCheck *check, size_t round,
                                          unsigned long seed, ComposeRejection *out);
 
 /* Frees everything and zeroes the struct. Safe on a zeroed struct. */

@@ -5,14 +5,12 @@
 #include <stddef.h>
 
 #include "theory/tonality/interval.h"
-#include "model/interpretation/interpretation.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/vocabulary/beat_strength.h"
 #include "analysis/notes/contour.h"
 #include "theory/vocabulary/non_chord_tone.h"
-#include "model/structure/structure.h"
 #include "model/time/metrical_position.h"
 #include "model/time/time_span.h"
 
@@ -27,7 +25,7 @@
  * several segments of the caller's segmentation is ONE entry (the caller merges them), and a repeated pitch is a second
  * entry. A note carries:
  *
- *   note_id       the note's id (non-empty). Copied. The id the Interpretations refer to
+ *   note_id       the note's id (non-empty). Copied. The id the results refer to
  *   span          its TimeSpan, or NULL. Borrowed
  *   position      its MetricalPosition, or NULL. Borrowed
  *   has_strength  strength is meaningful; strength is its BeatStrength
@@ -53,8 +51,7 @@
  *                a step 1 or 2), the interval is marked APPROXIMATE, and its uncertainty is raised by the penalty
  *                (an augmented second is then read as a leap: a known limit)
  *
- * Each interval is a Structure shell (the two note ids), a kernel Contour value, and an Interpretation
- * targeting the shell's id: FrameworkReference standard-counterpoint, claim = a StandardCounterpointMelodicIntervalClaim,
+ * Each interval is a kernel Contour value and a StandardCounterpointMelodicIntervalClaim, with
  *
  *   uncertainty = 1 - (1 - u)(1 - penalty), u = 1 - the lesser note confidence, penalty = config.approximate_penalty when
  *                 the interval is approximate and 0 otherwise.
@@ -65,8 +62,6 @@
  * in semitones, and the lowest and highest notes (the FIRST entry at each pitch).
  */
 
-#define STANDARD_COUNTERPOINT_MELODIC_INTERVAL_CLAIM_TYPE "standard-counterpoint/melodic-interval"
-#define STANDARD_COUNTERPOINT_CONTOUR_SUMMARY_CLAIM_TYPE "standard-counterpoint/contour-summary"
 
 typedef enum {
     STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED = 0, /* no result for the note (the default) */
@@ -147,8 +142,6 @@ typedef struct {
                                                when claim.generic_source is SPELLING */
     double uncertainty;
     Contour *contour;               /* owned: the two pitches and the direction */
-    Structure *shell;               /* owned: the two note ids */
-    Interpretation *interpretation; /* owned; targets the shell's id */
 } StandardCounterpointMelodicInterval;
 
 typedef struct {
@@ -188,8 +181,6 @@ typedef struct {
     char span_id[64];
     StandardCounterpointContourSummaryClaim claim;
     double uncertainty; /* 1 - the least note confidence in the span */
-    Structure *shell;               /* owned: every note id in the span */
-    Interpretation *interpretation; /* owned */
 } StandardCounterpointContourSummary;
 
 typedef struct {

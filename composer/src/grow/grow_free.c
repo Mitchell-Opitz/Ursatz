@@ -4,12 +4,13 @@
 
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
-#include "util/plan_util.h"
+#include "util/position.h"
+#include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include "motive/motive_internal.h"
 
 /*
@@ -121,7 +122,7 @@ static bool lay_ideas(const GrowThemeRequest *theme, Rational meter_start, FreeR
     return true;
 }
 
-static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out) {
+static bool read_free(const Plan *plan, FillTarget target, FreeRequest *out) {
     FreeRequest request;
     GrowThemeRequest *theme = &request.theme;
     memset(&request, 0, sizeof(request));
@@ -161,7 +162,7 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
         return false;
     }
-    theme->bar = grow_bar_length(&theme->meter);
+    plan_meter_bar_length(&theme->meter, &theme->bar);
     theme->source = grow_find_source(plan);
     if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
         theme->bar.num == 0 || !lay_ideas(theme, meter_start, &request)) {
@@ -199,22 +200,12 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     return true;
 }
 
-bool grow_free_applies(const PiecePlan *plan, FillTarget target) {
+bool grow_free_applies(const Plan *plan, FillTarget target) {
     FreeRequest request;
     return read_free(plan, target, &request);
 }
 
 /* ------------------------------------------------------------- candidates */
-
-/* Every pitch within the range a form may have, so the melody has room to place it. */
-static bool in_range(const Motive *motive) {
-    for (size_t i = 0; i < motive->note_count; i++) {
-        if (motive_pitch(motive, i) < FORM_LOW || motive_pitch(motive, i) > FORM_HIGH) {
-            return false;
-        }
-    }
-    return true;
-}
 
 /*
  * The development of m0 a middle idea is: a leading fragment, a transposition in the key's steps (a sequence), an
@@ -254,7 +245,7 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
         }
         }
         if (motive_develop(source, dev, result) == MOTIVE_DEV_OK && result->note_count >= 1 &&
-            rational_cmp(result->length, room) <= 0 && in_range(result)) {
+            rational_cmp(result->length, room) <= 0 && grow_motive_in_form_range(result)) {
             return true;
         }
     }
@@ -276,7 +267,7 @@ static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, Mo
     return drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK && rational_cmp(result->length, room) <= 0;
 }
 
-static bool draw_free(const PiecePlan *plan, const FreeRequest *request, FillRng *rng, GrowFreeSpec *spec) {
+static bool draw_free(const Plan *plan, const FreeRequest *request, FillRng *rng, GrowFreeSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_FREE_MAGIC;
@@ -321,7 +312,7 @@ static void free_label(const GrowFreeSpec *spec, char *label, size_t size) {
     }
 }
 
-bool grow_free_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_free_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     FreeRequest request;
     if (!read_free(plan, target, &request)) {
@@ -400,7 +391,7 @@ static const char *idea_name(size_t index, size_t count) {
     return index % 2 == 1 ? "fragment 1" : "fragment 2";
 }
 
-PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpec *spec) {
+PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *spec) {
     FreeRequest request;
     if (!spec || spec->magic != GROW_FREE_MAGIC || !read_free(plan, target, &request) ||
         request.idea_count != spec->count) {
@@ -463,7 +454,7 @@ PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpe
                 ref.step.value[2] = 0;
             }
             snprintf(name, sizeof(name), "m%zu", i);
-            result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + i - 1),
+            result = plan_result_of_rational(rational_add(build.material_span.start, position_times(request.theme.bar, build.slot_base + i - 1),
                                    &bar.start));
             if (result == PLAN_OK) {
                 result = plan_add_node(plan, build.material, PLAN_NODE_MOTIVE, bar, name, &motive);

@@ -1,17 +1,18 @@
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <theory/harmony/harmony_cadence_rules.h>
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 #include <theory/tonality/roman_numeral_rules.h>
 
-#include "util/plan_util.h"
+#include "util/position.h"
+#include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
@@ -50,7 +51,7 @@ const char *grow_slot_node_name(GrowSlot slot) {
     return row ? row->node_name : NULL;
 }
 
-NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot) {
+NodeId grow_find_slot_node(const Plan *plan, GrowSlot slot) {
     const char *wanted = grow_slot_node_name(slot);
     for (NodeId id = 1; wanted && id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
@@ -65,29 +66,12 @@ const char *grow_idea_name(GrowIdea idea) {
     return theme_shape_idea_name(idea);
 }
 
-bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place) {
-    const ThemeShapeIdea *row = theme_shape_idea_in(pairing, idea);
-    if (row && place) {
-        *place = (GrowPlace)row->place;
-    }
-    return row != NULL;
-}
-
-bool grow_idea_in_pairing(const SectionPairing *pairing, GrowIdea idea) {
-    return theme_shape_idea_in(pairing, idea) != NULL;
-}
-
-size_t grow_place_units(const SectionPairing *pairing, GrowPlace place) {
-    const ThemeShapeIdea *row = theme_shape_place_in(pairing, (unsigned)place);
-    return row ? row->units : 2;
-}
-
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size) {
     snprintf(buffer, size, "i%d", (int)idea);
     return buffer;
 }
 
-NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea) {
+NodeId grow_find_idea_node(const Plan *plan, GrowIdea idea) {
     char wanted[8];
     grow_idea_node_name(idea, wanted, sizeof(wanted));
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -135,19 +119,6 @@ bool grow_slot_used(const SectionPairing *pairing, GrowSlot slot, size_t *units)
     return used;
 }
 
-bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells) {
-    return harmony_rhythm_cells_per_bar(meter, cells);
-}
-
-Rational grow_bar_length(const PlanMeter *meter) {
-    Rational bar = {0, 1};
-    if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
-        bar.num = 0;
-        bar.den = 1;
-    }
-    return bar;
-}
-
 GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars) {
     Rational span = {0, 1};
     long long bars = 0;
@@ -177,7 +148,7 @@ bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, 
     Rational idea_end = {0, 1};
     size_t leading = 0;
     if (!grow_motive_fills_part(motive, bar, part_bars, beginning) ||
-        rational_add(motive_pickup(motive), grow_scaled(bar, basic_bars), &idea_end) != RATIONAL_OK) {
+        rational_add(motive_pickup(motive), position_times(bar, basic_bars), &idea_end) != RATIONAL_OK) {
         return false;
     }
     /* The notes that start inside the idea's bars; a note running past the idea's end makes no basic idea. */
@@ -200,15 +171,6 @@ size_t grow_motive_layout_bars(const Motive *motive, Rational bar) {
         return 1;
     }
     return (size_t)bars;
-}
-
-static Rational times(Rational time, size_t count) {
-    Rational out = {0, 1};
-    if (rational_mul_int(time, (long long)count, &out) != RATIONAL_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
 }
 
 static GrowResult from_plan(PlanResult result) {
@@ -440,7 +402,7 @@ static const char *motive_reason(const GrowRequest *request, const Motive *motiv
         return "is not in the theme's meter";
     }
     if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
-        (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
+        (motive->tonic_pc != spelled_key_tonic_pitch_class(&request->key) ||
          motive_sketch_minor(motive) != (composer_key_is_minor(&request->key)))) {
         return "is not in the theme's key";
     }
@@ -597,7 +559,8 @@ static GrowResult check_cadence_bar(const GrowRequest *request, Rational bar_len
 }
 
 GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType first, GrowRefusal *refusal) {
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     if (request->chord_count == 0 || !request->chords) {
         return GROW_OK;
     }
@@ -616,7 +579,7 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
     return result;
 }
 
-GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal) {
+GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowRefusal *refusal) {
     if (refusal) {
         memset(refusal, 0, sizeof(*refusal));
     }
@@ -665,10 +628,11 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     if (request->motive->note_count < 2) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/slots/basic", "the basic motif needs at least two notes");
     }
-    if (analysis_key_tonic_pitch_class(&request->key) < 0 || analysis_key_tonic_pitch_class(&request->key) > 11) {
+    if (spelled_key_tonic_pitch_class(&request->key) < 0 || spelled_key_tonic_pitch_class(&request->key) > 11) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/key", "the key has no tonic");
     }
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     size_t basic_units = 0;
     /* The basic motive fills the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. */
     if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units)) {
@@ -775,12 +739,12 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     segment_bars += request->contrast.new_material > 0 ? 2 : 0;
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return GROW_ERR_ALLOC;
     }
-    PlanSpan theme = {{0, 1}, times(bar, request->bars)};
-    PlanSpan material = {theme.length, times(bar, material_bars)};
+    PlanSpan theme = {{0, 1}, position_times(bar, request->bars)};
+    PlanSpan material = {theme.length, position_times(bar, material_bars)};
     PlanSpan form = {{0, 1}, {0, 1}};
     Rational total;
     GrowResult result = from_plan(plan_result_of_rational(rational_add(theme.length, material.length, &total)));
@@ -806,8 +770,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     }
     if (result == GROW_OK) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = request->key;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
+        payload.region = request->key;
+        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_REGION, 0, form, &payload, &lane));
         result = result == GROW_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     if (result == GROW_OK) {
@@ -838,8 +802,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     }
     if (result == GROW_OK) {
         memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = request->key;
+        constraint.kind = PLAN_CONSTRAINT_REGION;
+        constraint.params.region = request->key;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 
@@ -885,7 +849,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         if (!request->slot_motives[slot]) {
             continue;
         }
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, slot_bar), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, slot_bar), &start)));
         slot_bar += grow_motive_layout_bars(request->slot_motives[slot], bar);
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->slot_motives[slot],
                                                              grow_slot_node_name(slot), NULL, NULL))
@@ -899,7 +863,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         if (!request->idea_motives[idea_at]) {
             continue;
         }
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, idea_bar), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, idea_bar), &start)));
         idea_bar += grow_motive_layout_bars(request->idea_motives[idea_at], bar);
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->idea_motives[idea_at],
                                                              grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name)),
@@ -908,7 +872,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     }
     if (result == GROW_OK && accompaniment_motive) {
         Rational start;
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, material_bars - 1), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, material_bars - 1), &start)));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, accompaniment_motive,
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;
@@ -940,7 +904,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     return GROW_OK;
 }
 
-NodeId grow_find_source(const PiecePlan *plan) {
+NodeId grow_find_source(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
         if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, GROW_SOURCE_NAME) == 0) {
@@ -950,7 +914,7 @@ NodeId grow_find_source(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out) {
+bool grow_read_motive(const Plan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out) {
     LaneSpanId ids[16];
     size_t found = plan_node_lane_spans(plan, node, ids, 16);
     for (size_t i = 0; i < found && i < 16; i++) {
@@ -975,7 +939,7 @@ bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter
     return false;
 }
 
-NodeId grow_find_theme(const PiecePlan *plan, bool open_only) {
+NodeId grow_find_theme(const Plan *plan, bool open_only) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
             (open_only && plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED)) {

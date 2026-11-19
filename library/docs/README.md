@@ -37,12 +37,12 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/structure.md](modules/structure.md): L5 structure: occurrences of structures.
 - [docs/modules/context.md](modules/context.md): L6 context: the opaque Context type.
 - [docs/modules/semantics.md](modules/semantics.md): L6 semantics: shared theory vocabulary and neutral analysis inputs.
-- [docs/modules/relationship.md](modules/relationship.md): L6 relationship: typed links between entities.
-- [docs/modules/interpretation.md](modules/interpretation.md): L6 interpretation: claims, chords, keys, uncertainty.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
 - [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
 - [docs/modules/realization.md](modules/realization.md): Realization: lines, performer parts, scoring assignments.
-- [docs/modules/plan.md](modules/plan.md): Plan: the section description and its JSON codec.
+- [docs/modules/reading.md](modules/reading.md): Reading: what one reader says about one realization, as claims; the builder and the JSON codec.
+- [docs/modules/plan.md](modules/plan.md): Plan: the plan (nodes, lanes, constraints, states, edits, the JSON codec) and the section description.
+- [docs/modules/plan-format.md](modules/plan-format.md): the plan JSON file, its nodes, lanes, state and versions.
 - [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference and their callbacks.
 - [docs/modules/analysis.md](modules/analysis.md): L8 analysis: overview of the analyzers and what is deferred.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
@@ -74,6 +74,9 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 
 ## Formats and schemas
 
+- Plan, format 6: [docs/modules/plan-format.md](modules/plan-format.md), schema [plan/schema/plan.v6.schema.json](../plan/schema/plan.v6.schema.json).
+- Realization, format 1 (`ursatz-realization`): [docs/modules/realization.md](modules/realization.md), schema [realization/schema/realization.v1.schema.json](../realization/schema/realization.v1.schema.json).
+- Reading, format 1 (`ursatz-reading`): [docs/modules/reading.md](modules/reading.md), schema [reading/schema/reading.v1.schema.json](../reading/schema/reading.v1.schema.json).
 - [docs/modules/export.md](modules/export.md): The MusicXML output format and its limits.
 - [docs/modules/io-midi.md](modules/io-midi.md): The MIDI input format reading.
 - [docs/modules/io-musicxml.md](modules/io-musicxml.md): The MusicXML input subset.

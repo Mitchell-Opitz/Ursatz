@@ -2,17 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/explain.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "api_grow.h"
+#include "api_construction.h"
+#include "api_seed.h"
+#include "api_style.h"
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_workflow.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* `grow` as a composer API entry (docs/cli-grow.md), and the helpers the entries that seed from a corpus or read a style share. */
@@ -21,78 +24,7 @@
 
 /* --- the style categories --------------------------------------------------------------------------------- */
 
-ComposerStatus api_style_category_check(const char *name, ComposerError *error) {
-    StyleDimension dimension;
-    if (!style_category_dimension(name, &dimension)) {
-        char list[640];
-        size_t used = 0;
-        list[0] = '\0';
-        for (size_t i = 0; i < style_category_count() && used < sizeof list; i++) {
-            int written = snprintf(list + used, sizeof list - used, "%s%s", i ? ", " : "", style_category_name(i));
-            used += written > 0 ? (size_t)written : 0;
-        }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without",
-                        "style_without: '%s' is not a style category (the categories are %s)", name, list);
-    }
-    return COMPOSER_OK;
-}
-
-ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
-                                     ComposerError *error) {
-    ComposerStatus checked = api_style_category_check(name, error);
-    if (checked != COMPOSER_OK) {
-        return checked;
-    }
-    for (size_t i = 0; i < *count; i++) {
-        if (strcmp(names[i], name) == 0) {
-            return COMPOSER_OK;
-        }
-    }
-    if (*count >= capacity) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without is given at most %zu times", capacity);
-    }
-    names[(*count)++] = name;
-    return COMPOSER_OK;
-}
-
 /* --- seeding from a corpus ------------------------------------------------------------------------------- */
-
-static ComposerStatus seed_failure(CorpusSeedResult result, ComposerError *error) {
-    switch (result) {
-    case CORPUS_SEED_ERR_NO_MATCH:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages",
-                        "no passage of corpus_passages gives a motive (it needs two or more notes in its first bar)");
-    default:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages", "%s", corpus_seed_result_name(result));
-    }
-}
-
-ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error) {
-    memset(out, 0, sizeof(*out));
-    if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the source piece's path is too long to record");
-    }
-    out->start_measure = seed->start_measure;
-    out->start_beat = seed->start_beat;
-    out->end_measure = seed->end_measure;
-    out->end_beat = seed->end_beat;
-    out->score_numerator = seed->score_numerator;
-    out->score_denominator = seed->score_denominator;
-    return COMPOSER_OK;
-}
-
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const AnalysisKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error) {
-    CorpusSeedResult result = corpus_seed_motive(knowledge, passages->items, passages->count, meter, key, seed, out);
-    return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, error);
-}
-
-void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size) {
-    out[0] = '\0';
-    if (seed->stale_documents > 0) {
-        snprintf(out, size, "%zu stale documents (analyzed by another version; run the corpus again)", seed->stale_documents);
-    }
-}
 
 /* --- the request ----------------------------------------------------------------------------------------- */
 
@@ -193,7 +125,7 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
 /* The motive request with the key the brief settled on, and the meter and the role of an accompaniment motive. */
 static ComposerStatus make_lines(State *state, ComposerError *error) {
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&state->setup.key), state->setup.key.material, key,
+    util_key_name(spelled_key_tonic_pitch_class(&state->setup.key), state->setup.key.material, key,
                   sizeof key);
     state->line = cJSON_Duplicate(state->request, true);
     if (!state->line) {
@@ -299,14 +231,14 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     setup->style = state->style;
     setup->without = state->brief.without;
     setup->without_count = state->brief.text.without_count;
-    ComposerRatio option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
+    Rational option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
     status = api_grow_set_tempo_and_mode(setup, has_tempo ? &option_tempo : NULL, error);
     if (status != COMPOSER_OK) {
         return status;
     }
-    if (!has_tempo && setup->tempo.denominator > 0) {
-        outputs->export_options.tempo_numerator = setup->tempo.numerator;
-        outputs->export_options.tempo_denominator = setup->tempo.denominator;
+    if (!has_tempo && setup->tempo.den > 0) {
+        outputs->export_options.tempo_numerator = setup->tempo.num;
+        outputs->export_options.tempo_denominator = setup->tempo.den;
     }
 
     status = make_lines(state, error);
@@ -365,7 +297,7 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
         cJSON *item = cJSON_GetArrayItem(themes, (int)k);
         const GrowTheme *theme = &run->themes[k];
         if (outputs->plans) {
-            cJSON *plan = api_piece_plan_object(theme->plan);
+            cJSON *plan = api_piece_plan_object(knowledge, theme->plan);
             if (!plan || !cJSON_AddItemToObject(item, "plan", plan)) {
                 cJSON_Delete(plan);
                 return api_fail_alloc(error);
@@ -410,13 +342,15 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, cJSON *document,
+                                   ComposerResponse *out) {
     ApiOutputs files;
     memset(&files, 0, sizeof(files));
     files.midi = outputs->midi;
     files.musicxml = outputs->musicxml;
+    files.layers = outputs->layers;
     files.export_options = outputs->export_options;
-    return api_render_outputs(knowledge, theme->plan, &files, out);
+    return api_render_outputs(knowledge, theme->plan, &files, document, out);
 }
 
 static ComposerStatus add_notices(cJSON *document, const State *state, const ApiOutputOptions *outputs, ComposerError *error) {
@@ -468,7 +402,7 @@ ComposerStatus composer_api_grow(const ComposerContext *context, const char *req
             status = add_notices(document, &state, &outputs, &out->error);
         }
         if (status == COMPOSER_OK) {
-            status = render_first(context->knowledge, &state.run.themes[0], &outputs, out);
+            status = render_first(context->knowledge, &state.run.themes[0], &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

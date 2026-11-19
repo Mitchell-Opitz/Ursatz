@@ -6,7 +6,7 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "api/api_grow.h"
@@ -53,7 +53,7 @@ static Motive load_motive(const char *path) {
 }
 
 /* The MOTIVE_REF a motive node is made by, to another node; NULL for a node that has none (m0) or refers to itself. */
-static const PlanMotiveRef *node_ref(const PiecePlan *plan, NodeId node) {
+static const PlanMotiveRef *node_ref(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive != node) {
@@ -63,12 +63,12 @@ static const PlanMotiveRef *node_ref(const PiecePlan *plan, NodeId node) {
     return NULL;
 }
 
-static const PlanMotiveTones *node_tones(const PiecePlan *plan, NodeId node) {
+static const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     const PlanConstraint *constraint = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_MOTIVE_TONES);
     return constraint ? &constraint->params.motive_tones : NULL;
 }
 
-static const PlanNotes *node_notes(const PiecePlan *plan, NodeId node) {
+static const PlanNotes *node_notes(const Plan *plan, NodeId node) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, node, &span, 1) >= 1);
     return &plan_lane_span_payload(plan, span)->notes;
@@ -116,7 +116,7 @@ static bool same_rhythm(const PlanNote *a, const PlanNote *b, size_t count) {
 }
 
 /* The name of the idea whose melody asks for the motive node, else "". */
-static const char *idea_of(const PiecePlan *plan, NodeId motive) {
+static const char *idea_of(const Plan *plan, NodeId motive) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_node_kind(plan, id) != PLAN_NODE_IDEA) {
             continue;
@@ -137,8 +137,8 @@ static const char *idea_of(const PiecePlan *plan, NodeId motive) {
     return "";
 }
 
-static void check_node(const PiecePlan *plan, NodeId node, const PlanMotiveRef *ref, const Motive *basic,
-                       const AnalysisKey *key, const PlanMeter *meter, size_t *seen) {
+static void check_node(const Plan *plan, NodeId node, const PlanMotiveRef *ref, const Motive *basic,
+                       const SpelledKey *key, const PlanMeter *meter, size_t *seen) {
     const PlanNotes *notes = node_notes(plan, node);
     const PlanNotes *source = node_notes(plan, ref->motive);
     const PlanMotiveTones *tones = node_tones(plan, node);
@@ -244,7 +244,7 @@ int main(void) {
     size_t nodes = 0;
     for (size_t c = 0; c < sizeof(CASES) / sizeof(CASES[0]); c++) {
         Motive motive = load_motive(CASES[c].file);
-        AnalysisKey key = motive_key(&motive);
+        SpelledKey key = motive_key(&motive);
         PlanMeter meter = motive_meter(&motive);
         for (unsigned long seed = 1; seed <= 10; seed++) {
             GrowBriefText text;
@@ -276,7 +276,7 @@ int main(void) {
                 api_grow_run_destroy(&run);
                 continue;
             }
-            const PiecePlan *plan = run.themes[0].plan;
+            const Plan *plan = run.themes[0].plan;
             for (NodeId id = 1; id <= plan_node_count(plan); id++) {
                 const PlanMotiveRef *ref = plan_node_kind(plan, id) == PLAN_NODE_MOTIVE ? node_ref(plan, id) : NULL;
                 if (ref && plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED && idea_of(plan, id)[0] != '\0') {

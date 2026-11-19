@@ -3,6 +3,8 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -218,27 +220,74 @@ int cli_style_without_add(CliStyleWithout *list, const char *name) {
     return 0;
 }
 
-void cli_print_json(const cJSON *document) {
+/* The document with 2-space indent and one space after each colon, and a final newline; NULL when out of memory. Free with free. */
+static char *pretty_text(const cJSON *document) {
     char *printed = cJSON_Print(document);
     if (!printed) {
-        return;
+        return NULL;
     }
     /* cJSON indents with tabs and puts one after each colon; the commands write 2 spaces and one space. */
-    for (const char *c = printed; *c; c++) {
-        if (*c == '\n') {
-            putchar('\n');
-            size_t tabs = 0;
-            while (c[1] == '\t') {
-                tabs++;
-                c++;
+    char *text = malloc(strlen(printed) * 2 + 2);
+    if (text) {
+        char *at = text;
+        for (const char *c = printed; *c; c++) {
+            if (*c == '\n') {
+                *at++ = '\n';
+                while (c[1] == '\t') {
+                    *at++ = ' ';
+                    *at++ = ' ';
+                    c++;
+                }
+            } else {
+                *at++ = *c == '\t' ? ' ' : *c;
             }
-            printf("%*s", (int)(tabs * 2), "");
-        } else {
-            putchar(*c == '\t' ? ' ' : *c);
         }
+        *at++ = '\n';
+        *at = '\0';
     }
-    putchar('\n');
     cJSON_free(printed);
+    return text;
+}
+
+void cli_print_json(const cJSON *document) {
+    char *text = pretty_text(document);
+    if (text) {
+        fputs(text, stdout);
+    }
+    free(text);
+}
+
+/* Writes the text to dir/name; the message names the file. */
+static int write_layer(const char *dir, const char *name, const char *text) {
+    char path[1100];
+    if (snprintf(path, sizeof path, "%s/%s", dir, name) >= (int)sizeof path || !text || !cli_write_bytes(path, text, strlen(text))) {
+        return cli_fail(CLI_EXIT_WRITE, "cannot write '%s/%s'", dir, name);
+    }
+    return 0;
+}
+
+int cli_write_layers(const char *dir, const ComposerResponse *response) {
+    char readings[1100];
+    if (snprintf(readings, sizeof readings, "%s/readings", dir) >= (int)sizeof readings ||
+        (mkdir(dir, 0755) != 0 && errno != EEXIST) || (mkdir(readings, 0755) != 0 && errno != EEXIST)) {
+        return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", dir);
+    }
+    cJSON *document = response->json ? cJSON_Parse(response->json) : NULL;
+    const cJSON *realization = cJSON_GetObjectItemCaseSensitive(document, "realization");
+    const cJSON *reading = cJSON_GetObjectItemCaseSensitive(document, "reading");
+    char *realization_text = realization ? pretty_text(realization) : NULL;
+    char *reading_text = reading ? pretty_text(reading) : NULL;
+    int status = write_layer(dir, "plan.json", response->plan_json);
+    if (status == 0) {
+        status = write_layer(dir, "realization.json", realization_text);
+    }
+    if (status == 0) {
+        status = write_layer(dir, "readings/composer.json", reading_text);
+    }
+    free(realization_text);
+    free(reading_text);
+    cJSON_Delete(document);
+    return status;
 }
 
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size) {

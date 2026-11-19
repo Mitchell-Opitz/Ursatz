@@ -7,16 +7,17 @@
 
 #include <plan/section_json.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
-#include "api_grow.h"
+#include "api_construction.h"
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "api_piece.h"
 #include "util/util.h"
 #include "api_workflow.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * The piece request (docs/piece-request.md, schema "ursatz-piece-request" version 1) as the library reads it: the brief, the
@@ -37,30 +38,6 @@ void api_piece_request_destroy(PieceSpec *request) {
     composer_style_destroy(request->style);
     form_spec_destroy(request->form);
     request->form = NULL;
-}
-
-/* "antecedent+continuation": a beginning, a plus sign and an ending (as grow --hybrid), the words of the vocabulary. */
-static bool parse_hybrid(const char *text, SectionPairing *pairing) {
-    const char *plus = strchr(text, '+');
-    if (!plus) {
-        return false;
-    }
-    size_t length = (size_t)(plus - text);
-    bool beginning_found = false;
-    bool ending_found = false;
-    for (int i = 0; API_THEME_BEGINNINGS[i].value; i++) {
-        if (strlen(API_THEME_BEGINNINGS[i].value) == length && strncmp(text, API_THEME_BEGINNINGS[i].value, length) == 0) {
-            pairing->beginning = (SectionBeginning)i;
-            beginning_found = true;
-        }
-    }
-    for (int i = 0; API_THEME_ENDINGS[i].value; i++) {
-        if (request_equals_ignore_case(plus + 1, API_THEME_ENDINGS[i].value)) {
-            pairing->ending = (SectionEnding)i;
-            ending_found = true;
-        }
-    }
-    return beginning_found && ending_found;
 }
 
 static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *fill, const char *base, ComposerError *error) {
@@ -129,7 +106,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         }
         if (section->has_into && section->into == PLAN_ARCHETYPE_HYBRID) {
             snprintf(path, sizeof path, "%s/hybrid", base);
-            if (!hybrid || !parse_hybrid(hybrid, &section->hybrid)) {
+            if (!hybrid || !api_parse_hybrid(hybrid, &section->hybrid)) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path,
                                 "section '%s': a hybrid needs \"hybrid\": \"<beginning>+<ending>\", for example "
                                 "antecedent+continuation",
@@ -182,7 +159,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         char *text = cJSON_PrintUnformatted(plan);
         PlanJsonError detail;
         memset(&detail, 0, sizeof detail);
-        PlanResult read = text ? plan_from_json_resolved(request->knowledge, text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
+        PlanResult read = text ? plan_from_json_resolved(request->knowledge, text, composer_plan_read_hooks(), &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
         cJSON_free(text);
         if (read == PLAN_ERR_ALLOC) {
             return api_fail_alloc(error);
@@ -364,7 +341,7 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         snprintf(path, sizeof path, "%s/meter", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "the %s form is in %s", request->form->label, listed);
     }
-    request->weight = (ComposerRatio){1, 1};
+    request->weight = (Rational){1, 1};
     if (style_weight && !request_parse_ratio(style_weight, &request->weight)) {
         snprintf(path, sizeof path, "%s/style_weight", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
@@ -458,20 +435,20 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         return status;
     }
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(root, "tempo");
-    request->tempo = (ComposerRatio){0, 0};
+    request->tempo = (Rational){0, 0};
     request->tempo_from = "none";
     if (tempo && !cJSON_IsNull(tempo)) {
-        request->tempo.numerator = request->export_options.tempo_numerator;
-        request->tempo.denominator = request->export_options.tempo_denominator;
+        request->tempo.num = request->export_options.tempo_numerator;
+        request->tempo.den = request->export_options.tempo_denominator;
         request->tempo_from = "option";
     } else if (composer_style_tempo(request->style, &request->tempo)) {
-        request->export_options.tempo_numerator = request->tempo.numerator;
-        request->export_options.tempo_denominator = request->tempo.denominator;
+        request->export_options.tempo_numerator = request->tempo.num;
+        request->export_options.tempo_denominator = request->tempo.den;
         request->tempo_from = "style";
     } else if (request->form && request->form->tempo > 0) {
-        request->tempo = (ComposerRatio){request->form->tempo, 1};
-        request->export_options.tempo_numerator = request->tempo.numerator;
-        request->export_options.tempo_denominator = request->tempo.denominator;
+        request->tempo = (Rational){request->form->tempo, 1};
+        request->export_options.tempo_numerator = request->tempo.num;
+        request->export_options.tempo_denominator = request->tempo.den;
         request->tempo_from = "form";
     }
     request->mode_from = "request";
@@ -489,8 +466,8 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         PlanStyle *plan_style = &request->request.style;
         memset(plan_style, 0, sizeof(*plan_style));
         snprintf(plan_style->path, sizeof(plan_style->path), "%s", request->style_path);
-        plan_style->weight_numerator = request->weight.numerator;
-        plan_style->weight_denominator = request->weight.denominator;
+        plan_style->weight_numerator = request->weight.num;
+        plan_style->weight_denominator = request->weight.den;
         for (size_t i = 0; i < request->without_count && i < PLAN_STYLE_WITHOUT_MAX; i++) {
             snprintf(plan_style->without[plan_style->without_count++], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", request->without[i]);
         }
@@ -501,7 +478,7 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
 
 /* A melodic motive of the request. */
 static ComposerStatus read_melodic(const KnowledgeSnapshot *knowledge, const char *what, const char *path, const cJSON *json, const PlanMeter *meter,
-                                   const AnalysisKey *key, Motive **out, ComposerError *error) {
+                                   const SpelledKey *key, Motive **out, ComposerError *error) {
     *out = calloc(1, sizeof(Motive));
     if (!*out) {
         return api_fail_alloc(error);
@@ -619,12 +596,6 @@ static bool read_bool(const cJSON *root, const char *base, const char *name, boo
     return false;
 }
 
-/* True when the request has the member and it is not null. */
-static bool given_member(const cJSON *root, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, name);
-    return item && !cJSON_IsNull(item);
-}
-
 /* The names of the built-in forms, joined by commas. */
 static void builtin_form_names(char *out, size_t size) {
     size_t used = 0;
@@ -639,7 +610,7 @@ static ComposerStatus read_form(PieceSpec *request, const cJSON *root, const cha
     char path[128];
     const char *name = API_PIECE_FORM;
     snprintf(path, sizeof path, "%s/form", base);
-    if (!named && given_member(root, "form")) {
+    if (!named && api_has_member(root, "form")) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "schema_version 1 is the game loop; name a form with schema_version 2");
     }
     char names[256];
@@ -803,7 +774,7 @@ static ComposerStatus check_harmony(PieceSpec *request, const char *base, Compos
         (void)piece_resolve_overlay_regions(piece, size, request->knowledge, regions, &regional, &refused, why, sizeof why);
     }
     Rational bar = {0, 1};
-    if (rational_make(piece->meter.beats_per_bar, piece->meter.beat_unit, &bar) != RATIONAL_OK) {
+    if (plan_meter_bar_length(&piece->meter, &bar) != PLAN_OK) {
         return COMPOSER_OK;
     }
     for (size_t i = 0; i < count; i++) {
@@ -812,7 +783,7 @@ static ComposerStatus check_harmony(PieceSpec *request, const char *base, Compos
             continue;
         }
         Rational length = {0, 1};
-        AnalysisKey key = piece->key;
+        SpelledKey key = piece->key;
         char path[200];
         if (request->form->request_sections) {
             if (rational_make((long long)items[i].description.beats, piece->meter.beat_unit, &length) != RATIONAL_OK) {
@@ -853,7 +824,7 @@ static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const ch
     bool has_count = false;
     bool modulate = false;
     bool present = false;
-    if (given_member(root, "voicing")) {
+    if (api_has_member(root, "voicing")) {
         snprintf(path, sizeof path, "%s/voicing", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s has no voicing to give; leave out voicing", form->label);
     }
@@ -915,7 +886,7 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
     } else {
         static const char *const SIZED[] = {"bars", "count", "modulate"};
         for (size_t i = 0; i < sizeof(SIZED) / sizeof(SIZED[0]); i++) {
-            if (given_member(root, SIZED[i])) {
+            if (api_has_member(root, SIZED[i])) {
                 snprintf(path, sizeof path, "%s/%s", base, SIZED[i]);
                 return api_fail(error, COMPOSER_ERR_REQUEST, path,
                                 "%s takes its sections from the request and has no %s; leave out %s", request->form->label,

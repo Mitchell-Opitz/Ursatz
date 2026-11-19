@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form/analysis_claim.h"
 #include "model/core/value.h"
 #include "theory/form/segmentation_rules.h"
 #include "theory/form/idea_label.h"
@@ -18,27 +17,9 @@ static double combine(double a, double b) {
     return 1.0 - (1.0 - a) * (1.0 - b);
 }
 
-static void destroy_idea(StandardFormIdea *idea) {
-    interpretation_destroy(idea->interpretation);
-    structure_destroy(idea->shell);
-    memset(idea, 0, sizeof(*idea));
-}
-
-static void destroy_subphrase(StandardFormSubphrase *subphrase) {
-    interpretation_destroy(subphrase->interpretation);
-    structure_destroy(subphrase->shell);
-    memset(subphrase, 0, sizeof(*subphrase));
-}
-
 void standard_form_segmentation_destroy(StandardFormSegmentation *segmentation) {
     if (segmentation == NULL) {
         return;
-    }
-    for (size_t i = 0; i < segmentation->idea_count; i++) {
-        destroy_idea(&segmentation->ideas[i]);
-    }
-    for (size_t i = 0; i < segmentation->subphrase_count; i++) {
-        destroy_subphrase(&segmentation->subphrases[i]);
     }
     free(segmentation->ideas);
     free(segmentation->subphrases);
@@ -86,50 +67,6 @@ static bool notes_in_measures(const StandardFormInput *input, int note_first, in
         *from = *to;
     }
     return true;
-}
-
-static StandardFormAnalysisStatus emit_idea(const StandardFormInput *input, StandardFormIdea *idea, double uncertainty) {
-    idea->uncertainty = uncertainty;
-    if (idea->claim.note_end <= idea->claim.note_first) {
-        return STANDARD_FORM_ANALYSIS_OK; /* no notes: a claim without a shell */
-    }
-    size_t count = (size_t)(idea->claim.note_end - idea->claim.note_first);
-    const char **ids = (const char **)calloc(count, sizeof(char *));
-    if (ids == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    for (size_t k = 0; k < count; k++) {
-        ids[k] = input->notes[(size_t)idea->claim.note_first + k].note_id;
-    }
-    char key[64];
-    snprintf(key, sizeof(key), "p%d-i%d", idea->claim.phrase, idea->claim.index);
-    bool ok = standard_form_analysis_emit("idea", key, ids, count, STANDARD_FORM_IDEA_CLAIM_TYPE, &idea->claim,
-                                          sizeof(idea->claim), uncertainty, &idea->shell, &idea->interpretation);
-    free(ids);
-    return ok ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-}
-
-static StandardFormAnalysisStatus emit_subphrase(const StandardFormInput *input, StandardFormSubphrase *subphrase,
-                                                 double uncertainty) {
-    subphrase->uncertainty = uncertainty;
-    if (subphrase->claim.note_end <= subphrase->claim.note_first) {
-        return STANDARD_FORM_ANALYSIS_OK;
-    }
-    size_t count = (size_t)(subphrase->claim.note_end - subphrase->claim.note_first);
-    const char **ids = (const char **)calloc(count, sizeof(char *));
-    if (ids == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    for (size_t k = 0; k < count; k++) {
-        ids[k] = input->notes[(size_t)subphrase->claim.note_first + k].note_id;
-    }
-    char key[64];
-    snprintf(key, sizeof(key), "p%d-s%d", subphrase->claim.phrase, subphrase->claim.index);
-    bool ok = standard_form_analysis_emit("subphrase", key, ids, count, STANDARD_FORM_SUBPHRASE_CLAIM_TYPE,
-                                          &subphrase->claim, sizeof(subphrase->claim), uncertainty, &subphrase->shell,
-                                          &subphrase->interpretation);
-    free(ids);
-    return ok ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
 }
 
 StandardFormAnalysisStatus standard_form_segment_ideas(const StandardFormInput *input, const StandardFormPhrases *phrases,
@@ -229,7 +166,7 @@ StandardFormAnalysisStatus standard_form_segment_ideas(const StandardFormInput *
                     claim->label = (int)IDEA_LABEL_CONTRASTING_IDEA;
                 }
             }
-            status = emit_idea(input, idea, combine(combine(phrase->uncertainty, u_similarity), penalty));
+            idea->uncertainty = combine(combine(phrase->uncertainty, u_similarity), penalty);
             found.idea_count++;
         }
         if (status != STANDARD_FORM_ANALYSIS_OK) {
@@ -254,7 +191,7 @@ StandardFormAnalysisStatus standard_form_segment_ideas(const StandardFormInput *
                 for (size_t j = 0; j < counts[s]; j++) {
                     claim->length_measures += found.ideas[first_idea + starts[s] + j].claim.length_measures;
                 }
-                status = emit_subphrase(input, subphrase, combine(phrase->uncertainty, penalty));
+                subphrase->uncertainty = combine(phrase->uncertainty, penalty);
                 found.subphrase_count++;
             }
         }

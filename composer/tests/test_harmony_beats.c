@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_embellish.h>
@@ -10,7 +10,7 @@
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_oracles.h"
 #include "support/test_knowledge.h"
 
@@ -35,7 +35,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     LaneSpanId bass;
@@ -126,8 +126,8 @@ static Fixture build(const Scenario *scenario, bool with_bass) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
@@ -393,8 +393,8 @@ static void test_off_beat_is_not_a_target(void) {
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_METER, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.material = test_materials()->major;
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
+    payload.region.material = test_materials()->major;
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");

@@ -7,27 +7,29 @@
 
 #include <theory/vocabulary/cadence_type.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
-#include "api_grow.h"
-#include "util/plan_util.h"
+#include "api_style.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /* --- the sections of a plan ------------------------------------------------------------------------ */
 
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 
-const char *api_key_name(const AnalysisKey *key, char *out, size_t size) {
-    util_key_name(analysis_key_tonic_pitch_class(key), key->material, out, size);
+const char *api_key_name(const SpelledKey *key, char *out, size_t size) {
+    util_key_name(spelled_key_tonic_pitch_class(key), key->material, out, size);
     return out;
 }
 
-size_t api_bars_in(const PiecePlan *plan, Rational length) {
+size_t api_bars_in(const Plan *plan, Rational length) {
     LaneSpanId meters[1];
     PlanSpan whole = plan_node_span(plan, plan_root(plan));
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, meters, 1) == 0) {
@@ -39,7 +41,7 @@ size_t api_bars_in(const PiecePlan *plan, Rational length) {
     return denominator > 0 ? (size_t)((numerator + denominator / 2) / denominator) : 0;
 }
 
-size_t api_plan_sections(const PiecePlan *plan, ApiSection *out, size_t capacity) {
+size_t api_plan_sections(const Plan *plan, ApiSection *out, size_t capacity) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -61,9 +63,9 @@ size_t api_plan_sections(const PiecePlan *plan, ApiSection *out, size_t capacity
             }
             for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
                 const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
-                if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+                if (constraint->kind == PLAN_CONSTRAINT_REGION) {
                     section->has_key = true;
-                    section->key = constraint->params.key;
+                    section->key = constraint->params.region;
                 }
             }
             if (described->has_cadence) {
@@ -153,9 +155,9 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
     if (!printed) {
         return api_fail_alloc(error);
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError detail;
-    PlanResult read = plan_from_json_resolved(knowledge, printed, &plan, &detail);
+    PlanResult read = plan_from_json_resolved(knowledge, printed, composer_plan_read_hooks(), &plan, &detail);
     if (read != PLAN_OK) {
         if (read == PLAN_ERR_FORMAT && looks_like_analysis_document(member)) {
             cJSON_free(printed);
@@ -171,7 +173,8 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
                         detail.path[0] ? " at " : "", detail.path);
     }
     cJSON_free(printed);
-    *text = plan_to_json(plan, &detail);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    *text = plan_to_json(plan, &producer, &detail);
     plan_destroy(plan);
     if (!*text) {
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
@@ -179,9 +182,9 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
     return COMPOSER_OK;
 }
 
-ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, PiecePlan **out, ComposerError *error) {
+ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, Plan **out, ComposerError *error) {
     PlanJsonError detail;
-    if (plan_from_json_resolved(knowledge, text, out, &detail) != PLAN_OK) {
+    if (plan_from_json_resolved(knowledge, text, composer_plan_read_hooks(), out, &detail) != PLAN_OK) {
         char path[64];
         snprintf(path, sizeof path, "/%s", name);
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
@@ -198,7 +201,8 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
     const char *explain = NULL;
     if (!api_member_bool(request, "midi", &out->midi, &present, error) ||
         !api_member_bool(request, "musicxml", &out->musicxml, &present, error) ||
-        !api_member_bool(request, "plain_midi", &out->plain_midi, &present, error)) {
+        !api_member_bool(request, "plain_midi", &out->plain_midi, &present, error) ||
+        !api_member_bool(request, "layers", &out->layers, &present, error)) {
         return COMPOSER_ERR_REQUEST;
     }
     if (workflow && (!api_member_bool(request, "record", &out->record, &present, error) ||
@@ -221,11 +225,19 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
     return api_read_tempo(request, &out->export_options, error);
 }
 
-ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out) {
+ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, cJSON *document,
+                                  ComposerResponse *out) {
     PlanJsonError plan_error;
-    out->plan_json = plan_to_json(plan, &plan_error);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    out->plan_json = plan_to_json(plan, &producer, &plan_error);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "cannot write the plan: %s", plan_error.message);
+    }
+    if (outputs->layers && document) {
+        ComposerStatus layered = api_layers_json(knowledge, plan, &outputs->export_options, document, &out->error);
+        if (layered != COMPOSER_OK) {
+            return layered;
+        }
     }
     if (!outputs->midi && !outputs->musicxml) {
         return COMPOSER_OK;
@@ -287,7 +299,7 @@ static char *record_text(const ComposeOutcome *outcome) {
     return text;
 }
 
-ComposerStatus api_record_outputs(const PiecePlan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
+ComposerStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
                                   cJSON *document, ComposerResponse *out) {
     if (outputs->record && outcome) {
         char *text = record_text(outcome);
@@ -355,7 +367,7 @@ static void heard_text(const ComposeHeard *heard, char *out, size_t size) {
     }
 }
 
-cJSON *api_heard_json(const PiecePlan *plan, const ComposeOutcome *outcome) {
+cJSON *api_heard_json(const Plan *plan, const ComposeOutcome *outcome) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     count = count > API_MAX_SECTIONS ? API_MAX_SECTIONS : count;
@@ -404,7 +416,7 @@ static const char *given_lane_name(const GivenReport *run) {
 }
 
 /* The bar of its section a run starts in, from 1. */
-static size_t given_bar(const PiecePlan *plan, const GivenReport *run) {
+static size_t given_bar(const Plan *plan, const GivenReport *run) {
     Rational offset;
     PlanSpan section = plan_node_span(plan, run->owner);
     if (rational_sub(run->span.start, section.start, &offset) != RATIONAL_OK) {
@@ -413,7 +425,7 @@ static size_t given_bar(const PiecePlan *plan, const GivenReport *run) {
     return api_bars_in(plan, offset) + 1;
 }
 
-static cJSON *given_json(const PiecePlan *plan, const ApiSection *sections, size_t section_count, const ApiGivenRuns *given) {
+static cJSON *given_json(const Plan *plan, const ApiSection *sections, size_t section_count, const ApiGivenRuns *given) {
     cJSON *object = cJSON_CreateObject();
     cJSON *runs = cJSON_CreateArray();
     bool ok = object && runs && cJSON_AddBoolToObject(object, "unchanged", given->unchanged);
@@ -440,7 +452,7 @@ static cJSON *given_json(const PiecePlan *plan, const ApiSection *sections, size
     return object;
 }
 
-cJSON *api_compose_document(const PiecePlan *plan, unsigned long seed, bool realized, const ComposeOutcome *outcome,
+cJSON *api_compose_document(const Plan *plan, unsigned long seed, bool realized, const ComposeOutcome *outcome,
                             const ApiGivenRuns *given, cJSON *extra) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
@@ -538,7 +550,7 @@ static bool add_open(cJSON *list, const char *what, const char *reason) {
     return true;
 }
 
-ComposerStatus api_compose_stuck(const PiecePlan *plan, const ComposeOutcome *outcome, unsigned long first,
+ComposerStatus api_compose_stuck(const Plan *plan, const ComposeOutcome *outcome, unsigned long first,
                                  unsigned long last, ComposerResponse *out) {
     cJSON *document = cJSON_CreateObject();
     cJSON *stuck = cJSON_CreateObject();

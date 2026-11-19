@@ -8,7 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_target.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/preferences.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/regenerate.h>
@@ -72,7 +72,7 @@ ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value);
 bool api_member_string(const cJSON *object, const char *name, const char **out, bool *present, ComposerError *error);
 bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *present, ComposerError *error);
 /* A whole number, or a string "3/2" (request_parse_ratio). */
-bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *out, bool *present, ComposerError *error);
+bool api_member_rational(const cJSON *object, const char *name, Rational *out, bool *present, ComposerError *error);
 /*
  * A whole number from minimum to maximum, given as a JSON number or as a string of digits ("3"). A value that is not one
  * is refused with the message "<name> must be a whole number from <minimum> to <maximum>, not '<value>'".
@@ -134,7 +134,7 @@ ComposerStatus api_read_motive_extras(const cJSON *object, const char *base, con
  * COMPOSER_ERR_REQUEST naming the member.
  */
 ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
-                                       const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error);
+                                       const PlanMeter *meter, const SpelledKey *key, Motive *out, ComposerError *error);
 /* The GROW_FUNCTION_* bits a form's "functions" list names. */
 ComposerStatus api_read_functions(const char *what, const char *base, const cJSON *functions, unsigned *out,
                                   ComposerError *error);
@@ -155,10 +155,22 @@ const char *api_lane_label(PlanLaneKind lane);
  * The targets under node: the node itself, or with a lane every span of it under the node (all the voices for inner), into
  * a new array the caller frees. COMPOSER_ERR_UNSATISFIABLE when the node has no span of the lane.
  */
-ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
+ComposerStatus api_lane_targets(const Plan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
                                 size_t *count, ComposerError *error);
 /* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
 ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);
+
+/* The first node of the plan with the name, or PLAN_NODE_NONE. */
+NodeId api_find_node(const Plan *plan, const char *name);
+
+/* A number written with %g and read back, so a double in a result has no float noise. */
+cJSON *api_number_g(double value);
+
+/* A rational as a number (num / den), for a tempo or a density in a result. */
+cJSON *api_ratio_number(const Rational *ratio);
+
+/* True when the object has the member and it is not null. */
+bool api_has_member(const cJSON *object, const char *name);
 
 /* --- the outputs a theme or grow request asks for ---------------------------------------------------- */
 
@@ -166,11 +178,20 @@ typedef struct {
     bool midi;
     bool musicxml;
     bool plans;
+    bool layers; /* the realization and the reading of the first plan, in "realization" and "reading" */
     int explain; /* 0 none, 1 text, 2 json */
     PlanExportOptions export_options;
 } ApiOutputOptions;
 
-/* "midi", "musicxml", "plain_midi", "plans" and "explain" ("text" or "json"). */
+/*
+ * Adds "realization" (the work of the plan as the MIDI and MusicXML are written from it, realization.v1) and "reading" (the Composer's
+ * hearing of the plan over that work, reading.v1, its target the realization's digest) to document. COMPOSER_ERR_UNSATISFIABLE when the plan
+ * cannot be rendered or heard, COMPOSER_ERR_ALLOC when out of memory.
+ */
+ComposerStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *plan, const PlanExportOptions *options, cJSON *document,
+                               ComposerError *error);
+
+/* "midi", "musicxml", "plain_midi", "plans", "layers" and "explain" ("text" or "json"). */
 ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error);
 
 /* --- reading a request without running it (composer_api_validate) --------------------------------------- */

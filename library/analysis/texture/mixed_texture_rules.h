@@ -5,8 +5,7 @@
 #include <stddef.h>
 
 #include "model/identity/entity_id.h"
-#include "model/interpretation/texture.h"
-#include "analysis/texture/texture_rules.h"
+#include "theory/vocabulary/texture_rules.h"
 
 /*
  * Mixed texture rules for standard-texture-v1. Most musical works do not
@@ -24,13 +23,9 @@
  *             accompaniment is a change of texture but not of category
  *             (both are homophony); the rules count changes either way.
  *             A work is mixed when its texture changes by category
- *   LABEL     a segment's texture, as a Texture
- *             (src/interpretation/texture.h), is labeled with the
- *             texture's name
  *
  * No container type is added for a work's texture history: the list is
- * what a caller keeps, the same way key and chord results are lists of
- * the interpretations themselves.
+ * what a caller keeps.
  */
 
 typedef struct {

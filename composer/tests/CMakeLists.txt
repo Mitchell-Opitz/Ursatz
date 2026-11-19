@@ -26,8 +26,12 @@ ursatz_test(test_composer_movement LIBS ursatz_composer composer_test_support
 ursatz_test(test_plan_note_ids LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
 
+ursatz_test(test_plan_clone LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
+
 ursatz_test(test_plan_json LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    PLAN_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/library/plan/tests/fixtures"
     COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     PROPERTIES FIXTURES_SETUP plan_files_written RESOURCE_LOCK plan_json_files)
 
@@ -42,7 +46,7 @@ endif()
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v5.schema.json
+                     -DSCHEMA=${CMAKE_SOURCE_DIR}/library/plan/schema/plan.v6.schema.json
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake
@@ -61,16 +65,15 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema)
 endif()
 
-ursatz_test(test_render_plan LIBS ursatz_composer DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
+ursatz_test(test_render_plan LIBS ursatz_composer composer_test_support DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_render_plan ursatz-composer)
 
-ursatz_test(test_fill_loop LIBS ursatz_composer)
+ursatz_test(test_fill_loop LIBS ursatz_composer composer_test_support)
 
 ursatz_test(test_candidate LIBS ursatz_composer)
 
 ursatz_test(test_generation_record LIBS ursatz_composer)
 
-ursatz_test(test_lane_resize LIBS ursatz_composer)
 
 ursatz_test(test_harmony_phrase LIBS ursatz_composer)
 
@@ -100,7 +103,7 @@ ursatz_test(test_motive_meter LIBS ursatz_composer cjson INCLUDES ${PROJECT_SOUR
 
 ursatz_test(test_motive_segments LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-ursatz_test(test_motive_develop LIBS ursatz_composer)
+ursatz_test(test_motive_develop LIBS ursatz_composer composer_test_support)
 
 ursatz_test(test_develop_cli LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
@@ -118,6 +121,10 @@ ursatz_test(test_motif_preferences LIBS ursatz_composer composer_test_support cj
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_form_hear LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+# The readings a hearing makes of a span (R-633).
+ursatz_test(test_hearing_reading LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_harmony_prolong LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
@@ -197,7 +204,7 @@ ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS sm
 # skipped.
 ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard PROPERTIES WILL_FAIL TRUE)
 
-ursatz_test(test_voicing LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_voicing LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test_executable(test_voicing_heard LIBS ursatz_composer composer_test_support)
 ursatz_test(test_voicing_heard_chorale TARGET test_voicing_heard ARGS chorale)
@@ -385,7 +392,7 @@ endif()
 
 # Variations and harmonizations (docs/regenerate.md). Each mode is one ctest entry; the sweep is slow and CI leaves it
 # out (ctest -LE slow), its smoke test is the sweep on seeds 1 and 2. The cli test runs the commands as processes.
-ursatz_test_executable(test_variations LIBS ursatz_composer)
+ursatz_test_executable(test_variations LIBS ursatz_composer composer_test_support)
 foreach(mode distinct refused harmonize sweep_smoke sweep)
     set(labels)
     if(mode STREQUAL "sweep")
@@ -557,6 +564,19 @@ ursatz_test(test_api_theme TARGET test_api_theme ARGS responses WORKING_DIRECTOR
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+# The layers of a composed result (R-634): a theme request with "layers" returns the realization and the reading.
+ursatz_test(test_api_layers LIBS ursatz_composer composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+
+ursatz_test(cli_layers COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_layers
+                     -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json
+                     -DREADING_SCHEMA=${CMAKE_SOURCE_DIR}/library/reading/schema/reading.v1.schema.json
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_layers.cmake)
+
 ursatz_test(test_api_validate LIBS ursatz_composer composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -604,7 +624,7 @@ ursatz_test(test_api_vocabulary LIBS ursatz_composer composer_test_support cjson
 ursatz_test(test_api_forms LIBS ursatz_composer composer_test_support cjson
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written)
 
-ursatz_test(test_job_cancel LIBS ursatz_composer)
+ursatz_test(test_job_cancel LIBS ursatz_composer composer_test_support)
 
 if(URSATZ_VALGRIND)
     # The valgrind runs do not set up the api_responses_written fixture (see test_plan_json_valgrind).
@@ -635,6 +655,8 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
+                     -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json
+                     -DREADING_SCHEMA=${CMAKE_SOURCE_DIR}/library/reading/schema/reading.v1.schema.json
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED api_responses_written)

@@ -18,10 +18,4 @@ const AnalysisChain *analyzer_result_run_chain(const AnalyzerResult *result);
 /* The snapshot the analysis read its materials from (the options knowledge). */
 const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result);
 
-/* True when every chain stage ran, so the report view is complete and can be exported. */
-bool analyzer_result_report_complete(const AnalyzerResult *result);
-
-/* Moves the report out into *report (the caller releases it with chain_result_destroy); the result keeps an empty one. */
-bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report);
-
 #endif

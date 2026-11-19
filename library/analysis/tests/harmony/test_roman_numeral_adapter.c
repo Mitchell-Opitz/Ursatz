@@ -3,7 +3,6 @@
 #include "analysis/tests/harmony/adapter_test_util.h"
 #include "analysis/harmony/applied_chords.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
-#include "interpretation_test_access.h"
 #include "test_knowledge.h"
 
 /* Roman numeral Interpretations per chord segment, in the segment's local key. */
@@ -148,14 +147,14 @@ static void test_key_boundary_switches_the_numeral_key(void) {
     expect_label(chord_in(7, 7, ADAPTER_MAJOR_TRIAD, 3, 7, C_MAJOR), "I");
 
     /* Through the builder: two segments, a region boundary between them. */
-    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
-    Key *g_major = adapter_test_key("G major", 7, COMMON_PRACTICE_KEY_MAJOR);
+    KeyStructure c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
+    KeyStructure g_major = adapter_test_key("G major", 7, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     MusicalTime two = adapter_test_time(2, 1);
     MusicalTime one = adapter_test_time(1, 1);
     MusicalTime three = adapter_test_time(3, 1);
     StandardTonalityKeyRegionInput regions[2] = {{c_major, zero, 0.0}, {g_major, two, 0.0}};
-    Chord *g_chord = adapter_test_chord("g", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
+    ChordCandidate *g_chord = adapter_test_chord("g", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
     StandardTonalitySegmentInput segments[2] = {{"before", one, g_chord, NULL}, {"after", three, g_chord, NULL}};
 
     StandardTonalityChordInput *inputs = NULL;
@@ -171,13 +170,11 @@ static void test_key_boundary_switches_the_numeral_key(void) {
     assert(results[1].has_numeral && strcmp(results[1].claim.label, "I") == 0);
     standard_tonality_roman_results_destroy(results, count);
     standard_tonality_chord_inputs_destroy(inputs);
-    chord_destroy(g_chord);
-    key_destroy(c_major);
-    key_destroy(g_major);
+    free(g_chord);
 }
 
 static void test_no_match_segment_gives_no_numeral(void) {
-    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
+    KeyStructure c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     StandardTonalityKeyRegionInput regions[1] = {{c_major, zero, 0.0}};
     StandardTonalitySegmentInput segments[1] = {{"unmatched", zero, NULL, NULL}};
@@ -190,14 +187,13 @@ static void test_no_match_segment_gives_no_numeral(void) {
     }
     StandardTonalityRomanResult *results = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(inputs, count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
-    assert(count == 1 && !results[0].has_numeral && results[0].interpretation == NULL);
+    assert(count == 1 && !results[0].has_numeral);
     assert(strcmp(results[0].segment_id, "unmatched") == 0);
     standard_tonality_roman_results_destroy(results, count);
     standard_tonality_chord_inputs_destroy(inputs);
-    key_destroy(c_major);
 }
 
-static void test_interpretation_and_uncertainty(void) {
+static void test_numeral_and_uncertainty(void) {
     StandardTonalityChordInput input = chord_in(7, 11, ADAPTER_DOMINANT_SEVENTH, 4, 0, C_MAJOR);
     input.segment_id = "sonority-12";
     input.chord_uncertainty = 0.2;
@@ -209,14 +205,7 @@ static void test_interpretation_and_uncertainty(void) {
     /* 1 - (1 - 0.2)(1 - 0.5) = 0.6 */
     assert(fabs(results[0].uncertainty - 0.6) < 1e-9);
 
-    const Interpretation *interpretation = results[0].interpretation;
-    assert(interpretation != NULL);
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "sonority-12") == 0);
-    assert(interpretation_framework_reference(interpretation) != NULL);
-    const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_SCALAR_CONFIDENCE);
-    assert(uncertainty_scalar_confidence_numerator(uncertainty) == 400000UL);
-    assert(uncertainty_scalar_confidence_denominator(uncertainty) == 1000000UL);
+    assert(strcmp(results[0].segment_id, "sonority-12") == 0);
     standard_tonality_roman_results_destroy(results, 1);
 
     /* Either source of uncertainty alone carries through; none gives full confidence. */
@@ -239,7 +228,7 @@ int main(void) {
     test_identified_applied_chords_read_directly();
     test_key_boundary_switches_the_numeral_key();
     test_no_match_segment_gives_no_numeral();
-    test_interpretation_and_uncertainty();
+    test_numeral_and_uncertainty();
     printf("standard-tonality roman numeral adapter: all tests passed\n");
     return 0;
 }

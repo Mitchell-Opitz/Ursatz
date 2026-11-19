@@ -9,6 +9,27 @@ GUI and corpus statistics read. The JSON Schema is
 `<ursatz_analyzer/analysis_document.h>`. The document is an export of an `AnalyzerResult`
 (see [analysis-result.md](analysis-result.md)).
 
+## Where it comes from
+
+The document is an export of the Analyzer's reading (R-631). `analysis_document_build_from_reading(path, reading, score, knowledge, &out)` takes the reading `analyzer_result_reading` gives; its detail is the chain the result ran. The keys, chords, cadences, phrases, themes, form and motives sections walk the reading's claims of that kind (regions, cadences, the groups of kind phrase, theme and section, the occurrence that opens each motive family) and print each claim's element of the chain's result, in the result's order. The chords section prints every chord entry of the chain, so an entry the chain read as "no match", which has no chord claim, keeps its place; every other area reads the chain's result itself. A reading with no detail (one read from a file) or from a chain that did not run every stage is `ANALYZER_ERR_ARGUMENT`. The text is byte for byte what the report form gave (P62 B10: `test_document_bytes_smoke` pins the text of Bach 114, `test_document_snapshots` the five pieces).
+
+## The code
+
+`src/export/` builds it in `document_*.c` files by area, with `analysis_document_internal.h` declaring `DocBuild` (the state of one build, holding the reading), the shared helpers (`doc_*`) and each area's top function (`doc_keys_json`, `doc_chords_json`, ...):
+
+| File | Areas |
+| --- | --- |
+| `analysis_document.c` | the assembly (`document_json`), the public API and the output file name |
+| `document_shared.c` | constants, rational time, the shape of a claim, the meter, the metadata and the input, and the helpers more than one area uses |
+| `document_keys.c` | key regions, the home key, tonicizations, modulations, pivot chords and the notes on the analysis |
+| `document_chords.c` | chords, non-chord tones and the chord vocabulary |
+| `document_harmony.c` | cadences, prolongations, progressions, harmonic rhythm and the outer voices |
+| `document_form.c` | phrases, themes, the form plan and repeats |
+| `document_motive.c` | motives and the melody |
+| `document_rhythm.c` | rhythm and meter, and texture |
+| `document_voice_leading.c` | markings, voice leading, schemas and sequences |
+| `document_print.c` | the pretty printer |
+
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same input and build always give the same bytes.
 

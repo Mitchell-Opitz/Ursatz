@@ -10,13 +10,13 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 
 #include "api_workflow.h"
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* `develop` as a composer API entry (docs/cli-develop.md): motives related to one motive, best first. */
 
@@ -202,7 +202,7 @@ static void motive_text(const Motive *motive, char *out, size_t size) {
 
 /* A plan that holds the source Given, then an open motive node after it that asks for the development. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId source;
     NodeId target;
 } Scene;
@@ -215,7 +215,8 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     }
     /* The development begins on the barline after the source, and has room for a long augmentation. */
     Rational bar;
-    rational_make(motive_meter(source).beats_per_bar, (long long)motive_meter(source).beat_unit, &bar);
+    PlanMeter source_meter = motive_meter(source);
+    plan_meter_bar_length(&source_meter, &bar);
     long bars = (source->length.num * (long)bar.den + (long)source->length.den * bar.num - 1) /
                 ((long)source->length.den * bar.num);
     Rational start;
@@ -244,8 +245,8 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     ok = ok && plan_add_lane_span(scene->plan, idea, PLAN_LANE_METER, 0, all, &payload, &lane) == PLAN_OK &&
          plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
     if (ok && source->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
-        payload.key = motive_key(source);
-        ok = plan_add_lane_span(scene->plan, idea, PLAN_LANE_KEY, 0, all, &payload, &lane) == PLAN_OK &&
+        payload.region = motive_key(source);
+        ok = plan_add_lane_span(scene->plan, idea, PLAN_LANE_REGION, 0, all, &payload, &lane) == PLAN_OK &&
              plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
     }
     PlanConstraint constraint;
@@ -479,11 +480,10 @@ static ComposerStatus read_flags(const cJSON *request, Flags *flags, char (*buff
 }
 
 /* The notes written on the target once suggestion index is applied to a copy of the plan. */
-static bool suggestion_motive(const KnowledgeSnapshot *knowledge, const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
+static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
                               Motive *out) {
-    char *json = plan_to_json(scene->plan, NULL);
-    PiecePlan *copy = NULL;
-    bool ok = json && plan_from_json(knowledge, json, &copy, NULL) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
+    Plan *copy = NULL;
+    bool ok = plan_clone(scene->plan, &copy) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
     LaneSpanId ids[4];
     if (ok && plan_node_lane_spans(copy, scene->target, ids, 4) == 1) {
         const PlanLanePayload *payload = plan_lane_span_payload(copy, ids[0]);
@@ -494,19 +494,18 @@ static bool suggestion_motive(const KnowledgeSnapshot *knowledge, const Scene *s
     } else {
         ok = false;
     }
-    free(json);
     plan_destroy(copy);
     return ok;
 }
 
 /* The files of the best candidate: the source and that candidate applied to the plan. */
 static ComposerStatus render_best(const KnowledgeSnapshot *knowledge, Scene *scene, const FillSuggestions *suggestions,
-                                  const ApiOutputs *outputs, ComposerResponse *out) {
+                                  const ApiOutputs *outputs, cJSON *document, ComposerResponse *out) {
     FillResult applied = fill_apply_suggestion(scene->plan, suggestions, 0);
     if (applied != FILL_OK) {
         return api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot build the plan to write (fill result %d)", (int)applied);
     }
-    return api_render_outputs(knowledge, scene->plan, outputs, out);
+    return api_render_outputs(knowledge, scene->plan, outputs, document, out);
 }
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
@@ -634,7 +633,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
             for (size_t i = 0; status == COMPOSER_OK && i < count; i++) {
                 const Candidate *candidate = candidate_set_candidate_at(set, i);
                 Motive development;
-                if (!suggestion_motive(context->knowledge, &scene, suggestions, i, &source, &development)) {
+                if (!suggestion_motive(&scene, suggestions, i, &source, &development)) {
                     status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot read candidate %zu", i + 1);
                     break;
                 }
@@ -650,8 +649,8 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
                     status = api_fail_alloc(&out->error);
                 }
             }
-            if (status == COMPOSER_OK && (outputs.midi || outputs.musicxml)) {
-                status = render_best(context->knowledge, &scene, suggestions, &outputs, out);
+            if (status == COMPOSER_OK && (outputs.midi || outputs.musicxml || outputs.layers)) {
+                status = render_best(context->knowledge, &scene, suggestions, &outputs, document, out);
             }
             if (status == COMPOSER_OK) {
                 status = api_respond_json(out, document);

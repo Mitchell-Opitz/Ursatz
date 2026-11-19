@@ -112,6 +112,9 @@ static void expect_plan(const char *plan_text, const char *snapshot) {
         cJSON *metadata = cJSON_GetObjectItemCaseSensitive(both[i], "metadata");
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "composer_version");
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "ursatz_commit");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_version");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_key");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "composition_key");
     }
     cJSON *actual = normalized(left);
     if (!cJSON_Compare(actual, right, true)) {

@@ -24,16 +24,13 @@
  * was computed in). UNCLASSIFIED is also the status of a note L2.5 did not cover (a melody note shorter than a segment, or
  * in a segment with no chord): the adapter never guesses a label for it.
  *
- * One claim per note (a Structure shell of the note id and an Interpretation targeting it): FrameworkReference
- * standard-counterpoint, claim = a StandardCounterpointNctClaim holding the status, the type, and the reference copied
+ * One claim per note: a StandardCounterpointNctClaim holding the status, the type, and the reference copied
  * as given. uncertainty = 1 - the note's confidence (the labelling itself is the source's; it is not re-weighed).
  *
  * Per span (as in analysis_melody.h; the whole line by default), a count claim: the notes, the chord tones, the unclassified
  * notes and the non-chord tones by NonChordTone type.
  */
 
-#define STANDARD_COUNTERPOINT_NCT_CLAIM_TYPE "standard-counterpoint/melodic-nct"
-#define STANDARD_COUNTERPOINT_NCT_COUNTS_CLAIM_TYPE "standard-counterpoint/nct-counts"
 #define STANDARD_COUNTERPOINT_NCT_REF_SIZE 128
 
 typedef struct {
@@ -47,8 +44,6 @@ typedef struct {
 typedef struct {
     StandardCounterpointNctClaim claim;
     double uncertainty;
-    Structure *shell;               /* owned: the note id */
-    Interpretation *interpretation; /* owned */
 } StandardCounterpointNctLabel;
 
 typedef struct {
@@ -87,8 +82,6 @@ typedef struct {
     char span_id[64];
     StandardCounterpointNctCountsClaim claim;
     double uncertainty; /* 1 - the least note confidence in the span */
-    Structure *shell;
-    Interpretation *interpretation;
 } StandardCounterpointNctCounts;
 
 typedef struct {

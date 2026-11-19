@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/meter/meter_analysis_claim.h"
 #include "analysis/meter/meter_analysis_position.h"
 #include "theory/meter/syncopation_rules.h"
 #include "model/time/meter_arithmetic.h"
@@ -143,15 +142,6 @@ static StandardMeterAnalysisStatus detect_stream(const StandardMeterInput *input
             continue;
         }
         result->uncertainty = item->snapped ? 0.1 : 0.0;
-        char interpretation_id[200];
-        snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-syncopation-%s%s", note->note_id,
-                 all_notes ? "-all" : "");
-        result->interpretation = standard_meter_analysis_interpretation(interpretation_id, note->note_id,
-                                                                        STANDARD_METER_SYNCOPATION_CLAIM_TYPE, claim,
-                                                                        sizeof(*claim), result->uncertainty, "syncopation");
-        if (result->interpretation == NULL) {
-            return STANDARD_METER_ANALYSIS_ERR_ALLOC;
-        }
         (*result_count)++;
     }
     return STANDARD_METER_ANALYSIS_OK;
@@ -241,9 +231,6 @@ StandardMeterAnalysisStatus standard_meter_find_syncopations(const StandardMeter
 void standard_meter_syncopations_destroy(StandardMeterSyncopations *syncopations) {
     if (syncopations == NULL) {
         return;
-    }
-    for (size_t i = 0; i < syncopations->count; i++) {
-        interpretation_destroy(syncopations->items[i].interpretation);
     }
     free(syncopations->items);
     syncopations->items = NULL;

@@ -244,7 +244,7 @@ static bool analyze(const char *path, Analysis *analysis) {
 }
 
 static void analysis_destroy(Analysis *analysis) {
-    chain_result_destroy(&analysis->report);
+    test_release_report(&analysis->report);
     imported_score_destroy(&analysis->notes);
 }
 

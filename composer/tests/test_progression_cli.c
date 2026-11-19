@@ -12,7 +12,7 @@
 
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "support/test_oracles.h"
@@ -85,14 +85,14 @@ static unsigned long printed_seed(const char *out_file) {
     return seed;
 }
 
-static PiecePlan *read_plan(const char *path) {
-    PiecePlan *plan = NULL;
+static Plan *read_plan(const char *path) {
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
 }
 
-static size_t bass_note_count(const PiecePlan *plan, PlanSpan phrase) {
+static size_t bass_note_count(const Plan *plan, PlanSpan phrase) {
     LaneSpanId ids[64];
     size_t count = plan_lane_find(plan, PLAN_LANE_BASS, 0, phrase, ids, 64);
     size_t notes = 0;
@@ -104,8 +104,8 @@ static size_t bass_note_count(const PiecePlan *plan, PlanSpan phrase) {
 
 /* The plan in the file ends in the cadence asked for (as the framework's recognizer hears it), its harmony passes
    standard-harmony and, with a bass, its bass passes the melodic rules. */
-static PiecePlan *check_plan(const char *path, const Combination *combination, bool bass) {
-    PiecePlan *plan = read_plan(path);
+static Plan *check_plan(const char *path, const Combination *combination, bool bass) {
+    Plan *plan = read_plan(path);
     PlanSpan phrase = plan_node_span(plan, plan_root(plan));
     CadenceType heard;
     bool at_end;
@@ -115,7 +115,7 @@ static PiecePlan *check_plan(const char *path, const Combination *combination, b
     assert(harmony_check_lane(plan, phrase, combination->mode, combination->cadence_type, &violation));
     assert(violation == NULL);
     if (bass) {
-        AnalysisKey key = test_key_mode(combination->tonic, combination->mode);
+        SpelledKey key = test_key_mode(combination->tonic, combination->mode);
         violation = "unread";
         assert(harmony_check_bass(plan, phrase, key, NULL, &violation));
         assert(violation == NULL);
@@ -136,7 +136,7 @@ static void test_combinations(void) {
         assert(contains("cli_out.txt", "seed "));
         assert(contains("cli_out.txt", "bar  beat chord"));
         assert(contains("cli_out.txt", "wrote cli_plan.json"));
-        PiecePlan *plan = check_plan("cli_plan.json", combination, true);
+        Plan *plan = check_plan("cli_plan.json", combination, true);
         plan_destroy(plan);
     }
 }
@@ -190,7 +190,7 @@ static void test_embellish_levels(void) {
                      "--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --seed %d --embellish %s --out cli_level.json",
                      seed, LEVELS[level]);
             assert(run(arguments, "cli_o.txt", "cli_e.txt") == 0);
-            PiecePlan *plan = check_plan("cli_level.json", &combination, true);
+            Plan *plan = check_plan("cli_level.json", &combination, true);
             plan_destroy(plan);
             if (level == 0) {
                 snprintf(arguments, sizeof(arguments),
@@ -214,7 +214,7 @@ static void test_no_bass_and_json_format(void) {
     assert(run("--key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 3 --no-bass --format json "
                "--out cli_nobass.json",
                "cli_json.txt", "cli_e.txt") == 0);
-    PiecePlan *plan = check_plan("cli_nobass.json", &combination, false);
+    Plan *plan = check_plan("cli_nobass.json", &combination, false);
     plan_destroy(plan);
     char *json = test_must_read_file("cli_json.txt", NULL);
     assert(json && json[0] == '{' && strstr(json, "\"seed\":3,") && strstr(json, "\"cadence\":\"PAC\"") &&
@@ -233,7 +233,7 @@ static void test_midi_and_musicxml(void) {
     assert(run("--key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 5 --embellish medium --out cli_files.json "
                "--midi cli_files.mid --musicxml cli_files.xml",
                "cli_o.txt", "cli_e.txt") == 0);
-    PiecePlan *plan = check_plan("cli_files.json", &combination, true);
+    Plan *plan = check_plan("cli_files.json", &combination, true);
     size_t notes = bass_note_count(plan, plan_node_span(plan, plan_root(plan)));
     assert(notes > 0);
     plan_destroy(plan);
@@ -335,7 +335,7 @@ static void test_help(void) {
 }
 
 /* The schema constraint of the first chord that has one, or -1. */
-static int schema_in_plan(const PiecePlan *plan) {
+static int schema_in_plan(const Plan *plan) {
     LaneSpanId ids[64];
     size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, plan_root(plan)), ids, 64);
     for (size_t i = 0; i < count; i++) {
@@ -396,7 +396,7 @@ static void test_list_schemas(void) {
         int status = run(arguments, "cli_o.txt", "cli_e.txt");
         assert(status == 0 || status == 2);
         if (status == 0) {
-            PiecePlan *plan = read_plan("cli_schema.json");
+            Plan *plan = read_plan("cli_schema.json");
             int found = schema_in_plan(plan);
             assert(found >= 0 && strcmp(galant_schema_name((GalantSchemaId)found), schemas[i]) == 0);
             plan_destroy(plan);
@@ -418,7 +418,7 @@ static void test_schema_reproducible(void) {
                 "--embellish medium --out cli_r2.json --midi cli_r2.mid";
     assert(run(arguments, "cli_r2.txt", "cli_e.txt") == 0);
     assert(same_file("cli_r1.json", "cli_r2.json") && same_file("cli_r1.mid", "cli_r2.mid"));
-    PiecePlan *plan = read_plan("cli_r1.json");
+    Plan *plan = read_plan("cli_r1.json");
     assert(schema_in_plan(plan) == GALANT_SCHEMA_ROMANESCA);
     plan_destroy(plan);
 }
@@ -438,7 +438,7 @@ static void test_sequences(void) {
             if (status == 0) {
                 /* The sequence's inverted chords have no reason of their own for the strict check, so the phrase
                    model and the cadence are checked, and the bass. */
-                PiecePlan *plan = read_plan("cli_seq.json");
+                Plan *plan = read_plan("cli_seq.json");
                 PlanSpan phrase = plan_node_span(plan, plan_root(plan));
                 CadenceType heard;
                 bool at_end;
@@ -446,7 +446,7 @@ static void test_sequences(void) {
                 assert(harmony_hear_cadence(plan, phrase, HARMONY_MODE_MINOR, CADENCE_TYPE_PERFECT_AUTHENTIC, &heard, &at_end));
                 assert(at_end && heard == CADENCE_TYPE_PERFECT_AUTHENTIC);
                 assert(harmony_check_lane_without_cadence(plan, phrase, HARMONY_MODE_MINOR, &violation) && violation == NULL);
-                AnalysisKey key = test_key(2, "minor");
+                SpelledKey key = test_key(2, "minor");
                 violation = "unread";
                 assert(harmony_check_bass(plan, phrase, key, NULL, &violation) && violation == NULL);
                 plan_destroy(plan);
@@ -469,7 +469,7 @@ static void test_suggest(void) {
     assert(contains("cli_sg.txt", "alternative 1 of 3") && contains("cli_sg.txt", "alternative 3 of 3"));
     assert(!test_file_exists("cli_sg.json") && !test_file_exists("cli_sg.mid"));
     assert(test_file_exists("cli_sg-1.json") && test_file_exists("cli_sg-3.json") && test_file_exists("cli_sg-2.mid"));
-    PiecePlan *plan = check_plan("cli_sg-1.json", &combination, true);
+    Plan *plan = check_plan("cli_sg-1.json", &combination, true);
     plan_destroy(plan);
     plan = check_plan("cli_sg-2.json", &combination, true);
     plan_destroy(plan);

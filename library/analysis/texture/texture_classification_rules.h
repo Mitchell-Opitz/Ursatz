@@ -2,7 +2,7 @@
 #define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_TEXTURE_CLASSIFICATION_RULES_H
 
 #include <stdbool.h>
-#include "analysis/texture/texture_rules.h"
+#include "theory/vocabulary/texture_rules.h"
 
 /*
  * Texture classification rules for standard-texture-v1: which of the

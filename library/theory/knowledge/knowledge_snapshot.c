@@ -7,11 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "model/core/content_hash.h"
 #include "theory/knowledge/knowledge_embedded.h"
 
 #define MATERIAL_STEP_MAX 12
-#define FNV_OFFSET 0xcbf29ce484222325ULL
-#define FNV_PRIME 0x100000001b3ULL
 #define SOURCES_SCHEMA "ursatz-knowledge-sources"
 #define USER_PREFIX "user."
 
@@ -54,14 +53,7 @@ static void fail(char *message, size_t message_size, const char *path, const cha
 }
 
 static uint64_t fnv(uint64_t hash, const char *text) {
-    for (const unsigned char *p = (const unsigned char *)text; *p != 0; p++) {
-        hash = (hash ^ *p) * FNV_PRIME;
-    }
-    return hash;
-}
-
-static void hex16(uint64_t value, char out[17]) {
-    snprintf(out, 17, "%016llx", (unsigned long long)value);
+    return content_hash_fnv1a64(hash, text, strlen(text));
 }
 
 static void slot_release(Slot *slot) {
@@ -889,7 +881,7 @@ static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entr
     slot.entry.status = status;
     slot.entry.version = version->valueint;
     slot.path = path;
-    hex16(fnv(FNV_OFFSET, text), slot.entry.hash);
+    content_hash_hex16(fnv(CONTENT_HASH_FNV1A64_OFFSET, text), slot.entry.hash);
     cJSON_free(text);
 
     KnowledgeStatus loaded = read_details(&slot, entry, path, message, message_size);
@@ -1036,14 +1028,14 @@ KnowledgeStatus knowledge_snapshot_build(const KnowledgeUserFile *user_files, si
         knowledge_snapshot_destroy(snapshot);
         return status;
     }
-    uint64_t hash = FNV_OFFSET;
+    uint64_t hash = CONTENT_HASH_FNV1A64_OFFSET;
     for (size_t i = 0; i < snapshot->count; i++) {
         hash = fnv(hash, snapshot->slots[i].entry.id);
         hash = fnv(hash, "=");
         hash = fnv(hash, snapshot->slots[i].entry.hash);
         hash = fnv(hash, "\n");
     }
-    hex16(hash, snapshot->hash);
+    content_hash_hex16(hash, snapshot->hash);
     *out = snapshot;
     return KNOWLEDGE_OK;
 }

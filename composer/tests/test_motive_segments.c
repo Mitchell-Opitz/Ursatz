@@ -13,7 +13,7 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static AnalysisKey C_MAJOR; /* made in main: a key carries the material of the knowledge snapshot */
+static SpelledKey C_MAJOR; /* made in main: a key carries the material of the knowledge snapshot */
 
 static MotiveAnalysis analyze(const char *text, const PlanMeter *meter, const MotiveOptions *extra) {
     MotiveOptions options;

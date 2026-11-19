@@ -8,8 +8,8 @@
 #include <model/time/meter_map.h>
 #include <model/time/musical_time.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * Rendering: a plan's realized lanes as Ursatz NoteEvents, ready for Ursatz's
@@ -111,7 +111,7 @@ typedef struct {
 } RenderedPlan;
 
 /* Renders plan into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
-PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out);
+PlanRenderResult plan_render(const Plan *plan, RenderedPlan *out);
 
 /* Frees everything and zeroes the struct. Safe on a zeroed struct. */
 void rendered_plan_destroy(RenderedPlan *rendered);

@@ -4,7 +4,7 @@ Core versions, vocabulary and validation entries of the Composer API. Back to th
 
 ## `composer_api_versions(out)`
 
-`json`: `{"composer_version", "api_version", "ursatz_commit", "plan_format_version"}`, the versions the
+`json`: `{"composer_version", "api_version", "ursatz_commit", "composition_key", "plan_format_version"}` (the plan format is 6, `composition_key` the key of the code that composes, both API 3.1), the versions the
 Composer was built with (the Analyzer's, and its producer key, held in `ursatz_commit` until the next versions rename it, are the ones a plan or
 an analysis is stale against). Schema: `schema/api/versions.schema.json`.
 
@@ -97,6 +97,6 @@ API 2.1 (R-599, R-601) changes the layout of the MIDI file and the MusicXML file
 | --- | --- | --- |
 | MIDI | track 0 and one track per lane voice, named `melody`, `bass`, `inner_voice_<n>`, on channels 0, 1, 2 and so on | track 0 and one track named `Piano`, a channel for each lane voice in the order they first sound, each with a program change (the piano); `plain_midi` still leaves out the names and the section markers |
 | MusicXML | one part per lane voice (`melody`, `bass`, `inner_voice_<n>`) | one part `piano` named `Piano`, of two staves when a line is on the lower staff: the melody on staff 1, the bass on staff 2, an inner voice by the mean of its notes; each note's `xml:id` is `piano-n<plan note id>` |
-| `plan` (`plan_json`) | plan format 3 | plan format 4: every note has an `id`, and a `source` and `operation` where the Composer knows one; `next_note_id` ([plan-format.md](../plan-format.md#note-ids)) |
+| `plan` (`plan_json`) | plan format 3 | plan format 4: every note has an `id`, and a `source` and `operation` where the Composer knows one; `next_note_id` ([plan-format.md](../../../library/docs/modules/plan-format.md#note-ids)) |
 
 The GUI's playback lists a part per line as before (the Analyzer reads one stream per track and channel), and its score is one piano part on a grand staff. `composer_api_versions` and the vocabulary report `"api_version":"2.1"` and `"plan_format_version":4`. The layout is documented in [export.md](../export.md).

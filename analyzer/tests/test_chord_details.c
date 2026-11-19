@@ -127,7 +127,7 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &imported, NULL) == IMPORTED_SCORE_OK);
     ChainResult report;
     assert(test_analyze_report(&imported, &report));
-    AnalysisDocument *built = analysis_document_build(path, &imported, &report, test_knowledge());
+    AnalysisDocument *built = test_build_document(path, &report);
     assert(built != NULL);
     char *json = analysis_document_to_json(built);
     assert(json != NULL);
@@ -135,7 +135,7 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     assert(analyzed.document != NULL);
     free(json);
     analysis_document_destroy(built);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&imported);
     remove(path);
     free(path);

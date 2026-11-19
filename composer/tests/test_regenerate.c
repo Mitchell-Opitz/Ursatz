@@ -7,21 +7,22 @@
 #include <sys/wait.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_record.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/regenerate.h>
 #include "check/hearing.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /* A single target regenerated: plan_regenerate_all with a list of one. */
-static RegenerateResult regenerate_one(PiecePlan *plan, FillTarget target, const ComposeConfig *config,
+static RegenerateResult regenerate_one(Plan *plan, FillTarget target, const ComposeConfig *config,
                                        ComposeOutcome *outcome) {
     return plan_regenerate_all(plan, &target, 1, config, outcome);
 }
@@ -61,7 +62,7 @@ static size_t analyzer_calls(void) {
 #define ERR "regenerate_cli_err.txt"
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId a;
     NodeId b;
     NodeId a_return;
@@ -131,8 +132,8 @@ static Piece fill(unsigned long seed) {
     return piece;
 }
 
-static char *json_of(const PiecePlan *plan) {
-    char *text = plan_to_json(plan, NULL);
+static char *json_of(const Plan *plan) {
+    char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text);
     return text;
 }
@@ -142,7 +143,7 @@ static char *json_of(const PiecePlan *plan) {
  * what they hold. Only the spans that end no later than limit (a time from the start of the plan) when limit is given: a
  * span that crosses it holds a regenerated chord, so its melody is written again.
  */
-static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKind lane, const Rational *limit) {
+static char *lane_text_before(const Plan *plan, NodeId section, PlanLaneKind lane, const Rational *limit) {
     size_t capacity = 1 << 16;
     char *text = calloc(capacity, 1);
     size_t used = 0;
@@ -176,12 +177,12 @@ static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKin
     return text;
 }
 
-static char *lane_text(const PiecePlan *plan, NodeId section, PlanLaneKind lane) {
+static char *lane_text(const Plan *plan, NodeId section, PlanLaneKind lane) {
     return lane_text_before(plan, section, lane, NULL);
 }
 
 /* Every lane of a section as text. */
-static char *section_text(const PiecePlan *plan, NodeId section) {
+static char *section_text(const Plan *plan, NodeId section) {
     PlanLaneKind lanes[4] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY, PLAN_LANE_INNER_VOICE};
     char *parts[4];
     size_t total = 1;
@@ -199,20 +200,20 @@ static char *section_text(const PiecePlan *plan, NodeId section) {
 }
 
 /* The index-th lane span (voice 0) of a lane inside a section. */
-static LaneSpanId span_in(const PiecePlan *plan, NodeId section, PlanLaneKind lane, size_t index) {
+static LaneSpanId span_in(const Plan *plan, NodeId section, PlanLaneKind lane, size_t index) {
     LaneSpanId ids[256];
     size_t found = plan_lane_find(plan, lane, 0, plan_node_span(plan, section), ids, 256);
     assert(index < found);
     return ids[index];
 }
 
-static size_t spans_in(const PiecePlan *plan, NodeId section, PlanLaneKind lane) {
+static size_t spans_in(const Plan *plan, NodeId section, PlanLaneKind lane) {
     return plan_lane_find(plan, lane, 0, plan_node_span(plan, section), NULL, 0);
 }
 
 /* The target of a kind in a piece, and the time it starts at. */
 static FillTarget pick(const Piece *piece, TargetKind kind, Rational *from) {
-    const PiecePlan *plan = piece->plan;
+    const Plan *plan = piece->plan;
     PlanLaneKind lane = kind == TARGET_HARMONY_SPAN ? PLAN_LANE_HARMONY : kind == TARGET_BASS_SPAN ? PLAN_LANE_BASS : PLAN_LANE_MELODY;
     switch (kind) {
     case TARGET_A:
@@ -242,7 +243,7 @@ static FillTarget pick(const Piece *piece, TargetKind kind, Rational *from) {
  * the target is written again with reaches back (the chords of a phrase model are written together, and the melody
  * over them with them).
  */
-static Rational rewritten_from(const PiecePlan *plan, FillTarget target, Rational from) {
+static Rational rewritten_from(const Plan *plan, FillTarget target, Rational from) {
     FillTarget *scope = NULL;
     size_t count = 0;
     assert(plan_regenerate_scope_all(plan, &target, 1, &scope, &count) == REGENERATE_OK);
@@ -266,11 +267,11 @@ static RegenerateResult regenerate_retry(Piece *piece, TargetKind kind, unsigned
     char *snapshot = json_of(piece->plan);
     RegenerateResult result = REGENERATE_ERR_STUCK;
     for (unsigned long attempt = 0; attempt < SEED_TRIES && result == REGENERATE_ERR_STUCK; attempt++) {
-        PiecePlan *fresh = NULL;
+        Plan *fresh = NULL;
         Rational from;
         Piece trial;
         ComposeConfig config = config_of(seed + attempt);
-        assert(plan_from_json(test_knowledge(), snapshot, &fresh, NULL) == PLAN_OK);
+        assert(plan_from_json(test_knowledge(), snapshot, composer_plan_read_hooks(), &fresh, NULL) == PLAN_OK);
         trial.plan = fresh;
         bind(&trial);
         compose_outcome_destroy(outcome);
@@ -288,7 +289,7 @@ static RegenerateResult regenerate_retry(Piece *piece, TargetKind kind, unsigned
 
 static int test_remove(void) {
     Piece piece = fill(1);
-    PiecePlan *plan = piece.plan;
+    Plan *plan = piece.plan;
     size_t nodes = plan_node_count(plan);
     size_t spans = plan_lane_span_count(plan);
     NodeId phrase = plan_node_child_at(plan, piece.b, 0);
@@ -350,8 +351,8 @@ static int test_remove(void) {
 
     /* The file renumbers from 1 and reads back to the same file. */
     char *text = json_of(plan);
-    PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), text, &again, NULL) == PLAN_OK);
+    Plan *again = NULL;
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     size_t live_nodes = 0;
     size_t live_spans = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -373,7 +374,7 @@ static int test_remove(void) {
 
 /* ------------------------------------------------------------ lock */
 
-static size_t count_given(const PiecePlan *plan, NodeId section, size_t *nodes, size_t *open) {
+static size_t count_given(const Plan *plan, NodeId section, size_t *nodes, size_t *open) {
     size_t spans = 0;
     *nodes = 0;
     *open = 0;
@@ -401,7 +402,7 @@ static size_t count_given(const PiecePlan *plan, NodeId section, size_t *nodes, 
 
 static int test_lock(void) {
     Piece piece = fill(1);
-    PiecePlan *plan = piece.plan;
+    Plan *plan = piece.plan;
     size_t nodes;
     size_t open;
     size_t spans = count_given(plan, piece.b, &nodes, &open);
@@ -436,7 +437,7 @@ static int test_lock(void) {
     plan_destroy(plan);
 
     /* What is still open is refused, and nothing changes: an unfilled plan has no written section. */
-    PiecePlan *unfilled = NULL;
+    Plan *unfilled = NULL;
     PieceRequest asked = request();
     assert(piece_build_plan(&asked, &unfilled) == PIECE_OK);
     NodeId first = plan_node_child_at(unfilled, plan_root(unfilled), 0);
@@ -474,7 +475,7 @@ static bool has_target(const FillTarget *list, size_t count, FillTarget target) 
 }
 
 /* Whether a target is in B: a node under it, or a lane span one owns. */
-static bool in_section(const PiecePlan *plan, FillTarget target, NodeId section) {
+static bool in_section(const Plan *plan, FillTarget target, NodeId section) {
     NodeId node = target.kind == FILL_TARGET_NODE ? (NodeId)target.id : plan_lane_span_owner(plan, (LaneSpanId)target.id);
     for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
         if (node == section) {
@@ -484,7 +485,7 @@ static bool in_section(const PiecePlan *plan, FillTarget target, NodeId section)
     return false;
 }
 
-static size_t overlapping(const PiecePlan *plan, const FillTarget *list, size_t count, PlanLaneKind lane, PlanSpan span) {
+static size_t overlapping(const Plan *plan, const FillTarget *list, size_t count, PlanLaneKind lane, PlanSpan span) {
     size_t found = 0;
     for (size_t i = 0; i < count; i++) {
         if (list[i].kind == FILL_TARGET_LANE_SPAN && plan_lane_span_lane(plan, (LaneSpanId)list[i].id) == lane) {
@@ -501,7 +502,7 @@ static size_t overlapping(const PiecePlan *plan, const FillTarget *list, size_t 
 
 static int test_dependents(void) {
     Piece piece = fill(1);
-    PiecePlan *plan = piece.plan;
+    Plan *plan = piece.plan;
     FillTarget *list = NULL;
     size_t count = 0;
 
@@ -601,7 +602,7 @@ static int test_dependents(void) {
 }
 
 /* The motive nodes the plan holds that no node or lane span names by a motive_ref: made motives a regeneration left behind. */
-static unsigned unnamed_motives(const PiecePlan *plan) {
+static unsigned unnamed_motives(const Plan *plan) {
     unsigned unnamed = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_MOTIVE) {
@@ -924,7 +925,7 @@ static int test_lanes(void) {
 
 static int test_locked(void) {
     Piece piece = fill(1);
-    PiecePlan *plan = piece.plan;
+    Plan *plan = piece.plan;
     ComposeConfig config = config_of(7);
     ComposeOutcome outcome;
     memset(&outcome, 0, sizeof(outcome));
@@ -1052,7 +1053,7 @@ static int test_determinism(void) {
             ComposeOutcome outcome;
             ComposeConfig config = config_of(9);
             memset(&outcome, 0, sizeof(outcome));
-            assert(plan_from_json(test_knowledge(), snapshot, &again.plan, NULL) == PLAN_OK);
+            assert(plan_from_json(test_knowledge(), snapshot, composer_plan_read_hooks(), &again.plan, NULL) == PLAN_OK);
             bind(&again);
             results[run] = regenerate_one(again.plan, pick(&again, KINDS[k], &from), &config, &outcome);
             assert(results[run] == REGENERATE_OK || results[run] == REGENERATE_ERR_STUCK);
@@ -1109,7 +1110,7 @@ static void expect_failure(const char *command, const char *arguments, int statu
 
 /* The text of a section of a plan file, by the child index in the form. */
 static char *file_section_text(const char *path, size_t index) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(test_read_plan_file(path, &plan, NULL) == PLAN_OK);
     char *text = section_text(plan, plan_node_child_at(plan, plan_root(plan), index));
     plan_destroy(plan);
@@ -1123,7 +1124,7 @@ static int test_cli(void) {
 
     /* lock */
     expect_success("lock", "regenerate_cli_filled.json --section A --out regenerate_cli_locked.json", "locked section A:");
-    PiecePlan *locked = NULL;
+    Plan *locked = NULL;
     assert(test_read_plan_file("regenerate_cli_locked.json", &locked, NULL) == PLAN_OK);
     assert(plan_node_state(locked, plan_node_child_at(locked, plan_root(locked), 0)) == PLAN_STATE_GIVEN);
     assert(plan_node_state(locked, plan_node_child_at(locked, plan_root(locked), 1)) == PLAN_STATE_REALIZED);

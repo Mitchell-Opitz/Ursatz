@@ -5,7 +5,6 @@
 
 #include "analysis/motive/motif_window_matching.h"
 #include "model/identity/entity_id.h"
-#include "model/relationship/relationship.h"
 
 /*
  * ThematicReturnDetection (Procedure):
@@ -15,8 +14,7 @@
  *
  * No new Structure/Occurrence type: a theme occurrence is an id and
  * its region of event ids that the caller holds; this module produces
- * Relationships only, the same "no new named type" pattern every
- * other analysis module in this pass uses.
+ * ThematicReturnPair values only (the index of the earlier and the later entry and the evidence of the match).
  *
  * Matching mechanism (requirement 3): reuses MotifWindowMatching's exact
  * Contour+RhythmicPattern comparison rule DIRECTLY, at Theme granularity
@@ -39,20 +37,10 @@
  * differs. This does not modify or duplicate MotifWindowMatching's own
  * public surface (out of scope per this branch).
  *
- * Linking mechanism: for every ordered pair of entries (earlier, later)
- * with earlier appearing before later in input order whose windows
- * match, this module builds one Relationship (source = later
- * ThemeOccurrence id, predicate "resembles", target = earlier
- * ThemeOccurrence id). "resembles" (TDD Sec77's documented predicate
- * vocabulary) is used rather than "transformed_from"
- * because thematic return is recurrence/recognition, not derivation --
- * "transformed_from" claims a transformation lineage (X was transformed
- * from Y); "resembles" claims similarity with no claimed direction of
- * derivation, the correct fit for "this later passage recalls that
- * earlier one" (requirement 1). Multiple earlier occurrences matching
- * the same later one (or vice versa) each produce their own
- * Relationship -- this module does not collapse or
- * pick a single "best" match.
+ * Pairing mechanism: for every ordered pair of entries (earlier, later) with earlier appearing before later in input order whose
+ * windows match, this module gives one ThematicReturnPair. A pair says the later passage recalls the earlier one (similarity with no
+ * claimed direction of derivation, not a transformation). Multiple earlier occurrences matching the same later one (or vice versa)
+ * each give their own pair -- this module does not collapse or pick a single "best" match.
  *
  * Where no two ThemeOccurrence windows match, this module produces no
  * output at all -- no detected thematic return is a legitimate outcome,
@@ -100,40 +88,38 @@ ThematicReturnDetectionConfig thematic_return_detection_default_config(void);
 #define THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD 0.8
 
 /*
- * The evidence of one return: the scores of the best stretch pair (see ThematicReturnDetectionConfig) and where
- * the stretches sit, as event offsets inside the earlier and the later theme's window. Carried, as a Value of type THEMATIC_RETURN_SIMILARITY_VALUE_TYPE, in the qualifiers of the
- * "resembles" Relationship (read it with value_content). similarity = lower of contour_score and rhythm_score.
+ * One return: the entries it links (indices into the entries the caller gave, earlier before later), the scores of the best stretch
+ * pair (see ThematicReturnDetectionConfig) and where the stretches sit, as event offsets inside the earlier and the later theme's
+ * window. similarity = lower of contour_score and rhythm_score.
  */
-#define THEMATIC_RETURN_SIMILARITY_VALUE_TYPE "thematic-return-similarity"
-
 typedef struct {
+    size_t earlier;
+    size_t later;
     double contour_score;
     double rhythm_score;
     double similarity;
     size_t earlier_offset;
     size_t later_offset;
     size_t window_length;
-} ThematicReturnSimilarity;
+} ThematicReturnPair;
 
 typedef enum {
-    THEMATIC_RETURN_DETECTION_REL_OK = 0,
-    THEMATIC_RETURN_DETECTION_REL_ERR_NULL_ENTRIES,
-    THEMATIC_RETURN_DETECTION_REL_ERR_NULL_ENTRY,
-    THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC
-} ThematicReturnDetectionRelationshipResult;
+    THEMATIC_RETURN_DETECTION_OK = 0,
+    THEMATIC_RETURN_DETECTION_ERR_NULL_ENTRIES,
+    THEMATIC_RETURN_DETECTION_ERR_NULL_ENTRY,
+    THEMATIC_RETURN_DETECTION_ERR_ALLOC
+} ThematicReturnDetectionResult;
 
 /*
- * Builds one Relationship (predicate "resembles", source = entries[j]'s id, target = entries[i]'s id) for every ordered pair (i, j)
- * with i < j whose windows match under the match settings of config (NULL means the defaults), in (i, j) enumeration order. Every
- * entry's theme_occurrence_id and window MUST be non-NULL. entry_count < 2 is valid and yields *out_relationships = NULL,
- * *out_relationship_count = 0. On success, *out_relationships is a freshly allocated array (caller frees with
- * thematic_return_detection_destroy_relationships).
+ * Gives one ThematicReturnPair for every ordered pair (i, j) with i < j whose windows match under the match settings of config
+ * (NULL means the defaults), in (i, j) enumeration order. Every entry's theme_occurrence_id and window MUST be non-NULL.
+ * entry_count < 2, or no match, is valid and yields *out_pairs = NULL, *out_pair_count = 0. On success *out_pairs is a freshly
+ * allocated array the caller frees with free().
  */
-ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relationships_configured(
-    const ThematicReturnDetectionEntry *entries, size_t entry_count, const ThematicReturnDetectionConfig *config,
-    Relationship ***out_relationships, size_t *out_relationship_count);
-
-/* Destroys each Relationship in relationships and the array itself. */
-void thematic_return_detection_destroy_relationships(Relationship **relationships, size_t relationship_count);
+ThematicReturnDetectionResult thematic_return_detection_build_pairs_configured(const ThematicReturnDetectionEntry *entries,
+                                                                                size_t entry_count,
+                                                                                const ThematicReturnDetectionConfig *config,
+                                                                                ThematicReturnPair **out_pairs,
+                                                                                size_t *out_pair_count);
 
 #endif

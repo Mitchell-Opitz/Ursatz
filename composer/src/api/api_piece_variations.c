@@ -5,14 +5,15 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/variations.h>
 
-#include "api_grow.h"
 #include "api_internal.h"
+#include "api_style.h"
 #include "api_piece.h"
 #include "util/util.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Variations of one section of a loop plan (docs/api.md): the section is written again from one seed after another (as a
@@ -59,7 +60,7 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
         const Variation *variation = &items[i];
         cJSON *entry = cJSON_CreateObject();
         cJSON *loop = api_piece_version_json(request, &variation->version);
-        cJSON *plan = api_piece_plan_object(variation->version.plan);
+        cJSON *plan = api_piece_plan_object(knowledge, variation->version.plan);
         ok = entry && loop && plan && cJSON_ReplaceItemInObject(loop, "plan", plan);
         if (!ok) {
             cJSON_Delete(loop && plan ? NULL : plan);
@@ -171,11 +172,11 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
     if (status == COMPOSER_OK) {
         plan_text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(root, "from"));
         edit.text = plan_text;
-        PiecePlan *original = NULL;
+        Plan *original = NULL;
         PlanJsonError plan_error;
         if (!plan_text) {
             status = api_fail_alloc(&out->error);
-        } else if (plan_from_json_resolved(context->knowledge, plan_text, &original, &plan_error) != PLAN_OK) {
+        } else if (plan_from_json_resolved(context->knowledge, plan_text, composer_plan_read_hooks(), &original, &plan_error) != PLAN_OK) {
             status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
         } else {
             original_signature = plan_signature(original);

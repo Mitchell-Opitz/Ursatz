@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/harmony/analysis_claim.h"
 #include "analysis/harmony/analysis_runs.h"
 #include "model/core/value.h"
 #include "theory/harmony/harmony_steps.h"
@@ -50,18 +49,9 @@ static int steps_of(long delta) {
     return delta < 0 ? -steps : steps;
 }
 
-static void destroy_result(HarmonyResolutionResult *result) {
-    interpretation_destroy(result->interpretation);
-    structure_destroy(result->shell);
-    memset(result, 0, sizeof(*result));
-}
-
 void harmony_resolutions_destroy(HarmonyResolutions *resolutions) {
     if (resolutions == NULL) {
         return;
-    }
-    for (size_t i = 0; i < resolutions->count; i++) {
-        destroy_result(&resolutions->items[i]);
     }
     free(resolutions->items);
     resolutions->items = NULL;
@@ -119,35 +109,6 @@ static bool emit(const ResolutionContext *ctx, HarmonyResolutionRule rule, size_
                        ? ctx->segments[from].input->uncertainty
                        : ctx->segments[to].input->uncertainty;
     result->uncertainty = 1.0 - (1.0 - (1.0 - least)) * (1.0 - chord);
-
-    const char *name = harmony_resolution_rule_name(rule);
-    char key[256];
-    snprintf(key, sizeof(key), "%s-%s-%s-v%zu", name, ctx->segments[from].input->segment.id,
-             ctx->segments[to].input->segment.id, voice);
-    char shell_id[300];
-    snprintf(shell_id, sizeof(shell_id), "standard-harmony-resolution-notes-%s", key);
-    const char *note_ids[2] = {a->note_id, b->note_id};
-    result->shell = harmony_analysis_note_group(shell_id, note_ids, 2);
-
-    HarmonyResolutionClaim claim;
-    memset(&claim, 0, sizeof(claim));
-    snprintf(claim.rule_name, sizeof(claim.rule_name), "%s", name);
-    claim.rule = (int)rule;
-    claim.voice = (int)voice;
-    claim.segment_from = (int)from;
-    claim.segment_to = (int)to;
-    claim.satisfied = satisfied;
-    char interpretation_id[340];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-harmony-resolution-%s", key);
-    if (result->shell != NULL) {
-        result->interpretation = harmony_analysis_make_interpretation(
-            interpretation_id, entity_id_value(entity_id(structure_entity(result->shell))), HARMONY_RESOLUTION_CLAIM_TYPE,
-            &claim, sizeof(claim), result->uncertainty, "resolution-adapter");
-    }
-    if (result->shell == NULL || result->interpretation == NULL) {
-        destroy_result(result);
-        return false;
-    }
     ctx->found->count++;
     return true;
 }

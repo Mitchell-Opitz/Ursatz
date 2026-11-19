@@ -1,7 +1,7 @@
 add_library(ursatz_composer STATIC
     composer.c
-    util/request_parse.c
-    util/request_chords.c
+    structure/request_parse.c
+    piece/request_chords.c
     api/api_internal.c
     api/api_versions.c
     api/api_export.c
@@ -9,7 +9,11 @@ add_library(ursatz_composer STATIC
     api/api_motive.c
     api/api_variants.c
     api/api_random.c
+    api/api_construction.c
     api/api_grow.c
+    api/api_grow_json.c
+    api/api_seed.c
+    api/api_style.c
     api/api_theme.c
     api/api_target.c
     api/api_workflow.c
@@ -19,6 +23,11 @@ add_library(ursatz_composer STATIC
     api/api_variations.c
     api/api_piece_request.c
     api/api_piece.c
+    api/api_piece_compose.c
+    api/api_piece_json.c
+    api/api_piece_output.c
+    api/api_piece_regenerate.c
+    api/api_piece_rows.c
     api/api_piece_variations.c
     api/api_progression.c
     api/api_counterpoint.c
@@ -29,27 +38,22 @@ add_library(ursatz_composer STATIC
     api/api_validate.c
     util/job.c
     util/util.c
-    util/plan_util.c
+    util/composer_json.c
+    structure/plan_util.c
     style/style.c
     style/style_blend.c
     style/style_labels.c
-    style/style_check.c
-    style/style_measure.c
-    style/corpus_seed.c
-    plan/piece_plan.c
-    plan/lanes.c
-    plan/plan_state.c
-    plan/constraint.c
-    plan/constraint_kinds.c
-    plan/plan_json.c
-    plan/plan_key_spans.c
+    check/style_check.c
+    check/style_measure.c
+    api/corpus_seed.c
     check/analyzer_check.c
     check/hearing.c
-    check/explain.c
+    check/key_hear.c
+    explain/explain.c
     render/render.c
     render/movement_build.c
     render/export.c
-    fill/fill_target.c
+    structure/fill_target.c
     fill/fill_operator.c
     fill/fill_loop.c
     fill/fill_rng.c
@@ -57,8 +61,9 @@ add_library(ursatz_composer STATIC
     fill/generation_record.c
     fill/fill_record.c
     fill/fill_suggest.c
-    fill/variations.c
+    candidates/variations.c
     harmony/harmony_roman.c
+    harmony/harmony_mask.c
     harmony/harmony_rhythm.c
     harmony/harmony_request.c
     harmony/harmony_progression.c
@@ -90,6 +95,9 @@ add_library(ursatz_composer STATIC
     motive/motive_invent.c
     motive/motive_random.c
     motive/motive_random_common.c
+    motive/motive_random_layout.c
+    motive/motive_random_pitch.c
+    motive/motive_random_rhythm.c
     motive/motive_random_segments.c
     motive/variant_registry.c
     motive/variant_chain.c
@@ -105,14 +113,19 @@ add_library(ursatz_composer STATIC
     melody/melody_realize.c
     melody/melody_fill.c
     preferences/preferences.c
-    form/form_hear.c
-    form/form_spec.c
-    form/form_builtin.c
-    form/return_hear.c
+    check/form_hear.c
+    structure/form_record.c
+    structure/form_spec.c
+    structure/form_builtin.c
+    check/return_hear.c
     grow/grow_request.c
+    grow/grow_apply.c
+    grow/grow_contrast.c
+    grow/grow_draw.c
+    grow/grow_idea.c
     grow/grow_theme.c
     grow/grow_layout.c
-    grow/theme_shape.c
+    structure/theme_shape.c
     grow/grow_develop.c
     grow/grow_fidelity.c
     grow/grow_segments.c
@@ -123,25 +136,25 @@ add_library(ursatz_composer STATIC
     grow/grow_coda.c
     grow/grow_check.c
     grow/grow_form.c
-    grow/grow_run.c
-    piece/form_return.c
-    piece/given.c
-    piece/seam.c
+    piece/grow_run.c
+    material/form_return.c
+    material/given.c
+    material/seam.c
     piece/piece_reopen.c
-    piece/seam_hear.c
-    piece/connective.c
+    harmony/seam_hear.c
+    material/connective.c
     piece/section_harmony.c
     piece/piece_perform.c
-    piece/form_vary.c
-    piece/form_figure.c
+    material/form_vary.c
+    material/form_figure.c
     piece/form_build.c
     piece/form_build_request.c
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
-    piece/compose_candidates.c
-    piece/lock.c
-    piece/depend.c
+    candidates/compose_candidates.c
+    structure/lock.c
+    structure/depend.c
     piece/regenerate.c
     texture/accompaniment.c
     texture/accompaniment_pattern.c
@@ -149,7 +162,7 @@ add_library(ursatz_composer STATIC
     texture/voicing.c
     texture/voicing_check.c
     texture/voicing_search.c
-    texture/texture_check.c
+    piece/texture_check.c
     counterpoint/counterpoint_write.c
     counterpoint/counterpoint_species.c
     counterpoint/counterpoint_check.c
@@ -170,18 +183,45 @@ add_custom_command(
     COMMENT "Embedding the form documents"
     VERBATIM)
 target_sources(ursatz_composer PRIVATE ${COMPOSER_FORM_DATA})
+# The Composer's composition key (R-626): a hash of the sources that compose a piece (the Composer's sources and forms, and the
+# library groups it is made of, with the vendored cJSON), stamped in every plan the Composer writes (composer_composition_key).
+# A change to a test, a doc or an app leaves it as it was.
+get_filename_component(URSATZ_REPO_ROOT ${PROJECT_SOURCE_DIR}/.. ABSOLUTE)
+set(composition_sources "")
+foreach(key_dir IN ITEMS composer/src library/model library/theory library/realization library/plan library/analysis library/io library/chain third_party/cjson)
+    file(GLOB_RECURSE found CONFIGURE_DEPENDS RELATIVE ${URSATZ_REPO_ROOT}
+        ${URSATZ_REPO_ROOT}/${key_dir}/*.c ${URSATZ_REPO_ROOT}/${key_dir}/*.h)
+    list(APPEND composition_sources ${found})
+endforeach()
+file(GLOB found CONFIGURE_DEPENDS RELATIVE ${URSATZ_REPO_ROOT} ${URSATZ_REPO_ROOT}/composer/forms/*.json)
+list(APPEND composition_sources ${found})
+list(FILTER composition_sources EXCLUDE REGEX "/tests/")
+list(SORT composition_sources)
+list(TRANSFORM composition_sources PREPEND "${URSATZ_REPO_ROOT}/" OUTPUT_VARIABLE composition_key_files)
+string(REPLACE ";" "\n" composition_key_text "${composition_sources}")
+set(composition_key_list ${PROJECT_BINARY_DIR}/composition_sources.txt)
+file(CONFIGURE OUTPUT ${composition_key_list} CONTENT "${composition_key_text}\n" @ONLY)
+set(composition_key_header ${PROJECT_BINARY_DIR}/composer_generated/composer/composition_key.h)
+add_custom_command(
+    OUTPUT ${composition_key_header}
+    COMMAND ${CMAKE_COMMAND} -DROOT=${URSATZ_REPO_ROOT} -DLIST=${composition_key_list} -DOUT=${composition_key_header}
+            -DMACRO=URSATZ_COMPOSER_COMPOSITION_KEY -P ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
+    DEPENDS ${composition_key_files} ${composition_key_list} ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
+    COMMENT "Computing the Composer composition key"
+    VERBATIM)
+target_sources(ursatz_composer PRIVATE ${composition_key_header})
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/composer_generated
 )
 target_link_libraries(ursatz_composer
-    PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_chain cjson
+    PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_reading ursatz_analysis ursatz_chain cjson
 )
 # The tests reach the internal headers and the libraries the sources use; no consumer does.
 add_library(ursatz_composer_internal INTERFACE)
-target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz_composer_internal INTERFACE
-    ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_chain cjson
+    ursatz_io ursatz_realization ursatz_plan ursatz_reading ursatz_analysis ursatz_chain cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"

@@ -1,9 +1,7 @@
 #include <math.h>
 
 #include "analysis/counterpoint/analysis_melody.h"
-#include "model/core/framework_reference.h"
 #include "analysis/tests/counterpoint/melody_test_util.h"
-#include "interpretation_test_access.h"
 #include "semantics_test_access.h"
 
 /* Melodic intervals and contour of one line: directions and sizes the adapter computes, rests that break the chain, the
@@ -41,18 +39,14 @@ static void test_a_stepwise_scale_has_no_leaps_and_rises(void) {
     test_melody_destroy(&m);
 }
 
-static void test_the_interpretation_follows_the_claim_pattern(void) {
+static void test_the_claim_carries_the_measures(void) {
     const int pitches[] = {60, 67};
     TestMelody m;
     test_melody_make(&m, pitches, 2);
     StandardCounterpointMelodicIntervals intervals = intervals_of(&m);
     assert(intervals.count == 1);
     const StandardCounterpointMelodicInterval *item = &intervals.items[0];
-    assert(structure_event_id_count(item->shell) == 2);
-    assert(strcmp(entity_id_value(interpretation_target_id(item->interpretation)),
-                  entity_id_value(entity_id(structure_entity(item->shell)))) == 0);
-    assert(interpretation_framework_reference(item->interpretation) != NULL);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(item->interpretation)) == 750000UL);
+    assert(fabs((1.0 - item->uncertainty) * 1000000.0 - 750000UL) < 1.0);
     standard_counterpoint_melodic_intervals_destroy(&intervals);
     test_melody_destroy(&m);
 }
@@ -164,8 +158,7 @@ static void test_uncertainty_follows_the_least_confidence(void) {
     test_melody_build(&m);
     StandardCounterpointMelodicIntervals intervals = intervals_of(&m);
     assert(fabs(intervals.items[0].uncertainty - 0.4) < 1e-12);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(intervals.items[0].interpretation)) ==
-           600000UL);
+    assert(fabs((1.0 - intervals.items[0].uncertainty) * 1000000.0 - 600000UL) < 1.0);
     standard_counterpoint_melodic_intervals_destroy(&intervals);
     test_melody_destroy(&m);
 }
@@ -211,7 +204,7 @@ static void test_bad_input_is_refused(void) {
 
 int main(void) {
     test_a_stepwise_scale_has_no_leaps_and_rises();
-    test_the_interpretation_follows_the_claim_pattern();
+    test_the_claim_carries_the_measures();
     test_a_rest_breaks_the_chain();
     test_down_and_same_directions_and_the_summary();
     test_generic_size_from_spellings();

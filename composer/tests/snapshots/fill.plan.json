@@ -1,14 +1,16 @@
 {
-  "format": "ursatz-composer-plan",
-  "format_version": 5,
+  "format": "ursatz-plan",
+  "format_version": 6,
   "next_note_id": 169,
   "metadata": {
-    "composer_version": "",
-    "ursatz_commit": ""
+    "producer": "ursatz-composer",
+    "producer_version": "",
+    "producer_key": "",
+    "composition_key": "",
+    "knowledge_hash": "4e5764f2fc6e2592"
   },
   "meter": {
     "spans": [{
-        "framework": "ursatz-composer",
         "span": {
           "start": {
             "num": 0,
@@ -19,9 +21,7 @@
             "den": 1
           }
         },
-        "note_ids": [],
         "label": "4/4",
-        "uncertainty": null,
         "composer": {
           "id": 1,
           "owner": 1,
@@ -37,8 +37,7 @@
         }
       }]
   },
-  "keys": [{
-      "framework": "ursatz-composer",
+  "regions": [{
       "span": {
         "start": {
           "num": 0,
@@ -49,10 +48,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "C major",
-      "uncertainty": null,
-      "method": "composer_plan",
       "composer": {
         "id": 3,
         "owner": 1,
@@ -61,13 +57,13 @@
         "state": "given",
         "constraints": [],
         "payload": {
+          "kind": "tonal",
           "tonic": "C",
           "material": "omt.material.major"
         }
       }
     }],
   "chords": [{
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 8,
@@ -78,10 +74,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 4,
         "owner": 11,
@@ -102,7 +95,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 10,
@@ -113,10 +105,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 6,
         "owner": 12,
@@ -137,7 +126,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 12,
@@ -148,10 +136,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 12,
         "owner": 16,
@@ -172,7 +157,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 0,
@@ -183,10 +167,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 17,
         "owner": 25,
@@ -207,7 +188,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 2,
@@ -218,10 +198,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 19,
         "owner": 26,
@@ -242,7 +219,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 4,
@@ -253,10 +229,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 25,
         "owner": 30,
@@ -277,7 +250,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 5,
@@ -288,10 +260,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "IV",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 39,
         "owner": 30,
@@ -305,7 +274,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 6,
@@ -316,10 +284,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "V",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 40,
         "owner": 30,
@@ -333,7 +298,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 7,
@@ -344,10 +308,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 41,
         "owner": 30,
@@ -364,7 +325,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 13,
@@ -375,10 +335,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "IV",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 42,
         "owner": 16,
@@ -392,7 +349,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 14,
@@ -403,10 +359,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "ii",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 43,
         "owner": 16,
@@ -420,7 +373,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 29,
@@ -431,10 +383,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "V",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 44,
         "owner": 16,
@@ -448,7 +397,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 15,
@@ -459,10 +407,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 45,
         "owner": 16,
@@ -479,7 +424,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 1,
@@ -490,10 +434,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "viio6",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 46,
         "owner": 25,
@@ -507,7 +448,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 3,
@@ -518,10 +458,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I6",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 47,
         "owner": 25,
@@ -535,7 +472,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 5,
@@ -546,10 +482,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "viio6",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 48,
         "owner": 26,
@@ -563,7 +496,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 7,
@@ -574,10 +506,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I6",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 49,
         "owner": 26,
@@ -777,7 +706,7 @@
           "id": 2,
           "state": "realized",
           "constraints": [{
-              "kind": "key",
+              "kind": "region",
               "tonic": "C",
               "material": "omt.material.major"
             }],
@@ -961,7 +890,7 @@
           "id": 3,
           "state": "realized",
           "constraints": [{
-              "kind": "key",
+              "kind": "region",
               "tonic": "C",
               "material": "omt.material.major"
             }, {
@@ -1465,7 +1394,6 @@
     }
   },
   "melody": [{
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 16,
@@ -1476,9 +1404,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 2,
         "owner": 7,
@@ -1548,7 +1474,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 8,
@@ -1559,9 +1484,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 8,
         "owner": 11,
@@ -1697,7 +1620,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 10,
@@ -1708,9 +1630,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 9,
         "owner": 12,
@@ -1857,7 +1777,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 22,
@@ -1868,9 +1787,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 10,
         "owner": 14,
@@ -1916,7 +1833,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 23,
@@ -1927,9 +1843,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 11,
         "owner": 15,
@@ -1986,7 +1900,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 12,
@@ -1997,9 +1910,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 14,
         "owner": 17,
@@ -2088,7 +1999,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 13,
@@ -2099,9 +2009,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 15,
         "owner": 18,
@@ -2190,7 +2098,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 14,
@@ -2201,9 +2108,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 16,
         "owner": 19,
@@ -2330,7 +2235,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 0,
@@ -2341,9 +2245,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 21,
         "owner": 25,
@@ -2479,7 +2381,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 2,
@@ -2490,9 +2391,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 22,
         "owner": 26,
@@ -2639,7 +2538,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 28,
@@ -2650,9 +2548,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 23,
         "owner": 28,
@@ -2687,7 +2583,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 29,
@@ -2698,9 +2593,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 24,
         "owner": 29,
@@ -2757,7 +2650,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 4,
@@ -2768,9 +2660,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 27,
         "owner": 31,
@@ -2835,7 +2725,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 5,
@@ -2846,9 +2735,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 28,
         "owner": 32,
@@ -2913,7 +2800,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 6,
@@ -2924,9 +2810,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 29,
         "owner": 33,
@@ -3053,7 +2937,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 17,
@@ -3064,9 +2947,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 30,
         "owner": 8,
@@ -3134,7 +3015,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 18,
@@ -3145,9 +3025,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 31,
         "owner": 13,
@@ -3215,7 +3093,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 19,
@@ -3226,9 +3103,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 32,
         "owner": 20,
@@ -3274,7 +3149,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 20,
@@ -3285,9 +3159,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 33,
         "owner": 21,
@@ -3333,7 +3205,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 21,
@@ -3344,9 +3215,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 34,
         "owner": 22,
@@ -3403,7 +3272,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 24,
@@ -3414,9 +3282,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 35,
         "owner": 27,
@@ -3484,7 +3350,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 25,
@@ -3495,9 +3360,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 36,
         "owner": 34,
@@ -3532,7 +3395,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 26,
@@ -3543,9 +3405,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 37,
         "owner": 35,
@@ -3580,7 +3440,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 27,
@@ -3591,9 +3450,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 38,
         "owner": 36,
@@ -3651,7 +3508,6 @@
       }
     }],
   "texture": [{
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 8,
@@ -3662,9 +3518,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 5,
         "owner": 11,
@@ -3710,7 +3564,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 10,
@@ -3721,9 +3574,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 7,
         "owner": 12,
@@ -3769,7 +3620,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 12,
@@ -3780,9 +3630,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 13,
         "owner": 16,
@@ -3806,7 +3654,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 0,
@@ -3817,9 +3664,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 18,
         "owner": 25,
@@ -3843,7 +3688,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 2,
@@ -3854,9 +3698,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 20,
         "owner": 26,
@@ -3880,7 +3722,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 4,
@@ -3891,9 +3732,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 26,
         "owner": 30,
@@ -3917,7 +3756,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 1,
@@ -3928,9 +3766,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 50,
         "owner": 25,
@@ -3954,7 +3790,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 3,
@@ -3965,9 +3800,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 51,
         "owner": 25,
@@ -3991,7 +3824,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 5,
@@ -4002,9 +3834,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 52,
         "owner": 26,
@@ -4028,7 +3858,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 7,
@@ -4039,9 +3868,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 53,
         "owner": 26,
@@ -4065,7 +3892,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 5,
@@ -4076,9 +3902,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 54,
         "owner": 30,
@@ -4102,7 +3926,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 6,
@@ -4113,9 +3936,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 55,
         "owner": 30,
@@ -4150,7 +3971,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 7,
@@ -4161,9 +3981,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 56,
         "owner": 30,
@@ -4187,7 +4005,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 13,
@@ -4198,9 +4015,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 57,
         "owner": 16,
@@ -4224,7 +4039,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 14,
@@ -4235,9 +4049,7 @@
           "den": 2
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 58,
         "owner": 16,
@@ -4261,7 +4073,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 29,
@@ -4272,9 +4083,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 59,
         "owner": 16,
@@ -4298,7 +4107,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 15,
@@ -4309,9 +4117,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "bass",
-      "uncertainty": null,
       "composer": {
         "id": 60,
         "owner": 16,

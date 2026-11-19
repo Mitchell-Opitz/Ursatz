@@ -5,20 +5,21 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -137,7 +138,7 @@ static FormSpec *load_form(const char *transition) {
     return form;
 }
 
-static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long seed, ComposeOutcome *outcome,
+static Plan *compose(const FormSpec *form, const Row *row, unsigned long seed, ComposeOutcome *outcome,
                           PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
@@ -148,7 +149,7 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     request.meter.beat_unit = (unsigned)row->unit;
     request.seed = seed;
     request.modulate = true;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = form_build_plan(form, &request, &plan);
     if (built != PIECE_OK) {
         fprintf(stderr, "form_build_plan: %s\n", piece_result_name(built));
@@ -170,7 +171,7 @@ static Rational add_time(Rational a, Rational b) {
 }
 
 /* The sections of the piece, in order (the material nodes are not sections). */
-static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
+static size_t piece_sections(const Plan *plan, NodeId *sections) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -183,7 +184,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
 }
 
 /* The motive reference of the motive node an idea's melody span names (the idea's own made motive), or NULL. */
-static const PlanMotiveRef *idea_motive_ref(const PiecePlan *plan, NodeId idea) {
+static const PlanMotiveRef *idea_motive_ref(const Plan *plan, NodeId idea) {
     LaneSpanId melody;
     if (idea == PLAN_NODE_NONE || !plan_melody_span_of(plan, idea, &melody)) {
         return NULL;
@@ -197,7 +198,7 @@ static const PlanMotiveRef *idea_motive_ref(const PiecePlan *plan, NodeId idea) 
 }
 
 /* The liquidation steps an idea is made with, 0 for an idea that is not liquidated. */
-static size_t idea_steps(const PiecePlan *plan, NodeId idea) {
+static size_t idea_steps(const Plan *plan, NodeId idea) {
     const PlanMotiveRef *ref = idea_motive_ref(plan, idea);
     return ref ? ref->steps : 0;
 }
@@ -208,7 +209,7 @@ static int region_tonic(const Row *row) {
 }
 
 /* One composed run of the transition case. */
-static void check_transition(const PiecePlan *plan, const Row *row, unsigned long seed) {
+static void check_transition(const Plan *plan, const Row *row, unsigned long seed) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);
     NodeId t = sections[1];
@@ -226,14 +227,14 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
     /* The second half is in the region's key: a key span starts at the half. */
     LaneSpanId keys[8];
     PlanSpan second = {middle, half};
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, second, keys, 8);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, second, keys, 8);
     assert(found > 0);
     bool starts_at_half = false;
     for (size_t i = 0; i < found && i < 8; i++) {
         PlanSpan k = plan_lane_span_span(plan, keys[i]);
         if (rational_cmp(k.start, middle) == 0) {
             starts_at_half = true;
-            if (analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, keys[i])->key) != region_tonic(row)) {
+            if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, keys[i])->region) != region_tonic(row)) {
                 fprintf(stderr, "%s seed %lu: T's second half is not in the region\n", row->name, seed);
                 assert(false);
             }
@@ -272,7 +273,7 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
 }
 
 /* The pitches of an idea's melody span, in order; the count, 0 when the idea has none. */
-static size_t idea_pitches(const PiecePlan *plan, NodeId idea, int *out, size_t room) {
+static size_t idea_pitches(const Plan *plan, NodeId idea, int *out, size_t room) {
     LaneSpanId melody;
     if (idea == PLAN_NODE_NONE || !plan_melody_span_of(plan, idea, &melody)) {
         return 0;
@@ -286,20 +287,20 @@ static size_t idea_pitches(const PiecePlan *plan, NodeId idea, int *out, size_t 
 }
 
 /* The motive node of the material with this name, or PLAN_NODE_NONE, and its invented notes (2 or more). */
-static bool invented_motive(const PiecePlan *plan, const char *name, NodeId *node) {
+static bool invented_motive(const Plan *plan, const char *name, NodeId *node) {
     *node = test_find_named(plan, plan_root(plan), name);
     LaneSpanId melody;
     return *node != PLAN_NODE_NONE && plan_node_kind(plan, *node) == PLAN_NODE_MOTIVE && plan_melody_span_of(plan, *node, &melody) &&
            plan_lane_span_payload(plan, melody)->notes.note_count >= 2;
 }
 
-static void check_round_trip(const PiecePlan *plan, const Row *row, unsigned long seed) {
+static void check_round_trip(const Plan *plan, const Row *row, unsigned long seed) {
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
-    PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
-    char *second = plan_to_json(again, &error);
+    Plan *again = NULL;
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
+    char *second = plan_to_json(again, test_plan_producer(), &error);
     assert(second);
     if (strcmp(text, second) != 0) {
         fprintf(stderr, "%s seed %lu: the plan does not round-trip\n", row->name, seed);
@@ -311,7 +312,7 @@ static void check_round_trip(const PiecePlan *plan, const Row *row, unsigned lon
 }
 
 /* One composed run of the independent case. */
-static void check_independent(const PiecePlan *plan, const Row *row, unsigned long seed) {
+static void check_independent(const Plan *plan, const Row *row, unsigned long seed) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);
     NodeId own;
@@ -340,7 +341,7 @@ static void check_independent(const PiecePlan *plan, const Row *row, unsigned lo
 }
 
 /* The motive node an idea's melody span asks for (the made motive node the idea's span names), or PLAN_NODE_NONE. */
-static NodeId asked_motive(const PiecePlan *plan, NodeId idea) {
+static NodeId asked_motive(const Plan *plan, NodeId idea) {
     LaneSpanId melody;
     if (idea == PLAN_NODE_NONE || !plan_melody_span_of(plan, idea, &melody)) {
         return PLAN_NODE_NONE;
@@ -350,7 +351,7 @@ static NodeId asked_motive(const PiecePlan *plan, NodeId idea) {
 }
 
 /* The notes of a motive node's own melody span, 0 when it has none. */
-static size_t node_pitches(const PiecePlan *plan, NodeId node, int *out, size_t room) {
+static size_t node_pitches(const Plan *plan, NodeId node, int *out, size_t room) {
     LaneSpanId melody;
     if (node == PLAN_NODE_NONE || !plan_melody_span_of(plan, node, &melody)) {
         return 0;
@@ -370,7 +371,7 @@ static bool is_dominant(const char *numeral) {
 }
 
 /* One composed run of the retransition case: R is sections[4] of A, T, S, C, R, A return, K. */
-static void check_retransition(const PiecePlan *plan, const Row *row, unsigned long seed) {
+static void check_retransition(const Plan *plan, const Row *row, unsigned long seed) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
     NodeId r = sections[4];
@@ -381,10 +382,10 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
 
     /* In the home key, from its first bar: every key span that touches R is the home key's. */
     LaneSpanId ids[32];
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 32);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, span, ids, 32);
     assert(found > 0 && found <= 32);
     for (size_t i = 0; i < found; i++) {
-        if (analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->key) != row->tonic) {
+        if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->region) != row->tonic) {
             fprintf(stderr, "%s seed %lu: R is not in the home key\n", row->name, seed);
             assert(false);
         }
@@ -445,7 +446,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
 }
 
 /* The harmony spans over [span], in time order. */
-static size_t harmony_in(const PiecePlan *plan, PlanSpan span, LaneSpanId *out, size_t room) {
+static size_t harmony_in(const Plan *plan, PlanSpan span, LaneSpanId *out, size_t room) {
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, out, room);
     assert(found <= room);
     for (size_t i = 1; i < found; i++) {
@@ -468,7 +469,7 @@ static bool root_position(const char *numeral, bool seventh_allowed) {
 }
 
 /* The lowest pitch class of the bass over `span`'s last chord: the bass span that starts latest within it. */
-static int bass_pitch_class_at_end(const PiecePlan *plan, PlanSpan span) {
+static int bass_pitch_class_at_end(const Plan *plan, PlanSpan span) {
     LaneSpanId ids[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_BASS, 0, span, ids, 64);
     assert(found > 0 && found <= 64);
@@ -484,7 +485,7 @@ static int bass_pitch_class_at_end(const PiecePlan *plan, PlanSpan span) {
 }
 
 /* One composed run of the coda case: K is sections[6] of A, T, S, C, R, A return, K. */
-static void check_coda(const PiecePlan *plan, const Row *row, unsigned long seed) {
+static void check_coda(const Plan *plan, const Row *row, unsigned long seed) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
     NodeId k = sections[6];
@@ -542,7 +543,7 @@ static void check_coda(const PiecePlan *plan, const Row *row, unsigned long seed
     check_round_trip(plan, row, seed);
 }
 
-static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceResult *result) {
+static Plan *plan_only(const FormSpec *form, const Motive *motive, PieceResult *result) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
@@ -553,7 +554,7 @@ static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceRes
     request.seed = 1;
     request.motive = motive;
     request.modulate = true;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     *result = form_build_plan(form, &request, &plan);
     return plan;
 }
@@ -592,7 +593,7 @@ static void test_applies(void) {
     FormSpec *form = parse_form(text);
     free(text);
     PieceResult result;
-    PiecePlan *plan = plan_only(form, NULL, &result);
+    Plan *plan = plan_only(form, NULL, &result);
     assert(result == PIECE_OK);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
@@ -667,7 +668,7 @@ static void test_applies(void) {
     form_spec_destroy(form);
 }
 
-static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long),
+static int run_rows(const char *label, const FormSpec *form, void (*check)(const Plan *, const Row *, unsigned long),
                     bool smoke) {
     int status = 0;
     const int seeds = smoke ? 1 : SEEDS;
@@ -676,7 +677,7 @@ static int run_rows(const char *label, const FormSpec *form, void (*check)(const
         for (unsigned long seed = 1; seed <= (unsigned long)seeds; seed++) {
             ComposeOutcome outcome;
             PieceResult ran;
-            PiecePlan *plan = compose(form, &ROWS[r], seed, &outcome, &ran);
+            Plan *plan = compose(form, &ROWS[r], seed, &outcome, &ran);
             if (ran == PIECE_OK) {
                 check(plan, &ROWS[r], seed);
                 composed++;

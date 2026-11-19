@@ -8,7 +8,6 @@
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_spelling.h"
-#include "analysis/galant/scale_analysis_claim.h"
 #include "theory/galant/scale_harmonization.h"
 #include "theory/galant/scale_sequence_rules.h"
 #include "model/pitch/pitch_arithmetic.h"
@@ -343,19 +342,7 @@ static GalantAnalysisStatus emit(const GalantSegmentList *segments, const Chord 
         stage->root_alteration = chord->has_root ? chord->root.alteration : 0;
     }
     out->uncertainty = 1.0 - c->confidence;
-    char key[96];
-    char interpretation_id[160];
-    snprintf(key, sizeof(key), "%s-%d", claim->kind_name, index);
-    out->relationship = scale_analysis_relationship("sequence", key, segments->items[claim->first_segment].segment.id,
-                                                    segments->items[claim->last_segment].segment.id, "harmonic-sequence");
-    if (out->relationship == NULL) {
-        return GALANT_ANALYSIS_ERR_ALLOC;
-    }
-    snprintf(interpretation_id, sizeof(interpretation_id), "scale-harmonization-sequence-claim-%s", key);
-    out->interpretation = scale_analysis_interpretation(interpretation_id, entity_id_value(relationship_id(out->relationship)),
-                                                        SCALE_SEQUENCE_CLAIM_TYPE, claim, sizeof(*claim), out->uncertainty,
-                                                        "sequence-detection");
-    return out->interpretation == NULL ? GALANT_ANALYSIS_ERR_ALLOC : GALANT_ANALYSIS_OK;
+    return GALANT_ANALYSIS_OK;
 }
 
 GalantAnalysisStatus scale_sequence_detect(const GalantSegmentList *segments, const ScaleDetectConfig *config, ScaleSequenceMatches *out) {
@@ -448,10 +435,6 @@ GalantAnalysisStatus scale_sequence_detect(const GalantSegmentList *segments, co
 void scale_sequence_matches_destroy(ScaleSequenceMatches *matches) {
     if (matches == NULL) {
         return;
-    }
-    for (size_t i = 0; i < matches->count; i++) {
-        interpretation_destroy(matches->items[i].interpretation);
-        relationship_destroy(matches->items[i].relationship);
     }
     free(matches->items);
     matches->items = NULL;

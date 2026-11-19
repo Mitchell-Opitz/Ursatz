@@ -2,10 +2,7 @@
 
 #include "analysis/form/analysis_motive.h"
 #include "analysis/tests/form/form_test_util.h"
-#include "model/interpretation/uncertainty.h"
 #include "theory/form/phrase_ending.h"
-#include "interpretation_test_access.h"
-#include "relationship_test_access.h"
 #include "structure_test_access.h"
 
 /* Motives of the soprano: windows of notes grouped by interval pattern and rhythm, the kernel's window matching as the first test,
@@ -206,55 +203,11 @@ static void test_the_output_is_shells_interpretations_and_links(void) {
     const StandardFormMotiveFamily *f = &m.families[0];
     assert(f->claim.note_count == 8 && f->occurrence_count == 2); /* measures 1-2 and 3-4 */
     assert(motif_event_id_count(f->motif) == 8);
-    assert(strcmp(entity_id_value(interpretation_target_id(f->interpretation)), entity_id_value(motif_id(f->motif))) == 0);
-    assert(interpretation_framework_reference(f->interpretation) != NULL);
     for (size_t j = 0; j < 2; j++) {
         const StandardFormMotiveOccurrence *o = &f->occurrences[j];
         assert(motif_occurrence_region_event_id_count(o->occurrence) == 8);
         assert(strcmp(entity_id_value(motif_occurrence_motif_id(o->occurrence)), entity_id_value(motif_id(f->motif))) == 0);
-        assert(strcmp(entity_id_value(interpretation_target_id(o->interpretation)),
-                      entity_id_value(motif_occurrence_id(o->occurrence))) == 0);
-        assert(strcmp(relationship_predicate_name(o->family_relationship), "occurrence-of") == 0);
-        assert(strcmp(entity_id_value(relationship_source_id(o->family_relationship)), entity_id_value(motif_id(f->motif))) == 0);
-        assert(strcmp(entity_id_value(relationship_target_id(o->family_relationship)),
-                      entity_id_value(motif_occurrence_id(o->occurrence))) == 0);
-        /* each occurrence is inside one idea (two measures each) */
-        assert(o->contained_relationship != NULL);
-        assert(strcmp(relationship_predicate_name(o->contained_relationship), "contained-in") == 0);
-        assert(strcmp(entity_id_value(relationship_source_id(o->contained_relationship)),
-                      entity_id_value(motif_occurrence_id(o->occurrence))) == 0);
-        assert(strcmp(entity_id_value(relationship_target_id(o->contained_relationship)),
-                      entity_id_value(entity_id(structure_entity(segmentation.ideas[j].shell)))) == 0);
     }
-    standard_form_motives_destroy(&m);
-    standard_form_segmentation_destroy(&segmentation);
-    standard_form_phrases_destroy(&phrases);
-    piece_destroy(&p);
-}
-
-static void test_an_occurrence_outside_every_idea_is_contained_in_the_phrase(void) {
-    Piece p;
-    piece_init(&p, false);
-    four_measures(&p);
-    form_cadence(&p.f, "pac4", 4, 0, 4, PAC, 3, false, 0.1);
-    form_finish(&p.f);
-    StandardFormPhrases phrases;
-    StandardFormSegmentation segmentation;
-    assert(standard_form_segment_phrases(&p.f.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_segment_ideas(&p.f.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
-    StandardFormConfig config = form_motive_config();
-    config.motive_min_notes = 3;
-    config.motive_max_notes = 8;
-    StandardFormMotives m;
-    /* with only the phrase given (no ideas) the occurrences link to the phrase */
-    StandardFormSegmentation none = {NULL, 0, NULL, 0};
-    assert(standard_form_find_motives(&p.f.input, &phrases, &none, NULL, &config, chain_form_match_windows, NULL, &m) ==
-           STANDARD_FORM_ANALYSIS_OK);
-    assert(m.family_count >= 1);
-    const StandardFormMotiveOccurrence *o = &m.families[0].occurrences[0];
-    assert(o->contained_relationship != NULL &&
-           strcmp(entity_id_value(relationship_target_id(o->contained_relationship)),
-                  entity_id_value(phrase_occurrence_id(phrases.items[0].occurrence))) == 0);
     standard_form_motives_destroy(&m);
     standard_form_segmentation_destroy(&segmentation);
     standard_form_phrases_destroy(&phrases);
@@ -420,7 +373,6 @@ int main(void) {
     test_a_window_starts_on_a_beat();
     test_the_config_limits_the_length();
     test_the_output_is_shells_interpretations_and_links();
-    test_an_occurrence_outside_every_idea_is_contained_in_the_phrase();
     test_an_inversion_joins_the_family();
     test_a_retrograde_joins_the_family();
     test_a_varied_motive_has_a_score_below_one();

@@ -50,6 +50,11 @@ endif()
 ursatz_test(test_document_snapshots LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow)
 
+# The text of the document of Bach 114, byte for byte (R-631; a few seconds, in the fast set).
+ursatz_test_executable(test_document_bytes LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+ursatz_test(test_document_bytes_smoke TARGET test_document_bytes LABELS golden)
+
 ursatz_test_executable(test_analysis_result LIBS ursatz_analyzer analyzer_test_support cjson ursatz_chain
     INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
@@ -434,3 +439,19 @@ ursatz_test(test_material_export LIBS ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden)
+
+# The layers of Mozart 545 (R-630): the CLI's --layers folder and Michelle's reading beside the Analyzer's (the full test runs the CLI and
+# analyzes the piece: nightly; the smoke reads only the stored fixture).
+ursatz_test_executable(test_layers_two_readings LIBS ursatz_analyzer analyzer_test_support
+    DEFINITIONS URSATZ_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>")
+add_dependencies(test_layers_two_readings ursatz-analyzer)
+ursatz_test(test_layers_two_readings_smoke TARGET test_layers_two_readings ARGS smoke)
+ursatz_test(test_layers_two_readings TARGET test_layers_two_readings LABELS slow)
+
+# The model plan of Mozart 545 (R-635): --model-plan on a copy, the plan validated against its schema.
+ursatz_test(cli_model_plan COMMAND ${CMAKE_COMMAND} -DANALYZER=$<TARGET_FILE:ursatz-analyzer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_model_plan
+                     "-DMIDI=${CMAKE_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/Mozart 545.mid"
+                     -DSCHEMA=${CMAKE_SOURCE_DIR}/library/plan/schema/plan.v6.schema.json
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
+                     -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON} -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_model_plan.cmake)

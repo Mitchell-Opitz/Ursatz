@@ -16,7 +16,7 @@ static int find_slot(const void *key, const void *entry) {
 
 static bool build_key_events(const ImportedScore *notes, const CommonPracticeMaterials *materials, ChainScoreInput *out) {
     size_t count = notes->key_signature_events.count;
-    out->key_events = calloc(count > 0 ? count : 1, sizeof(AnalysisKeyEvent));
+    out->key_events = calloc(count > 0 ? count : 1, sizeof(SpelledKeyEvent));
     if (!out->key_events) {
         return false;
     }
@@ -24,7 +24,7 @@ static bool build_key_events(const ImportedScore *notes, const CommonPracticeMat
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         out->key_events[i].time = event->position;
         /* The file's mode hint never reached the chain: every key is the major one. */
-        if (!analysis_key_from_fifths(event->sharps_flats, materials->major,
+        if (!spelled_key_from_fifths(event->sharps_flats, materials->major,
                                                &out->key_events[i].key)) {
             return false;
         }

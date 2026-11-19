@@ -24,7 +24,7 @@
  *
  * scope is kept as an opaque, nullable Value (core/value.h) for now --
  * a minimal placeholder, not a frozen schema, same treatment
- * Relationship gives its own scope field (relationship/relationship.h).
+ * Relationship gives its own scope field (the plan).
  */
 
 typedef struct Rule Rule;

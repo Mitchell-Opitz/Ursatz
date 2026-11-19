@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/counterpoint/analysis_melody_emit.h"
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 
@@ -146,8 +145,6 @@ static StandardTonalityInterval make_interval(int size) {
 /* --- intervals --- */
 
 static void destroy_interval(StandardCounterpointMelodicInterval *item) {
-    interpretation_destroy(item->interpretation);
-    structure_destroy(item->shell);
     contour_destroy(item->contour);
     memset(item, 0, sizeof(*item));
 }
@@ -250,14 +247,7 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
         double penalty = claim->approximate ? effective->approximate_penalty : 0.0;
         item->uncertainty = 1.0 - lesser * (1.0 - penalty);
 
-        char key[400];
-        snprintf(key, sizeof(key), "%s-%s", a->note_id, b->note_id);
-        const char *ids[2] = {a->note_id, b->note_id};
-        if (!build_values(a, b, item) ||
-            !standard_counterpoint_melody_emit("melodic-interval", key, ids, 2,
-                                               STANDARD_COUNTERPOINT_MELODIC_INTERVAL_CLAIM_TYPE, claim,
-                                               sizeof(*claim), item->uncertainty, &item->shell,
-                                               &item->interpretation)) {
+        if (!build_values(a, b, item)) {
             destroy_interval(item);
             standard_counterpoint_melodic_intervals_destroy(&found);
             return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
@@ -274,18 +264,9 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
 
 /* --- contour summaries --- */
 
-static void destroy_summary(StandardCounterpointContourSummary *summary) {
-    interpretation_destroy(summary->interpretation);
-    structure_destroy(summary->shell);
-    memset(summary, 0, sizeof(*summary));
-}
-
 void standard_counterpoint_contour_summaries_destroy(StandardCounterpointContourSummaries *summaries) {
     if (summaries == NULL) {
         return;
-    }
-    for (size_t i = 0; i < summaries->count; i++) {
-        destroy_summary(&summaries->items[i]);
     }
     free(summaries->items);
     summaries->items = NULL;
@@ -324,11 +305,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_contour_summaries(
         memset(&claim, 0, sizeof(claim));
         claim.span_first = (int)span->first;
         claim.span_last = (int)span->last;
-        const char **ids = (const char **)calloc(span->last - span->first + 1, sizeof(char *));
-        if (ids == NULL) {
-            standard_counterpoint_contour_summaries_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         size_t first_note = line->count;
         size_t last_note = 0;
         size_t lowest = 0;
@@ -339,7 +315,7 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_contour_summaries(
             if (!note->present) {
                 continue;
             }
-            ids[claim.note_count++] = note->note_id;
+            claim.note_count++;
             if (first_note == line->count) {
                 first_note = i;
                 lowest = i;
@@ -357,7 +333,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_contour_summaries(
             }
         }
         if (claim.note_count == 0) {
-            free(ids);
             continue;
         }
         for (size_t k = 0; k < intervals->count; k++) {
@@ -383,15 +358,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_contour_summaries(
         snprintf(summary->span_id, sizeof(summary->span_id), "%s", span->id);
         summary->claim = claim;
         summary->uncertainty = 1.0 - least;
-        bool ok = standard_counterpoint_melody_emit("contour-summary", span->id, ids, (size_t)claim.note_count,
-                                                    STANDARD_COUNTERPOINT_CONTOUR_SUMMARY_CLAIM_TYPE, &claim,
-                                                    sizeof(claim), summary->uncertainty, &summary->shell,
-                                                    &summary->interpretation);
-        free(ids);
-        if (!ok) {
-            standard_counterpoint_contour_summaries_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         found.count++;
     }
     if (found.count == 0) {

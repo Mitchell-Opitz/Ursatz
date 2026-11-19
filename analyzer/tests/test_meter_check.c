@@ -54,7 +54,7 @@ static void analyze(const char *name, const ImportedReading *reading, Analysis *
 
 static void analysis_destroy(Analysis *analysis) {
     cJSON_Delete(analysis->document);
-    chain_result_destroy(&analysis->report);
+    test_release_report(&analysis->report);
     imported_score_destroy(&analysis->notes);
 }
 
@@ -180,7 +180,7 @@ static void test_empty_score(void) {
     ChainResult report;
     assert(test_analyze_report(&notes, &report));
     assert(!report.meter_check.present);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

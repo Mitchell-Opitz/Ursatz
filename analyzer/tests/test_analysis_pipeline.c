@@ -93,7 +93,7 @@ int main(void) {
     assert(strcmp(report.entries[2].chord_label, "iii") == 0);
     assert(strcmp(report.entries[2].key_label, "C major") == 0);
 
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     remove(path);
     free(path);

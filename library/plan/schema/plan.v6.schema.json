@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/plan.v6.schema.json",
+  "title": "Ursatz plan, format version 6",
+  "type": "object",
+  "required": ["format", "format_version", "next_note_id", "metadata", "form"],
+  "properties": {
+    "format": { "const": "ursatz-plan" },
+    "format_version": { "const": 6 },
+    "next_note_id": { "type": "integer", "minimum": 1, "description": "The id the next new note gets: above every note id of the plan." },
+    "metadata": {
+      "type": "object",
+      "required": ["producer", "producer_version", "producer_key", "composition_key", "knowledge_hash"],
+      "properties": {
+        "producer": { "type": "string", "description": "The program that wrote the file." },
+        "producer_version": { "type": "string" },
+        "producer_key": { "$ref": "#/$defs/key16", "description": "The key of the library chain the producer was built on." },
+        "composition_key": { "$ref": "#/$defs/key16", "description": "The key of the code that composed the plan; empty for a program that does not compose." },
+        "knowledge_hash": { "$ref": "#/$defs/key16", "description": "The hash of the knowledge snapshot the plan was made against." },
+        "analyzer_version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "derived_from": {
+      "type": "object",
+      "required": ["reading", "realization"],
+      "properties": {
+        "reading": { "type": "string", "minLength": 1, "maxLength": 63, "description": "The reading the plan was made from." },
+        "realization": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "The digest of the realization that reading names." }
+      },
+      "additionalProperties": false
+    },
+    "meter": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["spans"],
+          "properties": { "spans": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } } }
+        }
+      ]
+    },
+    "regions": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "chords": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "form": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/node" }] },
+    "melody": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "texture": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } }
+  },
+  "$defs": {
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer" },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/rational" },
+        "end": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "state": { "enum": ["constrained", "given", "realized"] },
+    "key16": { "type": "string", "pattern": "^([0-9a-f]{16})?$" },
+    "tonic": { "type": "string", "pattern": "^[A-G](bb|b|#|x)?$" },
+    "materialId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
+    "relationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 63 },
+    "anchor": { "type": "string", "minLength": 1, "maxLength": 31, "description": "home, previous, or the name of an earlier section (its key at its start)." },
+    "time": { "type": "string", "pattern": "^-?[0-9]+/[0-9]+$" },
+    "formRecord": {
+      "type": "object",
+      "required": ["name", "version", "hash", "checks", "closing"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 31 },
+        "version": { "type": "integer", "minimum": 1, "description": "The version of the form document." },
+        "hash": { "type": "string", "pattern": "^([0-9a-f]{16})?$", "description": "FNV-1a 64 of the built-in document the plan was built from; empty for a form that is not built in." },
+        "checks": { "type": "array", "uniqueItems": true, "items": { "enum": ["sections", "returns", "keys", "cadences", "seam"] } },
+        "closing": { "type": "boolean", "description": "The form ends with a cadence: its cadences across the sections are planned and checked." }
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["kind", "label", "span", "children", "composer"],
+      "properties": {
+        "kind": { "enum": ["form", "section", "phrase", "subphrase", "idea", "motive"] },
+        "label": { "type": ["string", "null"] },
+        "span": { "$ref": "#/$defs/span" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "composer": {
+          "type": "object",
+          "required": ["id", "state", "constraints"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "state": { "$ref": "#/$defs/state" },
+            "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+            "section": { "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/plan_section" },
+            "form": { "$ref": "#/$defs/formRecord", "description": "On the form node: the form the plan was built from (R-608)." }
+          }
+        }
+      }
+    },
+    "laneSpan": {
+      "type": "object",
+      "required": ["span", "composer"],
+      "properties": {
+        "span": { "$ref": "#/$defs/span" },
+        "label": { "type": "string" },
+        "composer": {
+          "type": "object",
+          "required": ["id", "owner", "lane", "voice", "state", "constraints", "payload"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "owner": { "type": "integer", "minimum": 1 },
+            "lane": { "enum": ["meter", "key", "harmony", "bass", "melody", "inner_voice"] },
+            "voice": { "type": "integer", "minimum": 0 },
+            "state": { "$ref": "#/$defs/state" },
+            "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+            "payload": { "type": "object" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "lane": { "const": "meter" } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["beats_per_bar", "beat_unit", "bars_per_hyperbar"],
+                    "properties": {
+                      "beats_per_bar": { "type": "integer", "minimum": 1 },
+                      "beat_unit": { "type": "integer", "minimum": 1 },
+                      "bars_per_hyperbar": { "type": "integer", "minimum": 0 }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "lane": { "const": "key" } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "properties": {
+                      "kind": { "const": "tonal", "description": "The kind of region; a tonal region (a key) is the only one built." },
+                      "tonic": { "$ref": "#/$defs/tonic" },
+                      "material": { "$ref": "#/$defs/materialId" },
+                      "relation": { "$ref": "#/$defs/relationId" },
+                      "anchor": { "$ref": "#/$defs/anchor" }
+                    },
+                    "dependentRequired": { "relation": ["anchor"], "anchor": ["relation"], "tonic": ["material"], "material": ["tonic"] },
+                    "anyOf": [{ "required": ["tonic", "material"] }, { "required": ["relation", "anchor"] }],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "lane": { "const": "harmony" } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["roman_numeral"],
+                    "properties": {
+                      "roman_numeral": { "type": "string", "minLength": 1, "maxLength": 15 },
+                      "function": { "enum": ["tonic", "predominant", "dominant"] }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "lane": { "enum": ["bass", "melody", "inner_voice"] } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["notes"],
+                    "properties": { "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } } },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["midi_pitch", "offset", "duration", "id"],
+      "properties": {
+        "midi_pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "spelling": { "$ref": "#/$defs/tonic" },
+        "offset": { "$ref": "#/$defs/rational" },
+        "duration": { "$ref": "#/$defs/rational" },
+        "id": { "type": "integer", "minimum": 1, "description": "The note's identity: unique in the plan, never reused." },
+        "source": { "type": "integer", "minimum": 1, "description": "The id of the note this one was made from." },
+        "operation": { "enum": ["copy", "motive", "return"], "description": "How the note was made from its source." }
+      },
+      "additionalProperties": false
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["length_bars", "cadence", "motive_ref", "region", "embellish", "schema", "harmony_shape", "accompaniment", "voicing",
+                   "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "region" } } },
+          "then": {
+            "required": ["tonic", "material"],
+            "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "material": { "$ref": "#/$defs/materialId" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "cadence" } } },
+          "then": { "required": ["type"], "properties": { "type": { "enum": ["pac", "iac", "hc", "dc", "pc"] } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "motive_ref" } } },
+          "then": {
+            "required": ["motive"],
+            "properties": {
+              "motive": { "type": "integer", "minimum": 1 },
+              "step": { "type": "string", "minLength": 1 },
+              "segment": { "type": "string", "minLength": 1, "maxLength": 8 },
+              "steps": { "type": "integer", "minimum": 1, "maximum": 8 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "length_bars" } } },
+          "then": { "required": ["bars"], "properties": { "bars": { "type": "integer", "minimum": 1 } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "pickup" } } },
+          "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
+        }
+      ]
+    }
+  }
+}

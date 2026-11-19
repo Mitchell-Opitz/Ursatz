@@ -6,14 +6,14 @@
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 
 #include "api_piece.h"
 #include "api_workflow.h"
 #include "motive/motive_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* `counterpoint` as a composer API entry (docs/cli-counterpoint.md): a counter-melody against a line, in strict species. */
@@ -26,7 +26,7 @@ typedef struct {
     const char *meter_text;
     int species;
     bool above;
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     unsigned long seed;
     unsigned long suggest;
@@ -37,7 +37,7 @@ typedef struct {
 
 /* One counter-melody written: its plan, the target and the verdict of the library. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     LaneSpanId target;
     unsigned long seed;
     CounterpointReport report;
@@ -163,8 +163,8 @@ static Rational fraction(long num, unsigned long den) {
  * The plan the operator works on: a form over the length of the line, the meter and the key given, the line as the melody
  * (below) or the bass (above), and an open inner voice span over the same time with the counterpoint constraint.
  */
-static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneSpanId *target) {
-    PiecePlan *plan = plan_create();
+static Plan *build_plan(const Options *options, const Motive *motive, LaneSpanId *target) {
+    Plan *plan = plan_create();
     PlanSpan all = {fraction(0, 1), motive->length};
     PlanLanePayload payload;
     PlanConstraint constraint;
@@ -178,8 +178,8 @@ static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneS
     ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.key = options->key;
-    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK &&
+    payload.region = options->key;
+    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_REGION, 0, all, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
     PlanNote lane_notes[MOTIVE_MAX_NOTES];
@@ -217,7 +217,7 @@ static void result_destroy(Result *result) {
 }
 
 /* The notes of the counter-melody as text, to tell two results apart. */
-static void sign(const PiecePlan *plan, LaneSpanId target, char *out, size_t size) {
+static void sign(const Plan *plan, LaneSpanId target, char *out, size_t size) {
     const PlanNotes *notes = &plan_lane_span_payload(plan, target)->notes;
     size_t used = 0;
     out[0] = '\0';
@@ -257,7 +257,7 @@ static bool write_one(const Options *options, const Motive *motive, unsigned lon
 
 /* --- the result ------------------------------------------------------------------------------------------- */
 
-static cJSON *notes_json(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
+static cJSON *notes_json(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
     LaneSpanId ids[512];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, 512);
     cJSON *list = cJSON_CreateArray();
@@ -322,7 +322,7 @@ static ComposerStatus result_json(const KnowledgeSnapshot *knowledge, const Opti
         }
     }
     if (options->plans) {
-        cJSON *plan = api_piece_plan_object(result->plan);
+        cJSON *plan = api_piece_plan_object(knowledge, result->plan);
         if (!plan || !cJSON_AddItemToObject(entry, "plan", plan)) {
             cJSON_Delete(plan);
             cJSON_Delete(entry);
@@ -389,7 +389,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
     /* Whether the line is one the species can be written against, before any seed is tried. */
     if (status == COMPOSER_OK) {
         LaneSpanId target;
-        PiecePlan *plan = build_plan(&options, &motive, &target);
+        Plan *plan = build_plan(&options, &motive, &target);
         const char *why = plan ? counterpoint_why_not(plan, target) : "the plan could not be built";
         if (why) {
             status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot be written as asked: %s", why);
@@ -431,7 +431,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         char key[24];
         char meter[16];
         PlanSpan span = {fraction(0, 1), motive.length};
-        util_key_name(analysis_key_tonic_pitch_class(&options.key), options.key.material, key, sizeof(key));
+        util_key_name(spelled_key_tonic_pitch_class(&options.key), options.key.material, key, sizeof(key));
         snprintf(meter, sizeof(meter), "%d/%d", options.meter.beats_per_bar, options.meter.beat_unit);
         document = cJSON_CreateObject();
         cJSON *list = document ? cJSON_CreateArray() : NULL;
@@ -462,7 +462,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         }
         if (status == COMPOSER_OK) {
             /* The first counter-melody's own files. */
-            status = api_render_outputs(context->knowledge, results[0].plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, results[0].plan, &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

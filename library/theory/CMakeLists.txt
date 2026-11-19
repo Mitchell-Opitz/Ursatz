@@ -25,7 +25,9 @@ add_library(ursatz_theory
     vocabulary/cadence_type.c
     vocabulary/key_change_extent.c
     vocabulary/motive_occurrence_kind.c
+    vocabulary/motive_relation_step.c
     vocabulary/non_chord_tone.c
+    vocabulary/texture_rules.c
     vocabulary/voice_part.c
     tonality/brightness.c
     tonality/chord_vocabulary.c
@@ -41,6 +43,7 @@ add_library(ursatz_theory
     tonality/roman_numeral_rules.c
     tonality/seventh_in_key_rules.c
     tonality/seventh_rules.c
+    tonality/spelled_key.c
     tonality/tonal_key.c
     tonality/triad_in_key_rules.c
     tonality/triad_rules.c
@@ -184,8 +187,10 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/cadence_type.h
         theory/vocabulary/key_change_extent.h
         theory/vocabulary/motive_occurrence_kind.h
+        theory/vocabulary/motive_relation_step.h
         theory/vocabulary/non_chord_tone.h
         theory/vocabulary/subphrase_role.h
+        theory/vocabulary/texture_rules.h
         theory/vocabulary/voice_part.h
         theory/knowledge/instrument.h
         theory/knowledge/knowledge_snapshot.h
@@ -194,7 +199,6 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_framework.h
         theory/tonality/common_practice_materials.h
-        theory/tonality/framework.h
         theory/tonality/interval.h
         theory/tonality/key_vocabulary.h
         theory/tonality/region_relation.h
@@ -203,6 +207,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/roman_numeral_rules.h
         theory/tonality/seventh_in_key_rules.h
         theory/tonality/seventh_rules.h
+        theory/tonality/spelled_key.h
         theory/tonality/tonal_key.h
         theory/tonality/triad_in_key_rules.h
         theory/tonality/triad_rules.h

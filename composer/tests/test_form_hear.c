@@ -8,10 +8,10 @@
 #include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/form_hear.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 
@@ -25,10 +25,10 @@
  * under the last chord, which in C would be the fifth and make the cadence imperfect.
  */
 
-static PiecePlan *load(const char *name) {
+static Plan *load(const char *name) {
     char path[512];
     snprintf(path, sizeof(path), "%s/%s", COMPOSER_FIXTURE_DIR, name);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
@@ -42,7 +42,7 @@ static PlanSpan bars(long start, long length) {
 }
 
 static void test_sentence(void) {
-    PiecePlan *plan = load("sentence_c_major.json");
+    Plan *plan = load("sentence_c_major.json");
     FormHeard heard;
     assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 1);
@@ -61,7 +61,7 @@ static void test_sentence(void) {
 }
 
 static void test_period(void) {
-    PiecePlan *plan = load("period_a_minor.json");
+    Plan *plan = load("period_a_minor.json");
     FormHeard heard;
     /* The Analyzer takes no section starts (form_hear_with_sections is form_hear), and finds the phrases itself, from the
        chords it identifies in the notes. Since P41 (Ursatz R-390) the antecedent's half cadence is claimed: the V that
@@ -96,9 +96,9 @@ static void test_period(void) {
 }
 
 static void test_modulating_sentence(void) {
-    PiecePlan *plan = load("sentence_c_to_g.json");
+    Plan *plan = load("sentence_c_to_g.json");
     LaneSpanId keys[3];
-    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, bars(0, 8), keys, 3) == 2);
+    assert(plan_lane_find(plan, PLAN_LANE_REGION, 0, bars(0, 8), keys, 3) == 2);
     FormHeard heard;
     assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 1);
@@ -127,7 +127,7 @@ static void test_modulating_sentence(void) {
 
 /* The sentence's presentation alone (I V6/5 I V6/5) has no cadence, so no theme. */
 static void test_no_cadence(void) {
-    PiecePlan *plan = load("sentence_c_major.json");
+    Plan *plan = load("sentence_c_major.json");
     FormHeard heard;
     assert(test_form_hear(plan, bars(0, 4), &heard) == FORM_HEAR_OK);
     assert(heard.count == 0 && heard.themes == NULL);
@@ -136,7 +136,7 @@ static void test_no_cadence(void) {
 }
 
 static void test_constrained_melody(void) {
-    PiecePlan *plan = load("sentence_c_major.json");
+    Plan *plan = load("sentence_c_major.json");
     LaneSpanId melody;
     assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, bars(0, 8), &melody, 1) == 1);
     assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_CONSTRAINED) == PLAN_OK);
@@ -150,12 +150,12 @@ static void expect_key(const FormHeardKey *key, long numerator, long denominator
     Rational start;
     assert(rational_make(numerator, denominator, &start) == RATIONAL_OK);
     assert(rational_cmp(key->start, start) == 0);
-    assert(analysis_key_tonic_pitch_class(&key->key) == tonic && harmony_key_mode(&key->key) == mode);
+    assert(spelled_key_tonic_pitch_class(&key->key) == tonic && harmony_key_mode(&key->key) == mode);
 }
 
 /* The key regions heard: the C major sentence is one region from 0, the one that modulates ends in a G major region. */
 static void test_keys(void) {
-    PiecePlan *plan = load("sentence_c_major.json");
+    Plan *plan = load("sentence_c_major.json");
     FormHeardKey *keys = NULL;
     size_t count = 0;
     assert(form_hear_keys(plan, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_OK);
@@ -179,7 +179,7 @@ static void test_keys_refused(void) {
     size_t count = 7;
     assert(form_hear_keys(NULL, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NULL);
     assert(keys == NULL && count == 0);
-    PiecePlan *plan = load("sentence_c_major.json");
+    Plan *plan = load("sentence_c_major.json");
     LaneSpanId melody;
     assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, bars(0, 8), &melody, 1) == 1);
     assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_CONSTRAINED) == PLAN_OK);

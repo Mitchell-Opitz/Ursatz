@@ -9,11 +9,11 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
-#include "util/plan_util.h"
-#include "util/request_chords.h"
+#include "structure/plan_util.h"
+#include "piece/request_chords.h"
 
 #define NUMERALS_MAX 32
 #define CHORDS_MAX 16
@@ -40,8 +40,8 @@ static void refuse(char *message, size_t size, const char *format, ...) {
     }
 }
 
-PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
-                               const AnalysisKey *key, char *message, size_t message_size) {
+PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
+                               const SpelledKey *key, char *message, size_t message_size) {
     if (!plan || !harmony || !meter || !key) {
         return PIECE_ERR_NULL;
     }
@@ -97,7 +97,8 @@ PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHar
             return PIECE_ERR_ALLOC;
         }
         PlanSpan span = plan_node_span(plan, section);
-        Rational bar_length = grow_bar_length(meter);
+        Rational bar_length;
+        plan_meter_bar_length(meter, &bar_length);
         Rational bars;
         long length = rational_div(span.length, bar_length, &bars) == RATIONAL_OK && bars.den == 1 ? (long)bars.num : 0;
         ComposerError error;
@@ -120,13 +121,13 @@ PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHar
     return PIECE_OK;
 }
 
-bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rational length, const SectionHarmony *harmony, char *message,
+bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational length, const SectionHarmony *harmony, char *message,
                          size_t message_size) {
     if (harmony->kind == SECTION_HARMONY_NONE) {
         return true;
     }
     /* The harmony is given to a scratch plan of one section as long as the section, in its key and meter, as the build gives it. */
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     NodeId section = PLAN_NODE_NONE;
     PlanSpan span = {{0, 1}, length};
@@ -146,8 +147,8 @@ bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rationa
     payload.meter = *meter;
     ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, span, &payload, &lane) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.key = *key;
-    ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, span, &payload, &lane) == PLAN_OK;
+    payload.region = *key;
+    ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, span, &payload, &lane) == PLAN_OK;
     PieceResult result = ok ? piece_give_harmony(plan, section, harmony, meter, key, message, message_size) : PIECE_ERR_ALLOC;
     plan_destroy(plan);
     return result == PIECE_OK;

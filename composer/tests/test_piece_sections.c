@@ -179,7 +179,7 @@ static size_t melody_pitches(const cJSON *plan, double from, double to, int shif
 
 /* The key spans of the plan in time order: the key lane entries. */
 static const cJSON *key_span(const cJSON *plan, size_t index) {
-    return cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(plan, "keys"), (int)index);
+    return cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(plan, "regions"), (int)index);
 }
 
 static const char *key_text(const cJSON *span, const char *member) {

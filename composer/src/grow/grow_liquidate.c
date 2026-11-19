@@ -4,13 +4,13 @@
 
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/position.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include "motive/motive_internal.h"
 #include "util/util.h"
 
@@ -67,7 +67,7 @@ typedef struct {
     size_t bar_run;                  /* eighths in a bar: the retransition's scale line */
 } LiquidateRequest;
 
-static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRequest *out) {
+static bool read_liquidate(const Plan *plan, FillTarget target, LiquidateRequest *out) {
     LiquidateRequest request;
     GrowThemeRequest *theme = &request.theme;
     memset(&request, 0, sizeof(request));
@@ -115,7 +115,7 @@ static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRe
     if (!grow_read_keys(plan, theme) || (theme->has_start_change && !request.retransition) || theme->has_end_change) {
         return false;
     }
-    theme->bar = grow_bar_length(&theme->meter);
+    plan_meter_bar_length(&theme->meter, &theme->bar);
     theme->source = grow_find_source(plan);
     if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
         theme->bar.num == 0) {
@@ -161,25 +161,25 @@ static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRe
     return true;
 }
 
-bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target) {
+bool grow_liquidate_applies(const Plan *plan, FillTarget target) {
     LiquidateRequest request;
     return read_liquidate(plan, target, &request);
 }
 
 /* ------------------------------------------------------------- the made motives */
 
-static bool minor_key(const AnalysisKey *key) {
+static bool minor_key(const SpelledKey *key) {
     return composer_key_is_minor(key);
 }
 
 /* The pitch of the step `position` of the key's scale (7 to an octave), the seventh raised in minor (the harmonic minor). */
-static int step_pitch(const AnalysisKey *key, long position) {
+static int step_pitch(const SpelledKey *key, long position) {
     long degree = ((position % 7) + 7) % 7;
     return motive_position_pitch(key, position, minor_key(key) && degree == 6 ? 1 : 0);
 }
 
 /* The step of degree (1 to 7) in the octave that puts its pitch nearest `pitch`; the nearer below on a tie. */
-static long nearest_step(const AnalysisKey *key, int degree, int pitch) {
+static long nearest_step(const SpelledKey *key, int degree, int pitch) {
     long position;
     int alteration;
     motive_scale_position(key, pitch, &position, &alteration);
@@ -212,7 +212,7 @@ static void own_harmony_v(Motive *made) {
  * tone labels and V for its own harmony, the pitches the steps of the key's scale `from`, `from + gap`, ... A run outside MIDI FORM_LOW to
  * FORM_HIGH is shifted an octave; false when it cannot be placed.
  */
-static bool make_line(const Motive *base, const AnalysisKey *key, size_t count, long from, const long *offsets, Motive *out) {
+static bool make_line(const Motive *base, const SpelledKey *key, size_t count, long from, const long *offsets, Motive *out) {
     for (int shift = 0; shift < 3; shift++) {
         long octave = shift == 0 ? 0 : (shift == 1 ? -7 : 7);
         Motive made = *base;
@@ -236,7 +236,7 @@ static bool make_line(const Motive *base, const AnalysisKey *key, size_t count, 
     return false;
 }
 
-static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, long from, long gap, Motive *out) {
+static bool make_run(const Motive *base, const SpelledKey *key, size_t count, long from, long gap, Motive *out) {
     long offsets[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count && i < MOTIVE_MAX_NOTES; i++) {
         offsets[i] = gap * (long)i;
@@ -248,7 +248,7 @@ static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, l
  * The broken chord of V: every other step up from the degree 5 (5, 7, 2), and in a run of four eighths (4/4) the root again an
  * octave up (5, 7, 2, 5), so the last note is always a tone of V (the seventh, 4, would end on a dissonance).
  */
-static bool make_broken(const Motive *base, const AnalysisKey *key, size_t count, long from, Motive *out) {
+static bool make_broken(const Motive *base, const SpelledKey *key, size_t count, long from, Motive *out) {
     long offsets[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count && i < MOTIVE_MAX_NOTES; i++) {
         offsets[i] = i < 3 ? 2 * (long)i : 7;
@@ -257,7 +257,7 @@ static bool make_broken(const Motive *base, const AnalysisKey *key, size_t count
 }
 
 /* The scale line (`scale_run` eighths), then the broken chord of V (`run` eighths) from the degree 5 nearest the line's last note. */
-static bool make_runs(GrowLiquidateSpec *spec, const AnalysisKey *key, size_t run, size_t scale_run) {
+static bool make_runs(GrowLiquidateSpec *spec, const SpelledKey *key, size_t run, size_t scale_run) {
     /* The line goes on from the idea before it: the liquidated idea, or the retransition's second residue. */
     const Motive *before = spec->retransition ? &spec->repeated : &spec->liquidated;
     int last_pitch = motive_pitch(before, before->note_count - 1);
@@ -271,15 +271,6 @@ static bool make_runs(GrowLiquidateSpec *spec, const AnalysisKey *key, size_t ru
 }
 
 /* ------------------------------------------------------------- candidates */
-
-static bool in_range(const Motive *motive) {
-    for (size_t i = 0; i < motive->note_count; i++) {
-        if (motive_pitch(motive, i) < FORM_LOW || motive_pitch(motive, i) > FORM_HIGH) {
-            return false;
-        }
-    }
-    return true;
-}
 
 /*
  * The main theme head (R-505, and the coda's, R-507): m0's leading notes that fit half a bar, three at most and two at least, as a literal motive
@@ -342,9 +333,9 @@ static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, Gro
     second.value[2] = 0;
     if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
         spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !in_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
+        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
         spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !in_range(&spec->repeated)) {
+        !grow_motive_in_form_range(&spec->repeated)) {
         return false;
     }
     spec->liquidation = first;
@@ -355,19 +346,19 @@ static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, Gro
     spec->first_degree = fill_rng_below(rng, 2) == 0 ? 2 : 4;
     Rational half;
     if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK || !grow_main_theme_head(&spec->source, half, &spec->head) ||
-        !in_range(&spec->head)) {
+        !grow_motive_in_form_range(&spec->head)) {
         return false;
     }
     return make_runs(spec, &theme->key, request->run, request->bar_run);
 }
 
-static bool draw_liquidate(const PiecePlan *plan, const LiquidateRequest *request, FillRng *rng, GrowLiquidateSpec *spec) {
+static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, FillRng *rng, GrowLiquidateSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_LIQUIDATE_MAGIC;
     memcpy(spec->span, request->ideas, sizeof(spec->span));
     if (!grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &spec->source) || spec->source.note_count < 2 ||
-        rational_cmp(spec->source.length, theme->bar) > 0 || !in_range(&spec->source)) {
+        rational_cmp(spec->source.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->source)) {
         return false;
     }
     if (request->retransition) {
@@ -379,7 +370,7 @@ static bool draw_liquidate(const PiecePlan *plan, const LiquidateRequest *reques
     spec->repetition.value[0] = 1;
     spec->repetition.value[1] = -1;
     if (motive_develop(&spec->source, &spec->repetition, &spec->repeated) != MOTIVE_DEV_OK ||
-        rational_cmp(spec->repeated.length, theme->bar) > 0 || !in_range(&spec->repeated)) {
+        rational_cmp(spec->repeated.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->repeated)) {
         return false;
     }
     /* The liquidation: 1 to half the notes dropped, fewer than the notes. */
@@ -396,7 +387,7 @@ static bool draw_liquidate(const PiecePlan *plan, const LiquidateRequest *reques
     drawn.value[2] = 1;
     if (motive_develop(&spec->source, &drawn, &spec->liquidated) != MOTIVE_DEV_OK ||
         spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !in_range(&spec->liquidated)) {
+        !grow_motive_in_form_range(&spec->liquidated)) {
         return false;
     }
     spec->liquidation = drawn;
@@ -417,7 +408,7 @@ static void liquidate_label(const GrowLiquidateSpec *spec, char *label, size_t s
              spec->down ? "down" : "up");
 }
 
-bool grow_liquidate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_liquidate_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                              FillCandidateList *out) {
     LiquidateRequest request;
     if (!read_liquidate(plan, target, &request)) {
@@ -498,7 +489,7 @@ const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, 
 
 static const char *const IDEA_NAMES[IDEAS] = {"basic idea", "repetition", "fragment 1", "fragment 2", "cadential"};
 
-PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLiquidateSpec *spec) {
+PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquidateSpec *spec) {
     LiquidateRequest request;
     if (!spec || spec->magic != GROW_LIQUIDATE_MAGIC || !read_liquidate(plan, target, &request)) {
         return PLAN_ERR_BAD_PAYLOAD;
@@ -551,7 +542,7 @@ PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLi
         if (result == PLAN_OK && (i > 0 || retransition)) {
             Rational start;
             result = plan_result_of_rational(rational_add(
-                build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + (retransition ? i : i - 1)),
+                build.material_span.start, position_times(request.theme.bar, build.slot_base + (retransition ? i : i - 1)),
                 &start));
             if (result == PLAN_OK && i < (retransition ? 2u : 3u)) {
                 /* The repetition and the liquidated idea (a retransition's two residues): m0 with a step, named by a motive

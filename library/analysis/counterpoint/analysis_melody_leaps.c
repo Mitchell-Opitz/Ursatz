@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/counterpoint/analysis_melody_emit.h"
 #include "model/core/value.h"
 
 /* The size from which the existing rule asks a leap to be recovered (a fourth). */
@@ -31,18 +30,9 @@ static double greater(double a, double b) {
 
 /* --- leap recovery --- */
 
-static void destroy_recovery(StandardCounterpointLeapRecovery *item) {
-    interpretation_destroy(item->interpretation);
-    structure_destroy(item->shell);
-    memset(item, 0, sizeof(*item));
-}
-
 void standard_counterpoint_leap_recoveries_destroy(StandardCounterpointLeapRecoveries *recoveries) {
     if (recoveries == NULL) {
         return;
-    }
-    for (size_t i = 0; i < recoveries->count; i++) {
-        destroy_recovery(&recoveries->items[i]);
     }
     free(recoveries->items);
     recoveries->items = NULL;
@@ -93,16 +83,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_leap_recoveries(
                                 ? (int)STANDARD_COUNTERPOINT_LEAP_RECOVERED
                                 : (int)STANDARD_COUNTERPOINT_LEAP_UNRECOVERED;
         }
-        const char *ids[3] = {line->notes[claim->from].note_id, line->notes[claim->to].note_id,
-                              next != NULL ? line->notes[claim->next_index].note_id : NULL};
-        char key[400];
-        snprintf(key, sizeof(key), "%s-%s", ids[0], ids[1]);
-        if (!standard_counterpoint_melody_emit("leap-recovery", key, ids, next != NULL ? 3 : 2,
-                                               STANDARD_COUNTERPOINT_LEAP_RECOVERY_CLAIM_TYPE, claim, sizeof(*claim),
-                                               item->uncertainty, &item->shell, &item->interpretation)) {
-            standard_counterpoint_leap_recoveries_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         found.count++;
     }
     if (found.count == 0) {
@@ -115,18 +95,9 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_leap_recoveries(
 
 /* --- consecutive leaps --- */
 
-static void destroy_consecutive(StandardCounterpointConsecutiveLeaps *item) {
-    interpretation_destroy(item->interpretation);
-    structure_destroy(item->shell);
-    memset(item, 0, sizeof(*item));
-}
-
 void standard_counterpoint_consecutive_leap_list_destroy(StandardCounterpointConsecutiveLeapList *list) {
     if (list == NULL) {
         return;
-    }
-    for (size_t i = 0; i < list->count; i++) {
-        destroy_consecutive(&list->items[i]);
     }
     free(list->items);
     list->items = NULL;
@@ -183,17 +154,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_consecutive_leaps(
         item->uncertainty = greater(first->uncertainty, second->uncertainty);
         if (three) {
             item->uncertainty = greater(item->uncertainty, intervals->items[k + 2].uncertainty);
-        }
-        const char *ids[3] = {line->notes[item->claim.first_from].note_id, line->notes[item->claim.middle].note_id,
-                              line->notes[item->claim.last_to].note_id};
-        char key[400];
-        snprintf(key, sizeof(key), "%s-%s-%s", ids[0], ids[1], ids[2]);
-        if (!standard_counterpoint_melody_emit("consecutive-leaps", key, ids, 3,
-                                               STANDARD_COUNTERPOINT_CONSECUTIVE_LEAPS_CLAIM_TYPE, &item->claim,
-                                               sizeof(item->claim), item->uncertainty, &item->shell,
-                                               &item->interpretation)) {
-            standard_counterpoint_consecutive_leap_list_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
         }
         found.count++;
     }

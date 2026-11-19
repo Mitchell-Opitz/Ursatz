@@ -9,7 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/position.h"
 #include "motive/motive_internal.h"
 #include "util/util.h"
@@ -190,7 +190,9 @@ static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings,
         length = cut > 0 ? GROW_FRAGMENT_SEGMENT : GROW_FRAGMENT_HALF_BAR;
     }
     if (length == GROW_FRAGMENT_HALF_BAR) {
-        cut = cut_notes(&spec->fragment_motive[k], position_div(grow_bar_length(&spec->meter), 2));
+        Rational bar;
+        plan_meter_bar_length(&spec->meter, &bar);
+        cut = cut_notes(&spec->fragment_motive[k], position_div(bar, 2));
     }
     spec->fragment_cut[k] = cut;
     spec->fragment_diminished[k] = cut == 0 && settings->diminish;
@@ -322,15 +324,6 @@ static bool liquid_diatonic(const Motive *motive) {
     return grow_motive_in_range(motive, 0, 127, true);
 }
 
-static int widest_leap(const Motive *motive) {
-    int widest = 0;
-    for (size_t i = 1; i < motive->note_count; i++) {
-        int leap = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
-        widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
-    }
-    return widest;
-}
-
 /*
  * The cadence rule of P33: an idea that ends the theme (or the first part) ends on the cadence's tone, the tonic for a PAC,
  * the third for an IAC, with the rhythm kept. The last note moves to the nearest such pitch (other = false) or the next
@@ -369,7 +362,7 @@ static bool same_head_rhythm(const Motive *a, const Motive *b, size_t count) {
     bool halved = true;
     for (size_t i = 0; i < count; i++) {
         equal = equal && rational_cmp(a->notes[i].duration, b->notes[i].duration) == 0;
-        halved = halved && rational_cmp(grow_scaled(a->notes[i].duration, 2), b->notes[i].duration) == 0;
+        halved = halved && rational_cmp(position_times(a->notes[i].duration, 2), b->notes[i].duration) == 0;
     }
     return equal || halved;
 }
@@ -452,7 +445,7 @@ static bool liquidate_base(const GrowThemeSpec *spec, const Motive *base, size_t
                 break;
             }
             if (moved.form == MOTIVE_SKETCH_FORM_FULL && liquid_in_range(&moved, liquid_diatonic(base)) &&
-                widest_leap(&moved) <= allowed && rational_cmp(moved.length, room) <= 0 && residue_keeps(&moved, spec)) {
+                grow_widest_leap(&moved) <= allowed && rational_cmp(moved.length, room) <= 0 && residue_keeps(&moved, spec)) {
                 *steps = count;
                 *segment = residue_segment(&moved, spec);
                 *out = moved;
@@ -499,19 +492,6 @@ static bool around_head(const Motive *base, size_t first, size_t last, Motive *o
         previous = holder;
     }
     return out->feature_count > 0;
-}
-
-/* Whether two motives have the same notes: count, pitches and durations. */
-static bool same_notes(const Motive *a, const Motive *b) {
-    if (a->note_count != b->note_count) {
-        return false;
-    }
-    for (size_t i = 0; i < a->note_count; i++) {
-        if (motive_pitch(a, i) != motive_pitch(b, i) || rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
-            return false;
-        }
-    }
-    return true;
 }
 
 /*
@@ -573,8 +553,8 @@ static bool head_residue(const GrowThemeSpec *spec, const Motive *base, int allo
                 if (!liquid_take_cadence(&moved, has_cadence, cadence, other == 1)) {
                     break;
                 }
-                if (liquid_in_range(&moved, liquid_diatonic(base)) && widest_leap(&moved) <= allowed &&
-                    residue_keeps(&moved, spec) && !same_notes(&moved, base)) {
+                if (liquid_in_range(&moved, liquid_diatonic(base)) && grow_widest_leap(&moved) <= allowed &&
+                    residue_keeps(&moved, spec) && !grow_same_notes(&moved, base)) {
                     *steps = base->feature_count > 0 ? base->feature_count : 1;
                     *segment = residue_segment(&moved, spec);
                     *out = moved;
@@ -598,7 +578,7 @@ static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment develo
     size_t least = LIQUIDATION_STEPS[development].least;
     size_t most = LIQUIDATION_STEPS[development].most;
     const Motive *base = &spec->liquid_base;
-    int allowed = widest_leap(base) > LIQUID_LEAP ? widest_leap(base) : LIQUID_LEAP;
+    int allowed = grow_widest_leap(base) > LIQUID_LEAP ? grow_widest_leap(base) : LIQUID_LEAP;
     *head = false;
     if (!spec->has_liquid_base) {
         return false;
@@ -635,8 +615,9 @@ static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, 
 /* The room the idea at a place has in the material: its own length, or the bars of a derived motive if shorter. */
 static Rational idea_room(const GrowThemeSpec *spec, GrowPlace place) {
     Rational idea = spec->layout.length[place];
-    Rational bar = grow_bar_length(&spec->meter);
-    Rational node = grow_scaled(bar, grow_motive_layout_bars(&spec->source, bar));
+    Rational bar;
+    plan_meter_bar_length(&spec->meter, &bar);
+    Rational node = position_times(bar, grow_motive_layout_bars(&spec->source, bar));
     return rational_cmp(idea, node) < 0 ? idea : node;
 }
 
@@ -775,8 +756,8 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
 static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     const MotiveRelationStep *avoid = spec->pairing.beginning == SECTION_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
-    AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
-    int tonic = analysis_key_tonic_pitch_class(&ends_in);
+    SpelledKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = spelled_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
                : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + composer_material_third(ends_in.material)) % 12
                                                       : -1;
@@ -1068,7 +1049,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
 static PlanResult add_made_node(GrowBuild *build, size_t at, const Motive *motive, const char *name, NodeId *out) {
     Rational start;
     PlanResult result = plan_result_of_rational(
-        rational_add(build->material_span.start, grow_scaled(build->request->bar, build->result_base + at), &start));
+        rational_add(build->material_span.start, position_times(build->request->bar, build->result_base + at), &start));
     return result == PLAN_OK ? motive_attach_as(build->plan, build->material, start, motive, name, PLAN_STATE_REALIZED, out, NULL) : result;
 }
 

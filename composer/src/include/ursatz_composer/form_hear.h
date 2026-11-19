@@ -6,15 +6,15 @@
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * Hearing the phrase-level form of a written plan through the Ursatz Analyzer (R-257). Only the plan's written lanes over
  * the span are read, never its constraints, its nodes or its planned chords: the plan is rendered, the notes that start
- * inside the span are heard by analyzer_hear in the plan's meter map and the key under the span's start, and the themes,
- * phrases and cadences are those of the Analyzer's result (analysis_chain_themes, analysis_chain_phrases and
- * analysis_chain_cadences of analyzer_result_chain). The Analyzer identifies the chords from the notes.
+ * inside the span are heard through the library chain in the plan's meter map and the key under the span's start, and the themes,
+ * phrases and cadences are those of the hearing's reading of the span (the group and cadence claims of hearing_section_reading, R-633).
+ * The chain identifies the chords from the notes.
  *
  * The span must lie in one meter lane span, start on a barline and be whole bars long.
  */
@@ -64,15 +64,15 @@ const char *form_hear_result_name(FormHearResult result);
 /* A key the Analyzer heard from start on, until the next region's start (or the end of the span). */
 typedef struct {
     Rational start; /* in whole notes from the start of the plan */
-    AnalysisKey key;
+    SpelledKey key;
 } FormHeardKey;
 
 /*
  * Hears the key regions of plan over span: one hearing of the span as form_hear_in does, then the key regions of the
- * Analyzer's chain (analysis_chain_key_regions), in order. *out is owned by the caller (free), NULL with *count 0 when
+ * reading's region claims, in order. *out is owned by the caller (free), NULL with *count 0 when
  * none were heard. knowledge is the snapshot the Analyzer hears with (the call context's). The same errors as form_hear_in.
  */
-FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
+FormHearResult form_hear_keys(const Plan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
                               size_t *count);
 
 /* standard-form's own name of a PhraseLevelForm ("sentence", "period", ...). */

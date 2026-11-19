@@ -4,13 +4,29 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <cJSON.h>
 #include <io/midi_importer.h>
+#include <plan/plan_json.h>
+
+/* The stamp the tests write plans with: the Composer's own (name, version, producer key) and no knowledge hash. */
+const PlanProducer *test_plan_producer(void);
 
 /*
  * Writes the text to a file at the path; aborts with the path when it cannot. The checked form of test_write_file (the
  * shared support, ursatz_test.h), which reports a failure and leaves the test to check it.
  */
 void test_write_text(const char *path, const char *text);
+
+/*
+ * A plan written as format 6 as a format 5 document in place: `format` "ursatz-composer-plan", `format_version` 5, the lane `keys`
+ * for `regions`, the constraint kind `key` for `region`, no `kind` on a region, no `derived_from`, and the metadata members the format
+ * 5 writer gave (`composer_version` and `ursatz_commit`). A document that is already format 5 is left as it is. For the tests that read
+ * older formats (what the plan reads from them is checked against the plan the format 6 text holds).
+ */
+void test_plan_document_as_format_five(cJSON *document);
+
+/* The same as text: newly allocated, the caller frees it; NULL when the text is not JSON. */
+char *test_plan_text_as_format_five(const char *text);
 
 /*
  * A plan text of format 4 as the format 3 text the same plan had: `format_version` 3, no `next_note_id`, and no `id`, `source` or

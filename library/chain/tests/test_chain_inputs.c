@@ -155,13 +155,13 @@ static void test_keys(TestPiece *piece) {
     assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 1, default_config(), &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     MusicalTime before;
     assert(musical_time_make(-1, 1, &before) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent no_time = {before, {NULL, PITCH_LETTER_C, 0, test_materials()->major}}; /* before the piece starts */
+    SpelledKeyEvent no_time = {before, {NULL, PITCH_LETTER_C, 0, test_materials()->major}}; /* before the piece starts */
     assert(chain_estimate_key_regions(key_segments, segments.count, map, &no_time, 1, default_config(), &regions) == CHAIN_INPUT_ERR_KEYS);
     assert(regions.regions == NULL);
 
     MusicalTime zero;
     assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
+    SpelledKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
     assert(chain_estimate_key_regions(key_segments, segments.count, map, &signature, 1, default_config(), &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0); /* C major */
     common_practice_key_regions_destroy(&regions);
@@ -208,7 +208,7 @@ static void test_stage_inputs(TestPiece *piece) {
     config.refine_keys = false;
     MusicalTime zero;
     assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
+    SpelledKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&piece->set, &signature, 1, &config, &chain);
     assert(status == ANALYSIS_CHAIN_OK);
@@ -313,7 +313,7 @@ static void test_stage_inputs(TestPiece *piece) {
     const CommonPracticeWeightedResult *results = analysis_chain_chords(chain);
     for (size_t s = 1; s < count; s++) {
         labels[s] = results[s].matched && results[s - 1].matched &&
-                    strcmp(chord_label(results[s].best_chord), chord_label(results[s - 1].best_chord)) != 0;
+                    strcmp(results[s].best_chord.label, results[s - 1].best_chord.label) != 0;
     }
     ChainMeterInput meter;
     memset(&meter, 0, sizeof(meter));

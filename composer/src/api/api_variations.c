@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/variations.h>
 
@@ -12,7 +12,7 @@
 /* `variations` and `harmonize` as composer API entries (docs/cli-variations.md): several distinct versions of a node. */
 
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
-static ComposerStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
+static ComposerStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *text = NULL;
@@ -35,7 +35,7 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
     for (size_t i = 0; ok && i < variations->count; i++) {
         const PlanVariation *variation = &variations->items[i];
         cJSON *entry = cJSON_CreateObject();
-        cJSON *plan = api_piece_plan_object(variation->plan);
+        cJSON *plan = api_piece_plan_object(knowledge, variation->plan);
         ok = entry && plan && cJSON_AddNumberToObject(entry, "index", (double)(i + 1)) &&
              cJSON_AddNumberToObject(entry, "seed", (double)variation->seed) && cJSON_AddItemToObject(entry, "plan", plan);
         if (!ok) {
@@ -82,7 +82,7 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     }
     cJSON *root = NULL;
     char *text = NULL;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ApiTarget target;
     ApiOutputs outputs;
     FillTarget *targets = NULL;
@@ -103,6 +103,9 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     }
     if (status == COMPOSER_OK) {
         status = api_read_outputs(root, false, &outputs, &out->error);
+        if (status == COMPOSER_OK && outputs.layers) {
+            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/layers", "variations have no layers: ask for them from the request that made the plan");
+        }
     }
     if (status == COMPOSER_OK) {
         if (!api_member_whole(root, "count", 1, PLAN_VARIATIONS_MAX, &count, &present, &out->error) ||

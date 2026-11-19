@@ -6,7 +6,7 @@
 #include "structure_test_access.h"
 
 /*
- * Relationship test: a Motif holds its defining events as EntityID
+ * Test: a Motif holds its defining events as EntityID
  * references only, never duplicated NoteEvent data, and its identity
  * is stable independent of any occurrence of it (Motif carries no
  * occurrence-related field at all, so identity equality here reduces

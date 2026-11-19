@@ -10,7 +10,7 @@
 
 #include "support/test_knowledge.h"
 #include "ursatz_test.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /*
  * The Composer's knowledge: a key text is a tonic and the word of a material the snapshot knows, and the Composer writes
@@ -20,7 +20,7 @@
 
 static void test_key_words(void) {
     const KnowledgeSnapshot *knowledge = test_knowledge();
-    AnalysisKey key;
+    SpelledKey key;
     char message[160];
 
     /* A material the Composer does not compose in is refused, by one check, with the word it was written with. */
@@ -37,13 +37,13 @@ static void test_key_words(void) {
 
     /* The major and the natural minor are accepted, in any case; the key carries the snapshot's material. */
     assert(request_parse_key("C minor", knowledge, &key));
-    assert(analysis_key_tonic_pitch_class(&key) == 0 && key.material == test_materials()->natural_minor);
+    assert(spelled_key_tonic_pitch_class(&key) == 0 && key.material == test_materials()->natural_minor);
     assert(request_parse_key("c MINOR", knowledge, &key));
-    assert(analysis_key_tonic_pitch_class(&key) == 0 && key.material == test_materials()->natural_minor);
+    assert(spelled_key_tonic_pitch_class(&key) == 0 && key.material == test_materials()->natural_minor);
     assert(request_parse_key("F# major", knowledge, &key));
-    assert(analysis_key_tonic_pitch_class(&key) == 6 && key.material == test_materials()->major);
+    assert(spelled_key_tonic_pitch_class(&key) == 6 && key.material == test_materials()->major);
     assert(request_parse_key("G natural minor", knowledge, &key));
-    assert(analysis_key_tonic_pitch_class(&key) == 7 && key.material == test_materials()->natural_minor);
+    assert(spelled_key_tonic_pitch_class(&key) == 7 && key.material == test_materials()->natural_minor);
     assert(!request_key_refusal("C minor", knowledge, message, sizeof(message)));
 
     /* Text that is no key, a word that names no material, and no snapshot are refused as "unknown key", not as a material. */
@@ -52,9 +52,9 @@ static void test_key_words(void) {
     assert(!request_parse_key("C minor", NULL, &key) && !request_key_refusal("C dorian", NULL, message, sizeof(message)));
 
     /* The test helper builds the same key from the word. */
-    AnalysisKey built = test_key(9, "minor");
-    assert(analysis_key_tonic_pitch_class(&built) == 9 && built.material == test_materials()->natural_minor);
-    assert(analysis_key_equals(&built, &(AnalysisKey){NULL, PITCH_LETTER_A, 0, test_materials()->natural_minor}));
+    SpelledKey built = test_key(9, "minor");
+    assert(spelled_key_tonic_pitch_class(&built) == 9 && built.material == test_materials()->natural_minor);
+    assert(spelled_key_equals(&built, &(SpelledKey){NULL, PITCH_LETTER_A, 0, test_materials()->natural_minor}));
 }
 
 static void expect_refused(ComposerStatus status, const ComposerResponse *response) {
@@ -119,7 +119,7 @@ static void test_region_keys_equal_the_related_keys(void) {
     size_t made_count = 0;
     for (int tonic = 0; tonic < 12; tonic++) {
         for (int mode = 0; mode < 2; mode++) {
-            AnalysisKey home = test_key_mode(tonic, (HarmonyMode)mode);
+            SpelledKey home = test_key_mode(tonic, (HarmonyMode)mode);
             HarmonyMode home_mode = harmony_key_mode(&home);
             for (int degree = 1; degree <= 7; degree++) {
                 FormRegion one;
@@ -128,10 +128,10 @@ static void test_region_keys_equal_the_related_keys(void) {
                 one.major_count = 1;
                 snprintf(one.minor[0], sizeof(one.minor[0]), "%s", DEGREE_RELATIONS[degree]);
                 one.minor_count = 1;
-                AnalysisKey key;
+                SpelledKey key;
                 bool made = piece_region_key(test_knowledge(), home, &one, &rng, &key);
                 if (degree == 1) {
-                    assert(made && analysis_key_tonic_pitch_class(&key) == tonic && harmony_key_mode(&key) != home_mode);
+                    assert(made && spelled_key_tonic_pitch_class(&key) == tonic && harmony_key_mode(&key) != home_mode);
                     made_count++;
                     continue;
                 }
@@ -139,7 +139,7 @@ static void test_region_keys_equal_the_related_keys(void) {
                 bool expected = harmony_related_key_of(home_mode, degree, &related) && harmony_key_is_closely_related(home_mode, &related);
                 assert(made == expected);
                 if (made) {
-                    assert(analysis_key_tonic_pitch_class(&key) == (tonic + harmony_related_key_semitone(home_mode, &related)) % 12);
+                    assert(spelled_key_tonic_pitch_class(&key) == (tonic + harmony_related_key_semitone(home_mode, &related)) % 12);
                     assert(harmony_key_mode(&key) == related.mode);
                     made_count++;
                 }
@@ -153,13 +153,13 @@ static void test_region_keys_equal_the_related_keys(void) {
     memset(&none, 0, sizeof(none));
     snprintf(none.major[0], sizeof(none.major[0]), "omt.relation.none");
     none.major_count = 1;
-    AnalysisKey key;
+    SpelledKey key;
     assert(!piece_region_key(test_knowledge(), test_key(0, "major"), &none, &rng, &key));
     FormRegion fifth;
     memset(&fifth, 0, sizeof(fifth));
     snprintf(fifth.major[0], sizeof(fifth.major[0]), "omt.relation.dominant");
     fifth.major_count = 1;
-    AnalysisKey zero = plan_key_of_pitch_class(0, NULL);
+    SpelledKey zero = plan_key_of_pitch_class(0, NULL);
     assert(!piece_region_key(test_knowledge(), zero, &fifth, &rng, &key));
 }
 

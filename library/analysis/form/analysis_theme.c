@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form/analysis_claim.h"
+#include "analysis/notes/note_group.h"
 #include "theory/form/beginning_rules.h"
 #include "theory/form/combination_rules.h"
 #include "model/core/value.h"
@@ -23,8 +23,6 @@ static double combine(double a, double b) {
 }
 
 static void destroy_theme(StandardFormTheme *theme) {
-    interpretation_destroy(theme->interpretation);
-    relationship_destroy(theme->relationship);
     structure_destroy(theme->shell);
     memset(theme, 0, sizeof(*theme));
 }
@@ -214,13 +212,12 @@ static bool phrase_notes(const ThemeContext *ctx, size_t p, const AnalysisNote *
 }
 
 static StandardFormAnalysisStatus emit_theme(const ThemeContext *ctx, StandardFormThemes *themes, StandardFormThemeClaim *claim,
-                                             double uncertainty, int note_first, int note_end, const char *part_a,
-                                             const char *part_b) {
+                                             double uncertainty, int note_first, int note_end) {
     StandardFormTheme *theme = &themes->items[themes->count];
     claim->index = (int)themes->count;
     theme->claim = *claim;
     theme->uncertainty = uncertainty;
-    if (note_end <= note_first || part_a == NULL || part_b == NULL) {
+    if (note_end <= note_first) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     size_t count = (size_t)(note_end - note_first);
@@ -235,22 +232,9 @@ static StandardFormAnalysisStatus emit_theme(const ThemeContext *ctx, StandardFo
     char shell_id[128];
     snprintf(key, sizeof(key), "t%d", claim->index);
     snprintf(shell_id, sizeof(shell_id), "standard-form-theme-notes-%s", key);
-    theme->shell = standard_form_analysis_group(shell_id, ids, count);
+    theme->shell = analysis_note_group("standard-form", shell_id, ids, count);
     free(ids);
-    if (theme->shell == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    theme->relationship = standard_form_analysis_relationship("theme", key, part_a, part_b,
-                                                              phrase_level_form_name((PhraseLevelForm)claim->form));
-    if (theme->relationship == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    char interpretation_id[128];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-form-theme-%s", key);
-    theme->interpretation = standard_form_analysis_interpretation(
-        interpretation_id, entity_id_value(relationship_id(theme->relationship)), STANDARD_FORM_THEME_CLAIM_TYPE, claim,
-        sizeof(*claim), uncertainty, "theme-identification");
-    return theme->interpretation != NULL ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    return theme->shell != NULL ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
 }
 
 static void fill_common(StandardFormThemeClaim *claim, const Candidate *c) {
@@ -274,14 +258,6 @@ static void fill_common(StandardFormThemeClaim *claim, const Candidate *c) {
     claim->second_cadence_type = -1;
 }
 
-static const char *phrase_part_id(const StandardFormPhrase *phrase) {
-    return entity_id_value(phrase_occurrence_id(phrase->occurrence));
-}
-
-static const char *subphrase_part_id(const StandardFormSubphrase *sub) {
-    return sub != NULL && sub->shell != NULL ? entity_id_value(entity_id(structure_entity(sub->shell))) : NULL;
-}
-
 static StandardFormAnalysisStatus emit_one_phrase(const ThemeContext *ctx, StandardFormThemes *themes, size_t p, const Candidate *c,
                                                   bool part_of_compound) {
     const StandardFormPhrase *phrase = &ctx->phrases->items[p];
@@ -303,8 +279,7 @@ static StandardFormAnalysisStatus emit_one_phrase(const ThemeContext *ctx, Stand
                                                             (size_t)c->end_len, c->fragmentation);
     claim.part_of_compound = part_of_compound;
     double uncertainty = combine(phrase->uncertainty, standard_form_similarity_uncertainty(&c->similarity));
-    return emit_theme(ctx, themes, &claim, uncertainty, c->begin_part->claim.note_first, c->end_part->claim.note_end,
-                      subphrase_part_id(c->begin_part), subphrase_part_id(c->end_part));
+    return emit_theme(ctx, themes, &claim, uncertainty, c->begin_part->claim.note_first, c->end_part->claim.note_end);
 }
 
 static StandardFormAnalysisStatus emit_two_phrases(const ThemeContext *ctx, StandardFormThemes *themes, size_t p,
@@ -363,7 +338,7 @@ static StandardFormAnalysisStatus emit_two_phrases(const ThemeContext *ctx, Stan
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     return emit_theme(ctx, themes, &claim, combine(u_cadences, u_similarity), first_ideas[0].claim.note_first,
-                      second_ideas[second_count - 1].claim.note_end, phrase_part_id(first), phrase_part_id(second));
+                      second_ideas[second_count - 1].claim.note_end);
 }
 
 /* On a grid, phrase p and p + 1 are one two-phrase theme only when p ends on a unit's half measure and p + 1 on that unit's last. */

@@ -3,7 +3,6 @@
 #include "chain/chain_inputs.h"
 
 #include "analysis/form/thematic_return_detection.h"
-#include "relationship_test_access.h"
 #include "test_knowledge.h"
 
 /*
@@ -12,7 +11,7 @@
  * THE GLUE. The themes are those of the L3.6 standard-form adapter on the cadences the chain found (framework_v1_chain.h). Each theme becomes a
  * theme occurrence (its own id and the ids of the soprano notes of the theme, which the adapter keeps in the theme's shell) and a MotifWindow: the Contour of those notes' pitches (up, down or same), their RhythmicPattern (the durations of
  * the notes), and their event ids. The kernel's ThematicReturnDetection (analysis/thematic_return_detection.h, with its minimum window of
- * THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH events) compares the windows and builds one "resembles" Relationship from each later occurrence to
+ * THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH events) compares the windows and builds one "resembles" pair from each later occurrence to
  * each earlier one it matches. Nothing in the library changed to feed it.
  *
  * THE CHECKS. An annotated return (a later statement of a named original) is FOUND when an occurrence that starts within one measure of it
@@ -169,15 +168,6 @@ static void fv1_occurrences_destroy(Occs *occs) {
     free(occs->items);
 }
 
-static const Occ *fv1_occ_by_id(const Occs *occs, const char *id) {
-    for (size_t i = 0; i < occs->count; i++) {
-        if (occs->items[i].usable && strcmp(entity_id_value(occs->items[i].occurrence_id), id) == 0) {
-            return &occs->items[i];
-        }
-    }
-    return NULL;
-}
-
 /* --- the returns of one piece --- */
 
 static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
@@ -185,20 +175,20 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
     Occs occs = fv1_occurrences(c);
     ThematicReturnDetectionEntry *entries = (ThematicReturnDetectionEntry *)calloc(occs.count > 0 ? occs.count : 1, sizeof(*entries));
     assert(entries != NULL);
+    const Occ **entry_occ = (const Occ **)calloc(occs.count > 0 ? occs.count : 1, sizeof(*entry_occ));
+    assert(entry_occ != NULL);
     size_t entry_count = 0;
     for (size_t i = 0; i < occs.count; i++) {
         if (occs.items[i].usable) {
             entries[entry_count].theme_occurrence_id = occs.items[i].occurrence_id;
             entries[entry_count].window = &occs.items[i].window;
+            entry_occ[entry_count] = &occs.items[i];
             entry_count++;
         }
     }
-    Relationship **rels = NULL;
+    ThematicReturnPair *rels = NULL;
     size_t rel_count = 0;
-    assert(thematic_return_detection_build_relationships_configured(entries, entry_count, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
-    for (size_t r = 0; r < rel_count; r++) {
-        assert(strcmp(relationship_predicate_name(rels[r]), "resembles") == 0);
-    }
+    assert(thematic_return_detection_build_pairs_configured(entries, entry_count, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_OK);
 
     char themes[240] = "";
     for (size_t i = 0; i < occs.count; i++) {
@@ -232,8 +222,8 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
         char targets[200] = "";
         char at[64] = "";
         for (size_t r = 0; r < rel_count; r++) {
-            const Occ *later = fv1_occ_by_id(&occs, entity_id_value(relationship_source_id(rels[r])));
-            const Occ *earlier = fv1_occ_by_id(&occs, entity_id_value(relationship_target_id(rels[r])));
+            const Occ *later = entry_occ[rels[r].later];
+            const Occ *earlier = entry_occ[rels[r].earlier];
             if (later == NULL || earlier == NULL || abs(later->first - ret->first) > 1) {
                 continue;
             }
@@ -264,7 +254,8 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
         }
         fv1_check(v, FV1_AREA_RETURNS, location, found, expected, actual);
     }
-    thematic_return_detection_destroy_relationships(rels, rel_count);
+    free(rels);
+    free(entry_occ);
     free(entries);
     fv1_occurrences_destroy(&occs);
 }
@@ -321,14 +312,14 @@ static void fv1_bach_minimum_window(const Chain *c) {
             same_shape += same ? 1 : 0;
         }
     }
-    Relationship **rels = NULL;
+    ThematicReturnPair *rels = NULL;
     size_t rel_count = 0;
-    assert(thematic_return_detection_build_relationships_configured(entries, windows, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_pairs_configured(entries, windows, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_OK);
     printf("  PR #37 regression: %zu sliding three-note windows, %zu pairs of them share contour and rhythm, %zu reported as returns\n",
            windows, same_shape, rel_count);
     assert(same_shape >= 20);
     assert(rel_count == 0);
-    thematic_return_detection_destroy_relationships(rels, rel_count);
+    free(rels);
     for (size_t w = 0; w < windows; w++) {
         contour_destroy(contours[w]);
         rhythmic_pattern_destroy(rhythms[w]);
@@ -363,12 +354,11 @@ static void fv1_bach_minimum_window(const Chain *c) {
     EntityID *e1 = fv1_id("bach-first-strain");
     EntityID *e2 = fv1_id("bach-first-strain-repeat");
     ThematicReturnDetectionEntry pair[2] = {{e1, &w1}, {e2, &w2}};
-    assert(thematic_return_detection_build_relationships_configured(pair, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
-    printf("  PR #37 regression: the first strain (%zu notes) and its written-out repeat: %zu \"resembles\" link(s)\n", length, rel_count);
+    assert(thematic_return_detection_build_pairs_configured(pair, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_OK);
+    printf("  PR #37 regression: the first strain (%zu notes) and its written-out repeat: %zu \"resembles\" pair(s)\n", length, rel_count);
     assert(rel_count == 1);
-    assert(strcmp(entity_id_value(relationship_source_id(rels[0])), "bach-first-strain-repeat") == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(rels[0])), "bach-first-strain") == 0);
-    thematic_return_detection_destroy_relationships(rels, rel_count);
+    assert(rels[0].later == 1 && rels[0].earlier == 0); /* the repeat recalls the first strain */
+    free(rels);
 
     /* a return that restates only the opening idea (measures 1-4 against the written-out repeat, measures 9-16) is found inside the longer theme,
        at the start of it, with a perfect score; it was invisible when whole themes were compared */
@@ -383,18 +373,14 @@ static void fv1_bach_minimum_window(const Chain *c) {
     EntityID *eo = fv1_id("bach-opening-idea");
     EntityID *el = fv1_id("bach-second-strain");
     ThematicReturnDetectionEntry partial[2] = {{eo, &wo}, {el, &wl}};
-    assert(thematic_return_detection_build_relationships_configured(partial, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
-    printf("  partial return: the opening idea (%zu notes) inside the repeat (%zu notes): %zu \"resembles\" link(s)", opening, n - second_start,
+    assert(thematic_return_detection_build_pairs_configured(partial, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_OK);
+    printf("  partial return: the opening idea (%zu notes) inside the repeat (%zu notes): %zu \"resembles\" pair(s)", opening, n - second_start,
            rel_count);
     assert(rel_count == 1);
-    const Value *qualifiers = relationship_qualifiers(rels[0]);
-    assert(qualifiers != NULL && strcmp(value_type(qualifiers), THEMATIC_RETURN_SIMILARITY_VALUE_TYPE) == 0);
-    size_t evidence_size = 0;
-    const ThematicReturnSimilarity *evidence = (const ThematicReturnSimilarity *)value_content(qualifiers, &evidence_size);
-    assert(evidence_size == sizeof(*evidence));
+    const ThematicReturnPair *evidence = &rels[0];
     printf(", similarity %.2f at offset %zu\n", evidence->similarity, evidence->later_offset);
     assert(evidence->similarity == 1.0 && evidence->earlier_offset == 0 && evidence->later_offset == 0);
-    thematic_return_detection_destroy_relationships(rels, rel_count);
+    free(rels);
     entity_id_destroy(eo);
     entity_id_destroy(el);
     contour_destroy(co);

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/style.h>
 
@@ -103,7 +103,7 @@ typedef struct {
     bool plain_shaping;
     unsigned climax_rise;
     unsigned climax_slack;
-    ComposerRatio second_nearest;
+    Rational second_nearest;
     unsigned attempts;
     unsigned keep;
     MelodyWeights weights;
@@ -153,7 +153,7 @@ MelodyFillParams melody_fill_params_default(void);
  * notes score. The strong beats must carry chord tones, and every note must be in the range. A candidate of
  * another operator goes to harmony_phrase_checker.
  */
-bool melody_fill_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool melody_fill_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*

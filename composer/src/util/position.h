@@ -87,14 +87,17 @@ static inline Rational position_remainder(Rational a, Rational unit) {
     return position_sub(a, position_mul(unit, position_floor_units(a, unit)));
 }
 
-/* The greatest length of which both a and b (positive lengths) are whole multiples. */
-static inline Rational position_gcd(Rational a, Rational b) {
-    while (position_is_positive(b)) {
-        Rational remainder = position_remainder(a, b);
-        a = b;
-        b = remainder;
+/* The greatest length of which both a and b (positive lengths) are whole multiples: gcd(an * bd, bn * ad) over ad * bd. */
+static inline Rational position_common_unit(Rational a, Rational b) {
+    long long left;
+    long long right;
+    long long denominator;
+    Rational out;
+    if (!position_is_positive(b) || __builtin_mul_overflow(a.num, b.den, &left) || __builtin_mul_overflow(b.num, a.den, &right) ||
+        __builtin_mul_overflow(a.den, b.den, &denominator) || rational_make(rational_gcd(left, right), denominator, &out) != RATIONAL_OK) {
+        return a;
     }
-    return a;
+    return out;
 }
 
 /* k * part / whole cut toward zero to a whole number, for a positive whole: how far through `whole` a part is, in k ths. */
@@ -110,6 +113,16 @@ static inline long long position_scale(long long k, Rational part, Rational whol
 /* |a|. */
 static inline Rational position_abs(Rational a) {
     return rational_is_negative(a) ? position_sub(POSITION_ZERO, a) : a;
+}
+
+/* count units as a length; 0 when the product does not fit a Rational. */
+static inline Rational position_times(Rational unit, size_t count) {
+    Rational out = {0, 1};
+    if (rational_mul_int(unit, (long long)count, &out) != RATIONAL_OK) {
+        out.num = 0;
+        out.den = 1;
+    }
+    return out;
 }
 
 #endif

@@ -6,9 +6,11 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_json.h>
+#include <plan/plan.h>
+#include "structure/form_record.h"
 
 /*
  * The keys of a piece plan (R-069). A section is in the home key, or in a closely related key
@@ -36,8 +38,8 @@
  * (R-597: `omt.relation.dominant`; a static string), NULL for home. The key lane writes it beside the key.
  */
 typedef struct {
-    AnalysisKey start;
-    AnalysisKey end;
+    SpelledKey start;
+    SpelledKey end;
     const char *start_relation;
     const char *end_relation;
     PlanKeyAnchor anchor;      /* what the relations are taken from: home for a drawn region, else a request's region (R-610) */
@@ -58,7 +60,7 @@ typedef struct {
  * degrees a form lists is the closely related key of standard-harmony on it (harmony_related_key_of). False when the relation
  * refuses the degree (a diminished triad names no key) or the snapshot lacks the entry; one draw of rng is made in any case.
  */
-bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out);
+bool piece_region_key(const KnowledgeSnapshot *knowledge, SpelledKey home, const FormRegion *region, FillRng *rng, SpelledKey *out);
 
 /*
  * Plans the keys of the plan made by form_build_plan from the form's size before its form is Given: adds the Given key lane spans to the
@@ -69,25 +71,8 @@ bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, cons
  * entry for each section of the size, the keys a request's overlays ask for (R-610): after the draws, a section with a region
  * starts and ends in it, so the draws and every other section's key are as they were.
  */
-PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
+PieceResult piece_plan_keys(Plan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
                             FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out);
-
-typedef struct {
-    bool ok;
-    size_t changes;     /* the key changes in the key lane (a span in another key than the one before it) */
-    size_t modulations; /* of them, those that open a key a section ends in and are confirmed as a modulation */
-    char reason[96];    /* the first change that is not, when it is not ok */
-} PieceKeyCheck;
-
-/*
- * piece_check_keys_in (check/hearing.h) checks the keys of a composed piece against standard-harmony (R-069): every key is closely related to the home
- * key (the key of the first span), and every key change that opens a key a section ends in is a modulation, not a
- * tonicization. The change is classified on its length and what follows the cadence (harmony_key_change_classify:
- * the chords in the new key, the planned cadence in it, whether the key goes on after it), then confirmed by the
- * cadences heard (harmony_key_change_confirm): an authentic cadence must arrive inside the new key's span, as form_hear_in
- * hears it in the key of its chord. The plan's sections must be written. True when the plan could be read; the result
- * is in out.
- */
 
 /*
  * The cadences across the sections (R-069), set on the plan after its keys. In binary, rounded binary, ternary and
@@ -100,7 +85,7 @@ typedef struct {
  * A form that does not close (loop, layered) ends open on purpose and is left as its document has it. Only the first CADENCE constraint of
  * a section, the one it ends in, is changed.
  */
-PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys);
+PieceResult piece_plan_cadences(Plan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys);
 
 typedef struct {
     bool ok;
@@ -115,13 +100,12 @@ typedef struct {
  * True when the plan could be read; the result is in out. A form that does not close (loop, layered), and a plan that records no form (plan_form_record), have nothing to
  * check: `closing` is read from the record and each section's `closed` from its description.
  */
-bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out);
+bool piece_check_cadences(const Plan *plan, PieceCadenceCheck *out);
 
 /*
- * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's
- * name, and each section's `closed` from that form's size (the first size with the plan's sections in its proportions). A plan of
- * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
+ * What the Composer adds to the plan reader (plan_json.h): its keys are made of the major and the natural minor only, and a plan of
+ * a format before 5 gets its form record from piece_form_record_migrate. Every read of a plan the Composer composes from passes it.
  */
-bool piece_form_record_migrate(PiecePlan *plan);
+const PlanReadHooks *composer_plan_read_hooks(void);
 
 #endif

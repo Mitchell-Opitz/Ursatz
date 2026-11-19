@@ -22,7 +22,7 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 | `src/util/` | Private JSON, file and misc helpers; the bottom of the stack | [library.md](library.md) |
 | `src/store/` | The corpus walk, paths and the stale check (`corpus_walk`, `path_util`, `staleness`) | [corpus.md](corpus.md) |
 | `src/result/` | The analysis result (`analyzer_analyze`), the file entry (`run_file`) and the thin import entries | [analysis-result.md](analysis-result.md) |
-| `src/export/` | The analysis document and its text, material, score and playback exports | [analysis-document.md](analysis-document.md), [text-export.md](text-export.md) |
+| `src/export/` | The analysis document (an export of the reading, built by area in `document_*.c`) and its text, material, score and playback exports | [analysis-document.md](analysis-document.md), [text-export.md](text-export.md) |
 | `src/style/` | Style profiles read from documents and the corpus | [style-profile.md](style-profile.md) |
 | `src/corpus/` | The corpus run, similar material, the chord sequence and the corpus passages | [corpus.md](corpus.md), [similar-material.md](similar-material.md), [corpus-passages.md](corpus-passages.md) |
 | `src/links/` | Motive links, their cache and their JSON | [motive-links.md](motive-links.md) |

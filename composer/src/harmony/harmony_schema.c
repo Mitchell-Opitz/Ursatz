@@ -61,7 +61,7 @@ static bool read_figures(const char *figures, bool *seventh, int *inversion) {
 }
 
 /* Whether the chord's bass member is what the framework's stage asks for, by the framework's own matching. */
-static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
+static bool bass_accepts(const SpelledKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
     int pc;
     if (!harmony_chord_bass_pc(key, chord, &pc)) {
         return false;
@@ -76,7 +76,7 @@ static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const
 }
 
 /* The chord of one stage, one cell long, or false when the data does not make one consistent chord. */
-static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, PhraseChord *out) {
+static bool derive_stage(const SpelledKey *key, const GalantStage *stage, PhraseChord *out) {
     HarmonyMode mode = harmony_key_mode(key);
     bool seventh;
     int inversion;
@@ -130,7 +130,7 @@ static bool modulates(GalantSchemaId id) {
     return id == GALANT_SCHEMA_MODULATING_PRINNER || id == GALANT_SCHEMA_MODULATING_PRINNER_WITH_DOMINANT;
 }
 
-static bool derive_schema(const AnalysisKey *key, const GalantPrototype *prototype, PhraseChord *chords) {
+static bool derive_schema(const SpelledKey *key, const GalantPrototype *prototype, PhraseChord *chords) {
     if (modulates(prototype->id) || prototype->stage_count == 0 || prototype->stage_count > GALANT_MAX_STAGES) {
         return false;
     }
@@ -155,7 +155,7 @@ bool harmony_schema_find(const char *name, GalantSchemaId *id) {
     return false;
 }
 
-bool harmony_schema_chords(const AnalysisKey *key, GalantSchemaId id, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count) {
+bool harmony_schema_chords(const SpelledKey *key, GalantSchemaId id, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count) {
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];
     if (!key || !prototype || !derive_schema(key, prototype, chords)) {
@@ -171,7 +171,7 @@ bool harmony_schema_chords(const AnalysisKey *key, GalantSchemaId id, char numer
 bool harmony_schema_available(GalantSchemaId id, const PitchMaterial *material) {
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];
-    AnalysisKey key = plan_key_of_pitch_class(0, material);
+    SpelledKey key = plan_key_of_pitch_class(0, material);
     return prototype && derive_schema(&key, prototype, chords);
 }
 
@@ -215,7 +215,7 @@ static bool layout_schema(const SkeletonContext *context, const GalantPrototype 
 
 /* --- the operator -------------------------------------------------------- */
 
-static bool schema_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool schema_applies(const Plan *plan, FillTarget target, void *context) {
     SkeletonContext read;
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) &&
@@ -250,7 +250,7 @@ static bool role_fits(unsigned role, const SkeletonContext *context, size_t rema
     }
 }
 
-static bool schema_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool schema_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     HarmonySchemaParams params_value = params_of(context);
     const HarmonySchemaParams *params = &params_value;
@@ -310,7 +310,7 @@ static bool schema_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return ok;
 }
 
-static PlanResult schema_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+PlanResult harmony_skeleton_apply_target(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const SkeletonCandidate *skeleton = candidate ? candidate->payload : NULL;
     (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !skeleton || skeleton->context.target != (LaneSpanId)target.id) {
@@ -323,8 +323,8 @@ FillResult harmony_schema_register(FillOperatorRegistry *registry, const Harmony
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_SCHEMA_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span with the chords before it";
-    operator_.generator.supported_outputs = "PiecePlan harmony and bass lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span with the chords before it";
+    operator_.generator.supported_outputs = "Plan harmony and bass lane spans";
     operator_.generator.configuration_description = "enabled schemas, enabled roles, preference, bass parameters";
     operator_.generator.constraints_description = "galant-schemas prototypes, standard-harmony, standard-counterpoint";
     operator_.generator.deterministic = true;
@@ -332,7 +332,7 @@ FillResult harmony_schema_register(FillOperatorRegistry *registry, const Harmony
     operator_.kind = FILL_OPERATOR_FILL;
     operator_.applies = schema_applies;
     operator_.generate = schema_generate;
-    operator_.apply = schema_apply;
+    operator_.apply = harmony_skeleton_apply_target;
     operator_.context = (void *)params;
     return fill_registry_register(registry, &operator_);
 }

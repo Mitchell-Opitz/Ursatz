@@ -175,7 +175,7 @@ static void test_schema(void) {
     composer_response_destroy(&response);
     assert(plan);
     /* The schema's chords in C major, one stage a cell from B's first bar, Given. */
-    AnalysisKey key = test_key(0, "major");
+    SpelledKey key = test_key(0, "major");
     char expected[GALANT_MAX_STAGES][PLAN_ROMAN_NUMERAL_MAX];
     size_t stages = 0;
     GalantSchemaId schema;

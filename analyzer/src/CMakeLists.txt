@@ -9,6 +9,15 @@ add_library(ursatz_analyzer STATIC
     export/score_export.c
     store/path_util.c
     export/analysis_document.c
+    export/document_shared.c
+    export/document_keys.c
+    export/document_chords.c
+    export/document_harmony.c
+    export/document_form.c
+    export/document_motive.c
+    export/document_rhythm.c
+    export/document_voice_leading.c
+    export/document_print.c
     corpus/corpus.c
     store/corpus_walk.c
     result/run_file.c
@@ -58,7 +67,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz_io ursatz_analysis ursatz_chain
+    PUBLIC ursatz_io ursatz_analysis ursatz_chain ursatz_realization ursatz_reading ursatz_plan
     PRIVATE cjson
 )
 

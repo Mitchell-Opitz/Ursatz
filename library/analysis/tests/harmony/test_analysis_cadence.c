@@ -3,7 +3,6 @@
 
 #include "analysis/harmony/analysis_cadence.h"
 #include "analysis/tests/harmony/analysis_test_util.h"
-#include "interpretation_test_access.h"
 #include "structure_test_access.h"
 
 /* Cadences from real music: candidates at cadence points, classified by the existing rules. The fixture's segments are
@@ -31,13 +30,10 @@ static void test_authentic_v_to_i_on_a_strong_enough_beat(void) {
     assert(c->arrival_first == 2 && c->arrival_last == 2);
     assert(strcmp(c->key_ref, "C") == 0 && c->uncertainty == 0.0);
 
-    /* The L5 shell has the segment ids of the dominant and the arrival; the Interpretation targets its id. */
+    /* The L5 shell has the segment ids of the dominant and the arrival. */
     assert(cadence_event_id_count(c->cadence) == 2);
     assert(strcmp(entity_id_value(cadence_event_id_at(c->cadence, 0)), "seg-1") == 0);
     assert(strcmp(entity_id_value(cadence_event_id_at(c->cadence, 1)), "seg-2") == 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(c->interpretation)),
-                  entity_id_value(cadence_id(c->cadence))) == 0);
-    assert(interpretation_framework_reference(c->interpretation) != NULL);
 
     /* The TimeSpan runs from the dominant's start (1/4) to the arrival's end (3/4). */
     assert(c->span.start.value.num == 1 && c->span.start.value.den == 4);
@@ -234,8 +230,6 @@ static void test_uncertainty_is_the_largest_of_the_chords_involved(void) {
     HarmonySegment *segments = NULL;
     HarmonyCadences found = find(&f, &segments, NULL);
     assert(found.count == 1 && fabs(found.items[0].uncertainty - 0.4) < 1e-12);
-    const Uncertainty *u = interpretation_uncertainty(found.items[0].interpretation);
-    assert(uncertainty_scalar_confidence_numerator(u) == 600000UL);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -506,19 +500,12 @@ static void test_boundary_arguments(void) {
 
 /* --- two competing readings (C7, C9) --- */
 
-/* Both Interpretations of a two-reading cadence: the same Cadence target, the alternative's id the primary's plus
-   "-alt", the claims carrying reading, rank and share, the shares summing to 1000. */
+/* A two-reading cadence: the alternative carrying its reading and share, the shares summing to 1000. */
 static void check_readings(const HarmonyCadenceResult *c, HarmonyCadenceReading primary_reading,
                            HarmonyCadenceReading alt_reading, int share) {
     assert(c->share == share && c->alternative.present && c->alternative.share == 1000 - share);
-    assert(c->alternative.reading == alt_reading && c->alternative.interpretation != NULL);
-    assert(strcmp(entity_id_value(interpretation_target_id(c->interpretation)),
-                  entity_id_value(interpretation_target_id(c->alternative.interpretation))) == 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(c->interpretation)),
-                  entity_id_value(cadence_id(c->cadence))) == 0);
-    char expected[300];
-    snprintf(expected, sizeof(expected), "%s-alt", entity_id_value(interpretation_id(c->interpretation)));
-    assert(strcmp(entity_id_value(interpretation_id(c->alternative.interpretation)), expected) == 0);
+    assert(c->alternative.reading == alt_reading);
+    (void)primary_reading;
 }
 
 static void test_v_to_i6_on_a_downbeat_after_a_predominant_is_evaded(void) {
@@ -569,8 +556,7 @@ static void test_other_cadences_have_one_reading(void) {
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
     HarmonySegment *segments = NULL;
     HarmonyCadences found = find(&f, &segments, NULL);
-    assert(found.count == 1 && found.items[0].share == 1000 && !found.items[0].alternative.present &&
-           found.items[0].alternative.interpretation == NULL);
+    assert(found.count == 1 && found.items[0].share == 1000 && !found.items[0].alternative.present);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -663,9 +649,7 @@ static void test_a_boundary_without_a_soprano_offers_an_unspecified_authentic_re
     const HarmonyCadenceResult *c = &found.items[0];
     assert(c->type == CADENCE_TYPE_HALF && c->alternative.type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED);
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 650); /* 500 + 150 rest */
-    /* the alternative carries the soprano-absent penalty (default 0.3) */
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(c->alternative.interpretation)) == 700000UL);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(c->interpretation)) == 1000000UL);
+    assert(c->uncertainty == 0.0);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);

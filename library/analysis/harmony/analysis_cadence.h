@@ -10,7 +10,6 @@
 #include <stddef.h>
 
 #include "analysis/harmony/analysis_input.h"
-#include "model/interpretation/interpretation.h"
 #include "theory/vocabulary/beat_strength.h"
 #include "theory/vocabulary/cadence_type.h"
 #include "model/structure/cadence.h"
@@ -80,22 +79,17 @@
  * 0 means absent. viio to I is not an authentic cadence in standard-harmony's rule and is not found here.
  *
  * The result of each cadence is a Cadence (structure/cadence.h, the L5 shell: an id and event refs, here the segment
- * ids from the dominant's first segment to the arrival's last) and an Interpretation targeting the Cadence's id:
- * FrameworkReference standard-harmony, claim = a HarmonyCadenceClaim, the uncertainty below. The span from the
+ * ids from the dominant's first segment to the arrival's last) and the uncertainty below. The span from the
  * dominant's start to the arrival's end is carried as a TimeSpan on the result.
  *
- * A cadence with two readings (C7, C9) has a second Interpretation for the alternative: the same Cadence target, the
- * id of the first plus "-alt", the same framework reference, uncertainty formula, author and method. Each claim
- * says which reading it is (`reading`), its `rank` (1 the primary, 2 the alternative) and its `share`, in thousandths,
- * the two shares summing to 1000. The evidence for the shares is analysis_cadence_readings.h; its weights are the
+ * A cadence with two readings (C7, C9) has an `alternative`: the other reading's type, arrival and soprano degree. The result and the
+ * alternative each have a `share`, in thousandths, the two shares summing to 1000. The evidence for the shares is analysis_cadence_readings.h; its weights are the
  * `reading_*` fields of HarmonyCadenceConfig. Consumers that read one reading per cadence read the primary only.
  *
  * UNCERTAINTY = 1 - (1 - u)(1 - penalty), u the largest input uncertainty of the chords involved (the dominant, a
  * cadential 6/4 in it, and the arrival), penalty config.soprano_absent_penalty when the type is
  * AUTHENTIC_UNSPECIFIED for want of a soprano, and 0 otherwise.
  */
-
-#define HARMONY_CADENCE_CLAIM_TYPE "standard-harmony/cadence"
 
 typedef struct {
     BeatStrength min_arrival_strength; /* default MEDIUM */
@@ -150,20 +144,6 @@ typedef enum {
     HARMONY_CADENCE_ANALYSIS_ERR_ALLOC
 } HarmonyCadenceAnalysisStatus;
 
-typedef struct {
-    int type;               /* CadenceType */
-    int soprano_degree;     /* at the arrival's first segment; 0 when absent */
-    bool post_cadential;    /* a plagal cadence that directly follows a PAC */
-    bool has_six_four;      /* the dominant includes a cadential 6/4 */
-    int arrival_beat_strength; /* BeatStrength at the arrival's first segment */
-    int reading;            /* HarmonyCadenceReading: what this Interpretation claims */
-    int rank;               /* 1 for the primary reading, 2 for the alternative */
-    int share;              /* thousandths of this reading; the two readings of a cadence sum to 1000 */
-    char arrival_segment[96];   /* the arrival's first segment id */
-    char dominant_segment[96];  /* the dominant's first segment id (the cadential 6/4's when it has one) */
-    char key_ref[64];
-} HarmonyCadenceClaim;
-
 /* The competing reading of a cadence that has two (C7, C9). `type` is meaningful only when `reading` is CADENCE. */
 typedef struct {
     bool present;
@@ -173,7 +153,6 @@ typedef struct {
     size_t arrival_last;
     int soprano_degree;           /* at the arrival's first segment; 0 when absent */
     int share;                    /* thousandths */
-    Interpretation *interpretation; /* owned; targets the same Cadence id; id = the primary's id + "-alt" */
 } HarmonyCadenceAlternative;
 
 typedef struct {
@@ -192,7 +171,6 @@ typedef struct {
     double uncertainty;           /* [0, 1] */
     TimeSpan span;                /* the dominant's start to the arrival's end */
     Cadence *cadence;             /* owned */
-    Interpretation *interpretation; /* owned; targets the Cadence's id */
     int share;                    /* thousandths of the primary reading; 1000 when there is no alternative */
     HarmonyCadenceAlternative alternative;
 } HarmonyCadenceResult;

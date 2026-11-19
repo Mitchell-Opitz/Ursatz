@@ -3,7 +3,7 @@
 
 #include "theory/style/style_labels.h"
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>
@@ -14,14 +14,14 @@
 #include <ursatz_composer/preferences.h>
 #include <ursatz_composer/variant_registry.h>
 
-#include "api_grow.h"
 #include "grow/grow_internal.h"
 #include "api_internal.h"
+#include "api_seed.h"
 #include "api_piece.h"
 #include "api_workflow.h"
 #include "api_vocabulary.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* --- the tables ------------------------------------------------------------------------------------------ */

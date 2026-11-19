@@ -10,7 +10,7 @@
 
 /*
  * The standard-counterpoint analysis adapter (L3): turns separated voices into this framework's inputs and returns
- * Interpretations. This file is the input, the VOICE-PITCH GRID. The grid is the shared AnalysisVoiceGrid
+ * results. This file is the input, the VOICE-PITCH GRID. The grid is the shared AnalysisVoiceGrid
  * (semantics/voice_grid.h), which the standard-harmony adapter reads too; the caller builds one from a voice assignment.
  *
  * The grid has one row per chord segment, in time order, and one column per voice. Voice 0 is the TOP voice (the
@@ -24,7 +24,7 @@
  *                spelling is DERIVED from the semitone with a sharp-preferring default (C C-sharp D D-sharp E F F-sharp
  *                G G-sharp A A-sharp B; MIDI middle C, 60, is C4): right for the white keys and the common sharps, but a
  *                flat key's D-flat or E-flat is spelled C-sharp or D-sharp, so a caller with spellings should pass them
- *   note_id      the note's id (non-empty when present); the id the Interpretations refer to. Borrowed
+ *   note_id      the note's id (non-empty when present); the id the results refer to. Borrowed
  *   attacked     the note was attacked in this segment; false when it was held over from an earlier segment
  *   confidence   [0, 1], the voice assignment's confidence for the note (voice separation's), used in uncertainty
  *

@@ -6,7 +6,6 @@
 
 #include "analysis/form/analysis_ideas.h"
 #include "analysis/form/analysis_phrase_grid.h"
-#include "model/relationship/relationship.h"
 
 /*
  * Themes (the form adapter, step 3): the phrase-level form of each theme, from the segmented phrases, idea similarity and
@@ -48,10 +47,8 @@
  * (analysis_ideas.h), so it is rarely found; no theme is claimed for a phrase of fewer than two ideas that no stronger cadence
  * follows.
  *
- * OUTPUT. A Structure shell per theme (the ids of its soprano notes) and a Relationship between its two parts (the subphrase shells of
- * a one-phrase theme, the phrases' PhraseOccurrences of a two-phrase theme), predicate = the form's name ("sentence", "period",
- * "hybrid", "compound-period", "repeated-phrase"), source the first part and target the second; the Interpretation targets the
- * RELATIONSHIP's id: FrameworkReference standard-form, claim = a StandardFormThemeClaim, and
+ * OUTPUT. A Structure shell per theme (the ids of its soprano notes), a StandardFormThemeClaim (its form is one of "sentence",
+ * "period", "hybrid", "compound-period", "repeated-phrase") and
  *
  *   uncertainty = 1 - (1 - u_cadences)(1 - u_similarity)
  *
@@ -59,8 +56,6 @@
  * similarity that decided the form (analysis_similarity.h): the second idea against the first for a one-phrase theme, the second
  * phrase's first idea against the first phrase's for a two-phrase one, the two phrases for a repeated phrase.
  */
-
-#define STANDARD_FORM_THEME_CLAIM_TYPE "standard-form/theme"
 
 typedef struct {
     int index;
@@ -100,8 +95,6 @@ typedef struct {
     StandardFormThemeClaim claim;
     double uncertainty;
     Structure *shell;               /* owned: the ids of the theme's soprano notes */
-    Relationship *relationship;     /* owned: first part to second part */
-    Interpretation *interpretation; /* owned; targets the relationship's id */
 } StandardFormTheme;
 
 typedef struct {

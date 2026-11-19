@@ -46,12 +46,12 @@ static bool pick(const Option *options, size_t count, int max_distance, const Me
     while (usable < count && options[usable].distance <= max_distance) {
         usable++;
     }
-    unsigned long denominator = params->second_nearest.denominator;
+    unsigned long denominator = params->second_nearest.den;
     uint64_t draw = fill_rng_below(rng, denominator);
     if (usable == 0) {
         return false;
     }
-    *pitch = options[usable > 1 && draw >= denominator - params->second_nearest.numerator ? 1 : 0].pitch;
+    *pitch = options[usable > 1 && draw >= denominator - params->second_nearest.num ? 1 : 0].pitch;
     return true;
 }
 
@@ -356,7 +356,7 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
     if (rational_make(1, (long long)context->metre.meter.beat_unit, &beat_time) != RATIONAL_OK) {
         return false;
     }
-    Rational unit = position_gcd(context->pickup, beat_time);
+    Rational unit = position_common_unit(context->pickup, beat_time);
     long long count = position_floor_units(context->pickup, unit);
     count = count > MELODY_MAX_PICKUP ? MELODY_MAX_PICKUP : count;
     if (count < 1) {

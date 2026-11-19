@@ -98,15 +98,6 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
     }
 }
 
-/* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
-static int bass_degree_of(HarmonyMode mode, const PhraseChord *chord) {
-    if (chord->applied) {
-        return (harmony_applied_root_degree(mode, &chord->applied_chord) - 1 +
-                2 * chord->applied_inversion) % 7 + 1;
-    }
-    return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
-}
-
 /* The soprano the requested cadence implies over chord i, or 0 for none. */
 static int implied_soprano(const HeardPhrase *phrase, size_t i) {
     size_t last = phrase->count - 1;
@@ -219,7 +210,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
             input->applied_to = 0;
             input->inversion = chord->chord.inversion;
         }
-        input->bass_degree = bass_degree_of(mode, chord);
+        input->bass_degree = harmony_member_degree(mode, chord);
         input->soprano_degree = soprano ? soprano[i] : implied_soprano(phrase, i);
         input->key_ref = set->key_refs[i];
         input->mode = mode;
@@ -273,18 +264,18 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
 }
 
 /* The key of the key lane over a chord, when one span holds it. */
-static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, AnalysisKey *key) {
+static bool key_under(const Plan *plan, PlanSpan chord_span, LaneSpanId *id, SpelledKey *key) {
     LaneSpanId keys[2];
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, chord_span, keys, 2) != 1 ||
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, chord_span, keys, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, keys[0]), chord_span)) {
         return false;
     }
     *id = keys[0];
-    *key = plan_lane_span_payload(plan, keys[0])->key;
+    *key = plan_lane_span_payload(plan, keys[0])->region;
     return true;
 }
 
-bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                             PhraseMetre *metre, HarmonyMode *modes, unsigned *keys) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
@@ -300,7 +291,7 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mo
         Rational end;
         HarmonyMode chord_mode = mode;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
-        AnalysisKey key;
+        SpelledKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
             chord_mode = harmony_key_mode(&key);
         }
@@ -323,12 +314,12 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mo
     return true;
 }
 
-bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
     return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
+bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];

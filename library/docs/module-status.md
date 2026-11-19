@@ -13,8 +13,6 @@ The implementation status and doc of each kernel module. [Docs index](README.md)
 | structure | L5 | Implemented (partial, see doc) | [structure](modules/structure.md) |
 | context | L6 | Implemented (the opaque type only, see doc) | [context](modules/context.md) |
 | semantics | L6 | Implemented | [semantics](modules/semantics.md) |
-| relationship | L6 | Implemented | [relationship](modules/relationship.md) |
-| interpretation | L6 | Implemented (partial, see doc) | [interpretation](modules/interpretation.md) |
 | theory | L7 | Implemented (partial, see doc) | [theory](modules/theory.md) |
 | rules | L7 | Implemented (partial, see doc) | [rules](modules/rules.md) |
 | analysis | L8 | Implemented | [analysis](modules/analysis.md), [motive-relations](modules/motive-relations.md), [motive-variant-recognition](modules/motive-variant-recognition.md), [motive-tone-roles](modules/motive-tone-roles.md) |

@@ -5,8 +5,6 @@
 #include <stddef.h>
 
 #include "analysis/harmony/chord_input.h"
-#include "model/interpretation/interpretation.h"
-#include "model/relationship/relationship.h"
 #include "theory/tonality/roman_numeral_rules.h"
 #include "theory/vocabulary/applied_chord_kind.h"
 
@@ -37,20 +35,17 @@
  * and the figure; in a minor key the label (the claim's too) is spelled as RomanText spells it (R-031): V, v, VII, III, III+, iv,
  * IV, "viio7", "ii/o7" -- the circle is "o" and the slashed circle "/o"; an inverted seventh chord replaces its "7" by the figure: V6/5, V4/3, V4/2, "vii\xC2\xB0" "6".
  *
- * CLAIM. One Interpretation per matched segment: target = the segment's Sonority id (the Chord's target),
- * FrameworkReference standard-tonality, a claim Value of type STANDARD_TONALITY_ROMAN_CLAIM_TYPE holding a
- * StandardTonalityRomanClaim (label, degree, quality, inversion, applied-to), and the scalar confidence
+ * RESULT. One result per segment: a StandardTonalityRomanClaim (label, degree, quality, inversion, applied-to) and the
+ * uncertainty
  *
- *     confidence = (1 - chord uncertainty) * (1 - key region uncertainty)
+ *     uncertainty = 1 - (1 - chord uncertainty)(1 - key uncertainty)
  *
- * i.e. uncertainty = 1 - (1 - chord uncertainty)(1 - key uncertainty), recorded in millionths and also
- * kept as a double in the result. A segment with no numeral has no Interpretation.
+ * kept as a double. A segment with no numeral has has_numeral false.
  */
 
-#define STANDARD_TONALITY_ROMAN_CLAIM_TYPE "standard-tonality/roman-numeral"
 #define STANDARD_TONALITY_ROMAN_LABEL_MAX 48
 
-/* The structured fields of the claim, copied into the Interpretation's claim Value. */
+/* The structured fields of a numeral. */
 typedef struct {
     char label[STANDARD_TONALITY_ROMAN_LABEL_MAX];
     int degree;                 /* 1..7: the chord's root as a degree of the local key; for an applied chord, of
@@ -88,21 +83,16 @@ bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *
 
 typedef struct {
     const char *segment_id;     /* the input's, borrowed from the caller's segment */
-    bool has_numeral;           /* false: no Interpretation, nothing below is meaningful */
+    bool has_numeral;           /* false: no numeral, nothing below is meaningful */
     StandardTonalityRomanReading reading;
     StandardTonalityRomanClaim claim;
     double uncertainty;         /* [0, 1] */
-    Interpretation *interpretation; /* owned */
-    /* An applied chord that resolves is linked to the segment it resolves to by a Relationship, predicate
-       STANDARD_TONALITY_RESOLVES_TO (source: this segment's Sonority id, target: the resolution segment's),
-       the durable claim pattern: the link is its own object, not a field of either claim. An applied chord that
-       does not resolve keeps its applied label and has no link. */
-    Relationship *resolves_to;  /* owned; NULL unless applied and resolved */
-    size_t resolution_index;    /* the resolution segment, an index into the inputs; meaningful when resolves_to is set */
-    bool deceptive;             /* resolves to the target's submediant, not the target; meaningful when resolves_to is set */
+    /* An applied chord that resolves names the segment it resolves to. An applied chord that does not resolve keeps its
+       applied label and names none. */
+    bool resolved;              /* applied and resolved */
+    size_t resolution_index;    /* the resolution segment, an index into the inputs; meaningful when resolved */
+    bool deceptive;             /* resolves to the target's submediant, not the target; meaningful when resolved */
 } StandardTonalityRomanResult;
-
-#define STANDARD_TONALITY_RESOLVES_TO "resolves-to"
 
 
 typedef enum {

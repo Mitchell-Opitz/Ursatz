@@ -4,12 +4,12 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 
@@ -451,7 +451,7 @@ static Motive scenario_motive(const Scenario *scenario) {
         exit(2);
     }
     motive_set_meter(&motive, (PlanMeter){scenario->beats, 4, 0});
-    AnalysisKey motive_key_value = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey motive_key_value = test_key_mode(scenario->tonic, scenario->mode);
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
@@ -477,7 +477,7 @@ static PieceRequest scenario_request(const Scenario *scenario, const char *kind,
     return request;
 }
 
-static const PlanConstraint *find(const PiecePlan *plan, NodeId id, PlanConstraintKind kind, size_t nth) {
+static const PlanConstraint *find(const Plan *plan, NodeId id, PlanConstraintKind kind, size_t nth) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
         if (constraint->kind == kind && nth-- == 0) {
@@ -496,7 +496,7 @@ static long bars_of(Rational time, int beats) {
     return quarters / beats;
 }
 
-static void check_structure(const PiecePlan *plan, const Scenario *scenario, const char *kind, Size size) {
+static void check_structure(const Plan *plan, const Scenario *scenario, const char *kind, Size size) {
     Expected expected[MAX_EXPECTED];
     size_t count = expected_sections(kind, size, expected);
     NodeId form = plan_root(plan);
@@ -514,7 +514,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         at += (long)expected[i].bars;
 
         const SectionDescription *described = plan_node_section(plan, section);
-        const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_KEY, 0);
+        const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_REGION, 0);
         const bool liquidation = described->has_role && described->role == SECTION_ROLE_LIQUIDATION;
         assert(described->letter[0] != '\0' && strcmp(described->letter, expected[i].letter) == 0);
         /* The part of a larger form a section is, and only that (R-503). */
@@ -547,25 +547,25 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         const int offset = expected[i].region ? region_offset : expected[i].key_offset;
         if (expected[i].tonic_major) {
             /* The home tonic's major key: the home key in a major piece, the parallel major in a minor one (R-517). */
-            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic &&
-                   harmony_key_mode(&key->params.key) == HARMONY_MODE_MAJOR);
+            assert(key && spelled_key_tonic_pitch_class(&key->params.region) == scenario->tonic &&
+                   harmony_key_mode(&key->params.region) == HARMONY_MODE_MAJOR);
         } else if (expected[i].second) {
             /* One of the second region's keys: vi or IV in major, VI or iv in minor (R-520). */
-            const int pc = analysis_key_tonic_pitch_class(&key->params.key);
+            const int pc = spelled_key_tonic_pitch_class(&key->params.region);
             const bool major = scenario->mode == HARMONY_MODE_MAJOR;
-            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && harmony_key_mode(&key->params.key) == (major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR)) ||
-                           (pc == (scenario->tonic + 5) % 12 && harmony_key_mode(&key->params.key) == scenario->mode)));
+            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && harmony_key_mode(&key->params.region) == (major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR)) ||
+                           (pc == (scenario->tonic + 5) % 12 && harmony_key_mode(&key->params.region) == scenario->mode)));
         } else if (expected[i].region_key >= 0) {
             /* The development is vi in major and iv in minor; the sequence is ii in major and v in minor; all minor keys (R-520). The
                elaboration is IV in major and VI in minor, both major keys (R-523). */
             const bool major = scenario->mode == HARMONY_MODE_MAJOR;
             const bool elaboration = expected[i].region_key == ELABORATION;
             const int up = elaboration ? (major ? 5 : 8) : expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
-            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
-                   harmony_key_mode(&key->params.key) == (elaboration ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR));
+            assert(key && spelled_key_tonic_pitch_class(&key->params.region) == (scenario->tonic + up) % 12 &&
+                   harmony_key_mode(&key->params.region) == (elaboration ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR));
         } else {
-            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
-                   harmony_key_mode(&key->params.key) == mode);
+            assert(key && spelled_key_tonic_pitch_class(&key->params.region) == (scenario->tonic + offset) % 12 &&
+                   harmony_key_mode(&key->params.region) == mode);
         }
         /* A figure rides on a figurate return and only there (R-497). */
         const SectionFigure *figure = described->has_figure ? &described->figure : NULL;
@@ -652,7 +652,7 @@ static void check_refused(const char *kind, const Scenario *scenario, const Moti
             continue;
         }
         PieceRequest request = scenario_request(scenario, kind, size, motive);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_ERR_BAD_SIZE && plan == NULL);
     }
 }
@@ -664,7 +664,7 @@ static void test_structure(const char *kind) {
         Motive motive = scenario_motive(&SCENARIOS[s]);
         for (size_t z = 0; z < size_count; z++) {
             PieceRequest request = scenario_request(&SCENARIOS[s], kind, sizes[z], &motive);
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             PieceResult built = piece_build_plan(&request, &plan);
             if (built != PIECE_OK) {
                 fprintf(stderr, "%s %zu bars, %s: %s\n", kind, sizes[z].bars, SCENARIOS[s].name,
@@ -726,7 +726,7 @@ static void compose_all(const char *kind, Tally *total) {
             memset(&tally, 0, sizeof(tally));
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {
                 PieceRequest request = scenario_request(&SCENARIOS[s], kind, sizes[z], &motive);
-                PiecePlan *plan = NULL;
+                Plan *plan = NULL;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
                 ComposeConfig config;
                 ComposeOutcome outcome;
@@ -881,7 +881,7 @@ static int test_smoke(const char *kind) {
     }
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         PieceRequest request = scenario_request(&SCENARIOS[0], kind, smallest, &motive);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         ComposeConfig config;
         ComposeOutcome outcome;

@@ -48,8 +48,8 @@
  */
 #define MAIN_RECORD_HASH 0x77b59ca4f5d1ac76ULL /* re-recorded at P37 B2 (ideas ranked by fidelity, R-355); P36 B3 before */
 
-static PiecePlan *rounded_binary(void) {
-    PiecePlan *plan = NULL;
+static Plan *rounded_binary(void) {
+    Plan *plan = NULL;
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
@@ -64,8 +64,8 @@ static PiecePlan *rounded_binary(void) {
 
 /* A period of 8 bars in G major 6/8 grown from a motive, a plan the Analyzer disagrees with in 7 of 10 seeds. It was A minor 3/4 until
    P61 B6 (the Composer hears on harmonic spans, R-618): the Analyzer then agreed with every seed of it (and with 300 seeds). */
-static PiecePlan *period_g_major(Motive *motive) {
-    PiecePlan *plan = NULL;
+static Plan *period_g_major(Motive *motive) {
+    Plan *plan = NULL;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -120,7 +120,7 @@ static bool scores_higher(unsigned long an, unsigned long ad, unsigned long bn, 
 /* ------------------------------------------------------------------ choices */
 
 static int test_choices(void) {
-    PiecePlan *plan = rounded_binary();
+    Plan *plan = rounded_binary();
     ComposerStyle *style = chorales();
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
@@ -259,7 +259,7 @@ static int test_rejections(void) {
     bool found = false;
     for (unsigned long seed = 1; seed <= 10 && !found; seed++) {
         Motive motive;
-        PiecePlan *plan = period_g_major(&motive);
+        Plan *plan = period_g_major(&motive);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.knowledge = test_knowledge();
@@ -311,7 +311,7 @@ static int test_rejections(void) {
 /* --------------------------------------------------------------------- same */
 
 static void explained(unsigned long seed, char **text, char **json) {
-    PiecePlan *plan = rounded_binary();
+    Plan *plan = rounded_binary();
     ComposerStyle *style = chorales();
     ComposeConfig config;
     memset(&config, 0, sizeof(config));

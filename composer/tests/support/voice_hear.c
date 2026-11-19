@@ -17,7 +17,7 @@
 #include <model/pitch/pitch_numeric_value.h>
 #include <model/pitch/tuning_system.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
@@ -71,7 +71,7 @@ static void grid_free(Grid *grid) {
 }
 
 /* True when a span of the lane and voice over range is Constrained. */
-static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan range) {
+static bool lane_open(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan range) {
     LaneSpanId ids[ACCOMP_MAX_LINE];
     size_t found = plan_lane_find(plan, lane, voice, range, ids, ACCOMP_MAX_LINE);
     for (size_t i = 0; i < found && i < ACCOMP_MAX_LINE; i++) {
@@ -82,16 +82,8 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
     return false;
 }
 
-/* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
-static int scale_degree(const AnalysisKey *key, int pitch) {
-    int degree = 1;
-    int alteration;
-    util_scale_degree(analysis_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
-    return degree;
-}
-
 /* The spelling of a pitch over a chord: as the tone of the chord it is, else as a degree of the key. */
-static PitchSpelling *spell_over(const AnalysisKey *key, const PhraseChord *chord, int pitch) {
+static PitchSpelling *spell_over(const SpelledKey *key, const PhraseChord *chord, int pitch) {
     int pcs[4];
     size_t count;
     int root_degree;
@@ -104,7 +96,7 @@ static PitchSpelling *spell_over(const AnalysisKey *key, const PhraseChord *chor
             }
         }
     }
-    return harmony_spell_pitch(key, scale_degree(key, pitch), pitch);
+    return harmony_spell_pitch(key, util_pitch_degree(key, pitch), pitch);
 }
 
 /* The pitch of the note sounding at a position, or -1 for a rest. */
@@ -157,13 +149,13 @@ static VoiceHearResult count_violations(const StandardCounterpointVoiceGrid *cou
     return result;
 }
 
-VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out) {
+VoiceHearResult voice_hear(const Plan *plan, PlanSpan span, VoiceHeard *out) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
     AccompLine lines[VOICES][ACCOMP_MAX_LINE];
     size_t line_count[VOICES];
-    AnalysisKey key;
+    SpelledKey key;
     size_t count;
     Rational origin = span.start;
     Rational length = span.length;

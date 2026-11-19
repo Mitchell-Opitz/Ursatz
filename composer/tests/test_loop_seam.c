@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/seam_hear.h>
 #include "support/test_knowledge.h"
@@ -37,7 +37,7 @@ static Rational whole(long num, unsigned long den) {
 }
 
 /* A lane span of notes, evenly spaced over a bar that starts at `bar`. */
-static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, long bar, const int *pitches, size_t count) {
+static void add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, long bar, const int *pitches, size_t count) {
     PlanNote notes[8];
     PlanLanePayload payload;
     LaneSpanId id;
@@ -56,7 +56,7 @@ static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, long bar
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
 }
 
-static void add_chord(PiecePlan *plan, NodeId owner, long bar, const char *roman) {
+static void add_chord(Plan *plan, NodeId owner, long bar, const char *roman) {
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
@@ -80,7 +80,7 @@ typedef struct {
 
 /* A plan of a bar before the seam and the seam, with a chord, a bass note and melody in each. */
 static SeamHeard hear_case(const SeamCase *c) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form;
     NodeId body;
     NodeId seam;
@@ -103,8 +103,8 @@ static SeamHeard hear_case(const SeamCase *c) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key(0, "major");
-    assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
+    payload.region = test_key(0, "major");
+    assert(plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     add_chord(plan, body, 0, c->before);
     add_chord(plan, seam, 1, c->after);
@@ -195,7 +195,7 @@ static void test_rules(void) {
     assert(hear_case(&other).leading_tone);
 
     /* A plan with no chord before the seam is not heard. */
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form;
     NodeId seam;
     SectionDescription mark;
@@ -210,8 +210,8 @@ static void test_rules(void) {
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, (PlanSpan){whole(1, 1), whole(1, 1)}, "seam", &seam) == PLAN_OK);
     assert(plan_node_set_section(plan, seam, &mark) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.material = test_materials()->major;
-    assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
+    payload.region.material = test_materials()->major;
+    assert(plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
            PLAN_OK);
     assert(seam_hear(plan, seam, &heard) == SEAM_HEAR_ERR_NOT_WRITTEN);
     assert(seam_hear(NULL, seam, &heard) == SEAM_HEAR_ERR_NULL);
@@ -256,7 +256,7 @@ static void standard_structure(Fixture *fixture) {
 }
 
 /* The first or the last section of a part of the piece structure. */
-static NodeId part_section(const PiecePlan *plan, int part, bool last) {
+static NodeId part_section(const Plan *plan, int part, bool last) {
     NodeId found = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         int id_part;
@@ -282,7 +282,7 @@ static Rational minus(Rational a, Rational b) {
     return out;
 }
 
-static size_t sounds(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window, Sound *out) {
+static size_t sounds(const Plan *plan, PlanLaneKind lane, PlanSpan window, Sound *out) {
     LaneSpanId ids[32];
     size_t found = plan_lane_find(plan, lane, 0, window, ids, 32);
     size_t count = 0;
@@ -320,7 +320,7 @@ static size_t sounds(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window, 
     return count;
 }
 
-static bool lane_written(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window) {
+static bool lane_written(const Plan *plan, PlanLaneKind lane, PlanSpan window) {
     LaneSpanId ids[128];
     size_t found = plan_lane_find(plan, lane, 0, window, ids, 128);
     if (found == 0 || found > 128) {
@@ -335,7 +335,7 @@ static bool lane_written(const PiecePlan *plan, PlanLaneKind lane, PlanSpan wind
 }
 
 /* The seam is the body's first bar, lane by lane, Given. */
-static void check_copy(const PiecePlan *plan, NodeId seam) {
+static void check_copy(const Plan *plan, NodeId seam) {
     static const PlanLaneKind LANES[3] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY};
     PlanSpan seam_span = plan_node_span(plan, seam);
     PlanSpan first = {plan_node_span(plan, part_section(plan, PIECE_PART_BODY, false)).start, seam_span.length};
@@ -358,7 +358,7 @@ static void check_copy(const PiecePlan *plan, NodeId seam) {
 }
 
 /* Nothing sounds past the loop's end: the piece ends there, the seam is skipped and has no marker. */
-static void check_render(const PiecePlan *plan, NodeId seam, Rational loop_end) {
+static void check_render(const Plan *plan, NodeId seam, Rational loop_end) {
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rational_cmp(rendered.piece_end, loop_end) == 0);
@@ -383,7 +383,7 @@ static void test_sweep(void) {
     size_t held_by_rule[SEAM_RULE_COUNT] = {0};
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Fixture fixture;
-        PiecePlan *plan;
+        Plan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
         standard_structure(&fixture);

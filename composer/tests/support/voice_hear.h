@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * Hearing the voice leading of a written plan, the way Ursatz-Analyzer's voice-leading stage hears real music (R-064,
@@ -43,6 +43,6 @@ typedef enum {
 const char *voice_hear_result_name(VoiceHearResult result);
 
 /* Hears the voice leading of plan over span into *out. On failure *out is all zero. */
-VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out);
+VoiceHearResult voice_hear(const Plan *plan, PlanSpan span, VoiceHeard *out);
 
 #endif

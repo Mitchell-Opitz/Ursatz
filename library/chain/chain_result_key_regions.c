@@ -24,11 +24,10 @@ static AnalysisKeyChangeExtent change_extent(KeyChangeExtent extent) {
 
 static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion *out) {
     int tonic = common_practice_key_index_tonic(source->key_index);
-    KeyStructure structure;
-    if (!source->key || !key_structure(source->key, &structure) || !structure.material) {
+    if (!source->key.material) {
         return false;
     }
-    const PitchMaterial *material = structure.material;
+    const PitchMaterial *material = source->key.material;
     const MusicalTime start = source->span.start;
     const MusicalTime end = source->span.end;
     out->label = chain_key_label(tonic, material);

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
@@ -12,15 +12,15 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 
 #include "api_piece.h"
 #include "api_vocabulary.h"
 #include "api_workflow.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* `progression` as a composer API entry (docs/cli-progression.md): a chord progression for one phrase, with a bass line. */
@@ -36,7 +36,7 @@ typedef struct {
     const char *meter_text;
     const char *schema_text;
     const char *sequence_text;
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     long bars;
     CadenceType cadence;
@@ -63,11 +63,6 @@ static bool needs_lead(const Options *options) {
            (options->has_schema && galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
 }
 
-static bool present(const cJSON *request, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, name);
-    return item && !cJSON_IsNull(item);
-}
-
 static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
                                    ApiOutputs *outputs, ComposerError *error) {
     const char *cadence_text = NULL;
@@ -75,7 +70,7 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     bool found;
     memset(options, 0, sizeof(*options));
     options->bass = true;
-    if (!present(request, "key") || !present(request, "meter") || !present(request, "bars") || !present(request, "cadence")) {
+    if (!api_has_member(request, "key") || !api_has_member(request, "meter") || !api_has_member(request, "bars") || !api_has_member(request, "cadence")) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "", "progression needs key, meter, bars and cadence");
     }
     if (!api_member_string(request, "key", &options->key_text, &found, error) ||
@@ -173,7 +168,7 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
 /* --- building the plan ------------------------------------------------------------------------------------ */
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     PlanSpan span;
     Rational bar_length;
 } Built;
@@ -194,7 +189,7 @@ static bool build_plan(const Options *options, Built *built) {
     if (!built->plan) {
         return false;
     }
-    built->bar_length = time_of(options->meter.beats_per_bar, (unsigned long)options->meter.beat_unit);
+    plan_meter_bar_length(&options->meter, &built->bar_length);
     built->span.start = time_of(0, 1);
     built->span.length = time_of(options->bars * (long)built->bar_length.num, built->bar_length.den);
 
@@ -219,8 +214,8 @@ static bool build_plan(const Options *options, Built *built) {
     ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_METER, 0, built->span, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.key = options->key;
-    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_KEY, 0, built->span, &payload, &id) == PLAN_OK &&
+    payload.region = options->key;
+    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_REGION, 0, built->span, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
 
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
@@ -243,8 +238,8 @@ static bool build_plan(const Options *options, Built *built) {
         for (int pitch = 40; pitch <= 60; pitch++) {
             int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
             int best = tonic_note.midi > 50 ? tonic_note.midi - 50 : 50 - tonic_note.midi;
-            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) &&
-                (tonic_note.midi % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
+            if (pitch % 12 == spelled_key_tonic_pitch_class(&options->key) &&
+                (tonic_note.midi % 12 != spelled_key_tonic_pitch_class(&options->key) || distance < best)) {
                 tonic_note.midi = pitch;
                 tonic_note.spelled = false;
             }
@@ -361,7 +356,7 @@ static FillConfig config_for(unsigned long seed) {
 }
 
 /* One run of the fill loop with the operators of a stage. False only if the loop itself fails. */
-static bool run_stage(PiecePlan *plan, const Options *options, unsigned long seed, Stage stage, const Parameters *parameters,
+static bool run_stage(Plan *plan, const Options *options, unsigned long seed, Stage stage, const Parameters *parameters,
                       FillRecord **record) {
     FillOperatorRegistry *registry = registry_for(options, parameters, stage);
     FillConfig config = config_for(seed);
@@ -390,7 +385,7 @@ static bool chose(const FillRecord *record, const char *label_prefix) {
     return false;
 }
 
-static bool any_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span) {
+static bool any_open(const Plan *plan, PlanLaneKind lane, PlanSpan span) {
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(plan, lane, 0, span, ids, MAX_CHORDS);
     for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
@@ -402,7 +397,7 @@ static bool any_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span) {
 }
 
 /* Reopens, for embellishment, the chords that have no bass written under them. */
-static bool open_for_embellishment(PiecePlan *plan, PlanSpan span) {
+static bool open_for_embellishment(Plan *plan, PlanSpan span) {
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, MAX_CHORDS);
     for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
@@ -602,7 +597,7 @@ static ComposerStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON 
         }
     }
     if (options->plans) {
-        cJSON *plan = api_piece_plan_object(built->plan);
+        cJSON *plan = api_piece_plan_object(knowledge, built->plan);
         if (!plan || !cJSON_AddItemToObject(object, "plan", plan)) {
             cJSON_Delete(plan);
             return api_fail_alloc(error);
@@ -634,7 +629,7 @@ static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const O
     char key[24];
     char meter[16];
     cJSON *document = cJSON_CreateObject();
-    util_key_name(analysis_key_tonic_pitch_class(&options->key), options->key.material, key, sizeof(key));
+    util_key_name(spelled_key_tonic_pitch_class(&options->key), options->key.material, key, sizeof(key));
     snprintf(meter, sizeof(meter), "%d/%d", options->meter.beats_per_bar, options->meter.beat_unit);
     bool ok = document && cJSON_AddStringToObject(document, "key", key) && cJSON_AddStringToObject(document, "meter", meter) &&
               cJSON_AddNumberToObject(document, "bars", (double)options->bars) &&
@@ -801,7 +796,7 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
         status = build_document(context->knowledge, &options, built, made, seed, &outputs, &document, &out->error);
         if (status == COMPOSER_OK) {
             /* The first progression's own files. */
-            status = api_render_outputs(context->knowledge, built[0].plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, built[0].plan, &outputs, document, out);
             if (status != COMPOSER_OK) {
                 cJSON_Delete(document);
             } else {

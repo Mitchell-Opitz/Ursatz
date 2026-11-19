@@ -6,7 +6,6 @@
 
 #include "analysis/form/analysis_phrase.h"
 #include "analysis/form/analysis_similarity.h"
-#include "model/interpretation/interpretation.h"
 #include "model/structure/structure.h"
 
 /*
@@ -28,8 +27,7 @@
  *
  * Limits: the nominal cut finds no 1 + 1 + 2 division of a continuation, and no boundary the melody or the harmony suggests.
  *
- * Each idea and subphrase is a Structure shell (the ids of its soprano notes) and an Interpretation targeting the shell's id:
- * FrameworkReference standard-form, a StandardFormIdeaClaim or StandardFormSubphraseClaim, and
+ * Each idea and subphrase is a StandardFormIdeaClaim or StandardFormSubphraseClaim and an uncertainty:
  *
  *   uncertainty = 1 - (1 - u_phrase)(1 - u_similarity)(1 - penalty)
  *
@@ -59,8 +57,6 @@ typedef struct {
 typedef struct {
     StandardFormIdeaClaim claim;
     double uncertainty;
-    Structure *shell;               /* owned */
-    Interpretation *interpretation; /* owned */
 } StandardFormIdea;
 
 typedef struct {
@@ -78,8 +74,6 @@ typedef struct {
 typedef struct {
     StandardFormSubphraseClaim claim;
     double uncertainty;
-    Structure *shell;
-    Interpretation *interpretation;
 } StandardFormSubphrase;
 
 typedef struct {

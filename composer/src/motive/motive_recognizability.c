@@ -21,13 +21,6 @@ typedef struct {
     size_t ratios;    /* the same */
 } Features;
 
-/* Counts are at most MOTIVE_MAX_NOTES, so the score always fits; the 0/1 is unreachable. */
-static MotiveScore make_score(unsigned long long numerator, unsigned long long denominator) {
-    MotiveScore score = {0, 1};
-    motive_score_make(numerator, denominator, &score);
-    return score;
-}
-
 static void features_of(const Motive *motive, Features *out) {
     memset(out, 0, sizeof(*out));
     size_t count = motive->note_count;
@@ -53,7 +46,7 @@ static void features_of(const Motive *motive, Features *out) {
 /* A part when one or both have nothing to compare: 1 when both have nothing, 0 when only one has. */
 static bool empty_part(size_t a, size_t b, MotiveScore *out) {
     if (a == 0 || b == 0) {
-        *out = make_score(a == b ? 1 : 0, 1);
+        *out = motive_make_score(a == b ? 1 : 0, 1);
         return true;
     }
     return false;
@@ -93,7 +86,7 @@ static MotiveScore contour_part(const Features *a, const Features *b) {
     if (empty_part(a->intervals, b->intervals, &score)) {
         return score;
     }
-    return make_score(longest_common_run(a, a->intervals, b, b->intervals, same_direction),
+    return motive_make_score(longest_common_run(a, a->intervals, b, b->intervals, same_direction),
                       longer(a->intervals, b->intervals));
 }
 
@@ -114,7 +107,7 @@ static MotiveScore intervals_part(const Features *a, const Features *b) {
     for (int c = 0; c <= 6; c++) {
         shared += counts_a[c] < counts_b[c] ? counts_a[c] : counts_b[c];
     }
-    return make_score(shared, longer(a->intervals, b->intervals));
+    return motive_make_score(shared, longer(a->intervals, b->intervals));
 }
 
 static MotiveScore rhythm_part(const Features *a, const Features *b) {
@@ -122,7 +115,7 @@ static MotiveScore rhythm_part(const Features *a, const Features *b) {
     if (empty_part(a->ratios, b->ratios, &score)) {
         return score;
     }
-    return make_score(longest_common_run(a, a->ratios, b, b->ratios, same_ratio), longer(a->ratios, b->ratios));
+    return motive_make_score(longest_common_run(a, a->ratios, b, b->ratios, same_ratio), longer(a->ratios, b->ratios));
 }
 
 MotiveScoreWeights motive_score_default_weights(void) {
@@ -148,7 +141,7 @@ bool motive_recognizability(const Motive *source, const Motive *development, con
     result.intervals = intervals_part(&a, &b);
     result.rhythm = rhythm_part(&a, &b);
     size_t shorter = source->note_count < development->note_count ? source->note_count : development->note_count;
-    result.length = make_score(shorter, longer(source->note_count, development->note_count));
+    result.length = motive_make_score(shorter, longer(source->note_count, development->note_count));
 
     /* The weighted sum of the four parts over the total weight, exact; false when it does not fit a Rational. */
     const MotiveScore *parts[4] = {&result.contour, &result.intervals, &result.rhythm, &result.length};

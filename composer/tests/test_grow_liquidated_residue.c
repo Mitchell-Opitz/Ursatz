@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "api/api_grow.h"
 #include "support/test_support.h"
@@ -59,7 +59,7 @@ static Motive load_motive(const char *path) {
     return motive;
 }
 
-static const PlanMotiveRef *ref_of(const PiecePlan *plan, NodeId node) {
+static const PlanMotiveRef *ref_of(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
@@ -70,7 +70,7 @@ static const PlanMotiveRef *ref_of(const PiecePlan *plan, NodeId node) {
 }
 
 /* The melody notes a node owns (its melody span), or 0. */
-static size_t melody_of(const PiecePlan *plan, NodeId node, const PlanNote **notes) {
+static size_t melody_of(const Plan *plan, NodeId node, const PlanNote **notes) {
     LaneSpanId spans[8];
     size_t count = plan_node_lane_spans(plan, node, spans, 8);
     for (size_t i = 0; i < count && i < 8; i++) {
@@ -119,7 +119,7 @@ static bool same_durations(const PlanNote *notes, const Motive *motive, size_t f
 }
 
 /* Checks one cadential idea of a composed theme; the motive node is m<slot>. */
-static void check_idea(const PiecePlan *plan, const Motive *motive, const MotiveAnalysis *analysis, const char *idea,
+static void check_idea(const Plan *plan, const Motive *motive, const MotiveAnalysis *analysis, const char *idea,
                        const char *motive_name, int tonic, bool is_minor, Rational shortest) {
     NodeId node = test_find_node(plan, motive_name);
     NodeId idea_node = test_find_node(plan, idea);
@@ -146,7 +146,7 @@ static void check_idea(const PiecePlan *plan, const Motive *motive, const Motive
 static void compose(const Case *test, unsigned long seed, GrowRun *run, Motive *motive) {
     static GrowBriefText text;
     *motive = load_motive(test->file);
-    AnalysisKey key = motive_key(motive);
+    SpelledKey key = motive_key(motive);
     memset(&text, 0, sizeof(text));
     text.cadence = "PAC";
     GrowSetup setup;
@@ -188,10 +188,10 @@ static void test_cadential_ideas(void) {
             for (size_t i = 1; i < motive.note_count; i++) {
                 shortest = rational_cmp(motive.notes[i].duration, shortest) < 0 ? motive.notes[i].duration : shortest;
             }
-            AnalysisKey key = motive_key(&motive);
-            int tonic = analysis_key_tonic_pitch_class(&key);
+            SpelledKey key = motive_key(&motive);
+            int tonic = spelled_key_tonic_pitch_class(&key);
             bool is_minor = harmony_key_mode(&key) == HARMONY_MODE_MINOR;
-            const PiecePlan *plan = run.themes[0].plan;
+            const Plan *plan = run.themes[0].plan;
             if (test->ending == SECTION_ENDING_CONTINUATION) {
                 check_idea(plan, &motive, &analysis, "cadential", "m4", tonic, is_minor, shortest);
                 ideas++;
@@ -214,7 +214,7 @@ static void test_head_residue(void) {
     GrowRun run;
     Motive motive;
     compose(&CASES[2], 1, &run, &motive);
-    const PiecePlan *plan = run.themes[0].plan;
+    const Plan *plan = run.themes[0].plan;
     NodeId node = test_find_node(plan, "liquidated 3");
     assert(node != PLAN_NODE_NONE);
     const PlanNote *notes = NULL;
@@ -244,7 +244,7 @@ static void test_no_residue(void) {
     options.features[1].first = 1;
     options.features[1].last = 1;
     assert(motive_from_notes_text("C5:h G4:h", &options, &motive, NULL) == MOTIVE_OK);
-    AnalysisKey key = test_key(0, "major");
+    SpelledKey key = test_key(0, "major");
     motive_set_key(&motive, &key, MOTIVE_SKETCH_KEY_GIVEN);
     memset(&text, 0, sizeof(text));
     text.cadence = "PAC";

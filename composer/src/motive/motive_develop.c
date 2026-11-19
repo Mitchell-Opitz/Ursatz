@@ -6,7 +6,7 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The developments of a motive. Each of the kinds applies the library relation of the same name
@@ -61,7 +61,7 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
     }
     if (developed->has_scale && (!template_motive->has_scale || developed->tonic_pc != template_motive->tonic_pc ||
                                  motive_sketch_minor(developed) != motive_sketch_minor(template_motive))) {
-        AnalysisKey moved = plan_key_of_pitch_class(developed->tonic_pc, developed->material);
+        SpelledKey moved = plan_key_of_pitch_class(developed->tonic_pc, developed->material);
         motive_set_key(&result, &moved, MOTIVE_SKETCH_KEY_GIVEN);
     }
     result.chord_count = developed->chord_count;

@@ -11,7 +11,6 @@
 
 #include "analysis/form/analysis_input.h"
 #include "analysis/form/analysis_phrase_grid.h"
-#include "model/interpretation/interpretation.h"
 #include "model/structure/phrase_occurrence.h"
 #include "model/time/time_span.h"
 
@@ -67,14 +66,11 @@
  * above.
  *
  * OUTPUT. A kernel PhraseOccurrence per phrase (its region: the ids of its soprano notes; target phrase id
- * "standard-form-phrase-<n>") and an Interpretation targeting the occurrence's id: FrameworkReference standard-form, claim = a
- * StandardFormPhraseClaim, and
+ * "standard-form-phrase-<n>"), a StandardFormPhraseClaim and
  *
  *   uncertainty = the cadence's uncertainty; 0.25 for a boundary by the secondary signal (the kernel's 3/4 confidence for it);
  *                 config.no_signal_uncertainty for a final phrase with neither.
  */
-
-#define STANDARD_FORM_PHRASE_CLAIM_TYPE "standard-form/phrase"
 
 typedef enum {
     STANDARD_FORM_SIGNAL_CADENCE = 0,
@@ -126,7 +122,6 @@ typedef struct {
     double uncertainty;
     TimeSpan span;                  /* the phrase's time span, the extension included */
     PhraseOccurrence *occurrence;   /* owned: the kernel's PhraseOccurrence */
-    Interpretation *interpretation; /* owned; targets the occurrence's id */
 } StandardFormPhrase;
 
 typedef struct {

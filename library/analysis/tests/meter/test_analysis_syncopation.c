@@ -4,7 +4,6 @@
 #include "analysis/tests/meter/analysis_test_util.h"
 #include "analysis/meter/meter_analysis_syncopation.h"
 #include "theory/meter/metric_position_rules.h"
-#include "model/interpretation/interpretation.h"
 
 static StandardMeterSyncopations find(Piece *piece, const StandardMeterConfig *config) {
     StandardMeterSyncopations found = {NULL, 0};
@@ -24,7 +23,7 @@ static void test_a_tie_across_a_barline(void) {
     assert(strcmp(claim->note_id, "n1") == 0 && claim->measure == 1 && fabs(claim->beat - 4.0) < 1e-12);
     assert(claim->attack_level == (int)STANDARD_METER_LEVEL_BEAT && claim->through_level == (int)STANDARD_METER_LEVEL_DOWNBEAT);
     assert(claim->strength == 2 && claim->through_measure == 2 && fabs(claim->through_beat - 1.0) < 1e-12);
-    assert(found.items[0].interpretation != NULL && found.items[0].uncertainty == 0.0);
+    assert(found.items[0].uncertainty == 0.0);
     standard_meter_syncopations_destroy(&found);
     piece_destroy(&piece);
 }

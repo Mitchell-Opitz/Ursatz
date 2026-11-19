@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/library/realization/schema/realization.v1.schema.json",
+  "title": "Ursatz realization, format version 1",
+  "description": "A work with its movements: the lines, scoring assignments and performer parts the library's realization group holds (R-627). Members with nothing to say are null or [].",
+  "type": "object",
+  "required": ["format", "format_version", "work"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "ursatz-realization" },
+    "format_version": { "const": 1 },
+    "work": { "$ref": "#/$defs/work" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,62}$" },
+    "text": { "type": "string", "maxLength": 63 },
+    "nullableText": { "type": ["string", "null"], "maxLength": 63 },
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "additionalProperties": false,
+      "properties": {
+        "num": { "type": "integer" },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "time": { "$ref": "#/$defs/rational", "description": "A position or a duration in whole notes: an exact fraction in lowest terms." },
+    "nullableTime": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rational" }] },
+    "spelling": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[A-G](bb|b|#|##|x)?$" }] },
+    "midi": { "type": "integer", "minimum": 0, "maximum": 127 },
+    "derivation": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["sources", "operation", "run"],
+          "additionalProperties": false,
+          "properties": {
+            "sources": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/id" } },
+            "operation": { "type": "string", "maxLength": 31, "pattern": "^([a-z]+(-[a-z]+)*)?$" },
+            "run": { "type": "string", "maxLength": 63 }
+          }
+        }
+      ]
+    },
+    "region": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["kind", "center", "material"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "tonal", "description": "The only kind built; a region of another kind is not written." },
+            "center": { "type": "integer", "minimum": 0, "maximum": 11 },
+            "material": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "description": "The id of a K1 pitch material." }
+          }
+        }
+      ]
+    },
+    "meter": {
+      "type": "array",
+      "description": "The regions of a meter map, in time order; empty for none or a defaulted map.",
+      "items": {
+        "type": "object",
+        "required": ["position", "time_signature"],
+        "additionalProperties": false,
+        "properties": {
+          "position": { "$ref": "#/$defs/time" },
+          "time_signature": { "type": "string", "pattern": "^[0-9]{1,2}/(1|2|4|8|16)$" },
+          "groups": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "integer", "minimum": 1, "maximum": 16 }, "description": "Only when the beat groups are not the ones the numbers give." }
+        }
+      }
+    },
+    "work": {
+      "type": "object",
+      "required": ["id", "title", "composer", "ensemble", "material", "movements"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/nullableText" },
+        "composer": { "$ref": "#/$defs/nullableText" },
+        "ensemble": { "type": ["string", "null"] },
+        "material": { "type": "array", "items": { "type": "string", "pattern": "^[a-z]+(-[a-z]+)*:[A-Za-z0-9_.-]+$" } },
+        "movements": { "type": "array", "items": { "$ref": "#/$defs/movement" } }
+      }
+    },
+    "movement": {
+      "type": "object",
+      "required": ["id", "title", "meter", "tempo", "home", "ensemble", "key_signatures", "markers", "played", "compound_parts", "lines", "assignments", "parts"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/nullableText" },
+        "meter": { "$ref": "#/$defs/meter" },
+        "tempo": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position", "quarters_per_minute"],
+            "additionalProperties": false,
+            "properties": {
+              "position": { "$ref": "#/$defs/time" },
+              "quarters_per_minute": { "$ref": "#/$defs/rational", "description": "60,000,000 over the microseconds of a quarter note." }
+            }
+          }
+        },
+        "home": { "$ref": "#/$defs/region" },
+        "ensemble": { "type": ["string", "null"] },
+        "key_signatures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position", "sharps_flats", "mode"],
+            "additionalProperties": false,
+            "properties": {
+              "position": { "$ref": "#/$defs/time" },
+              "sharps_flats": { "type": "integer", "minimum": -7, "maximum": 7 },
+              "mode": { "enum": ["major", "minor", "unknown"] }
+            }
+          }
+        },
+        "markers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position", "text"],
+            "additionalProperties": false,
+            "properties": { "position": { "$ref": "#/$defs/time" }, "text": { "type": "string", "minLength": 1, "maxLength": 63 } }
+          }
+        },
+        "played": { "type": "array", "items": { "$ref": "#/$defs/span" } },
+        "compound_parts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "start", "end", "home"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "$ref": "#/$defs/text" },
+              "start": { "$ref": "#/$defs/time" },
+              "end": { "$ref": "#/$defs/time" },
+              "home": { "$ref": "#/$defs/region" }
+            }
+          }
+        },
+        "lines": { "type": "array", "items": { "$ref": "#/$defs/line" } },
+        "assignments": { "type": "array", "items": { "$ref": "#/$defs/assignment" } },
+        "parts": { "type": "array", "items": { "$ref": "#/$defs/part" } }
+      }
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": { "start": { "$ref": "#/$defs/time" }, "end": { "$ref": "#/$defs/time" } }
+    },
+    "line": {
+      "type": "object",
+      "required": ["id", "role", "name", "relations", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "role": { "enum": ["melody", "counter-melody", "harmony-line", "bass", "chords", "pad", "accompaniment", "drums", "pedal", "subject", "answer", "countersubject"] },
+        "name": { "$ref": "#/$defs/nullableText" },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "target", "interval", "delay", "start", "end"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "enum": ["parallel", "imitation", "answers", "call-response"] },
+              "target": { "$ref": "#/$defs/id" },
+              "interval": { "type": "integer" },
+              "delay": { "$ref": "#/$defs/time" },
+              "start": { "$ref": "#/$defs/nullableTime" },
+              "end": { "$ref": "#/$defs/nullableTime" }
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "onset", "duration", "midi", "spelling", "derivation"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "onset": { "$ref": "#/$defs/time" },
+              "duration": { "$ref": "#/$defs/time" },
+              "midi": { "$ref": "#/$defs/midi" },
+              "spelling": { "$ref": "#/$defs/spelling" },
+              "derivation": { "$ref": "#/$defs/derivation" }
+            }
+          }
+        }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "required": ["id", "line", "part", "whole", "start", "end", "staff", "voice", "transform", "divisi"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "line": { "$ref": "#/$defs/id" },
+        "part": { "$ref": "#/$defs/id" },
+        "whole": { "type": "boolean", "description": "The whole line; start and end are then null." },
+        "start": { "$ref": "#/$defs/nullableTime" },
+        "end": { "$ref": "#/$defs/nullableTime" },
+        "staff": { "type": "integer", "minimum": 1 },
+        "voice": { "type": "integer", "minimum": 1 },
+        "transform": {
+          "type": "object",
+          "required": ["kind", "octaves", "semitones", "steps"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["none", "octave", "interval"] },
+            "octaves": { "type": "integer", "minimum": -4, "maximum": 4 },
+            "semitones": { "type": "integer" },
+            "steps": { "type": "integer" }
+          }
+        },
+        "divisi": { "type": "boolean" }
+      },
+      "if": { "properties": { "whole": { "const": false } } },
+      "then": { "properties": { "start": { "$ref": "#/$defs/rational" }, "end": { "$ref": "#/$defs/rational" } } }
+    },
+    "part": {
+      "type": "object",
+      "required": ["id", "instrument", "name", "number", "players", "staves", "program", "local_meter", "pedals", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "instrument": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 63 },
+        "number": { "type": "integer", "minimum": 1 },
+        "players": { "type": "integer", "minimum": 1 },
+        "staves": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "program": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "local_meter": { "$ref": "#/$defs/meter" },
+        "pedals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "start", "end"],
+            "additionalProperties": false,
+            "properties": { "kind": { "const": "sustain" }, "start": { "$ref": "#/$defs/time" }, "end": { "$ref": "#/$defs/time" } }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "onset", "duration", "midi", "spelling", "staff", "voice", "derivation", "edited", "detached", "review"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "onset": { "$ref": "#/$defs/time" },
+              "duration": { "$ref": "#/$defs/time" },
+              "midi": { "$ref": "#/$defs/midi" },
+              "spelling": { "$ref": "#/$defs/spelling" },
+              "staff": { "type": "integer", "minimum": 1, "maximum": 4 },
+              "voice": { "type": "integer", "minimum": 1 },
+              "derivation": { "$ref": "#/$defs/derivation" },
+              "edited": { "type": "boolean" },
+              "detached": { "type": "boolean" },
+              "review": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

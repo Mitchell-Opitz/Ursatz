@@ -6,45 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "model/core/framework_reference.h"
-#include "model/core/once.h"
-#include "model/core/provenance_reference.h"
-#include "model/core/value.h"
-#include "theory/tonality/common_practice_framework.h"
-#include "model/interpretation/uncertainty.h"
 
-typedef struct {
-    const char *label;
-    const char *rule_id;
-    const char *constraint_id;
-    const char *chord_interpretation_id_prefix;
-} TriadDescriptor;
-
-/* vii\xC2\xB0 (diminished) uses the "-dim" suffix in identifiers; the
-   label itself carries the real degree symbol. */
-static const TriadDescriptor DESCRIPTORS[COMMON_PRACTICE_TRIAD_COUNT] = {
-    {"I", "common-practice-minimal-rule-I", "common-practice-minimal-constraint-I",
-     "common-practice-minimal-chord-I"},
-    {"ii", "common-practice-minimal-rule-ii", "common-practice-minimal-constraint-ii",
-     "common-practice-minimal-chord-ii"},
-    {"iii", "common-practice-minimal-rule-iii", "common-practice-minimal-constraint-iii",
-     "common-practice-minimal-chord-iii"},
-    {"IV", "common-practice-minimal-rule-IV", "common-practice-minimal-constraint-IV",
-     "common-practice-minimal-chord-IV"},
-    {"V", "common-practice-minimal-rule-V", "common-practice-minimal-constraint-V",
-     "common-practice-minimal-chord-V"},
-    {"vi", "common-practice-minimal-rule-vi", "common-practice-minimal-constraint-vi",
-     "common-practice-minimal-chord-vi"},
-    {"vii\xC2\xB0", "common-practice-minimal-rule-vii-dim", "common-practice-minimal-constraint-vii-dim",
-     "common-practice-minimal-chord-vii-dim"},
-    {"augmented", "common-practice-minimal-rule-augmented", "common-practice-minimal-constraint-augmented",
-     "common-practice-minimal-chord-augmented"},
-    {"major", "common-practice-minimal-rule-major", "common-practice-minimal-constraint-major",
-     "common-practice-minimal-chord-major"},
-    {"minor", "common-practice-minimal-rule-minor", "common-practice-minimal-constraint-minor",
-     "common-practice-minimal-chord-minor"},
-    {"diminished", "common-practice-minimal-rule-diminished", "common-practice-minimal-constraint-diminished",
-     "common-practice-minimal-chord-diminished"},
+/* vii\xC2\xB0 (diminished) carries the real degree symbol. */
+static const char *const TRIAD_LABELS[COMMON_PRACTICE_TRIAD_COUNT] = {
+    "I", "ii", "iii", "IV", "V", "vi", "vii\xC2\xB0", "augmented", "major", "minor", "diminished",
 };
 
 static const int TRIAD_INTERVALS[COMMON_PRACTICE_TRIAD_COUNT][3] = {
@@ -66,86 +31,15 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
     return true;
 }
 
-ChordResult common_practice_build_triad_chord_with_confidence(CommonPracticeTriad triad, EntityID *sonority_target_id,
-                                                          unsigned long confidence_numerator,
-                                                          unsigned long confidence_denominator,
-                                                          const char *interpretation_id_suffix, Chord **out) {
-    if (!valid_triad(triad)) {
-        return CHORD_ERR_NULL_LABEL;
+bool common_practice_triad_candidate(CommonPracticeTriad triad, unsigned long confidence_numerator,
+                                     unsigned long confidence_denominator, ChordCandidate *out) {
+    if (!valid_triad(triad) || out == NULL || confidence_denominator == 0 ||
+        rational_make((long long)confidence_numerator, (long long)confidence_denominator, &out->confidence) != RATIONAL_OK) {
+        return false;
     }
-
-    const Framework *framework = common_practice_minimal_framework();
-    if (framework == NULL) {
-        return CHORD_ERR_ALLOC;
-    }
-
-    char interpretation_id_value[256];
-    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "%s-%s%s",
-             DESCRIPTORS[triad].chord_interpretation_id_prefix, entity_id_value(sonority_target_id),
-             interpretation_id_suffix != NULL ? interpretation_id_suffix : "");
-
-    EntityID *interpretation_id;
-    if (entity_id_create(interpretation_id_value, &interpretation_id) != ENTITY_ID_OK) {
-        return CHORD_ERR_ALLOC;
-    }
-
-    EntityID *framework_target_id;
-    if (entity_id_create(entity_id_value(framework_id(framework)), &framework_target_id) != ENTITY_ID_OK) {
-        entity_id_destroy(interpretation_id);
-        return CHORD_ERR_ALLOC;
-    }
-    FrameworkReference *framework_reference;
-    if (framework_reference_create(framework_target_id, &framework_reference) != FRAMEWORK_REFERENCE_OK) {
-        entity_id_destroy(framework_target_id);
-        entity_id_destroy(interpretation_id);
-        return CHORD_ERR_ALLOC;
-    }
-
-    Value *claim;
-    const char *label = DESCRIPTORS[triad].label;
-    if (value_create("common-practice-minimal/triad-label", label, strlen(label) + 1, &claim) != VALUE_OK) {
-        framework_reference_destroy(framework_reference);
-        entity_id_destroy(interpretation_id);
-        return CHORD_ERR_ALLOC;
-    }
-
-    Uncertainty *uncertainty;
-    if (uncertainty_create_scalar_confidence(confidence_numerator, confidence_denominator, &uncertainty) != UNCERTAINTY_OK) {
-        value_destroy(claim);
-        framework_reference_destroy(framework_reference);
-        entity_id_destroy(interpretation_id);
-        return CHORD_ERR_ALLOC;
-    }
-
-    ProvenanceReference *provenance;
-    if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
-        uncertainty_destroy(uncertainty);
-        value_destroy(claim);
-        framework_reference_destroy(framework_reference);
-        entity_id_destroy(interpretation_id);
-        return CHORD_ERR_ALLOC;
-    }
-
-    Interpretation *interpretation;
-    InterpretationResult interpretation_result =
-        interpretation_create(interpretation_id, sonority_target_id, claim, NULL, NULL, framework_reference,
-                               uncertainty, "common-practice-minimal-v1", "diatonic-triad-vocabulary",
-                               INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation);
-    if (interpretation_result != INTERPRETATION_OK) {
-        provenance_reference_destroy(provenance);
-        uncertainty_destroy(uncertainty);
-        value_destroy(claim);
-        framework_reference_destroy(framework_reference);
-        entity_id_destroy(interpretation_id);
-        return CHORD_ERR_ALLOC;
-    }
-
-    ChordResult chord_result = chord_create(interpretation, label, out);
-    if (chord_result != CHORD_OK) {
-        interpretation_destroy(interpretation);
-        return chord_result;
-    }
-
-    return CHORD_OK;
+    snprintf(out->label, sizeof(out->label), "%s", TRIAD_LABELS[triad]);
+    out->structure.root_pitch_class = -1;
+    out->structure.bass_pitch_class = -1;
+    out->structure.interval_count = 0;
+    return true;
 }
-

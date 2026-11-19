@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/regenerate.h>
 
 #include "api_workflow.h"
@@ -21,7 +21,7 @@ typedef struct {
     size_t spans[PLAN_LANE_INNER_VOICE + 1];
 } Reopened;
 
-static void read_reopened(const PiecePlan *plan, const FillTarget *scope, size_t count, Reopened *out) {
+static void read_reopened(const Plan *plan, const FillTarget *scope, size_t count, Reopened *out) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t section_count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     section_count = section_count > API_MAX_SECTIONS ? API_MAX_SECTIONS : section_count;
@@ -93,7 +93,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
     }
 
     /* What will be reopened, read from the plan as it is now. */
-    PiecePlan *before = NULL;
+    Plan *before = NULL;
     Reopened reopened;
     char what[96] = "";
     memset(&reopened, 0, sizeof reopened);
@@ -122,7 +122,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
     plan_destroy(before);
 
     /* The seeds are tried one after another, each from a new copy of the plan; only a stuck run can be mended by the next. */
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ComposeOutcome outcome;
     memset(&outcome, 0, sizeof(outcome));
     bool done = false;
@@ -132,7 +132,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
             status = fail_cancelled(&out->error);
             break;
         }
-        PiecePlan *fresh = NULL;
+        Plan *fresh = NULL;
         status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
         if (status != COMPOSER_OK) {
             break;
@@ -180,7 +180,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
         if (!document) {
             status = api_fail_alloc(&out->error);
         } else {
-            status = api_render_outputs(context->knowledge, plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, plan, &outputs, document, out);
             if (status == COMPOSER_OK) {
                 status = api_respond_json(out, document);
             } else {

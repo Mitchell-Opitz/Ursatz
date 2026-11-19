@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/render.h>
 
 /*
@@ -83,6 +83,6 @@ PlanExportResult rendered_plan_musicxml_text(const KnowledgeSnapshot *knowledge,
  * command renders a plan to write files, then gets any number of them as bytes or text with the rendered_plan_ functions.
  * error may be NULL.
  */
-PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error);
+PlanExportResult plan_export_render(const Plan *plan, RenderedPlan *rendered, PlanExportError *error);
 
 #endif

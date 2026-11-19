@@ -3,11 +3,11 @@
 
 #include <stdbool.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/melody_fill.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The return operator (R-070): a Grow operator for a theme section that returns an earlier one. A returning section
@@ -55,24 +55,24 @@
  * theme section with no children and a RETURN that satisfies the list above. grow-theme does not apply to such a
  * section, and compose_run leaves it for the RETURNS stage.
  */
-bool form_return_handles(const PiecePlan *plan, NodeId section);
+bool form_return_handles(const Plan *plan, NodeId section);
 
 /* The section the target returns and how, when form_return_handles holds. */
-bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation);
+bool form_return_source(const Plan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation);
 
 /*
  * Whether every melody note that starts on a strong beat (the start of a cell of the meter, where a chord may start) in
  * the section is a tone of the chord under it. A section whose key lane has more than one span is not judged: true.
  * False when the harmony or the melody cannot be read.
  */
-bool form_return_melody_fits(const PiecePlan *plan, NodeId section);
+bool form_return_melody_fits(const Plan *plan, NodeId section);
 
 /*
  * How many of the chords of a section that returns another (a RETURN constraint) are not the chords of the other at the
  * same place: another numeral, or the same one over another length. *total is the number of chords of the section. A
  * reharmonized return changes some. False when the section has no RETURN or either harmony lane cannot be read.
  */
-bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total);
+bool form_return_chords_changed(const Plan *plan, NodeId section, size_t *changed, size_t *total);
 
 /*
  * Whether the cadence of a section that returns another is changed: a chord that starts in the last quarter of the
@@ -80,41 +80,41 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
  * form_return_chords_changed compares them. False when the section has no RETURN or either harmony lane cannot be
  * read.
  */
-bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed);
+bool form_return_cadence_changed(const Plan *plan, NodeId section, bool *changed);
 
 /*
  * Whether the root changes at a fixed bar of a section that returns another: a chord that starts inside bar `bar` of the
  * section (from 1) is not a chord of the returned section at the same place, as form_return_chords_changed compares
  * them (R-498). False when the section has no RETURN, either harmony lane cannot be read, or the meter cannot be read.
  */
-bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed);
+bool form_return_bar_changed(const Plan *plan, NodeId section, unsigned bar, bool *changed);
 
 /*
  * The numerals of the chords of a section that returns another (a RETURN constraint) that start in the last quarter of
  * the returned section (from) and of the section (to), each space separated ("IV V I"). False when the section has no
  * RETURN, either harmony lane cannot be read, or size is too small.
  */
-bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size);
+bool form_return_cadence_numerals(const Plan *plan, NodeId section, char *from, char *to, size_t size);
 
 /*
  * The numerals of the first and of the last chord of a section's harmony lane (R-486: an upbeat chord and the chord it
  * leads to). False when the section has no readable harmony or size is below PLAN_ROMAN_NUMERAL_MAX.
  */
-bool form_return_edge_numerals(const PiecePlan *plan, NodeId section, char *first, char *last, size_t size);
+bool form_return_edge_numerals(const Plan *plan, NodeId section, char *first, char *last, size_t size);
 
 /*
  * Whether the section holds a copy of the section it returns, in any state: the RETURN names another section of the
  * piece (not the material) as long as the section, in the same meter and in keys of the same shape. False for a section
  * grown afresh because its keys differ from the other's.
  */
-bool form_return_copies(const PiecePlan *plan, NodeId section);
+bool form_return_copies(const Plan *plan, NodeId section);
 
 /*
  * Whether the section's return copies (form_return_copies) into the other mode of the source's keys: a reharmonized
  * return in the home mode (R-524) or a figurate return in the parallel mode (R-499). *to is the mode of the target's
  * keys. False for a copy in keys of the same mode and for a section that does not copy.
  */
-bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchMaterial **to);
+bool form_return_mode_change(const Plan *plan, NodeId section, const PitchMaterial **to);
 
 /*
  * Registers form-return. melody gives the range a re-registered melody keeps to (NULL for the defaults); the registry
@@ -131,7 +131,7 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
  * octave away and inside the range. The score is 1/1 for a candidate that keeps to it and changes what its variation
  * changes (an ornament with a note added), else 0/1. A candidate of another operator is accepted at 0/1.
  */
-bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool form_return_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* A section's return as the readers use it: the section it returns, how it varies it, the setting of a setting return and whether it

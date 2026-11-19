@@ -131,7 +131,7 @@ typedef struct {
     MeterMap *own;
     AnalysisNote *notes;
     size_t note_count;
-    AnalysisKeyEvent *events;
+    SpelledKeyEvent *events;
     size_t event_count;
     AnalysisNoteSet set;
 } ChainInput;
@@ -146,12 +146,12 @@ static void chain_input_init(ChainInput *in, const Reference *ref) {
     free(data);
     assert(midi_import_analysis_notes(&in->import, &in->notes, &in->note_count));
     in->event_count = in->import.key_signatures.count;
-    in->events = calloc(in->event_count + 1, sizeof(AnalysisKeyEvent));
+    in->events = calloc(in->event_count + 1, sizeof(SpelledKeyEvent));
     assert(in->events != NULL);
     for (size_t i = 0; i < in->event_count; i++) {
         const MidiKeySignatureEvent *event = &in->import.key_signatures.events[i];
         in->events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &in->events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, test_materials()->major, &in->events[i].key));
     }
     in->own = ref->three_four ? three_four_map() : NULL;
     in->set.notes = in->notes;
@@ -254,7 +254,7 @@ static void digest_chords(Digest *d, const AnalysisChain *c) {
         digest_double(d, r->best_score);
         digest_double(d, r->runner_up_score);
         digest_double(d, r->uncertainty);
-        digest_string(d, r->best_chord != NULL ? chord_label(r->best_chord) : NULL);
+        digest_string(d, r->matched ? r->best_chord.label : NULL);
         digest_int(d, (long long)r->leftover_count);
         const char **ids = calloc(r->leftover_count + 1, sizeof(char *));
         assert(ids != NULL);
@@ -338,7 +338,7 @@ static void digest_cadences(Digest *d, const AnalysisChain *c) {
         digest_int(d, a->share);
         digest_span(d, &a->span);
         digest_int(d, a->alternative.share);
-        digest_int(d, a->alternative.interpretation != NULL);
+        digest_int(d, a->alternative.present);
     }
 }
 
@@ -737,7 +737,7 @@ static void check_chord_readings(const char *context, const AnalysisChain *c, bo
         if (!CHECK(r.borrowed_from == NULL && !r.has_expected && r.expected_type == NULL && r.expected_root_pitch_class == 0)) abort();
         if (!CHECK(r.bass_pitch_class == r.sonority.bass_pitch_class)) abort();
         bool cadential = prepared != NULL && harmony_cadence_is_cadential_six_four(&prepared[i]);
-        if (chords[i].matched && chords[i].best_chord != NULL) {
+        if (chords[i].matched) {
             matched++;
             if (!CHECK(r.has_root && r.root_pitch_class == chords[i].best.root_pitch_class)) abort();
             const char *id = reading_type_id(&chords[i].best);

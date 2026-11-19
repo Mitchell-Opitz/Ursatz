@@ -2,9 +2,7 @@
 #include <string.h>
 
 #include "analysis/tests/texture/analysis_test_util.h"
-#include "model/interpretation/texture.h"
 #include "analysis/texture/texture_analysis_classify.h"
-#include "interpretation_test_access.h"
 
 static bool near(double a, double b) {
     return fabs(a - b) < 1e-9;
@@ -98,7 +96,7 @@ static void test_homophony_of_block_chords(void) {
     assert(analysis.passages[0].claim.category == STANDARD_TEXTURE_HOMOPHONY);
     assert(near(analysis.windows.items[0].synchrony, 1.0) && analysis.classes[0].features.rhythmic_unison);
     assert(near(analysis.classes[0].margin, 1.0) && near(analysis.passages[0].claim.confidence, 1.0));
-    assert(analysis.passages[0].texture != NULL && strcmp(texture_label(analysis.passages[0].texture), "homorhythm") == 0);
+    assert(strcmp(standard_texture_name((StandardTexture)analysis.passages[0].claim.texture), "homorhythm") == 0);
     assert(analysis.change_count == 0);
     standard_texture_analysis_destroy(&analysis);
     piece_destroy(&piece);
@@ -150,7 +148,6 @@ static void test_a_change_from_homophony_to_melody_and_accompaniment(void) {
     assert(change->from == 0 && change->to == 1 && change->boundary_measure == 2);
     assert(change->from_texture == STANDARD_TEXTURE_HOMORHYTHM && change->to_texture == STANDARD_TEXTURE_MELODY_AND_ACCOMPANIMENT);
     assert(change->category_changed == 0); /* both are homophony */
-    assert(analysis.changes[0].relationship != NULL && analysis.changes[0].interpretation != NULL);
     standard_texture_analysis_destroy(&analysis);
     piece_destroy(&piece);
 

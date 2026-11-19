@@ -9,7 +9,8 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
+#include "structure/plan_util.h"
 
 /*
  * The phrase-model harmony operator: a Fill operator for harmony lane spans.
@@ -41,12 +42,6 @@
  */
 
 #define HARMONY_PHRASE_OPERATOR_NAME "harmony-phrase-model"
-
-/*
- * Whether the harmony operators can write for a meter: 2/4, 3/4, 4/4 and 6/8, where a chord may start on a
- * strong beat.
- */
-bool harmony_meter_supported(const PlanMeter *meter);
 
 /*
  * The fewest cells a phrase can have and still end in the cadence, in a meter the operators support; 0 for any
@@ -93,7 +88,7 @@ FillResult harmony_phrase_register_given(FillOperatorRegistry *registry);
  * always accepted. Candidates from any other operator are accepted at 0/1, as the
  * default checker does.
  */
-bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*
@@ -105,7 +100,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
  * when the cadence arrives on the last chord. False when the lane cannot be
  * read, or the recognizer hears no cadence.
  */
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
+bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end);
 
 /*
@@ -114,7 +109,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode
  * and natural minor keys, and the tables written for those two stay as they are.
  */
 HarmonyMode harmony_mode_of_material(const PitchMaterial *material);
-static inline HarmonyMode harmony_key_mode(const AnalysisKey *key) {
+static inline HarmonyMode harmony_key_mode(const SpelledKey *key) {
     return harmony_mode_of_material(key != NULL ? key->material : NULL);
 }
 

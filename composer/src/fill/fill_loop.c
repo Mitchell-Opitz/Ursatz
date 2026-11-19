@@ -8,7 +8,7 @@
 
 /* --------------------------------------------------------------- checker */
 
-bool fill_default_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool fill_default_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out) {
     (void)plan;
     (void)target;
@@ -55,7 +55,7 @@ static bool entries_append(FillEntries *entries, const FillEntry *entry) {
     return true;
 }
 
-FillResult fill_gather(const PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_gather(const Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                        FillTarget target, FillRng *rng, FillEntries *out) {
     memset(out, 0, sizeof(*out));
     FillCheckerFn checker = config && config->checker ? config->checker : fill_default_checker;
@@ -102,7 +102,7 @@ FillResult fill_gather(const PiecePlan *plan, const FillOperatorRegistry *regist
 
 /* ---------------------------------------------------------------- applying */
 
-FillResult fill_apply_entry(PiecePlan *plan, const FillOperatorRegistry *registry, FillTarget target,
+FillResult fill_apply_entry(Plan *plan, const FillOperatorRegistry *registry, FillTarget target,
                             const FillEntry *entry) {
     const FillOperator *operator_ = fill_registry_at(registry, entry->operator_index);
     if (operator_->apply(plan, target, &entry->candidate, operator_->context) != PLAN_OK) {
@@ -204,7 +204,7 @@ static bool stuck_add(StuckSet *set, FillTarget target, FillStuckReason reason) 
     return true;
 }
 
-FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_run(Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                     FillOutcome *outcome, FillRecord **record_out) {
     if (record_out) {
         *record_out = NULL;

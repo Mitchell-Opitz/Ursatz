@@ -1,7 +1,5 @@
 #include "analysis/harmony/analysis_prolongation.h"
 #include "analysis/tests/harmony/analysis_test_util.h"
-#include "interpretation_test_access.h"
-#include "relationship_test_access.h"
 
 /* Prolongations of tonic and dominant: a span from one T (or D) to the next, with every interior chord explained. */
 
@@ -14,14 +12,13 @@ static HarmonyProlongations run(Fixture *f, HarmonySegment **segments) {
 
 static void check_edge(const HarmonyProlongationSpan *span, size_t k, const char *source, const char *target,
                        HarmonyProlongationReason reason) {
-    const Relationship *r = span->relationships[k];
-    assert(strcmp(relationship_predicate_name(r), "prolongs") == 0);
-    assert(strcmp(entity_id_value(relationship_source_id(r)), source) == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(r)), target) == 0);
+    char expected_source[32];
+    char expected_target[32];
+    snprintf(expected_source, sizeof(expected_source), "seg-%zu", span->first_segment);
+    snprintf(expected_target, sizeof(expected_target), "seg-%zu", span->interior_segments[k]);
+    assert(strcmp(expected_source, source) == 0);
+    assert(strcmp(expected_target, target) == 0);
     assert(span->reasons[k] == reason);
-    /* The Interpretation targets the Relationship, not a segment. */
-    const Interpretation *interpretation = span->interpretations[k];
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), entity_id_value(relationship_id(r))) == 0);
 }
 
 static void test_tonic_prolongation_through_a_passing_six_four(void) {
@@ -92,12 +89,6 @@ static void test_dominant_prolongation_through_a_neighbor_six_four(void) {
     assert(found.spans[0].interior_count == 2); /* both segments of the 6/4 */
     check_edge(&found.spans[0], 0, "seg-1", "seg-2", HARMONY_PROLONGATION_REASON_NEIGHBOR_SIX_FOUR);
     check_edge(&found.spans[0], 1, "seg-1", "seg-3", HARMONY_PROLONGATION_REASON_NEIGHBOR_SIX_FOUR);
-    HarmonyProlongationScope scope;
-    size_t size = 0;
-    const Value *value = relationship_scope(found.spans[0].relationships[0]);
-    assert(strcmp(value_type(value), HARMONY_PROLONGATION_SCOPE_TYPE) == 0);
-    memcpy(&scope, value_content(value, &size), sizeof(scope));
-    assert(scope.function == (int)HARMONIC_FUNCTION_DOMINANT && strcmp(scope.closing_segment, "seg-4") == 0);
     harmony_prolongations_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);

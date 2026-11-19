@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /*
  * The bass operator: a Fill operator for the bass lane. It reads a harmony lane
@@ -54,7 +54,7 @@ HarmonyBassParams harmony_bass_params_default(void);
  * soft rules are not asked. True when the lane could be read, with *violation NULL if nothing is broken
  * and otherwise the rule that is.
  */
-bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const HarmonyBassParams *params,
+bool harmony_check_bass(const Plan *plan, PlanSpan span, SpelledKey key, const HarmonyBassParams *params,
                         const char **violation);
 
 /*

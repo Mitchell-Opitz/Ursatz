@@ -7,12 +7,12 @@
 
 #include <theory/counterpoint/melodic_rules.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /*
@@ -36,24 +36,15 @@ typedef struct {
     Motive motive;
 } InventPayload;
 
-static MotiveDevelopContext invent_context(const void *context) {
-    if (context) {
-        return *(const MotiveDevelopContext *)context;
-    }
-    MotiveDevelopContext defaults;
-    motive_develop_context_default(&defaults);
-    return defaults;
-}
-
 /* --------------------------------------------------------------- request */
 
 typedef struct {
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     Rational bar;
 } InventRequest;
 
-static bool has_invent_constraint(const PiecePlan *plan, LaneSpanId id) {
+static bool has_invent_constraint(const Plan *plan, LaneSpanId id) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
         if (plan_lane_span_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_INVENT_MOTIVE) {
             return true;
@@ -66,7 +57,7 @@ static bool has_invent_constraint(const PiecePlan *plan, LaneSpanId id) {
  * The target must be an open melody span (voice 0) of a motive node, with an invent_motive constraint, one bar of
  * its meter long and starting on a barline of it. The meter and key are the plan's lanes over it, else the context's.
  */
-static bool read_invent_request(const PiecePlan *plan, FillTarget target, const MotiveDevelopContext *context,
+static bool read_invent_request(const Plan *plan, FillTarget target, const MotiveDevelopContext *context,
                                 InventRequest *out) {
     LaneSpanId id = (LaneSpanId)target.id;
     if (target.kind != FILL_TARGET_LANE_SPAN || !plan_has_lane_span(plan, id) ||
@@ -82,13 +73,13 @@ static bool read_invent_request(const PiecePlan *plan, FillTarget target, const 
         out->meter = plan_lane_span_payload(plan, lane)->meter;
     }
     out->key = plan_key_of_pitch_class(0, context->materials != NULL ? context->materials->major : NULL);
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &lane, 1) > 0) {
-        out->key = plan_lane_span_payload(plan, lane)->key;
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &lane, 1) > 0) {
+        out->key = plan_lane_span_payload(plan, lane)->region;
     } else if (context->has_key) {
         out->key = context->key;
     }
     if (out->meter.beats_per_bar <= 0 || out->meter.beat_unit <= 0 ||
-        rational_make(out->meter.beats_per_bar, (long long)out->meter.beat_unit, &out->bar) != RATIONAL_OK ||
+        plan_meter_bar_length(&out->meter, &out->bar) != PLAN_OK ||
         rational_cmp(span.length, out->bar) != 0) {
         return false;
     }
@@ -236,7 +227,7 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
     for (size_t i = 0; i < motive->note_count; i++) {
         long position;
         int alteration;
-        AnalysisKey key = motive_key(motive);
+        SpelledKey key = motive_key(motive);
         int midi = motive_pitch(motive, i);
         motive_scale_position(&key, midi, &position, &alteration);
         long degree = ((position % 7) + 7) % 7 + 1;
@@ -295,9 +286,9 @@ static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights
 
 /* -------------------------------------------------------------- operator */
 
-static bool invent_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool invent_applies(const Plan *plan, FillTarget target, void *context) {
     InventRequest request;
-    MotiveDevelopContext shared = invent_context(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_invent_request(plan, target, &shared, &request);
 }
 
@@ -322,9 +313,9 @@ static void invent_label(const Motive *motive, char *label, size_t size) {
     }
 }
 
-static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool invent_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    MotiveDevelopContext shared_value = invent_context(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     InventRequest request;
     if (!read_invent_request(plan, target, shared, &request)) {
@@ -362,13 +353,13 @@ static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *r
 }
 
 /* The span takes the notes and is Realized; the motive node it belongs to is complete with it, so it is too. */
-static PlanResult invent_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult invent_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const InventPayload *payload = candidate ? candidate->payload : NULL;
     InventRequest request;
     if (!payload || payload->magic != INVENT_PAYLOAD_MAGIC) {
         return PLAN_ERR_NULL;
     }
-    MotiveDevelopContext request_context = invent_context(context);
+    MotiveDevelopContext request_context = motive_context_or_default(context);
     if (!read_invent_request(plan, target, &request_context, &request)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
@@ -392,8 +383,8 @@ FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDe
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = MOTIVE_INVENT_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan one-bar melody lane span of a motive node with invent_motive";
-    operator_.generator.supported_outputs = "PiecePlan melody lane span";
+    operator_.generator.supported_inputs = "Plan one-bar melody lane span of a motive node with invent_motive";
+    operator_.generator.supported_outputs = "Plan melody lane span";
     operator_.generator.configuration_description = "candidates per call, default meter and key";
     operator_.generator.constraints_description = "3 to 6 notes filling the bar, opening on degree 1, 3 or 5, C4 to C6, standard-counterpoint melodic rules";
     operator_.generator.deterministic = true;
@@ -406,7 +397,7 @@ FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDe
     return fill_registry_register(registry, &operator_);
 }
 
-bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool motive_invent_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out) {
     (void)plan;
     (void)target;
@@ -426,7 +417,7 @@ bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillO
         snprintf(out->reason, sizeof(out->reason), "%s", fault);
         return true;
     }
-    MotiveDevelopContext shared_value = invent_context(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     MotiveScoreWeights weights = shared->weights;
     if (weights.contour + weights.intervals + weights.rhythm + weights.length == 0) {

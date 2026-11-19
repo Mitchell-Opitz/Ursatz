@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "api_internal.h"
 #include "api_workflow.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 
 /* The lanes a request or a command names, and the spans of a node a regenerate may write again. */
 
@@ -32,7 +32,7 @@ const char *api_lane_label(PlanLaneKind lane) {
     return LANE_LABELS[lane];
 }
 
-ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
+ComposerStatus api_lane_targets(const Plan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
                                 size_t *count, ComposerError *error) {
     *out = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
     *count = 0;
@@ -112,7 +112,7 @@ ComposerStatus api_read_target(const cJSON *request, ApiTarget *out, ComposerErr
     return COMPOSER_OK;
 }
 
-static bool target_node(const PiecePlan *plan, const ApiTarget *target, NodeId *out) {
+static bool target_node(const Plan *plan, const ApiTarget *target, NodeId *out) {
     if (target->has_node) {
         if (!plan_has_node(plan, (NodeId)target->node)) {
             return false;
@@ -133,7 +133,7 @@ static bool target_node(const PiecePlan *plan, const ApiTarget *target, NodeId *
     return false;
 }
 
-ComposerStatus api_target_node(const PiecePlan *plan, const ApiTarget *target, NodeId *out, ComposerError *error) {
+ComposerStatus api_target_node(const Plan *plan, const ApiTarget *target, NodeId *out, ComposerError *error) {
     if (target_node(plan, target, out)) {
         return COMPOSER_OK;
     }
@@ -144,7 +144,7 @@ ComposerStatus api_target_node(const PiecePlan *plan, const ApiTarget *target, N
     return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/section", "the plan has no section '%s'", target->section);
 }
 
-ComposerStatus api_target_list(const PiecePlan *plan, const ApiTarget *target, FillTarget **out, size_t *count,
+ComposerStatus api_target_list(const Plan *plan, const ApiTarget *target, FillTarget **out, size_t *count,
                                ComposerError *error) {
     NodeId node;
     *out = NULL;
@@ -153,7 +153,7 @@ ComposerStatus api_target_list(const PiecePlan *plan, const ApiTarget *target, F
     return status == COMPOSER_OK ? api_lane_targets(plan, node, target->has_lane, target->lane, out, count, error) : status;
 }
 
-void api_target_describe(const PiecePlan *plan, const ApiTarget *target, char *out, size_t size) {
+void api_target_describe(const Plan *plan, const ApiTarget *target, char *out, size_t size) {
     NodeId node;
     char what[64];
     if (!target_node(plan, target, &node)) {
@@ -178,7 +178,7 @@ void api_target_describe(const PiecePlan *plan, const ApiTarget *target, char *o
 
 /* --- lock ------------------------------------------------------------------------------------------ */
 
-static size_t count_given(const PiecePlan *plan, size_t *nodes) {
+static size_t count_given(const Plan *plan, size_t *nodes) {
     size_t spans = 0;
     *nodes = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -200,7 +200,7 @@ ComposerStatus composer_api_lock(const ComposerContext *context, const char *req
     }
     cJSON *root = NULL;
     char *text = NULL;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     FillTarget *targets = NULL;
     size_t target_count = 0;
     ApiTarget target;
@@ -245,7 +245,7 @@ ComposerStatus composer_api_lock(const ComposerContext *context, const char *req
             cJSON_Delete(document);
             status = api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
         } else {
-            status = api_render_outputs(context->knowledge, plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, plan, &outputs, document, out);
             if (status == COMPOSER_OK) {
                 status = api_respond_json(out, document);
             } else {

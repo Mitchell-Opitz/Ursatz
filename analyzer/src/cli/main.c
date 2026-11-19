@@ -13,9 +13,14 @@
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
 #include <ursatz_analyzer/version.h>
+#include <plan/plan_json.h>
+#include <reading/reading_json.h>
+#include <reading/reading_plan.h>
+#include <realization/realization_json.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
+#include "corpus/corpus_internal.h"
 #include "store/corpus_walk.h"
 #include "result/run_file.h"
 #include "util/file_util.h"
@@ -54,7 +59,7 @@ static bool write_output(const char *path, const char *what, const char *written
 static void print_usage(const char *program) {
     fprintf(stderr,
             "Usage: %s [--json] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] "
-            "[--pickup <n/d>] <input-file-path>\n"
+            "[--pickup <n/d>] [--layers <dir>] [--model-plan <file>] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
             "       %s --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]\n"
@@ -64,6 +69,58 @@ static void print_usage(const char *program) {
             "[--format text|json]\n"
             "       %s export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>\n",
             program, program, program, program, program, program, program);
+}
+
+/* Writes <dir>/<relative> (making the folders), false with a message on stderr when it cannot. */
+static bool write_layer_file(const char *dir, const char *relative, const char *text) {
+    char *path = corpus_join(dir, relative);
+    bool ok = path && corpus_make_parent_dirs(path) && file_write_atomic(path, text);
+    if (!ok) {
+        fprintf(stderr, "Error: cannot write '%s'\n", path ? path : relative);
+    }
+    free(path);
+    return ok;
+}
+
+/* The layers of an analyzed piece (R-630): the realization once and the Analyzer's reading of it. */
+static bool write_layers(const char *dir, const AnalyzerResult *result) {
+    char *realization = realization_work_to_json(analyzer_result_realization(result), NULL);
+    char *reading = reading_to_json(analyzer_result_reading(result), NULL);
+    bool ok = realization && reading && write_layer_file(dir, "realization.json", realization) &&
+              write_layer_file(dir, "readings/analyzer.json", reading);
+    if (!realization || !reading) {
+        fprintf(stderr, "Error: cannot write the layers of the analysis to '%s'\n", dir);
+    }
+    free(realization);
+    free(reading);
+    return ok;
+}
+
+/* The minimal model composition of the Analyzer's reading (R-635): the plan its sections, keys and chords give. */
+static bool write_model_plan(const char *path, const AnalyzerResult *result, const KnowledgeSnapshot *knowledge) {
+    const Work *work = analyzer_result_realization(result);
+    Plan *plan = NULL;
+    ReadingPlanError plan_error;
+    memset(&plan_error, 0, sizeof(plan_error));
+    if (reading_to_plan(analyzer_result_reading(result), work_movement_at(work, 0), knowledge, &plan, &plan_error) != REALIZATION_OK) {
+        fprintf(stderr, "Error: cannot make a plan of the analysis: %s\n", plan_error.message);
+        return false;
+    }
+    PlanProducer producer;
+    memset(&producer, 0, sizeof(producer));
+    snprintf(producer.name, sizeof(producer.name), "%s", "ursatz-analyzer");
+    snprintf(producer.version, sizeof(producer.version), "%s", URSATZ_ANALYZER_VERSION);
+    snprintf(producer.producer_key, sizeof(producer.producer_key), "%s", ursatz_analyzer_producer_key());
+    snprintf(producer.knowledge_hash, sizeof(producer.knowledge_hash), "%s", knowledge_snapshot_hash(knowledge));
+    PlanJsonError json_error;
+    char *text = plan_to_json(plan, &producer, &json_error);
+    plan_destroy(plan);
+    bool ok = text && file_write_atomic(path, text);
+    if (!ok) {
+        fprintf(stderr, "Error: cannot write the plan of the analysis to '%s'\n", path);
+    }
+    free(text);
+    return ok;
 }
 
 static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
@@ -656,6 +713,8 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     SimilarOptions similar_options = similar_options_default();
     ImportedReading reading = imported_reading_none();
     bool reading_set = false; /* --meter, --value-scale or --pickup given */
+    const char *layers_dir = NULL;
+    const char *model_plan_path = NULL;
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
@@ -741,6 +800,18 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
             }
         } else if (strcmp(arg, "--resume") == 0) {
             corpus_resume = true;
+        } else if (strcmp(arg, "--layers") == 0) {
+            if (i + 1 >= argc || layers_dir) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            layers_dir = argv[++i];
+        } else if (strcmp(arg, "--model-plan") == 0) {
+            if (i + 1 >= argc || model_plan_path) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            model_plan_path = argv[++i];
         } else if (strcmp(arg, "--meter") == 0 || strcmp(arg, "--value-scale") == 0 || strcmp(arg, "--pickup") == 0) {
             bool (*parse)(const char *, ImportedReading *) = strcmp(arg, "--meter") == 0
                                                                  ? imported_reading_parse_meter
@@ -759,6 +830,12 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
         } else {
             path = arg;
         }
+    }
+    if ((layers_dir || model_plan_path) && (link_dir || link_cache || link_depth || link_candidates || similar_dir || motive_file || progression ||
+                       similar_flags || compare_a || without_count > 0 || format_set || style_dir || style_name || corpus_dir ||
+                       corpus_out || corpus_resume)) {
+        print_usage(argv[0]);
+        return 1;
     }
     if (link_dir || link_cache || link_depth || link_candidates) {
         if (!link_dir || similar_dir || motive_file || progression || similar_flags || compare_a || without_count > 0 ||
@@ -836,6 +913,18 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     case RUN_FILE_ERR_ALLOC:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
+    }
+
+    if (layers_dir && !write_layers(layers_dir, result)) {
+        analyzer_result_destroy(result);
+        imported_score_destroy(&notes);
+        return 2;
+    }
+
+    if (model_plan_path && !write_model_plan(model_plan_path, result, knowledge)) {
+        analyzer_result_destroy(result);
+        imported_score_destroy(&notes);
+        return 2;
     }
 
     AnalysisDocument *document = analyzer_run_file_document(path, &notes, result);

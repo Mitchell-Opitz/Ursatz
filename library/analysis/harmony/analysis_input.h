@@ -6,7 +6,7 @@
 
 #include "theory/harmony/harmony_applied.h"
 #include "theory/harmony/harmony_chord.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_segment.h"
 #include "theory/vocabulary/applied_chord_kind.h"
 #include "theory/vocabulary/beat_strength.h"
@@ -23,7 +23,7 @@
  * HarmonySegmentInput, one per chord segment, in time order:
  *
  *   segment          the neutral AnalysisSegment (analysis/notes/analysis_segment.h): `id`, the segment's Sonority id
- *                    (non-empty), the target of every Interpretation made for it; `span`, its TimeSpan; `position`, the
+ *                    (non-empty), the id of its Sonority; `span`, its TimeSpan; `position`, the
  *                    MetricalPosition of its start (may be NULL); and `strength`, the BeatStrength of that start
  *   degree           the chord's root as a scale degree, 1..7, in the key the chord is read in. For an applied
  *                    chord (applied_to != 0) it is the degree in the TEMPORARY key: 5 for a V or V7 of the target,
@@ -41,7 +41,7 @@
  *   soprano_degree   the same for the soprano, or 0 when absent
  *   key_ref          the id of the key the chord is read in (non-empty); borrowed
  *   mode             the key's mode
- *   uncertainty      [0, 1], carried into every Interpretation made from the segment
+ *   uncertainty      [0, 1], carried into every result made from the segment
  *   beat_length      OPTIONAL: the length of one beat at the segment's start, a Duration in whole notes (a quarter
  *                    in 4/4, a dotted quarter in 12/8), read when has_beat_length is set; with it false the cadence
  *                    step uses its configured default. The caller reads it from the meter
@@ -51,7 +51,7 @@
  *
  * A segment whose fields do not make a chord this framework reads (a degree outside 1..7, an inversion beyond the
  * chord, an interval set it has no name for, an applied chord whose target it cannot tonicize) is NOT an error: it
- * is passed through as not valid, and gets no Interpretation.
+ * is passed through as not valid, and has no result.
  */
 
 #define HARMONY_SEGMENT_MAX_INTERVALS 4

@@ -7,21 +7,20 @@
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "analysis/harmony/weighted_identification.h"
 #include "model/core/rational.h"
-#include "model/interpretation/chord.h"
-#include "chain/chain_result_interpretation.h"
 #include "chain/chain_result_spelling.h"
 #include "theory/vocabulary/non_chord_tone.h"
 
-static bool fill_reading(const CommonPracticeRankedChord *candidate, const Chord *chord, double score,
+static bool fill_reading(const CommonPracticeRankedChord *candidate, const ChordCandidate *chord, double score,
                          int bass_pitch_class, bool prefer_flats, AnalysisChordReading *out) {
     const char *quality = common_practice_ranked_chord_quality_name(candidate);
-    out->label = strdup(chord_label(chord));
+    out->label = strdup(chord->label);
     out->root = strdup(pitch_class_name(candidate->root_pitch_class, prefer_flats));
     out->quality = strdup(quality ? quality : "unknown");
     out->bass = strdup(pitch_class_name(bass_pitch_class, prefer_flats));
     out->inversion = common_practice_ranked_chord_inversion(candidate, bass_pitch_class);
     out->score = score;
-    out->confidence = interpretation_confidence(chord_interpretation(chord));
+    out->confidence.present = true;
+    out->confidence.value = chord->confidence;
     if (!out->label || !out->root || !out->quality || !out->bass) {
         analysis_chord_reading_destroy(out);
         return false;
@@ -89,10 +88,10 @@ static bool read_in_region(const Segmentation *segmentation, size_t first, size_
             continue;
         }
         int bass = segment_bass_pitch_class(&segmentation->segments[i]);
-        if (!fill_reading(&result->best, result->best_chord, result->best_score, bass, region->prefer_flats,
+        if (!fill_reading(&result->best, &result->best_chord, result->best_score, bass, region->prefer_flats,
                           &estimates[i].best) ||
-            (result->runner_up_chord &&
-             !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, bass,
+            (result->has_runner_up &&
+             !fill_reading(&result->runner_up, &result->runner_up_chord, result->runner_up_score, bass,
                            region->prefer_flats, &estimates[i].runner_up)) ||
             !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
             return false;
@@ -168,7 +167,7 @@ bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRe
         bool ok = true;
         if (result.matched) {
             int bass = segment_bass_pitch_class(&segmentation->segments[change->pivot_entry]);
-            ok = fill_reading(&result.best, result.best_chord, result.best_score, bass, old_region->prefer_flats,
+            ok = fill_reading(&result.best, &result.best_chord, result.best_score, bass, old_region->prefer_flats,
                               &change->pivot);
         }
         common_practice_weighted_result_destroy(&result);

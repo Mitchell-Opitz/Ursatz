@@ -1,7 +1,6 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_DENSITY_H
 #define URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_DENSITY_H
 
-#include "model/interpretation/interpretation.h"
 #include "analysis/meter/meter_analysis_input.h"
 
 /*
@@ -19,11 +18,9 @@
  *                      count). At most STANDARD_METER_DENSITY_BINS distinct durations are kept, the shortest first, and
  *                      `bins_truncated` says some were left out
  *
- * The profile is a structured claim, "standard-meter/density", an Interpretation targeting the phrase's id with an uncertainty of
- * 0 (it describes the notes the caller gave, as they are).
+ * The profile is a structured claim over the phrase, with no uncertainty (it describes the notes the caller gave, as they are).
  */
 
-#define STANDARD_METER_DENSITY_CLAIM_TYPE "standard-meter/density"
 #define STANDARD_METER_DENSITY_BINS 16
 
 typedef struct {
@@ -50,7 +47,6 @@ typedef struct {
 
 typedef struct {
     StandardMeterDensityClaim claim;
-    Interpretation *interpretation; /* owned */
 } StandardMeterDensity;
 
 typedef struct {

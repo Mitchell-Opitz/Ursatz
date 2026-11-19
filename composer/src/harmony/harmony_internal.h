@@ -12,11 +12,11 @@
 #include <theory/vocabulary/beat_strength.h>
 #include <theory/vocabulary/cadence_type.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /* One chord of a progression. A chord starts where the one before it ends. */
 typedef struct {
@@ -78,8 +78,8 @@ typedef struct {
     /* The span opens a new key (shape.starts_on is PIVOT): the key before it, and the degrees in the new key that a
        pivot chord can be, best first. The key lane over the span is the new key. */
     bool pivot;
-    AnalysisKey from_key;
-    AnalysisKey key;
+    SpelledKey from_key;
+    SpelledKey key;
     size_t pivot_count;
     int pivot_degrees[HARMONY_PIVOT_MAX];
     /*
@@ -192,22 +192,19 @@ typedef struct {
 
 
 /* Reads the chords of the harmony lane over span, which must tile it exactly. False if it cannot be read. */
-bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre);
 
 /*
  * The same lane with each chord read in the key of the key lane under it (the mode given is for a chord under no key),
  * that key's mode in modes[i] and its number in keys[i]. A phrase in one key reads as harmony_read_lane does.
  */
-bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                             PhraseMetre *metre, HarmonyMode *modes, unsigned *keys);
 
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
 
-/* How many cells a bar of the meter has, which is where a chord may start: one per accent beat of a simple meter, one per
-   beat group of a compound one (R-590). False for a meter not supported. */
-bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
 /* The strength of the cell with this index in its bar: the first is strong, any other medium. */
 BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar);
 
@@ -220,30 +217,30 @@ static inline bool harmony_is_target(FillTarget target) {
     return target.kind == FILL_TARGET_LANE_SPAN;
 }
 /* Adds a chord as a Realized harmony lane span over the span. */
-PlanResult harmony_add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id);
+PlanResult harmony_add_chord(Plan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id);
 
 /* A constraint of this kind on the span, else on its owner. */
-bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
+bool harmony_find_constraint(const Plan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
                              PlanConstraint *out);
 /* The mode of the key lane over the span, else of a key constraint on the span or its owner. */
-bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out);
+bool harmony_find_mode(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out);
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */
-bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, AnalysisKey *out);
+bool harmony_find_key(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out);
 /* The key of the key lane that ends where start is, when the span of the lane after it starts there. */
-bool harmony_key_before(const PiecePlan *plan, Rational start, AnalysisKey *out);
+bool harmony_key_before(const Plan *plan, Rational start, SpelledKey *out);
 /*
  * The degrees in the key `to` of the chords a pivot from the key `from` can be: triads of both (harmony_pivot_find), the
  * best of harmony_pivot_rank first, with the chords a phrase cannot open on left out (a dominant in either key, a
  * diminished triad, and in minor the minor v). 0 when the keys are not closely related.
  */
-size_t harmony_pivot_degrees(AnalysisKey from, AnalysisKey to, int degrees[HARMONY_PIVOT_MAX]);
+size_t harmony_pivot_degrees(SpelledKey from, SpelledKey to, int degrees[HARMONY_PIVOT_MAX]);
 /* Whether the chord is a pivot chord from the key `from` into the key `to`: a root-position triad both keys have. */
-bool harmony_pivot_chord_valid(AnalysisKey from, AnalysisKey to, const HarmonyChord *chord);
+bool harmony_pivot_chord_valid(SpelledKey from, SpelledKey to, const HarmonyChord *chord);
 /*
  * The meter under span, which must lie in one meter lane span and start and end on a beat of it (a beat is
  * 1/beat_unit of a whole note). A span of whole bars has no part cells (see PhraseMetre).
  */
-bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out);
+bool harmony_read_metre(const Plan *plan, PlanSpan span, PhraseMetre *out);
 
 /* Where cell `cell` starts, counted from the span's start; cell == cells is the span's end. */
 bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, Rational *out);
@@ -272,24 +269,24 @@ size_t harmony_metre_last_cell(const PhraseMetre *metre);
 PlanResult harmony_cells_span(Rational start, Rational cell_length, size_t first_cell, size_t cells, PlanSpan *out);
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
-bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out);
 /*
  * The phrase reader for an operator registered to work around Given material (harmony_phrase_register_given): a Given
  * bass over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at
  * the ends (harmony_given_read). The prolongation reader, harmony_prolong_read_request_given, does the same for a
  * PROLONGATION shape, whole bars, a key, and no cadence asked for.
  */
-bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
-bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out);
+bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out);
 
 /* Reads into the request what the Given bass, the Given melody and the Given chords around the target ask of it. */
-void harmony_given_read(const PiecePlan *plan, PhraseRequest *request);
+void harmony_given_read(const Plan *plan, PhraseRequest *request);
 /*
  * Reads into the request the chords of the developed motives that sound under it (has_motive, motive_chord): for each melody
  * lane span over the target that names a motive node by a motive_ref, the chords of that node's motive_tones, each holding the cells
  * from the one its onset falls in to the next chord's onset or the motive's end. Called after harmony_given_read.
  */
-void harmony_motive_read(const PiecePlan *plan, PhraseRequest *request);
+void harmony_motive_read(const Plan *plan, PhraseRequest *request);
 /* Whether chords keep to the given bass (at each chord's start) and the given melody (its notes on strong beats). */
 bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords, size_t count, const char **why);
 /*
@@ -301,9 +298,9 @@ bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords,
 bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords, size_t count, bool cadence_planned,
                         const char **why);
 
-typedef bool (*ReadRequestFn)(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
+typedef bool (*ReadRequestFn)(const Plan *plan, LaneSpanId target, PhraseRequest *out);
 /* Writes a progression candidate over its target span, one chord span each; the first keeps the target's id. */
-PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate,
+PlanResult harmony_progression_apply(Plan *plan, FillTarget target, const FillCandidate *candidate,
                                      ReadRequestFn read_request);
 
 /*
@@ -328,7 +325,7 @@ typedef struct {
 } CellMetre;
 
 /* False unless the span lies in one meter lane span, starts on a cell and is a whole number of cells. */
-bool harmony_read_cells(const PiecePlan *plan, PlanSpan span, CellMetre *out);
+bool harmony_read_cells(const Plan *plan, PlanSpan span, CellMetre *out);
 /* As harmony_count_cells, but a length of zero is zero cells. */
 bool harmony_count_cells_or_zero(Rational cell_length, Rational length, size_t *cells);
 
@@ -336,9 +333,9 @@ bool harmony_count_cells_or_zero(Rational cell_length, Rational length, size_t *
 bool harmony_count_cells(Rational cell_length, Rational length, size_t *cells);
 
 /* Reads the chord of a harmony span: a diatonic numeral, else an applied one, and its length in cells. */
-bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, HarmonyMode mode, Rational cell_length, PhraseChord *out);
+bool harmony_read_chord(const Plan *plan, LaneSpanId id, HarmonyMode mode, Rational cell_length, PhraseChord *out);
 /* The same on the cells of a metre: the span must start and end on a cell boundary of it. */
-bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
+bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
                            PhraseChord *out);
 
 /*
@@ -348,7 +345,7 @@ bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, HarmonyMode mod
  * holds a chord it cannot read or an open span that is not marked, or the phrase
  * has no meter, key or cadence.
  */
-bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContext *out);
+bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *out);
 
 /* The segments the recognizer reads, one per chord of a phrase. */
 typedef struct SegmentSet SegmentSet;
@@ -367,7 +364,7 @@ typedef struct {
     unsigned soft_held;
     unsigned soft_total;
     CadenceType heard;
-    unsigned shaping_broken; /* SHAPING_ bits of the shaping rules that did not hold (see check/shaping.h) */
+    unsigned shaping_broken; /* SHAPING_ bits of the shaping rules that did not hold (see util/shaping.h) */
 } PhraseVerdict;
 
 /*
@@ -421,9 +418,9 @@ void harmony_options_add(OptionList *list, const PhraseContext *phrase, const Ed
 size_t harmony_options_pick(FillRng *rng, size_t low, size_t high, size_t out[2]);
 
 /* The options of each family. They judge nothing; the checker does. */
-void harmony_options_prolongation(const PiecePlan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list);
+void harmony_options_prolongation(const Plan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list);
 void harmony_options_predominant(const PhraseContext *phrase, FillRng *rng, OptionList *list);
-void harmony_options_applied(const PiecePlan *plan, const PhraseContext *phrase, OptionList *list);
+void harmony_options_applied(const Plan *plan, const PhraseContext *phrase, OptionList *list);
 
 /* Builds one diatonic chord for the progression. False when the chord is not valid in the mode. */
 bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
@@ -436,7 +433,7 @@ bool harmony_make_leading_tone(HarmonyMode mode, int inversion, size_t cells, Ph
 void harmony_chord_payload(const PhraseChord *chord, PlanLanePayload *payload);
 
 /* Moves the cadence constraint from one chord span to another. */
-PlanResult harmony_move_cadence(PiecePlan *plan, LaneSpanId from, LaneSpanId to);
+PlanResult harmony_move_cadence(Plan *plan, LaneSpanId from, LaneSpanId to);
 
 /* The phrase as the edit would leave it, in out->chords, ready for the checker. False if it does not fit. */
 bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, EmbellishCandidate *out);
@@ -460,7 +457,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     PhraseMetre metre;
     size_t count;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -487,7 +484,7 @@ typedef struct {
  * of them open, with a meter and a key over it. False when the span is not one the bass operator
  * applies to.
  */
-bool harmony_bass_context_read(const PiecePlan *plan, LaneSpanId target, BassContext *out);
+bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, BassContext *out);
 
 /*
  * Judges a bass line: every note in range and the bass member of its chord, then standard-counterpoint's
@@ -515,12 +512,12 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
 int harmony_member_degree(HarmonyMode mode, const PhraseChord *chord);
 
 /* A MIDI pitch spelled as a scale degree of the key (see harmony_bass.h); NULL when it cannot be. */
-PitchSpelling *harmony_spell_pitch(const AnalysisKey *key, int degree, int pitch);
+PitchSpelling *harmony_spell_pitch(const SpelledKey *key, int degree, int pitch);
 /* The key's tonic, spelled with the fewest accidentals, in the octave given. */
-PitchSpelling *harmony_spell_tonic(const AnalysisKey *key, int octave);
+PitchSpelling *harmony_spell_tonic(const SpelledKey *key, int octave);
 
 /* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
-bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int *pc);
+bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int *pc);
 
 
 /*
@@ -531,7 +528,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     CellMetre metre;
     bool at_start;      /* the span starts the owner node */
     bool has_cadence;   /* the span, or its owner, asks for a cadence */
@@ -553,7 +550,7 @@ typedef struct {
 } SkeletonCandidate;
 
 /* Reads a Constrained harmony target for a skeleton; false when it is not one (see harmony_schema.h). */
-bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonContext *out);
+bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext *out);
 
 /*
  * Judges the skeleton in its phrase: the chords before it and its own, the schema's chords needing no
@@ -573,6 +570,17 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
  * beside them, a schema constraint on each chord of a schema, and a new Constrained span for what is left,
  * carrying the cadence.
  */
-PlanResult harmony_skeleton_apply(PiecePlan *plan, const SkeletonCandidate *skeleton);
+PlanResult harmony_skeleton_apply(Plan *plan, const SkeletonCandidate *skeleton);
+
+/* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
+bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
+/* How many of the standard counterpoint melodic rules have a soft preference. */
+unsigned melody_melodic_soft_rules(void);
+
+/* The motive_tones constraint of a node, or NULL. */
+const PlanMotiveTones *node_tones(const Plan *plan, NodeId node);
+
+/* Applies a skeleton candidate (schema or sequence) to the harmony lane span it was drawn for. */
+PlanResult harmony_skeleton_apply_target(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
 
 #endif

@@ -4,7 +4,6 @@
 #include <stddef.h>
 
 #include "model/containers/section.h"
-#include "model/relationship/relationship.h"
 #include "theory/vocabulary/cadence_type.h"
 #include "model/structure/phrase_occurrence.h"
 
@@ -12,7 +11,7 @@
  * FormStructureDetection (Procedure):
  * groups consecutive PhraseOccurrences into formal Sections (L4
  * containers/section.h) at the strongest, section-closing cadences, and
- * orders the identified Sections via a "precedes" Relationship chain --
+ * orders the identified Sections as pairs of indices (each section before the next) --
  * the section-order half of this branch's scope (thematic return is
  * analysis/thematic_return_detection.h).
  *
@@ -45,12 +44,11 @@
  * actually closed by a structural cadence become Sections (skip, don't
  * guess).
  *
- * Linking mechanism: each identified Section gets minted via section_create (id + phrase_ids =
+ * Section minting: each identified Section gets minted via section_create (id + phrase_ids =
  * the underlying L4 Phrase ids of its member PhraseOccurrences, via
  * phrase_occurrence_phrase_id). Consecutive Sections (in input order)
- * are linked by one Relationship each (source = earlier Section id,
- * predicate "precedes", target = later Section id).
- * No Interpretation is built for them.
+ * are ordered by one FormStructureOrder each (the index of the earlier and the later Section). Nothing
+ * else is built for them.
  */
 
 typedef struct {
@@ -68,7 +66,7 @@ typedef enum {
 /*
  * Builds the Section objects FormStructureDetection identifies, using
  * the identical boundary rule. entries/entry_count validation matches
- * form_structure_detection_build_relationships. No boundary found is valid and
+ * form_structure_detection_order. No boundary found is valid and
  * yields *out_sections = NULL, *out_section_count = 0.
  *
  * On success, *out_sections is a freshly allocated array (caller frees
@@ -82,31 +80,20 @@ FormStructureDetectionSectionResult form_structure_detection_build_sections(
 /* Destroys each Section in sections and the array itself. */
 void form_structure_detection_destroy_sections(Section **sections, size_t section_count);
 
-typedef enum {
-    FORM_STRUCTURE_DETECTION_REL_OK = 0,
-    FORM_STRUCTURE_DETECTION_REL_ERR_NULL_ENTRIES,
-    FORM_STRUCTURE_DETECTION_REL_ERR_NULL_ENTRY,
-    FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC
-} FormStructureDetectionRelationshipResult;
+/* The order of two consecutive Sections: indices into the array form_structure_detection_build_sections gives. */
+typedef struct {
+    size_t earlier;
+    size_t later;
+} FormStructureOrder;
 
 /*
- * Builds the Relationship objects that link the identified Sections,
- * using the identical boundary rule and the identical Section ids
- * form_structure_detection_build_sections mints.
- * entries/entry_count validation matches form_structure_detection_
- * build_sections. Fewer than 2 Sections found is valid and yields
- * *out_relationships = NULL, *out_relationship_count = 0.
- *
- * On success, *out_relationships is a freshly allocated array (caller
- * frees with form_structure_detection_destroy_relationships) of one
- * Relationship per consecutive Section pair (predicate "precedes"), in
- * chronological order.
+ * Gives the order of the identified Sections, using the identical boundary rule (the same Sections
+ * form_structure_detection_build_sections mints): one FormStructureOrder {k, k + 1} per consecutive Section pair, in
+ * chronological order. entries/entry_count validation matches form_structure_detection_build_sections. Fewer than 2
+ * Sections found is valid and yields *out_pairs = NULL, *out_pair_count = 0. On success *out_pairs is a freshly allocated
+ * array the caller frees with free().
  */
-FormStructureDetectionRelationshipResult form_structure_detection_build_relationships(
-    const FormStructureDetectionEntry *entries, size_t entry_count, Relationship ***out_relationships,
-    size_t *out_relationship_count);
-
-/* Destroys each Relationship in relationships and the array itself. */
-void form_structure_detection_destroy_relationships(Relationship **relationships, size_t relationship_count);
+FormStructureDetectionSectionResult form_structure_detection_order(const FormStructureDetectionEntry *entries, size_t entry_count,
+                                                                    FormStructureOrder **out_pairs, size_t *out_pair_count);
 
 #endif

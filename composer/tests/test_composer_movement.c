@@ -12,8 +12,8 @@
 #include <realization/work.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "render/movement_build.h"
@@ -22,6 +22,7 @@
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -272,9 +273,9 @@ static int expected_staff(const Line *line) {
 
 /* One stored plan, as text: renders into the piano part and agrees with the voice-track layout. */
 static void check_plan_text(const char *text, const char *name, bool *saw_motive_link) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
-    if (plan_from_json(test_knowledge(), text, &plan, &error) != PLAN_OK) {
+    if (plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &plan, &error) != PLAN_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
     }
     assert(plan != NULL);

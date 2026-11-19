@@ -4,8 +4,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
@@ -91,7 +91,7 @@ static void test_suggest(void) {
 
 static void test_files(void) {
     char *text = output_of(BASE " --species 2 --seed 3 --out cp_cli.json --midi cp_cli.mid --musicxml cp_cli.xml");
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     char *midi;
     LaneSpanId ids[4];

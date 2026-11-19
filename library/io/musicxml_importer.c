@@ -1,4 +1,5 @@
 #include "io/musicxml_importer.h"
+#include <model/core/content_hash.h>
 
 #include <ctype.h>
 #include <limits.h>
@@ -981,11 +982,7 @@ typedef struct {
 } IdSet;
 
 static size_t id_hash(const char *text) {
-    size_t hash = 1469598103934665603ull;
-    for (const unsigned char *p = (const unsigned char *)text; *p != 0; p++) {
-        hash = (hash ^ *p) * 1099511628211ull;
-    }
-    return hash;
+    return (size_t)content_hash_fnv1a64(1469598103934665603ULL, text, strlen(text));
 }
 
 static bool id_set_has(const IdSet *set, const char *text) {

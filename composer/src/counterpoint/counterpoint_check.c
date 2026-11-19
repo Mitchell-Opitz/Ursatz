@@ -25,7 +25,7 @@
 #include <theory/counterpoint/third_species_rules.h>
 
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "counterpoint/counterpoint_internal.h"
 #include "util/util.h"
@@ -281,7 +281,7 @@ bool counterpoint_eval(const CounterpointContext *context, size_t notes, const u
 
 /* ---------------------------------------------------------- the checker */
 
-bool counterpoint_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool counterpoint_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;
@@ -313,7 +313,7 @@ bool counterpoint_checker(const PiecePlan *plan, FillTarget target, const FillOp
 
 /* ------------------------------------------------------------- the report */
 
-bool counterpoint_report(const PiecePlan *plan, LaneSpanId target, CounterpointReport *out) {
+bool counterpoint_report(const Plan *plan, LaneSpanId target, CounterpointReport *out) {
     CounterpointContext *read = calloc(1, sizeof(*read));
     CounterpointCandidate *line = calloc(1, sizeof(*line));
     CounterpointVerdict verdict;

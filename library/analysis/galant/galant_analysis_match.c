@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/galant/galant_analysis_claim.h"
 #include "theory/galant/galant_matching_rules.h"
 #include "theory/galant/galant_prototypes.h"
 #include "model/core/rational.h"
@@ -445,18 +444,7 @@ static GalantAnalysisStatus emit(const GalantSegmentList *s, const Candidate *c,
         }
     }
     out->uncertainty = 1.0 - c->confidence;
-    char key[96];
-    char interpretation_id[160];
-    snprintf(key, sizeof(key), "%s-%d", prototype->name, index);
-    out->relationship = galant_analysis_relationship("match", key, s->items[c->first].segment.id, s->items[c->last].segment.id, "galant-schema");
-    if (out->relationship == NULL) {
-        return GALANT_ANALYSIS_ERR_ALLOC;
-    }
-    snprintf(interpretation_id, sizeof(interpretation_id), "galant-schemas-match-claim-%s", key);
-    out->interpretation = galant_analysis_interpretation(interpretation_id, entity_id_value(relationship_id(out->relationship)),
-                                                         GALANT_SCHEMA_CLAIM_TYPE, claim, sizeof(*claim), out->uncertainty,
-                                                         "schema-matching");
-    return out->interpretation == NULL ? GALANT_ANALYSIS_ERR_ALLOC : GALANT_ANALYSIS_OK;
+    return GALANT_ANALYSIS_OK;
 }
 
 GalantAnalysisStatus galant_schema_match(const GalantSegmentList *segments, const GalantMatchConfig *config, GalantSchemaMatches *out) {
@@ -544,10 +532,6 @@ GalantAnalysisStatus galant_schema_match(const GalantSegmentList *segments, cons
 void galant_schema_matches_destroy(GalantSchemaMatches *matches) {
     if (matches == NULL) {
         return;
-    }
-    for (size_t i = 0; i < matches->count; i++) {
-        interpretation_destroy(matches->items[i].interpretation);
-        relationship_destroy(matches->items[i].relationship);
     }
     free(matches->items);
     matches->items = NULL;

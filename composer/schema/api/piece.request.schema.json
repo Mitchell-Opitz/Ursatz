@@ -33,6 +33,10 @@
     "plain_midi": {
       "type": "boolean"
     },
+    "layers": {
+      "type": "boolean",
+      "description": "Also return the realization and the reading of the first result as \"realization\" and \"reading\"."
+    },
     "from": {
       "$ref": "#/$defs/plan"
     },
@@ -91,7 +95,7 @@
           "type": "string"
         }
       },
-      "description": "A plan object (docs/plan-format.md, schema/plan.v5.schema.json)."
+      "description": "A plan object (library/docs/modules/plan-format.md, library/plan/schema/plan.v6.schema.json)."
     },
     "piece_request": {
       "type": "object",

@@ -32,3 +32,4 @@ ursatz_test(common_practice_materials SOURCES test_common_practice_materials.c L
 ursatz_test(tonal_key_materials SOURCES test_tonal_key_materials.c LIBS ursatz_theory)
 
 ursatz_test(region_relation SOURCES test_region_relation.c LIBS ursatz_theory cjson VALGRIND)
+ursatz_test(spelled_key LIBS ursatz_theory VALGRIND)

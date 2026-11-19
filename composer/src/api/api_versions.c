@@ -4,7 +4,7 @@
 #include <chain/analysis_chain.h>
 #include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "api_internal.h"
 
@@ -31,7 +31,8 @@ ComposerStatus composer_api_versions(ComposerResponse *out) {
     if (!root || !cJSON_AddStringToObject(root, "composer_version", composer_version()) ||
         !cJSON_AddStringToObject(root, "api_version", composer_api_version()) ||
         !cJSON_AddStringToObject(root, "ursatz_commit", analysis_chain_producer_key()) ||
-        !cJSON_AddNumberToObject(root, "plan_format_version", URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) {
+        !cJSON_AddStringToObject(root, "composition_key", composer_composition_key()) ||
+        !cJSON_AddNumberToObject(root, "plan_format_version", URSATZ_PLAN_FORMAT_VERSION)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

@@ -8,10 +8,10 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
@@ -64,14 +64,14 @@ static int degree_of(const char *numeral) {
 }
 
 /* The numeral of the harmony span sounding at the time. */
-static const char *chord_at(const PiecePlan *plan, Rational at) {
+static const char *chord_at(const Plan *plan, Rational at) {
     LaneSpanId ids[4];
     PlanSpan here = {at, {1, 4096}};
     assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, here, ids, 4) >= 1);
     return plan_lane_span_payload(plan, ids[0])->harmony.roman_numeral;
 }
 
-static const PlanMotiveRef *ref_of_node(const PiecePlan *plan, NodeId idea, LaneSpanId *span_out) {
+static const PlanMotiveRef *ref_of_node(const Plan *plan, NodeId idea, LaneSpanId *span_out) {
     LaneSpanId span;
     assert(plan_melody_span_of(plan, idea, &span));
     if (span_out) {
@@ -86,12 +86,12 @@ static const PlanMotiveRef *ref_of_node(const PiecePlan *plan, NodeId idea, Lane
     return NULL;
 }
 
-static const PlanMotiveTones *tones_of(const PiecePlan *plan, NodeId node) {
+static const PlanMotiveTones *tones_of(const Plan *plan, NodeId node) {
     const PlanConstraint *constraint = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_MOTIVE_TONES);
     return constraint ? &constraint->params.motive_tones : NULL;
 }
 
-static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentence, GivenChord *chords, size_t chord_count) {
+static Plan *compose(const Motive *motive, unsigned long seed, bool sentence, GivenChord *chords, size_t chord_count) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -113,7 +113,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentenc
     }
     request.chords = chords;
     request.chord_count = chord_count;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -137,7 +137,7 @@ static Rational bars_of_three_four(long bars) {
 }
 
 /* The sentence's ideas: the chords of the basic idea and the repetition, the fragments and the cadence. */
-static void check_sentence(const PiecePlan *plan, size_t seen[3]) {
+static void check_sentence(const Plan *plan, size_t seen[3]) {
     NodeId basic = test_find_node(plan, "basic idea");
     NodeId repetition = test_find_node(plan, "repetition");
     assert(basic != PLAN_NODE_NONE && repetition != PLAN_NODE_NONE);
@@ -195,7 +195,7 @@ int main(void) {
     size_t composed = 0;
     Motive test_motif = load_motive(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json");
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan = compose(&test_motif, seed, true, NULL, 0);
+        Plan *plan = compose(&test_motif, seed, true, NULL, 0);
         if (!plan) {
             continue;
         }
@@ -209,7 +209,7 @@ int main(void) {
     Motive period = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
     size_t periods = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan = compose(&period, seed, false, NULL, 0);
+        Plan *plan = compose(&period, seed, false, NULL, 0);
         if (!plan) {
             continue;
         }
@@ -232,7 +232,7 @@ int main(void) {
             chords[i].onset = rational_ratio(STARTS[i], 8);
             chords[i].length = rational_ratio(LENGTHS[i], 8);
         }
-        PiecePlan *plan = compose(&test_motif, seed, true, chords, GIVEN);
+        Plan *plan = compose(&test_motif, seed, true, chords, GIVEN);
         if (!plan) {
             continue;
         }
@@ -270,7 +270,7 @@ int main(void) {
         request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
         request.pairing.ending = SECTION_ENDING_CONTINUATION;
         request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));

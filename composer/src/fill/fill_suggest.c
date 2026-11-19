@@ -70,7 +70,7 @@ static FillResult build_set(FillSuggestions *suggestions, unsigned long seed) {
                  suggestions->target.id, k);
         ok = ok && entity_id_create(text, &material) == ENTITY_ID_OK &&
              provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK &&
-             candidate_create(id, material, NULL, 0, NULL, 0, check->score_numerator, check->score_denominator,
+             candidate_create(id, material, check->score_numerator, check->score_denominator,
                               provenance, &candidates[k]) == CANDIDATE_OK;
         if (!ok) {
             entity_id_destroy(id);
@@ -110,7 +110,7 @@ static FillResult build_set(FillSuggestions *suggestions, unsigned long seed) {
     return FILL_OK;
 }
 
-FillResult fill_suggest(const PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_suggest(const Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                         FillTarget target, size_t top_n, FillSuggestions **out) {
     if (!plan || !registry || !out) {
         return FILL_ERR_NULL;
@@ -166,7 +166,7 @@ FillResult fill_suggest(const PiecePlan *plan, const FillOperatorRegistry *regis
     return FILL_OK;
 }
 
-FillResult fill_apply_suggestion(PiecePlan *plan, const FillSuggestions *suggestions, size_t index) {
+FillResult fill_apply_suggestion(Plan *plan, const FillSuggestions *suggestions, size_t index) {
     if (!plan || !suggestions || index >= suggestions->count) {
         return FILL_ERR_NULL;
     }

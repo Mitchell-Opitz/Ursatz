@@ -6,10 +6,10 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
@@ -42,14 +42,14 @@ static Motive load_motive(void) {
 }
 
 /* The notes of the melody span a node owns, written in the plan. */
-static const PlanNotes *melody_of(const PiecePlan *plan, NodeId node) {
+static const PlanNotes *melody_of(const Plan *plan, NodeId node) {
     LaneSpanId span;
     assert(plan_melody_span_of(plan, node, &span));
     return &plan_lane_span_payload(plan, span)->notes;
 }
 
 /* The motive_ref of the melody span of an idea, or NULL. */
-static const PlanMotiveRef *ref_of(const PiecePlan *plan, LaneSpanId span) {
+static const PlanMotiveRef *ref_of(const Plan *plan, LaneSpanId span) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, span); i++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
@@ -78,7 +78,7 @@ static bool within_one_shift(const PlanNotes *idea, const PlanNotes *node) {
     return false;
 }
 
-static PiecePlan *compose(const Motive *motive, unsigned long seed, GivenChord *chords) {
+static Plan *compose(const Motive *motive, unsigned long seed, GivenChord *chords) {
     static const char *const NUMERALS[CHORDS] = {"I", "vi", "IV", "V", "I", "vi", "IV", "V", "I"};
     /* Bars of 6/8 are six eighths: chords I vi IV V I vi in bars 0 to 5, IV then V from the second dotted quarter of bar 6, I in bar 7. */
     static const long long STARTS[CHORDS] = {0, 6, 12, 18, 24, 30, 36, 39, 42};
@@ -100,7 +100,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, GivenChord *
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.chords = chords;
     request.chord_count = CHORDS;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -122,7 +122,7 @@ int main(void) {
     assert(motive.note_count == 10);
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         GivenChord chords[CHORDS];
-        PiecePlan *plan = compose(&motive, seed, chords);
+        Plan *plan = compose(&motive, seed, chords);
         NodeId basic = test_find_node(plan, "basic idea");
         assert(basic != PLAN_NODE_NONE);
         const PlanNotes *notes = melody_of(plan, basic);

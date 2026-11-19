@@ -3,6 +3,7 @@
 
 #include <chain/analysis_chain.h>
 #include <chain/chain_result.h>
+#include <reading/reading.h>
 
 #include "check/hearing.h"
 
@@ -21,15 +22,30 @@
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalysisChain **out);
 
 /*
- * The chain over the whole piece: from the plan's start to where its last section that is not material ends (the whole
- * plan when it has no section). It is one span of hearing_section, so the checks of the piece share one analysis.
+ * The reading of the notes that start inside span: the library reading_build of the span's chain (hearing_section: the same cache), source
+ * the Composer (its composition key, all the chain's stages, the snapshot's hash), target work `w1`, movement `m1` and no digest (the layers
+ * output sets it), and the performer note ids of rendered_plan_work's work as evidence (`rendered_plan_note_id`). Built on the first request
+ * and kept until hearing_destroy, so two requests of one span give one reading, borrowed. The errors are hearing_section's.
  */
-HearingResult hearing_piece(ComposerHearing *hearing, const AnalysisChain **out);
+HearingResult hearing_section_reading(ComposerHearing *hearing, PlanSpan span, const Reading **out);
 
 /*
- * The index among hearing_rendered's events of event index of the notes a chain was run on (the ids a voice fault names are
- * indices into those notes). (size_t)-1 for a chain the hearing did not make or an index it does not have.
+ * hearing_section_reading over the whole piece: from the plan's start to where its last section that is not material ends (the whole
+ * plan when it has no section). It is one span of hearing_section_reading, so the checks of the piece share one analysis.
  */
-size_t hearing_source_event(const ComposerHearing *hearing, const AnalysisChain *chain, size_t index);
+HearingResult hearing_piece_reading(ComposerHearing *hearing, const Reading **out);
+
+/*
+ * hearing_piece_reading, with the reading's target naming the version of the work it is about (`digest`, 16 lowercase hexadecimal
+ * digits: realization_digest of rendered_plan_work's work for hearing_rendered). The reading is the hearing's own, so the digest is set
+ * on it; HEARING_ERR_ANALYSIS for a digest the reading refuses.
+ */
+HearingResult hearing_piece_reading_of(ComposerHearing *hearing, const char *digest, const Reading **out);
+
+/*
+ * The rendered event (an index among hearing_rendered's events) of a performer note id of the work: the inverse of rendered_plan_note_id.
+ * (size_t)-1 for an id the work does not have.
+ */
+size_t hearing_event_of_note(const ComposerHearing *hearing, const char *note_id);
 
 #endif

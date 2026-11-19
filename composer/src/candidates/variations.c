@@ -1,0 +1,232 @@
+#include <ursatz_composer/variations.h>
+#include <model/core/content_hash.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <model/core/rational.h>
+#include <model/time/duration.h>
+#include <model/time/musical_time.h>
+#include <model/time/temporal_anchor.h>
+
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
+#include <ursatz_composer/render.h>
+#include "structure/plan_util.h"
+
+static uint64_t hash_value(uint64_t hash, uint64_t value) {
+    for (int i = 0; i < 8; i++) {
+        unsigned char byte = (unsigned char)((value >> (8 * i)) & 0xFFu);
+        hash = content_hash_fnv1a64(hash, &byte, 1);
+    }
+    return hash;
+}
+
+/* A fraction as its reduced numerator and denominator, into the hash. */
+static uint64_t hash_fraction(uint64_t hash, long numerator, unsigned long denominator) {
+    unsigned long magnitude = numerator < 0 ? 0UL - (unsigned long)numerator : (unsigned long)numerator;
+    unsigned long divisor = (unsigned long)rational_gcd_unsigned(magnitude, denominator);
+    if (divisor == 0) {
+        divisor = 1;
+    }
+    hash = hash_value(hash, (uint64_t)(numerator / (long)divisor));
+    return hash_value(hash, denominator / divisor);
+}
+
+typedef struct {
+    PlanSpan span;
+    char numeral[PLAN_ROMAN_NUMERAL_MAX];
+} HarmonySpan;
+
+/* By start, then length, then numeral: the same chords in the same places sort the same whatever their ids. */
+static int compare_harmony(const void *left, const void *right) {
+    const HarmonySpan *a = left;
+    const HarmonySpan *b = right;
+    int order = rational_cmp(a->span.start, b->span.start);
+    if (order == 0) {
+        order = rational_cmp(a->span.length, b->span.length);
+    }
+    return order != 0 ? order
+                      : strcmp(a->numeral, b->numeral);
+}
+
+/* The harmony lane of the plan in time order: where each span is and its numeral. */
+static uint64_t hash_harmony(uint64_t hash, const Plan *plan) {
+    size_t count = 0;
+    HarmonySpan *spans = calloc(plan_lane_span_count(plan) + 1, sizeof(HarmonySpan));
+    if (!spans) {
+        return 0;
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_HARMONY) {
+            spans[count].span = plan_lane_span_span(plan, id);
+            snprintf(spans[count].numeral, sizeof(spans[count].numeral), "%s", plan_lane_span_payload(plan, id)->harmony.roman_numeral);
+            count++;
+        }
+    }
+    qsort(spans, count, sizeof(HarmonySpan), compare_harmony);
+    for (size_t i = 0; i < count; i++) {
+        hash = hash_fraction(hash, spans[i].span.start.num, spans[i].span.start.den);
+        hash = hash_fraction(hash, spans[i].span.length.num, spans[i].span.length.den);
+        for (const char *c = spans[i].numeral; *c; c++) {
+            hash = hash_value(hash, (unsigned char)*c);
+        }
+    }
+    free(spans);
+    return hash;
+}
+
+static uint64_t signature_of(const Plan *plan, bool harmony_only) {
+    if (plan && harmony_only) {
+        return hash_harmony(CONTENT_HASH_FNV1A64_OFFSET, plan);
+    }
+    RenderedPlan rendered;
+    if (!plan || plan_render(plan, &rendered) != PLAN_RENDER_OK) {
+        return 0;
+    }
+    uint64_t hash = CONTENT_HASH_FNV1A64_OFFSET;
+    for (size_t i = 0; i < rendered.count; i++) {
+        const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
+        const Duration *duration = note_event_duration(rendered.events[i]);
+        hash = hash_value(hash, rendered.part_index[i]);
+        hash = hash_fraction(hash, (long)onset->value.num, (unsigned long)onset->value.den);
+        hash = hash_fraction(hash, (long)duration->value.num, (unsigned long)duration->value.den);
+        hash = hash_value(hash, (uint64_t)pitch_numeric_value_position_numerator(rendered.pitch_values[i]));
+    }
+    rendered_plan_destroy(&rendered);
+    return hash;
+}
+
+uint64_t plan_signature(const Plan *plan) {
+    return signature_of(plan, false);
+}
+
+/* A clone numbers its nodes and lane spans from 1 with no gaps; a copy of a plan without gaps then keeps every id. */
+static bool ids_are_stable(const Plan *plan) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (!plan_has_node(plan, id)) {
+            return false;
+        }
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (!plan_has_lane_span(plan, id)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void plan_variations_destroy(PlanVariations *variations) {
+    if (!variations) {
+        return;
+    }
+    for (size_t i = 0; i < variations->count; i++) {
+        plan_destroy(variations->items[i].plan);
+        compose_outcome_destroy(&variations->items[i].outcome);
+    }
+    free(variations->items);
+    memset(variations, 0, sizeof(*variations));
+}
+
+static RegenerateResult vary(const Plan *plan, const FillTarget *targets, size_t target_count,
+                             const ComposeConfig *config, size_t count, bool with_harmony, PlanVariations *out) {
+    if (!plan || !targets || !config || !out) {
+        return REGENERATE_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    if (count < 1 || count > PLAN_VARIATIONS_MAX || target_count == 0 || !ids_are_stable(plan)) {
+        return REGENERATE_ERR_BAD_TARGET;
+    }
+
+    /* The errors that no seed can mend, before any is run. */
+    FillTarget *scope = NULL;
+    size_t scope_count = 0;
+    RegenerateResult scoped = plan_regenerate_scope_all(plan, targets, target_count, &scope, &scope_count);
+    free(scope);
+    if (scoped != REGENERATE_OK) {
+        return scoped;
+    }
+
+    out->items = calloc(count, sizeof(PlanVariation));
+    if (!out->items) {
+        return REGENERATE_ERR_ALLOC;
+    }
+    uint64_t original = signature_of(plan, with_harmony);
+    RegenerateResult result = REGENERATE_OK;
+    size_t seeds = 4 * count;
+    for (size_t k = 0; k < seeds && out->count < count && result == REGENERATE_OK; k++) {
+        out->seeds_tried = k + 1;
+        Plan *copy = NULL;
+        if (plan_clone(plan, &copy) != PLAN_OK) {
+            result = REGENERATE_ERR_ALLOC;
+            break;
+        }
+        ComposeConfig run = *config;
+        run.seed = (config->seed + k) & 0xFFFFFFFFUL;
+        ComposeOutcome outcome;
+        memset(&outcome, 0, sizeof(outcome));
+        RegenerateResult ran = plan_regenerate_all(copy, targets, target_count, &run, &outcome);
+        bool keep = false;
+        uint64_t signature = 0;
+        if (ran == REGENERATE_OK) {
+            signature = signature_of(copy, with_harmony);
+            keep = signature != original;
+            for (size_t i = 0; keep && i < out->count; i++) {
+                keep = out->items[i].signature != signature;
+            }
+        } else if (ran != REGENERATE_ERR_STUCK) {
+            result = ran;
+        }
+        if (keep) {
+            out->items[out->count++] = (PlanVariation){copy, run.seed, signature, outcome};
+        } else {
+            plan_destroy(copy);
+            compose_outcome_destroy(&outcome);
+        }
+    }
+    if (result != REGENERATE_OK) {
+        plan_variations_destroy(out);
+    }
+    return result;
+}
+
+RegenerateResult plan_variations(const Plan *plan, const FillTarget *targets, size_t target_count,
+                                 const ComposeConfig *config, size_t count, PlanVariations *out) {
+    return vary(plan, targets, target_count, config, count, false, out);
+}
+
+RegenerateResult plan_harmonizations(const Plan *plan, NodeId section, const ComposeConfig *config, size_t count,
+                                     PlanVariations *out) {
+    if (!plan || !config || !out) {
+        return REGENERATE_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    if (!plan_has_node(plan, section) || plan_section_of(plan, section) != section) {
+        return REGENERATE_ERR_BAD_TARGET;
+    }
+    FillTarget *targets = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
+    if (!targets) {
+        return REGENERATE_ERR_ALLOC;
+    }
+    size_t target_count = 0;
+    size_t melody_count = 0;
+    bool melody_given = true;
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (!plan_has_lane_span(plan, id) || !plan_in_subtree(plan, plan_lane_span_owner(plan, id), section)) {
+            continue;
+        }
+        PlanLaneKind lane = plan_lane_span_lane(plan, id);
+        if (lane == PLAN_LANE_MELODY) {
+            melody_count++;
+            melody_given = melody_given && plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN;
+        } else if (lane == PLAN_LANE_HARMONY && plan_lane_span_state(plan, id) != PLAN_STATE_GIVEN) {
+            targets[target_count++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
+        }
+    }
+    RegenerateResult result = melody_count > 0 && melody_given && target_count > 0
+                                  ? vary(plan, targets, target_count, config, count, true, out)
+                                  : REGENERATE_ERR_BAD_TARGET;
+    free(targets);
+    return result;
+}

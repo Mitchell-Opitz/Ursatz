@@ -8,7 +8,7 @@
 #include <theory/harmony/harmony_applied.h>
 #include <theory/galant/scale_patterns.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/fill_suggest.h>
@@ -16,7 +16,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_oracles.h"
 #include "support/test_knowledge.h"
 
@@ -42,7 +42,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     LaneSpanId bass_target;
@@ -73,7 +73,7 @@ static Rational bars_of(const Fixture *fixture, long bars) {
     return fraction(bars * (long)fixture->bar_length.num, fixture->bar_length.den);
 }
 
-static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pitch) {
+static LaneSpanId add_bass(Plan *plan, NodeId owner, PlanSpan span, int pitch) {
     PlanNote note = plan_note(pitch, fraction(0, 1), span.length);
     PlanLanePayload payload;
     LaneSpanId id;
@@ -84,7 +84,7 @@ static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pit
     return id;
 }
 
-static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, const char *roman,
+static LaneSpanId add_harmony(Plan *plan, NodeId owner, PlanSpan span, const char *roman,
                               int function) {
     PlanLanePayload payload;
     LaneSpanId id;
@@ -120,8 +120,8 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_METER, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     if (scenario->before_bars > 0) {
@@ -385,7 +385,7 @@ static int check_schemas(const Fixture *fixture, const Scenario *scenario, const
         Rational end = time_plus(last.start, last.length);
         assert(offset_in_bar(fixture, end).num == 0);
         PlanSpan whole = {first.start, time_sub(end, first.start)};
-        AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+        SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
         const char *violation = "unread";
         assert(harmony_check_bass(fixture->plan, whole, key, bass, &violation));
         assert(violation == NULL);
@@ -647,7 +647,7 @@ static void check_sequence(const Fixture *fixture, const Scenario *scenario, con
     PlanSpan first = plan_lane_span_span(fixture->plan, ids[0]);
     PlanSpan last = plan_lane_span_span(fixture->plan, ids[count - 1]);
     PlanSpan whole = {first.start, time_sub(time_plus(last.start, last.length), first.start)};
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, whole, key, &params->bass, &violation));
     assert(violation == NULL);

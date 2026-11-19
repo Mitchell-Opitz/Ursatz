@@ -8,7 +8,7 @@
 #include "motive/motive_internal.h"
 
 /* A score from small constants or counts, which always fit. Values from a caller go through motive_score_make. */
-static MotiveScore fraction(unsigned long long numerator, unsigned long long denominator) {
+MotiveScore motive_make_score(unsigned long long numerator, unsigned long long denominator) {
     MotiveScore score = {0, 1};
     motive_score_make(numerator, denominator, &score);
     return score;
@@ -26,7 +26,7 @@ bool motive_chain_distance(const VariantChain *chain, MotiveScore *out) {
         }
         cost += (unsigned long long)motive_relation_cost((MotiveRelationKind)operation->relation);
     }
-    *out = fraction(cost, cost + 4);
+    *out = motive_make_score(cost, cost + 4);
     return true;
 }
 
@@ -68,16 +68,16 @@ static MotiveScore coherence(const Motive *previous, const Motive *candidate) {
     int to;
     int to_alteration;
     if (!chord_of(previous, true, &from, &from_alteration) || !chord_of(candidate, false, &to, &to_alteration)) {
-        return fraction(0, 1);
+        return motive_make_score(0, 1);
     }
     if (from == to && from_alteration == to_alteration) {
-        return fraction(1, 2);
+        return motive_make_score(1, 2);
     }
     HarmonicFunction a = degree_function(from);
     HarmonicFunction b = degree_function(to);
     bool allowed = (a == HARMONIC_FUNCTION_TONIC) || (a == HARMONIC_FUNCTION_PREDOMINANT && b == HARMONIC_FUNCTION_DOMINANT) ||
                    (a == HARMONIC_FUNCTION_DOMINANT && b == HARMONIC_FUNCTION_TONIC);
-    return allowed ? fraction(1, 1) : fraction(0, 1);
+    return allowed ? motive_make_score(1, 1) : motive_make_score(0, 1);
 }
 
 bool motive_connection_limited(const Motive *basic, const Motive *previous, const Motive *candidate,
@@ -91,7 +91,7 @@ bool motive_connection_limited(const Motive *basic, const Motive *previous, cons
     MotiveScore remote;
     if (distance) {
         if (distance->denominator == 0) {
-            remote = fraction(1, 1);
+            remote = motive_make_score(1, 1);
         } else if (!motive_score_make(distance->numerator, distance->denominator, &remote)) {
             return false;
         }
@@ -112,7 +112,7 @@ bool motive_connection_limited(const Motive *basic, const Motive *previous, cons
     MotiveConnection connection;
     memset(&connection, 0, sizeof(connection));
     connection.remoteness = remote;
-    connection.limit = fraction(3, 4);
+    connection.limit = motive_make_score(3, 4);
     if (limit && limit->denominator > 0 && !motive_score_make(limit->numerator, limit->denominator, &connection.limit)) {
         return false;
     }

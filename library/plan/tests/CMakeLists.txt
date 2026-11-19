@@ -1,5 +1,12 @@
 ursatz_test_includes()
 
+# Plan format 6: three plans of format 5 (tests/fixtures) read and written, regions, derivation, the stamp.
+ursatz_test(plan_format SOURCES test_plan_format.c LIBS ursatz_plan VALGRIND
+    DEFINITIONS PLAN_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+# Resizing a lane span.
+ursatz_test(plan_lane_resize SOURCES test_plan_lane_resize.c LIBS ursatz_plan VALGRIND)
+
 # The section description: vocabulary, codec, rules and the member table against the schema fragment. The test writes
 # plan_section_written_<use>_<n>.json in its build directory; plan_section_schema validates them against the fragment's profiles.
 # The valgrind run writes the same files, so the two share a lock.

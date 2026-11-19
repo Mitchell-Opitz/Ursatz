@@ -160,15 +160,15 @@ static void defaults_round_trip(void) {
     /* The defaults are the constants the stage used before the settings existed. */
     assert(defaults.melody.range_low == 60 && defaults.melody.range_high == 84 && defaults.melody.climax_position == 667);
     assert(defaults.melody.climax_rise == 4 && defaults.melody.climax_slack == 150);
-    assert(defaults.melody.second_nearest.numerator == 1 && defaults.melody.second_nearest.denominator == 3);
+    assert(defaults.melody.second_nearest.num == 1 && defaults.melody.second_nearest.den == 3);
     assert(defaults.melody.attempts == 48 && defaults.melody.keep == 6 && defaults.melody.weights.seam == 1);
     assert(defaults.motif.pickup_one_in == 4 && defaults.motif.leap_low == 5 && defaults.motif.leap_high == 9);
     assert(defaults.motif.durations[0] == 2 && defaults.motif.durations[1] == 4 && defaults.motif.durations[2] == 1);
     assert(defaults.motif.accented_one_in == 0 && defaults.motif.accented_types[0] == 1 &&
            defaults.motif.accented_types[1] == 1 && defaults.motif.accented_types[2] == 1 &&
            !defaults.motif.avoid_repeats && defaults.motif.leaps_per_motif == 11 && !defaults.motif.leap_recovery &&
-           !defaults.motif.pickup_from_accent && defaults.motif.contrast_fidelity_min.numerator == 0 &&
-           defaults.motif.contrast_fidelity_min.denominator == 1 && defaults.motif.long_on_weak == 0 &&
+           !defaults.motif.pickup_from_accent && defaults.motif.contrast_fidelity_min.num == 0 &&
+           defaults.motif.contrast_fidelity_min.den == 1 && defaults.motif.long_on_weak == 0 &&
            !defaults.motif.final_long);
     assert(defaults.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].numerator == 11 &&
            defaults.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].denominator == 20);
@@ -189,7 +189,7 @@ static void members_read_over_defaults(void) {
     assert(preferences.melody.keep == 3 && preferences.melody.attempts == 12 && preferences.melody.density == 2);
     assert(preferences.melody.range_low == 60 && preferences.melody.range_high == 90);
     assert(preferences.melody.nct_types == (MELODY_NCT_SUSPENSION | MELODY_NCT_PASSING));
-    assert(preferences.melody.second_nearest.numerator == 1 && preferences.melody.second_nearest.denominator == 2);
+    assert(preferences.melody.second_nearest.num == 1 && preferences.melody.second_nearest.den == 2);
     assert(preferences.melody.plain_shaping && preferences.melody.weights.waves == 0 &&
            preferences.melody.weights.central_range == 20 && preferences.melody.weights.melodic == 1);
 
@@ -229,14 +229,14 @@ static void members_read_over_defaults(void) {
     assert(preferences.motif.accented_one_in == 3 && preferences.motif.accented_types[0] == 0 &&
            preferences.motif.accented_types[1] == 2 && preferences.motif.accented_types[2] == 5 &&
            preferences.motif.avoid_repeats && preferences.motif.leaps_per_motif == 2 && preferences.motif.leap_recovery &&
-           preferences.motif.pickup_from_accent && preferences.motif.contrast_fidelity_min.numerator == 1 &&
-           preferences.motif.contrast_fidelity_min.denominator == 3 && preferences.motif.long_on_weak == 4 &&
+           preferences.motif.pickup_from_accent && preferences.motif.contrast_fidelity_min.num == 1 &&
+           preferences.motif.contrast_fidelity_min.den == 3 && preferences.motif.long_on_weak == 4 &&
            preferences.motif.final_long);
     document = composer_preferences_write(&preferences);
     assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
     assert(again.motif.accented_one_in == 3 && again.motif.accented_types[2] == 5 && again.motif.avoid_repeats &&
            again.motif.leaps_per_motif == 2 && again.motif.leap_recovery && again.motif.pickup_from_accent &&
-           again.motif.contrast_fidelity_min.numerator == 1 && again.motif.contrast_fidelity_min.denominator == 3 &&
+           again.motif.contrast_fidelity_min.num == 1 && again.motif.contrast_fidelity_min.den == 3 &&
            again.motif.long_on_weak == 4 && again.motif.final_long);
     char *written = cJSON_PrintUnformatted(document);
     cJSON *rewritten = composer_preferences_write(&again);

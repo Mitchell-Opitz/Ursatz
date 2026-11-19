@@ -3,8 +3,7 @@
 
 #include <stdbool.h>
 
-#include "model/identity/entity_id.h"
-#include "model/interpretation/chord.h"
+#include "theory/tonality/chord_vocabulary.h"
 
 /*
  * Seventh-chord vocabulary for common-practice-minimal-v1: the four
@@ -40,15 +39,10 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh);
 
 /*
- * Builds a Chord claiming that the Sonority named by sonority_target_id is this seventh chord under
- * common-practice-minimal-v1. The Interpretation's scalar confidence is confidence_numerator /
- * confidence_denominator (a rational in [0, 1]), and its id has interpretation_id_suffix (NULL for none)
- * appended, so two Chords over one Sonority (a best and a runner-up) get distinct ids. Takes ownership
- * of sonority_target_id on success only.
+ * The candidate that names a sonority this seventh chord: its label and the confidence confidence_numerator / confidence_denominator (a
+ * rational in [0, 1], reduced), with no structure. False (out untouched) for an invalid seventh or a zero denominator.
  */
-ChordResult common_practice_build_seventh_chord_with_confidence(CommonPracticeSeventh seventh, EntityID *sonority_target_id,
-                                                          unsigned long confidence_numerator,
-                                                          unsigned long confidence_denominator,
-                                                          const char *interpretation_id_suffix, Chord **out);
+bool common_practice_seventh_candidate(CommonPracticeSeventh seventh, unsigned long confidence_numerator,
+                                       unsigned long confidence_denominator, ChordCandidate *out);
 
 #endif

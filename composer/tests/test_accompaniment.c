@@ -3,18 +3,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/accompaniment.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 
 #include "accompaniment_check.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * The accompaniment operator on realized plans: the fixed 8-bar sentence in C major 4/4, and plans built here in 3/4
@@ -29,7 +31,7 @@
 #define SEEDS 8
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     PlanSpan span;
     PlanMeter meter;
@@ -43,8 +45,8 @@ static Rational fraction(long num, unsigned long den) {
     return time;
 }
 
-static AnalysisKey c_major(void) {
-    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
+static SpelledKey c_major(void) {
+    SpelledKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
@@ -76,14 +78,14 @@ static const int BASS[8] = {48, 41, 43, 48, 48, 50, 43, 48};
  * 72 to 76, or, steady, of one held note a bar, so the room between the bass and the melody never changes.
  */
 /* The accompaniment motive of the tests, C4:e G4:e E4:e G4:e, as the node "acc" in a bar after the eight. */
-static void add_motive_node(PiecePlan *plan, NodeId form) {
+static void add_motive_node(Plan *plan, NodeId form) {
     Motive motive;
     NodeId section;
     NodeId phrase;
     NodeId idea;
     PlanSpan material = {fraction(8, 1), fraction(1, 1)};
     motive_init(&motive, (PlanMeter){4, 4, 0});
-    AnalysisKey motive_key_value = c_major();
+    SpelledKey motive_key_value = c_major();
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     motive.accompaniment = true;
     static const int PITCHES[4] = {60, 67, 64, 67};
@@ -120,8 +122,8 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
     assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = c_major();
-    assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
+    payload.region = c_major();
+    assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_REGION, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     bool compound = unit == 8 && beats % 3 == 0;
@@ -209,7 +211,7 @@ static PlanAccompaniment ask(PlanAccompanimentPattern pattern, int texture) {
     return accompaniment;
 }
 
-static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
+static FillOutcome accompany(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
@@ -299,7 +301,7 @@ static void check_shape(const Piece *piece, PlanAccompanimentPattern pattern, bo
     }
 }
 
-static void run_pattern(const char *name, Piece (*make)(void), AnalysisKey key, PlanAccompanimentPattern pattern,
+static void run_pattern(const char *name, Piece (*make)(void), SpelledKey key, PlanAccompanimentPattern pattern,
                         bool steady) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Piece piece = make();
@@ -319,8 +321,8 @@ static void run_pattern(const char *name, Piece (*make)(void), AnalysisKey key, 
         Piece again = make();
         open_voices(&again, ask(pattern, -1), voices);
         FillOutcome second = accompany(again.plan, seed);
-        char *a = plan_to_json(piece.plan, NULL);
-        char *b = plan_to_json(again.plan, NULL);
+        char *a = plan_to_json(piece.plan, test_plan_producer(), NULL);
+        char *b = plan_to_json(again.plan, test_plan_producer(), NULL);
         assert(a && b && strcmp(a, b) == 0);
         free(a);
         free(b);
@@ -388,11 +390,11 @@ static void test_unused_voices_are_written_empty(void) {
         assert(plan_lane_span_payload(piece.plan, id)->notes.note_count == 0);
     }
     /* An empty voice survives the plan file. */
-    char *json = plan_to_json(piece.plan, NULL);
-    PiecePlan *read = NULL;
+    char *json = plan_to_json(piece.plan, test_plan_producer(), NULL);
+    Plan *read = NULL;
     PlanJsonError error;
-    assert(json && plan_from_json(test_knowledge(), json, &read, &error) == PLAN_OK);
-    char *again = plan_to_json(read, NULL);
+    assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
+    char *again = plan_to_json(read, test_plan_producer(), NULL);
     assert(again && strcmp(json, again) == 0);
     free(again);
     free(json);
@@ -482,12 +484,12 @@ static void test_constraint(void) {
     assert(plan_lane_span_constraint_count(piece.plan, target) == 2);
 
     /* The plan file names the pattern and the texture, and gives back what was written. */
-    char *json = plan_to_json(piece.plan, NULL);
+    char *json = plan_to_json(piece.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"kind\": \"accompaniment\"") && strstr(json, "\"pattern\": \"alberti\"") &&
            strstr(json, "\"texture\": \"melody and accompaniment\"") && strstr(json, "\"pattern\": \"oom-pah\""));
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
-    assert(plan_from_json(test_knowledge(), json, &read, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     LaneSpanId read_target;
     assert(plan_lane_find(read, PLAN_LANE_INNER_VOICE, 1, piece.span, &read_target, 1) == 1);
     assert(plan_lane_span_constraint_count(read, read_target) == 2);
@@ -498,7 +500,7 @@ static void test_constraint(void) {
            first->low == 0 && first->high == 0);
     assert(second->pattern == PLAN_ACCOMPANIMENT_OOM_PAH && second->texture == -1 && second->low == 40 &&
            second->high == 72);
-    char *again = plan_to_json(read, NULL);
+    char *again = plan_to_json(read, test_plan_producer(), NULL);
     assert(again && strcmp(json, again) == 0);
     free(again);
 
@@ -507,14 +509,14 @@ static void test_constraint(void) {
     char *at = strstr(bad, "\"alberti\"");
     assert(at);
     memcpy(at, "\"albertz\"", 9);
-    PiecePlan *refused = NULL;
-    assert(plan_from_json(test_knowledge(), bad, &refused, &error) == PLAN_ERR_FORMAT && !refused);
+    Plan *refused = NULL;
+    assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) == PLAN_ERR_FORMAT && !refused);
     free(bad);
     bad = strdup(json);
     at = strstr(bad, "\"melody and accompaniment\"");
     assert(at);
     memcpy(at + 1, "melody and accompanimenx", 24);
-    assert(plan_from_json(test_knowledge(), bad, &refused, &error) == PLAN_ERR_FORMAT && !refused);
+    assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) == PLAN_ERR_FORMAT && !refused);
     free(bad);
     free(json);
     plan_destroy(read);

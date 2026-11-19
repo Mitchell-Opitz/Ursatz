@@ -6,15 +6,16 @@
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
- * The Analyzer check (R-080): a realized section is heard by the Analyzer's composer API (analyzer_hear) and what the
- * Analyzer hears is compared with what the plan asked for.
+ * The Analyzer check (R-080): a realized section is heard through the library chain (the hearing, R-257) and what it hears is
+ * compared with what the plan asked for.
  *
  * The plan is rendered once with every lane (plan_render); the notes that start in the section's span are heard in the
- * plan's meter map and the key the plan has at the section's start, and the cadences, chords and key regions are read from
- * the result's report (analyzer_result_report). Bars are counted from the section's start. Then:
+ * plan's meter map and the key the plan has at the section's start, and the cadences, key regions and voice faults are read
+ * from the hearing's reading of the span (hearing_section_reading, R-633: claims over the work's notes). Bars are counted
+ * from the section's start. Then:
  *   - Cadence: every planned cadence, the CADENCE constraints of the section (the first is the one it ends in, a second
  *     is the weak one an antecedent ends in, halfway), must be heard arriving in its bar. A planned PAC or IAC is heard
  *     as planned when the Analyzer hears any authentic cadence there; any other type must be heard as that type.
@@ -60,7 +61,7 @@ typedef enum {
  * Checks the section into *out, which the caller destroys. On failure *out is empty and safe to destroy. knowledge is the snapshot
  * the Analyzer hears the section with (the call context's); ANALYZER_CHECK_ERR_NULL for NULL.
  */
-AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
+AnalyzerCheckResult analyzer_check_section(const Plan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
                                            AnalyzerCheck *out);
 
 /*

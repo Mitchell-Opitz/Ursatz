@@ -8,10 +8,10 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
 
@@ -46,7 +46,7 @@ static Motive load_motive(void) {
 }
 
 /* The same sentence as test_grow_motif_realized: 8 bars of 6/8 in C major over I vi IV V I vi IV V I. */
-static PiecePlan *compose(const Motive *motive, unsigned long seed, const MelodyFillParams *melody) {
+static Plan *compose(const Motive *motive, unsigned long seed, const MelodyFillParams *melody) {
     static const char *const NUMERALS[CHORDS] = {"I", "vi", "IV", "V", "I", "vi", "IV", "V", "I"};
     static const long long STARTS[CHORDS] = {0, 6, 12, 18, 24, 30, 36, 39, 42};
     static const long long LENGTHS[CHORDS] = {6, 6, 6, 6, 6, 6, 3, 3, 6};
@@ -68,7 +68,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, const Melody
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.chords = chords;
     request.chord_count = CHORDS;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -92,7 +92,7 @@ static uint64_t mix(uint64_t hash, long long value) {
 }
 
 /* A hash of every melody note of the plan (pitch, onset, duration), node by node; the count of notes goes in too. */
-static uint64_t melody_hash(const PiecePlan *plan, size_t *notes_out) {
+static uint64_t melody_hash(const Plan *plan, size_t *notes_out) {
     uint64_t hash = 14695981039346656037ull;
     size_t total = 0;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
@@ -120,7 +120,7 @@ static uint64_t melody_hash(const PiecePlan *plan, size_t *notes_out) {
  * Closure (phase L4, R-478): the last melody note over the mean note value of the notes before it, from the start of the
  * plan, which is the phrase's mean for a theme of one phrase.
  */
-static double final_over_mean(const PiecePlan *plan) {
+static double final_over_mean(const Plan *plan) {
     double last_onset = -1;
     double last_duration = 0;
     size_t count = 0;
@@ -145,7 +145,7 @@ static double final_over_mean(const PiecePlan *plan) {
 }
 
 /* The duration of the last note of the antecedent of a period, in whole notes. */
-static double antecedent_last_note(const PiecePlan *plan) {
+static double antecedent_last_note(const Plan *plan) {
     NodeId antecedent = PLAN_NODE_NONE;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
         const char *name = plan_node_name(plan, node);
@@ -162,7 +162,7 @@ static double antecedent_last_note(const PiecePlan *plan) {
 }
 
 /* The period of test_grow_period (C major 4/4, an antecedent and a consequent, 8 bars) with a melody setting. */
-static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *melody) {
+static Plan *compose_period(unsigned long seed, const MelodyFillParams *melody) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
@@ -181,7 +181,7 @@ static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *mel
     request.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
     request.pairing.ending = SECTION_ENDING_CONSEQUENT;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -215,7 +215,7 @@ static int compare_units(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
-static size_t longest_rhythm_run(const PiecePlan *plan) {
+static size_t longest_rhythm_run(const Plan *plan) {
     static UnitNote list[MAX_MELODY_NOTES];
     size_t count = 0;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
@@ -290,7 +290,7 @@ static int compare_ints(const void *a, const void *b) {
     return *(const int *)a - *(const int *)b;
 }
 
-static size_t leaps_of(const PiecePlan *plan) {
+static size_t leaps_of(const Plan *plan) {
     static PitchNote list[MAX_MELODY_NOTES];
     size_t count = 0;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
@@ -317,7 +317,7 @@ static size_t leaps_of(const PiecePlan *plan) {
     return leaps;
 }
 
-static int register_move(const PiecePlan *plan) {
+static int register_move(const Plan *plan) {
     PitchNote ideas[16];
     size_t idea_count = 0;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
@@ -357,9 +357,9 @@ int main(void) {
         size_t absent_notes;
         size_t default_notes;
         size_t shaped_notes;
-        PiecePlan *absent = compose(&motive, seed, NULL);
-        PiecePlan *with_defaults = compose(&motive, seed, &defaults);
-        PiecePlan *with_weights = compose(&motive, seed, &shaped);
+        Plan *absent = compose(&motive, seed, NULL);
+        Plan *with_defaults = compose(&motive, seed, &defaults);
+        Plan *with_weights = compose(&motive, seed, &shaped);
         uint64_t absent_hash = melody_hash(absent, &absent_notes);
         uint64_t default_hash = melody_hash(with_defaults, &default_notes);
         uint64_t shaped_hash = melody_hash(with_weights, &shaped_notes);
@@ -378,8 +378,8 @@ int main(void) {
     /* Seeds are reproducible: the same settings and seed compose the same melody again. */
     size_t first_notes;
     size_t second_notes;
-    PiecePlan *first = compose(&motive, 1, &shaped);
-    PiecePlan *second = compose(&motive, 1, &shaped);
+    Plan *first = compose(&motive, 1, &shaped);
+    Plan *second = compose(&motive, 1, &shaped);
     assert(melody_hash(first, &first_notes) == melody_hash(second, &second_notes) && first_notes == second_notes);
     plan_destroy(first);
     plan_destroy(second);
@@ -399,9 +399,9 @@ int main(void) {
         size_t absent_notes;
         size_t zero_notes;
         size_t closing_notes;
-        PiecePlan *absent = compose(&motive, seed, NULL);
-        PiecePlan *zero = compose(&motive, seed, &written_zero);
-        PiecePlan *with_closure = compose(&motive, seed, &closing);
+        Plan *absent = compose(&motive, seed, NULL);
+        Plan *zero = compose(&motive, seed, &written_zero);
+        Plan *with_closure = compose(&motive, seed, &closing);
         uint64_t absent_hash = melody_hash(absent, &absent_notes);
         assert(melody_hash(zero, &zero_notes) == absent_hash && zero_notes == absent_notes);
         closing_differs += melody_hash(with_closure, &closing_notes) != absent_hash;
@@ -423,8 +423,8 @@ int main(void) {
     first_closing.closure_first = 20;
     int antecedent_longer = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *without = compose_period(seed, &defaults);
-        PiecePlan *with_closure = compose_period(seed, &first_closing);
+        Plan *without = compose_period(seed, &defaults);
+        Plan *with_closure = compose_period(seed, &first_closing);
         antecedent_longer += antecedent_last_note(with_closure) > antecedent_last_note(without) + 1e-9;
         plan_destroy(without);
         plan_destroy(with_closure);
@@ -443,9 +443,9 @@ int main(void) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
-        PiecePlan *absent = compose(&motive, seed, NULL);
-        PiecePlan *zero = compose(&motive, seed, &cap_zero);
-        PiecePlan *with_cap = compose(&motive, seed, &capped);
+        Plan *absent = compose(&motive, seed, NULL);
+        Plan *zero = compose(&motive, seed, &cap_zero);
+        Plan *with_cap = compose(&motive, seed, &capped);
         assert(melody_hash(zero, &zero_notes) == melody_hash(absent, &absent_notes) && zero_notes == absent_notes);
         size_t run_off = longest_rhythm_run(absent);
         size_t run_on = longest_rhythm_run(with_cap);
@@ -472,9 +472,9 @@ int main(void) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
-        PiecePlan *absent = compose(&motive, seed, NULL);
-        PiecePlan *zero = compose(&motive, seed, &leap_off);
-        PiecePlan *weighted = compose(&motive, seed, &leap_on);
+        Plan *absent = compose(&motive, seed, NULL);
+        Plan *zero = compose(&motive, seed, &leap_off);
+        Plan *weighted = compose(&motive, seed, &leap_on);
         assert(melody_hash(zero, &zero_notes) == melody_hash(absent, &absent_notes) && zero_notes == absent_notes);
         leaps_default += leaps_of(absent);
         leaps_weighted += leaps_of(weighted);
@@ -496,9 +496,9 @@ int main(void) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
-        PiecePlan *absent = compose_period(seed, NULL);
-        PiecePlan *zero = compose_period(seed, &register_off);
-        PiecePlan *weighted = compose_period(seed, &register_on);
+        Plan *absent = compose_period(seed, NULL);
+        Plan *zero = compose_period(seed, &register_off);
+        Plan *weighted = compose_period(seed, &register_on);
         assert(melody_hash(zero, &zero_notes) == melody_hash(absent, &absent_notes) && zero_notes == absent_notes);
         moves_default += register_move(absent);
         moves_weighted += register_move(weighted);

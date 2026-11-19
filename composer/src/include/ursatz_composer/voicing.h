@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 
@@ -52,7 +52,7 @@ VoicingParams voicing_params_default(void);
  * or leading tone (standard-harmony). Soft, the score being the share that hold: every upper voice moves by a third or
  * less in a connection. A candidate of another operator goes to harmony_phrase_checker.
  */
-bool voicing_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool voicing_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                      const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*

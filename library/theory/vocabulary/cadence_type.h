@@ -53,6 +53,9 @@ bool cadence_type_valid(CadenceType type);
    "authentic-unspecified" "unknown"; NULL for an invalid type. */
 const char *cadence_type_name(CadenceType type);
 
+/* The type a name gives, the inverse of cadence_type_name; false (*out untouched) for a name that is none of the eight or a NULL one. */
+bool cadence_type_from_name(const char *name, CadenceType *out);
+
 /* True for the authentic cadences (PAC and IAC), the ones that sound conclusive.
    False for the others and for an invalid type. */
 bool cadence_type_is_authentic(CadenceType type);

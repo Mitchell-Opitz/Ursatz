@@ -1,14 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece_reopen.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
 
 #include "piece/piece_internal.h"
-#include "plan/plan_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 #define PIECE_REOPEN_RUNS_MAX 64
 
@@ -17,7 +17,7 @@
  * end holds back for the seam, the seam's copy of the body's first bar, and the lanes a filled section was given.
  */
 
-NodeId piece_section_find(const PiecePlan *plan, const char *id) {
+NodeId piece_section_find(const Plan *plan, const char *id) {
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
         if (!plan_has_node(plan, node) || plan_node_kind(plan, node) != PLAN_NODE_SECTION) {
             continue;
@@ -29,7 +29,7 @@ NodeId piece_section_find(const PiecePlan *plan, const char *id) {
     return PLAN_NODE_NONE;
 }
 
-size_t piece_held_sections(const PiecePlan *plan, NodeId *out, size_t capacity) {
+size_t piece_held_sections(const Plan *plan, NodeId *out, size_t capacity) {
     size_t count = 0;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
         if (plan_has_node(plan, node) && plan_node_kind(plan, node) == PLAN_NODE_SECTION &&
@@ -43,7 +43,7 @@ size_t piece_held_sections(const PiecePlan *plan, NodeId *out, size_t capacity) 
     return count;
 }
 
-bool piece_section_holds_body_start(const PiecePlan *plan, NodeId section) {
+bool piece_section_holds_body_start(const Plan *plan, NodeId section) {
     Rational body_start;
     if (!plan_has_node(plan, section) || !piece_seam_body_start(plan, &body_start)) {
         return false;
@@ -53,7 +53,7 @@ bool piece_section_holds_body_start(const PiecePlan *plan, NodeId section) {
            rational_cmp(plan_node_span(plan, section).start, body_start) == 0;
 }
 
-PieceResult piece_seam_reset(PiecePlan *plan) {
+PieceResult piece_seam_reset(Plan *plan) {
     NodeId seam = piece_seam_find(plan);
     if (seam != PLAN_NODE_NONE && plan_lane_span_remove_owned(plan, seam) != PLAN_OK) {
         return PIECE_ERR_BAD_REQUEST;
@@ -75,7 +75,7 @@ static bool span_inside(PlanSpan span, PlanSpan outer) {
  * subphrase or idea that holds the whole run. So a reopened span goes to the smallest node under the section that holds
  * its time; for harmony and bass, the time of the run of chords it is in (a run starts at a chord with a harmony shape).
  */
-static NodeId finest_owner(const PiecePlan *plan, NodeId section, PlanSpan span) {
+static NodeId finest_owner(const Plan *plan, NodeId section, PlanSpan span) {
     NodeId best = section;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
         if (node == section || !plan_has_node(plan, node) || !plan_in_subtree(plan, node, section)) {
@@ -95,7 +95,7 @@ typedef struct {
     NodeId owner;
 } ChordRun;
 
-static bool has_shape(const PiecePlan *plan, LaneSpanId id) {
+static bool has_shape(const Plan *plan, LaneSpanId id) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
         if (plan_lane_span_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
             return true;
@@ -105,7 +105,7 @@ static bool has_shape(const PiecePlan *plan, LaneSpanId id) {
 }
 
 /* The runs of chords the section owns itself, each with the node that holds it; their number. */
-static size_t read_runs(const PiecePlan *plan, NodeId section, ChordRun *runs, size_t capacity) {
+static size_t read_runs(const Plan *plan, NodeId section, ChordRun *runs, size_t capacity) {
     LaneSpanId *ids = calloc(plan_lane_span_count(plan) + 1, sizeof(LaneSpanId));
     size_t count = 0;
     size_t run_count = 0;
@@ -148,24 +148,28 @@ static size_t read_runs(const PiecePlan *plan, NodeId section, ChordRun *runs, s
     return run_count;
 }
 
-size_t piece_reopen_lane(PiecePlan *plan, NodeId section, PlanLaneKind lane) {
+size_t piece_reopen_lane(Plan *plan, NodeId section, PlanLaneKind lane) {
     ChordRun runs[PIECE_REOPEN_RUNS_MAX];
     size_t run_count = lane == PLAN_LANE_HARMONY || lane == PLAN_LANE_BASS ? read_runs(plan, section, runs, PIECE_REOPEN_RUNS_MAX) : 0;
     size_t reopened = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        LaneSpan *span = plan_lane_span_at(plan, id);
-        if (!span || span->lane != lane || span->state != PLAN_STATE_GIVEN || !plan_in_subtree(plan, span->owner, section)) {
+        if (!plan_has_lane_span(plan, id) || plan_lane_span_lane(plan, id) != lane ||
+            plan_lane_span_state(plan, id) != PLAN_STATE_GIVEN || !plan_in_subtree(plan, plan_lane_span_owner(plan, id), section)) {
             continue;
         }
-        span->state = PLAN_STATE_REALIZED;
-        if (span->owner == section) {
-            NodeId owner = PLAN_NODE_NONE;
+        NodeId owner = plan_lane_span_owner(plan, id);
+        PlanSpan span = plan_lane_span_span(plan, id);
+        if (owner == section) {
+            NodeId finer = PLAN_NODE_NONE;
             for (size_t r = 0; r < run_count; r++) {
-                if (rational_cmp(span->span.start, runs[r].start) >= 0 && rational_cmp(span->span.start, runs[r].end) < 0) {
-                    owner = runs[r].owner;
+                if (rational_cmp(span.start, runs[r].start) >= 0 && rational_cmp(span.start, runs[r].end) < 0) {
+                    finer = runs[r].owner;
                 }
             }
-            span->owner = owner != PLAN_NODE_NONE ? owner : finest_owner(plan, section, span->span);
+            owner = finer != PLAN_NODE_NONE ? finer : finest_owner(plan, section, span);
+        }
+        if (plan_lane_span_reopen(plan, id, owner) != PLAN_OK) {
+            plan_lane_span_reopen(plan, id, plan_lane_span_owner(plan, id));
         }
         reopened++;
     }

@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Path `library/realization/`, target `ursatz_realization`, on `model` and `theory` (the layer table row `uses realization model theory`). Music as the realization holds it (target architecture 4.8 and 4.11, R-534, R-541, R-600): lines that belong to no instrument, performer parts that do, and the scoring that makes the second from the first. Sources include headers by their path from `library/` (`realization/<file>.h`). No header is staged yet: one is staged when a file outside the group first includes it.
+Path `library/realization/`, target `ursatz_realization`, on `model` and `theory` (the layer table row `uses realization model theory`). Music as the realization holds it (target architecture 4.8 and 4.11, R-534, R-541, R-600): lines that belong to no instrument, performer parts that do, and the scoring that makes the second from the first. Sources include headers by their path from `library/` (`realization/<file>.h`). A header is staged when a file outside the group includes it.
 
 ## Provides
 
@@ -16,6 +16,7 @@ Path `library/realization/`, target `ursatz_realization`, on `model` and `theory
 | `movement.h` | `Movement`, `MovementKeySignature`, `MovementMarker`, `MovementPart` |
 | `work.h` | `Work`, `work_movement_ensemble` |
 | `piano_reduction.h` | `movement_reduce_to_piano` |
+| `realization_json.h` | The codec: `realization_work_to_json`, `realization_work_to_compact_json`, `realization_work_from_json`, `realization_digest` |
 
 ## Ids
 
@@ -49,6 +50,14 @@ A `Work` holds movements in order and the defaults they inherit: a title, a comp
 
 `movement_reduce_to_piano(movement, piano, run)` (the only realization header that includes the K12 `Instrument`) makes the part `piano` and one whole-line assignment `a-<line id>` per line, in line order, then scores the movement. A melody line is on staff 1 and a bass line on staff 2; any other line is on staff 1 when the mean MIDI number of its notes is 60 or more (a line with no notes: staff 1) and on staff 2 below that. The voice is the line's index plus 1. The part has two staves when any line is on staff 2, else one (a motif stays on one staff). It is refused with `REALIZATION_ERR_BAD_VALUE` and nothing changed when the movement already holds parts or assignments or the instrument has fewer than two staves. This is R-599's rule: the Composer exports every plan as one movement whose lines are all assigned to one piano part.
 
+## The codec
+
+`realization_work_to_json` writes a work as `{"format": "ursatz-realization", "format_version": 1, "work": {...}}` (2-space indent, a final newline); `realization_work_from_json` reads it with the group's own checks at the path of the member that fails (`work.movements[0].lines[1].notes[2].id`). `realization_digest` is the FNV-1a 64 of the compact text, 16 lowercase hexadecimal digits: the name of one version of a realization, which a reading names as its target. A work written and read back is equal, and writes the same text.
+
+## The realization of an import
+
+`imported_score_realization` (`io/imported_realization.h`, R-628) makes the work an import holds: work `w1`, movement `m1` with the file's meter and tempo maps and key signatures, one performer part for each part of the import and one performer note for each event, and no lines. It also gives the id of the note made from each import index, which the chain's results use (`note_ids`), so a reading can name the notes. The Analyzer builds it after its chain run (`analyzer_result_realization`).
+
 ## Deferred
 
-Export of a movement (P59 B4; a played order is refused until a phase writes repeats as signs), the Composer's use (P59 B7), the realization codec (P62), other instruments (P74), keyboard limits and pedal writing (P75).
+Export of a movement (P59 B4; a played order is refused until a phase writes repeats as signs), the Composer's use (P59 B7), other instruments (P74), keyboard limits and pedal writing (P75).

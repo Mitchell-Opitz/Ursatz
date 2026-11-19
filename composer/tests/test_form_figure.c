@@ -5,20 +5,21 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_figure.h>
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/return_hear.h>
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * The figurate return (form_figure.h, R-497, R-498): tests/fixtures/forms/figure-form.json (a theme and three
@@ -79,7 +80,7 @@ static Rational minus(Rational a, Rational b) {
 }
 
 /* The phrases and ideas under two sections have the same names and lengths at the same offsets. */
-static bool same_shape(const PiecePlan *plan, NodeId a, NodeId b, NodeId root_a, NodeId root_b) {
+static bool same_shape(const Plan *plan, NodeId a, NodeId b, NodeId root_a, NodeId root_b) {
     if (plan_node_child_count(plan, a) != plan_node_child_count(plan, b)) {
         return false;
     }
@@ -100,7 +101,7 @@ static bool same_shape(const PiecePlan *plan, NodeId a, NodeId b, NodeId root_a,
 }
 
 /* The highest melody pitch of a section. */
-static int highest(const PiecePlan *plan, NodeId section) {
+static int highest(const Plan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[64];
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 64);
@@ -123,7 +124,7 @@ typedef struct {
     size_t returns;
 } Counts;
 
-static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *counts) {
+static void check_plan(Plan *plan, const ComposeOutcome *outcome, Counts *counts) {
     NodeId sections[MAX_SECTIONS];
     NodeId root = plan_root(plan);
     size_t count = 0;
@@ -160,10 +161,10 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
     counts->bar_changed += bar_changed;
     counts->raised += highest(plan, sections[3]) > highest(plan, theme);
     /* The plan round-trips through plan JSON. */
-    char *json = plan_to_json(plan, NULL);
-    PiecePlan *again = NULL;
-    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
-    char *second = plan_to_json(again, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
+    Plan *again = NULL;
+    assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
+    char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
     free(second);
@@ -171,14 +172,14 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
 }
 
 /* The key of the section: its one key lane span. */
-static AnalysisKey key_of(const PiecePlan *plan, NodeId section) {
+static SpelledKey key_of(const Plan *plan, NodeId section) {
     LaneSpanId ids[2];
-    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 2) == 1);
-    return plan_lane_span_payload(plan, ids[0])->key;
+    assert(plan_lane_find(plan, PLAN_LANE_REGION, 0, plan_node_span(plan, section), ids, 2) == 1);
+    return plan_lane_span_payload(plan, ids[0])->region;
 }
 
 /* Every melody note of the section is in the scale of the key: in minor the natural minor's and the harmonic minor's (the figures use the raised seventh over V and vii only). */
-static bool melody_in_scale(const PiecePlan *plan, NodeId section, AnalysisKey key) {
+static bool melody_in_scale(const Plan *plan, NodeId section, SpelledKey key) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     LaneSpanId ids[64];
@@ -187,7 +188,7 @@ static bool melody_in_scale(const PiecePlan *plan, NodeId section, AnalysisKey k
     for (size_t s = 0; s < spans; s++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            int degree = ((notes->notes[n].midi - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
+            int degree = ((notes->notes[n].midi - spelled_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
             if (!(harmony_key_mode(&key) == HARMONY_MODE_MAJOR ? MAJOR[degree] : MINOR[degree])) {
                 return false;
             }
@@ -196,7 +197,7 @@ static bool melody_in_scale(const PiecePlan *plan, NodeId section, AnalysisKey k
     return true;
 }
 
-static void check_parallel_plan(PiecePlan *plan) {
+static void check_parallel_plan(Plan *plan) {
     NodeId sections[MAX_SECTIONS];
     NodeId root = plan_root(plan);
     size_t count = 0;
@@ -208,11 +209,11 @@ static void check_parallel_plan(PiecePlan *plan) {
         }
     }
     assert(count == 3);
-    AnalysisKey home = key_of(plan, sections[0]);
-    AnalysisKey other = key_of(plan, sections[1]);
-    assert(analysis_key_tonic_pitch_class(&other) == analysis_key_tonic_pitch_class(&home) && harmony_key_mode(&other) != harmony_key_mode(&home));
-    AnalysisKey last = key_of(plan, sections[2]);
-    assert(analysis_key_equals(&last, &home));
+    SpelledKey home = key_of(plan, sections[0]);
+    SpelledKey other = key_of(plan, sections[1]);
+    assert(spelled_key_tonic_pitch_class(&other) == spelled_key_tonic_pitch_class(&home) && harmony_key_mode(&other) != harmony_key_mode(&home));
+    SpelledKey last = key_of(plan, sections[2]);
+    assert(spelled_key_equals(&last, &home));
     char reason[256] = "";
     assert(form_return_copies(plan, sections[1]));
     if (!form_figure_check(plan, sections[1], reason, sizeof(reason))) {
@@ -225,10 +226,10 @@ static void check_parallel_plan(PiecePlan *plan) {
     PieceKeyCheck keys;
     memset(&keys, 0, sizeof(keys));
     assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
-    char *json = plan_to_json(plan, NULL);
-    PiecePlan *again = NULL;
-    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
-    char *second = plan_to_json(again, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
+    Plan *again = NULL;
+    assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
+    char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
     free(second);
@@ -240,7 +241,7 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
     memset(&counts, 0, sizeof(counts));
     for (unsigned long seed = 1; seed <= seeds; seed++) {
         PieceRequest request;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         ComposeOutcome outcome;
         ComposeConfig config;
         memset(&request, 0, sizeof(request));
@@ -262,7 +263,7 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
             }
             counts.composed++;
         } else {
-            if (getenv("DBG")) { NodeId r = plan_root(plan); for (size_t q = 0; q < plan_node_child_count(plan, r); q++) { NodeId c = plan_node_child_at(plan, r, q); printf("DBGSEC %zu children %zu state %d handles %d copies %d\n", q, plan_node_child_count(plan, c), (int)plan_node_state(plan, c), (int)form_return_handles(plan, c), (int)form_return_copies(plan, c)); } } if (0 && outcome.records[COMPOSE_STAGE_HARMONY]) { char *j = fill_record_to_json(outcome.records[COMPOSE_STAGE_HARMONY]); printf("%s\n", j); free(j); char *pj = plan_to_json(plan, NULL); printf("PLAN %s\n", pj); free(pj); }
+            if (getenv("DBG")) { NodeId r = plan_root(plan); for (size_t q = 0; q < plan_node_child_count(plan, r); q++) { NodeId c = plan_node_child_at(plan, r, q); printf("DBGSEC %zu children %zu state %d handles %d copies %d\n", q, plan_node_child_count(plan, c), (int)plan_node_state(plan, c), (int)form_return_handles(plan, c), (int)form_return_copies(plan, c)); } } if (0 && outcome.records[COMPOSE_STAGE_HARMONY]) { char *j = fill_record_to_json(outcome.records[COMPOSE_STAGE_HARMONY]); printf("%s\n", j); free(j); char *pj = plan_to_json(plan, test_plan_producer(), NULL); printf("PLAN %s\n", pj); free(pj); }
             printf("  %s seed %lu: not composed (stuck at %s)\n", row->name, seed,
                    outcome.stuck ? compose_stage_name(outcome.stuck_stage) : "-");
         }

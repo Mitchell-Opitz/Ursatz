@@ -8,6 +8,7 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 
 ## Build and test
 
+- [changelog.md](changelog.md): the Analyzer's changes by phase.
 - [building.md](building.md): build requirements, the test list, the include and file scope checks, the theory taken from the library.
 
 ## Using it
@@ -18,6 +19,7 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 - [corpus-passages.md](corpus-passages.md): the passages of a corpus as the Composer API takes them inline.
 - [motive-links.md](motive-links.md): linking motive families across pieces.
 - [input.md](input.md): input formats, notation readings, meter and measure numbers.
+- [analysis-result.md](analysis-result.md): the result, its realization and reading, and `--layers <dir>` (writes `realization.json` and `readings/analyzer.json`) and `--model-plan <file>` (writes the plan of the reading).
 
 ## API reference
 

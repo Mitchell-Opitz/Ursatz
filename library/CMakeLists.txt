@@ -13,6 +13,7 @@ add_subdirectory(realization)
 add_subdirectory(plan)
 add_subdirectory(analysis)
 add_subdirectory(chain)
+add_subdirectory(reading)
 add_subdirectory(io)
 
 ursatz_write_public_manifest()

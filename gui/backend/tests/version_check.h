@@ -20,12 +20,12 @@
 /* An exchange with a JSON body: the answer's body parsed as JSON (the caller deletes it), its status in *status. */
 typedef cJSON *(*VersionCheckExchange)(const char *method, const char *path, const char *body, int *status);
 
-/* A Composer plan: JSON with "format": "ursatz-composer-plan". */
+/* A plan: JSON with "format": "ursatz-plan". */
 static bool check_plan_file(const char *path) {
   char *text = test_read_file(path, NULL);
   cJSON *plan = text ? cJSON_Parse(text) : NULL;
   const cJSON *format = plan ? cJSON_GetObjectItemCaseSensitive(plan, "format") : NULL;
-  bool ok = cJSON_IsString(format) && strcmp(format->valuestring, "ursatz-composer-plan") == 0;
+  bool ok = cJSON_IsString(format) && strcmp(format->valuestring, "ursatz-plan") == 0;
   cJSON_Delete(plan);
   free(text);
   return ok;

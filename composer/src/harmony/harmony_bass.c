@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
@@ -37,7 +37,7 @@ static unsigned chance_of(unsigned value) {
     return value > CHANCE_SCALE ? CHANCE_SCALE : value;
 }
 
-bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int *pc) {
+bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int *pc) {
     int intervals[4];
     size_t count;
     int root;
@@ -61,11 +61,11 @@ bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int
     if (root < 0 || member < 0 || (size_t)member >= count) {
         return false;
     }
-    *pc = (analysis_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
+    *pc = (spelled_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
     return true;
 }
 
-bool harmony_bass_context_read(const PiecePlan *plan, LaneSpanId target, BassContext *out) {
+bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, BassContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_BASS ||
         plan_lane_span_voice(plan, target) != 0) {
         return false;
@@ -234,13 +234,13 @@ static void line_label(const BassCandidate *line, char *label, size_t size) {
     }
 }
 
-static bool bass_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool bass_applies(const Plan *plan, FillTarget target, void *context) {
     BassContext read;
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && harmony_bass_context_read(plan, (LaneSpanId)target.id, &read);
 }
 
-static bool bass_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool bass_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                           FillCandidateList *out) {
     const HarmonyBassParams *params = params_of(context);
     BassContext read;
@@ -340,7 +340,7 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
  * The target span becomes the first chord's bass (it keeps its id), and one span is added after it for
  * each chord that follows, so the bass spans line up with the chord spans and tile the phrase.
  */
-static PlanResult bass_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult bass_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const BassCandidate *line = candidate ? candidate->payload : NULL;
     BassContext read;
     (void)context;
@@ -399,8 +399,8 @@ FillResult harmony_bass_register(FillOperatorRegistry *registry, const HarmonyBa
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_BASS_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan bass lane span over a written harmony lane";
-    operator_.generator.supported_outputs = "PiecePlan bass lane spans";
+    operator_.generator.supported_inputs = "Plan bass lane span over a written harmony lane";
+    operator_.generator.supported_outputs = "Plan bass lane spans";
     operator_.generator.configuration_description = "bass range, subdivision and stepwise chances in thousandths";
     operator_.generator.constraints_description = "chord bass members, standard-counterpoint melodic rules";
     operator_.generator.deterministic = true;

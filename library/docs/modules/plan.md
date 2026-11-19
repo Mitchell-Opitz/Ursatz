@@ -2,12 +2,19 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Path `library/plan/`, target `ursatz_plan`, on `model`, `theory` and cJSON (the layer table row `uses plan model theory cjson`). One description of a section, shared by form documents, plan section nodes and piece requests (R-605): its value, its vocabulary, the rules about a section itself and its JSON codec. Sources include headers by their path from `library/` (`plan/<file>.h`). No header is staged yet: P60 B2 stages both when the Composer first includes them.
+Path `library/plan/`, target `ursatz_plan`, on `model`, `theory` and cJSON (the layer table row `uses plan model theory cjson`). The plan (R-625) and the description of a section. The plan is a tree of nodes (form, section, phrase, subphrase, idea, motive) over a piece's time, with lanes (meter, region, harmony, bass, melody, inner voices), constraints and states; the description of a section is shared by form documents, plan section nodes and piece requests (R-605): its value, its vocabulary, the rules about a section itself and its JSON codec. Sources include headers by their path from `library/` (`plan/<file>.h`). The headers the Composer includes are staged; `plan_internal.h`, `plan_json_internal.h` and `plan_constraint_kinds.h` are the group's own.
 
 ## Provides
 
 | Header | Provides |
 |---|---|
+| `plan.h` | `Plan` (`plan_create`, `plan_destroy`), `NodeId`, `PlanResult`, `PlanSpan`, `PlanNodeKind`, the nodes (`plan_add_node`, `plan_remove_subtree`, the `plan_node_*` readers), the analyzer version and the form record (`PlanFormRecord`) |
+| `plan_lanes.h` | `PlanLaneKind`, `PlanMeter`, `PlanHarmony`, `PlanNote` (with its id, source and operation), `PlanLanePayload`, `PlanKeyRelation`, the lane spans (`plan_add_lane_span`, `plan_lane_span_resize`, `plan_lane_find`, `plan_note_by_id`) |
+| `plan_constraint.h` | `PlanConstraint` and its kinds, `PlanMotiveRef`, the section description of a node (`plan_node_section`, `plan_node_set_section`) and the constraint lists of nodes and lane spans |
+| `plan_state.h` | `PlanState` (Constrained, Given, Realized), the transitions and `plan_lane_span_write` |
+| `plan_edit.h` | `plan_clone` and `plan_copy_into` (a plan as a JSON round trip gives it, without the text), `plan_lane_span_reopen` (the one way out of Given), `plan_node_remove_leaf`, `plan_lane_span_remove`, `plan_lane_span_remove_owned` |
+| `plan_json.h` | `plan_to_json` with a `PlanProducer` (the program, its version, its build keys and the hash of its knowledge, which the caller gives), `plan_from_json` and `plan_from_json_resolved` with `PlanReadHooks` (a program's say in which materials it supports and how a plan of a format before 5 gets its form record), `plan_resolve_key_spans`; the format is [plan-format.md](plan-format.md) |
+| `plan_common.h` | The helpers the plan's files share: the lane names, the cadence names, `plan_meter_signature`, `plan_meter_grid`, `plan_meter_pickup_on_grid`, `plan_meter_bar_length`, `plan_key_valid`, `plan_key_material_id`, `plan_key_word` |
 | `section.h` | `SectionDescription`, the vocabulary (`SectionRole`, `SectionBeginning`, `SectionEnding`, `SectionIdea`, `SectionConstruction`, `SectionReturnVariation`, `SectionSetting`, `SectionModeShift`, `SectionConnective`, `SectionFigure`, `SectionFunction`, `SectionLane`, `SectionRegion`, `SectionHarmony`), a `*_name` and `*_find` pair for each, `section_description_init`, `section_description_check`, `section_description_weight` |
 | `section_json.h` | `section_from_json`, `section_to_json`, `section_json_member_count`, `section_json_member_name`, `section_json_member_uses` |
 
@@ -36,6 +43,10 @@ The codec has one static table, one row per member with its name, its uses, its 
 
 A cadence is a kind name (`perfect-authentic`, `medial-caesura`, kept as written) or PAC, IAC, HC, DC or PC in any case. A pickup is a whole number or a fraction `"1/2"`. A region is `"home"`, a form region name, `{"tonic", "material"}` or `{"relation", "anchor"}` with the anchor `home` (default), `previous` or a section name.
 
+## The plan
+
+The Composer writes the plan; the Analyzer's reading becomes one later in P62 (B14). The plan holds no program of its own: a caller stamps what it writes (`plan_to_json(plan, &producer, &error)`) and a reader that needs a program's rules passes hooks (`plan_from_json(knowledge, text, hooks, &plan, &error)`; NULL hooks support every material and migrate nothing). `plan_clone` renumbers the live nodes and lane spans from 1, as writing and reading a plan does; `plan_copy_into` replaces a plan's contents with a clone (what a retry of a failed composing round restores). Spans and nodes are edited through the public functions of the headers; only the group's files include `plan_internal.h`.
+
 ## Deferred
 
-The Composer reads forms, plans and requests through it from P60 B2 on. Until then nothing outside its tests calls it, and `tools/ci/reach-allow.txt` lists its functions with the branch that adds the caller.
+The Composer reads forms, plans and requests through the group. `tools/ci/reach-allow.txt` lists the functions no application reaches yet with the branch that adds the caller.

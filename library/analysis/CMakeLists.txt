@@ -1,10 +1,10 @@
 # The analysis group (spec/target-architecture.md 7.2): the neutral analysis types, the kernel analyses, similarity
 # scoring and every framework's analysis adapter. Sources include headers by their path from library/ (analysis/<area>/<file>.h).
 add_library(ursatz_analysis
-    notes/analysis_key.c
     notes/analysis_note.c
     notes/analysis_note_build.c
     notes/contour.c
+    notes/note_group.c
     notes/rhythmic_pattern.c
     notes/sonority.c
     notes/sonority_segmentation.c
@@ -18,9 +18,8 @@ add_library(ursatz_analysis
     voices/outer_voice.c
     voices/voice_separation.c
     harmony/analysis_cadence.c
-    harmony/analysis_cadence_claims.c
+    harmony/analysis_cadence_points.c
     harmony/analysis_cadence_readings.c
-    harmony/analysis_claim.c
     harmony/analysis_function.c
     harmony/analysis_input.c
     harmony/analysis_phrase.c
@@ -44,7 +43,6 @@ add_library(ursatz_analysis
     harmony/roman_numeral_adapter.c
     harmony/weighted_chord_identification.c
     harmony/weighted_identification.c
-    form/analysis_claim.c
     form/analysis_expansion.c
     form/analysis_ideas.c
     form/analysis_input.c
@@ -61,7 +59,6 @@ add_library(ursatz_analysis
     form/thematic_return_detection.c
     meter/beat_grid_length.c
     meter/meter_analysis_check.c
-    meter/meter_analysis_claim.c
     meter/meter_analysis_density.c
     meter/meter_analysis_hemiola.c
     meter/meter_analysis_hypermeter.c
@@ -71,25 +68,19 @@ add_library(ursatz_analysis
     meter/meter_analysis_tuplet.c
     texture/framework.c
     texture/mixed_texture_rules.c
-    texture/texture_analysis_claim.c
     texture/texture_analysis_classify.c
     texture/texture_analysis_features.c
     texture/texture_analysis_input.c
     texture/texture_classification_rules.c
-    texture/texture_rules.c
-    counterpoint/analysis_claim.c
     counterpoint/analysis_grid.c
     counterpoint/analysis_melody.c
     counterpoint/analysis_melody_climax.c
-    counterpoint/analysis_melody_emit.c
     counterpoint/analysis_melody_leaps.c
     counterpoint/analysis_melody_nct.c
     counterpoint/analysis_motion.c
     counterpoint/analysis_perfects.c
-    galant/galant_analysis_claim.c
     galant/galant_analysis_input.c
     galant/galant_analysis_match.c
-    galant/scale_analysis_claim.c
     galant/scale_analysis_detect.c
     similarity/similarity_model.c
     similarity/similarity_scoring.c
@@ -98,7 +89,6 @@ ursatz_public_headers(ursatz_analysis
     BASE ${PROJECT_SOURCE_DIR}
     SOURCE_DIRS ${PROJECT_SOURCE_DIR}
     HEADERS
-        analysis/notes/analysis_key.h
         analysis/notes/analysis_note.h
         analysis/notes/analysis_note_build.h
         analysis/notes/analysis_segment.h
@@ -118,7 +108,7 @@ ursatz_public_headers(ursatz_analysis
         analysis/voices/outer_voice.h
         analysis/voices/voice_separation.h
         analysis/harmony/analysis_cadence.h
-        analysis/harmony/analysis_cadence_claims.h
+        analysis/harmony/analysis_cadence_points.h
         analysis/harmony/analysis_function.h
         analysis/harmony/analysis_input.h
         analysis/harmony/analysis_phrase.h
@@ -164,7 +154,7 @@ ursatz_public_headers(ursatz_analysis
         analysis/texture/texture_analysis_features.h
         analysis/texture/texture_analysis_input.h
         analysis/texture/texture_classification_rules.h
-        analysis/texture/texture_rules.h
+        theory/vocabulary/texture_rules.h
         analysis/counterpoint/analysis_grid.h
         analysis/counterpoint/analysis_melody.h
         analysis/counterpoint/analysis_melody_climax.h

@@ -7,7 +7,7 @@
 #include <theory/voicing/range_rules.h>
 #include <theory/vocabulary/voice_part.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "texture/voicing_internal.h"
 #include "util/util.h"
@@ -41,7 +41,7 @@ void voicing_context_free(VoicingContext *context) {
 }
 
 /* The melody over the span when it is to be written: one open span over the same time as the target. */
-static bool read_melody_span(const PiecePlan *plan, PlanSpan span, LaneSpanId *out) {
+static bool read_melody_span(const Plan *plan, PlanSpan span, LaneSpanId *out) {
     LaneSpanId ids[2];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 2);
     if (found != 1 || plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED) {
@@ -65,7 +65,7 @@ static int line_pitch_at(const AccompLine *lines, size_t count, Rational positio
     return -1;
 }
 
-static bool read_chords(const PiecePlan *plan, VoicingContext *out, Rational *cell_length) {
+static bool read_chords(const Plan *plan, VoicingContext *out, Rational *cell_length) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
@@ -140,7 +140,7 @@ static bool read_tones(VoicingContext *out, size_t i) {
  * note in each of the four voices at its start. Then it becomes chord 0 of the context and the target's chords follow.
  * True with the context as it was when there is none.
  */
-static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational cell_length) {
+static bool read_lead_in(const Plan *plan, VoicingContext *out, Rational cell_length) {
     static const PlanLaneKind LANE[4] = {PLAN_LANE_MELODY, PLAN_LANE_INNER_VOICE, PLAN_LANE_INNER_VOICE, PLAN_LANE_BASS};
     static const int VOICE[4] = {0, 1, 2, 0};
     PlanSpan range = {{0, 1}, out->span.start};
@@ -149,7 +149,7 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational ce
     PlanSpan before_span;
     Rational before_end;
     PhraseChord chord;
-    AnalysisKey key;
+    SpelledKey key;
     int pitch[4];
     Rational origin;
     Rational length;
@@ -170,7 +170,7 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational ce
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
         !harmony_read_chord(plan, before, harmony_key_mode(&out->key), cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
-         (analysis_key_tonic_pitch_class(&key) != analysis_key_tonic_pitch_class(&out->key) || composer_key_is_minor(&key) != composer_key_is_minor(&out->key))) ||
+         (spelled_key_tonic_pitch_class(&key) != spelled_key_tonic_pitch_class(&out->key) || composer_key_is_minor(&key) != composer_key_is_minor(&out->key))) ||
         !position_is_positive(before_span.length)) {
         return true;
     }
@@ -200,7 +200,7 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational ce
  * A soprano the voicing writes ends the cadence the melody span asks for, as the recognizer hears it: a perfect authentic
  * cadence on the tonic, an imperfect one on the third of the tonic chord.
  */
-static void limit_cadence_soprano(const PiecePlan *plan, VoicingContext *out) {
+static void limit_cadence_soprano(const Plan *plan, VoicingContext *out) {
     size_t last = out->chord_count - 1;
     for (size_t i = 0; i < out->chord_count; i++) {
         out->soprano_mask[i] = 0xFFFu;
@@ -211,14 +211,14 @@ static void limit_cadence_soprano(const PiecePlan *plan, VoicingContext *out) {
             continue;
         }
         if (constraint->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC) {
-            out->soprano_mask[last] = 1u << analysis_key_tonic_pitch_class(&out->key);
+            out->soprano_mask[last] = 1u << spelled_key_tonic_pitch_class(&out->key);
         } else if (constraint->params.cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
-            out->soprano_mask[last] = 1u << ((analysis_key_tonic_pitch_class(&out->key) + composer_material_third(out->key.material)) % 12);
+            out->soprano_mask[last] = 1u << ((spelled_key_tonic_pitch_class(&out->key) + composer_material_third(out->key.material)) % 12);
         }
     }
 }
 
-bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out) {
+bool voicing_read(const Plan *plan, LaneSpanId target, VoicingContext *out) {
     PlanConstraint constraint;
     AccompLine melody[ACCOMP_MAX_LINE];
     AccompLine bass[ACCOMP_MAX_LINE];
@@ -258,7 +258,7 @@ bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out)
         limit_cadence_soprano(plan, out);
     }
     out->key_tonic = harmony_spell_tonic(&out->key, 4);
-    out->key_leading = harmony_spell_pitch(&out->key, 7, 60 + (analysis_key_tonic_pitch_class(&out->key) + 11) % 12);
+    out->key_leading = harmony_spell_pitch(&out->key, 7, 60 + (spelled_key_tonic_pitch_class(&out->key) + 11) % 12);
     if (!out->key_tonic || !out->key_leading) {
         return false;
     }
@@ -364,7 +364,7 @@ bool voicing_options(const VoicingContext *context, size_t chord, VoicingOption 
 
 /* ------------------------------------------------------- the operator */
 
-static bool operator_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool operator_applies(const Plan *plan, FillTarget target, void *context) {
     VoicingContext *read;
     bool applies;
     (void)context;
@@ -388,7 +388,7 @@ static void candidate_label(const VoicingCandidate *candidate, size_t first, cha
 
 #define MAX_CANDIDATES 16
 
-static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
     const VoicingParams *params = context;
     size_t wanted = params && params->candidates > 0 ? params->candidates : VOICING_DEFAULT_CANDIDATES;
@@ -433,7 +433,7 @@ static PlanResult part_payload(const VoicingContext *context, const VoicingCandi
 }
 
 /* The target keeps its id and takes the alto; the tenor and, when written, the soprano go in the spans over the same time. */
-static PlanResult operator_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const VoicingCandidate *voicing = candidate ? candidate->payload : NULL;
     VoicingContext *read;
     PlanNote *notes;
@@ -483,8 +483,8 @@ FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams 
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = VOICING_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan inner voice lane span over a written harmony and bass";
-    operator_.generator.supported_outputs = "PiecePlan inner voice lane spans, and a melody lane span";
+    operator_.generator.supported_inputs = "Plan inner voice lane span over a written harmony and bass";
+    operator_.generator.supported_outputs = "Plan inner voice lane spans, and a melody lane span";
     operator_.generator.configuration_description = "the number of candidates and the width of the beam";
     operator_.generator.constraints_description = "standard-voicing for every chord, standard-counterpoint and standard-harmony between them";
     operator_.generator.deterministic = true;

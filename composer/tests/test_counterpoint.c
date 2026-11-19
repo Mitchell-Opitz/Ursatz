@@ -12,10 +12,10 @@
 #include <theory/counterpoint/second_species_rules.h>
 #include <theory/counterpoint/third_species_rules.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/counterpoint.h>
 #include <ursatz_composer/fill_loop.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "accompaniment_check.h"
 #include "support/test_knowledge.h"
@@ -58,7 +58,7 @@ static Rational fraction(long num, unsigned long den) {
 }
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     LaneSpanId target;
     PlanSpan span;
 } Piece;
@@ -82,8 +82,8 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_of(cantus->key);
-    assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
+    payload.region = test_key_of(cantus->key);
+    assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_REGION, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t b = 0; b < cantus->bars; b++) {
         PlanSpan span = {fraction((long)b, 1), fraction(1, 1)};
@@ -118,7 +118,7 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     return piece;
 }
 
-static FillOutcome write(PiecePlan *plan, unsigned long seed) {
+static FillOutcome write(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
@@ -172,7 +172,7 @@ static void check_result(const Piece *piece, const Cantus *cantus, int species, 
     PitchSpelling *cantus_spelled[MAX_BARS];
     PitchSpelling *owned[MAX_BARS * 4] = {NULL};
     StandardCounterpointSlot slots[MAX_BARS * 4];
-    PitchSpelling *tonic = spell(analysis_key_tonic_pitch_class(&(AnalysisKey){NULL, cantus->key.tonic_letter, cantus->key.tonic_accidental, NULL}) + 60);
+    PitchSpelling *tonic = spell(spelled_key_tonic_pitch_class(&(SpelledKey){NULL, cantus->key.tonic_letter, cantus->key.tonic_accidental, NULL}) + 60);
     StandardCounterpointLine line = {(const PitchSpelling *const *)cantus_spelled, cantus->bars};
     StandardCounterpointCantusPart part = above ? STANDARD_COUNTERPOINT_CANTUS_IN_LOWER : STANDARD_COUNTERPOINT_CANTUS_IN_UPPER;
     StandardCounterpointResult result;

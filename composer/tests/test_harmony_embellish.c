@@ -4,11 +4,11 @@
 
 #include <theory/harmony/harmony_phrase_rules.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
@@ -33,7 +33,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     PlanSpan span;
@@ -75,8 +75,8 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));

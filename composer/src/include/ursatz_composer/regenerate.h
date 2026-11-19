@@ -3,39 +3,8 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/fill_target.h>
-#include <ursatz_composer/piece_plan.h>
-
-/*
- * Locking and regenerating (R-072).
- *
- * plan_lock makes material Given: a node and every node under it and every lane span they own, or one lane span
- * alone. Given material is never changed by the Composer, and nothing leaves Given, so locking is permanent in the
- * plan; unlocking is reading an earlier plan file.
- *
- * Only what is written can be locked: a node or lane span still open (Constrained) has nothing to keep, and locking it
- * would leave a hole nothing may fill. The call is then refused with PLAN_ERR_BAD_PAYLOAD and nothing is changed.
- * PLAN_ERR_NOT_FOUND for a target that does not exist.
- */
-PlanResult plan_lock(PiecePlan *plan, FillTarget target);
-
-/*
- * What is written from a target (its direct dependents; Given ones are left out), into a new array the caller frees
- * with free (NULL when there are none), nodes before lane spans, each by id:
- *   a structure node          its whole subtree and the lane spans of the node and of the subtree
- *   a section                 as a structure node, and every section whose RETURN names it, with its subtree and its
- *                             lane spans, and the sections that return those
- *   a harmony span            the bass, inner voice and melody spans over its time, and the next harmony span of the
- *                             same section (the chord that joins it)
- *   a bass span               the inner voice and melody spans over its time
- *   a melody span             the inner voice spans with a VOICING or COUNTERPOINT constraint over its time, and the
- *                             next melody span of the same section (the idea that joins it)
- *   a material motive node    every melody span whose MOTIVE_REF names it
- * An inner voice, meter or key span has none. PLAN_ERR_NOT_FOUND for a target that does not exist.
- */
-PlanResult plan_dependents(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count);
-
-/* The section a node is in (the node itself for a section), PLAN_NODE_NONE for the form. */
-NodeId plan_section_of(const PiecePlan *plan, NodeId node);
+#include <ursatz_composer/locks.h>
+#include <plan/plan.h>
 
 /*
  * Regenerating one target (R-072): what depends on it is written again and nothing else is.
@@ -81,14 +50,14 @@ const char *regenerate_result_name(RegenerateResult result);
  * the lane spans reopened one by one (those inside a section reopened whole are not listed), into a new array the
  * caller frees with free (NULL when empty). The errors are plan_regenerate_all's, for the first target that has one.
  */
-RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_regenerate_scope_all(const Plan *plan, const FillTarget *targets, size_t target_count,
                                            FillTarget **out, size_t *count);
 
 /*
  * Reopens what depends on any of the targets (every harmony span of a section, say) and composes it once. A single
  * target is a list of one.
  */
-RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_regenerate_all(Plan *plan, const FillTarget *targets, size_t target_count,
                                      const ComposeConfig *config, ComposeOutcome *outcome);
 
 #endif

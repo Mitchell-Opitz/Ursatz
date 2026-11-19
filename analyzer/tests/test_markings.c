@@ -74,7 +74,7 @@ static void check_markings(const char *dir) {
         CHECK(mp->relation && strcmp(mp->relation, "quieter") == 0);
     }
 
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 
@@ -86,7 +86,7 @@ static void check_no_markings(const char *dir) {
     }
     CHECK(report.tempo_marking_count == 0);
     CHECK(report.dynamic_count == 0);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

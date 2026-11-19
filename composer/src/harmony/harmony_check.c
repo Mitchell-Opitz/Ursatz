@@ -24,7 +24,7 @@
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/seam_hear.h>
 
-#include "check/shaping.h"
+#include "util/shaping.h"
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
 
@@ -325,7 +325,7 @@ static bool verdict_to_check(const HeardPhrase *phrase, FillCheck *out) {
     return true;
 }
 
-bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;

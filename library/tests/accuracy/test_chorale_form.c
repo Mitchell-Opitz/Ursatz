@@ -7,7 +7,7 @@
 #include "../import_notes_test_util.h"
 #include "io/musicxml_importer.h"
 #include "score_layout.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -35,11 +35,11 @@ static void check_piece(const char *name) {
     size_t note_count = 0;
     assert(musicxml_import_analysis_notes(&imported, &notes, &note_count));
     size_t key_count = imported.key_signature_count;
-    AnalysisKeyEvent *key_events = (AnalysisKeyEvent *)calloc(key_count + 1, sizeof(AnalysisKeyEvent));
+    SpelledKeyEvent *key_events = (SpelledKeyEvent *)calloc(key_count + 1, sizeof(SpelledKeyEvent));
     assert(key_events != NULL);
     for (size_t i = 0; i < key_count; i++) {
         key_events[i].time = imported.key_signatures[i].position;
-        assert(analysis_key_from_fifths(imported.key_signatures[i].sharps_flats, test_materials()->major, &key_events[i].key));
+        assert(spelled_key_from_fifths(imported.key_signatures[i].sharps_flats, test_materials()->major, &key_events[i].key));
     }
 
     AnalysisNoteSet set = {notes, note_count, map};

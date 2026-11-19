@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/library/reading/schema/reading.v1.schema.json",
+  "title": "Ursatz reading, format version 1",
+  "description": "What one reader (the Analyzer, the Composer or a person) says about one realization, as claims over it (R-629).",
+  "type": "object",
+  "required": ["format", "format_version", "source", "target", "regions", "chords", "cadences", "groups", "motive_occurrences", "meters", "lines", "voice_faults"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "ursatz-reading" },
+    "format_version": { "const": 1 },
+    "source": {
+      "type": "object",
+      "required": ["kind", "name", "producer_key", "stages", "knowledge_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["analyzer", "composer", "person"] },
+        "name": { "type": "string", "maxLength": 63 },
+        "producer_key": { "$ref": "#/$defs/key16", "description": "The key of the program that read; empty for a person." },
+        "stages": { "type": "integer", "minimum": 0, "description": "The stages of the chain that ran (a bit mask); 0 for a person." },
+        "knowledge_hash": { "$ref": "#/$defs/key16", "description": "The hash of the knowledge snapshot it read with; empty for a person." }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": ["work", "movement", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "work": { "$ref": "#/$defs/id" },
+        "movement": { "$ref": "#/$defs/id" },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "The digest of the version of the realization the reading is about." }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["center", "material", "strength", "label"],
+            "properties": {
+              "center": { "type": "integer", "minimum": 0, "maximum": 11 },
+              "material": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
+              "strength": { "enum": ["established", "tonicized", "implied", "fragile", "absent"] },
+              "label": { "type": "string", "maxLength": 31 }
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "chords": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["reading", "numeral", "function", "label"],
+            "properties": {
+              "reading": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/chordReading" }] },
+              "numeral": { "type": "string", "maxLength": 15 },
+              "function": { "type": "string", "maxLength": 15 },
+              "label": { "type": "string", "maxLength": 31 }
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "cadences": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["type", "arrival", "alternatives"],
+            "properties": {
+              "type": { "$ref": "#/$defs/cadenceType" },
+              "arrival": { "$ref": "#/$defs/rational" },
+              "alternatives": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/cadenceType" } }
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["kind", "parent", "label", "form", "beginning", "ending", "commonality", "first_measure", "last_measure", "phrase_count", "part_cadences", "archetypal", "fragmentation"],
+            "properties": {
+              "kind": { "enum": ["section", "theme", "phrase", "subphrase", "idea"] },
+              "parent": { "type": ["integer", "null"], "minimum": 0, "description": "The index of an earlier group; null for a top level one." },
+              "label": { "type": "string", "maxLength": 31 },
+              "form": { "type": "string", "maxLength": 23 },
+              "beginning": { "type": "string", "maxLength": 31 },
+              "ending": { "type": "string", "maxLength": 31 },
+              "commonality": { "type": "string", "maxLength": 23 },
+              "first_measure": { "type": "integer" },
+              "last_measure": { "type": "integer" },
+              "phrase_count": { "type": "integer", "minimum": 0 },
+              "part_cadences": { "type": "array", "maxItems": 2, "items": { "$ref": "#/$defs/cadenceType" } },
+              "archetypal": { "type": "boolean" },
+              "fragmentation": { "type": "boolean" }
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "motive_occurrences": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["motive", "kind"],
+            "properties": { "motive": { "type": "integer", "minimum": 0 }, "kind": { "type": "string", "maxLength": 23 } }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "meters": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["time_signature"],
+            "properties": { "time_signature": { "type": "string", "pattern": "^[0-9]{1,2}/(1|2|4|8|16)$" } }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["role"],
+            "properties": {
+              "role": { "enum": ["melody", "counter-melody", "harmony-line", "bass", "chords", "pad", "accompaniment", "drums", "pedal", "subject", "answer", "countersubject"] }
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "voice_faults": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/claim" },
+          {
+            "type": "object",
+            "required": ["rule", "hard", "measure"],
+            "properties": { "rule": { "type": "string", "maxLength": 47 }, "hard": { "type": "boolean" }, "measure": { "type": "integer" } }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,62}$" },
+    "key16": { "type": "string", "pattern": "^([0-9a-f]{16})?$" },
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "additionalProperties": false,
+      "properties": { "num": { "type": "integer" }, "den": { "type": "integer", "minimum": 1 } }
+    },
+    "cadenceType": { "enum": ["perfect-authentic", "imperfect-authentic", "half", "subverted", "plagal", "deceptive", "authentic-unspecified", "unknown"] },
+    "claim": {
+      "type": "object",
+      "required": ["id", "start", "end", "confidence", "evidence"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "start": { "$ref": "#/$defs/rational" },
+        "end": { "$ref": "#/$defs/rational" },
+        "confidence": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rational" }], "description": "From 0 to 1; null when the reader gives none." },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/id" }, "description": "Performer note ids of the realization the claim rests on." }
+      }
+    },
+    "chordReading": {
+      "type": "object",
+      "required": ["root", "type", "pitch_classes", "bass", "members", "borrowed_from", "role", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "root": { "type": "integer", "minimum": -1, "maximum": 11, "description": "-1 for a sonority read as no chord." },
+        "type": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9.-]*$", "description": "The id of a K2 chord type." },
+        "pitch_classes": { "type": "integer", "minimum": 0, "maximum": 4095 },
+        "bass": { "type": "integer", "minimum": -1, "maximum": 11 },
+        "members": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "type": "integer", "minimum": 0, "maximum": 4095 } },
+        "borrowed_from": { "type": ["string", "null"] },
+        "role": { "enum": ["functional", "embellishing"] },
+        "expected": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["root", "type"],
+              "additionalProperties": false,
+              "properties": { "root": { "type": "integer", "minimum": 0, "maximum": 11 }, "type": { "type": ["string", "null"] } }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

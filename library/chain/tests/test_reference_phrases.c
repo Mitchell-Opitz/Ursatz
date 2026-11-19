@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "theory/form/phrase_level_form.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
@@ -74,15 +74,15 @@ typedef struct {
     int alternative_type;
 } Claimed;
 
-static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, AnalysisKeyEvent **key_events_out) {
+static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, SpelledKeyEvent **key_events_out) {
     *p = pipeline_run(URSATZ_CORPUS_DIR, piece->midi, NULL);
     size_t key_event_count = p->import.key_signatures.count;
-    AnalysisKeyEvent *key_events = (AnalysisKeyEvent *)calloc(key_event_count + 1, sizeof(AnalysisKeyEvent));
+    SpelledKeyEvent *key_events = (SpelledKeyEvent *)calloc(key_event_count + 1, sizeof(SpelledKeyEvent));
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
     config.knowledge = test_knowledge();
@@ -138,7 +138,7 @@ static bool has_claimed(const Claimed *claimed, size_t count, int measure, int t
 
 static void check_clementi(void) {
     WeightedPipeline p;
-    AnalysisKeyEvent *key_events = NULL;
+    SpelledKeyEvent *key_events = NULL;
     AnalysisChain *chain = run_chain(&CLEMENTI, &p, &key_events);
 
     printf("%s, phrases first\n", CLEMENTI.name);
@@ -194,7 +194,7 @@ static void check_clementi(void) {
 
 static void check_mozart(void) {
     WeightedPipeline p;
-    AnalysisKeyEvent *key_events = NULL;
+    SpelledKeyEvent *key_events = NULL;
     AnalysisChain *chain = run_chain(&MOZART, &p, &key_events);
 
     printf("%s, phrases first\n", MOZART.name);

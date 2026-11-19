@@ -17,6 +17,7 @@ typedef struct {
     const char *input;
     const char *seed_text;
     const char *out_path;
+    const char *layers_path;
     const char *midi_path;
     const char *musicxml_path;
     const char *tempo_text;
@@ -59,6 +60,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
     fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
     fprintf(out, "  --out <file.json>    write the realized plan as JSON\n");
+    fprintf(out, "  --layers <dir>       write the three layers: plan.json, realization.json and readings/composer.json\n");
     fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
     fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
@@ -112,6 +114,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->blend_weights_text;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out_path;
+        } else if (strcmp(arg, "--layers") == 0) {
+            target = &options->layers_path;
         } else if (strcmp(arg, "--midi") == 0) {
             target = &options->midi_path;
         } else if (strcmp(arg, "--musicxml") == 0) {
@@ -178,7 +182,8 @@ static cJSON *build_request(const Options *options, cJSON *plan) {
          (!options->musicxml_path || cJSON_AddTrueToObject(request, "musicxml")) &&
          (!options->tempo_text || cJSON_AddStringToObject(request, "tempo", options->tempo_text)) &&
          (!options->plain_midi || cJSON_AddTrueToObject(request, "plain_midi")) &&
-         (!options->record_path || cJSON_AddTrueToObject(request, "record"));
+         (!options->record_path || cJSON_AddTrueToObject(request, "record")) &&
+         (!options->layers_path || cJSON_AddTrueToObject(request, "layers"));
     if (ok && options->explain_path) {
         size_t length = strlen(options->explain_path);
         bool json = length >= 5 && cli_equals_ignore_case(options->explain_path + length - 5, ".json");
@@ -270,8 +275,13 @@ int run_fill(int argc, char **argv) {
         size_t file_count = 0;
         status = document ? write_outputs(&options, &response, document, files, &file_count)
                           : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        if (status == 0 && options.layers_path) {
+            status = cli_write_layers(options.layers_path, &response);
+        }
         if (status == 0) {
             cli_print_notices(document);
+            cJSON_DeleteItemFromObjectCaseSensitive(document, "realization");
+            cJSON_DeleteItemFromObjectCaseSensitive(document, "reading");
             cJSON_DeleteItemFromObjectCaseSensitive(document, "record");
             cJSON_DeleteItemFromObjectCaseSensitive(document, "explanation");
             if (options.json) {

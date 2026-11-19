@@ -9,7 +9,6 @@
 #include "theory/form/internal_expansion_technique.h"
 #include "theory/form/phrase_length_change.h"
 #include "theory/form/phrase_level_form.h"
-#include "interpretation_test_access.h"
 
 /* Expansion and contraction from the theme's own balance (an ending as long as its beginning), the internal technique evidence,
    and the external expansion of a phrase's extension. */
@@ -72,10 +71,6 @@ static void test_a_ten_measure_sentence_is_expanded_by_two(void) {
     assert(c->first_measure == 5 && c->last_measure == 10 && c->theme == 0 && c->phrase == 0);
     assert(c->techniques == 0 && c->external_kind == -1); /* no evidence of a technique: unspecified */
     const StandardFormExpansion *e = &r.expansions.items[0];
-    assert(strcmp(entity_id_value(interpretation_target_id(e->interpretation)),
-                  entity_id_value(entity_id(structure_entity(e->shell)))) == 0);
-    assert(interpretation_framework_reference(e->interpretation) != NULL);
-    assert(structure_event_id_count(e->shell) == 24);
     assert(fabs(e->uncertainty - r.themes.items[0].uncertainty) < 1e-12);
     finish(&r);
 }
@@ -168,7 +163,6 @@ static void test_a_post_cadential_extension_is_an_external_expansion(void) {
     assert(c->external_kind == (int)EXTERNAL_EXPANSION_KIND_POST_CADENTIAL_EXTENSION && c->measures_changed == 2 &&
            c->expected_length == 8 && c->actual_length == 10 && c->first_measure == 9 && c->last_measure == 10);
     assert(c->suffix_length_typical == 1 && c->suffix_agrees_with_location == 1 && c->theme == 0 && c->techniques == 0);
-    assert(structure_event_id_count(r.expansions.items[0].shell) == 8);
     finish(&r);
 }
 

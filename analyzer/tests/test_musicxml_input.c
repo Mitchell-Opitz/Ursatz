@@ -46,7 +46,7 @@ static cJSON *analyze(const char *path, ImportedScore *notes_out) {
     assert(test_analyze_report(&notes, &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     if (notes_out) {
         *notes_out = notes;
     } else {

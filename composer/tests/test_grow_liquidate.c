@@ -5,19 +5,20 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -63,7 +64,7 @@ static FormSpec *load_form(void) {
     return form;
 }
 
-static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long seed, ComposeOutcome *outcome,
+static Plan *compose(const FormSpec *form, const Row *row, unsigned long seed, ComposeOutcome *outcome,
                           PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
@@ -73,7 +74,7 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = form_build_plan(form, &request, &plan);
     if (built != PIECE_OK) {
         fprintf(stderr, "form_build_plan: %s\n", piece_result_name(built));
@@ -93,7 +94,7 @@ typedef struct {
     Rational onset;
 } Heard;
 
-static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
+static size_t piece_sections(const Plan *plan, NodeId *sections) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -112,7 +113,7 @@ static Rational add_time(Rational a, Rational b) {
 }
 
 /* The notes of the melody that start in [from, to), in onset order. */
-static size_t melody_notes(const PiecePlan *plan, Rational from, Rational to, Heard *out, size_t cap) {
+static size_t melody_notes(const Plan *plan, Rational from, Rational to, Heard *out, size_t cap) {
     LaneSpanId ids[16];
     PlanSpan range = {from, {0, 1}};
     assert(rational_sub(to, from, &range.length) == RATIONAL_OK);
@@ -141,7 +142,7 @@ static size_t melody_notes(const PiecePlan *plan, Rational from, Rational to, He
 }
 
 /* The notes of the motive an idea's melody asks for: the idea's melody span names a motive node, whose own melody holds them. */
-static size_t motive_notes_of(const PiecePlan *plan, NodeId idea) {
+static size_t motive_notes_of(const Plan *plan, NodeId idea) {
     LaneSpanId spans[8];
     size_t found = plan_node_lane_spans(plan, idea, spans, 8);
     for (size_t i = 0; i < found && i < 8; i++) {
@@ -172,7 +173,7 @@ static bool is_dominant_numeral(const char *numeral) {
 }
 
 /* One composed run: the checks of the header comment. */
-static void check_run(const PiecePlan *plan, const Row *row, unsigned long seed) {
+static void check_run(const Plan *plan, const Row *row, unsigned long seed) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);
     NodeId l = sections[2];
@@ -262,7 +263,7 @@ static int rows_composed(const FormSpec *form) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             ComposeOutcome outcome;
             PieceResult ran;
-            PiecePlan *plan = compose(form, &ROWS[r], seed, &outcome, &ran);
+            Plan *plan = compose(form, &ROWS[r], seed, &outcome, &ran);
             if (ran == PIECE_OK) {
                 check_run(plan, &ROWS[r], seed);
                 composed++;
@@ -286,14 +287,14 @@ static int rows_composed(const FormSpec *form) {
 static void test_round_trip(const FormSpec *form) {
     ComposeOutcome outcome;
     PieceResult ran;
-    PiecePlan *plan = compose(form, &ROWS[0], 1, &outcome, &ran);
+    Plan *plan = compose(form, &ROWS[0], 1, &outcome, &ran);
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
     assert(strstr(text, "\"liquidation\""));
-    PiecePlan *parsed = NULL;
-    assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK && parsed);
-    char *again = plan_to_json(parsed, &error);
+    Plan *parsed = NULL;
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error) == PLAN_OK && parsed);
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
     free(text);
     free(again);
@@ -302,7 +303,7 @@ static void test_round_trip(const FormSpec *form) {
     plan_destroy(plan);
 }
 
-static PiecePlan *plan_of(const FormSpec *form, const Motive *motive, bool modulate, PieceResult *result) {
+static Plan *plan_of(const FormSpec *form, const Motive *motive, bool modulate, PieceResult *result) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
@@ -313,7 +314,7 @@ static PiecePlan *plan_of(const FormSpec *form, const Motive *motive, bool modul
     request.seed = 1;
     request.motive = motive;
     request.modulate = modulate;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     *result = form_build_plan(form, &request, &plan);
     return plan;
 }
@@ -324,7 +325,7 @@ static PiecePlan *plan_of(const FormSpec *form, const Motive *motive, bool modul
  */
 static void test_applies(const FormSpec *form) {
     PieceResult result;
-    PiecePlan *plan = plan_of(form, NULL, false, &result);
+    Plan *plan = plan_of(form, NULL, false, &result);
     assert(result == PIECE_OK);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);

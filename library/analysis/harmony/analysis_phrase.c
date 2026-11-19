@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/harmony/analysis_claim.h"
 #include "analysis/harmony/analysis_six_four.h"
 #include "model/core/value.h"
 #include "theory/harmony/harmony_phrase_labels.h"
@@ -64,19 +63,6 @@ static bool collapse(const HarmonySegment *segments, const HarmonySixFourResult 
     return true;
 }
 
-static bool make_interpretation(const HarmonySegmentInput *input, PhraseModelLabel label, int phrase_index,
-                                Interpretation **out) {
-    HarmonyPhraseLabelClaim claim;
-    memset(&claim, 0, sizeof(claim));
-    claim.label = (int)label;
-    claim.phrase_index = phrase_index;
-    char id[256];
-    snprintf(id, sizeof(id), "standard-harmony-phrase-model-%s", input->segment.id);
-    *out = harmony_analysis_make_interpretation(id, input->segment.id, HARMONY_PHRASE_LABEL_CLAIM_TYPE, &claim,
-                                                sizeof(claim), input->uncertainty, "phrase-model-adapter");
-    return *out != NULL;
-}
-
 /* Labels one span. false only on allocation failure; a phrase the rules do not label is true and unlabeled. */
 static bool label_span(const HarmonySegment *segments, const HarmonySixFourResult *six_fours,
                        const HarmonyPhraseSpan *span, int phrase_index, HarmonyPhraseModel *model) {
@@ -99,8 +85,6 @@ static bool label_span(const HarmonySegment *segments, const HarmonySixFourResul
                 HarmonyPhraseLabelResult *result = &model->segments[span->first_segment + i];
                 result->has_label = true;
                 result->label = labels.label[chord];
-                ok = make_interpretation(segments[span->first_segment + i].input, result->label, phrase_index,
-                                         &result->interpretation);
             }
         }
     }
@@ -155,9 +139,6 @@ HarmonyPhraseModelStatus harmony_analysis_phrase_model_label(const HarmonySegmen
 void harmony_phrase_model_destroy(HarmonyPhraseModel *model) {
     if (model == NULL) {
         return;
-    }
-    for (size_t i = 0; i < model->segment_count && model->segments != NULL; i++) {
-        interpretation_destroy(model->segments[i].interpretation);
     }
     free(model->segments);
     free(model->phrase_labeled);

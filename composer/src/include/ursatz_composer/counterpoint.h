@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 
@@ -46,7 +46,7 @@ CounterpointParams counterpoint_params_default(void);
  * Why the operator does not apply to a target, as a short phrase for people, or NULL when it does. The target must be a
  * lane span of the plan.
  */
-const char *counterpoint_why_not(const PiecePlan *plan, LaneSpanId target);
+const char *counterpoint_why_not(const Plan *plan, LaneSpanId target);
 
 /*
  * The checker for this operator's candidates; pass it as FillConfig.checker. Hard: standard-counterpoint's check of the
@@ -54,7 +54,7 @@ const char *counterpoint_why_not(const PiecePlan *plan, LaneSpanId target);
  * and for species 2 to 4 neither does the species' own exercise check. The given line is not judged. Soft, the score being
  * the share of soft groups with no violation. A candidate of another operator goes to harmony_phrase_checker.
  */
-bool counterpoint_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool counterpoint_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out);
 
 #define COUNTERPOINT_REPORT_MAX_GROUPS 8
@@ -74,7 +74,7 @@ typedef struct {
  * does, group by group. The group of the given line itself is not judged and not listed. False when the target is not a
  * written counter-melody the operator reads.
  */
-bool counterpoint_report(const PiecePlan *plan, LaneSpanId target, CounterpointReport *out);
+bool counterpoint_report(const Plan *plan, LaneSpanId target, CounterpointReport *out);
 
 /*
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must outlive

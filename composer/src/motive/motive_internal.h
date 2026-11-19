@@ -21,7 +21,7 @@ typedef struct {
     /* The input declares the meter (a file's time signature, a JSON "meter"), as opposed to Ursatz's 4/4 default. */
     bool meter_declared;
     bool has_key;
-    AnalysisKey key;
+    SpelledKey key;
     /* A JSON "form" and "pickup"; the other inputs have neither, and the caller's options can set the pickup. */
     MotiveSketchForm form;
     bool has_pickup;
@@ -43,7 +43,7 @@ typedef struct {
  * The motive of a motive node's Given or Realized melody lane span: its notes, and the meter and key of the lanes over
  * it, else the context's. False when the node has no such span. Shared with the motive-form operator.
  */
-bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out);
+bool motive_develop_read_node(const Plan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out);
 
 /* Records the first problem only. error may be NULL. */
 void motive_set_error(MotiveError *error, const char *location, const char *format, ...);
@@ -136,15 +136,15 @@ cJSON *motive_json_object(const Motive *motive);
 char *motive_json_text(cJSON *document);
 
 /* The key of a key signature count of sharps (negative for flats) and mode, in the materials' major or natural minor. */
-AnalysisKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode);
+SpelledKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode);
 
 /*
  * The step of the key's scale a MIDI pitch is on (7 to an octave, 0 the tonic's pitch class), and whether it is a
  * raised degree (1) or on the degree (0); and the pitch at a step. A pitch outside the scale is on the degree below
  * it, raised. The pitch is not range-checked.
  */
-void motive_scale_position(const AnalysisKey *key, int pitch, long *position, int *alteration);
-int motive_position_pitch(const AnalysisKey *key, long position, int alteration);
+void motive_scale_position(const SpelledKey *key, int pitch, long *position, int *alteration);
+int motive_position_pitch(const SpelledKey *key, long position, int alteration);
 
 /*
  * Checks the motive's own harmony and features: chords ascending inside the length, degree 1 to 7, alteration -1 to 1,
@@ -174,7 +174,12 @@ static inline void motive_payload_destroy(void *payload) {
  * motive_attach in another state: a motive node and its melody span written as `state` (Given for motive_attach). The motives
  * grow-theme makes are the run's own and Realized, so a regenerated section can remove them (R-346).
  */
-PlanResult motive_attach_as(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach_as(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                             PlanState state, NodeId *out_node, LaneSpanId *out_span);
+
+/* The develop context a payload or an operator context points to, else the defaults. */
+MotiveDevelopContext motive_context_or_default(const void *context);
+/* A score from small constants or counts, which always fit. Values from a caller go through motive_score_make. */
+MotiveScore motive_make_score(unsigned long long numerator, unsigned long long denominator);
 
 #endif

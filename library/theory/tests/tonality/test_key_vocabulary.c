@@ -2,33 +2,33 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "model/identity/entity_id.h"
-#include "model/interpretation/key.h"
 #include "theory/tonality/key_vocabulary.h"
-#include "interpretation_test_access.h"
 #include "test_knowledge.h"
 
 /*
- * Construction tests: one major key and one minor key, confirming each
- * resolves to a real Key labeled with its actual key name.
+ * Construction tests: one major key and one minor key, confirming each gives the tonic's pitch class and the material of its mode, and
+ * that a bad material or tonic name is refused.
  */
 
-static void check_key(CommonPracticeKeyMode mode, const char *tonic_name, const char *expected_label,
-                       const char *context_id_value) {
-    EntityID *context_id;
-    assert(entity_id_create(context_id_value, &context_id) == ENTITY_ID_OK);
-
-    Key *key;
-    assert(common_practice_build_key(common_practice_material(test_materials(), mode), tonic_name, context_id, &key) == KEY_OK);
-    assert(strcmp(key_label(key), expected_label) == 0);
-    assert(interpretation_framework_reference(key_interpretation(key)) != NULL);
-
-    key_destroy(key);
+static void check_key(CommonPracticeKeyMode mode, const char *tonic_name, int expected_tonic) {
+    const PitchMaterial *material = common_practice_material(test_materials(), mode);
+    KeyStructure key;
+    assert(common_practice_build_key(material, tonic_name, &key));
+    assert(key.tonic_pitch_class == expected_tonic && key.material == material);
 }
 
 int main(void) {
-    check_key(COMMON_PRACTICE_KEY_MAJOR, "C", "C major", "context-test-c-major");
-    check_key(COMMON_PRACTICE_KEY_MINOR, "A", "A minor", "context-test-a-minor");
+    check_key(COMMON_PRACTICE_KEY_MAJOR, "C", 0);
+    check_key(COMMON_PRACTICE_KEY_MINOR, "A", 9);
+    check_key(COMMON_PRACTICE_KEY_MAJOR, "F#", 6);
+    check_key(COMMON_PRACTICE_KEY_MAJOR, "Bb", 10);
+
+    KeyStructure key = {-5, NULL};
+    assert(!common_practice_build_key(NULL, "C", &key));
+    assert(!common_practice_build_key(common_practice_material(test_materials(), COMMON_PRACTICE_KEY_MAJOR), "", &key));
+    assert(!common_practice_build_key(common_practice_material(test_materials(), COMMON_PRACTICE_KEY_MAJOR), "H", &key));
+    assert(!common_practice_build_key(common_practice_material(test_materials(), COMMON_PRACTICE_KEY_MAJOR), "C", NULL));
+    assert(key.tonic_pitch_class == -5 && key.material == NULL);
 
     printf("test_key_vocabulary: ok\n");
     return 0;

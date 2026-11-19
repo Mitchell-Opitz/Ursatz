@@ -21,6 +21,7 @@ The options the `theme` command takes are members of the same object:
 | `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.12): its `melody` group and the `development` fidelity minimums reach the grow; from API 1.17 its `development` group's `continuation` settings and `basic_as_written` reach the grow too; from API 1.19 so do `melody.closure`, `rhythm_repeat_bars`, `leaps`, `register` and `development.contrast`, and its `motif` group shapes the theme's drawn rhythms and new material (and nothing else, because the motives come from the request). A bad member is refused with its path under `/preferences` |
 | `midi`, `musicxml` | `true`: the first theme's MIDI file (`midi`, `midi_size`) and MusicXML (`musicxml`), rendered once from the same `RenderedPlan` |
 | `plain_midi` | `true`: no track names and no section markers in the MIDI file |
+| `layers` | `true`: the first theme's `realization` and `reading` in the document ([layers](#layers)) |
 | `plans` | `true`: each theme's plan as an object, `themes[k].plan` (the CLI writes the plans, MIDI files and MusicXML of the themes after the first from it, through `composer_api_export`) |
 | `explain` | `"text"` or `"json"`: why each candidate was chosen or rejected, as a string, `themes[k].explanation` |
 
@@ -58,6 +59,7 @@ model (R-267):
 | `ending_musicxml` | `true`: the ending version's MusicXML as the string `ending_musicxml` of the result (refused at `/ending_musicxml` for a form with no ending version) |
 | `musicxml_versions` | `true`: the MusicXML of every version after the first as `musicxml_versions: {"<name>": "<MusicXML>"}` (`{}` for a form with one version) |
 | `plain_midi` | `true`: no track names and no section markers in the MIDI file |
+| `layers` | `true`: the loop version's `realization` and `reading` in the document ([layers](#layers)) |
 | `explain` | `"text"` or `"json"`: why each candidate was chosen or rejected in both versions, as the string `explanation` |
 
 The request has no `corpus` member: a piece reads no corpus, and `corpus` is refused with the path `/corpus`.
@@ -102,3 +104,14 @@ is kept when its notes differ from the plan's and from every version kept before
 (`"variations"`) and for each compose stage; a cancel is `COMPOSER_ERR_CANCELLED`. No version that differs from the plan is
 `COMPOSER_ERR_UNSATISFIABLE`. Refusals name `/from`, `/variations/section`, `/variations/lanes`, `/variations/count`.
 Schemas: `piece_variations.request.schema.json`, `piece_variations.response.schema.json`.
+
+## Layers
+
+The member `layers` (API 3.2, R-634; a boolean, off by default) of the theme, grow, piece, fill, regenerate, develop, counterpoint and
+progression requests adds two members to the document of the first result (the first theme, the loop version, the first
+progression or counter-melody, the realized plan): `realization`, the work its MIDI and MusicXML are written from
+(`realization.v1`, [schema](../../../library/realization/schema/realization.v1.schema.json)), and `reading`, the Composer's hearing of
+the plan over that work (`reading.v1`, [schema](../../../library/reading/schema/reading.v1.schema.json)), whose `target.digest` is the
+realization's digest and whose evidence names the work's performer notes (`piano-n<plan note id>`). Without it the response is as it was.
+Variations refuse it (`/layers`). The command line writes the two members and the plan with `--layers <dir>`
+([cli-theme.md](../cli-theme.md)).

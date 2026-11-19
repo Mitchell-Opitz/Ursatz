@@ -4,12 +4,12 @@
 
 #include <theory/harmony/harmony_applied.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 
@@ -33,7 +33,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     LaneSpanId given_bass; /* a Given bass span after the phrase, which nothing may change */
@@ -54,7 +54,7 @@ static Rational time_plus(Rational a, Rational b) {
     return sum;
 }
 
-static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, const int *pitches, int count) {
+static LaneSpanId add_bass(Plan *plan, NodeId owner, PlanSpan span, const int *pitches, int count) {
     PlanNote notes[8];
     PlanLanePayload payload;
     LaneSpanId id;
@@ -98,8 +98,8 @@ static Fixture build(const Scenario *scenario, bool cadence) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.form_span, &payload, &id) ==
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, fixture.form_span, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -229,7 +229,7 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
     }
 
     /* The bass passes standard-counterpoint's melodic rules, checked by the framework from the plan. */
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);

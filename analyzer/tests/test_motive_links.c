@@ -40,7 +40,7 @@ static bool analyze_fixtures(void) {
             return false;
         }
         documents[i] = test_render_document(path, &notes, &report);
-        chain_result_destroy(&report);
+        test_release_report(&report);
         imported_score_destroy(&notes);
         if (!documents[i]) {
             return false;

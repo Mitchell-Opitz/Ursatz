@@ -10,7 +10,7 @@
 #include <theory/knowledge/knowledge_snapshot.h>
 
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * Seeding from a corpus (docs/style.md): the material a piece starts from is taken from a passage of an analyzed
@@ -109,7 +109,7 @@ const char *corpus_seed_result_name(CorpusSeedResult result);
  * no passage or none that gives a motive. out is untouched on any result but CORPUS_SEED_OK.
  */
 CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassage *passages, size_t count,
-                                    const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out);
+                                    const PlanMeter *meter, const SpelledKey *key, unsigned long seed, CorpusSeed *out);
 
 /*
  * The chords of the first passage, best first, whose `wanted` chords from the one that starts where the passage does the plan

@@ -28,7 +28,7 @@ typedef struct FillSuggestions FillSuggestions;
  * FILL_ERR_TARGET_NOT_OPEN otherwise. With nothing to suggest the set is empty,
  * which is not an error. *out is destroyed with fill_suggestions_destroy.
  */
-FillResult fill_suggest(const PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_suggest(const Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                         FillTarget target, size_t top_n, FillSuggestions **out);
 
 /* The suggested candidates, best first. Owned by the suggestions. */
@@ -43,7 +43,7 @@ const char *fill_suggestion_label(const FillSuggestions *suggestions, size_t ind
  * one the suggestions were made for, unchanged since. FILL_ERR_TARGET_NOT_OPEN
  * if the target is no longer open, FILL_ERR_NULL for an index past the end.
  */
-FillResult fill_apply_suggestion(PiecePlan *plan, const FillSuggestions *suggestions, size_t index);
+FillResult fill_apply_suggestion(Plan *plan, const FillSuggestions *suggestions, size_t index);
 
 void fill_suggestions_destroy(FillSuggestions *suggestions);
 

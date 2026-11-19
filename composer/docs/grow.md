@@ -8,7 +8,7 @@ melody, and, when asked, an accompaniment or a four-part voicing, each through t
 GrowRequest request = {.motive = &motive, .key = key, .meter = meter, .bars = 8,
                        .pairing = {PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION},
                        .cadence = PLAN_CADENCE_PAC};
-PiecePlan *plan;
+Plan *plan;
 GrowConfig config = {.seed = 7};
 GrowOutcome outcome;
 if (grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && grow_run(plan, &config, &outcome) == GROW_OK) {
@@ -60,7 +60,7 @@ cadential slot in a period). A slot motive keeps no harmony, features or role (a
 
 ### Idea motives
 
-A theme's shape is one table (R-416, `src/grow/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf` (its plan name and its standard-form name); each idea of each half is a `ThemeShapeIdea` row with its `GrowIdea`, name, `GrowPlace`, slot, whether it is the first of its slot, role and length in eighths of the theme; each slot is a `ThemeShapeSlot` (name, function, plan node name). `grow_idea_name`, `grow_idea_place`, `grow_idea_in_pairing`, `grow_place_units`, `grow_idea_slot`, `grow_slot_used`, the slot readers, `grow_idea_role`, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it, so a new idea or a new length is a row, not a `switch`. `GrowSlot`, `GrowIdea` and `GrowIdeaRole` are declared in `theme_shape.h`, which `grow.h` includes. `tests/test_theme_shape.c` checks the table against the values the old code gave for the nine pairings.
+A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf` (its plan name and its standard-form name); each idea of each half is a `ThemeShapeIdea` row with its `GrowIdea`, name, `GrowPlace`, slot, whether it is the first of its slot, role and length in eighths of the theme; each slot is a `ThemeShapeSlot` (name, function, plan node name). `grow_idea_name`, `grow_idea_place`, `grow_idea_in_pairing`, `grow_place_units`, `grow_idea_slot`, `grow_slot_used`, the slot readers, `grow_idea_role`, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it, so a new idea or a new length is a row, not a `switch`. `GrowSlot`, `GrowIdea` and `GrowIdeaRole` are declared in `theme_shape.h`, which `grow.h` includes. `tests/test_theme_shape.c` checks the table against the values the old code gave for the nine pairings.
 
 `GrowIdea` names the ideas of a theme as the plan does (`grow_idea_name`: `basic idea`, `repetition`, `contrasting idea`,
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,

@@ -6,14 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/interpretation/chord.h"
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "analysis/harmony/applied_chords.h"
 #include "model/time/time_span.h"
 #include "analysis/form/analysis_phrase_grid.h"
 #include "analysis/form/analysis_repeats.h"
-#include "analysis/harmony/analysis_cadence_claims.h"
+#include "analysis/harmony/analysis_cadence_points.h"
 #include "chain/form_bridge.h"
 #include "chain/kernel_owners.h"
 #include "theory/tonality/common_practice_materials.h"
@@ -283,7 +282,7 @@ static bool read_numerals(AnalysisChain *chain) {
     for (size_t i = 0; i < count; i++) {
         p->segment_inputs[i].segment_id = chain->segs.ids[i];
         p->segment_inputs[i].start = chain->key_segments[i].start;
-        p->segment_inputs[i].chord = p->chords[i].matched ? p->chords[i].best_chord : NULL;
+        p->segment_inputs[i].chord = p->chords[i].matched ? &p->chords[i].best_chord : NULL;
         p->segment_inputs[i].weights = chain->key_segments[i].weights.pitch_class;
         p->segment_inputs[i].pitches = &p->segment_pitches[pitch_total];
         p->segment_inputs[i].pitch_count = chain->segs.segments[i].member_count;
@@ -380,7 +379,7 @@ static AnalysisChainStatus claim_cadences_on_grid(AnalysisChain *chain, int last
         bool follows = u + 1 < p->grid.count && !p->grid.units[u + 1].elided && p->grid.units[u + 1].first_measure == unit->last_measure + 1;
         points[point_count++] = (HarmonyPhrasePoint){unit->last_measure, true, u, follows};
     }
-    if (harmony_analysis_claim_cadences(p->prepared, chain->count, &chain->config.cadences, &p->cadences, &readings, points, point_count,
+    if (harmony_analysis_cadences_at_points(p->prepared, chain->count, &chain->config.cadences, &p->cadences, &readings, points, point_count,
                                         &claimed) != HARMONY_CADENCE_ANALYSIS_OK) {
         goto done;
     }
@@ -945,7 +944,7 @@ const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT] = {
      NULL, NULL, schema_stage},
 };
 
-AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,
+AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const SpelledKeyEvent *key_events, size_t key_event_count,
                                        const AnalysisChainConfig *config, AnalysisChain **out) {
     if (notes == NULL || out == NULL || (key_event_count > 0 && key_events == NULL)) {
         return ANALYSIS_CHAIN_ERR_NULL_ARGUMENT;
@@ -1096,7 +1095,7 @@ AnalysisChainStatus analysis_chain_chord_reading(const AnalysisChain *chain, siz
     sonority.pitch_classes = segment_pitch_classes(segment);
     sonority.bass_pitch_class = has_numeral ? input->bass_pitch_class : -1;
     int root = -1;
-    if (result->matched && result->best_chord != NULL) {
+    if (result->matched) {
         /* a chord the chain found: its tones are the sonority's pitch classes, the leftover tones are not part of the chord */
         sonority.pitch_classes = common_practice_ranked_chord_mask(&result->best, has_numeral ? input->tonic_pitch_class : 0);
         root = result->best.root_pitch_class;

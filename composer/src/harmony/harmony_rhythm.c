@@ -1,4 +1,5 @@
 #include "harmony/harmony_internal.h"
+#include "structure/plan_util.h"
 
 #include <theory/meter/metric_position_rules.h>
 #include <model/time/note_value.h>
@@ -20,52 +21,6 @@
  * is amended to this, which is what P25 B5 built (R-590): 4/4 has two cells, not
  * four, and the second cell of 6/8 is medium, not weak.
  */
-
-#define RHYTHM_MAX_CELLS 4u
-
-static bool meter_signature(const PlanMeter *meter, TimeSignature **out) {
-    NoteValue *unit = NULL;
-    if (!meter || meter->beats_per_bar < 1 || (meter->beat_unit != 4 && meter->beat_unit != 8)) {
-        return false;
-    }
-    if (note_value_create(meter->beat_unit == 4 ? 2 : 3, &unit) != NOTE_VALUE_OK) {
-        return false;
-    }
-    TimeSignatureResult result = time_signature_create((unsigned)meter->beats_per_bar, unit, out);
-    note_value_destroy(unit);
-    return result == TIME_SIGNATURE_OK;
-}
-
-bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
-    TimeSignature *signature = NULL;
-    unsigned beats[RHYTHM_MAX_CELLS];
-    size_t count = 0;
-    if (!cells || !meter_signature(meter, &signature)) {
-        return false;
-    }
-    bool ok = standard_meter_accent_beats(signature, beats, NULL, RHYTHM_MAX_CELLS, &count);
-    bool compound = time_signature_is_compound(signature);
-    size_t groups = time_signature_group_count(signature);
-    time_signature_destroy(signature);
-    if (!ok || count == 0) {
-        return false;
-    }
-    /* The meters this operator writes: simple duple, triple and quadruple over quarters, and 6/8. */
-    if (compound && meter->beat_unit == 8 && meter->beats_per_bar == 6) {
-        *cells = groups; /* the two dotted-quarter beats */
-        return true;
-    }
-    if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {
-        *cells = count;
-        return true;
-    }
-    return false;
-}
-
-bool harmony_meter_supported(const PlanMeter *meter) {
-    size_t cells;
-    return harmony_rhythm_cells_per_bar(meter, &cells);
-}
 
 /* The chords a cadence needs before its last: a tonic, the dominant unless the phrase ends on it, and the plagal tonic and IV. */
 static size_t cells_before_last(CadenceType cadence) {

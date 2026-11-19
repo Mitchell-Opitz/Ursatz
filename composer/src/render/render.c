@@ -18,10 +18,10 @@
 #include <model/time/temporal_anchor.h>
 #include <model/time/time_signature.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_state.h>
 #include "render/render_notes.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 const char *rendered_part_lane_name(const RenderedPart *part) {
@@ -69,17 +69,17 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
 
 /* ----------------------------------------------------------------- material */
 
-static bool section_is_material(const PiecePlan *plan, NodeId id) {
+static bool section_is_material(const Plan *plan, NodeId id) {
     return plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL);
 }
 
 /* Whether the section is the seam: the copy of the body's first bar after the loop's end, which is not part of the piece. */
-static bool section_is_seam(const PiecePlan *plan, NodeId id) {
+static bool section_is_seam(const Plan *plan, NodeId id) {
     return plan_section_has_role(plan, id, SECTION_ROLE_SEAM);
 }
 
 /* True for a node that is, or sits under, the seam section. */
-static bool node_is_seam(const PiecePlan *plan, NodeId id) {
+static bool node_is_seam(const Plan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section_is_seam(plan, id)) {
             return true;
@@ -89,7 +89,7 @@ static bool node_is_seam(const PiecePlan *plan, NodeId id) {
 }
 
 /* True for a node that is, or sits under, a section marked MATERIAL. */
-static bool node_is_material(const PiecePlan *plan, NodeId id) {
+static bool node_is_material(const Plan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section_is_material(plan, id)) {
             return true;
@@ -102,7 +102,7 @@ static bool node_is_material(const PiecePlan *plan, NodeId id) {
  * Whether the lane sounds where the node is: false only when the section the node is in carries a LAYERS constraint
  * whose mask leaves the lane out (a layer of a layered form). A section with no LAYERS sounds every lane.
  */
-static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) {
+static bool lane_sounds_in(const Plan *plan, NodeId id, PlanLaneKind lane) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
@@ -114,7 +114,7 @@ static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) 
 }
 
 /* The end of the last section that is not material or the seam; zero when the form has no such section. */
-static Rational piece_end_of(const PiecePlan *plan) {
+static Rational piece_end_of(const Plan *plan) {
     Rational end = {0, 1};
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -161,7 +161,7 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
         return true;
     }
     Rational end;
-    if (lane == PLAN_LANE_KEY || lane == PLAN_LANE_METER) {
+    if (lane == PLAN_LANE_REGION || lane == PLAN_LANE_METER) {
         return plan_span_end(span, &end) == PLAN_OK && rational_cmp(end, range->start) > 0 &&
                rational_cmp(span.start, range_end(range)) < 0;
     }
@@ -171,14 +171,14 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
 /* ----------------------------------------------------------------- keys */
 
 /* The tonic of a key as the key spells it. */
-static bool key_tonic(const AnalysisKey *key, PitchLetter *letter, int *accidental) {
+static bool key_tonic(const SpelledKey *key, PitchLetter *letter, int *accidental) {
     *letter = key->tonic_letter;
     *accidental = key->tonic_accidental;
     return true;
 }
 
 /* The signature of a key as sharps (positive) or flats (negative); 0 for a tonic the library cannot spell. */
-static int key_sharps_flats(const AnalysisKey *key) {
+static int key_sharps_flats(const SpelledKey *key) {
     PitchLetter letter;
     int accidental;
     int fifths = 0;
@@ -192,7 +192,7 @@ static int key_sharps_flats(const AnalysisKey *key) {
 typedef struct {
     LaneSpanId span;
     PlanSpan plan_span;
-    AnalysisKey key;
+    SpelledKey key;
 } KeySource;
 
 static bool starts_before(PlanSpan a, PlanSpan b) {
@@ -200,8 +200,8 @@ static bool starts_before(PlanSpan a, PlanSpan b) {
 }
 
 /* The last key that starts at or before onset, or NULL when none does. */
-static const AnalysisKey *key_in_force(const KeySource *keys, size_t count, Rational onset) {
-    const AnalysisKey *in_force = NULL;
+static const SpelledKey *key_in_force(const KeySource *keys, size_t count, Rational onset) {
+    const SpelledKey *in_force = NULL;
     for (size_t i = 0; i < count; i++) {
         if (rational_cmp(keys[i].plan_span.start, onset) <= 0) {
             in_force = &keys[i].key;
@@ -225,7 +225,7 @@ typedef struct {
  * A pitch as written in a key (none: C major). A note of the key's scale takes its signature spelling; any other is
  * placed on the line of fifths, its sharp spelling in a sharp key or none, its flat spelling in a flat key.
  */
-static Spelling spell(int midi, const AnalysisKey *key) {
+static Spelling spell(int midi, const SpelledKey *key) {
     int pitch_class = util_pitch_class(midi);
     int sharps_flats = key ? key_sharps_flats(key) : 0;
     PitchLetter tonic_letter = PITCH_LETTER_C;
@@ -322,7 +322,7 @@ static size_t find_part(const RenderedPart *parts, size_t count, PlanLaneKind la
 }
 
 /* Builds one NoteEvent and its pitch value. Everything is freed again on failure. */
-static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *part, const AnalysisKey *key,
+static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *part, const SpelledKey *key,
                                    const TuningSystem *tuning, NoteEvent **out_event,
                                    PitchNumericValue **out_value) {
     EntityID *id = NULL;
@@ -371,7 +371,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
 
 /* ------------------------------------------------------------------ meter */
 
-static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t count, const PiecePlan *plan,
+static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t count, const Plan *plan,
                                         const PlanSpan *range, MeterMap **out) {
     *out = NULL;
     if (count == 0) {
@@ -447,7 +447,7 @@ static bool add_skip(RenderSkip **skipped, size_t *count, size_t *capacity, Lane
 }
 
 /* Sorts span ids by the start of their spans. */
-static void sort_by_start(const PiecePlan *plan, LaneSpanId *ids, size_t count) {
+static void sort_by_start(const Plan *plan, LaneSpanId *ids, size_t count) {
     for (size_t i = 1; i < count; i++) {
         LaneSpanId moving = ids[i];
         size_t position = i;
@@ -473,7 +473,7 @@ static PlanRenderResult tuning_create(TuningSystem **out) {
     return PLAN_RENDER_OK;
 }
 
-static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+static PlanRenderResult render_into(const Plan *plan, const PlanSpan *range, RenderedPlan *out) {
     size_t span_count = plan_lane_span_count(plan);
     size_t skipped_capacity = 0;
     LaneSpanId *meter_spans = calloc(span_count + 1, sizeof(LaneSpanId));
@@ -525,7 +525,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
             }
         } else if (lane == PLAN_LANE_METER) {
             meter_spans[meter_count++] = id;
-        } else if (lane == PLAN_LANE_KEY) {
+        } else if (lane == PLAN_LANE_REGION) {
             key_spans[key_count++] = id;
         } else if (plan_is_note_lane(lane)) {
             note_spans[note_span_count++] = id;
@@ -545,12 +545,12 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
     for (size_t i = 0; result == PLAN_RENDER_OK && i < key_count; i++) {
         PlanSpan span = plan_lane_span_span(plan, key_spans[i]);
         Rational key_start = span_start_in_range(span, range);
-        const AnalysisKey *key = &plan_lane_span_payload(plan, key_spans[i])->key;
+        const SpelledKey *key = &plan_lane_span_payload(plan, key_spans[i])->region;
         keys[i].span = key_spans[i];
         keys[i].plan_span = span;
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
-        out->keys[i].tonic = analysis_key_tonic_pitch_class(key);
+        out->keys[i].tonic = spelled_key_tonic_pitch_class(key);
         out->keys[i].material = key->material;
         out->keys[i].position = musical_time_of(key_start);
         out->key_count++;
@@ -630,7 +630,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         }
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < note_count; i++) {
-        const AnalysisKey *key = key_in_force(keys, key_count, notes[i].onset);
+        const SpelledKey *key = key_in_force(keys, key_count, notes[i].onset);
         NoteSource placed = notes[i];
         placed.onset = from_range_start(placed.onset, range);
         result = build_note(&placed, &out->parts[notes[i].part], key, tuning, &out->events[i],
@@ -656,7 +656,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
 
 /* ------------------------------------------------------------------ notes alone */
 
-PlanRenderResult render_notes(const RenderNote *notes, size_t count, const AnalysisKey *key, RenderedPlan *out) {
+PlanRenderResult render_notes(const RenderNote *notes, size_t count, const SpelledKey *key, RenderedPlan *out) {
     TuningSystem *tuning = NULL;
     NoteSource *sources = NULL;
     memset(out, 0, sizeof(*out));
@@ -715,13 +715,13 @@ PlanRenderResult render_notes(const RenderNote *notes, size_t count, const Analy
 
 /* ----------------------------------------------------------------- sections */
 
-static const char *section_label(const PiecePlan *plan, NodeId id) {
+static const char *section_label(const Plan *plan, NodeId id) {
     const SectionDescription *section = plan_node_section(plan, id);
     return section && section->letter[0] ? section->letter : plan_node_name(plan, id);
 }
 
 /* The sections that are not material and start inside the range (all of them without one), earliest first. */
-static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+static PlanRenderResult render_sections(const Plan *plan, const PlanSpan *range, RenderedPlan *out) {
     NodeId root = plan_root(plan);
     size_t child_count = root == PLAN_NODE_NONE ? 0 : plan_node_child_count(plan, root);
     if (child_count == 0) {
@@ -777,7 +777,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
     return result;
 }
 
-static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+static PlanRenderResult render_checked(const Plan *plan, const PlanSpan *range, RenderedPlan *out) {
     if (!out) {
         return PLAN_RENDER_ERR_NULL;
     }
@@ -804,6 +804,6 @@ static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *ra
     return result;
 }
 
-PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
+PlanRenderResult plan_render(const Plan *plan, RenderedPlan *out) {
     return render_checked(plan, NULL, out);
 }

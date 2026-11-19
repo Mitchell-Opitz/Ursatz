@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
@@ -37,7 +37,7 @@ static char *export_request(const char *plan_text, const char *options) {
 }
 
 static void test_versions(void) {
-    assert(strcmp(composer_api_version(), "3.0") == 0);
+    assert(strcmp(composer_api_version(), "3.2") == 0);
     assert(strcmp(test_status_name(COMPOSER_OK), "ok") == 0);
     assert(strcmp(test_status_name(COMPOSER_ERR_REQUEST), "request") == 0);
     assert(strcmp(test_status_name(COMPOSER_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
@@ -52,10 +52,12 @@ static void test_versions(void) {
     char expected[64];
     snprintf(expected, sizeof expected, "\"composer_version\":\"%s\"", composer_version());
     assert(strstr(response.json, expected));
-    assert(strstr(response.json, "\"api_version\":\"3.0\""));
+    assert(strstr(response.json, "\"api_version\":\"3.2\""));
     assert(strstr(response.json, "\"analyzer_version\"") == NULL); /* R-620: the Composer knows no Analyzer */
     assert(strstr(response.json, "\"ursatz_commit\":\""));
-    snprintf(expected, sizeof expected, "\"plan_format_version\":%d", URSATZ_COMPOSER_PLAN_FORMAT_VERSION);
+    snprintf(expected, sizeof expected, "\"composition_key\":\"%s\"", composer_composition_key());
+    assert(strstr(response.json, expected));
+    snprintf(expected, sizeof expected, "\"plan_format_version\":%d", URSATZ_PLAN_FORMAT_VERSION);
     assert(strstr(response.json, expected));
     write_response("versions", &response);
     composer_response_destroy(&response);
@@ -95,7 +97,7 @@ static void test_export(void) {
     request = export_request(plan_text, "\"plan_file\":true");
     assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
-    assert(response.plan_json && strstr(response.plan_json, "\"format\": \"ursatz-composer-plan\""));
+    assert(response.plan_json && strstr(response.plan_json, "\"format\": \"ursatz-plan\""));
     assert(!response.midi && !response.musicxml);
     /* The text is a plan file: it exports to the same MIDI. */
     request = export_request(response.plan_json, "\"midi\":true");

@@ -5,7 +5,7 @@
 #include <ursatz_composer/motive.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* The motive request members (docs/api.md): meter, key, pickup, harmony, features, role, and the input to read. */
 
@@ -36,11 +36,6 @@ static ComposerStatus string_member(const cJSON *object, const char *base, const
     }
     *out = item->valuestring;
     return COMPOSER_OK;
-}
-
-static bool has_member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
-    return item && !cJSON_IsNull(item);
 }
 
 ComposerStatus api_read_motive_extras(const cJSON *object, const char *base, const PlanMeter *meter,
@@ -252,12 +247,12 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
     memset(&detail, 0, sizeof detail);
     MotiveResult result = bytes ? motive_load(bytes, size, format, &options, out, &detail)
                                 : motive_load(text, strlen(text), format, &options, out, &detail);
-    bool extras = has_member(request, "harmony") || has_member(request, "features") || has_member(request, "role");
-    if (result == MOTIVE_OK && (has_member(request, "pickup") || extras)) {
+    bool extras = api_has_member(request, "harmony") || api_has_member(request, "features") || api_has_member(request, "role");
+    if (result == MOTIVE_OK && (api_has_member(request, "pickup") || extras)) {
         /* The pickup and the chord onsets are in beats of the motive's meter, which an input may declare, so they are
            read after the first load. */
         PlanMeter meter = motive_meter(out);
-        if (has_member(request, "pickup")) {
+        if (api_has_member(request, "pickup")) {
             status = read_pickup(request, base, meter.beat_unit, &options, error);
             if (status != COMPOSER_OK) {
                 return status;
@@ -391,7 +386,7 @@ static ComposerStatus read_tone_overrides(const char *what, const char *base, co
 }
 
 ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
-                                       const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error) {
+                                       const PlanMeter *meter, const SpelledKey *key, Motive *out, ComposerError *error) {
     const char *degrees;
     const char *harmony;
     const char *form;

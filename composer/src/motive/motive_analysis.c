@@ -9,8 +9,9 @@
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
 #include "motive/motive_segments.h"
-#include "plan/plan_json_internal.h"
+#include "util/composer_json.h"
 #include "util/util.h"
+#include <plan/plan_common.h>
 
 static long floor_div(long a, long b) {
     long quotient = a / b;
@@ -52,19 +53,19 @@ static MotiveDegree degree_of(const PitchMaterial *material, int relative) {
 }
 
 /* The step of the key's scale a pitch is on: octaves of 7 from the tonic's pitch class, and the degree in the octave. */
-void motive_scale_position(const AnalysisKey *key, int pitch, long *position, int *alteration) {
-    int relative = pitch - analysis_key_tonic_pitch_class(key);
+void motive_scale_position(const SpelledKey *key, int pitch, long *position, int *alteration) {
+    int relative = pitch - spelled_key_tonic_pitch_class(key);
     long octave = floor_div(relative, 12);
     MotiveDegree degree = degree_of(key->material, (int)(relative - octave * 12));
     *position = octave * 7 + (degree.degree - 1);
     *alteration = degree.alteration;
 }
 
-int motive_position_pitch(const AnalysisKey *key, long position, int alteration) {
+int motive_position_pitch(const SpelledKey *key, long position, int alteration) {
     Scale scale = scale_of(key->material);
     long octave = floor_div(position, 7);
     int degree = (int)(position - octave * 7) + 1;
-    return (int)(analysis_key_tonic_pitch_class(key) + octave * 12 + scale.semitones[degree] + alteration);
+    return (int)(spelled_key_tonic_pitch_class(key) + octave * 12 + scale.semitones[degree] + alteration);
 }
 
 /* ---------------------------------------------------------------- contour */
@@ -107,7 +108,9 @@ static bool power_of_two(unsigned long value) {
 }
 
 static void analyze_rhythm(const Motive *motive, MotiveAnalysis *out) {
-    Rational bar = motive_time(motive_meter(motive).beats_per_bar, (unsigned long)motive_meter(motive).beat_unit);
+    Rational bar;
+    PlanMeter bar_meter = motive_meter(motive);
+    plan_meter_bar_length(&bar_meter, &bar);
     Rational previous_end = motive_time(0, 1);
     Rational pickup = motive_pickup(motive);
     for (size_t i = 0; i < motive->note_count; i++) {
@@ -285,7 +288,9 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     if (result.rhythm_known) {
         analyze_rhythm(motive, &result);
     } else {
-        Rational bar = motive_time(motive_meter(motive).beats_per_bar, (unsigned long)motive_meter(motive).beat_unit);
+        Rational bar;
+        PlanMeter bar_meter = motive_meter(motive);
+        plan_meter_bar_length(&bar_meter, &bar);
         result.bars = motive_time(motive->length.num * (long)bar.den, motive->length.den * (unsigned long)bar.num);
     }
     if (result.harmony_known) {
@@ -315,9 +320,9 @@ static const char *direction_name(ContourDirection direction) {
     return direction == CONTOUR_DIRECTION_UP ? "up" : direction == CONTOUR_DIRECTION_DOWN ? "down" : "same";
 }
 
-static void key_text(const AnalysisKey *key, char *out, size_t size) {
+static void key_text(const SpelledKey *key, char *out, size_t size) {
     /* The minor key's tonic is named as a minor key is written (key_tonic_name_minor, R-582: Eb minor, not D# minor). */
-    int tonic = analysis_key_tonic_pitch_class(key);
+    int tonic = spelled_key_tonic_pitch_class(key);
     snprintf(out, size, "%s %s",
              composer_key_is_minor(key) ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
              composer_key_is_minor(key) ? "minor" : "major");
@@ -361,13 +366,13 @@ static char *base_harmony_text(const Motive *motive, const MotiveBaseHarmony *ba
 /* ------------------------------------------------------------------- JSON */
 
 static bool add_string(cJSON *object, const char *key, const char *value) {
-    return plan_json_add(object, key, cJSON_CreateString(value));
+    return composer_json_add(object, key, cJSON_CreateString(value));
 }
 
 static cJSON *degree_json(const MotiveDegree *degree) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "degree", json_number(degree->degree)) &&
-                    plan_json_add(object, "alteration", json_number(degree->alteration)))) {
+    if (object && !(composer_json_add(object, "degree", composer_json_number(degree->degree)) &&
+                    composer_json_add(object, "alteration", composer_json_number(degree->alteration)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -382,14 +387,14 @@ static cJSON *intervals_json(const MotiveAnalysis *analysis) {
     for (size_t i = 0; array && i < analysis->interval_count; i++) {
         const MotiveInterval *interval = &analysis->intervals[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && plan_json_add(object, "semitones", json_number(interval->semitones)) &&
-                  plan_json_add(object, "steps", interval->has_steps ? json_number(interval->steps) : cJSON_CreateNull());
+        bool ok = object && composer_json_add(object, "semitones", composer_json_number(interval->semitones)) &&
+                  composer_json_add(object, "steps", interval->has_steps ? composer_json_number(interval->steps) : cJSON_CreateNull());
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
             return NULL;
         }
-        if (!plan_json_append(array, object)) {
+        if (!composer_json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -405,13 +410,13 @@ static cJSON *contour_json(const MotiveAnalysis *analysis) {
     cJSON *directions = cJSON_CreateArray();
     bool ok = object && directions;
     for (size_t i = 0; ok && i < analysis->interval_count; i++) {
-        ok = plan_json_append(directions, cJSON_CreateString(direction_name(analysis->directions[i])));
+        ok = composer_json_append(directions, cJSON_CreateString(direction_name(analysis->directions[i])));
     }
     if (ok) {
         ok = add_string(object, "shape", motive_shape_name(analysis->shape));
     }
     if (ok) {
-        ok = plan_json_add(object, "directions", directions);
+        ok = composer_json_add(object, "directions", directions);
         directions = NULL;
     }
     cJSON_Delete(directions);
@@ -430,19 +435,19 @@ static cJSON *rhythm_json(const MotiveAnalysis *analysis) {
     for (size_t i = 0; array && i < analysis->note_count; i++) {
         const MotiveRhythmNote *rhythm = &analysis->rhythm[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && plan_json_add(object, "onset", rational_json(rhythm->onset.num, rhythm->onset.den)) &&
-                  plan_json_add(object, "duration", rational_json(rhythm->duration.num, rhythm->duration.den)) &&
-                  plan_json_add(object, "bar", json_number(rhythm->bar)) &&
-                  plan_json_add(object, "beat", rational_json(rhythm->beat.num, rhythm->beat.den)) &&
-                  plan_json_add(object, "on_beat", cJSON_CreateBool(rhythm->on_beat)) &&
-                  plan_json_add(object, "dotted", cJSON_CreateBool(rhythm->dotted)) &&
-                  plan_json_add(object, "rest_before", rational_json(rhythm->rest_before.num, rhythm->rest_before.den));
+        bool ok = object && composer_json_add(object, "onset", composer_json_rational(rhythm->onset.num, rhythm->onset.den)) &&
+                  composer_json_add(object, "duration", composer_json_rational(rhythm->duration.num, rhythm->duration.den)) &&
+                  composer_json_add(object, "bar", composer_json_number(rhythm->bar)) &&
+                  composer_json_add(object, "beat", composer_json_rational(rhythm->beat.num, rhythm->beat.den)) &&
+                  composer_json_add(object, "on_beat", cJSON_CreateBool(rhythm->on_beat)) &&
+                  composer_json_add(object, "dotted", cJSON_CreateBool(rhythm->dotted)) &&
+                  composer_json_add(object, "rest_before", composer_json_rational(rhythm->rest_before.num, rhythm->rest_before.den));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
             return NULL;
         }
-        if (!plan_json_append(array, object)) {
+        if (!composer_json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -455,9 +460,9 @@ static cJSON *range_json(const MotiveAnalysis *analysis) {
         return cJSON_CreateNull();
     }
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "lowest", json_number(analysis->lowest)) &&
-                    plan_json_add(object, "highest", json_number(analysis->highest)) &&
-                    plan_json_add(object, "semitones", json_number(analysis->range_semitones)))) {
+    if (object && !(composer_json_add(object, "lowest", composer_json_number(analysis->lowest)) &&
+                    composer_json_add(object, "highest", composer_json_number(analysis->highest)) &&
+                    composer_json_add(object, "semitones", composer_json_number(analysis->range_semitones)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -472,12 +477,12 @@ static cJSON *degrees_json(const MotiveAnalysis *analysis) {
     cJSON *all = cJSON_CreateArray();
     bool ok = object && all;
     for (size_t i = 0; ok && i < analysis->note_count; i++) {
-        ok = plan_json_append(all, degree_json(&analysis->degrees[i]));
+        ok = composer_json_append(all, degree_json(&analysis->degrees[i]));
     }
-    ok = ok && plan_json_add(object, "start", degree_json(&analysis->degrees[0])) &&
-         plan_json_add(object, "end", degree_json(&analysis->degrees[analysis->note_count - 1]));
+    ok = ok && composer_json_add(object, "start", degree_json(&analysis->degrees[0])) &&
+         composer_json_add(object, "end", degree_json(&analysis->degrees[analysis->note_count - 1]));
     if (ok) {
-        ok = plan_json_add(object, "all", all);
+        ok = composer_json_add(object, "all", all);
         all = NULL;
     }
     cJSON_Delete(all);
@@ -491,23 +496,23 @@ static cJSON *degrees_json(const MotiveAnalysis *analysis) {
 static cJSON *harmony_json(const MotiveAnalysis *analysis) {
     cJSON *object = cJSON_CreateObject();
     cJSON *candidates = cJSON_CreateArray();
-    bool ok = object && candidates && plan_json_add(object, "key_known", cJSON_CreateBool(analysis->harmony_known));
+    bool ok = object && candidates && composer_json_add(object, "key_known", cJSON_CreateBool(analysis->harmony_known));
     for (size_t i = 0; ok && i < analysis->candidate_count; i++) {
         const MotiveChordCandidate *candidate = &analysis->candidates[i];
         cJSON *entry = cJSON_CreateObject();
         ok = entry && add_string(entry, "roman_numeral", candidate->roman) &&
              add_string(entry, "function", util_function_name(candidate->has_function, candidate->function)) &&
-             plan_json_add(entry, "fit", cJSON_CreateNumber(candidate->fit)) &&
-             plan_json_add(entry, "chord_tones", json_number((long)candidate->chord_tones)) &&
-             plan_json_add(entry, "non_chord_tones", json_number((long)candidate->non_chord_tones));
+             composer_json_add(entry, "fit", cJSON_CreateNumber(candidate->fit)) &&
+             composer_json_add(entry, "chord_tones", composer_json_number((long)candidate->chord_tones)) &&
+             composer_json_add(entry, "non_chord_tones", composer_json_number((long)candidate->non_chord_tones));
         if (!ok) {
             cJSON_Delete(entry);
             break;
         }
-        ok = plan_json_append(candidates, entry);
+        ok = composer_json_append(candidates, entry);
     }
     if (ok) {
-        ok = plan_json_add(object, "candidates", candidates);
+        ok = composer_json_add(object, "candidates", candidates);
         candidates = NULL;
     }
     cJSON_Delete(candidates);
@@ -523,8 +528,8 @@ static cJSON *key_json(const MotiveAnalysis *analysis) {
         return cJSON_CreateNull();
     }
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&analysis->key))) &&
-              add_string(object, "material", composer_key_material_id(&analysis->key)) &&
+    bool ok = object && composer_json_add(object, "tonic_pitch_class", composer_json_number(spelled_key_tonic_pitch_class(&analysis->key))) &&
+              add_string(object, "material", plan_key_material_id(&analysis->key)) &&
               add_string(object, "source", key_source_name(analysis->key_source));
     if (!ok) {
         cJSON_Delete(object);
@@ -540,24 +545,24 @@ static cJSON *rendered_json(const Motive *rendered) {
     bool ok = object && notes;
     if (ok && rendered->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         char text[32];
-        AnalysisKey rendered_key = motive_key(rendered);
+        SpelledKey rendered_key = motive_key(rendered);
         key_text(&rendered_key, text, sizeof(text));
         ok = add_string(object, "key", text);
     } else if (ok) {
-        ok = plan_json_add(object, "key", cJSON_CreateNull());
+        ok = composer_json_add(object, "key", cJSON_CreateNull());
     }
     for (size_t i = 0; ok && i < rendered->note_count; i++) {
         cJSON *note = cJSON_CreateObject();
-        ok = note && plan_json_add(note, "midi_pitch", json_number(motive_pitch(rendered, i))) &&
-             plan_json_add(note, "offset", rational_json(rendered->notes[i].onset.num, rendered->notes[i].onset.den)) &&
-             plan_json_add(note, "duration", rational_json(rendered->notes[i].duration.num, rendered->notes[i].duration.den));
+        ok = note && composer_json_add(note, "midi_pitch", composer_json_number(motive_pitch(rendered, i))) &&
+             composer_json_add(note, "offset", composer_json_rational(rendered->notes[i].onset.num, rendered->notes[i].onset.den)) &&
+             composer_json_add(note, "duration", composer_json_rational(rendered->notes[i].duration.num, rendered->notes[i].duration.den));
         if (ok) {
             cJSON_AddItemToArray(notes, note);
         } else {
             cJSON_Delete(note);
         }
     }
-    ok = ok && plan_json_add(object, "notes", notes);
+    ok = ok && composer_json_add(object, "notes", notes);
     if (!ok) {
         cJSON_Delete(notes);
         cJSON_Delete(object);
@@ -573,7 +578,7 @@ static cJSON *base_harmony_json(const Motive *motive, const MotiveAnalysis *anal
     char *text = base_harmony_text(motive, &analysis->base_harmony);
     cJSON *object = text ? cJSON_CreateObject() : NULL;
     bool ok = object && add_string(object, "text", text) &&
-              plan_json_add(object, "given", cJSON_CreateBool(analysis->base_harmony.given));
+              composer_json_add(object, "given", cJSON_CreateBool(analysis->base_harmony.given));
     free(text);
     if (!ok) {
         cJSON_Delete(object);
@@ -586,12 +591,12 @@ static cJSON *base_harmony_json(const Motive *motive, const MotiveAnalysis *anal
 static cJSON *segments_json(const MotiveAnalysis *analysis) {
     cJSON *object = cJSON_CreateObject();
     cJSON *items = cJSON_CreateArray();
-    bool ok = object && items && plan_json_add(object, "given", cJSON_CreateBool(analysis->segments_given));
+    bool ok = object && items && composer_json_add(object, "given", cJSON_CreateBool(analysis->segments_given));
     for (size_t i = 0; ok && i < analysis->segment_count; i++) {
         cJSON *item = cJSON_CreateObject();
         ok = item && add_string(item, "label", analysis->segments[i].label) &&
-             plan_json_add(item, "first", json_number((long)analysis->segments[i].first)) &&
-             plan_json_add(item, "last", json_number((long)analysis->segments[i].last));
+             composer_json_add(item, "first", composer_json_number((long)analysis->segments[i].first)) &&
+             composer_json_add(item, "last", composer_json_number((long)analysis->segments[i].last));
         if (ok) {
             cJSON_AddItemToArray(items, item);
         } else {
@@ -599,7 +604,7 @@ static cJSON *segments_json(const MotiveAnalysis *analysis) {
         }
     }
     if (ok) {
-        ok = plan_json_add(object, "items", items);
+        ok = composer_json_add(object, "items", items);
         items = NULL;
     }
     cJSON_Delete(items);
@@ -622,11 +627,11 @@ static cJSON *tones_json(const Motive *motive, const MotiveAnalysis *analysis, c
         const MotiveToneLabel *label = &analysis->tones[i];
         cJSON *tone = cJSON_CreateObject();
         const char *type = label->role == MOTIVE_TONE_NON_CHORD ? motive_tone_type_name(label->type) : NULL;
-        ok = tone && plan_json_add(tone, "note", json_number((long)i + 1)) && add_string(tone, "role", tone_role_name(label->role)) &&
-             plan_json_add(tone, "type", type ? cJSON_CreateString(type) : cJSON_CreateNull()) &&
-             plan_json_add(tone, "resolves_to", label->resolves_to >= 0 ? json_number(label->resolves_to + 1) : cJSON_CreateNull()) &&
-             plan_json_add(tone, "unresolved", cJSON_CreateBool(label->unresolved)) &&
-             plan_json_add(tone, "overridden", cJSON_CreateBool(label->overridden));
+        ok = tone && composer_json_add(tone, "note", composer_json_number((long)i + 1)) && add_string(tone, "role", tone_role_name(label->role)) &&
+             composer_json_add(tone, "type", type ? cJSON_CreateString(type) : cJSON_CreateNull()) &&
+             composer_json_add(tone, "resolves_to", label->resolves_to >= 0 ? composer_json_number(label->resolves_to + 1) : cJSON_CreateNull()) &&
+             composer_json_add(tone, "unresolved", cJSON_CreateBool(label->unresolved)) &&
+             composer_json_add(tone, "overridden", cJSON_CreateBool(label->overridden));
         if (ok) {
             cJSON_AddItemToArray(tones, tone);
         } else {
@@ -660,7 +665,7 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
     }
     cJSON *document = cJSON_CreateObject();
     cJSON *body = cJSON_CreateObject();
-    bool ok = document && body && plan_json_add(document, "motive", motive_json_object(motive));
+    bool ok = document && body && composer_json_add(document, "motive", motive_json_object(motive));
     char beats[32];
     if (ok) {
         pickup_beats_text(motive, beats, sizeof(beats));
@@ -669,42 +674,42 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
     char *degrees_text = ok ? motive_to_degrees_text(motive) : NULL;
     char *rhythm_text = ok && motive->form == MOTIVE_SKETCH_FORM_RHYTHM ? motive_to_rhythm_text(motive) : NULL;
     char *contour_text = ok && motive->form == MOTIVE_SKETCH_FORM_CONTOUR ? motive_to_contour_text(motive) : NULL;
-    ok = ok && plan_json_add(body, "form", cJSON_CreateString(motive_form_name(analysis->form))) &&
-         plan_json_add(body, "pickup", cJSON_CreateString(beats)) &&
-         plan_json_add(body, "notes_text", notes_text ? cJSON_CreateString(notes_text) : cJSON_CreateNull()) &&
-         plan_json_add(body, "degrees_text", degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull());
+    ok = ok && composer_json_add(body, "form", cJSON_CreateString(motive_form_name(analysis->form))) &&
+         composer_json_add(body, "pickup", cJSON_CreateString(beats)) &&
+         composer_json_add(body, "notes_text", notes_text ? cJSON_CreateString(notes_text) : cJSON_CreateNull()) &&
+         composer_json_add(body, "degrees_text", degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull());
     if (ok && motive->form == MOTIVE_SKETCH_FORM_RHYTHM) {
-        ok = rhythm_text && plan_json_add(body, "rhythm_text", cJSON_CreateString(rhythm_text));
+        ok = rhythm_text && composer_json_add(body, "rhythm_text", cJSON_CreateString(rhythm_text));
     }
     if (ok && motive->form == MOTIVE_SKETCH_FORM_CONTOUR) {
-        ok = contour_text && plan_json_add(body, "contour_text", cJSON_CreateString(contour_text));
+        ok = contour_text && composer_json_add(body, "contour_text", cJSON_CreateString(contour_text));
     }
     if (ok && motive->chord_count > 0) {
         char *harmony_text = motive_harmony_to_text(motive);
-        ok = harmony_text && plan_json_add(body, "harmony_text", cJSON_CreateString(harmony_text));
+        ok = harmony_text && composer_json_add(body, "harmony_text", cJSON_CreateString(harmony_text));
         free(harmony_text);
     }
     free(notes_text);
     free(degrees_text);
     free(rhythm_text);
     free(contour_text);
-    ok = ok && plan_json_add(body, "note_count", json_number((long)analysis->note_count)) &&
-         plan_json_add(body, "length", rational_json(analysis->length.num, analysis->length.den)) &&
-         plan_json_add(body, "bars", rational_json(analysis->bars.num, analysis->bars.den)) && plan_json_add(body, "key", key_json(analysis)) &&
-         plan_json_add(body, "intervals", intervals_json(analysis)) && plan_json_add(body, "contour", contour_json(analysis)) &&
-         plan_json_add(body, "rhythm", rhythm_json(analysis)) && plan_json_add(body, "range", range_json(analysis)) &&
-         plan_json_add(body, "scale_degrees", degrees_json(analysis)) &&
-         plan_json_add(body, "implied_harmony", harmony_json(analysis)) &&
-         plan_json_add(body, "base_harmony", base_harmony_json(motive, analysis)) &&
-         plan_json_add(body, "segments", segments_json(analysis));
+    ok = ok && composer_json_add(body, "note_count", composer_json_number((long)analysis->note_count)) &&
+         composer_json_add(body, "length", composer_json_rational(analysis->length.num, analysis->length.den)) &&
+         composer_json_add(body, "bars", composer_json_rational(analysis->bars.num, analysis->bars.den)) && composer_json_add(body, "key", key_json(analysis)) &&
+         composer_json_add(body, "intervals", intervals_json(analysis)) && composer_json_add(body, "contour", contour_json(analysis)) &&
+         composer_json_add(body, "rhythm", rhythm_json(analysis)) && composer_json_add(body, "range", range_json(analysis)) &&
+         composer_json_add(body, "scale_degrees", degrees_json(analysis)) &&
+         composer_json_add(body, "implied_harmony", harmony_json(analysis)) &&
+         composer_json_add(body, "base_harmony", base_harmony_json(motive, analysis)) &&
+         composer_json_add(body, "segments", segments_json(analysis));
     cJSON *warnings = NULL;
     cJSON *tones = ok ? tones_json(motive, analysis, &warnings) : NULL;
-    ok = ok && tones && plan_json_add(body, "tones", tones) && plan_json_add(body, "warnings", warnings);
+    ok = ok && tones && composer_json_add(body, "tones", tones) && composer_json_add(body, "warnings", warnings);
     if (ok) {
-        ok = plan_json_add(document, "analysis", body);
+        ok = composer_json_add(document, "analysis", body);
         body = NULL;
     }
-    ok = ok && (!rendered || plan_json_add(document, "rendered", rendered_json(rendered)));
+    ok = ok && (!rendered || composer_json_add(document, "rendered", rendered_json(rendered)));
     cJSON_Delete(body);
     if (!ok) {
         cJSON_Delete(document);

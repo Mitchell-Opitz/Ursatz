@@ -300,7 +300,7 @@ bool motive_tones_constraint(const Motive *motive, PlanConstraint *out) {
     return true;
 }
 
-PlanResult motive_node_write_tones(PiecePlan *plan, NodeId node, const Motive *motive) {
+PlanResult motive_node_write_tones(Plan *plan, NodeId node, const Motive *motive) {
     PlanConstraint tones;
     if (!motive_tones_constraint(motive, &tones)) {
         return PLAN_OK;

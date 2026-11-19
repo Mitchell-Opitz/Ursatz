@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
-#include "util/plan_util.h"
+#include "structure/request_parse.h"
+#include "structure/plan_util.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 static const char *skip_reason_text(RenderSkipReason reason) {
     return reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized"
@@ -40,7 +42,7 @@ static ComposerStatus read_loop(const cJSON *request, PlanExportOptions *options
         return api_fail(error, COMPOSER_ERR_REQUEST, "/loop", "loop must be {\"start\": \"2/1\", \"end\": \"14/1\"}");
     }
     static const char *const NAMES[2] = {"start", "end"};
-    ComposerRatio values[2];
+    Rational values[2];
     for (int i = 0; i < 2; i++) {
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(loop, NAMES[i]);
         char path[24];
@@ -50,12 +52,12 @@ static ComposerStatus read_loop(const cJSON *request, PlanExportOptions *options
                             NAMES[i]);
         }
     }
-    if (values[1].numerator * values[0].denominator <= values[0].numerator * values[1].denominator) {
+    if (values[1].num * values[0].den <= values[0].num * values[1].den) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/loop", "loop end must come after loop start");
     }
     options->loop_markers = true;
-    options->loop_start = (Rational){(long long)values[0].numerator, (long long)values[0].denominator};
-    options->loop_end = (Rational){(long long)values[1].numerator, (long long)values[1].denominator};
+    options->loop_start = (Rational){(long long)values[0].num, (long long)values[0].den};
+    options->loop_end = (Rational){(long long)values[1].num, (long long)values[1].den};
     return COMPOSER_OK;
 }
 
@@ -116,9 +118,9 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     if (!plan_text) {
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError load_error;
-    PlanResult loaded = plan_from_json_resolved(context->knowledge, plan_text, &plan, &load_error);
+    PlanResult loaded = plan_from_json_resolved(context->knowledge, plan_text, composer_plan_read_hooks(), &plan, &load_error);
     free(plan_text);
     if (loaded != PLAN_OK) {
         if (loaded == PLAN_ERR_ALLOC) {
@@ -141,7 +143,8 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     if (want_plan_file) {
         /* The plan as the library writes a plan file; with nothing else asked for, nothing is rendered. */
         PlanJsonError write_error;
-        out->plan_json = plan_to_json(plan, &write_error);
+        PlanProducer producer = composer_plan_producer(context->knowledge);
+        out->plan_json = plan_to_json(plan, &producer, &write_error);
         if (!out->plan_json) {
             plan_destroy(plan);
             return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "/plan", "cannot write plan: %s", write_error.message);

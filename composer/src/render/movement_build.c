@@ -21,7 +21,7 @@
 
 #define SOLO_PIANO_ENSEMBLE "omt.instrument.solo-piano"
 
-static void set_message(PlanExportError *error, const char *format, ...) {
+void render_set_message(PlanExportError *error, const char *format, ...) {
     if (!error) {
         return;
     }
@@ -38,13 +38,13 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
         return PLAN_EXPORT_OK;
     }
     if (options->tempo_numerator == 0 || options->tempo_denominator == 0) {
-        set_message(error, "the tempo must be a ratio of two numbers of 1 or more");
+        render_set_message(error, "the tempo must be a ratio of two numbers of 1 or more");
         return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     unsigned long long numerator = options->tempo_numerator;
     unsigned long long micros = (60000000ULL * options->tempo_denominator + numerator / 2) / numerator;
     if (micros < 1 || micros > 0xFFFFFFULL) {
-        set_message(error, "a tempo of %lu/%lu quarter notes per minute cannot be written", options->tempo_numerator,
+        render_set_message(error, "a tempo of %lu/%lu quarter notes per minute cannot be written", options->tempo_numerator,
                     options->tempo_denominator);
         return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
     }
@@ -59,7 +59,7 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
     }
     if (made != TEMPO_MAP_OK) {
         entity_id_destroy(id);
-        set_message(error, "out of memory");
+        render_set_message(error, "out of memory");
         return PLAN_EXPORT_ERR_ALLOC;
     }
     return PLAN_EXPORT_OK;
@@ -67,14 +67,33 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
 
 static PlanExportResult realization_failed(RealizationResult result, const char *what, PlanExportError *error) {
     if (result == REALIZATION_ERR_ALLOC) {
-        set_message(error, "out of memory");
+        render_set_message(error, "out of memory");
         return PLAN_EXPORT_ERR_ALLOC;
     }
-    set_message(error, "the plan's %s cannot be held as a movement (realization result %d)", what, (int)result);
+    render_set_message(error, "the plan's %s cannot be held as a movement (realization result %d)", what, (int)result);
     return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
 }
 
 static const char *const OPERATION_NAMES[] = {"", "copy", "motive", "return"};
+
+/* The id of the line note made from rendered event `event`: `n<plan note id>`, or `e<event + 1>` for a note with no plan note. */
+static void line_note_id(const RenderedPlan *rendered, size_t event, char *out, size_t size) {
+    if (rendered->note_ids[event] != PLAN_NOTE_NONE) {
+        snprintf(out, size, "n%zu", (size_t)rendered->note_ids[event]);
+    } else {
+        snprintf(out, size, "e%zu", event + 1);
+    }
+}
+
+bool rendered_plan_note_id(const RenderedPlan *rendered, size_t event, char out[REALIZATION_ID_MAX]) {
+    if (!rendered || event >= rendered->count) {
+        return false;
+    }
+    char line_note[32]; /* "n" or "e" and a number */
+    line_note_id(rendered, event, line_note, sizeof(line_note));
+    snprintf(out, REALIZATION_ID_MAX, "piano-%s", line_note);
+    return true;
+}
 
 static void part_line_id(const RenderedPart *part, char *out, size_t size) {
     if (part->lane == PLAN_LANE_INNER_VOICE) {
@@ -107,11 +126,7 @@ static PlanExportResult build_line(const RenderedPlan *rendered, size_t part, Li
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
         LineNote note;
         memset(&note, 0, sizeof(note));
-        if (rendered->note_ids[i] != PLAN_NOTE_NONE) {
-            snprintf(note.id, sizeof(note.id), "n%zu", (size_t)rendered->note_ids[i]);
-        } else {
-            snprintf(note.id, sizeof(note.id), "e%zu", i + 1);
-        }
+        line_note_id(rendered, i, note.id, sizeof(note.id));
         note.onset = *onset;
         note.duration = *note_event_duration(event);
         note.midi = (int)pitch_numeric_value_position_numerator(rendered->pitch_values[i]);
@@ -175,11 +190,11 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
                                     Work **out, PlanExportError *error) {
     PlanExportOptions options = options_in ? *options_in : plan_export_options_default();
     if (!rendered || !out || !knowledge) {
-        set_message(error, "rendered plan, knowledge snapshot or output is NULL");
+        render_set_message(error, "rendered plan, knowledge snapshot or output is NULL");
         return PLAN_EXPORT_ERR_NULL;
     }
     if (rendered->count == 0) {
-        set_message(error, "the plan has no Given or Realized notes to write");
+        render_set_message(error, "the plan has no Given or Realized notes to write");
         return PLAN_EXPORT_ERR_NO_CONTENT;
     }
     Work *work = NULL;
@@ -205,7 +220,7 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
         MeterMap *copy = NULL;
         if (meter_map_copy(rendered->meter_map, &copy) != METER_MAP_OK) {
             status = PLAN_EXPORT_ERR_ALLOC;
-            set_message(error, "out of memory");
+            render_set_message(error, "out of memory");
         } else {
             movement_set_meter_map(movement, copy);
         }
@@ -243,7 +258,7 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
     const EnsembleTemplate *ensemble = ensemble_id ? knowledge_snapshot_ensemble(knowledge, ensemble_id) : NULL;
     const Instrument *piano = ensemble && ensemble->slot_count > 0 ? knowledge_snapshot_instrument(knowledge, ensemble->slots[0].instrument) : NULL;
     if (status == PLAN_EXPORT_OK && !piano) {
-        set_message(error, "the knowledge snapshot has no " SOLO_PIANO_ENSEMBLE " ensemble with a piano");
+        render_set_message(error, "the knowledge snapshot has no " SOLO_PIANO_ENSEMBLE " ensemble with a piano");
         status = PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     if (status == PLAN_EXPORT_OK && (result = movement_reduce_to_piano(movement, piano, "")) != REALIZATION_OK) {

@@ -1,28 +1,24 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "analysis/form/thematic_return_detection.h"
-#include "model/core/value.h"
 #include "model/identity/entity_id.h"
-#include "model/interpretation/interpretation.h"
-#include "model/interpretation/uncertainty.h"
 #include "model/pitch/pitch_identity.h"
-#include "model/relationship/relationship.h"
 #include "analysis/notes/contour.h"
 #include "analysis/notes/rhythmic_pattern.h"
 #include "model/time/duration.h"
-#include "relationship_test_access.h"
 
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,
  * and fewer than two entries is a valid, empty
- * relationship set (no pair to compare).
+ * set of pairs (no pair to compare).
  *
  * Analysis-regression test: three ThemeOccurrence windows where entries[0]
  * and entries[2] share an identical Contour+RhythmicPattern (a thematic
  * return) and entries[1] does not match either -- pins the resulting
- * "resembles" Relationship (later -> earlier) and Interpretation shape
+ * pair (later -> earlier) and its evidence
  * against a future refactor, and confirms a non-matching entry produces
  * no output (requirement 4).
  */
@@ -106,31 +102,26 @@ static void destroy_theme(TestTheme *theme, size_t count) {
     rhythmic_pattern_destroy(theme->rhythm);
 }
 
-/* Returns the number of links between the two themes and, when there is one, its evidence. */
+/* Returns the number of pairs between the two themes and, when there is one, its evidence. */
 static size_t link_two(TestTheme *earlier, TestTheme *later, const ThematicReturnDetectionConfig *config,
-                       ThematicReturnSimilarity *evidence) {
+                       ThematicReturnPair *evidence) {
     ThematicReturnDetectionEntry entries[2] = {{earlier->occurrence_id, &earlier->window},
                                                 {later->occurrence_id, &later->window}};
-    Relationship **relationships = NULL;
+    ThematicReturnPair *pairs = NULL;
     size_t count = 0;
-    assert(thematic_return_detection_build_relationships_configured(entries, 2, config, &relationships, &count) ==
-           THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_pairs_configured(entries, 2, config, &pairs, &count) ==
+           THEMATIC_RETURN_DETECTION_OK);
     if (count == 1 && evidence != NULL) {
-        const Value *qualifiers = relationship_qualifiers(relationships[0]);
-        assert(qualifiers != NULL);
-        assert(strcmp(value_type(qualifiers), THEMATIC_RETURN_SIMILARITY_VALUE_TYPE) == 0);
-        size_t size;
-        const ThematicReturnSimilarity *content = (const ThematicReturnSimilarity *)value_content(qualifiers, &size);
-        assert(size == sizeof(ThematicReturnSimilarity));
-        *evidence = *content;
+        assert(pairs[0].earlier == 0 && pairs[0].later == 1);
+        *evidence = pairs[0];
     }
-    thematic_return_detection_destroy_relationships(relationships, count);
+    free(pairs);
     return count;
 }
 
 static void test_partial_and_varied_returns(void) {
     const long even[10] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
-    ThematicReturnSimilarity evidence;
+    ThematicReturnPair evidence;
 
     /* Partial: the earlier theme (10 events) opens with an idea (up up down up down) that the later theme
        (8 events) restates at its start and then continues differently. Whole-theme comparison would see
@@ -202,12 +193,12 @@ static void test_partial_and_varied_returns(void) {
 
 int main(void) {
     /* Behavioral contract: 0 or 1 entries is valid and empty (no pair to compare). */
-    Relationship **empty_relationships;
-    size_t empty_relationship_count;
-    assert(thematic_return_detection_build_relationships_configured(NULL, 0, NULL, &empty_relationships, &empty_relationship_count) ==
-           THEMATIC_RETURN_DETECTION_REL_OK);
-    assert(empty_relationships == NULL);
-    assert(empty_relationship_count == 0);
+    ThematicReturnPair *empty_pairs;
+    size_t empty_pair_count;
+    assert(thematic_return_detection_build_pairs_configured(NULL, 0, NULL, &empty_pairs, &empty_pair_count) ==
+           THEMATIC_RETURN_DETECTION_OK);
+    assert(empty_pairs == NULL);
+    assert(empty_pair_count == 0);
 
     EntityID *theme_occ_a = make_id("occurrence-theme-a");
     EntityID *theme_occ_b = make_id("occurrence-theme-b");
@@ -235,21 +226,15 @@ int main(void) {
         {theme_occ_b, &window_b},
         {theme_occ_c, &window_c},
     };
-    /* The same single "resembles" link: the later theme resembles the earlier, with identical contour and rhythm. */
-    Relationship **relationships;
-    size_t relationship_count;
-    assert(thematic_return_detection_build_relationships_configured(entries, 3, NULL, &relationships, &relationship_count) ==
-           THEMATIC_RETURN_DETECTION_REL_OK);
-    assert(relationship_count == 1);
-    assert(strcmp(entity_id_value(relationship_source_id(relationships[0])), "occurrence-theme-c") == 0);
-    assert(strcmp(relationship_predicate_name(relationships[0]), "resembles") == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(relationships[0])), "occurrence-theme-a") == 0);
-    size_t similarity_size;
-    const ThematicReturnSimilarity *similarity =
-        (const ThematicReturnSimilarity *)value_content(relationship_qualifiers(relationships[0]), &similarity_size);
-    assert(similarity_size == sizeof(ThematicReturnSimilarity));
-    assert(similarity->similarity == 1.0 && similarity->contour_score == 1.0 && similarity->rhythm_score == 1.0);
-    thematic_return_detection_destroy_relationships(relationships, relationship_count);
+    /* The same single pair: the later theme (entry 2) resembles the earlier (entry 0), with identical contour and rhythm. */
+    ThematicReturnPair *pairs;
+    size_t pair_count;
+    assert(thematic_return_detection_build_pairs_configured(entries, 3, NULL, &pairs, &pair_count) ==
+           THEMATIC_RETURN_DETECTION_OK);
+    assert(pair_count == 1);
+    assert(pairs[0].later == 2 && pairs[0].earlier == 0);
+    assert(pairs[0].similarity == 1.0 && pairs[0].contour_score == 1.0 && pairs[0].rhythm_score == 1.0);
+    free(pairs);
 
     entity_id_destroy(theme_occ_a);
     entity_id_destroy(theme_occ_b);
@@ -346,17 +331,16 @@ int main(void) {
         {theme_occ_long_3, &long_windows[3]},
     };
 
-    Relationship **regression_relationships;
-    size_t regression_relationship_count;
-    assert(thematic_return_detection_build_relationships_configured(regression_entries, 7, NULL, &regression_relationships,
-                                                           &regression_relationship_count) ==
-           THEMATIC_RETURN_DETECTION_REL_OK);
-    assert(regression_relationship_count == 2);
-    for (size_t i = 0; i < regression_relationship_count; i++) {
-        assert(strstr(entity_id_value(relationship_source_id(regression_relationships[i])), "long") != NULL);
-        assert(strstr(entity_id_value(relationship_target_id(regression_relationships[i])), "long") != NULL);
+    ThematicReturnPair *regression_pairs;
+    size_t regression_pair_count;
+    assert(thematic_return_detection_build_pairs_configured(regression_entries, 7, NULL, &regression_pairs,
+                                                            &regression_pair_count) == THEMATIC_RETURN_DETECTION_OK);
+    assert(regression_pair_count == 2);
+    for (size_t i = 0; i < regression_pair_count; i++) {
+        assert(strstr(entity_id_value(regression_entries[regression_pairs[i].later].theme_occurrence_id), "long") != NULL);
+        assert(strstr(entity_id_value(regression_entries[regression_pairs[i].earlier].theme_occurrence_id), "long") != NULL);
     }
-    thematic_return_detection_destroy_relationships(regression_relationships, regression_relationship_count);
+    free(regression_pairs);
 
     entity_id_destroy(theme_occ_short_0);
     entity_id_destroy(theme_occ_short_1);

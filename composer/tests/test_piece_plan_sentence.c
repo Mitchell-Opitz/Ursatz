@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
+#include <plan/plan_state.h>
 #include "support/test_knowledge.h"
 
 /*
@@ -31,7 +31,7 @@ static PlanSpan bars(long start, long length) {
     return span;
 }
 
-static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name) {
+static NodeId add(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name) {
     NodeId id = PLAN_NODE_NONE;
     assert(plan_add_node(plan, parent, kind, span, name, &id) == PLAN_OK);
     assert(id != PLAN_NODE_NONE);
@@ -56,7 +56,7 @@ static PlanLanePayload harmony_payload(const char *roman, int function) {
     return payload;
 }
 
-static LaneSpanId add_lane(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
+static LaneSpanId add_lane(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                            const PlanLanePayload *payload) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, owner, lane, voice, span, payload, &id) == PLAN_OK);
@@ -64,7 +64,7 @@ static LaneSpanId add_lane(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int
 }
 
 int main(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     assert(plan != NULL);
 
     /* Tree */
@@ -115,8 +115,8 @@ int main(void) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key(0, "major");
-    LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
+    key.region = test_key(0, "major");
+    LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_REGION, 0, bars(0, 8), &key);
 
     PlanLanePayload tonic = harmony_payload("I", HARMONIC_FUNCTION_TONIC);
     PlanLanePayload dominant = harmony_payload("V", HARMONIC_FUNCTION_DOMINANT);
@@ -231,9 +231,9 @@ int main(void) {
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload bad_key;
     memset(&bad_key, 0, sizeof(bad_key));
-    bad_key.key = test_key(7, "major");
+    bad_key.region = test_key(7, "major");
     assert(plan_lane_span_write(plan, key_span, &bad_key) == PLAN_ERR_GIVEN_LOCKED);
-    assert(analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->key) == 0);
+    assert(spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->region) == 0);
 
     plan_destroy(plan);
     return 0;

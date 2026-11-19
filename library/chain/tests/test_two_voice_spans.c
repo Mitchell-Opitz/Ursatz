@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "theory/form/phrase_level_form.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
@@ -79,13 +79,13 @@ static Run run_fixture(const char *file, bool spans) {
     WeightedPipeline p = pipeline_run(URSATZ_TWO_VOICE_DIR, file, NULL);
     size_t key_event_count = p.import.key_signatures.count;
     assert(key_event_count > 0);
-    AnalysisKeyEvent *key_events = (AnalysisKeyEvent *)calloc(key_event_count, sizeof(AnalysisKeyEvent));
+    SpelledKeyEvent *key_events = (SpelledKeyEvent *)calloc(key_event_count, sizeof(SpelledKeyEvent));
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p.import.key_signatures.events[i];
         const PitchMaterial *material = event->mode_byte == 1 ? test_materials()->natural_minor : test_materials()->major;
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, material, &key_events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, material, &key_events[i].key));
     }
     /* the home key: the first key signature's tonic and mode */
     const MidiKeySignatureEvent *first = &p.import.key_signatures.events[0];

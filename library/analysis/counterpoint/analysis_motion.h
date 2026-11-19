@@ -10,9 +10,7 @@
 #include <stddef.h>
 
 #include "analysis/counterpoint/analysis_grid.h"
-#include "model/interpretation/interpretation.h"
 #include "theory/counterpoint/motion_type.h"
-#include "model/structure/structure.h"
 
 /*
  * Motion between voice pairs (the standard-counterpoint analysis adapter, step 1). For every pair of voices and every pair
@@ -23,16 +21,13 @@
  * Pairs are (upper, lower) with upper < lower in voice index (voice 0 is the top). A voice that rests in either segment
  * gives no motion for any pair it is in.
  *
- * Each motion is a Structure shell (the note ids of the two voices in both segments, a held note once) and an
- * Interpretation targeting the shell's id: FrameworkReference standard-counterpoint, claim = a
- * StandardCounterpointMotionClaim, and
+ * Each motion carries its type, voices and segments, and
  *
  *   uncertainty = 1 - (the least voice-assignment confidence of the cells involved)
  *
  * (no harmony rule is involved here, so there is no chord uncertainty to combine).
  */
 
-#define STANDARD_COUNTERPOINT_MOTION_CLAIM_TYPE "standard-counterpoint/motion"
 
 typedef struct {
     int motion_type; /* MotionType */
@@ -49,8 +44,6 @@ typedef struct {
     size_t lower_voice;
     MotionType type;
     double uncertainty;
-    Structure *shell;               /* owned: the note ids involved */
-    Interpretation *interpretation; /* owned; targets the shell's id */
 } StandardCounterpointMotion;
 
 typedef struct {

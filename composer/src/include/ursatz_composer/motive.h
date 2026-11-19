@@ -8,9 +8,9 @@
 #include <analysis/motive/motive_tone_roles.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * A motive: a short pitch-and-rhythm cell, typically one bar or less, supplied
@@ -94,7 +94,7 @@ typedef struct {
     bool has_meter;
     PlanMeter meter;
     bool has_key;
-    AnalysisKey key;
+    SpelledKey key;
     bool has_pickup;
     /* In whole notes; the CLI converts beats. */
     Rational pickup;
@@ -118,14 +118,14 @@ typedef struct {
 
 /*
  * The meter and key of a library motive sketch (analysis/motive_sketch.h), the only mappings between the sketch's
- * bar, beat and scale and the Composer's PlanMeter and AnalysisKey. motive_meter_of is false for a bar and beat that
+ * bar, beat and scale and the Composer's PlanMeter and SpelledKey. motive_meter_of is false for a bar and beat that
  * are not a meter of 1 to 64 beats over a unit of 1, 2, 4, 8 or 16; motive_key_of is false for a sketch with no scale.
  * motive_set_meter is false for a meter that is not one. motive_set_key spells the tonic as the key does; with source UNSPECIFIED it clears the scale.
  */
 bool motive_meter_of(const MotiveSketch *sketch, PlanMeter *meter);
 bool motive_set_meter(MotiveSketch *sketch, PlanMeter meter);
-bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key);
-void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKeySource source);
+bool motive_key_of(const MotiveSketch *sketch, SpelledKey *key);
+void motive_set_key(MotiveSketch *sketch, const SpelledKey *key, MotiveSketchKeySource source);
 
 /*
  * The sounding pitch of note index: its pitch, or for a rhythm motive (pitch MOTIVE_SKETCH_PITCH_UNKNOWN) degree 1 of
@@ -134,7 +134,7 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
  * not a meter). Built on motive_key_of and motive_meter_of.
  */
 int motive_pitch(const Motive *motive, size_t index);
-AnalysisKey motive_key(const Motive *motive);
+SpelledKey motive_key(const Motive *motive);
 PlanMeter motive_meter(const Motive *motive);
 
 /* A motive with no notes, no key and no harmony in the meter, with no pickup: the zero value is not a valid sketch. */
@@ -240,7 +240,7 @@ MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *opti
 MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
 /*
- * JSON, in the plan format's vocabulary (docs/plan-format.md, "Motive documents"):
+ * JSON, in the plan format's vocabulary (library/docs/modules/plan-format.md, "Motive documents"):
  *
  *   {"meter": {"beats_per_bar": 4, "beat_unit": 4},
  *    "key": {"tonic_pitch_class": 2, "mode": "minor"},
@@ -289,7 +289,7 @@ char *motive_to_contour_text(const Motive *motive);
  * False, with *out untouched, for a source with no key, a note that leaves MIDI 0 to 127, or NULL arguments.
  * out may be the source.
  */
-bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out);
+bool motive_in_key(const Motive *source, const SpelledKey *key, Motive *out);
 
 /*
  * Own harmony as text: chords separated by white space, each a Roman numeral and an optional onset.
@@ -335,7 +335,7 @@ const char *motive_role_name(bool accompaniment);
  * PLAN_ERR_BAD_PAYLOAD for a motive that is not valid. name may be NULL.
  * out_node and out_span may be NULL.
  */
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span);
 
 /*
@@ -343,7 +343,7 @@ PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const M
  * corpus (corpus_seed.h). It is added before the node becomes Given, which is the only time it can be. source may be
  * NULL, which is motive_attach.
  */
-PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach_sourced(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span);
 
 #endif

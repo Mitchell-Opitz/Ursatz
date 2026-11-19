@@ -62,4 +62,4 @@ any more: `liquidate_drop`, `cadential_drop` and the `liquidate` steps of R-321'
 
 Each item of the theme result's `developments` has the `segment` it is made from (or `null`) and a one-line `summary`
 ([explain.md](explain.md#the-summary-line-of-a-developed-idea)). The plan's two members are in
-[plan-format.md](plan-format.md#motive-refs-the-segment-and-the-steps).
+[plan-format.md](../../library/docs/modules/plan-format.md#motive-refs-the-segment-and-the-steps).

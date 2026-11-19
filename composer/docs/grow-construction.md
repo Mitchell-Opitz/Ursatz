@@ -4,7 +4,7 @@ A theme need not be 4 or 8 bars with ideas of fixed fractions of it (Schoenberg 
 
 ## The request
 
-`GrowRequest.construction` (`const PlanConstruction *`, NULL for none) is added to the theme section as a `construction` constraint ([plan-format.md](plan-format.md)). `idea_bars` is indexed by `GrowIdea`: an idea the pairing has needs 1 bar or more, an idea it does not have is 0. `bars` is the sum, 3 to 16; without a construction it is 4 or 8. The reason is `given` for a request, `motive` or `length` when Composer chooses it (see Choosing a construction).
+`GrowRequest.construction` (`const PlanConstruction *`, NULL for none) is added to the theme section as a `construction` constraint ([plan-format.md](../../library/docs/modules/plan-format.md)). `idea_bars` is indexed by `GrowIdea`: an idea the pairing has needs 1 bar or more, an idea it does not have is 0. `bars` is the sum, 3 to 16; without a construction it is 4 or 8. The reason is `given` for a request, `motive` or `length` when Composer chooses it (see Choosing a construction).
 
 ## The layout
 

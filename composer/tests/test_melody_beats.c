@@ -4,17 +4,19 @@
 #include <string.h>
 
 #include <ursatz_composer/accompaniment.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/voicing.h>
 
 #include "accompaniment_check.h"
 #include "support/test_oracles.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Melody, accompaniment and voicing over spans that start and end on any beat, and melody pickups (R-168). Everything
@@ -39,7 +41,7 @@ typedef struct {
 } Chord;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId form;
     NodeId owner; /* what the lanes belong to: a section of the form */
     PlanSpan span; /* the melody target's span, the pickup included */
@@ -57,12 +59,12 @@ static Rational beats(long count) {
     return fraction(count, 4);
 }
 
-static AnalysisKey c_major(void) {
-    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
+static SpelledKey c_major(void) {
+    SpelledKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
-static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, int pitch,
+static LaneSpanId add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, int pitch,
                             PlanState state) {
     PlanNote note;
     PlanLanePayload payload;
@@ -99,8 +101,8 @@ static Piece build(const Chord *chords, size_t count, bool with_melody) {
     assert(plan_add_lane_span(piece.plan, piece.form, PLAN_LANE_METER, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = c_major();
-    assert(plan_add_lane_span(piece.plan, piece.form, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
+    payload.region = c_major();
+    assert(plan_add_lane_span(piece.plan, piece.form, PLAN_LANE_REGION, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = {beats(chords[i].start), beats(chords[i].length)};
@@ -153,7 +155,7 @@ static void add_accompaniment_motive(Piece *piece) {
     PlanSpan material = {beats(40), beats(4)};
     static const int PITCHES[4] = {60, 67, 64, 67};
     motive_init(&motive, (PlanMeter){4, 4, 0});
-    AnalysisKey motive_key_value = c_major();
+    SpelledKey motive_key_value = c_major();
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     motive.accompaniment = true;
     for (size_t n = 0; n < 4; n++) {
@@ -446,11 +448,11 @@ static void test_pickup_json(void) {
     PlanSpan span = {beats(3), beats(9)};
     PlanJsonError error;
     add_melody_target(&piece, span, motive, 8);
-    char *text = plan_to_json(piece.plan, &error);
+    char *text = plan_to_json(piece.plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"kind\": \"pickup\"") && strstr(text, "\"length\": \"1/4\""));
-    PiecePlan *parsed = NULL;
-    assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK);
-    char *again = plan_to_json(parsed, &error);
+    Plan *parsed = NULL;
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error) == PLAN_OK);
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
     LaneSpanId melody;
     assert(plan_lane_find(parsed, PLAN_LANE_MELODY, 0, span, &melody, 1) == 1);
@@ -468,8 +470,8 @@ static void test_pickup_json(void) {
     char *at = broken ? strstr(broken, "\"length\": \"1/4\"") : NULL;
     assert(at);
     at[12] = 'x';
-    PiecePlan *rejected = NULL;
-    assert(plan_from_json(test_knowledge(), broken, &rejected, &error) != PLAN_OK && rejected == NULL);
+    Plan *rejected = NULL;
+    assert(plan_from_json(test_knowledge(), broken, composer_plan_read_hooks(), &rejected, &error) != PLAN_OK && rejected == NULL);
     free(broken);
     free(again);
     free(text);
@@ -479,7 +481,7 @@ static void test_pickup_json(void) {
 
 /* ----------------------------------------------------------- texture */
 
-static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
+static FillOutcome accompany(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
@@ -596,7 +598,7 @@ static void test_accompaniment_short_chord(void) {
     assert(completed > 0);
 }
 
-static FillOutcome voice(PiecePlan *plan, unsigned long seed) {
+static FillOutcome voice(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;

@@ -24,3 +24,4 @@ ursatz_test(musicxml_roundtrip LIBS ursatz_io ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus")
 ursatz_test(midi_renderer_parts LIBS ursatz_io VALGRIND)
 ursatz_test(imported_score LIBS ursatz_io VALGRIND)
+ursatz_test(imported_realization LIBS ursatz_io ursatz_realization VALGRIND)

@@ -4,7 +4,7 @@
 
 #include <theory/harmony/harmony_applied.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/harmony_bass.h>
@@ -13,7 +13,7 @@
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
@@ -44,7 +44,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     NodeId source;      /* the Given motive */
     NodeId developed;   /* the open motive node a development is written to */
@@ -67,7 +67,7 @@ static Rational time_plus(Rational a, Rational b) {
     return sum;
 }
 
-static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, int pitch) {
+static LaneSpanId add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, int pitch) {
     PlanNote note;
     PlanLanePayload payload;
     LaneSpanId id;
@@ -129,8 +129,8 @@ static Fixture build(const Scenario *scenario, bool with_development) {
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.form_span, &payload, &id) ==
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, fixture.form_span, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -366,7 +366,7 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
 
     /* The melody passes the frameworks' rules: standard-counterpoint (melodic, and harmonic against the bass),
        the NonChordTone labeler and standard-harmony's resolution, read from the plan. */
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(melody_check_lane(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);
@@ -630,7 +630,7 @@ static void test_needs_harmony_and_bass(void) {
  *     chord tone.
  */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId phrase;
     NodeId source;
     LaneSpanId first;
@@ -687,8 +687,8 @@ static IdeaFixture build_ideas(int beats, int unit, HarmonyMode mode, int tonic)
     assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(tonic, mode);
-    assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
+    payload.region = test_key_mode(tonic, mode);
+    assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_REGION, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
@@ -831,7 +831,7 @@ static void test_ideas_in_order(void) {
  * A motive with no key has no tones, and its plan carries no motive_tones constraint.
  */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId source;
     LaneSpanId first;
     LaneSpanId second;
@@ -889,8 +889,8 @@ static ToneScene build_tone_scene(bool keyed) {
     assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key(0, "major");
-    assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
+    payload.region = test_key(0, "major");
+    assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_REGION, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     static const char *const CHORDS[2] = {"I", "IV"};
     static const int BASS[2] = {48, 41};

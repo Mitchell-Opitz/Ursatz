@@ -5,12 +5,12 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "api/api_grow.h"
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
 
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
             ComposerError error;
             memset(&error, 0, sizeof(error));
             assert(api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1);
-            const PiecePlan *plan = run.themes[0].plan;
+            const Plan *plan = run.themes[0].plan;
             NodeId source_node = grow_find_source(plan);
             assert(source_node != PLAN_NODE_NONE);
             Motive m0;

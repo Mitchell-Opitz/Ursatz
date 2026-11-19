@@ -7,8 +7,6 @@
 #include "analysis/harmony/analysis_input.h"
 #include "analysis/harmony/analysis_voices.h"
 #include "theory/harmony/harmony_resolution_rules.h"
-#include "model/interpretation/interpretation.h"
-#include "model/structure/structure.h"
 
 /*
  * Seventh and leading tone resolution on separated voices (the standard-harmony analysis adapter, step 6). The rules are
@@ -34,9 +32,7 @@
  * semitones a step, 3 or 4 a third, and so on): the rules read steps. The semitone is a step of the scale only in the common
  * cases, which is all these two rules ask.
  *
- * OUTPUT. A violation, one Interpretation per occurrence, targets a Structure shell whose event refs are the voice's two note ids
- * (the seventh or leading tone and the note it moved to): FrameworkReference standard-harmony, claim = a HarmonyResolutionClaim
- * (rule name, voice, the two segments, whether it was satisfied), and
+ * OUTPUT. A violation, one result per occurrence: the rule, the voice, the two segments, whether it was satisfied, and
  *
  *   uncertainty = 1 - c (1 - u),  c the least voice-assignment confidence of the voice's two cells,
  *                                 u the chord uncertainty (the larger of the two chords' input uncertainties),
@@ -46,22 +42,11 @@
  * Satisfied resolutions are not output unless config.emit_satisfied is set (a debug flag).
  */
 
-#define HARMONY_RESOLUTION_CLAIM_TYPE "standard-harmony/resolution"
-
 typedef struct {
     bool emit_satisfied; /* default false */
 } HarmonyResolutionConfig;
 
 HarmonyResolutionConfig harmony_resolution_config_default(void);
-
-typedef struct {
-    char rule_name[24];
-    int rule;        /* HarmonyResolutionRule */
-    int voice;
-    int segment_from; /* the last segment of the chord that resolves */
-    int segment_to;   /* the first segment of the next chord */
-    bool satisfied;
-} HarmonyResolutionClaim;
 
 typedef struct {
     HarmonyResolutionRule rule;
@@ -70,8 +55,6 @@ typedef struct {
     size_t segment_to;
     bool satisfied;
     double uncertainty;
-    Structure *shell;               /* owned: the voice's two note ids */
-    Interpretation *interpretation; /* owned; targets the shell's id */
 } HarmonyResolutionResult;
 
 typedef struct {

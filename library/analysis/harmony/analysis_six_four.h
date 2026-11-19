@@ -5,13 +5,12 @@
 #include <stddef.h>
 
 #include "analysis/harmony/analysis_input.h"
-#include "model/interpretation/interpretation.h"
 #include "theory/harmony/six_four_type.h"
 
 /*
  * 6/4 chords (the standard-harmony analysis adapter, step 3). Every valid diatonic segment that is a triad in
- * second inversion is a 6/4 segment. It gets a SixFourType Interpretation when it matches one of the types below,
- * and is left UNCLASSIFIED (no Interpretation) when it matches none.
+ * second inversion is a 6/4 segment. It is classified as a SixFourType when it matches one of the types below,
+ * and is left UNCLASSIFIED when it matches none.
  *
  * RUNS. Consecutive segments that make the same chord are one chord sounded over several segments. A 6/4 is judged
  * as a run: its neighbors are the chord before the run and the chord after it, its beat strength is the run's first
@@ -34,22 +33,13 @@
  * soprano's step (they are not known), so "the upper voices sustain" means the soprano sustains. With no soprano
  * the upper voices are all taken to sustain. A 6/4 over a missing bass degree is unclassified.
  *
- * Each classified segment gets one Interpretation: target = the segment's Sonority id, FrameworkReference
- * standard-harmony, claim = a HarmonySixFourClaim, the segment's uncertainty.
  */
-
-#define HARMONY_SIX_FOUR_CLAIM_TYPE "standard-harmony/six-four"
-
-typedef struct {
-    int type; /* SixFourType */
-} HarmonySixFourClaim;
 
 typedef struct {
     const char *segment_id;       /* borrowed from the input */
     bool is_six_four;             /* a triad in second inversion */
-    bool classified;              /* matched a type; false: unclassified, no Interpretation */
+    bool classified;              /* matched a type; false: unclassified */
     SixFourType type;
-    Interpretation *interpretation; /* owned; NULL unless classified */
 } HarmonySixFourResult;
 
 typedef enum {

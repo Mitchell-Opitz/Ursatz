@@ -317,7 +317,7 @@ static HarmonyCadences chain_cadences(const Piece *piece, const WeightedPipeline
     for (size_t s = 0; s < count; s++) {
         segment_inputs[s].segment_id = p->segment_ids[s];
         segment_inputs[s].start = key_segments[s].start;
-        segment_inputs[s].chord = chords.items[s].matched ? chords.items[s].best_chord : NULL;
+        segment_inputs[s].chord = chords.items[s].matched ? &chords.items[s].best_chord : NULL;
         segment_inputs[s].weights = key_segments[s].weights.pitch_class;
     }
     StandardTonalityChordInput *tonal_inputs = NULL;

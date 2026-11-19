@@ -15,12 +15,12 @@
 #include <theory/vocabulary/non_chord_tone.h>
 
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
 
-#include "check/shaping.h"
+#include "util/shaping.h"
 #include "melody/melody_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /*
@@ -38,27 +38,19 @@
 static const char MELODY_VOICE[] = "melody";
 static const char BASS_VOICE[] = "bass";
 
-/* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
-static int pitch_degree(const AnalysisKey *key, int pitch) {
-    int degree = 1;
-    int alteration;
-    util_scale_degree(analysis_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
-    return degree;
-}
-
 /* The diatonic step of a pitch from the tonic: 0 is do, 7 the octave above. */
-static int pitch_step(const AnalysisKey *key, int pitch) {
-    int relative = pitch - analysis_key_tonic_pitch_class(key);
+static int pitch_step(const SpelledKey *key, int pitch) {
+    int relative = pitch - spelled_key_tonic_pitch_class(key);
     int octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
-    return octave * 7 + pitch_degree(key, pitch) - 1;
+    return octave * 7 + util_pitch_degree(key, pitch) - 1;
 }
 
 unsigned melody_cadence_mask(const MelodyContext *context) {
     if (!context->has_cadence) {
         return 0xFFFu;
     }
-    unsigned tonic = 1u << analysis_key_tonic_pitch_class(&context->key);
-    unsigned third = 1u << ((analysis_key_tonic_pitch_class(&context->key) + composer_material_third(context->key.material)) % 12);
+    unsigned tonic = 1u << spelled_key_tonic_pitch_class(&context->key);
+    unsigned third = 1u << ((spelled_key_tonic_pitch_class(&context->key) + composer_material_third(context->key.material)) % 12);
     switch (context->cadence) {
     case CADENCE_TYPE_PERFECT_AUTHENTIC:
     case CADENCE_TYPE_PLAGAL:
@@ -236,16 +228,8 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
 }
 
 /* The pitch spelled as a degree of the key; the caller destroys it. */
-static PitchSpelling *spell_melody(const AnalysisKey *key, int pitch) {
-    return harmony_spell_pitch(key, pitch_degree(key, pitch), pitch);
-}
-
-unsigned melody_melodic_soft_rules(void) {
-    unsigned count = 0;
-    for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
-        count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
-    }
-    return count;
+static PitchSpelling *spell_melody(const SpelledKey *key, int pitch) {
+    return harmony_spell_pitch(key, util_pitch_degree(key, pitch), pitch);
 }
 
 static unsigned harmonic_soft_rules(void) {
@@ -987,7 +971,7 @@ bool melody_check(const void *payload, FillCheck *out) {
     return true;
 }
 
-bool melody_fill_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool melody_fill_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;

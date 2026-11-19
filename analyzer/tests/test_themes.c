@@ -113,7 +113,7 @@ static void check_sentence(const char *dir) {
     /* a balanced sentence is neither expanded nor contracted */
     CHECK(test_json_member(cJSON_GetArrayItem(test_json_member(document, "phrases"), 0), "expansions") == NULL);
     cJSON_Delete(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 
@@ -157,7 +157,7 @@ static void check_period(const char *dir) {
         CHECK(cJSON_IsFalse(test_json_member(theme, "cadences_usual")));
     }
     cJSON_Delete(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 
@@ -192,7 +192,7 @@ static void check_compound_period(const char *dir) {
         CHECK(strcmp(part_cadence(document, cJSON_GetArrayItem(parts, 1)), "perfect-authentic") == 0);
     }
     cJSON_Delete(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 
@@ -343,7 +343,7 @@ static void check_piece(const Piece *piece) {
     check_themes(document, notes.count);
     check_expansions(document);
     cJSON_Delete(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

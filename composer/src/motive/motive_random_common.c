@@ -67,7 +67,7 @@ bool motive_random_forms(NonChordTone type, int before, int pitch, int after) {
  * on a beat. Steps (one chord tone) most often, a repeated pitch now and then, and a move of two or more chord tones is
  * followed by one chord tone back. The draw fails when a note leaves PITCH_LOW to PITCH_HIGH.
  */
-bool motive_random_draw_frame(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
+bool motive_random_draw_frame(const SpelledKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
     long rung = BASE_RUNG + (long)fill_rng_below(rng, TRIAD_SIZE);
     int step_back = 0;
     bool first = true;
@@ -108,7 +108,7 @@ bool motive_random_draw_frame(const AnalysisKey *key, const Rhythm *rhythm, Fill
  * Fills the notes between two frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the
  * frame note before it that makes the figure with the frame notes either side, else a chord tone near it.
  */
-bool motive_random_draw_between(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
+bool motive_random_draw_between(const SpelledKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
     for (size_t i = 1; i + 1 < rhythm->count; i++) {
         if (rhythm->on_beat[i]) {
             continue;
@@ -147,7 +147,7 @@ bool motive_random_draw_between(const AnalysisKey *key, const Rhythm *rhythm, Fi
     return true;
 }
 
-bool motive_random_build(const MotiveRandomOptions *options, const AnalysisKey *key, const Rhythm *rhythm,
+bool motive_random_build(const MotiveRandomOptions *options, const SpelledKey *key, const Rhythm *rhythm,
                          const Melody *melody, Motive *out) {
     unsigned long den = (unsigned long)(rhythm->ticks_per_unit > 0 ? rhythm->ticks_per_unit : 2) * (unsigned long)options->meter.beat_unit;
     motive_init(out, options->meter);
@@ -212,7 +212,7 @@ bool motive_random_already_made(const Motive *made, size_t count, const Motive *
     return false;
 }
 
-bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, ComposerRatio *out) {
+bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, Rational *out) {
     ComposerStyleNote notes[MAX_NOTES];
     for (size_t i = 0; i < full->note_count; i++) {
         notes[i].pitch = full->notes[i].pitch;
@@ -235,12 +235,4 @@ bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const
     }
     composer_style_labels_destroy(all);
     return ok;
-}
-
-/* -1, 0 or 1 as a is less than, equal to or more than b. */
-int motive_random_ratio_compare(const ComposerRatio *a, const ComposerRatio *b) {
-    __extension__ typedef unsigned __int128 wide;
-    wide left = (wide)a->numerator * b->denominator;
-    wide right = (wide)b->numerator * a->denominator;
-    return left < right ? -1 : left > right ? 1 : 0;
 }

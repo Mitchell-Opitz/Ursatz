@@ -7,7 +7,7 @@ rondo) are not offered: standard-form and the kernel do not analyze them. Back t
 
 ```c
 PieceRequest request = {.form = "ternary", .key = key, .meter = meter, .bars = 24, .motive = NULL};
-PiecePlan *plan;
+Plan *plan;
 ComposeConfig config = {.seed = 7};
 ComposeOutcome outcome;
 if (piece_build_plan(&request, &plan) == PIECE_OK && compose_run(plan, &config, &outcome) == PIECE_OK) {

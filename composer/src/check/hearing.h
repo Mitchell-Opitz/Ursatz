@@ -7,8 +7,8 @@
 #include <theory/knowledge/knowledge_snapshot.h>
 
 #include <ursatz_composer/analyzer_check.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/piece_plan_keys.h>
+#include <plan/plan.h>
+#include <ursatz_composer/key_hear.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/return_hear.h>
 #include <ursatz_composer/style.h>
@@ -40,13 +40,13 @@ typedef enum {
  * Renders plan once. *out is released with hearing_destroy; NULL on failure. The plan and the knowledge snapshot (the call
  * context's, which the chain hears the spans with) must outlive the hearing; HEARING_ERR_NULL for a NULL knowledge.
  */
-HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out);
+HearingResult hearing_create(const Plan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out);
 
 /* The render the hearing keeps: every written lane of the whole plan. Borrowed; do not destroy. */
 const RenderedPlan *hearing_rendered(const ComposerHearing *hearing);
 
 /* The plan the hearing was made from. */
-const PiecePlan *hearing_plan(const ComposerHearing *hearing);
+const Plan *hearing_plan(const ComposerHearing *hearing);
 
 /* Test only: how many spans, in all hearings of this process so far, were run through the chain. A test reads it before
    and after a run to see which sections the run heard. */
@@ -62,8 +62,7 @@ void hearing_destroy(ComposerHearing *hearing);
  */
 AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId section, AnalyzerCheck *out);
 AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out);
-bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceKeyCheck *out);
-ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan, ReturnHeard *out);
+ReturnHearResult return_hear_in(ComposerHearing *hearing, const Plan *plan, ReturnHeard *out);
 ComposerMeasureResult composer_style_measure_in(ComposerHearing *hearing, const ComposerStyle *style,
                                                 StyleComparison *out);
 

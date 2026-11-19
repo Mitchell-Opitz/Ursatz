@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/voice_hear.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
         GrowRequest request = make_request(&SCENARIOS[s], &motive, write_soprano);
         size_t scenario_dirty = 0;
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             GrowOutcome outcome;
             GrowConfig config;
             VoiceHeard heard;

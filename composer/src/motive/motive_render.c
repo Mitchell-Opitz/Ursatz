@@ -3,22 +3,22 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
-static bool add_given_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
+static bool add_given_span(Plan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
     LaneSpanId id;
     return plan_add_lane_span(plan, owner, lane, 0, span, payload, &id) == PLAN_OK &&
            plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
 }
 
-PiecePlan *motive_render_plan(const Motive *motive) {
+Plan *motive_render_plan(const Motive *motive) {
     if (!motive || motive->note_count == 0) {
         return NULL;
     }
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return NULL;
     }
@@ -55,8 +55,8 @@ PiecePlan *motive_render_plan(const Motive *motive) {
     }
     if (ok && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = motive_key(motive);
-        ok = add_given_span(plan, idea, PLAN_LANE_KEY, all, &payload);
+        payload.region = motive_key(motive);
+        ok = add_given_span(plan, idea, PLAN_LANE_REGION, all, &payload);
     }
     if (!ok) {
         plan_destroy(plan);

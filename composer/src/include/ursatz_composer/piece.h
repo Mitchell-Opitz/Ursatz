@@ -7,11 +7,12 @@
 
 #include <plan/section.h>
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
+#include "structure/plan_util.h"
 
 struct GrowPoolForm;
 
@@ -87,7 +88,7 @@ typedef struct {
     SectionConstruction construction; /* reason GIVEN; read when has_construction and not construction_auto */
     const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
     size_t pool_count;
-    const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */
+    const Plan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */
 } PieceSection;
 
 /* A section with nothing set: an empty fill, no pickup. */
@@ -124,7 +125,7 @@ static inline void piece_section_set_function(PieceSection *section, PieceFuncti
 
 typedef struct {
     const char *form;      /* the name of a built-in form: "binary", "rounded-binary", ... (form_spec.h) */
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     size_t bars;           /* the form's size; 0 for the size count gives, or the default */
     size_t count;          /* variations or layers; 0 for the size bars gives, or the default */
@@ -174,19 +175,6 @@ typedef struct {
     PlanVoicing voicing;
 } PieceRequest;
 
-typedef enum {
-    PIECE_OK = 0,
-    PIECE_ERR_NULL,
-    PIECE_ERR_ALLOC,
-    PIECE_ERR_MOTIVE_TOO_LONG, /* the motive is longer than the basic idea it fills (2 bars of an 8-bar section, else 1) */
-    PIECE_ERR_BAD_REQUEST,     /* a meter or key not supported, a motive of one note, an accompaniment that is not
-                                  valid, a section grow-theme cannot build in the meter */
-    PIECE_ERR_STUCK,           /* a stage left a target open */
-    PIECE_ERR_BAD_SIZE         /* a size or count the template does not have */
-} PieceResult;
-
-const char *piece_result_name(PieceResult result);
-
 /* The material bars a piece of section_count sections holds, for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
 
@@ -224,10 +212,10 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
  *     (piece_give_harmony); the harmony stage fills what is left of the section.
  * piece_request_check's refusals are PIECE_ERR_BAD_REQUEST.
  */
-PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out);
+PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, Plan **out);
 
 /* Builds the plan of the request into *out: form_build_plan with the built-in form named request->form (BAD_REQUEST for none). */
-PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out);
+PieceResult piece_build_plan(const PieceRequest *request, Plan **out);
 
 /*
  * The ending version (R-172) of a game loop into *out, which the caller destroys with plan_destroy: a copy of the realized
@@ -239,7 +227,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out);
  * that is not realized or does not hold the request's intro and body sections, or a request with no ending;
  * form_build_plan's results otherwise.
  */
-PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *request, PiecePlan **out);
+PieceResult piece_build_ending(const Plan *loop_plan, const PieceRequest *request, Plan **out);
 
 /*
  * PIECE_OK, or PIECE_ERR_BAD_REQUEST for: a form that is not a built-in whose sections the request gives; no body section;
@@ -258,7 +246,7 @@ PieceResult piece_request_check(const PieceRequest *request);
 typedef struct {
     bool has_region;
     bool changes_key; /* the key differs from the section before's (home for the first): the plan has a key change here */
-    AnalysisKey key;
+    SpelledKey key;
     char relation[PLAN_KEY_RELATION_MAX];
     PlanKeyAnchor anchor;
     char anchor_section[PLAN_KEY_ANCHOR_SECTION_MAX];
@@ -284,11 +272,11 @@ PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const For
  * the plan's meter. PIECE_ERR_BAD_REQUEST with the reason in message when the plan or the schema refuses it. The key must be the one the section
  * is in; a section that modulates takes no schema.
  */
-PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
-                               const AnalysisKey *key, char *message, size_t message_size);
+PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
+                               const SpelledKey *key, char *message, size_t message_size);
 
 /* Whether the harmony can be given to a section of this length in this key and meter, tried on a scratch plan; message says why not. */
-bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rational length, const SectionHarmony *harmony, char *message,
+bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational length, const SectionHarmony *harmony, char *message,
                          size_t message_size);
 
 /*

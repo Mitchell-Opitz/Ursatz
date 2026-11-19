@@ -12,7 +12,7 @@ static HarmonySixFourResult *classify(Fixture *f, HarmonySegment **segments) {
 }
 
 static void expect(const HarmonySixFourResult *r, SixFourType type) {
-    assert(r->is_six_four && r->classified && r->type == type && r->interpretation != NULL);
+    assert(r->is_six_four && r->classified && r->type == type);
 }
 
 static void test_cadential(void) {
@@ -44,7 +44,7 @@ static void test_i64_on_a_weaker_beat_than_the_v_is_not_cadential(void) {
     HarmonySegment *segments = NULL;
     HarmonySixFourResult *results = classify(&f, &segments);
     assert(!segments[3].chord.cadential);
-    assert(results[3].is_six_four && !results[3].classified && results[3].interpretation == NULL);
+    assert(results[3].is_six_four && !results[3].classified);
     harmony_six_four_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -102,7 +102,7 @@ static void test_unclassified_and_runs(void) {
     HarmonySegment *segments = NULL;
     HarmonySixFourResult *results = classify(&f, &segments);
     for (int i = 1; i <= 2; i++) {
-        assert(results[i].is_six_four && !results[i].classified && results[i].interpretation == NULL);
+        assert(results[i].is_six_four && !results[i].classified);
     }
     assert(!results[0].is_six_four && !results[3].is_six_four);
     harmony_six_four_results_destroy(results, f.count);

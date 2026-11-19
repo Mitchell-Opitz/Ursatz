@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /*
  * The prolongation harmony operator (R-050): a Fill operator for harmony lane spans that one harmony is to
@@ -42,7 +42,7 @@ FillResult harmony_prolong_register_given(FillOperatorRegistry *registry);
  * and no cadence heard inside the span or at its end, whatever the soprano. The score is the share of the soft
  * phrase rules that hold. A candidate of any other operator is checked by harmony_phrase_checker.
  */
-bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool harmony_prolong_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                              const FillCandidate *candidate, void *context, FillCheck *out);
 
 #endif

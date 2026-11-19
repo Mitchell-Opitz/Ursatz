@@ -31,7 +31,7 @@ static void test_a_cadential_hemiola_in_three_four(void) {
     assert(claim->first_measure == 1 && claim->last_measure == 2);
     assert(claim->duration_evidence == 1 && claim->chord_evidence == 1 && claim->accent_evidence == 1);
     assert(claim->agreeing == 3 && claim->available == 3 && found.items[0].uncertainty == 0.0);
-    assert(found.items[0].shell != NULL && found.items[0].interpretation != NULL);
+    assert(found.items[0].shell != NULL);
     standard_meter_hemiolas_destroy(&found);
     piece_destroy(&piece);
 

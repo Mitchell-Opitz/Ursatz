@@ -55,25 +55,11 @@ bool composer_material_supported(const CommonPracticeMaterials *materials, const
     return materials != NULL && material != NULL && (material == materials->major || material == materials->natural_minor);
 }
 
-bool composer_key_is_minor(const AnalysisKey *key) {
+bool composer_key_is_minor(const SpelledKey *key) {
     return key && composer_material_is_minor(key->material);
 }
 
-bool composer_key_valid(const AnalysisKey *key) {
-    return key && (key->material == NULL || composer_material_valid(key->material));
-}
-
-#define MAJOR_MATERIAL_ID "omt.material.major"
-
-const char *composer_key_material_id(const AnalysisKey *key) {
-    return key && key->material ? key->material->id : MAJOR_MATERIAL_ID;
-}
-
-const char *composer_key_word(const AnalysisKey *key) {
-    return key && key->material ? key->material->key_word : "major";
-}
-
-void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material) {
+void composer_key_set_material(SpelledKey *key, const PitchMaterial *material) {
     key->material = material;
 }
 
@@ -141,4 +127,12 @@ char *util_copy_string(const char *text) {
 const char *util_function_name(bool has_function, HarmonicFunction function) {
     const char *name = has_function ? harmonic_function_name(function) : NULL;
     return name ? name : "unknown";
+}
+
+/* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
+int util_pitch_degree(const SpelledKey *key, int pitch) {
+    int degree = 1;
+    int alteration;
+    util_scale_degree(spelled_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
+    return degree;
 }

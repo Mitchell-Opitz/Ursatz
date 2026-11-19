@@ -1,6 +1,10 @@
 #ifndef URSATZ_COMPOSER_RENDER_MOVEMENT_BUILD_H
 #define URSATZ_COMPOSER_RENDER_MOVEMENT_BUILD_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <realization/realization.h>
 #include <realization/work.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/export.h>
@@ -23,5 +27,16 @@
  */
 PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExportOptions *options, const KnowledgeSnapshot *knowledge,
                                     Work **out, PlanExportError *error);
+
+/*
+ * The performer note id the work of rendered_plan_work gives rendered event `event` (an index among rendered->events): `piano-n<plan note id>`,
+ * or `piano-e<event + 1>` for an event with no plan note (id 0): the line note id of the rule above, which the piano reduction prefixes with
+ * the part's id `piano`. A reading names the notes of the work by these ids. False (out untouched) for an event the render does not have.
+ * An id that two notes would share (the reduction adds -2, -3) does not occur: a plan note is written once.
+ */
+bool rendered_plan_note_id(const RenderedPlan *rendered, size_t event, char out[REALIZATION_ID_MAX]);
+
+/* Writes a printf-style message into the export error (nothing for a NULL error). */
+void render_set_message(PlanExportError *error, const char *format, ...);
 
 #endif

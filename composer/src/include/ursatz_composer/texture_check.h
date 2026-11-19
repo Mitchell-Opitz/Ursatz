@@ -11,7 +11,7 @@
  * voicing_checker for the candidates of voicing-satb, accompaniment_checker for the accompaniment's (and, through
  * either, harmony_phrase_checker for any other operator's). Pass it as FillConfig.checker.
  */
-bool texture_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool texture_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                      const FillCandidate *candidate, void *context, FillCheck *out);
 
 #endif

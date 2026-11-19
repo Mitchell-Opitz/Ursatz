@@ -28,7 +28,6 @@ static void test_a_romanesca(void) {
     assert(near_to(found->claim.confidence, 1.0) && near_to(found->uncertainty, 0.0) && found->claim.frame_degree == 1);
     assert(strcmp(found->claim.stages[0].segment_id, "s0") == 0 && found->claim.stages[1].bass_degree == 7 &&
            found->claim.stages[2].melody_degree == 1);
-    assert(found->relationship != NULL && found->interpretation != NULL);
     galant_schema_matches_destroy(&matches);
     seq_destroy(&seq);
 }

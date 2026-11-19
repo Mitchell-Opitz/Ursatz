@@ -3,8 +3,33 @@
 
 #include <stdbool.h>
 
-#include "model/identity/entity_id.h"
-#include "model/interpretation/chord.h"
+#include <stddef.h>
+
+#include "model/core/rational.h"
+
+#define CHORD_STRUCTURE_MAX_INTERVALS 8
+
+/*
+ * The shape of a chord candidate in numbers: the root's pitch class (0 = C ... 11 = B), the quality as the root-relative interval set in
+ * semitones, ascending, starting at 0 (a major triad {0,4,7}, a dominant seventh {0,4,7,10}), and the bass's pitch class. Any of the
+ * three may be unknown: a pitch class of -1, or an interval_count of 0.
+ */
+typedef struct {
+    int root_pitch_class;
+    int bass_pitch_class;
+    size_t interval_count;
+    int root_relative_intervals[CHORD_STRUCTURE_MAX_INTERVALS];
+} ChordStructure;
+
+/*
+ * A chord candidate: the label the vocabulary gives (e.g. "V", "dominant7"), the confidence in it (from 0 to 1) and, once the identification
+ * has read it, its structure (unknown, root and bass -1 and no intervals, as the vocabulary gives it).
+ */
+typedef struct {
+    char label[32];
+    Rational confidence;
+    ChordStructure structure;
+} ChordCandidate;
 
 /*
  * Chord vocabulary for common-practice-minimal-v1: exactly the seven
@@ -44,15 +69,10 @@ typedef enum {
 bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]);
 
 /*
- * Builds a Chord claiming that the Sonority named by sonority_target_id is this triad under
- * common-practice-minimal-v1. The Interpretation's scalar confidence is confidence_numerator /
- * confidence_denominator (a rational in [0, 1]), and its id has interpretation_id_suffix (NULL for none)
- * appended, so two Chords over one Sonority (a best and a runner-up) get distinct ids. Takes ownership
- * of sonority_target_id on success only.
+ * The candidate that names a sonority this triad: its label and the confidence confidence_numerator / confidence_denominator (a rational in
+ * [0, 1], reduced), with no structure. False (out untouched) for an invalid triad or a zero denominator.
  */
-ChordResult common_practice_build_triad_chord_with_confidence(CommonPracticeTriad triad, EntityID *sonority_target_id,
-                                                          unsigned long confidence_numerator,
-                                                          unsigned long confidence_denominator,
-                                                          const char *interpretation_id_suffix, Chord **out);
+bool common_practice_triad_candidate(CommonPracticeTriad triad, unsigned long confidence_numerator,
+                                     unsigned long confidence_denominator, ChordCandidate *out);
 
 #endif

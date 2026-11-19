@@ -12,7 +12,7 @@ longer refused for not dividing into the slots of the species.
 ## The target
 
 A target is a Constrained inner voice span, voice 1, with a `counterpoint` constraint on the span or its owner
-(`{"kind": "counterpoint", "species": 1-4, "above": bool}`, see [plan-format.md](plan-format.md)) and a key.
+(`{"kind": "counterpoint", "species": 1-4, "above": bool}`, see [plan-format.md](../../library/docs/modules/plan-format.md)) and a key.
 
 - With `above` false the given line is the melody lane and the counter-melody sounds below it. With `above` true the given
   line is the bass lane, the cantus, and the counter-melody sounds above it.

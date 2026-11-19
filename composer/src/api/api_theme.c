@@ -6,22 +6,25 @@
 
 #include <theory/harmony/harmony_chord.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "api_grow.h"
+#include "api_construction.h"
+#include "api_style.h"
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
-#include "util/plan_util.h"
-#include "util/request_chords.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "piece/request_chords.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /*
@@ -235,7 +238,9 @@ static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, cons
     } else if (setup->bars != 4 && setup->bars != 8) {
         return COMPOSER_OK; /* a construction chosen at the build (R-469): grow_build_plan_checked checks the idea then */
     }
-    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), part_bars, basic_bars,
+    Rational theme_bar;
+    plan_meter_bar_length(&setup->meter, &theme_bar);
+    if (!grow_part_basic_idea(&material->basic, theme_bar, part_bars, basic_bars,
                               setup->pairing.beginning, &basic, &step)) {
         return COMPOSER_OK;
     }
@@ -444,7 +449,7 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
 /* --- the outputs --------------------------------------------------------------------------------------- */
 
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
-static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
+static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
                                         const ApiOutputOptions *outputs, ComposerError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
@@ -452,7 +457,8 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
         const GrowTheme *theme = &run->themes[k];
         if (outputs->plans) {
             PlanJsonError detail;
-            char *text = plan_to_json(theme->plan, &detail);
+            PlanProducer producer = composer_plan_producer(knowledge);
+            char *text = plan_to_json(theme->plan, &producer, &detail);
             cJSON *plan = text ? cJSON_Parse(text) : NULL;
             free(text);
             if (!plan || !cJSON_AddItemToObject(item, "plan", plan)) {
@@ -483,11 +489,19 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, cJSON *document,
+                                   ComposerResponse *out) {
     PlanJsonError json_error;
-    out->plan_json = plan_to_json(theme->plan, &json_error);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    out->plan_json = plan_to_json(theme->plan, &producer, &json_error);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", json_error.message);
+    }
+    if (outputs->layers) {
+        ComposerStatus layered = api_layers_json(knowledge, theme->plan, &outputs->export_options, document, &out->error);
+        if (layered != COMPOSER_OK) {
+            return layered;
+        }
     }
     if (!outputs->midi && !outputs->musicxml) {
         return COMPOSER_OK;
@@ -621,14 +635,14 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     setup->style = state->style;
     setup->without = state->brief.without;
     setup->without_count = state->brief.text.without_count;
-    ComposerRatio option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
+    Rational option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
     status = api_grow_set_tempo_and_mode(setup, has_tempo ? &option_tempo : NULL, error);
     if (status != COMPOSER_OK) {
         return status;
     }
-    if (!has_tempo && setup->tempo.denominator > 0) {
-        outputs->export_options.tempo_numerator = setup->tempo.numerator;
-        outputs->export_options.tempo_denominator = setup->tempo.denominator;
+    if (!has_tempo && setup->tempo.den > 0) {
+        outputs->export_options.tempo_numerator = setup->tempo.num;
+        outputs->export_options.tempo_denominator = setup->tempo.den;
     }
 
     state->material = calloc(1, sizeof(*state->material));
@@ -678,13 +692,13 @@ ComposerStatus composer_api_theme(const ComposerContext *context, const char *re
         const cJSON *chords = cJSON_GetObjectItemCaseSensitive(state.request, "chords");
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
-        status = document ? add_theme_members(document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
+        status = document ? add_theme_members(context->knowledge, document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK && state.has_preferences &&
             !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(&state.preferences))) {
             status = api_fail_alloc(&out->error);
         }
         if (status == COMPOSER_OK) {
-            status = render_first(context->knowledge, &state.run.themes[0], &outputs, out);
+            status = render_first(context->knowledge, &state.run.themes[0], &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
@@ -719,7 +733,7 @@ ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const Comm
     if (status == COMPOSER_OK) {
         /* Build the plan as Compose would, without seeding: the first refusal is the answer. */
         GrowRequest grow;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowRefusal refusal;
         api_grow_request_for(&state.setup, state.setup.seed, &grow);
         GrowResult built = grow_build_plan_checked(&grow, &plan, &refusal);

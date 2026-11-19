@@ -2,12 +2,12 @@
 
 [Docs index](README.md): the Ursatz docs by topic.
 
-Ursatz is organized into seven groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `plan/` (the section description), `analysis/` (analyses and framework adapters), `chain/` (the analysis chain) and `io/` (import and export), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
+Ursatz is organized into eight groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `plan/` (the plan and the section description), `analysis/` (analyses and framework adapters), `io/` (import and export), `chain/` (the analysis chain) and `reading/` (what a reader says about a realization), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
 
 ## Purpose
 
-Ursatz is the base library of the platform: a theory-neutral C11 representation of musical material (events, structures, relationships, interpretations, contexts, provenance) with exact time and pitch.
-Theory lives in 11 Theory Frameworks that produce interpretations under a named framework, and the analysis chain runs them over imported notes.
+Ursatz is the base library of the platform: a theory-neutral C11 representation of musical material (events, structures, contexts, provenance) with exact time and pitch.
+Theory lives in 11 Theory Frameworks, and the analysis chain runs them over imported notes.
 The library imports MIDI and MusicXML, analyzes and exports MusicXML.
 It owns every analysis algorithm (R-217); the apps orchestrate and render.
 
@@ -26,6 +26,7 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | `analysis/<area>/` | Analyses and the 11 frameworks' adapters, target `ursatz_analysis` | [analysis/README.md](../analysis/README.md) |
 | `chain/` | The analysis chain, target `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `io/` | MIDI and MusicXML import and export, target `ursatz_io` | [io](modules/io.md) |
+| `reading/` | Readings: claims over a realization, the builder from a chain run, the JSON codec and `reading_to_plan`, above `chain` and `plan`, target `ursatz_reading` | [reading](modules/reading.md) |
 | `<group>/tests/`, `tests/` | Tests beside the code they test; the accuracy harness, integration tests and test support in `tests/` | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
 | `cmake/`, `scripts/` | Public header staging, docs check | [Public surface](public-surface.md) |
@@ -43,8 +44,6 @@ The headers the apps include are the staged public headers (`build/library/publi
 | model/events | `dynamics.h`, `note_event.h` and 1 more | `NoteEvent` | The canonical note. | [events](modules/events.md) |
 | model/containers | `section.h` | `Section` | The section container, grouping phrases. | [containers](modules/containers.md) |
 | model/structure | `cadence.h`, `motif.h` and 3 more | `PhraseOccurrence`, `Structure` | Occurrences of structures. | [structure](modules/structure.md) |
-| model/relationship | `relationship.h` | `Relationship` | Typed link between two entities. | [relationship](modules/relationship.md) |
-| model/interpretation | `chord.h`, `claim_interpretation.h` and 4 more | `Interpretation`, `Chord`, `Uncertainty` | Claims under a named framework, with uncertainty. | [interpretation](modules/interpretation.md) |
 | theory/framework | `framework.h`, `framework_singleton.h` | `Framework`, `framework_singleton_get` | The Theory Framework type and its singleton helper. | [theory](modules/theory.md) |
 | theory/style | `style_features.h`, `style_model.h` and 2 more | `StyleModel` | Style models built from corpus statistics. | [theory](modules/theory.md) |
 | theory/rules | `context.h`, `preference.h` | `Rule`, `Constraint`, `Preference`, `Context` | The rule objects and the opaque Context. | [rules](modules/rules.md), [context](modules/context.md) |
@@ -59,10 +58,10 @@ The headers the apps include are the staged public headers (`build/library/publi
 | theory/galant | `galant_degree.h`, `galant_exemplar.h` and 11 more | framework entry and rules | Galant schema prototypes, rule of the octave and sequences. | [README](../theory/galant/README.md), [sequences](../theory/galant/sequences.md) |
 | theory/markings | `dynamics_rules.h`, `framework.h` and 1 more | framework entry and rules | Dynamics and tempo rules. | [README](../theory/markings/README.md) |
 | realization | `realization.h`, `derivation.h`, `line.h`, `performer_part.h`, `scoring.h`, `movement.h`, `work.h`, `piano_reduction.h` | `Line`, `PerformerPart`, `ScoringAssignment`, `realization_score`, `Movement`, `Work` | Music held as lines that belong to no instrument and performer parts that do, with note ids and derivations; scoring assignments place lines into parts. In use by the Composer's export (P59 B7): `io/movement_export.h` writes a movement's performer parts as MIDI and MusicXML, and `render/movement_build.c` makes a work of a rendered plan with one piano part (`piano_reduction.h`). | [realization](modules/realization.md) |
-| analysis/notes | `analysis_key.h`, `analysis_note.h` and 9 more | `AnalysisNote`, `CadenceType`, `sonority_segmentation` | The neutral analysis inputs and the segmentation. | [semantics](modules/semantics.md) |
+| analysis/notes | `analysis_note.h` and 9 more | `AnalysisNote`, `CadenceType`, `sonority_segmentation` | The neutral analysis inputs and the segmentation. | [semantics](modules/semantics.md) |
 | analysis/motive | `motif_window_matching.h`, `motive_link.h` and 4 more | `motive_sketch`, `motif_window_matching` | Motive sketches, relations, links and variant recognition. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
 | analysis/voices | `outer_voice.h`, `voice_separation.h` | `outer_voice_extract`, `voice_separate` | Outer voices and voice separation. | [analysis voices](modules/analysis-voices.md) |
-| analysis/harmony | `analysis_cadence.h`, `analysis_cadence_claims.h` and 19 more | adapters and perception | Chord segments to functions and cadences, weighted chord identification, key regions, non-chord tones, Roman numeral adapter, chord readings of sonorities (`chord_reading.h`). | [README](../analysis/harmony/README.md), [analysis detail](modules/common-practice-minimal-analysis.md), [harmony analysis](modules/standard-harmony-analysis.md), [tonality analysis](modules/standard-tonality-analysis.md) |
+| analysis/harmony | `analysis_cadence.h`, `analysis_cadence_points.h` and 19 more | adapters and perception | Chord segments to functions and cadences, weighted chord identification, key regions, non-chord tones, Roman numeral adapter, chord readings of sonorities (`chord_reading.h`). | [README](../analysis/harmony/README.md), [analysis detail](modules/common-practice-minimal-analysis.md), [harmony analysis](modules/standard-harmony-analysis.md), [tonality analysis](modules/standard-tonality-analysis.md) |
 | analysis/form | `analysis_expansion.h`, `analysis_ideas.h` and 12 more | adapters and detection | Phrase, idea, repeat, motive and theme analysis; form structure and thematic returns. | [form analysis](modules/form-analysis.md) |
 | analysis/meter | `meter_analysis_check.h`, `meter_analysis_density.h` and 5 more | adapters | Meter, syncopation, hemiola, hypermeter and density analysis. | [rhythm and meter analysis](modules/rhythm-meter-analysis.md) |
 | analysis/texture | `framework.h`, `texture_analysis_classify.h` and 4 more | framework entry and adapters | Texture rules and classification. | [README](../analysis/texture/README.md), [texture analysis](modules/texture-analysis.md) |
@@ -102,7 +101,7 @@ One file through the library:
 3. The caller turns the import into neutral `AnalysisNote`s (`analysis/notes/analysis_note.h`); the library's tests use `tests/import_notes_test_util.h`.
 4. `analysis_chain_run` (`chain/analysis_chain.h`) takes the notes and a config whose `knowledge` is the snapshot the caller built (the chain resolves the four common-practice materials from it once, and a config without one is refused), and runs the stages in order: segments, key regions, weighted chords, Roman numerals, outer voices, cadences, phrase form and motives, meter, texture, voice leading, melody, schemas and sequences ([analytic-job-owners](analytic-job-owners.md)).
 5. Each stage builds its input with `chain_inputs.h` and calls the owner of its job: an `analysis/<area>/` adapter or analysis.
-6. Results are `Interpretation`s and framework result structs, owned by the `AnalysisChain` and read through its `analysis_chain_*` accessors.
+6. Results are framework result structs, owned by the `AnalysisChain` and read through its `analysis_chain_*` accessors. The chain collects them into the `ChainResult` the reading is built from (`reading/reading_build.h`).
 7. The caller reads the results, or exports the notes with `export`.
 
 ## Finding things

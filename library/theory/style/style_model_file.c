@@ -7,22 +7,11 @@
 
 #include <cJSON.h>
 
+#include "model/core/content_hash.h"
 #include "model/identity/entity_id.h"
 #include "theory/style/style_labels.h"
 #include "theory/style/style_model_build.h"
 #include "theory/style/style_profile.h"
-
-#define FNV1A_OFFSET_BASIS 14695981039346656037ULL
-#define FNV1A_PRIME 1099511628211ULL
-
-/* Folds length bytes into a 64-bit FNV-1a hash. */
-static uint64_t fnv1a_bytes(uint64_t hash, const void *data, size_t length) {
-    const unsigned char *bytes = data;
-    for (size_t i = 0; i < length; i++) {
-        hash = (hash ^ bytes[i]) * FNV1A_PRIME;
-    }
-    return hash;
-}
 
 /* The whole file in a new NUL-terminated buffer; NULL when it cannot be read. */
 static char *read_all(const char *path) {
@@ -81,7 +70,7 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
         return STYLE_MODEL_FILE_ERR_IO;
     }
     cJSON *root = cJSON_Parse(text);
-    uint64_t hash = fnv1a_bytes(FNV1A_OFFSET_BASIS, text, strlen(text));
+    uint64_t hash = content_hash_fnv1a64(CONTENT_HASH_FNV1A64_OFFSET, text, strlen(text));
     free(text);
 
     StyleModelFileResult result = STYLE_MODEL_FILE_ERR_FORMAT;

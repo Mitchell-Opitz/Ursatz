@@ -1,13 +1,14 @@
 #include <stdio.h>
+#include <model/core/content_hash.h>
 #include <string.h>
 
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive_analysis.h>
 
 #include "grow/grow_internal.h"
 #include "style/style_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * An idea's fidelity to its source, read from the plan (R-354). The idea's melody span names its motive node (the span's
@@ -58,16 +59,16 @@ GrowIdeaRole grow_idea_role(const char *idea_name) {
 }
 
 /* The meter and key of the lanes over the span. */
-static bool read_meter_key(const PiecePlan *plan, PlanSpan span, PlanMeter *meter, AnalysisKey *key) {
+static bool read_meter_key(const Plan *plan, PlanSpan span, PlanMeter *meter, SpelledKey *key) {
     LaneSpanId id;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &id, 1) < 1) {
         return false;
     }
     *meter = plan_lane_span_payload(plan, id)->meter;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &id, 1) < 1) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &id, 1) < 1) {
         return false;
     }
-    *key = plan_lane_span_payload(plan, id)->key;
+    *key = plan_lane_span_payload(plan, id)->region;
     return true;
 }
 
@@ -80,7 +81,7 @@ static bool notes_end(const PlanNotes *notes, size_t count, Rational *out) {
  * The theme's motive m0 as the plan holds it, with the compose run's basic motive's features and pickup when m0 is its
  * first notes (grow_theme.c's draw_segments does the same), so its segments are the run's.
  */
-static bool read_m0(const PiecePlan *plan, const Motive *basic, const PlanMeter *meter, const AnalysisKey *key, Motive *m0) {
+static bool read_m0(const Plan *plan, const Motive *basic, const PlanMeter *meter, const SpelledKey *key, Motive *m0) {
     NodeId node = grow_find_source(plan);
     if (node == PLAN_NODE_NONE || !grow_read_motive(plan, node, meter, key, m0)) {
         return false;
@@ -116,14 +117,14 @@ static bool read_segment(const Motive *m0, const char *label, Motive *out) {
     return false;
 }
 
-bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
+bool grow_idea_fidelity_source(const Plan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
                                PlanMotiveRef *ref, bool *from_segment) {
     if (!plan || !source || !ref || !from_segment || !plan_has_lane_span(plan, melody)) {
         return false;
     }
     const PlanConstraint *asked = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     if (!asked || !plan_has_node(plan, asked->params.motive.motive) ||
         !read_meter_key(plan, plan_lane_span_span(plan, melody), &meter, &key)) {
         return false;
@@ -151,9 +152,9 @@ bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const M
 }
 
 /* The notes as a motive in the meter and key of the lanes over the span; its length is the end of its last note. */
-static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const PlanNote *notes, size_t count, Motive *out) {
+static bool realized_motive(const Plan *plan, LaneSpanId melody, const PlanNote *notes, size_t count, Motive *out) {
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     Rational length;
     if (count == 0 || count > MOTIVE_MAX_NOTES || !read_meter_key(plan, plan_lane_span_span(plan, melody), &meter, &key)) {
         return false;
@@ -170,7 +171,7 @@ static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const Plan
 }
 
 /* The length of the idea's motive node: the end of its last note, the pickup part of it (R-319). */
-static bool node_length_of(const PiecePlan *plan, LaneSpanId melody, Rational *length) {
+static bool node_length_of(const Plan *plan, LaneSpanId melody, Rational *length) {
     const PlanConstraint *asked = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
     LaneSpanId node_span;
     if (!asked || !plan_has_node(plan, asked->params.motive.motive) ||
@@ -190,7 +191,7 @@ static size_t notes_inside(const PlanNote *notes, size_t count, Rational node_le
     return inside;
 }
 
-bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
+bool grow_idea_realized(const Plan *plan, LaneSpanId melody, Motive *out) {
     Rational node_length;
     if (!plan || !out || !plan_has_lane_span(plan, melody) || plan_lane_span_lane(plan, melody) != PLAN_LANE_MELODY ||
         !node_length_of(plan, melody, &node_length)) {
@@ -200,7 +201,7 @@ bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
     return realized_motive(plan, melody, written->notes, notes_inside(written->notes, written->note_count, node_length), out);
 }
 
-bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out) {
+bool grow_idea_fidelity(const Plan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out) {
     Motive source;
     Motive realized;
     PlanMotiveRef ref;
@@ -227,8 +228,13 @@ static const char *role_name(GrowIdeaRole role) {
     return "none";
 }
 
+/* A 64-bit value as 8 bytes, least significant first, into the hash. */
 static unsigned long long hash_value(unsigned long long hash, long long value) {
-    return (hash ^ (unsigned long long)value) * 1099511628211ull;
+    unsigned char bytes[8];
+    for (int i = 0; i < 8; i++) {
+        bytes[i] = (unsigned char)(((unsigned long long)value >> (8 * i)) & 0xFFu);
+    }
+    return content_hash_fnv1a64(hash, bytes, sizeof(bytes));
 }
 
 /*
@@ -236,7 +242,7 @@ static unsigned long long hash_value(unsigned long long hash, long long value) {
  * first), since the fidelity of the same notes an octave higher or lower is the same (R-354 drops whole octaves).
  */
 static unsigned long long measurement_key(LaneSpanId span, const PlanNote *notes, size_t count) {
-    unsigned long long hash = hash_value(14695981039346656037ull, (long long)span);
+    unsigned long long hash = hash_value(CONTENT_HASH_FNV1A64_OFFSET, (long long)span);
     int octave = count > 0 ? (notes[0].midi >= 0 ? notes[0].midi / 12 : -((11 - notes[0].midi) / 12)) * 12 : 0;
     for (size_t i = 0; i < count; i++) {
         hash = hash_value(hash, notes[i].midi - octave);
@@ -305,7 +311,7 @@ bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment) {
 }
 
 /* The idea's fidelity for these realized notes: from the cache, else measured. *departs says its ref makes the idea differ from its source. */
-static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
+static bool measure(const Plan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
                     const GrowFidelityContext *context, MotiveFidelity *out, bool *departs) {
     unsigned long long key = measurement_key(span, notes, count);
     if (cache_find(context->cache, key, out, departs)) {
@@ -340,13 +346,14 @@ static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *note
 }
 
 /* A fraction in lowest terms and below 2^32 on both sides, as the fill loop compares scores in 64 bits (style_check.c does the same). */
-static void set_reduced(unsigned long *numerator_out, unsigned long *denominator_out, Wide numerator, Wide denominator) {
-    Wide divisor = wide_gcd(numerator, denominator);
+static void set_reduced(unsigned long *numerator_out, unsigned long *denominator_out, unsigned long long numerator,
+                        unsigned long long denominator) {
+    unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
     if (divisor > 1) {
         numerator /= divisor;
         denominator /= divisor;
     }
-    while (numerator >= ((Wide)1 << 32) || denominator >= ((Wide)1 << 32)) {
+    while (numerator >= (1ULL << 32) || denominator >= (1ULL << 32)) {
         numerator >>= 1;
         denominator >>= 1;
     }
@@ -354,7 +361,7 @@ static void set_reduced(unsigned long *numerator_out, unsigned long *denominator
     *denominator_out = denominator ? (unsigned long)denominator : 1ul;
 }
 
-bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_fidelity_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out) {
     const GrowFidelityContext *fidelity_context = context;
     if (!fidelity_context || !fidelity_context->inner || !plan || !operator_ || !candidate || !out) {
@@ -406,20 +413,27 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
     unsigned long quantized = measured.score.numerator * 100 / measured.score.denominator;
     /* The inner share in lowest terms, so the same share ranks the same however a checker wrote it (a style of weight 0 adds
        nothing and must change nothing). */
-    Wide held = out->score_numerator;
-    Wide total = out->score_denominator;
-    Wide divisor = wide_gcd(held, total);
+    unsigned long long held = out->score_numerator;
+    unsigned long long total = out->score_denominator;
+    unsigned long long divisor = rational_gcd_unsigned(held, total);
     if (divisor > 1) {
         held /= divisor;
         total /= divisor;
     }
-    Wide scale = 201 * (total + 1);
-    set_reduced(&out->score_numerator, &out->score_denominator, ((measured.agrees ? 100u : 0u) + (Wide)quantized) * (total + 1) + held,
-                scale);
+    /* The score's parts are below 2^32 (style_check.c and set_reduced keep them so), so each product below fits 64 bits except the style's
+       denominator times the scale, which is brought down a bit at a time when it would not. */
+    unsigned long long scale = 201 * (total + 1);
+    set_reduced(&out->score_numerator, &out->score_denominator,
+                ((measured.agrees ? 100u : 0u) + (unsigned long long)quantized) * (total + 1) + held, scale);
     /* The style's part stays a part of the score: it is scaled as the held share is, held/total over 201 (total + 1). */
     if (out->style_denominator > 0) {
-        set_reduced(&out->style_numerator, &out->style_denominator, (Wide)out->style_numerator * total,
-                    (Wide)out->style_denominator * scale);
+        unsigned long long style_numerator = (unsigned long long)out->style_numerator * total;
+        unsigned long long style_denominator;
+        while (!rational_checked_mul_unsigned(out->style_denominator, scale, &style_denominator)) {
+            style_numerator >>= 1;
+            scale >>= 1;
+        }
+        set_reduced(&out->style_numerator, &out->style_denominator, style_numerator, style_denominator);
     }
     return true;
 }

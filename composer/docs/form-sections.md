@@ -1,6 +1,6 @@
 # Form sections
 
-The members of a section of a size in a form document. A section is read by the library's section codec (`section_from_json`, use `SECTION_USE_FORM`, [library plan](../../library/docs/modules/plan.md)), which refuses what is about the section itself at its path under the section, and then by `form_section_check` in `src/form/form_spec.c`, which holds the rules that need the form: a name unique in its size, keys that name regions of the form, a return of an earlier section that keeps its construction, the motive grammar, the length and cadence each role has, and the bars a construction adds up to. The role of a transition, retransition, subordinate theme or coda sets the section's function. Back to [forms.md](forms.md).
+The members of a section of a size in a form document. A section is read by the library's section codec (`section_from_json`, use `SECTION_USE_FORM`, [library plan](../../library/docs/modules/plan.md)), which refuses what is about the section itself at its path under the section, and then by `form_section_check` in `src/structure/form_spec.c`, which holds the rules that need the form: a name unique in its size, keys that name regions of the form, a return of an earlier section that keeps its construction, the motive grammar, the length and cadence each role has, and the bars a construction adds up to. The role of a transition, retransition, subordinate theme or coda sets the section's function. Back to [forms.md](forms.md).
 
 ## A section of a size
 

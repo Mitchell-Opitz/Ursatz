@@ -3,12 +3,13 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/compose_candidates.h>
 #include <ursatz_composer/given.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
-#include "api_grow.h"
+#include "api_style.h"
 #include "api_workflow.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* `fill` as a composer API entry (docs/cli-fill.md): a plan realized in stages. */
 
@@ -22,7 +23,7 @@ typedef struct {
     const char *blend_weights_text;
     const char *without[PLAN_STYLE_WITHOUT_MAX];
     size_t without_count;
-    ComposerRatio style_weight; /* 0/0 unless style_weight was given */
+    Rational style_weight; /* 0/0 unless style_weight was given */
 } FillStyle;
 
 /* The style members of a request (fill and the commands that compose a plan again). */
@@ -68,8 +69,8 @@ static ComposerStatus read_style_members(const cJSON *request, FillStyle *out, C
  * The style the run prefers: the request's, else the STYLE constraint on the plan's form node, and the weight from the
  * request, else the constraint's. *style stays NULL when there is none.
  */
-static ComposerStatus resolve_style(const FillStyle *options, const PiecePlan *plan, ComposerStyle **style,
-                                    ComposerRatio *weight, ComposerError *error) {
+static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, ComposerStyle **style,
+                                    Rational *weight, ComposerError *error) {
     const PlanStyle *planned = NULL;
     NodeId root = plan_root(plan);
     for (size_t i = 0; root != PLAN_NODE_NONE && i < plan_node_constraint_count(plan, root); i++) {
@@ -110,8 +111,8 @@ static ComposerStatus resolve_style(const FillStyle *options, const PiecePlan *p
         }
         return api_read_blend(false, blend_path, options->blend_weight_text, options->blend_weights_text, &blend_weights, error);
     }
-    weight->numerator = planned ? planned->weight_numerator : 0;
-    weight->denominator = planned ? planned->weight_denominator : 0;
+    weight->num = planned ? planned->weight_numerator : 0;
+    weight->den = planned ? planned->weight_denominator : 0;
     if (options->style_weight_text) {
         *weight = options->style_weight;
     }
@@ -191,7 +192,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     }
 
     /* The seeds are tried one after another, each from a new copy of the plan; only a stuck run can be mended by the next. */
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ComposeOutcome outcome;
     memset(&outcome, 0, sizeof(outcome));
     GivenSnapshot *snapshot = NULL;
@@ -201,13 +202,13 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     ComposeCandidates candidates;
     memset(&candidates, 0, sizeof(candidates));
     ComposerStyle *style = NULL;
-    ComposerRatio style_weight = {0, 0};
+    Rational style_weight = {0, 0};
     for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == COMPOSER_OK; attempt++) {
         if (job_step(job, "seed", (unsigned)attempt, API_SEED_TRIES)) {
             status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
             break;
         }
-        PiecePlan *fresh = NULL;
+        Plan *fresh = NULL;
         status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
         if (status != COMPOSER_OK) {
             break;
@@ -320,7 +321,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
             status = api_record_outputs(plan, &outcome, &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
-            status = api_render_outputs(context->knowledge, plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, plan, &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

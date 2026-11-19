@@ -5,11 +5,12 @@
 
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include <plan/plan_common.h>
 
 /*
  * A motif as long as the idea it fills is that idea (B1 of P33): grow_motive_fit for motives of 1, 1.5, 2 and 3 bars with
@@ -48,7 +49,8 @@ static void test_fit(void) {
         PlanMeter meter_of = {0};
         meter_of.beats_per_bar = beats;
         meter_of.beat_unit = 4;
-        Rational bar = grow_bar_length(&meter_of);
+        Rational bar;
+        plan_meter_bar_length(&meter_of, &bar);
         for (size_t t = 0; t < 4; t++) {
             Motive motive = make_motive(texts[t], beats, 4, false, 0, none);
             for (size_t idea = 1; idea <= 4; idea++) {
@@ -105,7 +107,7 @@ static void test_compose(void) {
     request.chords = chords;
     request.chord_count = 8;
 
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -166,7 +168,7 @@ static void test_cadence_note(void) {
         request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
         request.pairing.ending = SECTION_ENDING_CONTINUATION;
         request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
@@ -224,7 +226,7 @@ static void test_variety(void) {
             request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
             request.pairing.ending = SECTION_ENDING_CONTINUATION;
             request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             GrowOutcome outcome;
             GrowConfig config;
             memset(&config, 0, sizeof(config));
@@ -256,7 +258,7 @@ static void test_four_bar_refused(void) {
     request.pairing.beginning = SECTION_BEGINNING_COMPOUND_BASIC_IDEA;
     request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
     /* A bar of it is accepted. */
     Motive bar = make_motive("A4:q C5:q E5:q", 3, 4, true, 9, none);
@@ -281,7 +283,7 @@ static void test_period_slot(void) {
     request.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
     request.pairing.ending = SECTION_ENDING_CONSEQUENT;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -311,7 +313,7 @@ static void test_period_slot(void) {
 /* A 4-bar 4/4 motif as long as the antecedent fills it whole: bars 1 to 4 are the motif's rhythm. */
 static const char *const FOUR_BARS = "E4:q G4:e F4:e D4:q C4:q | G4:q E4:q D4:q C4:q | E4:q G4:q C5:q G4:q | D5:q B4:q A4:q G4:q";
 
-static void check_whole_part(PiecePlan *plan, const Motive *motive) {
+static void check_whole_part(Plan *plan, const Motive *motive) {
     NodeId idea = test_find_node(plan, "basic idea");
     assert(idea != PLAN_NODE_NONE);
     PlanSpan span = plan_node_span(plan, idea);
@@ -353,7 +355,7 @@ static void test_part_length(void) {
                 continue;
             }
             for (unsigned long seed = 1; seed <= 3; seed++) {
-                PiecePlan *plan = NULL;
+                Plan *plan = NULL;
                 GrowOutcome outcome;
                 GrowConfig config;
                 memset(&config, 0, sizeof(config));
@@ -376,7 +378,7 @@ static void test_part_length(void) {
 static void test_part_length_refused(void) {
     Rational none = {0, 1};
     Motive motive = make_motive(FOUR_BARS, 4, 4, false, 0, none);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowRequest compound = part_request(&motive, SECTION_BEGINNING_COMPOUND_BASIC_IDEA, SECTION_ENDING_CONTINUATION);
     assert(grow_build_plan_checked(&compound, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
     Motive three = make_motive("E4:q G4:q C5:q G4:q | D5:q B4:q A4:q G4:q | E4:w", 4, 4, false, 0, none);

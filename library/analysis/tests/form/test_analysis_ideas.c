@@ -3,7 +3,6 @@
 #include "analysis/form/analysis_ideas.h"
 #include "analysis/tests/form/form_test_util.h"
 #include "theory/form/idea_label.h"
-#include "interpretation_test_access.h"
 
 /* Ideas and subphrases of each phrase by standard-form's length conventions, labelled by similarity to the basic idea. */
 
@@ -40,7 +39,7 @@ static void test_an_eight_measure_phrase_has_four_ideas_and_two_subphrases(void)
     assert(phrases.count == 1 && s.idea_count == 4 && s.subphrase_count == 2);
     for (size_t i = 0; i < 4; i++) {
         assert(s.ideas[i].claim.length_measures == 2 && s.ideas[i].claim.first_measure == 1 + 2 * (int)i);
-        assert(s.ideas[i].shell != NULL && structure_event_id_count(s.ideas[i].shell) == 8);
+        assert(s.ideas[i].claim.note_end - s.ideas[i].claim.note_first == 8);
     }
     assert(s.ideas[0].claim.label == (int)IDEA_LABEL_BASIC_IDEA && s.ideas[0].claim.match == -1);
     assert(s.ideas[1].claim.label == (int)IDEA_LABEL_BASIC_IDEA && s.ideas[1].claim.match == 1 &&
@@ -60,7 +59,7 @@ static void test_an_eight_measure_phrase_has_four_ideas_and_two_subphrases(void)
     form_destroy(&f);
 }
 
-static void test_the_interpretation_follows_the_claim_pattern(void) {
+static void test_the_claim_carries_the_measures(void) {
     FormFixture f;
     form_init(&f, 4, 0);
     const int *measures[4] = {BASIC, BASIC, OTHER, OTHER};
@@ -69,12 +68,8 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     StandardFormSegmentation s = analyze(&f, &phrases);
     assert(s.idea_count == 2 && s.subphrase_count == 0 && s.subphrases == NULL);
     const StandardFormIdea *idea = &s.ideas[1];
-    assert(strcmp(entity_id_value(interpretation_target_id(idea->interpretation)),
-                  entity_id_value(entity_id(structure_entity(idea->shell)))) == 0);
-    assert(interpretation_framework_reference(idea->interpretation) != NULL);
     /* u = 1 - (1 - 0.1)(1 - 0.5 * (1 - margin)); the contrast has margin 1, so u is the phrase's */
     assert(fabs(idea->uncertainty - 0.1) < 1e-12);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(idea->interpretation)) == 900000UL);
     standard_form_segmentation_destroy(&s);
     standard_form_phrases_destroy(&phrases);
     form_destroy(&f);
@@ -167,7 +162,7 @@ static void test_bad_calls_are_refused(void) {
 
 int main(void) {
     test_an_eight_measure_phrase_has_four_ideas_and_two_subphrases();
-    test_the_interpretation_follows_the_claim_pattern();
+    test_the_claim_carries_the_measures();
     test_a_six_measure_phrase_has_a_one_idea_ending();
     test_an_odd_length_gives_the_last_idea_the_remainder();
     test_the_pickup_belongs_to_the_first_idea_and_is_not_counted();

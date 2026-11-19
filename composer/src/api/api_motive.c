@@ -11,7 +11,7 @@
 #include <ursatz_composer/motive_tones.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* "3=passing": the 1-based note and its role (the --tone option's value). */
 static ComposerStatus read_tone(const char *text, size_t note_count, const char *path, MotiveToneOverride *out,
@@ -86,7 +86,7 @@ static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapsho
         return COMPOSER_ERR_REQUEST;
     }
     if (has_key) {
-        AnalysisKey key;
+        SpelledKey key;
         if (!request_parse_key(key_text, knowledge, &key)) {
             if (api_fail_unsupported_key(error, "/render_key", knowledge, key_text)) {
                 return COMPOSER_ERR_REQUEST;
@@ -106,7 +106,7 @@ static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapsho
     if (status != COMPOSER_OK || (!want_midi && !want_musicxml)) {
         return status;
     }
-    PiecePlan *plan = motive_render_plan(rendered);
+    Plan *plan = motive_render_plan(rendered);
     RenderedPlan plan_rendered;
     PlanExportError detail;
     memset(&detail, 0, sizeof detail);

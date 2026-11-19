@@ -211,7 +211,7 @@ the requested key's mode. There is no seed: the first passage that works is used
 **What is reported.** The text output names the source piece, its measures and the score (`motive from Mozart 545.mid m.1
 b.1 - m.2 b.1, score 1/1`; `progression from ...`), the JSON output has `source` (grow), `motive_source` (plan) and `from`
 (a progression), and the plan JSON records it in a `source` constraint: on the motive node `m0` for a motive, on the section
-for a progression (`docs/plan-format.md`). A passage marked `stale` (its document was analyzed by another version) is used all the
+for a progression (`library/docs/modules/plan-format.md`). A passage marked `stale` (its document was analyzed by another version) is used all the
 same and the result says so in `notices`: `N stale documents (analyzed by another version; run the corpus again)`, which the
 command line prints with the corpus directory (`N stale documents in '<dir>' (...)`). Nothing reads the note when the plan is filled.
 

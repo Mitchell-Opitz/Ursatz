@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "model/interpretation/interpretation.h"
 #include "analysis/meter/meter_analysis_input.h"
 #include "theory/meter/meter_class_rules.h"
 #include "analysis/notes/analysis_note.h"

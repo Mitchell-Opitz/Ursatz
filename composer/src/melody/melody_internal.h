@@ -38,7 +38,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     PhraseMetre metre;
     Rational length;
     Rational cell;
@@ -147,7 +147,7 @@ Rational melody_climax_position(const MelodyContext *context, const MelodyFillPa
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
 
 /* Reads the bars before the target that share one rhythm into repeat_run (phase L4, R-479). False only on a plan error. */
-bool melody_context_read_repeats(const PiecePlan *plan, MelodyContext *context);
+bool melody_context_read_repeats(const Plan *plan, MelodyContext *context);
 
 /* How many times the closure rules count for the target (phase L4, R-478): 0 when it ends no cadence. */
 unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params);
@@ -190,8 +190,6 @@ void melody_context_zero(MelodyContext *context);
 /* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
 #define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
 
-/* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
-bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
 /* The index of the chord sounding at a position of the phrase. */
 size_t melody_chord_at(const MelodyContext *context, Rational position);
 
@@ -199,14 +197,14 @@ size_t melody_chord_at(const MelodyContext *context, Rational position);
  * Reads the harmony and bass under a phrase: the chord spans must tile the span exactly, none of them open, and
  * the bass spans must tile it. The target and the motive are not read. False when the phrase cannot be read.
  */
-bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, AnalysisKey key, MelodyContext *out);
+bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *out);
 
 /*
  * Reads the harmony, bass and motive under a Constrained melody span: the chord spans must tile the span exactly,
  * none of them open, the bass spans must tile it, and a motive_ref constraint must name a motive with a melody.
  * False when the span is not one the melody operator applies to.
  */
-bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out);
+bool melody_context_read(const Plan *plan, LaneSpanId target, MelodyContext *out);
 
 /*
  * The pitch classes a note must be one of: those the chords it sounds through share, so that a note that is
@@ -314,7 +312,7 @@ bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
 bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unclassified);
 /* The MELODY_NCT_ bit of a NonChordTone (an int), 0 for a type the operator has no bit for. */
 unsigned melody_nct_bit(int tone);
-/* The SHAPING_ bits (check/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
+/* The SHAPING_ bits (util/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
 unsigned melody_shaping_broken(const MelodyCandidate *melody);
 /* The checker's verdict on a melody candidate's payload. */
 bool melody_check(const void *payload, FillCheck *out);
@@ -340,8 +338,5 @@ bool melody_realize(const MelodyContext *context, const MelodyFillParams *params
  * five. Returns how many.
  */
 size_t melody_realize_shifts(const MelodyContext *context, const MelodyFillParams *params, int *shifts);
-
-/* How many of the standard counterpoint melodic rules have a soft preference. */
-unsigned melody_melodic_soft_rules(void);
 
 #endif

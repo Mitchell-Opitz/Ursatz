@@ -9,7 +9,7 @@
 
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 
@@ -84,7 +84,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     GrowRequest request;
     GrowConfig config;
     GrowOutcome outcome;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     FormHeard heard;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();

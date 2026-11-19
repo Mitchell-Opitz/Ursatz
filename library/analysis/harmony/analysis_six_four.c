@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/harmony/analysis_claim.h"
 #include "model/core/value.h"
 #include "theory/harmony/harmony_six_four.h"
 #include "model/identity/entity_id.h"
@@ -169,18 +168,6 @@ HarmonySixFourStatus harmony_analysis_classify_six_fours(const HarmonySegment *s
                 if (!classified) {
                     continue;
                 }
-                HarmonySixFourClaim claim;
-                memset(&claim, 0, sizeof(claim));
-                claim.type = (int)type;
-                char id[256];
-                snprintf(id, sizeof(id), "standard-harmony-six-four-%s", segments[s].input->segment.id);
-                results[s].interpretation = harmony_analysis_make_interpretation(
-                    id, segments[s].input->segment.id, HARMONY_SIX_FOUR_CLAIM_TYPE, &claim, sizeof(claim),
-                    segments[s].input->uncertainty, "six-four-adapter");
-                if (results[s].interpretation == NULL) {
-                    harmony_six_four_results_destroy(results, count);
-                    return HARMONY_SIX_FOUR_ERR_ALLOC;
-                }
                 results[s].classified = true;
                 results[s].type = type;
             }
@@ -192,12 +179,7 @@ HarmonySixFourStatus harmony_analysis_classify_six_fours(const HarmonySegment *s
 }
 
 void harmony_six_four_results_destroy(HarmonySixFourResult *results, size_t count) {
-    if (results == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        interpretation_destroy(results[i].interpretation);
-    }
+    (void)count;
     free(results);
 }
 

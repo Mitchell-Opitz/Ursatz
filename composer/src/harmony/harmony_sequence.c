@@ -97,7 +97,7 @@ static bool build_chords(HarmonyMode mode, const ScalePattern *pattern, int dire
     return true;
 }
 
-static bool sequence_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool sequence_applies(const Plan *plan, FillTarget target, void *context) {
     SkeletonContext read;
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) &&
@@ -174,7 +174,7 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
     return true;
 }
 
-static bool sequence_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool sequence_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
     HarmonySequenceParams params_value = params_of(context);
     const HarmonySequenceParams *params = &params_value;
@@ -204,21 +204,12 @@ static bool sequence_generate(const PiecePlan *plan, FillTarget target, FillRng 
     return ok;
 }
 
-static PlanResult sequence_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    const SkeletonCandidate *skeleton = candidate ? candidate->payload : NULL;
-    (void)context;
-    if (target.kind != FILL_TARGET_LANE_SPAN || !skeleton || skeleton->context.target != (LaneSpanId)target.id) {
-        return PLAN_ERR_NULL;
-    }
-    return harmony_skeleton_apply(plan, skeleton);
-}
-
 FillResult harmony_sequence_register(FillOperatorRegistry *registry, const HarmonySequenceParams *params) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_SEQUENCE_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span with the chords before it";
-    operator_.generator.supported_outputs = "PiecePlan harmony and bass lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span with the chords before it";
+    operator_.generator.supported_outputs = "Plan harmony and bass lane spans";
     operator_.generator.configuration_description = "enabled patterns, repeats, preference, bass parameters";
     operator_.generator.constraints_description = "scale-harmonization patterns, standard-harmony, standard-counterpoint";
     operator_.generator.deterministic = true;
@@ -226,7 +217,7 @@ FillResult harmony_sequence_register(FillOperatorRegistry *registry, const Harmo
     operator_.kind = FILL_OPERATOR_FILL;
     operator_.applies = sequence_applies;
     operator_.generate = sequence_generate;
-    operator_.apply = sequence_apply;
+    operator_.apply = harmony_skeleton_apply_target;
     operator_.context = (void *)params;
     return fill_registry_register(registry, &operator_);
 }

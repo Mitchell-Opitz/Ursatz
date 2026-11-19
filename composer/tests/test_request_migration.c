@@ -7,14 +7,15 @@
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -383,11 +384,11 @@ static void test_plan_formats(void) {
         snprintf(path, sizeof(path), COMPOSER_FIXTURE_DIR "/%s", FIXTURES[i]);
         char *v1 = test_must_read_file(path, NULL);
         assert(strstr(v1, "\"schema_version\": 1") != NULL || strstr(v1, "\"schema_version\":1") != NULL);
-        PiecePlan *read = NULL;
+        Plan *read = NULL;
         PlanJsonError error;
-        assert(plan_from_json(test_knowledge(), v1, &read, &error) == PLAN_OK);
-        char *v4 = plan_to_json(read, &error);
-        assert(v4 && strstr(v4, "\"format_version\": 5") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
+        assert(plan_from_json(test_knowledge(), v1, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
+        char *v4 = plan_to_json(read, test_plan_producer(), &error);
+        assert(v4 && strstr(v4, "\"format_version\": 6") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
         /* format 3 is the same text without the note ids */
         char *v3 = test_plan_text_as_format_three(v4);
         assert(v3 && strstr(v3, "\"format_version\": 3") && strstr(v3, "next_note_id") == NULL);
@@ -421,9 +422,9 @@ static void test_plan_formats(void) {
         composer_response_destroy(&from_v4);
 
         /* every format writes back as the format 4 text (a format 1 to 3 file gets its note ids 1 to n in file order) */
-        PiecePlan *again = NULL;
-        assert(plan_from_json(test_knowledge(), v2, &again, &error) == PLAN_OK);
-        char *written = plan_to_json(again, &error);
+        Plan *again = NULL;
+        assert(plan_from_json(test_knowledge(), v2, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
+        char *written = plan_to_json(again, test_plan_producer(), &error);
         assert(written && strcmp(written, v4) == 0);
         free(written);
         plan_destroy(again);
@@ -435,9 +436,9 @@ static void test_plan_formats(void) {
     }
 }
 
-/* The first key span of the plan named by `relation` and resolved: its index in the "keys" member of the plan object, or -1. */
+/* The first key span of the plan named by `relation` and resolved: its index in the "regions" member of the plan object, or -1. */
 static int resolved_span_of(const cJSON *plan, const char *relation) {
-    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(plan, "keys");
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(plan, "regions");
     int index = 0;
     const cJSON *span;
     cJSON_ArrayForEach(span, keys) {
@@ -465,12 +466,12 @@ static char *dominant_plan(unsigned long *seed_out, int *span_out) {
             request.meter.beat_unit = 4;
             request.modulate = true;
             request.seed = seed;
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             if (piece_build_plan(&request, &plan) != PIECE_OK) {
                 continue;
             }
             PlanJsonError error;
-            char *text = plan_to_json(plan, &error);
+            char *text = plan_to_json(plan, test_plan_producer(), &error);
             plan_destroy(plan);
             assert(text);
             cJSON *json = cJSON_Parse(text);
@@ -492,7 +493,7 @@ static char *dominant_plan(unsigned long *seed_out, int *span_out) {
 static char *plan_with_span_named(const char *text, int span, bool by_relation) {
     cJSON *json = cJSON_Parse(text);
     assert(json);
-    cJSON *keys = cJSON_GetObjectItemCaseSensitive(json, "keys");
+    cJSON *keys = cJSON_GetObjectItemCaseSensitive(json, "regions");
     cJSON *payload = cJSON_GetObjectItemCaseSensitive(
         cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(keys, span), "composer"), "payload");
     assert(payload);
@@ -532,7 +533,7 @@ static void test_relation_named_span_composes(void) {
     assert(planned);
     cJSON *json = cJSON_Parse(planned);
     cJSON *payload = cJSON_GetObjectItemCaseSensitive(
-        cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(json, "keys"), span), "composer"), "payload");
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(json, "regions"), span), "composer"), "payload");
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(payload, "tonic")->valuestring, "G") == 0 &&
            strcmp(cJSON_GetObjectItemCaseSensitive(payload, "material")->valuestring, "omt.material.major") == 0 &&
            strcmp(cJSON_GetObjectItemCaseSensitive(payload, "anchor")->valuestring, "home") == 0);
@@ -543,11 +544,11 @@ static void test_relation_named_span_composes(void) {
     assert(strstr(by_key, "\"relation\"") == NULL && strstr(by_relation, "\"tonic\": \"G\"") == NULL);
 
     /* the relation-named plan is read unresolved, and written resolved once it is composed from */
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
-    assert(plan_from_json(test_knowledge(), by_relation, &read, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), by_relation, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     plan_destroy(read);
-    assert(plan_from_json_resolved(test_knowledge(), by_relation, &read, &error) == PLAN_OK);
+    assert(plan_from_json_resolved(test_knowledge(), by_relation, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     plan_destroy(read);
 
     ComposerResponse named;

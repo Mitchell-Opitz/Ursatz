@@ -3,7 +3,7 @@
 
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * A motive as a file. The motive goes into a one-voice plan (a melody lane) as Given material, with its meter and, when
@@ -17,6 +17,6 @@
  */
 
 /* The plan the files are written from; NULL on failure. Caller frees with plan_destroy. */
-PiecePlan *motive_render_plan(const Motive *motive);
+Plan *motive_render_plan(const Motive *motive);
 
 #endif

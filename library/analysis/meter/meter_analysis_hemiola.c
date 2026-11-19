@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "theory/meter/hemiola_rules.h"
-#include "analysis/meter/meter_analysis_claim.h"
+#include "analysis/notes/note_group.h"
 #include "analysis/meter/meter_analysis_position.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
@@ -106,10 +106,11 @@ static StandardMeterAnalysisStatus emit_window(const StandardMeterInput *input, 
     item->uncertainty = 1.0 - (double)claim->agreeing / 3.0;
     char key[64];
     snprintf(key, sizeof(key), "m%d", claim->first_measure);
-    bool ok = standard_meter_analysis_emit("hemiola", key, ids, n, STANDARD_METER_HEMIOLA_CLAIM_TYPE, claim,
-                                                    sizeof(*claim), item->uncertainty, &item->shell, &item->interpretation);
+    char shell_id[128];
+    snprintf(shell_id, sizeof(shell_id), "standard-meter-hemiola-notes-%s", key);
+    item->shell = analysis_note_group("standard-meter", shell_id, ids, n);
     free(ids);
-    if (!ok) {
+    if (item->shell == NULL) {
         return STANDARD_METER_ANALYSIS_ERR_ALLOC;
     }
     found->count++;
@@ -280,7 +281,6 @@ void standard_meter_hemiolas_destroy(StandardMeterHemiolas *hemiolas) {
         return;
     }
     for (size_t i = 0; i < hemiolas->count; i++) {
-        interpretation_destroy(hemiolas->items[i].interpretation);
         structure_destroy(hemiolas->items[i].shell);
     }
     free(hemiolas->items);

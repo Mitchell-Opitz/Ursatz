@@ -144,7 +144,7 @@ int main(void) {
     snprintf(path, sizeof(path), "%s/annotations/field1_texture.txt", URSATZ_FIXTURES_DIR);
     if (!load_annotation(path, &annotation)) {
         fprintf(stderr, "cannot read %s\n", path);
-        chain_result_destroy(&report);
+        test_release_report(&report);
         imported_score_destroy(&notes);
         return 1;
     }
@@ -185,7 +185,7 @@ int main(void) {
     printf("Field 1: change points found: %zu of %zu\n", found_changes, annotation.change_count);
     CHECK(found_changes == annotation.change_count);
 
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     return test_finish("test_texture");
 }

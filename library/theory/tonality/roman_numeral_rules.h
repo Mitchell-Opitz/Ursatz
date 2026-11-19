@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "model/identity/entity_id.h"
-#include "model/interpretation/chord.h"
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/triad_rules.h"
 

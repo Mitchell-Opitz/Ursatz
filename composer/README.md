@@ -58,6 +58,6 @@ See [docs/api.md](docs/api.md) for every entry, the job rules and a minimal C cl
 
 All docs are indexed in [docs/README.md](docs/README.md). Start with [docs/architecture.md](docs/architecture.md), then:
 
-- [Plan format](docs/plan-format.md), [fill loop](docs/fill-loop.md), [melody](docs/melody-fill.md), [accompaniment](docs/accompaniment.md), [voicing](docs/voicing.md), [counterpoint](docs/counterpoint.md)
+- [Plan format](../library/docs/modules/plan-format.md), [fill loop](docs/fill-loop.md), [melody](docs/melody-fill.md), [accompaniment](docs/accompaniment.md), [voicing](docs/voicing.md), [counterpoint](docs/counterpoint.md)
 - [Growing a theme](docs/grow.md), [pieces from forms](docs/piece.md), [forms as documents](docs/forms.md), [hearing the form](docs/form-hear.md)
 - [Changelog](docs/changelog.md)

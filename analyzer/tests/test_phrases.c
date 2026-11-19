@@ -274,7 +274,7 @@ static void run_piece(const Piece *piece) {
         check_phrases(piece, &notes, document);
         cJSON_Delete(document);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

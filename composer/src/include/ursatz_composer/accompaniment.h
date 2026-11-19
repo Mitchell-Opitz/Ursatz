@@ -6,7 +6,7 @@
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 
@@ -51,7 +51,7 @@ AccompanimentParams accompaniment_params_default(void);
  * every moment it sounds. Soft, the score being the share that hold: the candidate moves fewer than 3 semitones per
  * voice per chord change on average. A candidate of another operator goes to harmony_phrase_checker.
  */
-bool accompaniment_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool accompaniment_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*

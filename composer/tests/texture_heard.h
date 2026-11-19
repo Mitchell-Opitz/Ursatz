@@ -8,7 +8,7 @@
 
 #include <analysis/texture/texture_analysis_classify.h>
 #include <analysis/texture/texture_analysis_input.h>
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <model/identity/entity_id.h>
 #include <model/time/meter_map.h>
@@ -17,8 +17,8 @@
 #include <model/time/time_signature.h>
 #include <model/time/time_span.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 
 /*
  * How standard-texture hears a written plan: the melody, the bass and the inner voices over a span as three tracks (the
@@ -52,7 +52,7 @@ static inline void heard_add(AnalysisNote **notes, size_t *note_count, size_t tr
 }
 
 /* The texture of every measure of span, and how many of them are the texture asked for. */
-static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, PlanMeter meter, int asked) {
+static inline TextureHeard texture_heard(const Plan *plan, PlanSpan span, PlanMeter meter, int asked) {
     TextureHeard result = {0, 0, {0}};
     NoteValue *unit = NULL;
     TimeSignature *signature = NULL;

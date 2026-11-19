@@ -135,7 +135,7 @@ int main(void) {
     assert(theme_shape_slot(GROW_SLOT_COUNT) == NULL);
     assert(grow_slot_node_name(GROW_SLOT_COUNT) == NULL);
 
-    /* The halves: the plan names (plan_json) and the library names (standard-form). */
+    /* The halves: the plan names (the section tables' too) and the library names (standard-form). */
     static const char *const BEGINNING_PLAN[3] = {"presentation", "antecedent", "compound_basic_idea"};
     static const char *const BEGINNING_LIBRARY[3] = {"presentation", "antecedent", "compound-basic-idea"};
     static const char *const ENDING_NAMES[3] = {"continuation", "consequent", "cadential"};
@@ -145,17 +145,12 @@ int main(void) {
         assert(beginning && beginning->beginning && beginning->value == i);
         assert(strcmp(beginning->plan_name, BEGINNING_PLAN[i]) == 0);
         assert(strcmp(beginning->library_name, BEGINNING_LIBRARY[i]) == 0);
-        assert(theme_shape_half_find(true, BEGINNING_PLAN[i]) == beginning);
         assert(ending && !ending->beginning && ending->value == i);
         assert(strcmp(ending->plan_name, ENDING_NAMES[i]) == 0);
         assert(strcmp(ending->library_name, ENDING_NAMES[i]) == 0);
-        assert(theme_shape_half_find(false, ENDING_NAMES[i]) == ending);
     }
     assert(theme_shape_beginning((SectionBeginning)3) == NULL);
     assert(theme_shape_ending((SectionEnding)-1) == NULL);
-    assert(theme_shape_half_find(true, "continuation") == NULL);
-    assert(theme_shape_half_find(false, "presentation") == NULL);
-    assert(theme_shape_half_find(true, NULL) == NULL);
 
     /* The rows: 13 for 10 ideas, each idea at least once. */
     assert(theme_shape_idea_count() == 13);

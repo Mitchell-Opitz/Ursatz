@@ -6,8 +6,6 @@
 #include "theory/form/phrase_beginning.h"
 #include "theory/form/phrase_ending.h"
 #include "theory/form/phrase_level_form.h"
-#include "interpretation_test_access.h"
-#include "relationship_test_access.h"
 
 /* Themes from segmented phrases: the framework's beginning, ending and pairing rules over idea similarity and the cadences. */
 
@@ -69,16 +67,9 @@ static void test_a_sentence(void) {
     assert(c->cadences_usual == 1 && c->lengths_usual == 1 && c->archetypal == 0); /* no fragmentation by the nominal cut */
     assert(c->similarity_match == 1 && c->part_of_compound == 0);
     assert(c->commonality == (int)STANDARD_FORM_COMMONALITY_VERY_COMMON);
-    /* the claim pattern: a relationship between the two subphrases, the interpretation on the relationship */
+    /* the form's name and the theme's shell */
     const StandardFormTheme *theme = &r.themes.items[0];
-    assert(strcmp(relationship_predicate_name(theme->relationship), "sentence") == 0);
-    assert(strcmp(entity_id_value(relationship_source_id(theme->relationship)),
-                  entity_id_value(entity_id(structure_entity(r.segmentation.subphrases[0].shell)))) == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(theme->relationship)),
-                  entity_id_value(entity_id(structure_entity(r.segmentation.subphrases[1].shell)))) == 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(theme->interpretation)),
-                  entity_id_value(relationship_id(theme->relationship))) == 0);
-    assert(interpretation_framework_reference(theme->interpretation) != NULL);
+    assert(c->form == (int)PHRASE_LEVEL_FORM_SENTENCE);
     assert(structure_event_id_count(theme->shell) == 32);
     assert(fabs(theme->uncertainty - 0.1) < 1e-12); /* the cadence's; the similarity is a certain match */
     finish(&r);
@@ -103,9 +94,7 @@ static void test_a_period(void) {
     assert(c->first_cadence_type == (int)HC && c->second_cadence_type == (int)PAC && c->first_strength_rank == 1 &&
            c->second_strength_rank == 3);
     assert(c->cadences_usual == 1 && c->lengths_usual == 1 && c->similarity_match == 1);
-    assert(strcmp(relationship_predicate_name(r.themes.items[0].relationship), "period") == 0);
-    assert(strcmp(entity_id_value(relationship_source_id(r.themes.items[0].relationship)),
-                  entity_id_value(phrase_occurrence_id(r.phrases.items[0].occurrence))) == 0);
+    assert(c->form == (int)PHRASE_LEVEL_FORM_PERIOD);
     assert(fabs(r.themes.items[0].uncertainty - 0.2) < 1e-12); /* the greater of the cadences' */
     finish(&r);
 }
@@ -125,7 +114,7 @@ static void test_a_hybrid_of_an_antecedent_and_a_continuation(void) {
     assert(c->form == (int)PHRASE_LEVEL_FORM_HYBRID && c->beginning == (int)PHRASE_BEGINNING_ANTECEDENT &&
            c->ending == (int)PHRASE_ENDING_CONTINUATION);
     assert(c->commonality == (int)STANDARD_FORM_COMMONALITY_SLIGHTLY_LESS_COMMON);
-    assert(strcmp(relationship_predicate_name(r.themes.items[0].relationship), "hybrid") == 0);
+    assert(c->form == (int)PHRASE_LEVEL_FORM_HYBRID);
     finish(&r);
 }
 
@@ -161,7 +150,6 @@ static void test_a_compound_period_holds_two_sentences(void) {
     const StandardFormThemeClaim *c = &r.themes.items[2].claim;
     assert(c->form == (int)PHRASE_LEVEL_FORM_COMPOUND_PERIOD && c->phrase_count == 2 && c->length_measures == 16 &&
            c->beginning == -1 && c->ending == -1 && c->parts_are_phrases == 1);
-    assert(strcmp(relationship_predicate_name(r.themes.items[2].relationship), "compound-period") == 0);
     finish(&r);
 }
 
@@ -176,7 +164,6 @@ static void test_a_written_out_repeat_is_a_repeated_phrase(void) {
     run(&r);
     assert(r.themes.count == 1);
     assert(r.themes.items[0].claim.form == (int)PHRASE_LEVEL_FORM_REPEATED_PHRASE);
-    assert(strcmp(relationship_predicate_name(r.themes.items[0].relationship), "repeated-phrase") == 0);
     finish(&r);
 }
 

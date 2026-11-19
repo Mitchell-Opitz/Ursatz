@@ -3,9 +3,9 @@
 #include <stdlib.h>
 
 #include <ursatz_composer/melody_fill.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
-#include "check/shaping.h"
+#include "util/shaping.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "support/test_knowledge.h"

@@ -6,16 +6,18 @@
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <ursatz_composer/compose_candidates.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * The Analyzer check (analyzer_check.h, docs/analyzer-check.md): a realized section is analyzed in memory by the
@@ -62,10 +64,10 @@ static const char *const SHAPE_NAMES[] = {"sentence", "period", "rounded binary"
 static const size_t BASELINE[3][SCENARIO_COUNT] = {{9, 7}, {10, 0}, {9, 0}};
 
 /* Builds the plan of a shape in a scenario; *motive_out is the motive a grown shape keeps pointing at. */
-static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_out) {
-    PiecePlan *plan = NULL;
+static Plan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_out) {
+    Plan *plan = NULL;
     PlanMeter meter = {scenario->beats, 4, 0};
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     if (shape == ROUNDED_BINARY) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
@@ -95,7 +97,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     return plan;
 }
 
-static PieceResult compose(PiecePlan *plan, unsigned long seed, bool check, ComposeOutcome *outcome) {
+static PieceResult compose(Plan *plan, unsigned long seed, bool check, ComposeOutcome *outcome) {
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -118,7 +120,7 @@ static const AnalyzerCheckItem *cadence_item(const AnalyzerCheck *check) {
 static int test_contradiction(void) {
     for (unsigned long seed = 1; seed <= 5; seed++) {
         Motive motive;
-        PiecePlan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
+        Plan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
         ComposeOutcome outcome;
         if (compose(plan, seed, false, &outcome) != PIECE_OK) {
             compose_outcome_destroy(&outcome);
@@ -164,7 +166,7 @@ static int test_contradiction(void) {
 
 static int test_default(void) {
     Motive motive;
-    PiecePlan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
+    Plan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
     ComposeOutcome outcome;
     assert(compose(plan, 1, false, &outcome) == PIECE_OK);
     assert(outcome.analyzer_checks == NULL && outcome.analyzer_check_count == 0);
@@ -178,7 +180,7 @@ static int test_default(void) {
 /* ------------------------------------------------------------ planned */
 
 /* Whether every theme section of a plan composed with the check is heard as planned: the outcome's and a new check's. */
-static void expect_heard_as_planned(const PiecePlan *plan, const ComposeOutcome *outcome) {
+static void expect_heard_as_planned(const Plan *plan, const ComposeOutcome *outcome) {
     assert(outcome->analyzer_check_count == outcome->section_count && outcome->analyzer_checks);
     assert(!outcome->analyzer_rejected);
     size_t planned = 0;
@@ -204,7 +206,7 @@ static void expect_heard_as_planned(const PiecePlan *plan, const ComposeOutcome 
 /* One seed; true when the run completed (and then it was accepted by the check). */
 static bool run_once(Shape shape, const Scenario *scenario, unsigned long seed) {
     Motive motive;
-    PiecePlan *plan = plan_of(shape, scenario, &motive);
+    Plan *plan = plan_of(shape, scenario, &motive);
     ComposeOutcome outcome;
     PieceResult ran = compose(plan, seed, true, &outcome);
     assert(ran == PIECE_OK || ran == PIECE_ERR_STUCK);
@@ -245,10 +247,10 @@ static int test_same(void) {
     size_t agreed[2];
     for (int run = 0; run < 2; run++) {
         Motive motive;
-        PiecePlan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
+        Plan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
         ComposeOutcome outcome;
         assert(compose(plan, 1, true, &outcome) == PIECE_OK);
-        texts[run] = plan_to_json(plan, NULL);
+        texts[run] = plan_to_json(plan, test_plan_producer(), NULL);
         agreed[run] = outcome.analyzer_agreed;
         assert(texts[run]);
         compose_outcome_destroy(&outcome);
@@ -286,8 +288,8 @@ static void expect_ranked(const ComposeCandidates *candidates) {
 static int test_candidates(void) {
     for (int check = 0; check < 2; check++) {
         Motive motive;
-        PiecePlan *plan = plan_of(PERIOD, &SCENARIOS[0], &motive);
-        char *before = plan_to_json(plan, NULL);
+        Plan *plan = plan_of(PERIOD, &SCENARIOS[0], &motive);
+        char *before = plan_to_json(plan, test_plan_producer(), NULL);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.knowledge = test_knowledge();
@@ -297,15 +299,15 @@ static int test_candidates(void) {
         ComposeCandidates second;
         assert(compose_candidates(plan, &config, 6, &first) == PIECE_OK);
         assert(compose_candidates(plan, &config, 6, &second) == PIECE_OK);
-        char *after = plan_to_json(plan, NULL);
+        char *after = plan_to_json(plan, test_plan_producer(), NULL);
         assert(strcmp(before, after) == 0); /* the plan given is not changed */
         assert(first.tried == 6 && first.count > 0 && first.count <= 6);
         assert(first.count == second.count);
         expect_ranked(&first);
         for (size_t i = 0; i < first.count; i++) {
             assert(first.items[i].seed == second.items[i].seed && first.items[i].seed >= 1 && first.items[i].seed <= 6);
-            char *a = plan_to_json(first.items[i].plan, NULL);
-            char *b = plan_to_json(second.items[i].plan, NULL);
+            char *a = plan_to_json(first.items[i].plan, test_plan_producer(), NULL);
+            char *b = plan_to_json(second.items[i].plan, test_plan_producer(), NULL);
             assert(strcmp(a, b) == 0);
             free(a);
             free(b);
@@ -363,7 +365,7 @@ static int test_piece(void) {
     assert(test_analyzer_check_piece(NULL, &check) == ANALYZER_CHECK_ERR_NULL);
     PieceFixture fixture;
     piece_fixture(&fixture);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     assert(test_analyzer_check_piece(plan, &check) == ANALYZER_CHECK_ERR_NOT_WRITTEN && check.item_count == 0);
     plan_destroy(plan);

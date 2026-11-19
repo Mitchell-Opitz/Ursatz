@@ -15,21 +15,23 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/composer.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_connect.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/style.h>
 
-#include "util/request_parse.h"
+#include "check/style_check.h"
+#include "structure/request_parse.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Styles (style.h, docs/style.md): a StyleModel file the Analyzer wrote is loaded and the harmony and melody stages
@@ -100,7 +102,7 @@ static PlanNote note(int pitch, Rational offset, Rational duration) {
     return result;
 }
 
-static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, const PlanNote *notes,
+static void add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, const PlanNote *notes,
                       size_t count) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
@@ -111,7 +113,7 @@ static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voic
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
 
-static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
+static void add_meter_and_key(Plan *plan, NodeId owner, PlanSpan span) {
     PlanLanePayload meter;
     memset(&meter, 0, sizeof(meter));
     meter.meter.beats_per_bar = 4;
@@ -121,8 +123,8 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key(0, "major");
-    assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
+    key.region = test_key(0, "major");
+    assert(plan_add_lane_span(plan, owner, PLAN_LANE_REGION, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
 
@@ -145,8 +147,8 @@ static const BlockChord BLOCK[] = {
 static const char *const BLOCK_NUMERALS[BLOCK_COUNT] = {"I", "IV", "V7", "I"};
 
 /* The hand-written progression: I IV V7 I, three bars of C major in 4/4, in four voices, a chord starting every note. */
-static PiecePlan *block_plan(void) {
-    PiecePlan *plan = plan_create();
+static Plan *block_plan(void) {
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 3), "form", &form) == PLAN_OK);
     add_meter_and_key(plan, form, bars(0, 3));
@@ -184,7 +186,7 @@ typedef struct {
 } Heard;
 
 /* Renders and hears a whole plan in C major through the library chain; the caller destroys *heard. */
-static void analyze(const PiecePlan *plan, Heard *heard) {
+static void analyze(const Plan *plan, Heard *heard) {
     memset(heard, 0, sizeof(*heard));
     assert(plan_render(plan, &heard->rendered) == PLAN_RENDER_OK);
     heard->midi = calloc(heard->rendered.count ? heard->rendered.count : 1, sizeof(int));
@@ -318,16 +320,16 @@ static void composer_bag(const ComposerStyleLabels *labels, Bag *bag) {
     bag_sort(bag);
 }
 
-static bool ratio_is(ComposerRatio ratio, unsigned long numerator, unsigned long denominator) {
-    return ratio.denominator != 0 && (unsigned long long)ratio.numerator * denominator ==
-                                         (unsigned long long)numerator * ratio.denominator;
+static bool ratio_is(Rational ratio, unsigned long numerator, unsigned long denominator) {
+    return ratio.den != 0 && (unsigned long long)ratio.num * denominator ==
+                                         (unsigned long long)numerator * ratio.den;
 }
 
 /* ------------------------------------------------------------------ labels */
 
 /* The labels of the hand-written progression and its soprano, against the Analyzer's of the same material. */
 static void test_block_labels(void) {
-    PiecePlan *plan = block_plan();
+    Plan *plan = block_plan();
     Heard analysis;
     analyze(plan, &analysis);
     ComposerStyleNote soprano[BLOCK_COUNT];
@@ -430,7 +432,7 @@ static void test_before(void) {
 /* ----------------------------------------------------------------- closeness */
 
 static void write_style(const char *path) {
-    PiecePlan *plan = block_plan();
+    Plan *plan = block_plan();
     Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = heard_profile(&analysis);
@@ -440,14 +442,14 @@ static void write_style(const char *path) {
     plan_destroy(plan);
 }
 
-static ComposerRatio closeness_of(const ComposerStyle *style, const char *const *categories, const char *const *names,
+static Rational closeness_of(const ComposerStyle *style, const char *const *categories, const char *const *names,
                                   size_t count) {
     ComposerStyleLabels *labels = composer_style_labels_create();
     assert(labels);
     for (size_t i = 0; i < count; i++) {
         assert(composer_style_labels_add(labels, categories[i], names[i]));
     }
-    ComposerRatio ratio = {0, 0};
+    Rational ratio = {0, 0};
     assert(composer_style_closeness(style, labels, &ratio));
     composer_style_labels_destroy(labels);
     return ratio;
@@ -534,7 +536,7 @@ static unsigned long long fnv(const char *text) {
 }
 
 /* A sentence in C major 4/4 grown from a motive, 8 bars, ending in a PAC. */
-static PiecePlan *sentence_plan(Motive *motive) {
+static Plan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -551,7 +553,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
     request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
@@ -565,9 +567,9 @@ typedef struct {
     unsigned long long hash;
 } Run;
 
-static Run compose_sentence(unsigned long seed, const ComposerStyle *style, ComposerRatio weight) {
+static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Rational weight) {
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -579,7 +581,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
     memset(&run, 0, sizeof(run));
     run.complete = compose_run(plan, &config, &outcome) == PIECE_OK;
     if (run.complete) {
-        char *json = plan_to_json(plan, NULL);
+        char *json = plan_to_json(plan, test_plan_producer(), NULL);
         assert(json);
         /* The metadata holds the versions the plan was written by; the hash is of the plan, from its meter on. */
         const char *plan_text = strstr(json, "\n  \"meter\"");
@@ -618,15 +620,16 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
 /* Re-recorded at P58 B14 (plan format 3: keys name their material, a key from a form region names its relation); the notes are the same. */
 /* Re-recorded at P59 B6 (plan format 4: every note has an id, and a source and operation where the Composer knows one); the notes are the same. */
 /* Re-recorded at P60 B3 (plan format 5: a section holds its description in place of its constraints); the notes are the same. */
-static const unsigned long long MAIN_HASH[5] = {0x9a10aeb1065264e1ULL, 0x6df1c83c24b2cc4bULL, 0xf2eff3dde2dfeb24ULL,
-                                                0x6c60b7b5ceee2977ULL, 0xbc1bdaf5205e0d87ULL};
+/* Re-recorded at P62 B4 (plan format 6: the lane `keys` is `regions`, a lane span has no claim members); the notes are the same. */
+static const unsigned long long MAIN_HASH[5] = {0xb96dce4c03801158ULL, 0x286a295674647ddcULL, 0xf7c1cb786b4c8c6bULL,
+                                                0xbc759f369f629a22ULL, 0x7f519305cdaf555cULL};
 
 static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */
     ComposerStyle *style = NULL;
     assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &style) == COMPOSER_STYLE_OK);
-    ComposerRatio none = {0, 0};
-    ComposerRatio zero = {0, 1};
+    Rational none = {0, 0};
+    Rational zero = {0, 1};
     for (unsigned long seed = 1; seed <= 5; seed++) {
         Run unstyled = compose_sentence(seed, NULL, none);
         assert(unstyled.complete && !unstyled.measured);
@@ -696,7 +699,7 @@ static int test_motive_categories(void) {
     assert(composer_style_load_without(CHORALES_MOTIVES, unknown, 1, &refused) == COMPOSER_STYLE_ERR_ARGUMENT && !refused);
     /* a blend has both lists, once each, and counts no category either style was read without */
     ComposerStyle *blend = NULL;
-    ComposerStyleWeights half = composer_style_weights_all((ComposerRatio){1, 2});
+    ComposerStyleWeights half = composer_style_weights_all((Rational){1, 2});
     assert(composer_style_blend(cut, kept, &half, &blend) == COMPOSER_STYLE_OK);
     assert(composer_style_without_count(blend) == 4);
     assert(!composer_style_share(blend, "motive-degrees", "3 5 4 2 1", &share));
@@ -755,7 +758,7 @@ static int test_motive_labels(void) {
 static void repetition_degrees(unsigned long seed, const ComposerStyle *style, char out[64]) {
     static const char *const DEGREES[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
@@ -811,7 +814,7 @@ static int test_motive_preference(void) {
 }
 
 /* A plan keeps the without list of its style; a plan with none reads back with none (old plans load). */
-static const PlanStyle *style_of(const PiecePlan *plan) {
+static const PlanStyle *style_of(const Plan *plan) {
     const PlanStyle *found = NULL;
     for (size_t i = 0; i < plan_node_constraint_count(plan, plan_root(plan)); i++) {
         const PlanConstraint *item = plan_node_constraint_at(plan, plan_root(plan), i);
@@ -823,7 +826,7 @@ static const PlanStyle *style_of(const PiecePlan *plan) {
 }
 
 static char *plan_json_with(size_t without_count) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 3), "form", &form) == PLAN_OK);
     PlanConstraint constraint;
@@ -834,7 +837,7 @@ static char *plan_json_with(size_t without_count) {
     snprintf(constraint.params.style.without[1], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", "motive-rhythm");
     constraint.params.style.without_count = without_count;
     assert(plan_node_add_constraint(plan, form, &constraint) == PLAN_OK);
-    char *json = plan_to_json(plan, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
     assert(json);
     plan_destroy(plan);
     return json;
@@ -843,8 +846,8 @@ static char *plan_json_with(size_t without_count) {
 static int test_plan_without(void) {
     char *json = plan_json_with(2);
     assert(strstr(json, "\"without\": [") && strstr(json, "motive-rhythm"));
-    PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    Plan *again = NULL;
+    assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     const PlanStyle *read = style_of(again);
     assert(read && read->without_count == 2 && strcmp(read->without[0], "motive-degrees") == 0 &&
            strcmp(read->without[1], "motive-rhythm") == 0);
@@ -853,7 +856,7 @@ static int test_plan_without(void) {
     /* a style constraint with no list: no member is written and it reads back with none */
     json = plan_json_with(0);
     assert(!strstr(json, "without"));
-    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     read = style_of(again);
     assert(read && read->without_count == 0);
     plan_destroy(again);
@@ -869,7 +872,7 @@ static int test_measure_without_motives(void) {
     assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &kept) == COMPOSER_STYLE_OK);
     assert(composer_style_load_without(CHORALES_MOTIVES, MOTIVE_CATEGORIES, 4, &cut) == COMPOSER_STYLE_OK);
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -908,7 +911,7 @@ typedef struct {
 
 static Means sweep(const ComposerStyle *style, unsigned long last_seed) {
     Means means = {0.0, 0.0, 0};
-    ComposerRatio none = {0, 0};
+    Rational none = {0, 0};
     for (unsigned long seed = 1; seed <= last_seed; seed++) {
         Run run = compose_sentence(seed, style, none);
         if (run.complete && run.measured) {
@@ -927,7 +930,7 @@ static Means sweep(const ComposerStyle *style, unsigned long last_seed) {
 /* The unstyled runs measured against a style: the distance is measured from the style, not from the composing. */
 static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed) {
     Means means = {0.0, 0.0, 0};
-    ComposerRatio zero = {0, 1};
+    Rational zero = {0, 1};
     for (unsigned long seed = 1; seed <= last_seed; seed++) {
         /* weight 0: the notes of the unstyled run, and the style's distance measured over them */
         Run run = compose_sentence(seed, style, zero);
@@ -1138,12 +1141,12 @@ static int test_brief(void) {
     /* The style reads as the fast, minor, two-notes-a-beat style it was written as. */
     ComposerStyle *style = NULL;
     assert(composer_style_load_without(FAST_MINOR, NULL, 0, &style) == COMPOSER_STYLE_OK);
-    ComposerRatio tempo = {0, 0};
+    Rational tempo = {0, 0};
     const PitchMaterial *mode = NULL;
-    ComposerRatio density = {0, 0};
-    assert(composer_style_tempo(style, &tempo) && tempo.numerator == 170 && tempo.denominator == 1);
+    Rational density = {0, 0};
+    assert(composer_style_tempo(style, &tempo) && tempo.num == 170 && tempo.den == 1);
     assert(composer_style_mode(style, test_materials(), &mode) && mode == test_materials()->natural_minor);
-    assert(composer_style_density(style, &density) && density.numerator == 4 && density.denominator == 2);
+    assert(composer_style_density(style, &density) && density.num == 4 && density.den == 2);
     composer_style_destroy(style);
     /* A style without the categories gives none of them (the fixture is chorales plus the motive categories, with no tempo or density: the
        chorales model re-recorded at P41 B7 holds both, which a style applies as the brief even at weight 0). */

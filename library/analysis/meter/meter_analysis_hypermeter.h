@@ -1,9 +1,7 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HYPERMETER_H
 #define URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HYPERMETER_H
 
-#include "model/interpretation/interpretation.h"
 #include "analysis/meter/meter_analysis_input.h"
-#include "model/relationship/relationship.h"
 
 /*
  * Hypermeter from phrase and cadence placement (standard-meter's hypermeter rules, hypermeter_rules.h). Each phrase is read on
@@ -22,14 +20,10 @@
  * Hyperdownbeats are the first measure of every hypermeasure. Hypermeasures are numbered from 0 in each phrase and tile the
  * phrase exactly.
  *
- * A hypermeasure is a Relationship over its measures (from the entity "standard-meter-measure-<first>" to
- * "standard-meter-measure-<last>", predicate "hypermeasure"); a reinterpretation is a Relationship from the ending phrase's id to
- * the next phrase's id (predicate "hypermetric-reinterpretation"). Each has an Interpretation targeting the Relationship's id,
- * with the claim types below and an uncertainty of 1 - score.
+ * A hypermeasure is a claim over its measures; a reinterpretation is a claim about the ending phrase and the next. Each has an
+ * uncertainty of 1 - score.
  */
 
-#define STANDARD_METER_HYPERMEASURE_CLAIM_TYPE "standard-meter/hypermeasure"
-#define STANDARD_METER_REINTERPRETATION_CLAIM_TYPE "standard-meter/hypermetric-reinterpretation"
 
 typedef enum {
     STANDARD_METER_HYPERMEASURE_REGULAR = 0, /* the nominal length */
@@ -55,8 +49,6 @@ typedef struct {
 typedef struct {
     StandardMeterHypermeasureClaim claim;
     double uncertainty;
-    Relationship *relationship;     /* owned */
-    Interpretation *interpretation; /* owned */
 } StandardMeterHypermeasure;
 
 typedef struct {
@@ -70,8 +62,6 @@ typedef struct {
 typedef struct {
     StandardMeterReinterpretationClaim claim;
     double uncertainty;
-    Relationship *relationship;     /* owned */
-    Interpretation *interpretation; /* owned */
 } StandardMeterReinterpretation;
 
 /* What was chosen for one phrase. `hypermeasure_first` indexes the hypermeasures array. */

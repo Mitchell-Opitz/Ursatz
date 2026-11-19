@@ -5,12 +5,14 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/compose_candidates.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Progress and cancel (docs/api.md, "Jobs"): compose_run on a theme-fill plan with a job that cancels at its third step
@@ -54,8 +56,8 @@ static bool on_cancelled(void *user) {
     return watch->cancel_at != 0 && watch->steps >= watch->cancel_at;
 }
 
-static PiecePlan *theme_fill_plan(void) {
-    PiecePlan *plan = NULL;
+static Plan *theme_fill_plan(void) {
+    Plan *plan = NULL;
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
@@ -69,7 +71,7 @@ static PiecePlan *theme_fill_plan(void) {
 }
 
 static void test_cancel(void) {
-    PiecePlan *plan = theme_fill_plan();
+    Plan *plan = theme_fill_plan();
     Watch watch;
     memset(&watch, 0, sizeof watch);
     watch.cancel_at = 3;
@@ -108,7 +110,7 @@ static void test_cancel(void) {
 }
 
 static void test_progress(void) {
-    PiecePlan *plan = theme_fill_plan();
+    Plan *plan = theme_fill_plan();
     Watch watch;
     memset(&watch, 0, sizeof watch);
     ComposerJob job = {on_progress, on_cancelled, &watch};
@@ -142,10 +144,10 @@ static void test_same_plan(void) {
     ComposerJob watching = {on_progress, on_cancelled, &watch};
     const ComposerJob *jobs[3] = {NULL, &none, &watching};
     for (int i = 0; i < 3; i++) {
-        PiecePlan *plan = theme_fill_plan();
+        Plan *plan = theme_fill_plan();
         config.job = jobs[i];
         assert(compose_run(plan, &config, &outcome) == PIECE_OK);
-        texts[i] = plan_to_json(plan, NULL);
+        texts[i] = plan_to_json(plan, test_plan_producer(), NULL);
         assert(texts[i]);
         compose_outcome_destroy(&outcome);
         plan_destroy(plan);
@@ -159,7 +161,7 @@ static void test_same_plan(void) {
 
 static void test_fill_job(void) {
     /* The fill loop alone: one report per target, a cancel is FILL_STATUS_ERROR with the flag. */
-    PiecePlan *plan = theme_fill_plan();
+    Plan *plan = theme_fill_plan();
     FillOperatorRegistry *registry = fill_registry_create();
     assert(registry);
     Watch watch;

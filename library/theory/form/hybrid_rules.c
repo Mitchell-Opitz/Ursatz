@@ -1,6 +1,7 @@
 #include "theory/form/hybrid_rules.h"
 
 #include <stddef.h>
+#include <string.h>
 
 static const char *const COMMONALITY_NAMES[STANDARD_FORM_COMMONALITY_COUNT] = {
     "very-common", "slightly-less-common", "occasional", "rare"};
@@ -11,6 +12,19 @@ bool standard_form_commonality_valid(StandardFormCommonality commonality) {
 
 const char *standard_form_commonality_name(StandardFormCommonality commonality) {
     return standard_form_commonality_valid(commonality) ? COMMONALITY_NAMES[commonality] : NULL;
+}
+
+bool standard_form_commonality_from_name(const char *name, StandardFormCommonality *out) {
+    if (name == NULL || out == NULL) {
+        return false;
+    }
+    for (int i = 0; i < STANDARD_FORM_COMMONALITY_COUNT; i++) {
+        if (strcmp(COMMONALITY_NAMES[i], name) == 0) {
+            *out = (StandardFormCommonality)i;
+            return true;
+        }
+    }
+    return false;
 }
 
 /* rows are beginnings, columns are endings, in the enum order */

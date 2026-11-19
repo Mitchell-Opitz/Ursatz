@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "analysis/harmony/analysis_cadence_claims.h"
+#include "analysis/harmony/analysis_cadence_points.h"
 #include "analysis/harmony/analysis_cadence_readings.h"
 #include "analysis/harmony/analysis_runs.h"
 #include "analysis/tests/harmony/analysis_test_util.h"
@@ -131,7 +131,7 @@ static void run_destroy(Run *r) {
 
 static HarmonyCadences claim(Run *r, const HarmonyPhrasePoint *points, size_t point_count) {
     HarmonyCadences claimed;
-    assert(harmony_analysis_claim_cadences(r->segments, r->piece.count, NULL, &r->found, &r->readings, points,
+    assert(harmony_analysis_cadences_at_points(r->segments, r->piece.count, NULL, &r->found, &r->readings, points,
                                            point_count, &claimed) == HARMONY_CADENCE_ANALYSIS_OK);
     return claimed;
 }
@@ -172,7 +172,7 @@ static void test_half_reading_before_an_authentic_cadence(void) {
     const HarmonyCadenceResult *h = &r.readings.items[0];
     assert(h->type == CADENCE_TYPE_HALF && h->share == 1000 && !h->alternative.present);
     assert(h->arrival_first == index_of(&r.piece, 4, 1) && h->arrival_last == index_of(&r.piece, 4, 3));
-    assert(h->cadence != NULL && h->interpretation != NULL);
+    assert(h->cadence != NULL);
     run_destroy(&r);
 }
 
@@ -244,7 +244,7 @@ static void test_v_then_an_inverted_tonic_claims_the_half(void) {
     harmony_cadences_destroy(&claimed);
     /* without the readings the found SUBVERTED is replaced all the same */
     HarmonyCadences alone;
-    assert(harmony_analysis_claim_cadences(r.segments, r.piece.count, NULL, &r.found, NULL, points, 1, &alone) ==
+    assert(harmony_analysis_cadences_at_points(r.segments, r.piece.count, NULL, &r.found, NULL, points, 1, &alone) ==
            HARMONY_CADENCE_ANALYSIS_OK);
     assert(alone.count == 1 && alone.items[0].type == CADENCE_TYPE_HALF &&
            alone.items[0].arrival_first == index_of(&r.piece, 4, 1));
@@ -421,23 +421,23 @@ static void test_null_arguments_and_no_points(void) {
     /* found NULL gives the dominants that come back on a downbeat only: none here */
     assert(harmony_analysis_half_readings(r.segments, n, NULL, NULL, &out) == HARMONY_CADENCE_ANALYSIS_OK && out.count == 0);
 
-    assert(harmony_analysis_claim_cadences(r.segments, n, NULL, &r.found, &r.readings, &point, 1, NULL) ==
+    assert(harmony_analysis_cadences_at_points(r.segments, n, NULL, &r.found, &r.readings, &point, 1, NULL) ==
            HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT);
-    assert(harmony_analysis_claim_cadences(NULL, n, NULL, &r.found, &r.readings, &point, 1, &out) ==
+    assert(harmony_analysis_cadences_at_points(NULL, n, NULL, &r.found, &r.readings, &point, 1, &out) ==
            HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT);
-    assert(harmony_analysis_claim_cadences(r.segments, n, NULL, &r.found, &r.readings, NULL, 1, &out) ==
+    assert(harmony_analysis_cadences_at_points(r.segments, n, NULL, &r.found, &r.readings, NULL, 1, &out) ==
            HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT);
 
     /* no points, no cadences; NULL found and readings are empty */
-    assert(harmony_analysis_claim_cadences(r.segments, n, NULL, &r.found, &r.readings, NULL, 0, &out) ==
+    assert(harmony_analysis_cadences_at_points(r.segments, n, NULL, &r.found, &r.readings, NULL, 0, &out) ==
            HARMONY_CADENCE_ANALYSIS_OK && out.count == 0 && out.items == NULL);
-    assert(harmony_analysis_claim_cadences(r.segments, n, NULL, NULL, NULL, &point, 1, &out) ==
+    assert(harmony_analysis_cadences_at_points(r.segments, n, NULL, NULL, NULL, &point, 1, &out) ==
            HARMONY_CADENCE_ANALYSIS_OK && out.count == 0);
 
     HarmonyCadenceConfig bad = harmony_cadence_config_default();
     bad.beat_length = rational_ratio(-1, 1);
     assert(harmony_analysis_half_readings(r.segments, n, &bad, &r.found, &out) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
-    assert(harmony_analysis_claim_cadences(r.segments, n, &bad, &r.found, &r.readings, &point, 1, &out) ==
+    assert(harmony_analysis_cadences_at_points(r.segments, n, &bad, &r.found, &r.readings, &point, 1, &out) ==
            HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     run_destroy(&r);
 }

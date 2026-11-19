@@ -35,7 +35,7 @@ typedef struct {
     LaneSpanId melody_span; /* with write_soprano, the open melody span the soprano is written in, else none */
     NodeId owner;
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     bool write_soprano;
     Rational length;
     /*
@@ -83,7 +83,7 @@ typedef struct {
 } VoicingOption;
 
 /* Reads a target; false when it is not one the operator applies to. The caller frees it with voicing_context_free. */
-bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out);
+bool voicing_read(const Plan *plan, LaneSpanId target, VoicingContext *out);
 void voicing_context_free(VoicingContext *context);
 
 /* Whether standard-voicing holds for the voicing (soprano, alto, tenor) of the chord over its bass. */

@@ -5,13 +5,13 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
 
@@ -79,7 +79,7 @@ static bool equal(Rational a, Rational b) {
     return rational_cmp(a, b) == 0;
 }
 
-static size_t events(const PiecePlan *plan, NodeId section, PlanLaneKind lane, int voice, Event *out) {
+static size_t events(const Plan *plan, NodeId section, PlanLaneKind lane, int voice, Event *out) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[MAX_EVENTS];
     size_t spans = plan_lane_find(plan, lane, voice, span, ids, MAX_EVENTS);
@@ -125,7 +125,7 @@ static bool same_events(const Event *a, size_t an, const Event *b, size_t bn, in
 }
 
 /* Whether two sections have the same nodes below them, at the same places in their sections. */
-static bool same_subtree(const PiecePlan *plan, NodeId a, NodeId b) {
+static bool same_subtree(const Plan *plan, NodeId a, NodeId b) {
     if (plan_node_child_count(plan, a) != plan_node_child_count(plan, b)) {
         return false;
     }
@@ -147,7 +147,7 @@ static bool same_subtree(const PiecePlan *plan, NodeId a, NodeId b) {
 }
 
 /* The return a section holds, as a small record in a slot that stays valid through the next three calls; NULL for a section that returns none. */
-static const ReturnRef *return_of(const PiecePlan *plan, NodeId section) {
+static const ReturnRef *return_of(const Plan *plan, NodeId section) {
     static ReturnRef slots[4];
     static size_t next = 0;
     const SectionDescription *described = plan_section_or_empty(plan, section);
@@ -165,7 +165,7 @@ static const ReturnRef *return_of(const PiecePlan *plan, NodeId section) {
 }
 
 /* The sections of the piece, in order, without the material. */
-static size_t sections_of(const PiecePlan *plan, NodeId *out) {
+static size_t sections_of(const Plan *plan, NodeId *out) {
     NodeId form = plan_root(plan);
     size_t count = plan_node_child_count(plan, form) - 1;
     for (size_t i = 0; i < count; i++) {
@@ -193,7 +193,7 @@ static PieceRequest request_of(const char *kind, size_t bars, size_t count, bool
 }
 
 static PieceResult compose(const PieceRequest *request, unsigned long seed, const MelodyFillParams *melody,
-                           void (*edit)(PiecePlan *), PiecePlan **plan, ComposeOutcome *outcome) {
+                           void (*edit)(Plan *), Plan **plan, ComposeOutcome *outcome) {
     ComposeConfig config;
     assert(piece_build_plan(request, plan) == PIECE_OK);
     if (edit) {
@@ -207,7 +207,7 @@ static PieceResult compose(const PieceRequest *request, unsigned long seed, cons
 }
 
 /* The lanes a return shares with the section it returns, and whether they are the same events. */
-static bool lane_same(const PiecePlan *plan, NodeId source, NodeId section, PlanLaneKind lane, int voice, int shift) {
+static bool lane_same(const Plan *plan, NodeId source, NodeId section, PlanLaneKind lane, int voice, int shift) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     size_t an = events(plan, source, lane, voice, a);
@@ -225,7 +225,7 @@ typedef struct {
     bool accompanied;
 } Scenario;
 
-static void check_exact(const PiecePlan *plan, NodeId source, NodeId section) {
+static void check_exact(const Plan *plan, NodeId source, NodeId section) {
     assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
     assert(same_subtree(plan, source, section));
     assert(lane_same(plan, source, section, PLAN_LANE_HARMONY, 0, 0));
@@ -248,7 +248,7 @@ static int test_exact(bool smoke) {
         size_t completed = 0;
         size_t returns = 0;
         for (unsigned long seed = 1; seed <= (smoke ? 1UL : SEEDS); seed++) {
-            PiecePlan *plan;
+            Plan *plan;
             ComposeOutcome outcome;
             if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
                 NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -289,7 +289,7 @@ static int step_between(int a, int b) {
     return (move >= 1 && move <= 2) ? 1 : ((move <= -1 && move >= -2) ? -1 : 0);
 }
 
-static size_t check_ornament(const PiecePlan *plan, NodeId source, NodeId section) {
+static size_t check_ornament(const Plan *plan, NodeId source, NodeId section) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
@@ -333,7 +333,7 @@ static int test_ornament(void) {
     size_t completed = 0;
     size_t added = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan;
+        Plan *plan;
         ComposeOutcome outcome;
         if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -367,7 +367,7 @@ static int test_reharmonize(void) {
     size_t changed_total = 0;
     size_t chords_total = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan;
+        Plan *plan;
         ComposeOutcome outcome;
         if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -407,7 +407,7 @@ static int test_reharmonize(void) {
 /* ------------------------------------------------------------ varied */
 
 /* The notes the varied return adds to A's melody: every note of A is there at its place and pitch, at most one added a bar. */
-static size_t check_varied(const PiecePlan *plan, NodeId source, NodeId section) {
+static size_t check_varied(const Plan *plan, NodeId source, NodeId section) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
@@ -459,7 +459,7 @@ static int test_varied(void) {
     size_t cadence = 0;
     for (unsigned long seed = 1; seed <= VARIED_SEEDS; seed++) {
         PieceRequest request = request_of(form->name, 0, 0, false);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         ComposeOutcome outcome;
         ComposeConfig config;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
@@ -497,7 +497,7 @@ static int test_varied(void) {
     PieceRequest ternary = request_of("ternary", 24, 0, false);
     size_t ternary_composed = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan;
+        Plan *plan;
         ComposeOutcome outcome;
         if (compose(&ternary, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -549,7 +549,7 @@ typedef struct {
 } EmbellishRow;
 
 /* A1 keeps every melody note of A at its place and pitch and has more notes; returns the notes it adds. */
-static size_t check_embellish(const PiecePlan *plan, NodeId source, NodeId section) {
+static size_t check_embellish(const Plan *plan, NodeId source, NodeId section) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
@@ -571,7 +571,7 @@ static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool 
     size_t composed = 0;
     for (unsigned long seed = 1; seed <= EMBELLISH_SEEDS; seed++) {
         PieceRequest request;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         ComposeOutcome outcome;
         ComposeConfig config;
         memset(&request, 0, sizeof(request));
@@ -685,7 +685,7 @@ static PieceRequest setting_request(const SettingRow *row) {
 }
 
 /* A1 has A's harmony, bass and melody, and an inner voice 1 with notes where A has none (the request has no accompaniment). */
-static void check_setting(const PiecePlan *plan, NodeId source, NodeId section) {
+static void check_setting(const Plan *plan, NodeId source, NodeId section) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     static const PlanLaneKind LANES[] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY};
@@ -704,7 +704,7 @@ static size_t setting_row(const FormSpec *form, const SettingRow *row) {
     size_t composed = 0;
     for (unsigned long seed = 1; seed <= SETTING_SEEDS; seed++) {
         PieceRequest request = setting_request(row);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         ComposeOutcome outcome;
         ComposeConfig config;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
@@ -733,7 +733,7 @@ static PlanAccompanimentPattern built_setting(const char *pattern, const Setting
     snprintf(members, sizeof(members), ",\"setting\":\"%s\"", pattern);
     FormSpec *form = stand_in_form("setting", members);
     PieceRequest request = setting_request(row);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     if (accompaniment >= 0) {
         request.has_accompaniment = true;
         request.accompaniment.pattern = (PlanAccompanimentPattern)accompaniment;
@@ -775,7 +775,7 @@ static int test_setting(void) {
     size_t alberti = 0;
     for (unsigned long seed = 1; seed <= SETTING_ACCOMPANIED_SEEDS; seed++) {
         PieceRequest request = setting_request(&ROWS[0]);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         ComposeOutcome outcome;
         ComposeConfig config;
         request.has_accompaniment = true;
@@ -811,7 +811,7 @@ static int test_setting(void) {
 
 /* ------------------------------------------------------------ reregister */
 
-static void make_reregister(PiecePlan *plan) {
+static void make_reregister(Plan *plan) {
     NodeId section = plan_node_child_at(plan, plan_root(plan), 2);
     SectionDescription described = *plan_node_section(plan, section);
     assert(described.returns[0] != '\0');
@@ -820,7 +820,7 @@ static void make_reregister(PiecePlan *plan) {
 }
 
 /* The melody of the return is an octave from the theme's, all of it the same way, and inside the range. */
-static int check_octave(const PiecePlan *plan, NodeId source, NodeId section, const MelodyFillParams *range, bool inner) {
+static int check_octave(const Plan *plan, NodeId source, NodeId section, const MelodyFillParams *range, bool inner) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
@@ -856,7 +856,7 @@ static int test_reregister(void) {
             size_t completed = 0;
             size_t stuck_at_returns = 0;
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-                PiecePlan *plan;
+                Plan *plan;
                 ComposeOutcome outcome;
                 PieceResult ran = compose(&request, seed, ranges[r], make_reregister, &plan, &outcome);
                 if (ran == PIECE_OK) {
@@ -916,22 +916,22 @@ typedef struct {
 } HomeRow;
 
 /* The keys of the key lane under a section; every one must be the home key. */
-static size_t keys_under(const PiecePlan *plan, NodeId section, AnalysisKey *out, size_t capacity) {
+static size_t keys_under(const Plan *plan, NodeId section, SpelledKey *out, size_t capacity) {
     LaneSpanId ids[32];
-    size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 32);
+    size_t count = plan_lane_find(plan, PLAN_LANE_REGION, 0, plan_node_span(plan, section), ids, 32);
     assert(count >= 1 && count <= capacity);
     for (size_t i = 0; i < count; i++) {
-        out[i] = plan_lane_span_payload(plan, ids[i])->key;
+        out[i] = plan_lane_span_payload(plan, ids[i])->region;
     }
     return count;
 }
 
 /* B1 against B: the key lane is home, the return has across_modes, the melody is B's moved by the tonic step (R-524). */
-static void check_home(const PiecePlan *plan, NodeId source, NodeId section, const HomeRow *row) {
+static void check_home(const Plan *plan, NodeId source, NodeId section, const HomeRow *row) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
-    AnalysisKey source_key;
-    AnalysisKey keys[32];
+    SpelledKey source_key;
+    SpelledKey keys[32];
     const ReturnRef *back = return_of(plan, section);
     assert(back && back->section == source &&
            back->variation == SECTION_RETURN_REHARMONIZE && back->across_modes);
@@ -939,9 +939,9 @@ static void check_home(const PiecePlan *plan, NodeId source, NodeId section, con
     assert(keys_under(plan, source, &source_key, 1) == 1);
     size_t key_count = keys_under(plan, section, keys, 32);
     for (size_t i = 0; i < key_count; i++) {
-        assert(analysis_key_tonic_pitch_class(&keys[i]) == row->pitch_class && harmony_key_mode(&keys[i]) == row->mode);
+        assert(spelled_key_tonic_pitch_class(&keys[i]) == row->pitch_class && harmony_key_mode(&keys[i]) == row->mode);
     }
-    int step = ((row->pitch_class - analysis_key_tonic_pitch_class(&source_key)) % 12 + 12) % 12;
+    int step = ((row->pitch_class - spelled_key_tonic_pitch_class(&source_key)) % 12 + 12) % 12;
     int shift = step > 6 ? step - 12 : step;
     size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
     size_t bn = events(plan, section, PLAN_LANE_MELODY, 0, b);
@@ -977,7 +977,7 @@ static int test_home(void) {
             bool done = false;
             for (unsigned long extra = 0; extra < HOME_SEED_TRIES && !done; extra++) {
                 PieceRequest request;
-                PiecePlan *plan = NULL;
+                Plan *plan = NULL;
                 ComposeOutcome outcome;
                 ComposeConfig config;
                 memset(&request, 0, sizeof(request));

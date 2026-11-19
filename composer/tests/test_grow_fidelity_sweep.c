@@ -5,12 +5,12 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "api/api_grow.h"
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
 
@@ -94,7 +94,7 @@ static void add_idea(RoleStats *stats, const MotiveFidelity *fidelity, MotiveSco
 }
 
 /* Reads every idea with a role of a composed theme into the setting's stats. */
-static void read_theme(const PiecePlan *plan, const Motive *basic, GrowDevelopment development, RoleStats stats[ROLE_COUNT]) {
+static void read_theme(const Plan *plan, const Motive *basic, GrowDevelopment development, RoleStats stats[ROLE_COUNT]) {
     for (NodeId idea = 1; idea <= plan_node_count(plan); idea++) {
         LaneSpanId span;
         GrowIdeaRole role =
@@ -153,7 +153,7 @@ int main(void) {
                 /* Not buildable: the pairing cannot be built, or the plan refuses the motif before any seeding. */
                 GrowRequest request;
                 GrowRefusal refusal;
-                PiecePlan *built = NULL;
+                Plan *built = NULL;
                 memset(&refusal, 0, sizeof(refusal));
                 api_grow_request_for(&setup, 1, &request);
                 bool buildable = grow_theme_buildable(&setup.meter, setup.bars, &setup.pairing, setup.cadence, setup.first_cadence) &&

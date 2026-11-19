@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "analysis/harmony/key_regions.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_note.h"
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"
@@ -93,15 +93,15 @@ static void test_region_key(void) {
         CommonPracticeKeyRegion region;
         memset(&region, 0, sizeof(region));
         region.key_index = index;
-        AnalysisKey key;
+        SpelledKey key;
         assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
-        assert(analysis_key_tonic_pitch_class(&key) == common_practice_key_index_tonic(index));
+        assert(spelled_key_tonic_pitch_class(&key) == common_practice_key_index_tonic(index));
         assert(key.id == NULL);
         assert(key.material == common_practice_material(test_materials(), common_practice_key_index_mode(index)));
     }
     CommonPracticeKeyRegion region;
     memset(&region, 0, sizeof(region));
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, test_materials()->major};
+    SpelledKey key = {NULL, PITCH_LETTER_C, 0, test_materials()->major};
     region.key_index = test_key_index_of(3, COMMON_PRACTICE_KEY_MINOR);
     assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
     assert(key.tonic_letter == PITCH_LETTER_E && key.tonic_accidental == -1 &&
@@ -126,9 +126,9 @@ static void test_signature_event(void) {
 
     for (int mode = COMMON_PRACTICE_KEY_MAJOR; mode <= COMMON_PRACTICE_KEY_MINOR; mode++) {
         for (int fifths = -7; fifths <= 7; fifths++) {
-            AnalysisKeyEvent event;
+            SpelledKeyEvent event;
             event.time = time;
-            assert(analysis_key_from_fifths(fifths, common_practice_material(test_materials(), (CommonPracticeKeyMode)mode), &event.key));
+            assert(spelled_key_from_fifths(fifths, common_practice_material(test_materials(), (CommonPracticeKeyMode)mode), &event.key));
             assert(common_practice_key_signature_event_from_analysis(&event, &out));
             assert(musical_time_same(out.position, time));
             assert(out.sharps_flats == fifths);
@@ -136,7 +136,7 @@ static void test_signature_event(void) {
     }
 
     out.sharps_flats = 99;
-    AnalysisKeyEvent too_sharp = {time, {NULL, PITCH_LETTER_G, 1, test_materials()->major}}; /* G sharp major: 8 sharps */
+    SpelledKeyEvent too_sharp = {time, {NULL, PITCH_LETTER_G, 1, test_materials()->major}}; /* G sharp major: 8 sharps */
     assert(!common_practice_key_signature_event_from_analysis(&too_sharp, &out));
     assert(!common_practice_key_signature_event_from_analysis(NULL, &out));
     assert(!common_practice_key_signature_event_from_analysis(&too_sharp, NULL));

@@ -1,18 +1,10 @@
 #include "analysis/form/thematic_return_detection.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/core/provenance_reference.h"
-#include "model/core/value.h"
-#include "model/identity/entity_id.h"
-#include "model/interpretation/interpretation.h"
-#include "model/interpretation/uncertainty.h"
 #include "analysis/notes/contour.h"
 #include "analysis/notes/rhythmic_pattern.h"
-
-#define THEMATIC_RETURN_DETECTION_ID_MINT_BUFFER_SIZE 288
 
 /* Root-cause fix (framework-v1-reference-set triage, Bach BWV Anh. 114): MotifWindowMatching's
    exact comparison rule has no minimum-length/distinctiveness floor, which is safe at Motif
@@ -26,10 +18,6 @@
    "genuine theme" from "incidental fragment" one level up; 4 gives real separation without a
    corpus-derived number to justify going higher. Expect this to move once more of the corpus is
    checked. The value is defined in the header. */
-
-typedef struct {
-    ThematicReturnSimilarity evidence;
-} ReturnMatch;
 
 static size_t window_length_of(const MotifWindow *window) { return rhythmic_pattern_duration_count(window->rhythm); }
 
@@ -55,7 +43,7 @@ static ThematicReturnDetectionConfig effective_config(const ThematicReturnDetect
    untransposed one. A window below THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH is too short/generic and never
    matches. */
 static bool find_return(const MotifWindow *earlier, const MotifWindow *later, const ThematicReturnDetectionConfig *config,
-                        ReturnMatch *match) {
+                        ThematicReturnPair *match) {
     size_t earlier_length = window_length_of(earlier);
     size_t later_length = window_length_of(later);
     size_t length = earlier_length < later_length ? earlier_length : later_length;
@@ -73,19 +61,19 @@ static bool find_return(const MotifWindow *earlier, const MotifWindow *later, co
                 continue;
             }
             double similarity = score.contour_score < score.rhythm_score ? score.contour_score : score.rhythm_score;
-            if (found && similarity <= match->evidence.similarity) {
+            if (found && similarity <= match->similarity) {
                 continue;
             }
-            match->evidence.contour_score = score.contour_score;
-            match->evidence.rhythm_score = score.rhythm_score;
-            match->evidence.similarity = similarity;
-            match->evidence.earlier_offset = i;
-            match->evidence.later_offset = j;
-            match->evidence.window_length = length;
+            match->contour_score = score.contour_score;
+            match->rhythm_score = score.rhythm_score;
+            match->similarity = similarity;
+            match->earlier_offset = i;
+            match->later_offset = j;
+            match->window_length = length;
             found = true;
         }
     }
-    return found && match->evidence.similarity >= config->threshold;
+    return found && match->similarity >= config->threshold;
 }
 
 static bool valid_entry_shape(const ThematicReturnDetectionEntry *entry) {
@@ -96,129 +84,53 @@ static bool valid_entry_shape(const ThematicReturnDetectionEntry *entry) {
            entry->window->event_id_count > 0;
 }
 
-static bool make_id(const char *prefix, const char *value_a, const char *value_b, EntityID **out) {
-    char buffer[THEMATIC_RETURN_DETECTION_ID_MINT_BUFFER_SIZE];
-    snprintf(buffer, sizeof(buffer), "%s-%s-%s", prefix, value_a, value_b);
-    return entity_id_create(buffer, out) == ENTITY_ID_OK;
-}
-
-static void destroy_partial_relationships(Relationship **relationships, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        relationship_destroy(relationships[i]);
-    }
-}
-
 ThematicReturnDetectionConfig thematic_return_detection_default_config(void) {
     ThematicReturnDetectionConfig config = {THEMATIC_RETURN_DETECTION_DEFAULT_WINDOW_LENGTH,
                                              THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD};
     return config;
 }
 
-ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relationships_configured(
+ThematicReturnDetectionResult thematic_return_detection_build_pairs_configured(
     const ThematicReturnDetectionEntry *entries, size_t entry_count, const ThematicReturnDetectionConfig *config_in,
-    Relationship ***out_relationships, size_t *out_relationship_count) {
+    ThematicReturnPair **out_pairs, size_t *out_pair_count) {
     ThematicReturnDetectionConfig config = effective_config(config_in);
+    *out_pairs = NULL;
+    *out_pair_count = 0;
     if (entry_count > 0 && entries == NULL) {
-        return THEMATIC_RETURN_DETECTION_REL_ERR_NULL_ENTRIES;
+        return THEMATIC_RETURN_DETECTION_ERR_NULL_ENTRIES;
     }
     for (size_t i = 0; i < entry_count; i++) {
         if (!valid_entry_shape(&entries[i])) {
-            return THEMATIC_RETURN_DETECTION_REL_ERR_NULL_ENTRY;
+            return THEMATIC_RETURN_DETECTION_ERR_NULL_ENTRY;
         }
     }
 
     size_t max_pair_count = entry_count < 2 ? 0 : (entry_count * (entry_count - 1)) / 2;
     if (max_pair_count == 0) {
-        *out_relationships = NULL;
-        *out_relationship_count = 0;
-        return THEMATIC_RETURN_DETECTION_REL_OK;
+        return THEMATIC_RETURN_DETECTION_OK;
     }
-
-    Relationship **relationships = (Relationship **)calloc(max_pair_count, sizeof(Relationship *));
-    if (relationships == NULL) {
-        return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
+    ThematicReturnPair *pairs = (ThematicReturnPair *)calloc(max_pair_count, sizeof(ThematicReturnPair));
+    if (pairs == NULL) {
+        return THEMATIC_RETURN_DETECTION_ERR_ALLOC;
     }
 
     size_t out_index = 0;
     for (size_t i = 0; i < entry_count; i++) {
         for (size_t j = i + 1; j < entry_count; j++) {
-            const ThematicReturnDetectionEntry *earlier = &entries[i];
-            const ThematicReturnDetectionEntry *later = &entries[j];
-            ReturnMatch match;
-            if (!find_return(earlier->window, later->window, &config, &match)) {
+            ThematicReturnPair pair;
+            if (!find_return(entries[i].window, entries[j].window, &config, &pair)) {
                 continue;
             }
-
-            const char *earlier_value = entity_id_value(earlier->theme_occurrence_id);
-            const char *later_value = entity_id_value(later->theme_occurrence_id);
-
-            EntityID *relationship_id;
-            if (!make_id("relationship-thematic-return", later_value, earlier_value, &relationship_id)) {
-                destroy_partial_relationships(relationships, out_index);
-                free(relationships);
-                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
-            }
-            EntityID *source_id;
-            if (entity_id_create(later_value, &source_id) != ENTITY_ID_OK) {
-                entity_id_destroy(relationship_id);
-                destroy_partial_relationships(relationships, out_index);
-                free(relationships);
-                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
-            }
-            EntityID *target_id;
-            if (entity_id_create(earlier_value, &target_id) != ENTITY_ID_OK) {
-                entity_id_destroy(source_id);
-                entity_id_destroy(relationship_id);
-                destroy_partial_relationships(relationships, out_index);
-                free(relationships);
-                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
-            }
-            ProvenanceReference *provenance;
-            if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
-                entity_id_destroy(target_id);
-                entity_id_destroy(source_id);
-                entity_id_destroy(relationship_id);
-                destroy_partial_relationships(relationships, out_index);
-                free(relationships);
-                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
-            }
-
-            Value *qualifiers;
-            if (value_create(THEMATIC_RETURN_SIMILARITY_VALUE_TYPE, &match.evidence, sizeof(match.evidence),
-                              &qualifiers) != VALUE_OK) {
-                provenance_reference_destroy(provenance);
-                entity_id_destroy(target_id);
-                entity_id_destroy(source_id);
-                entity_id_destroy(relationship_id);
-                destroy_partial_relationships(relationships, out_index);
-                free(relationships);
-                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
-            }
-
-            Relationship *relationship;
-            if (relationship_create(relationship_id, source_id, "resembles", target_id, NULL, NULL, qualifiers, NULL,
-                                     NULL, provenance, &relationship) != RELATIONSHIP_OK) {
-                value_destroy(qualifiers);
-                destroy_partial_relationships(relationships, out_index);
-                free(relationships);
-                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
-            }
-            relationships[out_index] = relationship;
-            out_index++;
+            pair.earlier = i;
+            pair.later = j;
+            pairs[out_index++] = pair;
         }
     }
-
-    *out_relationships = relationships;
-    *out_relationship_count = out_index;
-    return THEMATIC_RETURN_DETECTION_REL_OK;
-}
-
-void thematic_return_detection_destroy_relationships(Relationship **relationships, size_t relationship_count) {
-    if (relationships == NULL) {
-        return;
+    if (out_index == 0) {
+        free(pairs);
+        return THEMATIC_RETURN_DETECTION_OK;
     }
-    for (size_t i = 0; i < relationship_count; i++) {
-        relationship_destroy(relationships[i]);
-    }
-    free(relationships);
+    *out_pairs = pairs;
+    *out_pair_count = out_index;
+    return THEMATIC_RETURN_DETECTION_OK;
 }

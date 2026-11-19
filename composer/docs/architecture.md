@@ -26,26 +26,39 @@ All four are built by the root `CMakeLists.txt`, in that order. The Composer hea
 |---|---|---|
 | `include/ursatz_composer/` | The one public header, `composer_api.h` | [api.md](api.md) |
 | `src/api/` | The composer API behind the header, one file for each request kind | [api.md](api.md) |
-| `src/plan/` | The piece plan, its lanes, states, section descriptions, form record, constraints (`constraint_kinds.c`: one row per kind holds its name, validity, writer and reader) and JSON | [plan-format.md](plan-format.md) |
-| `src/render/` | Rendering a plan to NoteEvents, making a work of one movement and one piano part from the render (`movement_build.h`), and writing MIDI and MusicXML through the library's movement export | [export.md](export.md) |
-| `src/fill/` | The fill loop, its operators, seeds and records | [fill-loop.md](fill-loop.md) |
-| `src/harmony/` | The harmony operators and hearing cadences | [grow-harmony.md](grow-harmony.md) |
-| `src/melody/` | The melody operator | [melody-fill.md](melody-fill.md) |
-| `src/preferences/` | The preferences document and the settings it holds | [preferences.md](preferences.md) |
-| `src/motive/` | Motives, their analysis, development and the variant registry | [motive-format.md](motive-format.md), [variant-registry.md](variant-registry.md) |
-| `src/form/` | Hearing the phrase form through standard-form; the form documents: `form_spec.c` reads them, `form_builtin.c` serves the built-in ones | [form-hear.md](form-hear.md), [forms.md](forms.md) |
+| (`library/plan/`) | The piece plan is the library's (R-625): `Plan`, its lanes, states, section descriptions, form record, constraints (`plan_constraint_kinds.c`: one row per kind holds its name, validity, writer and reader), edits (`plan_clone`, `plan_lane_span_reopen`), the producer stamp and reader hooks of the JSON codec. The Composer writes plans with `composer_plan_producer` and reads them with `composer_plan_read_hooks` | [plan.md](../../library/docs/modules/plan.md), [plan-format.md](../../library/docs/modules/plan-format.md) |
+| `src/<module>/` | One folder for each module of the layers below (R-636) | [structure.md](structure.md), [Layers](#layers) |
 | `forms/` | The built-in forms, one JSON document each, embedded at build time by `cmake/EmbedForms.cmake` | [forms.md](forms.md) |
-| `src/counterpoint/` | The counter-melody operator, species 1 to 4 | [counterpoint.md](counterpoint.md) |
-| `src/texture/` | The accompaniment and four-part voicing operators | [accompaniment.md](accompaniment.md), [voicing.md](voicing.md) |
-| `src/piece/` | The one piece builder (`form_build.c`; `form_build_request.c` lays out the sections of a form the request gives, the game loop), keys and cadences from a form, the piece plan and the compose run | [piece.md](piece.md) |
-| `src/grow/` | Growing a theme from a motive; `theme_shape.c` is the table of what a theme of each beginning and ending is made of (ideas, slots, roles, places, lengths) | [grow.md](grow.md) |
-| `src/check/` | Hearing a render through the library chain, the check loop, the explanation | [analyzer-check.md](analyzer-check.md), [explain.md](explain.md) |
-| `src/style/` | Style models, blending, style checks, seeding from a corpus | [style.md](style.md) |
-| `src/util/` | Private helpers the sources share | [structure.md](structure.md) |
 | `cli/` | The `ursatz-composer` command | [cli.md](cli.md) |
-| `schema/` | The plan schema and the API request and response schemas | [plan-format.md](plan-format.md) |
+| `schema/` | The plan schema and the API request and response schemas | [plan-format.md](../../library/docs/modules/plan-format.md) |
 
 The full table with every directory is in [structure.md](structure.md).
+
+## Layers
+
+The Composer's sources are 17 modules, one folder each under `src/` (R-636). A module includes only the ones below it; `cmake/layer-table.txt` lists each module's `uses` row and the test `layer_table` fails on an include upward or between siblings that the row does not allow. Every module also uses the library (`model`, `theory`, `realization`, `plan`, `reading`, `analysis`, `chain`, `io`) and cJSON. The plan is the library's; the hearing gives readings (`check/hearing.c`: a reading for each heard span, over the performer notes of the rendered work, R-633).
+
+| Module | Holds | May use |
+|---|---|---|
+| `util` | shared helpers: positions, shaping bits, jobs, JSON, the composition key (`composer.c`) | the library |
+| `structure` | plan queries (`plan_util`), request parsing, locks and dependents, fill targets, the form documents and the form record, theme shapes | `util` |
+| `fill` | the fill loop, its operators, seeds, candidates, suggestions and records | `structure`, `util` |
+| `render` | rendering a plan to events, making a work of it, MIDI and MusicXML | `structure`, `util` |
+| `style` | style models, blending, labels | `fill`, `structure`, `util` |
+| `harmony` | the harmony operators, the chord masks, the seam hearing | the five above |
+| `motive` | motives, their development, random motives, the variant registry | `harmony` and the five above |
+| `melody` | the melody operator | `harmony`, `motive` and the five above |
+| `texture` | the accompaniment and four-part voicing operators | `harmony`, `melody` and the five above |
+| `counterpoint` | the counter-melody operator | `harmony`, `texture` and the five above |
+| `material` | the returns, variations and figures of a section, given material, connectives, the seam | `harmony`, `melody` and the five above |
+| `grow` | growing a theme from a motive | `harmony`, `motive`, `melody`, `material` and the five above |
+| `check` | hearing (readings), the critic (`analyzer_check`, form, key and return hearing), the style check and measure | `grow`, `harmony`, `melody`, `motive`, `texture` and the five above |
+| `piece` | the compose run, the piece builders, performing, regenerating, the stages of `grow` | `check`, the operators, `grow` and the five above |
+| `candidates` | candidates and variations of a plan | `piece` and the five above |
+| `explain` | the explanation of a run | `piece`, `check`, `grow` and the five above |
+| `request` | the API entries and the preferences document | every module and `composer_api.h` |
+
+A header in `src/include/ursatz_composer/` belongs to the module whose files implement it. The five lowest modules (`util`, `structure`, `fill`, `render`, `style`) are the core; `harmony` to `material` are the operators.
 
 ## Public API
 
@@ -67,8 +80,8 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 |---|---|---|---|
 | Composer version | `CMakeLists.txt` (`project(UrsatzComposer VERSION ...)`) | 0.4.1 | [changelog.md](changelog.md) |
 | API version | `include/ursatz_composer/composer_api.h` (`COMPOSER_API_VERSION_MAJOR`, `_MINOR`) | 2.1 | [api.md](api.md#versioning) |
-| Plan format version | `src/include/ursatz_composer/plan_json.h` (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`) | 5 | [plan-format.md](plan-format.md#format-versions) |
-| Plan schema | `schema/plan.v5.schema.json` | plan format 5 (section descriptions) | [plan-format.md](plan-format.md) |
+| Plan format version | `library/plan/plan_json.h` (`URSATZ_PLAN_FORMAT_VERSION`) | 5 | [plan-format.md](../../library/docs/modules/plan-format.md#format-versions) |
+| Plan schema | `library/plan/schema/plan.v6.schema.json` | plan format 6 | [plan-format.md](../../library/docs/modules/plan-format.md) |
 | API schemas | `schema/api/*.schema.json` | API 2.1 | [api.md](api.md) |
 | Motive format | the motive document has no version member | none | [motive-format.md](motive-format.md) |
 | Theme request schema | `docs/theme-request.md` (`schema_version`) | 2 | [theme-request.md](theme-request.md) |

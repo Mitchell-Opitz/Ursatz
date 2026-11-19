@@ -197,7 +197,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
         free(json);
     }
 
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     return test_failure_count == 0 ? 0 : 1;
 }
@@ -314,7 +314,7 @@ static void analyze(const char *path, Analyzed *out) {
 
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    chain_result_destroy(&analyzed->report);
+    test_release_report(&analyzed->report);
     imported_score_destroy(&analyzed->notes);
 }
 

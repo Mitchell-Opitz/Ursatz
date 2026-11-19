@@ -16,7 +16,7 @@ PieceSection sections[3] = {
     {.id = "t", .letter = "T", .part = PIECE_PART_TURNAROUND, .beats = 4, .fill = PIECE_FILL_EMPTY},
 };
 PieceRequest request = {.form = "game-loop", .key = key, .meter = meter, .sections = sections, .section_count = 3};
-PiecePlan *plan;
+Plan *plan;
 ComposeConfig config = {.seed = 7};
 ComposeOutcome outcome;
 if (piece_build_plan(&request, &plan) == PIECE_OK && compose_run(plan, &config, &outcome) == PIECE_OK) {

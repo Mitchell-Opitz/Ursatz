@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/motive_tones.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The motivic development operators: Grow operators for a Constrained motive node that carries a motive_ref
@@ -46,7 +46,7 @@ void motive_develop_context_default(MotiveDevelopContext *context) {
     context->weights = motive_score_default_weights();
 }
 
-static MotiveDevelopContext context_or_default(const void *context) {
+MotiveDevelopContext motive_context_or_default(const void *context) {
     if (context) {
         return *(const MotiveDevelopContext *)context;
     }
@@ -66,7 +66,7 @@ typedef struct {
 } Request;
 
 /* The source motive: its notes, and the meter and key of the lanes over it, else the context's. */
-bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
+bool motive_develop_read_node(const Plan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
     LaneSpanId span;
     if (!plan_melody_span_of(plan, node, &span)) {
         return false;
@@ -93,8 +93,8 @@ bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDe
     if (motive_check_notes(&motive, &motive.length, NULL) != MOTIVE_OK) {
         return false;
     }
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &lane, 1) > 0) {
-        motive_set_key(&motive, &plan_lane_span_payload(plan, lane)->key, MOTIVE_SKETCH_KEY_GIVEN);
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, range, &lane, 1) > 0) {
+        motive_set_key(&motive, &plan_lane_span_payload(plan, lane)->region, MOTIVE_SKETCH_KEY_GIVEN);
     } else if (context->has_key) {
         motive_set_key(&motive, &context->key, MOTIVE_SKETCH_KEY_GIVEN);
     }
@@ -107,7 +107,7 @@ bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDe
  * source is another motive node with a melody. It must not have a melody of its own, and the melody lane must be free
  * over its span.
  */
-static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveDevelopContext *context,
+static bool read_request(const Plan *plan, FillTarget target, const MotiveDevelopContext *context,
                          unsigned long long family, Request *out) {
     if (target.kind != FILL_TARGET_NODE || !plan_has_node(plan, target.id) ||
         plan_node_kind(plan, target.id) != PLAN_NODE_MOTIVE ||
@@ -360,15 +360,15 @@ static bool propose_rhythms(Proposal *proposal) {
 
 /* ------------------------------------------------------------- the hooks */
 
-static bool restate_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool restate_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, FAMILY_RESTATE, &request);
 }
 
-static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool restate_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RESTATE, &request)) {
@@ -378,15 +378,15 @@ static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *
     return propose_restatements(&proposal, rng);
 }
 
-static bool fragment_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool fragment_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, FAMILY_FRAGMENT, &request);
 }
 
-static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool fragment_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_FRAGMENT, &request)) {
@@ -396,16 +396,16 @@ static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng 
     return propose_fragments(&proposal, rng);
 }
 
-static bool rhythm_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool rhythm_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, FAMILY_RHYTHM, &request);
 }
 
-static bool rhythm_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool rhythm_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     (void)rng;
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RHYTHM, &request)) {
@@ -415,7 +415,7 @@ static bool rhythm_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return propose_rhythms(&proposal);
 }
 
-static PlanResult develop_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult develop_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     const Payload *payload = candidate->payload;
     if (!payload || payload->magic != PAYLOAD_MAGIC) {
@@ -437,15 +437,15 @@ static PlanResult develop_apply(PiecePlan *plan, FillTarget target, const FillCa
 }
 
 static FillResult register_operator(FillOperatorRegistry *registry, const char *name, const char *description,
-                                    bool (*applies)(const PiecePlan *, FillTarget, void *),
-                                    bool (*generate)(const PiecePlan *, FillTarget, FillRng *, void *,
+                                    bool (*applies)(const Plan *, FillTarget, void *),
+                                    bool (*generate)(const Plan *, FillTarget, FillRng *, void *,
                                                      FillCandidateList *),
                                     const MotiveDevelopContext *context) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = name;
-    operator_.generator.supported_inputs = "PiecePlan motive node with a motive_ref constraint";
-    operator_.generator.supported_outputs = "PiecePlan melody lane span of the motive node";
+    operator_.generator.supported_inputs = "Plan motive node with a motive_ref constraint";
+    operator_.generator.supported_outputs = "Plan melody lane span of the motive node";
     operator_.generator.configuration_description = description;
     operator_.generator.constraints_description = "the motive_ref constraint's transformation and parameters";
     operator_.generator.deterministic = true;
@@ -479,7 +479,7 @@ FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveD
 
 /* ----------------------------------------------------------- the checker */
 
-bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool motive_develop_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out) {
     (void)operator_;
     memset(out, 0, sizeof(*out));
@@ -488,7 +488,7 @@ bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const Fill
     if (!payload || payload->magic != PAYLOAD_MAGIC) {
         return true;
     }
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     MotiveScoreWeights weights = shared->weights;

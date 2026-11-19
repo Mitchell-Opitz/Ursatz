@@ -4,15 +4,16 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/given.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
+#include "structure/form_record.h"
 #include "piece/piece_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The performance of a composed piece (R-485): the sections of the composed plan in the order they are played. See
@@ -23,7 +24,7 @@
 #define PERFORM_MAX_KEY_SPANS 8
 
 /* The sections of the composed plan in order, the material left out. */
-static size_t composed_sections(const PiecePlan *plan, NodeId *out, size_t capacity) {
+static size_t composed_sections(const Plan *plan, NodeId *out, size_t capacity) {
     NodeId root = plan_root(plan);
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -39,7 +40,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out, size_t capac
 }
 
 /* The meter of the composed plan over its first bar. */
-static bool plan_meter(const PiecePlan *plan, PlanMeter *meter) {
+static bool plan_meter(const Plan *plan, PlanMeter *meter) {
     LaneSpanId id;
     PlanSpan first = {{0, 1}, {1, 64}};
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, first, &id, 1) < 1) {
@@ -50,9 +51,9 @@ static bool plan_meter(const PiecePlan *plan, PlanMeter *meter) {
 }
 
 /* The key lane over the source section, cut to it and moved to start, added to the performed plan under its form. */
-static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan *plan, PlanSpan source, Rational start) {
+static PieceResult copy_keys(Plan *performed, NodeId form, const Plan *plan, PlanSpan source, Rational start) {
     LaneSpanId ids[PERFORM_MAX_KEY_SPANS];
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, source, ids, PERFORM_MAX_KEY_SPANS);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, source, ids, PERFORM_MAX_KEY_SPANS);
     Rational source_end;
     if (found == 0 || found > PERFORM_MAX_KEY_SPANS || plan_span_end(source, &source_end) != PLAN_OK) {
         return PIECE_ERR_BAD_REQUEST;
@@ -76,8 +77,8 @@ static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan 
             return PIECE_ERR_BAD_REQUEST;
         }
         memset(&payload, 0, sizeof(payload));
-        payload.key = plan_lane_span_payload(plan, ids[i])->key;
-        PieceResult result = piece_result_of_plan(plan_add_lane_span(performed, form, PLAN_LANE_KEY, 0, moved, &payload, &id));
+        payload.region = plan_lane_span_payload(plan, ids[i])->region;
+        PieceResult result = piece_result_of_plan(plan_add_lane_span(performed, form, PLAN_LANE_REGION, 0, moved, &payload, &id));
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(performed, id, PLAN_STATE_GIVEN)) : result;
         if (result != PIECE_OK) {
             return result;
@@ -87,7 +88,7 @@ static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan 
 }
 
 /* The constraints a performed section holds: the source's letter, cadences and key. */
-static PieceResult copy_constraints(PiecePlan *performed, NodeId node, const PiecePlan *plan, NodeId source) {
+static PieceResult copy_constraints(Plan *performed, NodeId node, const Plan *plan, NodeId source) {
     const SectionDescription *from = plan_section_or_empty(plan, source);
     SectionDescription description = *plan_node_section(performed, node);
     snprintf(description.letter, sizeof(description.letter), "%s", from->letter);
@@ -98,7 +99,7 @@ static PieceResult copy_constraints(PiecePlan *performed, NodeId node, const Pie
     PieceResult result = piece_result_of_plan(plan_node_set_section(performed, node, &description));
     for (size_t i = 0; result == PIECE_OK && i < plan_node_constraint_count(plan, source); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, source, i);
-        if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+        if (constraint->kind == PLAN_CONSTRAINT_REGION) {
             result = piece_add_constraint(performed, node, constraint);
         }
     }
@@ -266,7 +267,7 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
             return PIECE_ERR_BAD_REQUEST;
         }
     }
-    PiecePlan *performed = plan_create();
+    Plan *performed = plan_create();
     if (!performed) {
         return PIECE_ERR_ALLOC;
     }

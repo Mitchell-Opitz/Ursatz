@@ -6,12 +6,12 @@ add_library(ursatz_model
     core/entity.c
     core/string_copy.c
     core/once.c
+    core/content_hash.c
     core/rational.c
     core/value.c
     core/occurrence.c
     core/voice_reference.c
     core/provenance_reference.c
-    core/framework_reference.c
     time/duration.c
     time/musical_time.c
     time/time_span.c
@@ -44,13 +44,6 @@ add_library(ursatz_model
     structure/motif_occurrence.c
     structure/cadence.c
     structure/phrase_occurrence.c
-    relationship/relationship.c
-    interpretation/uncertainty.c
-    interpretation/interpretation.c
-    interpretation/claim_interpretation.c
-    interpretation/chord.c
-    interpretation/key.c
-    interpretation/texture.c
 )
 ursatz_public_headers(ursatz_model
     BASE ${PROJECT_SOURCE_DIR}
@@ -58,10 +51,10 @@ ursatz_public_headers(ursatz_model
     HEADERS
         model/containers/section.h
         model/core/entity.h
-        model/core/framework_reference.h
         model/core/occurrence.h
         model/core/once.h
         model/core/provenance_reference.h
+        model/core/content_hash.h
         model/core/rational.h
         model/core/string_copy.h
         model/core/value.h
@@ -71,12 +64,6 @@ ursatz_public_headers(ursatz_model
         model/events/tempo_marking.h
         model/identity/entity_id.h
         model/identity/schema_version.h
-        model/interpretation/chord.h
-        model/interpretation/claim_interpretation.h
-        model/interpretation/interpretation.h
-        model/interpretation/key.h
-        model/interpretation/texture.h
-        model/interpretation/uncertainty.h
         model/pitch/chord_type.h
         model/pitch/key_signature.h
         model/pitch/midi_pitch.h
@@ -87,7 +74,6 @@ ursatz_public_headers(ursatz_model
         model/pitch/region.h
         model/pitch/pitch_spelling.h
         model/pitch/tuning_system.h
-        model/relationship/relationship.h
         model/structure/cadence.h
         model/structure/motif.h
         model/structure/motif_occurrence.h

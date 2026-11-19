@@ -338,8 +338,8 @@ int main(void) {
         check_annotation(motives, families, family_count);
         cJSON_Delete(document);
     }
-    chain_result_destroy(&report);
-    chain_result_destroy(&report_again);
+    test_release_report(&report);
+    test_release_report(&report_again);
     imported_score_destroy(&notes);
     imported_score_destroy(&notes_again);
     return test_finish("test_motives");

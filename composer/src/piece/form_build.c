@@ -5,75 +5,22 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
+#include "util/position.h"
 #include "grow/grow_internal.h"
+#include "structure/form_record.h"
 #include "piece/piece_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
 
-const char *piece_result_name(PieceResult result) {
-    switch (result) {
-    case PIECE_OK:
-        return "ok";
-    case PIECE_ERR_NULL:
-        return "null argument";
-    case PIECE_ERR_ALLOC:
-        return "allocation failed";
-    case PIECE_ERR_MOTIVE_TOO_LONG:
-        return "motive too long";
-    case PIECE_ERR_BAD_REQUEST:
-        return "bad request";
-    case PIECE_ERR_STUCK:
-        return "stuck";
-    case PIECE_ERR_BAD_SIZE:
-        return "bad size";
-    }
-    return "unknown";
-}
-
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
     return motive_bars + MATERIAL_BARS_PER_SECTION * motive_bars * section_count;
-}
-
-static Rational bars_of(Rational bar, size_t count) {
-    Rational out = {0, 1};
-    if (rational_mul_int(bar, (long long)count, &out) != RATIONAL_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
-}
-
-const FormSpecSize *form_spec_default_size(const FormSpec *form) {
-    for (size_t i = 0; form && i < form->size_count; i++) {
-        if (form->sizes[i].is_default) {
-            return &form->sizes[i];
-        }
-    }
-    return NULL;
-}
-
-const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t count) {
-    if (!form || form->request_sections) {
-        return NULL;
-    }
-    if (bars == 0 && count == 0) {
-        return form_spec_default_size(form);
-    }
-    for (size_t i = 0; i < form->size_count; i++) {
-        const FormSpecSize *size = &form->sizes[i];
-        /* A count picks the size with it, and bars then must match; bars alone pick the first size with them. */
-        if (count != 0 ? size->count == count && (bars == 0 || size->bars == bars) : size->bars == bars) {
-            return size;
-        }
-    }
-    return NULL;
 }
 
 /*
@@ -118,7 +65,7 @@ static bool piece_accompaniment(const FormSpec *form, const PieceRequest *reques
  * One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. A section
  * that leads in is held (R-486), and a connective is asked for when `connective` (a "sometimes" is drawn by the caller).
  */
-static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSpecSize *size,
+static PieceResult add_section(Plan *plan, const PieceRequest *request, const FormSpecSize *size,
                                const SectionDescription *section, const SectionConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
@@ -180,8 +127,8 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = request->key;
+        constraint.kind = PLAN_CONSTRAINT_REGION;
+        constraint.params.region = request->key;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && accompaniment) {
@@ -206,7 +153,7 @@ static bool section_motive(const FormSpecSize *size, size_t index, MotiveRelatio
 }
 
 /* A section whose motive is not m0 itself asks for it as a MOTIVE_REF to m0. */
-static PieceResult add_section_motive(PiecePlan *plan, const FormSpecSize *size, size_t index, NodeId id, NodeId source) {
+static PieceResult add_section_motive(Plan *plan, const FormSpecSize *size, size_t index, NodeId id, NodeId source) {
     PlanConstraint constraint;
     MotiveRelationStep step;
     if (!section_motive(size, index, &step)) {
@@ -221,7 +168,7 @@ static PieceResult add_section_motive(PiecePlan *plan, const FormSpecSize *size,
 }
 
 /* m0 with no motive given: a Constrained one-bar motive node whose melody span motive-invent writes. */
-static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) {
+static PieceResult add_open_motive(Plan *plan, NodeId idea, PlanSpan span) {
     NodeId node;
     LaneSpanId melody;
     PlanLanePayload payload;
@@ -251,7 +198,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
  * An independent transition's motive (R-504): an open motive node of its own in the material's idea, at `bar_index` bars
  * from the material's start, named for the section, with the invent stage's melody span as m0's has.
  */
-static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index,
+static PieceResult add_independent_motive(Plan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index,
                                           const SectionDescription *section, NodeId *out) {
     char name[64];
     PlanSpan span = {{0, 1}, bar};
@@ -261,7 +208,7 @@ static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan
     PlanNote note;
     PlanConstraint constraint;
     snprintf(name, sizeof(name), "independent %s", section->name);
-    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, bars_of(bar, bar_index), &span.start)));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, bar_index), &span.start)));
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, name, &node));
     }
@@ -289,17 +236,17 @@ static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan
  * A motive of its own for a section (R-610): its notes, in a motive node named `own <section>` in the material at the bar
  * `bar_index` from the material's start (the bars the motive's layout takes are the material's).
  */
-PieceResult piece_add_own_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index, const char *section,
+PieceResult piece_add_own_motive(Plan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index, const char *section,
                                  const Motive *motive, NodeId *out) {
     char name[64];
     Rational start;
     snprintf(name, sizeof(name), "own %s", section);
-    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, bars_of(bar, bar_index), &start)));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, bar_index), &start)));
     return result == PIECE_OK ? piece_result_of_plan(motive_attach_sourced(plan, idea, start, motive, name, NULL, out, NULL)) : result;
 }
 
 /* An independent transition asks for its own motive as a MOTIVE_REF with no step: the motive itself, not m0 made over. */
-PieceResult piece_add_own_ref(PiecePlan *plan, NodeId id, NodeId motive) {
+PieceResult piece_add_own_ref(Plan *plan, NodeId id, NodeId motive) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
@@ -309,7 +256,7 @@ PieceResult piece_add_own_ref(PiecePlan *plan, NodeId id, NodeId motive) {
 }
 
 /* The material section, its phrase and its idea, Realized, with m0 in it; the source node in *out. */
-PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
+PieceResult piece_add_material(Plan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, Rational bar, NodeId *out) {
     NodeId section;
     NodeId phrase;
@@ -442,23 +389,7 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     return true;
 }
 
-PieceResult piece_set_form_record(PiecePlan *plan, const FormSpec *form) {
-    PlanFormRecord record;
-    memset(&record, 0, sizeof(record));
-    snprintf(record.name, sizeof(record.name), "%s", form->name);
-    record.version = FORM_SPEC_VERSION;
-    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
-        if (strcmp(form_spec_builtin_name(i), form->name) == 0) {
-            const char *hash = form_spec_builtin_hash(i);
-            snprintf(record.hash, sizeof(record.hash), "%s", hash ? hash : "");
-        }
-    }
-    record.checks = form->checks;
-    record.closing = form->closing;
-    return piece_result_of_plan(plan_set_form_record(plan, &record));
-}
-
-PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out) {
+PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, Plan **out) {
     if (!form || !request || !out) {
         return PIECE_ERR_NULL;
     }
@@ -476,15 +407,16 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     SectionConstruction constructions[FORM_SPEC_MAX_SECTIONS];
     bool has_construction[FORM_SPEC_MAX_SECTIONS];
     if (!form_spec_meter_allowed(form, &request->meter) || !grow_cells_per_bar(&request->meter, &cells_per_bar) ||
-        analysis_key_tonic_pitch_class(&request->key) < 0 ||
-        analysis_key_tonic_pitch_class(&request->key) > 11 ||
-        !composer_key_valid(&request->key) ||
+        spelled_key_tonic_pitch_class(&request->key) < 0 ||
+        spelled_key_tonic_pitch_class(&request->key) > 11 ||
+        !plan_key_valid(&request->key) ||
         (request->motive && request->motive->note_count < 2) ||
         (accompanied && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
         !size_buildable(size, &request->meter, request->motive, constructions, has_construction)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     /* The motive fills the basic idea of every section: its construction's, else 2 bars of an 8-bar theme section, 1 of a 4-bar one. */
     size_t basic_bars = 2;
     size_t extension_bars = 0;
@@ -539,12 +471,12 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         independent_count += size->sections[i].function.independent ? 1 : 0;
     }
 
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
-    PlanSpan piece = {{0, 1}, bars_of(bar, size->bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count + own_bars)};
+    PlanSpan piece = {{0, 1}, position_times(bar, size->bars)};
+    PlanSpan material = {piece.length, position_times(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count + own_bars)};
     PlanSpan extent = {{0, 1}, {0, 1}};
     PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &extent.length)));
     NodeId form_id = PLAN_NODE_NONE;
@@ -568,7 +500,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     FillRng connective_rng;
     fill_rng_seed(&connective_rng, request->seed + FORM_CONNECTIVE_SEED_OFFSET);
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
-        PlanSpan span = {start, bars_of(bar, size->sections[i].bars)};
+        PlanSpan span = {start, position_times(bar, size->sections[i].bars)};
         int wants = size->sections[i].leads_in ? (int)size->sections[i].connective : SECTION_CONNECTIVE_NONE;
         bool connective = wants == SECTION_CONNECTIVE_ALWAYS ||
                           (wants == SECTION_CONNECTIVE_SOMETIMES && fill_rng_below(&connective_rng, 2) == 0);
@@ -630,12 +562,12 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         }
         PlanSpan span = plan_node_span(plan, sections[i]);
         LaneSpanId keys_over[3];
-        size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys_over, 3);
+        size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, span, keys_over, 3);
         if (found == 0 || (found > 1 && overlay->description.harmony.kind == SECTION_HARMONY_SCHEMA)) {
             result = PIECE_ERR_BAD_REQUEST;
             break;
         }
-        const AnalysisKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->key;
+        const SpelledKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->region;
         result = piece_give_harmony(plan, sections[i], &overlay->description.harmony, &request->meter, section_key, NULL, 0);
     }
     /* A composed theme given to a section (R-610): its pairing and cadences, then its realized lanes moved and transposed to the section. */
@@ -674,7 +606,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     return PIECE_OK;
 }
 
-PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
+PieceResult piece_build_plan(const PieceRequest *request, Plan **out) {
     if (!request || !out) {
         return PIECE_ERR_NULL;
     }

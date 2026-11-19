@@ -5,10 +5,10 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "support/test_support.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
@@ -47,7 +47,7 @@ int main(void) {
         request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
         request.pairing.ending = SECTION_ENDING_CONTINUATION;
         request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));

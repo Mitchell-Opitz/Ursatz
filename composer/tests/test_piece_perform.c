@@ -8,16 +8,17 @@
 #include <theory/harmony/harmony_related_key.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_perform.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md): tests/fixtures/forms/repeat-form.json (A, B, A',
@@ -60,7 +61,7 @@ static Rational whole(long long numerator) {
     return (Rational){numerator, 1};
 }
 
-static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
+static Plan *compose(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
@@ -69,7 +70,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
@@ -81,7 +82,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
 }
 
 /* The lane spans of one lane and voice inside a section, in order: their start from the section's, and their payload. */
-static void same_lane(const PiecePlan *source_plan, NodeId source, const PiecePlan *performed, NodeId node, PlanLaneKind lane,
+static void same_lane(const Plan *source_plan, NodeId source, const Plan *performed, NodeId node, PlanLaneKind lane,
                       int voice) {
     LaneSpanId a[32];
     LaneSpanId b[32];
@@ -113,7 +114,7 @@ static void same_lane(const PiecePlan *source_plan, NodeId source, const PiecePl
     }
 }
 
-static size_t composed_sections(const PiecePlan *plan, NodeId *out) {
+static size_t composed_sections(const Plan *plan, NodeId *out) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -125,7 +126,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out) {
     return count;
 }
 
-static size_t render_count(const PiecePlan *plan, Rational *end, size_t *sections) {
+static size_t render_count(const Plan *plan, Rational *end, size_t *sections) {
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     size_t count = rendered.count;
@@ -135,7 +136,7 @@ static size_t render_count(const PiecePlan *plan, Rational *end, size_t *section
     return count;
 }
 
-static void check_performance(const FormSpec *form, const PiecePlan *plan) {
+static void check_performance(const FormSpec *form, const Plan *plan) {
     static const char *const NAMES[6] = {"A", "A (repeat)", "B", "A'", "B (repeat)", "A' (repeat)"};
     static const size_t SOURCE[6] = {0, 0, 1, 2, 1, 2};
     PiecePerformPart part = {form, &form->sizes[0], plan, true, NULL};
@@ -177,7 +178,7 @@ static void check_performance(const FormSpec *form, const PiecePlan *plan) {
 }
 
 /* A performance of parts in two meters is refused, and so is a plan that does not match its size. */
-static void check_refusals(const FormSpec *form, const PiecePlan *plan) {
+static void check_refusals(const FormSpec *form, const Plan *plan) {
     PiecePerformance performance;
     PiecePerformPart part = {form, &form->sizes[0], plan, true, NULL};
     assert(piece_perform(NULL, 1, &performance) == PIECE_ERR_NULL && piece_perform(&part, 0, &performance) == PIECE_ERR_NULL);
@@ -193,7 +194,7 @@ static void check_refusals(const FormSpec *form, const PiecePlan *plan) {
 static const char *const PART_NAMES[6] = {"A", "B", "Second A", "Second B", "First again A", "First again B"};
 
 /* The notes of the first lane span of the motive m0 of a plan. */
-static const PlanLanePayload *m0_notes(const PiecePlan *plan) {
+static const PlanLanePayload *m0_notes(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
         if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, "m0") == 0) {
@@ -228,7 +229,7 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
     static const size_t SOURCE_PART[6] = {0, 0, 1, 1, 0, 0};
     for (size_t i = 0; i < 6; i++) {
         const PiecePerformedSection *section = &performance.sections[i];
-        const PiecePlan *source_plan = parts->plans[SOURCE_PART[i]];
+        const Plan *source_plan = parts->plans[SOURCE_PART[i]];
         assert(strcmp(section->name, PART_NAMES[i]) == 0 && !section->repeat);
         assert(section->part == (i < 2 ? 0u : i < 4 ? 1u : 2u));
         assert(rational_cmp(section->start, whole((long long)i * 8)) == 0);
@@ -243,15 +244,15 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
     /* The key lane follows the parts, a span over each performed section: C major, A minor, C major. */
     LaneSpanId ids[8];
     PlanSpan all = {whole(0), whole(48)};
-    size_t found = plan_lane_find(performance.plan, PLAN_LANE_KEY, 0, all, ids, 8);
+    size_t found = plan_lane_find(performance.plan, PLAN_LANE_REGION, 0, all, ids, 8);
     assert(found == 6);
     static const int TONIC[3] = {0, 9, 0};
     static const HarmonyMode MODE[3] = {HARMONY_MODE_MAJOR, HARMONY_MODE_MINOR, HARMONY_MODE_MAJOR};
     for (size_t k = 0; k < 6; k++) {
         PlanSpan span = plan_lane_span_span(performance.plan, ids[k]);
-        const AnalysisKey *key = &plan_lane_span_payload(performance.plan, ids[k])->key;
+        const SpelledKey *key = &plan_lane_span_payload(performance.plan, ids[k])->region;
         assert(rational_cmp(span.start, whole((long long)k * 8)) == 0 && rational_cmp(span.length, whole(8)) == 0);
-        assert(analysis_key_tonic_pitch_class(key) == TONIC[k / 2] && harmony_key_mode(key) == MODE[k / 2]);
+        assert(spelled_key_tonic_pitch_class(key) == TONIC[k / 2] && harmony_key_mode(key) == MODE[k / 2]);
     }
     Rational end;
     size_t sections;
@@ -269,13 +270,13 @@ static void check_region_keys(void) {
     snprintf(parallel.minor[0], sizeof(parallel.minor[0]), "omt.relation.parallel");
     parallel.minor_count = 1;
     FillRng rng;
-    AnalysisKey key;
+    SpelledKey key;
     fill_rng_seed(&rng, 1);
-    AnalysisKey c_major = test_key(0, "major");
-    AnalysisKey a_minor = test_key(9, "minor");
-    assert(piece_region_key(test_knowledge(), c_major, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
+    SpelledKey c_major = test_key(0, "major");
+    SpelledKey a_minor = test_key(9, "minor");
+    assert(piece_region_key(test_knowledge(), c_major, &parallel, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 0 &&
            harmony_key_mode(&key) == HARMONY_MODE_MINOR);
-    assert(piece_region_key(test_knowledge(), a_minor, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
+    assert(piece_region_key(test_knowledge(), a_minor, &parallel, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 9 &&
            harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     /* Any other degree is the closely related key, as before: 6 of C major is A minor, 3 of A minor is C major. */
     FormRegion other;
@@ -284,9 +285,9 @@ static void check_region_keys(void) {
     other.major_count = 1;
     snprintf(other.minor[0], sizeof(other.minor[0]), "omt.relation.mediant");
     other.minor_count = 1;
-    assert(piece_region_key(test_knowledge(), c_major, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
+    assert(piece_region_key(test_knowledge(), c_major, &other, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 9 &&
            harmony_key_mode(&key) == HARMONY_MODE_MINOR);
-    assert(piece_region_key(test_knowledge(), a_minor, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
+    assert(piece_region_key(test_knowledge(), a_minor, &other, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 0 &&
            harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     /* A degree that is no closely related key is refused. */
     FormRegion none;
@@ -327,9 +328,9 @@ static int test_parts(void) {
         }
         composed++;
         assert(parts.count == 3 && parts.plans[0] && parts.plans[1] && parts.plans[2] == NULL);
-        assert(analysis_key_tonic_pitch_class(&parts.keys[0]) == 0 && harmony_key_mode(&parts.keys[0]) == HARMONY_MODE_MAJOR);
-        assert(analysis_key_tonic_pitch_class(&parts.keys[1]) == 9 && harmony_key_mode(&parts.keys[1]) == HARMONY_MODE_MINOR);
-        assert(analysis_key_equals(&parts.keys[2], &parts.keys[0]));
+        assert(spelled_key_tonic_pitch_class(&parts.keys[0]) == 0 && harmony_key_mode(&parts.keys[0]) == HARMONY_MODE_MAJOR);
+        assert(spelled_key_tonic_pitch_class(&parts.keys[1]) == 9 && harmony_key_mode(&parts.keys[1]) == HARMONY_MODE_MINOR);
+        assert(spelled_key_equals(&parts.keys[2], &parts.keys[0]));
         assert(parts.forms[0] && parts.forms[1] && parts.forms[2] == NULL);
         check_parts_performance(form, seed, &parts);
         /* Second has a motive of its own: its m0 is not First's. */
@@ -382,7 +383,7 @@ static void check_part_bars_performance(const FormSpec *form, size_t bars, const
         in_part[section->part]++;
         assert(rational_cmp(plan_node_span(performance.plan, section->node).length, in_bars(section->part == 1 ? 4 : first)) == 0);
         /* Its source in the part's own plan is as long: the Trio's plan is composed at 12 bars, the others at the size's. */
-        const PiecePlan *source_plan = parts->plans[section->part == 2 ? 0 : section->part];
+        const Plan *source_plan = parts->plans[section->part == 2 ? 0 : section->part];
         assert(rational_cmp(plan_node_span(source_plan, section->source).length, in_bars(section->part == 1 ? 4 : first)) == 0);
     }
     assert(in_part[0] == 6 && in_part[1] == 6 && in_part[2] == 3);
@@ -466,13 +467,13 @@ int main(int argc, char **argv) {
         ComposeOutcome plain_outcome;
         PieceResult ran;
         PieceResult plain_ran;
-        PiecePlan *plan = compose(form, seed, &outcome, &ran);
-        PiecePlan *plain = compose(plain_form, seed, &plain_outcome, &plain_ran);
+        Plan *plan = compose(form, seed, &outcome, &ran);
+        Plan *plain = compose(plain_form, seed, &plain_outcome, &plain_ran);
         /* Repeats do not change composing. */
         assert(ran == plain_ran);
         PlanJsonError detail;
-        char *json = plan_to_json(plan, &detail);
-        char *plain_json = plan_to_json(plain, &detail);
+        char *json = plan_to_json(plan, test_plan_producer(), &detail);
+        char *plain_json = plan_to_json(plain, test_plan_producer(), &detail);
         assert(json && plain_json);
         assert(strcmp(json, plain_json) == 0);
         free(json);

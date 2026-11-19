@@ -3,7 +3,7 @@
 #include <string.h>
 
 /* Reads the numeral of one span: a diatonic one, else an applied one. The cells are not counted. */
-static bool read_numeral(const PiecePlan *plan, LaneSpanId id, HarmonyMode mode, PhraseChord *out) {
+static bool read_numeral(const Plan *plan, LaneSpanId id, HarmonyMode mode, PhraseChord *out) {
     const PlanHarmony *harmony = &plan_lane_span_payload(plan, id)->harmony;
     memset(out, 0, sizeof(*out));
     memcpy(out->roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
@@ -19,20 +19,20 @@ static bool read_numeral(const PiecePlan *plan, LaneSpanId id, HarmonyMode mode,
     return true;
 }
 
-bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, HarmonyMode mode, Rational cell_length,
+bool harmony_read_chord(const Plan *plan, LaneSpanId id, HarmonyMode mode, Rational cell_length,
                        PhraseChord *out) {
     return read_numeral(plan, id, mode, out) &&
            harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
 }
 
-bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
+bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
                            PhraseChord *out) {
     size_t first;
     return read_numeral(plan, id, mode, out) &&
            harmony_metre_find_cells(metre, plan_lane_span_span(plan, id), &first, &out->cells);
 }
 
-bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContext *out) {
+bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
         plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) == NULL) {

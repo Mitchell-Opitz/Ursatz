@@ -36,4 +36,7 @@ bool phrase_level_form_valid(PhraseLevelForm value);
    value. */
 const char *phrase_level_form_name(PhraseLevelForm value);
 
+/* The inverse of phrase_level_form_name: false, leaving *out untouched, for a NULL argument or a name that is none of the six. */
+bool phrase_level_form_from_name(const char *name, PhraseLevelForm *out);
+
 #endif

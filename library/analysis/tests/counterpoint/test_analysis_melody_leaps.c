@@ -3,7 +3,6 @@
 #include "analysis/counterpoint/analysis_melody_climax.h"
 #include "analysis/counterpoint/analysis_melody_leaps.h"
 #include "analysis/tests/counterpoint/melody_test_util.h"
-#include "interpretation_test_access.h"
 
 /* Leap recovery, consecutive leaps and the climax of a span: the existing cantus firmus and melodic rules' definitions,
    read back as Interpretations. */
@@ -42,9 +41,6 @@ static void test_a_leap_then_a_step_down_is_recovered(void) {
     assert(standard_counterpoint_melody_leap_recoveries(&f.m.line, &f.intervals, &recoveries) ==
            STANDARD_COUNTERPOINT_MELODY_OK);
     assert(recoveries.count == 1 && recoveries.items[0].claim.next_index == 2);
-    assert(structure_event_id_count(recoveries.items[0].shell) == 3);
-    assert(strcmp(entity_id_value(interpretation_target_id(recoveries.items[0].interpretation)),
-                  entity_id_value(entity_id(structure_entity(recoveries.items[0].shell)))) == 0);
     standard_counterpoint_leap_recoveries_destroy(&recoveries);
     fixture_destroy(&f);
 }
@@ -160,7 +156,6 @@ static void test_a_unique_climax_and_its_position(void) {
     assert(fabs(c->relative_position - 2.0 / 5.0) < 1e-12);
     assert(c->has_strength == 1 && c->strength == (int)BEAT_STRENGTH_STRONG);
     assert(c->by_leap == 1 && c->final_note == 0);
-    assert(structure_event_id_count(climaxes.items[0].shell) == 1);
     standard_counterpoint_climaxes_destroy(&climaxes);
     fixture_destroy(&f);
 }
@@ -176,7 +171,6 @@ static void test_a_repeated_top_note_is_listed_not_collapsed(void) {
     assert(c->unique == 0 && c->occurrence_count == 3 && c->first_index == 1);
     assert(c->occurrences[0] == 1 && c->occurrences[1] == 3 && c->occurrences[2] == 5);
     assert(c->final_note == 0); /* the FIRST occurrence is what the rules call the climax */
-    assert(structure_event_id_count(climaxes.items[0].shell) == 3);
     standard_counterpoint_climaxes_destroy(&climaxes);
     fixture_destroy(&f);
 }

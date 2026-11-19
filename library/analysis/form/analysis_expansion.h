@@ -28,12 +28,9 @@
  *                its measures. Whether its length is typical for its kind (standard_form_suffix_length_typical) and agrees with its
  *                location (standard_form_suffix_length_agrees_with_location) is recorded. A prefix (an introduction) is not detected
  *
- * Each expansion or contraction is a Structure shell (the soprano notes it concerns) and an Interpretation targeting it:
- * FrameworkReference standard-form, claim = a StandardFormExpansionClaim, and uncertainty = the theme's (internal and contraction)
+ * Each expansion or contraction is a StandardFormExpansionClaim and an uncertainty = the theme's (internal and contraction)
  * or the phrase's (external).
  */
-
-#define STANDARD_FORM_EXPANSION_CLAIM_TYPE "standard-form/length-change"
 
 typedef enum {
     STANDARD_FORM_EXPANSION_INTERNAL = 0,
@@ -62,8 +59,6 @@ typedef struct {
 typedef struct {
     StandardFormExpansionClaim claim;
     double uncertainty;
-    Structure *shell;
-    Interpretation *interpretation;
 } StandardFormExpansion;
 
 typedef struct {

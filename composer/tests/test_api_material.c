@@ -142,6 +142,9 @@ static void expect_plan(const char *plan_text, const char *snapshot) {
         cJSON *metadata = cJSON_GetObjectItemCaseSensitive(both[i], "metadata");
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "composer_version");
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "ursatz_commit");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_version");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_key");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "composition_key");
     }
     if (!cJSON_Compare(left, right, true)) {
         fprintf(stderr, "a plan differs from %s\n", snapshot);
@@ -608,7 +611,7 @@ static void test_cancel(void) {
 }
 
 static void test_version(void) {
-    assert(strcmp(composer_api_version(), "3.0") == 0);
+    assert(strcmp(composer_api_version(), "3.2") == 0);
 }
 
 int main(int argc, char **argv) {

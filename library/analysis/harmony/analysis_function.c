@@ -4,11 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/harmony/analysis_claim.h"
-#include "model/core/value.h"
 #include "theory/harmony/harmony_applied.h"
 #include "theory/harmony/harmony_functions.h"
-#include "model/identity/entity_id.h"
 
 static bool function_of(const HarmonySegment *segment, HarmonyFunctionResult *result) {
     const HarmonySegmentInput *input = segment->input;
@@ -43,23 +40,6 @@ HarmonyFunctionStatus harmony_analysis_assign_functions(const HarmonySegment *se
         if (!segments[i].valid || !function_of(&segments[i], result)) {
             continue;
         }
-        HarmonyFunctionClaim claim;
-        memset(&claim, 0, sizeof(claim));
-        claim.function = (int)result->function;
-        claim.applied = result->applied;
-        claim.applied_to = result->applied_to;
-        claim.applied_kind = result->applied ? (int)segments[i].applied_chord.kind : 0;
-
-        char id[256];
-        snprintf(id, sizeof(id), "standard-harmony-function-%s", input->segment.id);
-        result->interpretation = harmony_analysis_make_interpretation(id, input->segment.id,
-                                                                      HARMONY_FUNCTION_CLAIM_TYPE, &claim,
-                                                                      sizeof(claim), input->uncertainty,
-                                                                      "harmonic-function-adapter");
-        if (result->interpretation == NULL) {
-            harmony_function_results_destroy(results, count);
-            return HARMONY_FUNCTION_ERR_ALLOC;
-        }
         result->has_function = true;
     }
     *out = results;
@@ -67,12 +47,7 @@ HarmonyFunctionStatus harmony_analysis_assign_functions(const HarmonySegment *se
 }
 
 void harmony_function_results_destroy(HarmonyFunctionResult *results, size_t count) {
-    if (results == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        interpretation_destroy(results[i].interpretation);
-    }
+    (void)count;
     free(results);
 }
 

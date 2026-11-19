@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "grow/grow_internal.h"
-#include "plan/plan_internal.h"
 
 const char *regenerate_result_name(RegenerateResult result) {
     static const char *const NAMES[] = {"ok",          "null argument", "out of memory", "not found",
@@ -21,7 +21,7 @@ const char *regenerate_result_name(RegenerateResult result) {
 
 /* The targets reached so far, marked by id, and the ones whose dependents are still to be read. */
 typedef struct {
-    const PiecePlan *plan;
+    const Plan *plan;
     bool *node_marked;
     bool *span_marked;
     bool *returns_added; /* by section: the sections that return it have been added */
@@ -31,7 +31,7 @@ typedef struct {
     bool failed;
 } Scope;
 
-static bool scope_init(Scope *scope, const PiecePlan *plan) {
+static bool scope_init(Scope *scope, const Plan *plan) {
     size_t nodes = plan_node_count(plan) + 1;
     size_t spans = plan_lane_span_count(plan) + 1;
     memset(scope, 0, sizeof(*scope));
@@ -64,12 +64,12 @@ static void scope_add(Scope *scope, FillTarget target) {
 }
 
 /* A section the theme operators grow: an archetype and a theme pairing. */
-static bool is_theme_section(const PiecePlan *plan, NodeId id) {
+static bool is_theme_section(const Plan *plan, NodeId id) {
     return plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_section_or_empty(plan, id)->has_pairing;
 }
 
 /* Whether the node is the material section or under it. */
-static bool in_material(const PiecePlan *plan, NodeId id) {
+static bool in_material(const Plan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL)) {
             return true;
@@ -80,7 +80,7 @@ static bool in_material(const PiecePlan *plan, NodeId id) {
 
 /* Whether a span the closure reaches is one it reopens: not a meter or key span, an inner voice only where it carries what
    its voices are written from. */
-static bool span_is_reopened(const PiecePlan *plan, LaneSpanId id) {
+static bool span_is_reopened(const Plan *plan, LaneSpanId id) {
     switch (plan_lane_span_lane(plan, id)) {
     case PLAN_LANE_HARMONY:
     case PLAN_LANE_BASS:
@@ -91,7 +91,7 @@ static bool span_is_reopened(const PiecePlan *plan, LaneSpanId id) {
                plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_VOICING) != NULL ||
                plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT) != NULL;
     case PLAN_LANE_METER:
-    case PLAN_LANE_KEY:
+    case PLAN_LANE_REGION:
         break;
     }
     return false;
@@ -99,7 +99,7 @@ static bool span_is_reopened(const PiecePlan *plan, LaneSpanId id) {
 
 /* Whether a span of the same owner and lane as `other`, already reached, touches it end to start. */
 static bool touches_reached(const Scope *scope, LaneSpanId other) {
-    const PiecePlan *plan = scope->plan;
+    const Plan *plan = scope->plan;
     PlanSpan span = plan_lane_span_span(plan, other);
     Rational other_end;
     plan_span_end(span, &other_end);
@@ -123,7 +123,7 @@ static bool touches_reached(const Scope *scope, LaneSpanId other) {
  * notes one operator wrote by splitting one open span, which are opened again as one.
  */
 static void add_run(Scope *scope, LaneSpanId id) {
-    const PiecePlan *plan = scope->plan;
+    const Plan *plan = scope->plan;
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     if (lane != PLAN_LANE_HARMONY && lane != PLAN_LANE_BASS) {
         return;
@@ -144,7 +144,7 @@ static void add_run(Scope *scope, LaneSpanId id) {
 
 /* The sections that return section: reopening what a section holds reopens them. */
 static void add_returners(Scope *scope, NodeId section) {
-    const PiecePlan *plan = scope->plan;
+    const Plan *plan = scope->plan;
     if (section == PLAN_NODE_NONE || scope->returns_added[section]) {
         return;
     }
@@ -158,7 +158,7 @@ static void add_returners(Scope *scope, NodeId section) {
     }
 }
 
-static NodeId owner_node(const PiecePlan *plan, FillTarget target) {
+static NodeId owner_node(const Plan *plan, FillTarget target) {
     return target.kind == FILL_TARGET_NODE ? (NodeId)target.id : plan_lane_span_owner(plan, (LaneSpanId)target.id);
 }
 
@@ -167,7 +167,7 @@ static NodeId owner_node(const PiecePlan *plan, FillTarget target) {
  * Whether a span can be written again: a harmony span only from the shape grow gave it or its owner's other spans. A
  * chord written whole (a presentation in sequence's I and ii, R-348) has none and is kept as it is.
  */
-static bool harmony_rebuildable(const PiecePlan *plan, LaneSpanId id) {
+static bool harmony_rebuildable(const Plan *plan, LaneSpanId id) {
     if (plan_lane_span_lane(plan, id) != PLAN_LANE_HARMONY) {
         return true;
     }
@@ -183,7 +183,7 @@ static bool harmony_rebuildable(const PiecePlan *plan, LaneSpanId id) {
 }
 
 /* The section a section that returns another is reopened as: a return is made from its source. */
-static NodeId return_section_of(const PiecePlan *plan, FillTarget target) {
+static NodeId return_section_of(const Plan *plan, FillTarget target) {
     NodeId section = plan_section_of(plan, owner_node(plan, target));
     if (section != PLAN_NODE_NONE && plan_section_or_empty(plan, section)->returns[0] != '\0' &&
         plan_node_state(plan, section) != PLAN_STATE_GIVEN) {
@@ -192,7 +192,7 @@ static NodeId return_section_of(const PiecePlan *plan, FillTarget target) {
     return PLAN_NODE_NONE;
 }
 
-static RegenerateResult scope_build(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+static RegenerateResult scope_build(const Plan *plan, const FillTarget *targets, size_t target_count,
                                     FillTarget **out, size_t *count) {
     if (!plan || !out || !count || !targets || target_count == 0) {
         return REGENERATE_ERR_NULL;
@@ -289,7 +289,7 @@ static RegenerateResult scope_build(const PiecePlan *plan, const FillTarget *tar
     return REGENERATE_OK;
 }
 
-RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_regenerate_scope_all(const Plan *plan, const FillTarget *targets, size_t target_count,
                                            FillTarget **out, size_t *count) {
     return scope_build(plan, targets, target_count, out, count);
 }
@@ -297,7 +297,7 @@ RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarg
 /* ------------------------------------------------------------- reopening */
 
 /* Whether the section has Given material among its nodes or the spans they own. */
-static bool subtree_has_given(const PiecePlan *plan, NodeId id) {
+static bool subtree_has_given(const Plan *plan, NodeId id) {
     for (size_t i = 0; i < plan_node_child_count(plan, id); i++) {
         NodeId child = plan_node_child_at(plan, id, i);
         if (plan_node_state(plan, child) == PLAN_STATE_GIVEN || subtree_has_given(plan, child)) {
@@ -314,7 +314,7 @@ static bool subtree_has_given(const PiecePlan *plan, NodeId id) {
 }
 
 /* Whether any constraint of a live node or lane span names the motive. */
-static bool motive_referenced(const PiecePlan *plan, NodeId motive) {
+static bool motive_referenced(const Plan *plan, NodeId motive) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         for (size_t i = 0; plan_has_node(plan, id) && i < plan_node_constraint_count(plan, id); i++) {
             const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
@@ -344,7 +344,7 @@ static bool is_candidate(const NodeId *list, size_t count, NodeId id) {
 }
 
 /* Adds the motives the spans owned under id name, and the motives those are made from, to list (room for every node). */
-static size_t collect_motives(const PiecePlan *plan, NodeId id, NodeId *list, size_t count) {
+static size_t collect_motives(const Plan *plan, NodeId id, NodeId *list, size_t count) {
     size_t before = count;
     for (LaneSpanId span = 1; span <= plan_lane_span_count(plan); span++) {
         if (!plan_has_lane_span(plan, span)) {
@@ -375,7 +375,7 @@ static size_t collect_motives(const PiecePlan *plan, NodeId id, NodeId *list, si
 }
 
 /* Removes the candidate motives nothing names any more, a motive made from another first. m0 and Given motives stay. */
-static void remove_unused_motives(PiecePlan *plan, const NodeId *list, size_t count) {
+static void remove_unused_motives(Plan *plan, const NodeId *list, size_t count) {
     bool again = true;
     while (again) {
         again = false;
@@ -394,7 +394,7 @@ static void remove_unused_motives(PiecePlan *plan, const NodeId *list, size_t co
 }
 
 /* Reopens a section whole. */
-static RegenerateResult reopen_section(PiecePlan *plan, NodeId section) {
+static RegenerateResult reopen_section(Plan *plan, NodeId section) {
     NodeId *motives = calloc(plan_node_count(plan) + 1, sizeof(NodeId));
     if (!motives) {
         return REGENERATE_ERR_ALLOC;
@@ -428,7 +428,7 @@ static void placeholder(PlanLaneKind lane, PlanSpan span, PlanNote *note, PlanLa
     payload->notes.note_count = 1;
 }
 
-static bool span_earlier(const PiecePlan *plan, LaneSpanId a, LaneSpanId b) {
+static bool span_earlier(const Plan *plan, LaneSpanId a, LaneSpanId b) {
     return rational_cmp(plan_lane_span_span(plan, a).start, plan_lane_span_span(plan, b).start) < 0;
 }
 
@@ -436,7 +436,7 @@ static bool span_earlier(const PiecePlan *plan, LaneSpanId a, LaneSpanId b) {
  * One run of harmony or bass spans an operator wrote and split, as one open span again over the same time, with the
  * constraints grow gave it: the first span's, and the last span's cadence.
  */
-static PlanResult reopen_run(PiecePlan *plan, const LaneSpanId *run, size_t count) {
+static PlanResult reopen_run(Plan *plan, const LaneSpanId *run, size_t count) {
     PlanLaneKind lane = plan_lane_span_lane(plan, run[0]);
     NodeId owner = plan_lane_span_owner(plan, run[0]);
     PlanSpan first = plan_lane_span_span(plan, run[0]);
@@ -484,7 +484,7 @@ static PlanResult reopen_run(PiecePlan *plan, const LaneSpanId *run, size_t coun
 }
 
 /* A written melody or inner voice span, open again with a placeholder note. */
-static PlanResult reopen_in_place(PiecePlan *plan, LaneSpanId id) {
+static PlanResult reopen_in_place(Plan *plan, LaneSpanId id) {
     PlanNote note;
     PlanLanePayload payload;
     placeholder(plan_lane_span_lane(plan, id), plan_lane_span_span(plan, id), &note, &payload);
@@ -493,7 +493,7 @@ static PlanResult reopen_in_place(PiecePlan *plan, LaneSpanId id) {
 }
 
 /* The harmony and bass spans among ids, grouped into runs (same owner and lane, end to start), each run opened once. */
-static PlanResult reopen_spans(PiecePlan *plan, const LaneSpanId *ids, size_t count) {
+static PlanResult reopen_spans(Plan *plan, const LaneSpanId *ids, size_t count) {
     LaneSpanId *sorted = calloc(count + 1, sizeof(LaneSpanId));
     LaneSpanId *run = calloc(count + 1, sizeof(LaneSpanId));
     if (!sorted || !run) {
@@ -547,7 +547,7 @@ static PlanResult reopen_spans(PiecePlan *plan, const LaneSpanId *ids, size_t co
 /* ------------------------------------------------------------- regenerating */
 
 /* Whether a section is still to be written: not grown yet, or with a lane span still open. */
-static bool section_is_open(const PiecePlan *plan, NodeId section) {
+static bool section_is_open(const Plan *plan, NodeId section) {
     if (plan_node_kind(plan, section) != PLAN_NODE_SECTION || plan_node_state(plan, section) == PLAN_STATE_GIVEN) {
         return false;
     }
@@ -567,7 +567,7 @@ static bool section_is_open(const PiecePlan *plan, NodeId section) {
  * The sections the run hears and checks (R-261), each once: the ones that hold the reopened targets, and the ones that
  * were still open before (the run writes them too, so they are heard, never reported kept). NULL when out of memory.
  */
-static NodeId *scope_sections(const PiecePlan *plan, const FillTarget *scope, size_t count, size_t *section_count) {
+static NodeId *scope_sections(const Plan *plan, const FillTarget *scope, size_t count, size_t *section_count) {
     size_t nodes = plan_node_count(plan);
     bool *marked = calloc(nodes + 1, sizeof(bool));
     NodeId *sections = calloc(nodes + 1, sizeof(NodeId));
@@ -592,7 +592,7 @@ static NodeId *scope_sections(const PiecePlan *plan, const FillTarget *scope, si
     return sections;
 }
 
-RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_regenerate_all(Plan *plan, const FillTarget *targets, size_t target_count,
                                      const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return REGENERATE_ERR_NULL;

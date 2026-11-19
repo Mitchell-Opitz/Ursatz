@@ -27,6 +27,7 @@ typedef struct {
     const char *seed;
     const char *suggest;
     const char *out;
+    const char *layers;
     const char *midi;
     const char *musicxml;
     const char *explain;
@@ -46,6 +47,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --check              analyze the theme with the Ursatz Analyzer and pass over a seed whose analysis contradicts\n");
     fprintf(out, "                       the plan\n");
     fprintf(out, "  --out <file.json>    write the plan as JSON\n");
+    fprintf(out, "  --layers <dir>       write the first theme's three layers: plan.json, realization.json and readings/composer.json\n");
     fprintf(out, "  --midi <file>        write the melody, the bass and the accompaniment as a MIDI file (the tempo of the brief)\n");
     fprintf(out, "  --musicxml <file>    write them as MusicXML\n");
     fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
@@ -73,6 +75,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->suggest;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out;
+        } else if (strcmp(arg, "--layers") == 0) {
+            target = &options->layers;
         } else if (strcmp(arg, "--midi") == 0) {
             target = &options->midi;
         } else if (strcmp(arg, "--musicxml") == 0) {
@@ -123,7 +127,7 @@ static int build_request(const Options *options, char **out) {
     if (options->suggest) {
         ok = ok && cJSON_AddStringToObject(request, "suggest", options->suggest);
     }
-    ok = ok && cJSON_AddBoolToObject(request, "check", options->check) && cJSON_AddBoolToObject(request, "midi", options->midi != NULL) &&
+    ok = ok && (!options->layers || cJSON_AddTrueToObject(request, "layers")) && cJSON_AddBoolToObject(request, "check", options->check) && cJSON_AddBoolToObject(request, "midi", options->midi != NULL) &&
          cJSON_AddBoolToObject(request, "musicxml", options->musicxml != NULL) &&
          cJSON_AddBoolToObject(request, "plain_midi", options->plain_midi);
     /* The plans of the themes after the first are written from the document. */
@@ -226,6 +230,8 @@ static void print_json(cJSON *document, const CliPendingFile *pending, size_t pe
         cJSON_DeleteItemFromObjectCaseSensitive(theme, "plan");
         cJSON_DeleteItemFromObjectCaseSensitive(theme, "explanation");
     }
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "realization");
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "reading");
     cJSON *files = cJSON_AddArrayToObject(document, "files");
     for (size_t i = 0; files && i < pending_count; i++) {
         cJSON_AddItemToArray(files, cJSON_CreateString(pending[i].final_path));
@@ -284,6 +290,9 @@ int run_theme(int argc, char **argv) {
     CliPendingFile pending[MAX_FILES];
     size_t pending_count = 0;
     status = write_files(&options, &response, document, pending, &pending_count);
+    if (status == 0 && options.layers) {
+        status = cli_write_layers(options.layers, &response);
+    }
     if (status == 0) {
         if (json) {
             print_json(document, pending, pending_count);

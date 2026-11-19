@@ -377,7 +377,7 @@ int main(void) {
 
     cJSON_Delete(document);
     free(json);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     remove(path);
     free(path);

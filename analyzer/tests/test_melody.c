@@ -392,7 +392,7 @@ int main(int argc, char **argv) {
         check_annotation(&notes, &report, path, target);
     }
     cJSON_Delete(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     return test_finish("test_melody");
 }

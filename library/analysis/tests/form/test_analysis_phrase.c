@@ -1,3 +1,4 @@
+#include <math.h>
 #include "analysis/form/analysis_phrase.h"
 #include "model/core/rational.h"
 #include "model/time/meter_arithmetic.h"
@@ -5,8 +6,6 @@
 #include "model/time/score_time.h"
 #include "theory/form/external_expansion_rules.h"
 #include "analysis/tests/form/form_test_util.h"
-#include "model/interpretation/uncertainty.h"
-#include "interpretation_test_access.h"
 #include "structure_test_access.h"
 
 /* Phrases from cadences: the kernel's Phrase Boundary Detection (through the bridge) fed with real cadences, post-cadential
@@ -43,7 +42,7 @@ static void test_two_cadences_make_two_phrases(void) {
     form_destroy(&f);
 }
 
-static void test_the_interpretation_follows_the_claim_pattern(void) {
+static void test_the_claim_carries_the_measures(void) {
     FormFixture f;
     form_init(&f, 4, 0);
     form_measures(&f, 1, 4, RISING);
@@ -54,10 +53,7 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     const StandardFormPhrase *phrase = &phrases.items[0];
     assert(phrase_occurrence_region_event_id_count(phrase->occurrence) == 16);
     assert(strcmp(entity_id_value(phrase_occurrence_phrase_id(phrase->occurrence)), "standard-form-phrase-0") == 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(phrase->interpretation)),
-                  entity_id_value(phrase_occurrence_id(phrase->occurrence))) == 0);
-    assert(interpretation_framework_reference(phrase->interpretation) != NULL);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(phrase->interpretation)) == 800000UL);
+    assert(fabs(phrase->uncertainty - 0.2) < 1e-12);
     Rational start = phrase->span.start.value;
     Rational end = phrase->span.end.value;
     assert(start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);
@@ -277,7 +273,7 @@ static void test_bad_calls_are_refused(void) {
 
 int main(void) {
     test_two_cadences_make_two_phrases();
-    test_the_interpretation_follows_the_claim_pattern();
+    test_the_claim_carries_the_measures();
     test_a_post_cadential_plagal_is_absorbed();
     test_only_a_goal_cadence_ends_a_phrase();
     test_without_a_cadence_the_secondary_signal_applies_after_eight_measures();

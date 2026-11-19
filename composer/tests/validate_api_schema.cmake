@@ -1,5 +1,5 @@
 # Validates the JSON the API tests wrote against schema/api/*.schema.json: <kind>_response_*.json in WRITTEN_DIR is checked
-# with <kind>.schema.json. Run with cmake -P and -DKINDS (a comma-separated list), -DPYTHON, -DVALIDATOR, -DSCHEMA_DIR, -DFRAGMENT (the section fragment of the plan group, which the request schema references) and corpus-passages.schema.json (which the grow and plan requests reference) and -DWRITTEN_DIR.
+# with <kind>.schema.json. Run with cmake -P and -DKINDS (a comma-separated list), -DPYTHON, -DVALIDATOR, -DSCHEMA_DIR, -DFRAGMENT (the section fragment of the plan group, which the request schema references), -DREALIZATION_SCHEMA and -DREADING_SCHEMA (the schemas of the layers, which the response schemas reference) and corpus-passages.schema.json (which the grow and plan requests reference) and -DWRITTEN_DIR.
 # The test is registered only when python3 with jsonschema was found at configure time (-DPYTHON is that python3).
 
 string(REPLACE "," ";" KINDS "${KINDS}")
@@ -14,7 +14,8 @@ foreach(kind IN LISTS KINDS)
     if(NOT written)
         message(FATAL_ERROR "no ${kind} responses were written to ${WRITTEN_DIR}")
     endif()
-    execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${response_schema}" ${written} RESULT_VARIABLE result)
+    execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" --ref "${REALIZATION_SCHEMA}" --ref "${READING_SCHEMA}" "${response_schema}" ${written}
+                    RESULT_VARIABLE result)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "a ${kind} response does not match ${response_schema}")
     endif()

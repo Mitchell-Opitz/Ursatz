@@ -9,10 +9,10 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "api/api_piece.h"
 #include "support/test_support.h"
@@ -127,28 +127,37 @@ static uint64_t fnv1a(const char *text) {
     return hash;
 }
 
-/* The plan text records the Analyzer's producer key (metadata.ursatz_commit); a source change must not move a plan, so
- * the key, whatever its length, is replaced by 40 zeros before the hash (the width of the commit the goldens were
- * captured with). */
-static uint64_t fnv1a_plan(const char *json) {
-    const char *field = strstr(json, "ursatz_commit");
-    const char *quote = field ? strchr(field + strlen("ursatz_commit") + 1, '"') : NULL;
+/* The plan text records the producer key and the composition key (metadata.producer_key and .composition_key); a source change must not
+ * move a plan, so each key, whatever its length, is replaced by 16 zeros before the hash (the width of a key). */
+static char *blank_member(const char *json, const char *member) {
+    char name[40];
+    snprintf(name, sizeof(name), "\"%s\"", member);
+    const char *field = strstr(json, name);
+    const char *quote = field ? strchr(field + strlen(name) + 1, '"') : NULL;
     const char *end = quote ? strchr(quote + 1, '"') : NULL;
-    if (!end) {
-        return fnv1a(json);
-    }
-    size_t head = (size_t)(quote + 1 - json);
-    size_t tail = strlen(end);
-    char *blanked = malloc(head + 40 + tail + 1);
+    size_t head = end ? (size_t)(quote + 1 - json) : 0;
+    size_t tail = end ? strlen(end) : strlen(json);
+    char *blanked = malloc(head + 16 + tail + 1);
     if (!blanked) {
         fprintf(stderr, "out of memory\n");
         exit(1);
     }
+    if (!end) {
+        memcpy(blanked, json, tail + 1);
+        return blanked;
+    }
     memcpy(blanked, json, head);
-    memset(blanked + head, '0', 40);
-    memcpy(blanked + head + 40, end, tail + 1);
+    memset(blanked + head, '0', 16);
+    memcpy(blanked + head + 16, end, tail + 1);
+    return blanked;
+}
+
+static uint64_t fnv1a_plan(const char *json) {
+    char *without_producer = blank_member(json, "producer_key");
+    char *blanked = blank_member(without_producer, "composition_key");
     uint64_t hash = fnv1a(blanked);
     free(blanked);
+    free(without_producer);
     return hash;
 }
 
@@ -165,7 +174,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
     request.count = size->count;
     request.modulate = modulate;
     request.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
     if (built != PIECE_OK || !plan) {
         fprintf(stderr, "%s %zu %zu %s modulate %d seed %lu: %s\n", size->kind, size->bars,
@@ -173,7 +182,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
         exit(1);
     }
     PlanJsonError error;
-    char *json = plan_to_json(plan, &error);
+    char *json = plan_to_json(plan, test_plan_producer(), &error);
     if (!json) {
         fprintf(stderr, "plan_to_json: %s\n", error.message);
         exit(1);
@@ -324,14 +333,14 @@ static uint64_t piece_hash(const char *name, const char *theme) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
         exit(1);
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = piece_build_plan(&spec->request, &plan);
     if (built != PIECE_OK || !plan) {
         fprintf(stderr, "%s: %s\n", name, piece_result_name(built));
         exit(1);
     }
     PlanJsonError json_error;
-    char *json = plan_to_json(plan, &json_error);
+    char *json = plan_to_json(plan, test_plan_producer(), &json_error);
     if (!json) {
         fprintf(stderr, "plan_to_json: %s\n", json_error.message);
         exit(1);

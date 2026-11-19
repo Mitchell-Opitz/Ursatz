@@ -2,23 +2,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
-#include "api_grow.h"
+#include "api_style.h"
+#include "api_seed.h"
+#include "api_construction.h"
 #include "api_vocabulary.h"
 #include "api_workflow.h"
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /*
@@ -86,7 +88,7 @@ typedef struct {
     bool form_defaulted;
     size_t given_melodies;
     FormSpec *form; /* the built-in form named, owned */
-    AnalysisKey key;
+    SpelledKey key;
     char key_name[24];
     char key_request[64];
     PlanMeter meter;
@@ -95,7 +97,7 @@ typedef struct {
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
     unsigned long seed;
-    ComposerRatio style_weight; /* 0/0 when no style_weight was given */
+    Rational style_weight; /* 0/0 when no style_weight was given */
     ComposerStyleWeights blend_weights;
     bool seeded; /* the motive is a passage of the corpus, kept in seed_found */
     CorpusSeed seed_found;
@@ -507,25 +509,11 @@ static ComposerStatus seed_failure(CorpusSeedResult result, const char *what, co
     }
 }
 
-static ComposerStatus seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error) {
-    memset(out, 0, sizeof(*out));
-    if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the source piece's path is too long to record");
-    }
-    out->start_measure = seed->start_measure;
-    out->start_beat = seed->start_beat;
-    out->end_measure = seed->end_measure;
-    out->end_beat = seed->end_beat;
-    out->score_numerator = seed->score_numerator;
-    out->score_denominator = seed->score_denominator;
-    return COMPOSER_OK;
-}
-
-static ComposerStatus add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed, ComposerError *error) {
+static ComposerStatus add_source(Plan *plan, NodeId node, const CorpusSeed *seed, ComposerError *error) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_SOURCE;
-    ComposerStatus status = seed_source(seed, &constraint.params.source, error);
+    ComposerStatus status = api_seed_source(seed, &constraint.params.source, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -556,7 +544,7 @@ static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, c
 /* --- the given material ---------------------------------------------------------------------------- */
 
 /* The node of the section with the letter, or PLAN_NODE_NONE; the letters are listed into names when it has none. */
-static NodeId section_named(const PiecePlan *plan, const char *letter, char *names, size_t size) {
+static NodeId section_named(const Plan *plan, const char *letter, char *names, size_t size) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     names[0] = '\0';
@@ -571,7 +559,7 @@ static NodeId section_named(const PiecePlan *plan, const char *letter, char *nam
 }
 
 /* Places the given material in the plan. */
-static ComposerStatus place_given(PlanBuild *state, PiecePlan *plan, ComposerError *error) {
+static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *error) {
     for (size_t i = 0; i < state->given_count; i++) {
         const Given *given = &state->given[i];
         char names[128];
@@ -650,7 +638,7 @@ static cJSON *given_document(const PlanBuild *state) {
     return list;
 }
 
-static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
+static cJSON *plan_document(const PlanBuild *state, const Plan *plan) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     if (count > API_MAX_SECTIONS) {
@@ -679,8 +667,8 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
     ok = ok && (state->given_count == 0 || api_add(document, "given", given_document(state)));
     if (ok && state->style_path) {
         char weight[48];
-        snprintf(weight, sizeof weight, "%lu/%lu", state->style_weight.denominator ? state->style_weight.numerator : 1UL,
-                 state->style_weight.denominator ? state->style_weight.denominator : 1UL);
+        snprintf(weight, sizeof weight, "%lld/%lld", state->style_weight.den ? state->style_weight.num : 1LL,
+                 state->style_weight.den ? state->style_weight.den : 1LL);
         cJSON *style = cJSON_CreateObject();
         ok = style && cJSON_AddStringToObject(style, "file", state->style_path) && cJSON_AddStringToObject(style, "weight", weight) &&
              api_add(document, "style", style);
@@ -729,7 +717,7 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
 
 /* --- the entry ------------------------------------------------------------------------------------- */
 
-static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerError *error) {
+static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *error) {
     Motive *motive = calloc(1, sizeof(*motive));
     bool has_motive = false;
     ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
@@ -745,7 +733,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
             corpus_passages_destroy(&passages);
             if (result == CORPUS_SEED_OK) {
                 add_notice(state, &state->seed_found);
-                status = seed_source(&state->seed_found, &state->source, error);
+                status = api_seed_source(&state->seed_found, &state->source, error);
             } else {
                 status = seed_failure(result, "a motive (it needs two or more notes in its first bar)", "/corpus_passages", error);
             }
@@ -833,8 +821,8 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     if (state->style_path) {
         request.has_style = true;
         snprintf(request.style.path, PLAN_STYLE_PATH_MAX, "%s", state->style_path);
-        request.style.weight_numerator = state->style_weight.numerator;
-        request.style.weight_denominator = state->style_weight.denominator;
+        request.style.weight_numerator = state->style_weight.num;
+        request.style.weight_denominator = state->style_weight.den;
         for (size_t i = 0; i < state->without_count; i++) {
             snprintf(request.style.without[i], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", state->without[i]);
         }
@@ -847,7 +835,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
             }
         }
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
     if (built != PIECE_OK) {
         size_t theme_bars = 8;
@@ -887,7 +875,7 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
         return context_status;
     }
     PlanBuild *state = calloc(1, sizeof(*state));
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     if (state) {
         state->knowledge = context->knowledge;
     }
@@ -905,7 +893,7 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
         cJSON *document = plan_document(state, plan);
         ApiOutputs outputs;
         memset(&outputs, 0, sizeof outputs);
-        status = document ? api_render_outputs(context->knowledge, plan, &outputs, out) : api_fail_alloc(&out->error);
+        status = document ? api_render_outputs(context->knowledge, plan, &outputs, document, out) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
         } else {

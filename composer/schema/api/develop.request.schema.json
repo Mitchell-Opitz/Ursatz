@@ -159,6 +159,10 @@
     "plain_midi": {
       "type": "boolean"
     },
+    "layers": {
+      "type": "boolean",
+      "description": "Also return the realization and the reading of the first result as \"realization\" and \"reading\"."
+    },
     "tempo": {
       "type": [
         "integer",

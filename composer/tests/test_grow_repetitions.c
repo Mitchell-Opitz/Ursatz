@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 
@@ -43,7 +43,7 @@ static GrowRequest make_request(const Motive *motive, int tonic, HarmonyMode mod
 }
 
 /* How the plan has the repetition made from the basic idea: the relation its motive node asks for. */
-static Kind repetition_kind(const PiecePlan *plan) {
+static Kind repetition_kind(const Plan *plan) {
     NodeId node = test_find_node(plan, "m1");
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
@@ -68,7 +68,7 @@ static Kind repetition_kind(const PiecePlan *plan) {
 }
 
 /* The notes written on the motive node `name`: onsets, durations and pitches. */
-static size_t written_notes(const PiecePlan *plan, const char *name, const PlanNote **notes) {
+static size_t written_notes(const Plan *plan, const char *name, const PlanNote **notes) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
@@ -92,7 +92,7 @@ static int step_of(int midi) {
 }
 
 /* The first chord of the idea. */
-static const char *first_chord(const PiecePlan *plan, const char *idea) {
+static const char *first_chord(const Plan *plan, const char *idea) {
     LaneSpanId chord = PLAN_LANE_SPAN_NONE;
     assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, test_find_node(plan, idea)), &chord, 1) >= 1);
     return plan_lane_span_payload(plan, chord)->harmony.roman_numeral;
@@ -103,7 +103,7 @@ static void test_three_kinds(void) {
     GrowRequest request = make_request(&motive, 0, HARMONY_MODE_MAJOR, 4, 4, 8);
     size_t seen[3] = {0, 0, 0};
     for (unsigned long seed = 1; seed <= 30; seed++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
@@ -150,7 +150,7 @@ static void test_one_cell(void) {
     Motive motive = make_motive("A4:q C5:e Bb4:e", 2, 4);
     GrowRequest request = make_request(&motive, 5, HARMONY_MODE_MAJOR, 2, 4, 4);
     for (unsigned long seed = 1; seed <= 10; seed++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));

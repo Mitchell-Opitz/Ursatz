@@ -8,6 +8,7 @@
 
 #include "grow/grow_internal.h"
 #include "util/util.h"
+#include <plan/plan_common.h>
 
 _Static_assert(SECTION_CONSTRUCTION_IDEAS == GROW_IDEA_COUNT, "a construction holds the bars of every idea");
 
@@ -57,16 +58,6 @@ bool grow_extension_allowed(const SectionPairing *pairing, SectionExtensionKind 
            (idea == GROW_IDEA_CONTRASTING && pairing->beginning == SECTION_BEGINNING_ANTECEDENT);
 }
 
-/* The place the theme's last idea holds under the pairing. */
-static GrowPlace last_place(const SectionPairing *pairing) {
-    for (int place = GROW_PLACE_CADENTIAL; place > GROW_PLACE_REPETITION; place--) {
-        if (theme_shape_place_in(pairing, (unsigned)place)) {
-            return (GrowPlace)place;
-        }
-    }
-    return GROW_PLACE_BASIC;
-}
-
 /*
  * Lays the places of one half end to end from bar `*at`, each as long as its bars (`bars[place]`, the construction's
  * bars with the stretches added), with the repeats that follow a place after it, in the construction's order. Leaves `*at`
@@ -112,7 +103,7 @@ static bool construction_layout(const GrowThemeRequest *request, GrowLayout *lay
     bool evaded = false;
     bool added = false;
     bool authentic = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    GrowPlace last = last_place(&request->pairing);
+    GrowPlace last = theme_shape_last_place(&request->pairing);
     if (request->bar.num <= 0 || construction->extension_count > SECTION_CONSTRUCTION_EXTENSIONS) {
         return false;
     }
@@ -257,7 +248,7 @@ static bool placed_motive(const GrowThemeSpec *spec, GrowPlace place, const Moti
 }
 
 /* Whether two motives have the same notes: count, pitches and durations. */
-static bool same_notes(const Motive *a, const Motive *b) {
+bool grow_same_notes(const Motive *a, const Motive *b) {
     if (a->note_count != b->note_count) {
         return false;
     }
@@ -294,7 +285,7 @@ static bool repeat_motive(const Motive *base, bool varied, Rational room, Motive
         }
         Motive result;
         if (base->note_count >= (varied ? 2u : 1u) && grow_develop_motive(base, &ref, &result) &&
-            (!varied || !same_notes(&result, base)) && rational_cmp(result.length, room) <= 0 &&
+            (!varied || !grow_same_notes(&result, base)) && rational_cmp(result.length, room) <= 0 &&
             grow_motive_in_range(&result, EXTENSION_LOW, EXTENSION_HIGH, false)) {
             *out = result;
             return true;
@@ -327,8 +318,8 @@ static bool addition_motive(const Motive *last, Rational room, int want, Motive 
 
 bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec) {
     const GrowLayout *layout = &spec->layout;
-    AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
-    int tonic = analysis_key_tonic_pitch_class(&ends_in);
+    SpelledKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = spelled_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
                : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + composer_material_third(ends_in.material)) % 12
                                                                       : -1;
@@ -420,69 +411,6 @@ void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out) {
     out->step.kind = MOTIVE_RELATION_EXACT;
 }
 
-/*
- * The bars of each place of the construction (with its stretches), of the repeats that follow it, and of the evaded idea
- * and the addition after the last place, in the order the extensions are listed.
- */
-static void construction_places(const SectionPairing *pairing, const SectionConstruction *construction,
-                                size_t bars[GROW_PLACE_COUNT], size_t repeated[GROW_PLACE_COUNT], size_t *evaded,
-                                size_t *addition) {
-    GrowPlace last = last_place(pairing);
-    memset(bars, 0, sizeof(size_t) * GROW_PLACE_COUNT);
-    memset(repeated, 0, sizeof(size_t) * GROW_PLACE_COUNT);
-    *evaded = 0;
-    *addition = 0;
-    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
-        const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
-        if (row) {
-            bars[row->place] = construction->idea_bars[idea];
-        }
-    }
-    for (size_t k = 0; k < construction->extension_count && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
-        const SectionExtension *extension = &construction->extensions[k];
-        GrowPlace place = last;
-        if ((extension->kind == SECTION_EXTENSION_REPEAT || extension->kind == SECTION_EXTENSION_STRETCH) &&
-            !grow_idea_place(pairing, (GrowIdea)extension->idea, &place)) {
-            continue;
-        }
-        switch (extension->kind) {
-        case SECTION_EXTENSION_REPEAT:
-            repeated[place] += extension->bars ? extension->bars : bars[place];
-            break;
-        case SECTION_EXTENSION_STRETCH:
-            bars[place] += extension->bars ? extension->bars : 1;
-            break;
-        case SECTION_EXTENSION_EVADED:
-            *evaded = extension->bars ? extension->bars : bars[last];
-            break;
-        case SECTION_EXTENSION_ADDITION:
-            *addition = extension->bars ? extension->bars : 1;
-            break;
-        }
-    }
-}
-
-void grow_construction_bars(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionBars *out) {
-    size_t bars[GROW_PLACE_COUNT];
-    size_t repeated[GROW_PLACE_COUNT];
-    memset(out, 0, sizeof(*out));
-    construction_places(pairing, construction, bars, repeated, &out->evaded, &out->addition);
-    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
-        size_t *half = place <= GROW_PLACE_REPETITION ? &out->beginning : &out->ending;
-        *half += bars[place] + repeated[place];
-    }
-}
-
-size_t grow_construction_extra_bars(const SectionPairing *pairing, const SectionConstruction *construction) {
-    GrowConstructionBars halves;
-    size_t ideas = 0;
-    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
-        ideas += theme_shape_idea_in(pairing, (GrowIdea)idea) ? construction->idea_bars[idea] : 0;
-    }
-    grow_construction_bars(pairing, construction, &halves);
-    return halves.beginning + halves.ending + halves.evaded + halves.addition - ideas;
-}
-
 /* --- choosing a construction (R-469) ------------------------------------ */
 
 /* Adds an extension to the construction; false when it holds the most there are. */
@@ -554,7 +482,9 @@ bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size
     }
     memset(out, 0, sizeof(*out));
     /* No motive is a motive still to be invented: one bar. */
-    size_t motif_bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 1;
+    Rational bar;
+    plan_meter_bar_length(meter, &bar);
+    size_t motif_bars = motive ? grow_motive_layout_bars(motive, bar) : 1;
     if ((bars == 4 || bars == 8) && motif_bars <= 2) {
         return false;
     }
@@ -681,7 +611,7 @@ void grow_construction_spans(const SectionPairing *pairing, const SectionConstru
     size_t repeated[GROW_PLACE_COUNT];
     size_t evaded;
     size_t addition;
-    construction_places(pairing, construction, bars, repeated, &evaded, &addition);
+    theme_shape_construction_places(pairing, construction, bars, repeated, &evaded, &addition);
     GrowConstructionBars halves;
     grow_construction_bars(pairing, construction, &halves);
     out->halves[0] = halves.beginning;
@@ -747,7 +677,7 @@ size_t grow_construction_describe(const SectionConstruction *construction, const
     size_t repeated[GROW_PLACE_COUNT];
     size_t evaded;
     size_t addition;
-    construction_places(pairing, construction, bars, repeated, &evaded, &addition);
+    theme_shape_construction_places(pairing, construction, bars, repeated, &evaded, &addition);
     GrowConstructionBars halves;
     grow_construction_bars(pairing, construction, &halves);
     /* Where each place, each repeat after it, the evaded idea and the addition start (0-based bars). */
@@ -840,7 +770,7 @@ size_t grow_construction_describe(const SectionConstruction *construction, const
     return used;
 }
 
-size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size) {
+size_t grow_section_describe(const Plan *plan, NodeId section, char *text, size_t size) {
     const SectionDescription *description = plan ? plan_node_section(plan, section) : NULL;
     if (text && size > 0) {
         text[0] = '\0';

@@ -9,10 +9,10 @@
 #include <model/pitch/pitch_spelling.h>
 #include <model/time/musical_time.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
@@ -130,8 +130,8 @@ static long marker_tick(const char *path, const char *text) {
 
 /* ------------------------------------------------------------- the plans */
 
-static PiecePlan *load_plan(const char *path) {
-    PiecePlan *plan = NULL;
+static Plan *load_plan(const char *path) {
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
@@ -156,7 +156,7 @@ static int compare_notes(const void *a, const void *b) {
 }
 
 /* The notes that start before the time (whole notes), sorted. */
-static size_t notes_before(const PiecePlan *plan, double limit, Note *out, size_t capacity) {
+static size_t notes_before(const Plan *plan, double limit, Note *out, size_t capacity) {
     RenderedPlan rendered;
     size_t count = 0;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
@@ -193,7 +193,7 @@ static double to_double(Rational time) {
 }
 
 /* The spans of a lane and voice inside [from, to) whole notes as text: the place, and the chord or the notes. */
-static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long from, long to) {
+static char *dump_lane(const Plan *plan, PlanLaneKind lane, int voice, long from, long to) {
     char *out = calloc(DUMP_SIZE, 1);
     LaneSpanId ids[512];
     PlanSpan range = {{from, 1}, {to - from, 1}};
@@ -224,7 +224,7 @@ static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long
 }
 
 /* All the lanes of a region, voices of the inner lane included. */
-static char *dump_region(const PiecePlan *plan, long from, long to) {
+static char *dump_region(const Plan *plan, long from, long to) {
     char *out = calloc(DUMP_SIZE * 5, 1);
     size_t used = 0;
     assert(out);
@@ -239,7 +239,7 @@ static char *dump_region(const PiecePlan *plan, long from, long to) {
 }
 
 /* What sounds in the bar that starts at the time: each chord or note with its place in the bar. */
-static char *dump_bar(const PiecePlan *plan, PlanLaneKind lane, long bar) {
+static char *dump_bar(const Plan *plan, PlanLaneKind lane, long bar) {
     char *out = calloc(DUMP_SIZE, 1);
     LaneSpanId ids[64];
     PlanSpan range = {{bar, 1}, {1, 1}};
@@ -300,8 +300,8 @@ static void test_done_when(void) {
     assert(count_of(shown, "\"planned\":5,\"agreed\":5") == 2);
 
     /* The two versions agree note for note up to the body's end (the intro and the body are Given in the ending). */
-    PiecePlan *loop = load_plan("loop.json");
-    PiecePlan *ending = load_plan("ending.json");
+    Plan *loop = load_plan("loop.json");
+    Plan *ending = load_plan("ending.json");
     Note *a = calloc(8192, sizeof(Note));
     Note *b = calloc(8192, sizeof(Note));
     size_t loop_count = notes_before(loop, 14.0, a, 8192);
@@ -417,8 +417,8 @@ static void test_theme_fill(void) {
     free(shown);
 
     /* The chords of the composed theme are the section's, moved to its start. */
-    PiecePlan *theme = load_plan("theme.json");
-    PiecePlan *piece = load_plan("theme_loop.json");
+    Plan *theme = load_plan("theme.json");
+    Plan *piece = load_plan("theme_loop.json");
     LaneSpanId from[64];
     LaneSpanId to[64];
     PlanSpan theme_span = {{0, 1}, {8, 1}};
@@ -436,7 +436,7 @@ static void test_theme_fill(void) {
 
 static void test_progression_fill(void) {
     free(piece_output(PIECE("progression-fill.json") " --seed 1 --out progression.json"));
-    PiecePlan *plan = load_plan("progression.json");
+    Plan *plan = load_plan("progression.json");
     static const char *const CHORDS[4] = {"i", "iv", "V", "i"};
     LaneSpanId ids[64];
     PlanSpan section = {{2, 1}, {4, 1}};
@@ -462,7 +462,7 @@ static void test_structure_only(void) {
     assert(strstr(shown, "\"fill\":\"motif\"") == NULL && count_of(shown, "\"fill\":\"empty\"") == 8);
     assert(marker_tick("structure.mid", "loopStart") == (long)(2 * WHOLE_TICKS));
     /* The motive is invented: m0 is in the plan as a written melody. */
-    PiecePlan *plan = load_plan("structure.json");
+    Plan *plan = load_plan("structure.json");
     bool m0 = false;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         m0 = m0 || (plan_has_node(plan, id) && strcmp(plan_node_name(plan, id), "m0") == 0 &&
@@ -476,7 +476,7 @@ static void test_structure_only(void) {
 /* ------------------------------------------------------------- regenerate and variations */
 
 /* The regions of the done-when piece, in whole notes: intro 0-2, A 2-10, B 10-14, the turnaround 14-16, the seam 16-17. */
-static void expect_region(const PiecePlan *before, const PiecePlan *after, long from, long to, bool same) {
+static void expect_region(const Plan *before, const Plan *after, long from, long to, bool same) {
     char *a = dump_region(before, from, to);
     char *b = dump_region(after, from, to);
     assert((strcmp(a, b) == 0) == same);
@@ -514,8 +514,8 @@ static void test_regenerate(void) {
                                "--out regen.json --ending-out regen_ending.json");
     assert(strstr(shown, "\"regenerated\":{\"section\":\"a\",\"lane\":\"melody\"}"));
     free(shown);
-    PiecePlan *before = load_plan("loop.json");
-    PiecePlan *after = load_plan("regen.json");
+    Plan *before = load_plan("loop.json");
+    Plan *after = load_plan("regen.json");
     /* The motives' tones are in the plan the piece was read from and in the one regenerated from it (R-215), so the melody
        written again is placed by them. */
     size_t toned_before = 0;
@@ -556,8 +556,8 @@ static void test_regenerate(void) {
     plan_destroy(after);
 
     /* The ending version is built again from the new loop: the two agree up to the body's end. */
-    PiecePlan *loop = load_plan("regen.json");
-    PiecePlan *ending = load_plan("regen_ending.json");
+    Plan *loop = load_plan("regen.json");
+    Plan *ending = load_plan("regen_ending.json");
     Note *a = calloc(8192, sizeof(Note));
     Note *b = calloc(8192, sizeof(Note));
     size_t loop_count = notes_before(loop, 14.0, a, 8192);
@@ -622,7 +622,7 @@ static void test_variations(void) {
     assert(seeds[0] != seeds[1] && seeds[1] != seeds[2] && seeds[0] != seeds[2]);
     free(shown);
     assert(test_file_exists("variations/result.json"));
-    PiecePlan *original = load_plan("loop.json");
+    Plan *original = load_plan("loop.json");
     char *old_melody = dump_lane(original, PLAN_LANE_MELODY, 0, 2, 10);
     size_t tunes_changed = 0;
     char *melodies[3]; /* the whole piece of each */
@@ -635,7 +635,7 @@ static void test_variations(void) {
         snprintf(path, sizeof(path), "variations/variation-%zu.mid", i + 1);
         assert(marker_tick(path, "loopStart") == (long)(2 * WHOLE_TICKS) && marker_tick(path, "loopEnd") == (long)(16 * WHOLE_TICKS));
         snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
-        PiecePlan *variation = load_plan(path);
+        Plan *variation = load_plan(path);
         melodies[i] = dump_region(variation, 0, 17);
         char *tune = dump_lane(variation, PLAN_LANE_MELODY, 0, 2, 10);
         /* A melody written again says its motives' realized notes again (R-328): a variation may keep the tune. */
@@ -669,13 +669,13 @@ static void test_harmonize_theme(void) {
     size_t kept = count_of(shown, "\"index\":");
     assert(kept >= 2 && kept <= 3);
     free(shown);
-    PiecePlan *original = load_plan("theme_loop.json");
+    Plan *original = load_plan("theme_loop.json");
     char *old_melody = dump_lane(original, PLAN_LANE_MELODY, 0, 2, 10);
     char *old_chords = dump_lane(original, PLAN_LANE_HARMONY, 0, 2, 10);
     for (size_t i = 0; i < kept; i++) {
         char path[128];
         snprintf(path, sizeof(path), "harmonize/variation-%zu.json", i + 1);
-        PiecePlan *variation = load_plan(path);
+        Plan *variation = load_plan(path);
         char *melody = dump_lane(variation, PLAN_LANE_MELODY, 0, 2, 10);
         char *chords = dump_lane(variation, PLAN_LANE_HARMONY, 0, 2, 10);
         assert(strcmp(melody, old_melody) == 0 && strcmp(chords, old_chords) != 0);

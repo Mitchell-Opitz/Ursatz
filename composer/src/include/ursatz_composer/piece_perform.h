@@ -6,9 +6,9 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md). A form is composed once; the performance is a
@@ -39,13 +39,13 @@ typedef struct {
 typedef struct {
     const FormSpec *form;
     const FormSpecSize *size;
-    const PiecePlan *plan;
+    const Plan *plan;
     bool repeats; /* its repeated groups are written out */
     const char *name; /* the part's name, or NULL */
 } PiecePerformPart;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     PiecePerformedSection sections[PIECE_PERFORMED_MAX];
     size_t section_count;
 } PiecePerformance;
@@ -69,9 +69,9 @@ void piece_performance_destroy(PiecePerformance *performance);
  * source's, and keys[i] is its source's key.
  */
 typedef struct {
-    PiecePlan *plans[FORM_SPEC_MAX_PARTS_OF];
+    Plan *plans[FORM_SPEC_MAX_PARTS_OF];
     ComposeOutcome outcomes[FORM_SPEC_MAX_PARTS_OF];
-    AnalysisKey keys[FORM_SPEC_MAX_PARTS_OF];
+    SpelledKey keys[FORM_SPEC_MAX_PARTS_OF];
     FormSpec *forms[FORM_SPEC_MAX_PARTS_OF]; /* owned: the built-in form each part is a piece of (an again part has none) */
     size_t count;
 } PieceParts;

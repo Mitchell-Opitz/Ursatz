@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/theme_shape.h>
 
 #include "grow/grow_internal.h"
@@ -139,7 +139,7 @@ static size_t whole_bars(Rational time, const Scenario *scenario) {
 }
 
 /* The section is as long as all the bars and each node lies where the case puts it, in whole bars. */
-static void check_spans(const PiecePlan *plan, const Scenario *scenario, const Case *item) {
+static void check_spans(const Plan *plan, const Scenario *scenario, const Case *item) {
     NodeId theme = test_find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
     assert(whole_bars(plan_node_span(plan, theme).length, scenario) == item->bars);
@@ -159,7 +159,7 @@ static void check_spans(const PiecePlan *plan, const Scenario *scenario, const C
 }
 
 /* The notes of the motive node's own melody span. */
-static size_t node_notes(const PiecePlan *plan, NodeId node, const PlanNote **notes) {
+static size_t node_notes(const Plan *plan, NodeId node, const PlanNote **notes) {
     LaneSpanId ids[4];
     size_t found = plan_node_lane_spans(plan, node, ids, 4);
     for (size_t i = 0; i < found && i < 4; i++) {
@@ -173,7 +173,7 @@ static size_t node_notes(const PiecePlan *plan, NodeId node, const PlanNote **no
 }
 
 /* The motive node the melody of the idea asks for. */
-static NodeId asked_motive(const PiecePlan *plan, NodeId idea) {
+static NodeId asked_motive(const Plan *plan, NodeId idea) {
     LaneSpanId ids[4];
     size_t found = plan_node_lane_spans(plan, idea, ids, 4);
     for (size_t i = 0; i < found && i < 4; i++) {
@@ -186,7 +186,7 @@ static NodeId asked_motive(const PiecePlan *plan, NodeId idea) {
 }
 
 /* The last note of the melody of the idea, as a pitch class. */
-static int last_pitch_class(const PiecePlan *plan, NodeId idea) {
+static int last_pitch_class(const Plan *plan, NodeId idea) {
     LaneSpanId ids[4];
     size_t found = plan_node_lane_spans(plan, idea, ids, 4);
     for (size_t i = 0; i < found && i < 4; i++) {
@@ -200,7 +200,7 @@ static int last_pitch_class(const PiecePlan *plan, NodeId idea) {
 }
 
 /* A repeat's motive against the one of the idea it repeats: a step lower, note for note (sequential), or another of the same contour. */
-static void check_repeat(const PiecePlan *plan, const char *idea_name, const char *repeat_name, bool varied) {
+static void check_repeat(const Plan *plan, const char *idea_name, const char *repeat_name, bool varied) {
     NodeId idea = test_find_node(plan, idea_name);
     NodeId repeat = test_find_node(plan, repeat_name);
     NodeId extension = test_find_node(plan, "extension 1");
@@ -250,7 +250,7 @@ static bool is_submediant(const char *numeral) {
 }
 
 /* The chords that sound within the span, in order. */
-static size_t chords_in(const PiecePlan *plan, PlanSpan span, const PlanHarmony **chords, size_t capacity) {
+static size_t chords_in(const Plan *plan, PlanSpan span, const PlanHarmony **chords, size_t capacity) {
     LaneSpanId ids[32];
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, 32);
     size_t count = 0;
@@ -261,7 +261,7 @@ static size_t chords_in(const PiecePlan *plan, PlanSpan span, const PlanHarmony 
 }
 
 /* A V then a vi at the end of the idea before the evaded cadence, the theme's cadence at the end of the idea after it. */
-static void check_evaded(const PiecePlan *plan, const Scenario *scenario) {
+static void check_evaded(const Plan *plan, const Scenario *scenario) {
     NodeId idea = test_find_node(plan, "cadential");
     NodeId after = test_find_node(plan, "cadential after the evaded cadence");
     const PlanHarmony *chords[32];
@@ -279,7 +279,7 @@ static void check_evaded(const PiecePlan *plan, const Scenario *scenario) {
 }
 
 /* The addition's chords go from a tonic to a tonic. */
-static void check_addition(const PiecePlan *plan, const Scenario *scenario) {
+static void check_addition(const Plan *plan, const Scenario *scenario) {
     NodeId addition = test_find_node(plan, "addition");
     const PlanHarmony *chords[32];
     size_t count = chords_in(plan, plan_node_span(plan, addition), chords, 32);
@@ -288,7 +288,7 @@ static void check_addition(const PiecePlan *plan, const Scenario *scenario) {
     assert(last_pitch_class(plan, test_find_node(plan, "addition idea")) == scenario->tonic);
 }
 
-static void check_extension(const PiecePlan *plan, const Scenario *scenario, const Case *item) {
+static void check_extension(const Plan *plan, const Scenario *scenario, const Case *item) {
     switch (item->check) {
     case CHECK_SEQUENCE:
         check_repeat(plan, "fragment 2", "fragment 2 repeated", false);
@@ -310,7 +310,7 @@ static void check_extension(const PiecePlan *plan, const Scenario *scenario, con
 }
 
 /* The plan carries the construction as given, extension included. */
-static void check_constraint(const PiecePlan *plan, const SectionConstruction *wanted) {
+static void check_constraint(const Plan *plan, const SectionConstruction *wanted) {
     const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
     assert(memcmp(constraint->construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
@@ -324,7 +324,7 @@ static bool run_case(const Scenario *scenario, const Case *item, unsigned long s
     SectionConstruction construction = construction_of(item);
     GrowRequest request = make_request(scenario, &motive, item, &construction);
     GrowConfig config;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -452,7 +452,7 @@ static void test_layouts(void) {
 
 /* A request refused: its result, the field to blame and the message. */
 static void expect_refusal(const GrowRequest *request, const char *path, const char *message) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowRefusal refusal;
     GrowResult result = grow_build_plan_checked(request, &plan, &refusal);
     if (result != GROW_ERR_BAD_REQUEST || strcmp(refusal.path, path) != 0 || strcmp(refusal.message, message) != 0) {
@@ -467,7 +467,7 @@ static void test_refusals(void) {
     Motive motive = make_motive(scenario);
     SectionConstruction construction = construction_of(&CASES[0]);
     GrowRequest request = make_request(scenario, &motive, &CASES[0], &construction);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
 

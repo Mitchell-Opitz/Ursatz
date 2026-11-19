@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/counterpoint/analysis_claim.h"
-#include "model/core/value.h"
-#include "model/identity/entity_id.h"
 #include "theory/counterpoint/motion_rules.h"
 
 static double least_confidence(const StandardCounterpointVoiceCell *const cells[4]) {
@@ -19,18 +16,9 @@ static double least_confidence(const StandardCounterpointVoiceCell *const cells[
     return least;
 }
 
-static void destroy_motion(StandardCounterpointMotion *motion) {
-    interpretation_destroy(motion->interpretation);
-    structure_destroy(motion->shell);
-    memset(motion, 0, sizeof(*motion));
-}
-
 void standard_counterpoint_motions_destroy(StandardCounterpointMotions *motions) {
     if (motions == NULL) {
         return;
-    }
-    for (size_t i = 0; i < motions->count; i++) {
-        destroy_motion(&motions->items[i]);
     }
     free(motions->items);
     motions->items = NULL;
@@ -79,36 +67,6 @@ StandardCounterpointMotionStatus standard_counterpoint_classify_motions(const St
                 motion->lower_voice = lower;
                 motion->type = type;
                 motion->uncertainty = 1.0 - least_confidence(cells);
-
-                char key[256];
-                snprintf(key, sizeof(key), "%s-%s-v%zu-v%zu", grid->segment_ids[s], grid->segment_ids[s + 1], upper,
-                         lower);
-                char shell_id[300];
-                snprintf(shell_id, sizeof(shell_id), "standard-counterpoint-motion-notes-%s", key);
-                const char *note_ids[4] = {cells[0]->note_id, cells[1]->note_id, cells[2]->note_id,
-                                           cells[3]->note_id};
-                motion->shell = standard_counterpoint_analysis_note_group(shell_id, note_ids, 4);
-
-                StandardCounterpointMotionClaim claim;
-                memset(&claim, 0, sizeof(claim));
-                claim.motion_type = (int)type;
-                claim.upper_voice = (int)upper;
-                claim.lower_voice = (int)lower;
-                claim.segment_from = (int)s;
-                claim.segment_to = (int)(s + 1);
-                char interpretation_id[320];
-                snprintf(interpretation_id, sizeof(interpretation_id), "standard-counterpoint-motion-%s", key);
-                if (motion->shell != NULL) {
-                    motion->interpretation = standard_counterpoint_analysis_interpretation(
-                        interpretation_id, entity_id_value(entity_id(structure_entity(motion->shell))),
-                        STANDARD_COUNTERPOINT_MOTION_CLAIM_TYPE, &claim, sizeof(claim), motion->uncertainty,
-                        "motion-adapter");
-                }
-                if (motion->shell == NULL || motion->interpretation == NULL) {
-                    destroy_motion(motion);
-                    standard_counterpoint_motions_destroy(&found);
-                    return STANDARD_COUNTERPOINT_MOTION_ERR_ALLOC;
-                }
                 found.count++;
             }
         }

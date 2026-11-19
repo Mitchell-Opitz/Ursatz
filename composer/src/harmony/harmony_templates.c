@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 /*
  * The shapes of the embellishments. A shape only says which chords go where; whether standard-harmony
@@ -132,7 +132,7 @@ static void tonic_options(const PhraseContext *phrase, FillRng *rng, OptionList 
  * I6/4 (V I6/4 V), or has the cadential I6/4 put before it, taken from its own first cells or from
  * the end of the chord before it.
  */
-static void dominant_options(const PiecePlan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list) {
+static void dominant_options(const Plan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list) {
     const PhraseChord *dominant = &phrase->chords[phrase->target];
     HarmonyMode mode = phrase->mode;
     size_t n = dominant->cells;
@@ -185,7 +185,7 @@ static void dominant_options(const PiecePlan *plan, const PhraseContext *phrase,
     }
 }
 
-void harmony_options_prolongation(const PiecePlan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list) {
+void harmony_options_prolongation(const Plan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list) {
     tonic_options(phrase, rng, list);
     dominant_options(plan, phrase, rng, list);
 }
@@ -272,7 +272,7 @@ static const HarmonyAppliedQuality APPLIED_QUALITIES[] = {
     HARMONY_APPLIED_MAJOR_TRIAD, HARMONY_APPLIED_DOMINANT_SEVENTH, HARMONY_APPLIED_DIMINISHED_TRIAD,
     HARMONY_APPLIED_FULLY_DIMINISHED_SEVENTH};
 
-void harmony_options_applied(const PiecePlan *plan, const PhraseContext *phrase, OptionList *list) {
+void harmony_options_applied(const Plan *plan, const PhraseContext *phrase, OptionList *list) {
     size_t t = phrase->target;
     const PhraseChord *target = &phrase->chords[t];
     HarmonyMode mode = phrase->mode;

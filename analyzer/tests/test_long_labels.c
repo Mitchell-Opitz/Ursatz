@@ -12,7 +12,7 @@
  * Labels are owned strings, not fixed 32-byte buffers: a report whose
  * first entry carries labels longer than 31 characters (swapped in
  * through the report API) keeps them intact through the analysis
- * document, and chain_result_destroy frees them.
+ * document, and test_release_report frees them.
  */
 
 static char *copy_string(const char *s) {
@@ -44,7 +44,7 @@ int main(void) {
     report.entries[0].key_label = copy_string(key_label);
     report.entries[0].chord_label = copy_string(chord_label);
 
-    AnalysisDocument *document = analysis_document_build("long_labels.mid", &notes, &report, test_knowledge());
+    AnalysisDocument *document = test_build_document("long_labels.mid", &report);
     assert(document != NULL);
     char *json = analysis_document_to_json(document);
     assert(json);
@@ -52,7 +52,7 @@ int main(void) {
     assert(strstr(json, chord_label));
     free(json);
     analysis_document_destroy(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     assert(report.entries == NULL);
     assert(report.entry_count == 0);
     imported_score_destroy(&notes);

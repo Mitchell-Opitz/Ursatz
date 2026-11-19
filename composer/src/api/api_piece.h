@@ -13,7 +13,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/grow_form.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_perform.h>
@@ -57,7 +57,7 @@ typedef struct {
     const cJSON *motive_json[PIECE_STRUCTURE_MAX_SECTIONS + 1]; /* a motif fill's own motive */
     const cJSON *forms_json[PIECE_STRUCTURE_MAX_SECTIONS + 1];  /* a motif fill's saved forms */
     Motive *section_motive[PIECE_STRUCTURE_MAX_SECTIONS + 1];   /* owned */
-    PiecePlan *theme_plan[PIECE_STRUCTURE_MAX_SECTIONS + 1];    /* owned */
+    Plan *theme_plan[PIECE_STRUCTURE_MAX_SECTIONS + 1];    /* owned */
     char source[PIECE_STRUCTURE_MAX_SECTIONS + 1][PLAN_STYLE_PATH_MAX]; /* where a section's material came from */
     const cJSON *piece_motive_json;
     Motive *piece_motive; /* owned */
@@ -66,11 +66,11 @@ typedef struct {
     const char *material_member; /* which of the two the request wrote */
     const char *meter_text;
     const char *style_path;
-    ComposerRatio weight;
+    Rational weight;
     const char *without[PIECE_WITHOUT_MAX];
     size_t without_count;
     ComposerStyle *style; /* owned */
-    ComposerRatio tempo;  /* a denominator of 0 for none */
+    Rational tempo;  /* a denominator of 0 for none */
     const char *tempo_from;
     const char *mode_from;
     GrowPoolForm *pool;   /* owned */
@@ -106,7 +106,7 @@ ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const Comm
 
 /* A version of the piece: its plan and what composing it reported. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     ComposeOutcome outcome;
     bool composed;
     /* A form with repeats or parts (form_spec_performed): the plan performed in order, what is rendered and answered (R-485). */
@@ -120,7 +120,7 @@ typedef struct {
 } PieceVersion;
 
 /* The plan a version is rendered and written out from: its performance when it is performed, else its plan. */
-const PiecePlan *api_piece_version_output_plan(const PieceVersion *version);
+const Plan *api_piece_version_output_plan(const PieceVersion *version);
 
 /* The most versions a piece has: the loop and the ending of a game loop (api_piece_version_names). */
 #define API_PIECE_VERSIONS_MAX 2
@@ -175,21 +175,79 @@ PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsig
 cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *version);
 
 /* The loop's region: from the start of the first body section to the end of the last section of the loop. */
-bool api_piece_loop_region(const PiecePlan *plan, Rational *start, Rational *end);
+bool api_piece_loop_region(const Plan *plan, Rational *start, Rational *end);
 /* {"start": "2/1", "end": "14/1"} of the region of the plan, or NULL when it has none. */
-cJSON *api_piece_loop_json(const PiecePlan *plan);
+cJSON *api_piece_loop_json(const Plan *plan);
 
 /*
  * The MusicXML of a version's plan, made from the plan in memory (its span ids are the ones the notes' xml:id carry; a plan
  * file renumbers them). The caller frees *out.
  */
-ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error);
+ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, ComposerError *error);
 
 /* The plan as a cJSON object, or NULL when it cannot be written. */
-cJSON *api_piece_plan_object(const PiecePlan *plan);
+cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const Plan *plan);
 
 /* The failure of a piece no seed composed: what the last try ran into. */
 ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
                                       unsigned long first_seed, unsigned long last_seed, ComposerError *error);
+
+/* --- shared by the files of the piece entry (api_piece.c reads the request, the others compose, regenerate, read the plans and write the result) --- */
+
+typedef struct {
+    const PieceSection *section;     /* the section the request gave, for a form whose sections it gives */
+    const SectionDescription *spec;     /* the section of the form's size, for a form with sizes */
+    const FormSpecSize *size;
+    const char *source;
+    Rational start;
+    Rational length;
+    bool has_cadence;
+    CadenceType cadence;
+    const char *heard; /* the cadence the Analyzer heard, NULL without a check */
+    const Plan *plan; /* a form with sizes: the plan and the section's node, for the pedal and the changes */
+    NodeId node;
+    char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
+    char key[16];       /* the key the plan gives the section's start (R-493), "" when the plan has none */
+    char region[128];   /* the region as the request asked for it or the form names it (R-610), "" for none */
+    char harmony[320];  /* the harmony as the request gave it (R-610): the numerals, "schema <name>" or the chord bars; "" for none */
+    bool key_flats;     /* that key is spelled with flats: the figure's skeleton names its tones so */
+    bool pedal;        /* a harmony span in the section's first half was written over a pedal */
+    bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
+    const char *part;      /* a performed compound form: the name of the part the section is in, else NULL */
+    const char *repeat_of; /* a performed section that writes another out again: the first time's name, else NULL */
+    bool has_upbeat;       /* the section leads into the next: its last chord and the next section's first (R-486) */
+    char upbeat_chord[PLAN_ROMAN_NUMERAL_MAX];
+    char upbeat_next[PLAN_ROMAN_NUMERAL_MAX];
+    int connective;        /* -1 the section has no CONNECTIVE constraint, else whether it was written */
+} ApiPieceRow;
+
+typedef struct {
+    bool midi;
+    bool musicxml;
+    bool ending_musicxml;
+    bool musicxml_versions;
+    bool layers; /* the realization and the reading of version 0's plan */
+    int explain; /* 0 none, 1 text, 2 json */
+} ApiPieceOutputs;
+
+ComposerStatus api_piece_fail_cancelled(ComposerError *error);
+size_t api_piece_version_count(const PieceSpec *request);
+const char *api_piece_version_name(const PieceSpec *request, size_t index);
+void api_piece_make_config(const PieceSpec *request, bool check, unsigned long seed, ComposeConfig *config);
+PieceResult api_piece_compose(PieceSpec *request, bool check, unsigned long seed, PieceMade *piece);
+bool api_piece_cancelled(const PieceMade *piece);
+NodeId api_piece_sized_section_find(const Plan *plan, const char *name);
+ComposerStatus api_piece_regenerate(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
+                                       PieceMade *piece, PieceResult *result, ComposerError *error);
+cJSON *api_piece_time_json(Rational time);
+void api_piece_planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t size, bool *flats);
+size_t api_piece_collect_rows(const PieceSpec *request, const PieceVersion *version, ApiPieceRow *rows);
+double api_piece_span_beats(const PieceSpec *request, Rational length);
+cJSON *api_piece_document(const PieceSpec *request, const PieceMade *piece, const PieceEdit *edit,
+                             const cJSON *regenerate_section, bool from);
+ComposerStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
+                                  ComposerResponse *out);
+ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *document, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
+                                  ComposerResponse *out);
 
 #endif

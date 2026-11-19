@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * The seam (R-171): the bar after the loop's end, where the loop starts again. Four soft rules say how well the end
@@ -36,7 +36,7 @@ typedef struct {
  * progression, which holds only with both chords.
  */
 typedef struct {
-    AnalysisKey key;
+    SpelledKey key;
     bool has_chords;
     HarmonicFunction before_function;     /* of the last chord before the seam, when before_has_function */
     bool before_has_function;             /* false to read it from the numeral */
@@ -66,9 +66,6 @@ typedef enum {
  * Hears the seam of a plan: the lanes right before the seam section starts, and the ones it holds. The key is the one
  * the key lane has at the seam.
  */
-SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out);
-
-/* The seam section that starts at the time, or PLAN_NODE_NONE. */
-NodeId seam_section_at(const PiecePlan *plan, Rational time);
+SeamHearResult seam_hear(const Plan *plan, NodeId seam, SeamHeard *out);
 
 #endif

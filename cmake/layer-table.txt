@@ -16,8 +16,6 @@ module pitch           library/model/pitch           prefix model/pitch/
 module events          library/model/events          prefix model/events/
 module containers      library/model/containers      prefix model/containers/
 module structure       library/model/structure       prefix model/structure/
-module relationship    library/model/relationship    prefix model/relationship/
-module interpretation  library/model/interpretation  prefix model/interpretation/
 # The theory group (library/theory, A20261115-507).
 module theory-framework    library/theory/framework    prefix theory/framework/
 module theory-style        library/theory/style        prefix theory/style/
@@ -38,7 +36,7 @@ module io              library/io                  prefix io/
 group L0-L1 identity core
 group L0-L2 L0-L1 time pitch
 group L0-L5 L0-L2 events containers structure
-group model identity core time pitch events containers structure relationship interpretation
+group model identity core time pitch events containers structure
 group theory theory-framework theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
 
 uses core            identity
@@ -47,8 +45,6 @@ uses pitch           L0-L1
 uses events          L0-L2
 uses containers      L0-L2 events
 uses structure       L0-L2 events containers
-uses relationship    model
-uses interpretation  model
 uses io              model realization ezxml
 uses theory-framework    model
 uses theory-style        model theory-tonality cjson
@@ -89,12 +85,15 @@ uses analysis-similarity   model analysis-notes
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
 module realization     library/realization        prefix realization/
 group realization realization
-uses realization model theory
+uses realization model theory cjson
+# The reading group (library/reading, P62, R-629): what one reader says about one realization, as claims over it.
+module reading         library/reading            prefix reading/
+group reading reading
+uses reading model theory realization plan analysis chain cjson
 # The plan group (library/plan, P60, R-605): the section description, shared by forms, plans and piece requests.
 module plan            library/plan               prefix plan/
 group plan plan
 uses plan model theory cjson
-allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
 only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
 
@@ -118,7 +117,26 @@ module analyzer-corpus analyzer/src/corpus root analyzer/src analyzer/include
 module analyzer-links  analyzer/src/links  root analyzer/src analyzer/include
 module analyzer-cli    analyzer/src/cli    root analyzer/src analyzer/include
 module composer-api  composer/include  prefix ursatz_composer/composer_api.h
-module composer      composer/src      prefix ursatz_composer/  root composer/src composer/src/include composer/include
+# The Composer (R-636): each folder of composer/src is a module; a src/include/ursatz_composer header belongs to the module whose files implement it.
+module composer-util composer/src/util composer/src/composer.c composer/src/include/ursatz_composer/composer.h root composer/src composer/src/include composer/include
+module composer-structure composer/src/structure composer/src/include/ursatz_composer/fill_target.h composer/src/include/ursatz_composer/form_spec.h composer/src/include/ursatz_composer/locks.h composer/src/include/ursatz_composer/theme_shape.h root composer/src composer/src/include composer/include
+module composer-fill composer/src/fill composer/src/include/ursatz_composer/candidate.h composer/src/include/ursatz_composer/fill_loop.h composer/src/include/ursatz_composer/fill_operator.h composer/src/include/ursatz_composer/fill_record.h composer/src/include/ursatz_composer/fill_rng.h composer/src/include/ursatz_composer/fill_suggest.h composer/src/include/ursatz_composer/generation_record.h composer/src/include/ursatz_composer/generator.h root composer/src composer/src/include composer/include
+module composer-render composer/src/render composer/src/include/ursatz_composer/export.h composer/src/include/ursatz_composer/render.h root composer/src composer/src/include composer/include
+module composer-style composer/src/style composer/src/include/ursatz_composer/style.h root composer/src composer/src/include composer/include
+module composer-harmony composer/src/harmony composer/src/include/ursatz_composer/harmony_bass.h composer/src/include/ursatz_composer/harmony_embellish.h composer/src/include/ursatz_composer/harmony_motive.h composer/src/include/ursatz_composer/harmony_phrase.h composer/src/include/ursatz_composer/harmony_prolong.h composer/src/include/ursatz_composer/harmony_schema.h composer/src/include/ursatz_composer/harmony_sequence.h composer/src/include/ursatz_composer/seam_hear.h root composer/src composer/src/include composer/include
+module composer-motive composer/src/motive composer/src/include/ursatz_composer/motive.h composer/src/include/ursatz_composer/motive_analysis.h composer/src/include/ursatz_composer/motive_connect.h composer/src/include/ursatz_composer/motive_develop.h composer/src/include/ursatz_composer/motive_random.h composer/src/include/ursatz_composer/motive_render.h composer/src/include/ursatz_composer/motive_tones.h composer/src/include/ursatz_composer/variant_registry.h root composer/src composer/src/include composer/include
+module composer-melody composer/src/melody composer/src/include/ursatz_composer/melody_fill.h root composer/src composer/src/include composer/include
+module composer-texture composer/src/texture composer/src/include/ursatz_composer/accompaniment.h composer/src/include/ursatz_composer/voicing.h root composer/src composer/src/include composer/include
+module composer-counterpoint composer/src/counterpoint composer/src/include/ursatz_composer/counterpoint.h root composer/src composer/src/include composer/include
+module composer-material composer/src/material composer/src/include/ursatz_composer/form_figure.h composer/src/include/ursatz_composer/form_return.h composer/src/include/ursatz_composer/given.h root composer/src composer/src/include composer/include
+module composer-grow composer/src/grow composer/src/include/ursatz_composer/grow_form.h composer/src/include/ursatz_composer/grow_types.h root composer/src composer/src/include composer/include
+module composer-check composer/src/check composer/src/include/ursatz_composer/analyzer_check.h composer/src/include/ursatz_composer/form_hear.h composer/src/include/ursatz_composer/key_hear.h composer/src/include/ursatz_composer/return_hear.h root composer/src composer/src/include composer/include
+module composer-piece composer/src/piece composer/src/include/ursatz_composer/compose.h composer/src/include/ursatz_composer/grow.h composer/src/include/ursatz_composer/piece.h composer/src/include/ursatz_composer/piece_perform.h composer/src/include/ursatz_composer/piece_plan_keys.h composer/src/include/ursatz_composer/piece_reopen.h composer/src/include/ursatz_composer/regenerate.h composer/src/include/ursatz_composer/rejection.h composer/src/include/ursatz_composer/texture_check.h root composer/src composer/src/include composer/include
+module composer-candidates composer/src/candidates composer/src/include/ursatz_composer/compose_candidates.h composer/src/include/ursatz_composer/variations.h root composer/src composer/src/include composer/include
+module composer-explain composer/src/explain composer/src/include/ursatz_composer/explain.h root composer/src composer/src/include composer/include
+module composer-request composer/src/api composer/src/preferences composer/src/include/ursatz_composer/corpus_seed.h composer/src/include/ursatz_composer/preferences.h root composer/src composer/src/include composer/include
+group composer-core composer-util composer-structure composer-fill composer-render composer-style
+group composer-operators composer-harmony composer-motive composer-melody composer-texture composer-counterpoint composer-material
 module composer-cli  composer/cli
 module gui           gui/backend/src   root gui/backend/src
 # A CMake target builds these modules; an include between two modules of one target needs no staging, one between targets (or from
@@ -130,22 +148,41 @@ target ursatz_chain chain
 target ursatz_io io
 target ursatz_realization realization
 target ursatz_plan plan
-staged model theory analysis chain io realization plan analyzer-api analyzer composer
+target ursatz_reading reading
+staged model theory analysis chain io realization plan reading analyzer-api analyzer composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain composer-request
 generated analyzer ursatz_analyzer/version.h ursatz_analyzer/producer_key.h
 generated chain producer_key.h chain/producer_key.h
+generated composer-util composer/composition_key.h
 
-uses analyzer-api  model theory analysis chain io
-uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
-uses analyzer-util   model theory analysis chain io analyzer-api cjson ezxml
-uses analyzer-store  model theory analysis chain io analyzer-api cjson ezxml analyzer-util
-uses analyzer-result model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store
-uses analyzer-export model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
-uses analyzer-style  model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+uses analyzer-api  model theory analysis chain io realization reading
+uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml
+uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml
+uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util
+uses analyzer-result model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store
+uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
 # corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
-uses analyzer-corpus model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h
-uses analyzer-links  model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
-uses analyzer-cli    model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
-uses composer      model theory realization plan analysis chain io composer-api cjson
+uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h
+uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
+# The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for ComposerJob, ComposerStatus and ComposerError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
+uses composer-util model theory realization plan reading analysis chain io cjson composer-api
+uses composer-structure model theory realization plan reading analysis chain io cjson composer-util
+uses composer-fill model theory realization plan reading analysis chain io cjson composer-api composer-structure composer-util
+uses composer-render model theory realization plan reading analysis chain io cjson composer-structure composer-util
+uses composer-style model theory realization plan reading analysis chain io cjson composer-fill composer-structure composer-util
+uses composer-harmony model theory realization plan reading analysis chain io cjson composer-core
+uses composer-motive model theory realization plan reading analysis chain io cjson composer-harmony composer-core
+uses composer-melody model theory realization plan reading analysis chain io cjson composer-harmony composer-motive composer-core
+uses composer-texture model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core
+uses composer-counterpoint model theory realization plan reading analysis chain io cjson composer-harmony composer-texture composer-core
+uses composer-material model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core
+uses composer-grow model theory realization plan reading analysis chain io cjson composer-api composer-harmony composer-motive composer-melody composer-material composer-core
+uses composer-check model theory realization plan reading analysis chain io cjson composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
+uses composer-piece model theory realization plan reading analysis chain io cjson composer-api composer-check composer-operators composer-grow composer-core
+uses composer-candidates model theory realization plan reading analysis chain io cjson composer-piece composer-core
+uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core
+uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson
 uses gui           analyzer-api composer-api cjson civetweb
@@ -171,8 +208,6 @@ module tests-pitch           library/model/tests/pitch           root library/te
 module tests-events          library/model/tests/events          root library/tests library/tests/support
 module tests-containers      library/model/tests/containers      root library/tests library/tests/support
 module tests-structure       library/model/tests/structure       root library/tests library/tests/support
-module tests-relationship    library/model/tests/relationship    root library/tests library/tests/support
-module tests-interpretation  library/model/tests/interpretation  root library/tests library/tests/support
 module tests-io              library/io/tests/io          root library/tests library/tests/support library
 module tests-export          library/io/tests/export      root library/tests library/tests/support library
 like tests-identity identity
@@ -182,8 +217,6 @@ like tests-pitch pitch
 like tests-events events
 like tests-containers containers
 like tests-structure structure
-like tests-relationship relationship
-like tests-interpretation interpretation
 like tests-io io
 like tests-export io
 uses tests-identity test-helpers
@@ -193,8 +226,6 @@ uses tests-pitch test-helpers
 uses tests-events test-helpers
 uses tests-containers test-helpers
 uses tests-structure test-helpers
-uses tests-relationship test-helpers
-uses tests-interpretation test-helpers
 uses tests-io test-helpers
 uses tests-export test-helpers
 
@@ -205,6 +236,11 @@ uses tests-realization test-helpers
 module tests-plan                library/plan/tests                root library/tests library/tests/support library
 like tests-plan plan
 uses tests-plan test-helpers
+
+module tests-reading             library/reading/tests             root library/tests library/tests/support library
+like tests-reading reading
+uses tests-reading test-helpers
+uses tests-reading io -- the builder test imports a piece and realizes it (io/imported_realization.h)
 
 module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library
@@ -309,7 +345,7 @@ like analyzer-tests analyzer-corpus
 like analyzer-tests analyzer-links
 like analyzer-tests analyzer-cli
 uses composer-tests test-support
-like composer-tests composer
+like composer-tests composer-request
 uses gui-tests test-support
 like gui-tests gui
 free analyzer-consumer composer-consumer -- consumer projects include what a consumer may not, to check that it fails

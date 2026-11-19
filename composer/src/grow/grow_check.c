@@ -1,4 +1,4 @@
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -220,7 +220,7 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     return form == PHRASE_LEVEL_FORM_PERIOD ? judge_period(spec, soft) : judge_hybrid(spec, soft);
 }
 
-bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                   const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;
