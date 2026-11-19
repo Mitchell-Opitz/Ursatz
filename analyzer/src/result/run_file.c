@@ -1,4 +1,4 @@
-#include "pipeline/run_file.h"
+#include "result/run_file.h"
 
 #include <stdio.h>
 

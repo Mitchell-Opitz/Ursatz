@@ -9,7 +9,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include "theory/style/style_labels.h"
 
-#include "pipeline/chord_sequence_internal.h"
+#include "corpus/chord_sequence_internal.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "util/json_util.h"
 

@@ -7,7 +7,7 @@
 
 #include <cJSON.h>
 
-#include "pipeline/corpus_walk.h"
+#include "store/corpus_walk.h"
 #include "style/style_profile_internal.h"
 
 /* Counts one document tree (schema version 9) into the profile. */

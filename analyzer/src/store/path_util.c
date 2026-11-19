@@ -1,4 +1,4 @@
-#include "pipeline/path_util.h"
+#include "store/path_util.h"
 
 #include <stdlib.h>
 #include <string.h>

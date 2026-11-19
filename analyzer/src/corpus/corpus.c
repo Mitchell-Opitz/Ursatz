@@ -15,9 +15,9 @@
 #include <ursatz_analyzer/version.h>
 
 #include "cJSON.h"
-#include "pipeline/analysis_document_internal.h"
-#include "pipeline/corpus_internal.h"
-#include "pipeline/run_file.h"
+#include "export/analysis_document_internal.h"
+#include "corpus/corpus_internal.h"
+#include "result/run_file.h"
 #include "util/file_util.h"
 #include "util/misc_util.h"
 

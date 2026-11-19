@@ -1,8 +1,8 @@
 # Functions the reach scan (tools/ci/check-reach.sh) may list as reached by no application.
 # One "<source path> <function>" per line; the text after # says why it stays (R-559).
-analyzer/src/pipeline/analysis_result.c analyzer_result_run_chain  # no app reads the chain of a result since P61 B8 (the Composer hears through the library chain itself); the Analyzer's tests read it
-analyzer/src/pipeline/chord_sequence.c analyzer_chord_sequence_from_document  # no app reads a chord sequence from a document text since P61 B7 (the Composer read documents through it; the Analyzer reads the tree); its tests call it
-analyzer/src/pipeline/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
+analyzer/src/result/analysis_result.c analyzer_result_run_chain  # no app reads the chain of a result since P61 B8 (the Composer hears through the library chain itself); the Analyzer's tests read it
+analyzer/src/corpus/chord_sequence.c analyzer_chord_sequence_from_document  # no app reads a chord sequence from a document text since P61 B7 (the Composer read documents through it; the Analyzer reads the tree); its tests call it
+analyzer/src/result/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
 composer/src/plan/lanes.c plan_note_by_id  # no app finds a note by id until P62 (the edits saved with the realization name notes by id); its tests call it
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test hook: test_analyzer_route reads the import counter

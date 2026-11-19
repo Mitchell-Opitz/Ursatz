@@ -17,8 +17,8 @@
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include "pipeline/corpus_walk.h"
-#include "pipeline/run_file.h"
+#include "store/corpus_walk.h"
+#include "result/run_file.h"
 #include "util/file_util.h"
 
 typedef char *(*RenderOutput)(const AnalysisDocument *document);

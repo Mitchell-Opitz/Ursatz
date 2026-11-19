@@ -1,4 +1,4 @@
-#include "pipeline/corpus_walk.h"
+#include "store/corpus_walk.h"
 
 #include <stdio.h>
 #include <stdlib.h>

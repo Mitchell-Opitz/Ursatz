@@ -10,7 +10,7 @@
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/staleness.h>
 
-#include "pipeline/chord_sequence_internal.h"
+#include "corpus/chord_sequence_internal.h"
 #include "util/file_util.h"
 #include "util/json_util.h"
 

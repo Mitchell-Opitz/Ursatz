@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>
-#include "pipeline/analysis_result_internal.h"
+#include "result/analysis_result_internal.h"
 #include <ursatz_analyzer/style_profile.h>
 
 #include <chain/chain_style.h>

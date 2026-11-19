@@ -5,7 +5,7 @@
 
 #include <chain/analysis_chain.h>
 
-#include "pipeline/analysis_result_internal.h"
+#include "result/analysis_result_internal.h"
 
 struct AnalyzerResult {
     AnalysisChain *chain; /* owned: the library chain and its collected result */

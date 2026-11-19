@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include "pipeline/analysis_result_internal.h"
+#include "result/analysis_result_internal.h"
 
 #include <chain/analysis_chain.h>
 

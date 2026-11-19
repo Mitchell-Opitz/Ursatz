@@ -13,7 +13,7 @@
 #include "links_internal.h"
 #include "chain/chain_motive_sketch.h"
 #include "util/json_util.h"
-#include "pipeline/corpus_walk.h"
+#include "store/corpus_walk.h"
 #include "util/misc_util.h"
 
 

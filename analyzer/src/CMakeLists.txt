@@ -1,21 +1,21 @@
 add_library(ursatz_analyzer STATIC
     version.c
-    pipeline/input_pipeline.c
-    pipeline/analysis_result.c
-    pipeline/analysis_pipeline.c
-    pipeline/chord_sequence.c
-    pipeline/corpus_passages.c
-    pipeline/staleness.c
-    pipeline/playback.c
-    pipeline/score_export.c
-    pipeline/path_util.c
-    pipeline/analysis_document.c
-    pipeline/corpus.c
-    pipeline/corpus_walk.c
-    pipeline/run_file.c
+    result/input_pipeline.c
+    result/analysis_result.c
+    result/analysis_pipeline.c
+    corpus/chord_sequence.c
+    corpus/corpus_passages.c
+    store/staleness.c
+    export/playback.c
+    export/score_export.c
+    store/path_util.c
+    export/analysis_document.c
+    corpus/corpus.c
+    store/corpus_walk.c
+    result/run_file.c
     style/style_profile.c
     style/style_piece_document.c
-    style/similar_material.c
+    corpus/similar_material.c
     links/motive_links.c
     links/motive_link_cache.c
     links/motive_links_render.c
@@ -63,6 +63,6 @@ target_link_libraries(ursatz_analyzer
     PRIVATE cjson
 )
 
-add_executable(ursatz-analyzer main.c)
+add_executable(ursatz-analyzer cli/main.c)
 target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer)

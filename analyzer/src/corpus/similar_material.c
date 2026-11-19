@@ -15,9 +15,9 @@
 #include "theory/style/style_labels.h"
 
 #include "model/core/rational.h"
-#include "pipeline/chord_sequence_internal.h"
-#include "pipeline/corpus_walk.h"
-#include "pipeline/run_file.h"
+#include "corpus/chord_sequence_internal.h"
+#include "store/corpus_walk.h"
+#include "result/run_file.h"
 #include "analysis/similarity/similarity_model.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
