@@ -426,13 +426,13 @@ ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char
     if (!has_style) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/blend", "blend needs style");
     }
-    ComposerRatio all = {1, 2};
+    Rational all = {1, 2};
     if (all_text) {
         if (!request_parse_ratio(all_text, &all)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weight", "blend_weight must be a fraction like 1/2, not '%s'",
                             all_text);
         }
-        if (all.numerator > all.denominator) {
+        if (all.num > all.den) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weight", "blend_weight must be from 0 to 1, not '%s'",
                             all_text);
         }
@@ -468,17 +468,17 @@ ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char
             return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights names %s twice", item);
         }
         seen[dimension] = true;
-        ComposerRatio weight;
+        Rational weight;
         if (!request_parse_ratio(equals + 1, &weight)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights: %s must be a fraction like 1/2, not '%s'",
                             item, equals + 1);
         }
-        if (weight.numerator > weight.denominator) {
+        if (weight.num > weight.den) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights: %s must be from 0 to 1, not '%s'", item,
                             equals + 1);
         }
-        out->numerator[dimension] = weight.numerator;
-        out->denominator[dimension] = weight.denominator;
+        out->numerator[dimension] = weight.num;
+        out->denominator[dimension] = weight.den;
         at += length;
         if (*at == ',') {
             at++;
@@ -516,9 +516,9 @@ ComposerStatus api_load_blend(const char *style_path, const char *blend_path, co
     return status;
 }
 
-ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *option_tempo, ComposerError *error) {
-    out->tempo.numerator = 0;
-    out->tempo.denominator = 0;
+ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *option_tempo, ComposerError *error) {
+    out->tempo.num = 0;
+    out->tempo.den = 0;
     out->tempo_from = "none";
     if (option_tempo) {
         out->tempo = *option_tempo;
@@ -1483,8 +1483,8 @@ cJSON *api_seed_json(const CorpusSeed *seed) {
     return object;
 }
 
-static cJSON *ratio_number(const ComposerRatio *ratio) {
-    return number_g((double)ratio->numerator / (double)ratio->denominator);
+static cJSON *ratio_number(const Rational *ratio) {
+    return number_g((double)ratio->num / (double)ratio->den);
 }
 
 cJSON *api_brief_json(const GrowBrief *brief) {
@@ -1493,7 +1493,7 @@ cJSON *api_brief_json(const GrowBrief *brief) {
     cJSON *material = cJSON_CreateObject();
     cJSON *without = cJSON_CreateArray();
     if (!object || !tempo || !material || !without ||
-        !cJSON_AddItemToObject(tempo, "qpm", brief->tempo.denominator > 0 ? ratio_number(&brief->tempo) : cJSON_CreateNull()) ||
+        !cJSON_AddItemToObject(tempo, "qpm", brief->tempo.den > 0 ? ratio_number(&brief->tempo) : cJSON_CreateNull()) ||
         !cJSON_AddStringToObject(tempo, "from", brief->tempo_from) ||
         !cJSON_AddStringToObject(material, "material", brief->material ? brief->material->id : "omt.material.major") ||
         !cJSON_AddStringToObject(material, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
@@ -1699,7 +1699,7 @@ cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const Gr
         ok = cJSON_AddItemToObject(root, "source", api_seed_json(&setup->seed_found));
     }
     cJSON *tempo = ok ? cJSON_CreateObject() : NULL;
-    ok = tempo && cJSON_AddItemToObject(tempo, "qpm", setup->tempo.denominator > 0 ? ratio_number(&setup->tempo) : cJSON_CreateNull()) &&
+    ok = tempo && cJSON_AddItemToObject(tempo, "qpm", setup->tempo.den > 0 ? ratio_number(&setup->tempo) : cJSON_CreateNull()) &&
          cJSON_AddStringToObject(tempo, "from", setup->tempo_from) && cJSON_AddItemToObject(root, "tempo", tempo);
     if (!ok) {
         if (tempo && !cJSON_GetObjectItem(root, "tempo")) {

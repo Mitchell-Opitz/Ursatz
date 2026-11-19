@@ -32,12 +32,12 @@
 
 /* What the brief of a run was. */
 typedef struct {
-    ComposerRatio tempo;      /* a denominator of 0 for none */
+    Rational tempo;      /* a denominator of 0 for none */
     const char *tempo_from;   /* "option", "style" or "none" */
     const PitchMaterial *material; /* the key's material */
     const char *mode_from;    /* "request" or "style" */
     bool has_density;         /* the style's density (attacks per beat) */
-    ComposerRatio density;
+    Rational density;
     const char *const *without;
     size_t without_count;
     const char *development;  /* "melody", "balanced" or "theme" for a theme; NULL for none (not echoed) */
@@ -102,7 +102,7 @@ typedef struct {
     PlanAccompaniment accompaniment;
     bool has_voicing;
     PlanVoicing voicing;
-    ComposerRatio style_weight;
+    Rational style_weight;
     GrowDevelopment development;
     const GrowContinuation *continuation;    /* NULL for the defaults; not owned */
     bool basic_as_written;                   /* a motif as long as the basic idea is it as written, over its own chords */
@@ -112,7 +112,7 @@ typedef struct {
     const Motive *accompaniment_motive;      /* NULL for none */
     const GrowMaterial *material;            /* NULL for grow itself */
     ComposerStyle *style;                    /* NULL for none; not owned */
-    ComposerRatio tempo;                     /* a denominator of 0 for none */
+    Rational tempo;                     /* a denominator of 0 for none */
     const char *tempo_from;                  /* "option", "style" or "none" */
     const char *mode_from;                   /* "request" or "style" */
     const char *const *without;              /* the categories the style is read without */
@@ -194,7 +194,7 @@ ComposerStatus api_load_blend(const char *style_path, const char *blend_path, co
  * Sets the tempo (from "option_tempo", else the style) and the mode of the key (mode "style" takes the style's) in out,
  * after the style is loaded. option_tempo has the tempo given with the request or NULL.
  */
-ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *option_tempo, ComposerError *error);
+ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *option_tempo, ComposerError *error);
 
 /*
  * Tries the seeds one after another: a stuck run is passed over, and a theme that is the same as one already made is not

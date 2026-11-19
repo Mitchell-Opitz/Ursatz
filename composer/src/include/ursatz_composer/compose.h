@@ -95,9 +95,9 @@ typedef struct {
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive compose_run */
     bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
     const ComposerStyle *style;     /* NULL for none; must outlive compose_run */
-    ComposerRatio style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */
+    Rational style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */
     const Motive *basic;            /* GrowConfig.basic; NULL for none; must outlive compose_run */
-    ComposerRatio tempo;            /* GrowConfig.tempo; a denominator of 0 (all-zero) is none */
+    Rational tempo;            /* GrowConfig.tempo; a denominator of 0 (all-zero) is none */
     const struct GrowPoolForm *pool; /* GrowConfig.pool; NULL for none; must outlive compose_run */
     size_t pool_count;
     const GrowFidelityTable *fidelity; /* GrowConfig.fidelity; NULL for the defaults; must outlive compose_run */

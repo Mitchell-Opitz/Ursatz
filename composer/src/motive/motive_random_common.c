@@ -212,7 +212,7 @@ bool motive_random_already_made(const Motive *made, size_t count, const Motive *
     return false;
 }
 
-bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, ComposerRatio *out) {
+bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, Rational *out) {
     ComposerStyleNote notes[MAX_NOTES];
     for (size_t i = 0; i < full->note_count; i++) {
         notes[i].pitch = full->notes[i].pitch;
@@ -235,12 +235,4 @@ bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const
     }
     composer_style_labels_destroy(all);
     return ok;
-}
-
-/* -1, 0 or 1 as a is less than, equal to or more than b. */
-int motive_random_ratio_compare(const ComposerRatio *a, const ComposerRatio *b) {
-    __extension__ typedef unsigned __int128 wide;
-    wide left = (wide)a->numerator * b->denominator;
-    wide right = (wide)b->numerator * a->denominator;
-    return left < right ? -1 : left > right ? 1 : 0;
 }

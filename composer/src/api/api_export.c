@@ -42,7 +42,7 @@ static ComposerStatus read_loop(const cJSON *request, PlanExportOptions *options
         return api_fail(error, COMPOSER_ERR_REQUEST, "/loop", "loop must be {\"start\": \"2/1\", \"end\": \"14/1\"}");
     }
     static const char *const NAMES[2] = {"start", "end"};
-    ComposerRatio values[2];
+    Rational values[2];
     for (int i = 0; i < 2; i++) {
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(loop, NAMES[i]);
         char path[24];
@@ -52,12 +52,12 @@ static ComposerStatus read_loop(const cJSON *request, PlanExportOptions *options
                             NAMES[i]);
         }
     }
-    if (values[1].numerator * values[0].denominator <= values[0].numerator * values[1].denominator) {
+    if (values[1].num * values[0].den <= values[0].num * values[1].den) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/loop", "loop end must come after loop start");
     }
     options->loop_markers = true;
-    options->loop_start = (Rational){(long long)values[0].numerator, (long long)values[0].denominator};
-    options->loop_end = (Rational){(long long)values[1].numerator, (long long)values[1].denominator};
+    options->loop_start = (Rational){(long long)values[0].num, (long long)values[0].den};
+    options->loop_end = (Rational){(long long)values[1].num, (long long)values[1].den};
     return COMPOSER_OK;
 }
 

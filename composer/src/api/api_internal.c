@@ -240,7 +240,7 @@ unsigned long api_default_seed(void) {
     return ((unsigned long)time(NULL) * 2654435761UL + (unsigned long)clock()) & 4294967295UL;
 }
 
-bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *out, bool *present, ComposerError *error) {
+bool api_member_rational(const cJSON *object, const char *name, Rational *out, bool *present, ComposerError *error) {
     const cJSON *item = member(object, name, present);
     if (!item) {
         return true;
@@ -261,13 +261,13 @@ bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *o
 }
 
 ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, ComposerError *error) {
-    ComposerRatio tempo;
+    Rational tempo;
     bool has_tempo = false;
     if (!api_member_rational(request, "tempo", &tempo, &has_tempo, error)) {
         return COMPOSER_ERR_REQUEST;
     }
-    if (has_tempo && (tempo.denominator == 0 || tempo.numerator < API_TEMPO_MIN * tempo.denominator ||
-                      tempo.numerator > API_TEMPO_MAX * tempo.denominator)) {
+    if (has_tempo && (tempo.den == 0 || tempo.num < (long long)API_TEMPO_MIN * tempo.den ||
+                      tempo.num > (long long)API_TEMPO_MAX * tempo.den)) {
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "tempo");
         char text[48] = "";
         if (cJSON_IsString(item)) {
@@ -280,8 +280,8 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
                         text);
     }
     if (has_tempo) {
-        options->tempo_numerator = tempo.numerator;
-        options->tempo_denominator = tempo.denominator;
+        options->tempo_numerator = tempo.num;
+        options->tempo_denominator = tempo.den;
     }
     return COMPOSER_OK;
 }

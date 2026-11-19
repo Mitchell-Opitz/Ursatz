@@ -136,7 +136,7 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
         out->accented_types[i] = 1;
     }
     out->leaps_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
-    out->contrast_fidelity_min.denominator = 1;
+    out->contrast_fidelity_min.den = 1;
     /* Endings and long non-chord tones (R-440, R-441), all off. */
     out->endings[0] = 1; /* free, as drawn */
     for (size_t i = 0; i < 5; i++) {
@@ -1725,8 +1725,8 @@ static bool contrast_is_close(const MotiveRandomOptions *options, const SpelledK
             !motive_recognizability(&a, &b, NULL, &score)) {
             return false;
         }
-        const ComposerRatio *least = &preferences->contrast_fidelity_min;
-        if ((unsigned long long)score.total.numerator * least->denominator < (unsigned long long)least->numerator * score.total.denominator) {
+        const Rational *least = &preferences->contrast_fidelity_min;
+        if ((unsigned long long)score.total.numerator * least->den < (unsigned long long)least->num * score.total.denominator) {
             return false;
         }
     }
@@ -1812,7 +1812,7 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
             !set_plan_and_segments(options, &layout, out) || !tones_as_drawn(out, &layout, &melody)) {
             continue;
         }
-        if (preferences->contrast_fidelity_min.numerator > 0 && !contrast_is_close(options, key, preferences, &layout, &melody)) {
+        if (preferences->contrast_fidelity_min.num > 0 && !contrast_is_close(options, key, preferences, &layout, &melody)) {
             continue;
         }
         if (!motive_melodic_fault(out, &fault)) {

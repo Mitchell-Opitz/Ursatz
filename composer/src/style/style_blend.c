@@ -15,14 +15,14 @@
 
 /* A category's statistics are brought to one total: the least common multiple of its labels' totals when that is below
    this, else this. */
-#define COMMON_TOTAL_LIMIT ((Wide)1 << 40)
-#define COMMON_TOTAL_ROUNDED ((Wide)1 << 30)
+#define COMMON_TOTAL_LIMIT (1ULL << 40)
+#define COMMON_TOTAL_ROUNDED (1ULL << 30)
 
-ComposerStyleWeights composer_style_weights_all(ComposerRatio weight) {
+ComposerStyleWeights composer_style_weights_all(Rational weight) {
     ComposerStyleWeights weights;
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-        weights.numerator[d] = weight.numerator;
-        weights.denominator[d] = weight.denominator;
+        weights.numerator[d] = weight.num;
+        weights.denominator[d] = weight.den;
     }
     return weights;
 }
@@ -99,22 +99,33 @@ static ComposerStyleResult part_model(const StyleModel *from, StyleDimension dim
  */
 static bool normalize_category(const StyleStatistic *items, size_t start, size_t end, StyleStatistic *out,
                                size_t *out_count) {
-    Wide common = 1;
+    unsigned long long common = 1;
     for (size_t i = start; i < end; i++) {
-        Wide total = items[i].total;
-        common = common / wide_gcd(common, total) * total;
-        if (common > COMMON_TOTAL_LIMIT) {
+        unsigned long long total = items[i].total;
+        unsigned long long next;
+        if (total == 0 || !rational_checked_mul_unsigned(common / rational_gcd_unsigned(common, total), total, &next) ||
+            next > COMMON_TOTAL_LIMIT) {
             common = COMMON_TOTAL_ROUNDED;
             break;
         }
+        common = next;
     }
     bool exact = common != COMMON_TOTAL_ROUNDED;
     for (size_t i = start; exact && i < end; i++) {
         exact = common % items[i].total == 0;
     }
     for (size_t i = start; i < end; i++) {
-        Wide scaled = (Wide)items[i].count * common;
-        Wide count = exact ? scaled / items[i].total : (scaled + items[i].total / 2) / items[i].total;
+        /* count * common / total: exact when the common total is a multiple of every total (the count is at most the total, so no
+           overflow); else rounded, in long double if the product does not fit 64 bits */
+        unsigned long long count;
+        unsigned long long scaled;
+        if (exact) {
+            count = (unsigned long long)items[i].count * (common / items[i].total);
+        } else if (rational_checked_mul_unsigned(items[i].count, common, &scaled)) {
+            count = (scaled + items[i].total / 2) / items[i].total;
+        } else {
+            count = (unsigned long long)((long double)items[i].count * (long double)common / (long double)items[i].total + 0.5L);
+        }
         if (count == 0) {
             continue;
         }

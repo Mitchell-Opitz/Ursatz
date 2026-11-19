@@ -66,11 +66,11 @@ typedef struct {
     const char *material_member; /* which of the two the request wrote */
     const char *meter_text;
     const char *style_path;
-    ComposerRatio weight;
+    Rational weight;
     const char *without[PIECE_WITHOUT_MAX];
     size_t without_count;
     ComposerStyle *style; /* owned */
-    ComposerRatio tempo;  /* a denominator of 0 for none */
+    Rational tempo;  /* a denominator of 0 for none */
     const char *tempo_from;
     const char *mode_from;
     GrowPoolForm *pool;   /* owned */

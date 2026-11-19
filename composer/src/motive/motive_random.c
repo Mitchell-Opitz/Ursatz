@@ -213,7 +213,7 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         size_t have = 0;
         size_t best = 0;
         size_t ties = 0;
-        ComposerRatio best_closeness = {0, 1};
+        Rational best_closeness = {0, 1};
         for (size_t attempt = 0; have < want && attempt < ATTEMPTS_PER_MOTIVE; attempt++) {
             Motive full;
             bool found;
@@ -225,11 +225,11 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
                 continue;
             }
             if (options->style) {
-                ComposerRatio closeness;
+                Rational closeness;
                 if (!motive_random_candidate_closeness(options, &full, &closeness)) {
                     return MOTIVE_RANDOM_ERR_ALLOC;
                 }
-                int order = have == 0 ? 1 : motive_random_ratio_compare(&closeness, &best_closeness);
+                int order = have == 0 ? 1 : rational_cmp(closeness, best_closeness);
                 if (order > 0) {
                     best = have;
                     best_closeness = closeness;

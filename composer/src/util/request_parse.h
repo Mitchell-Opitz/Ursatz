@@ -19,7 +19,7 @@ bool request_equals_ignore_case(const char *a, const char *b);
 bool request_parse_whole_number(const char *text, unsigned long maximum, unsigned long *out);
 
 /* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
-bool request_parse_ratio(const char *text, ComposerRatio *out);
+bool request_parse_ratio(const char *text, Rational *out);
 
 /* The longest word after a key's tonic: "harmonic minor" and the like. */
 #define REQUEST_KEY_WORD_MAX 64

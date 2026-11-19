@@ -324,13 +324,13 @@ static bool tempo_band_middle(const char *text, unsigned long *out) {
     return true;
 }
 
-bool composer_style_tempo(const ComposerStyle *style, ComposerRatio *out) {
+bool composer_style_tempo(const ComposerStyle *style, Rational *out) {
     unsigned long middle = 0;
     if (!out || !most_common_label(find_category(style, STYLE_CATEGORY_TEMPO), tempo_band_middle, &middle)) {
         return false;
     }
-    out->numerator = middle;
-    out->denominator = 1;
+    out->num = middle;
+    out->den = 1;
     return true;
 }
 
@@ -377,12 +377,12 @@ static bool density_halves(const char *text, unsigned long *out) {
     return false;
 }
 
-bool composer_style_density(const ComposerStyle *style, ComposerRatio *out) {
+bool composer_style_density(const ComposerStyle *style, Rational *out) {
     unsigned long halves = 0;
     if (!out || !most_common_label(find_category(style, STYLE_CATEGORY_NOTE_DENSITY), density_halves, &halves)) {
         return false;
     }
-    out->numerator = halves;
-    out->denominator = 2;
+    out->num = halves;
+    out->den = 2;
     return true;
 }

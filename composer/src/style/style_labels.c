@@ -152,30 +152,6 @@ bool composer_style_labels_add_melody(ComposerStyleLabels *labels, const int *be
 /* ----------------------------------------------------------- closeness */
 
 
-/* Reduces a fraction of 128-bit parts into 64-bit parts, rounding to 30 bits when it does not fit. */
-static ComposerRatio narrow(Wide numerator, Wide denominator) {
-    ComposerRatio out = {0, 1};
-    Wide divisor = wide_gcd(numerator, denominator);
-    if (divisor > 1) {
-        numerator /= divisor;
-        denominator /= divisor;
-    }
-    if (numerator <= ULONG_MAX && denominator <= ULONG_MAX) {
-        out.numerator = (unsigned long)numerator;
-        out.denominator = (unsigned long)denominator;
-        return out;
-    }
-    /* numerator <= denominator for a closeness: scale to 2^30. */
-    Wide scale = (Wide)1 << 30;
-    Wide shift = 0;
-    while ((denominator >> shift) > ((Wide)1 << 64) / scale - 1) {
-        shift++;
-    }
-    out.numerator = (unsigned long)(((numerator >> shift) * scale + ((denominator >> shift) / 2)) / (denominator >> shift));
-    out.denominator = (unsigned long)scale;
-    return out;
-}
-
 bool composer_style_labels_add_form(ComposerStyleLabels *labels, const char *form, const unsigned *phrase_bars,
                                     size_t phrase_count) {
     if (!labels || (phrase_count > 0 && !phrase_bars)) {
@@ -242,13 +218,12 @@ bool composer_style_labels_add_nct(ComposerStyleLabels *labels, const char *prev
            composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_NCT_FIGURE, text);
 }
 
-bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLabels *labels, ComposerRatio *out) {
+bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLabels *labels, Rational *out) {
     if (!style || !labels || !out) {
         return false;
     }
-    /* The sum of count/largest over the labels, kept as a reduced fraction while it fits in 128 bits. */
-    Wide numerator = 0;
-    Wide denominator = 1;
+    /* The sum of count/largest over the labels, kept as a reduced fraction while it fits in 64 bits. */
+    Rational sum = {0, 1};
     bool exact = true;
     long double approximate = 0.0L;
     size_t used = 0;
@@ -263,37 +238,26 @@ bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLab
         if (!exact) {
             continue;
         }
-        Wide scaled_sum;
-        Wide scaled_term;
-        Wide next_denominator;
-        if (__builtin_mul_overflow(numerator, (Wide)share.largest, &scaled_sum) ||
-            __builtin_mul_overflow(denominator, (Wide)share.count, &scaled_term) ||
-            __builtin_mul_overflow(denominator, (Wide)share.largest, &next_denominator) ||
-            __builtin_add_overflow(scaled_sum, scaled_term, &numerator)) {
+        Rational term;
+        if (share.count > (unsigned long)LLONG_MAX || share.largest > (unsigned long)LLONG_MAX ||
+            rational_make((long long)share.count, (long long)share.largest, &term) != RATIONAL_OK ||
+            rational_add(sum, term, &sum) != RATIONAL_OK) {
             exact = false;
-            continue;
-        }
-        denominator = next_denominator;
-        Wide divisor = wide_gcd(numerator, denominator);
-        if (divisor > 1) {
-            numerator /= divisor;
-            denominator /= divisor;
         }
     }
     if (used == 0) {
-        out->numerator = 1;
-        out->denominator = 1;
+        out->num = 1;
+        out->den = 1;
         return true;
     }
-    if (exact && !__builtin_mul_overflow(denominator, (Wide)used, &denominator)) {
-        *out = narrow(numerator, denominator);
+    if (exact && rational_div_int(sum, (long long)used, out) == RATIONAL_OK) {
         return true;
     }
-    /* Past 128 bits: the mean to 30 bits. */
+    /* Past 64 bits: the mean to 30 bits. */
     long double mean = approximate / (long double)used;
     unsigned long scale = 1UL << 30;
     unsigned long rounded = (unsigned long)(mean * (long double)scale + 0.5L);
-    out->numerator = rounded > scale ? scale : rounded;
-    out->denominator = scale;
+    out->num = rounded > scale ? scale : rounded;
+    out->den = scale;
     return true;
 }

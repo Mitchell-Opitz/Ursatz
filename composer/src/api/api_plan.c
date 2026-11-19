@@ -95,7 +95,7 @@ typedef struct {
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
     unsigned long seed;
-    ComposerRatio style_weight; /* 0/0 when no style_weight was given */
+    Rational style_weight; /* 0/0 when no style_weight was given */
     ComposerStyleWeights blend_weights;
     bool seeded; /* the motive is a passage of the corpus, kept in seed_found */
     CorpusSeed seed_found;
@@ -679,8 +679,8 @@ static cJSON *plan_document(const PlanBuild *state, const Plan *plan) {
     ok = ok && (state->given_count == 0 || api_add(document, "given", given_document(state)));
     if (ok && state->style_path) {
         char weight[48];
-        snprintf(weight, sizeof weight, "%lu/%lu", state->style_weight.denominator ? state->style_weight.numerator : 1UL,
-                 state->style_weight.denominator ? state->style_weight.denominator : 1UL);
+        snprintf(weight, sizeof weight, "%lld/%lld", state->style_weight.den ? state->style_weight.num : 1LL,
+                 state->style_weight.den ? state->style_weight.den : 1LL);
         cJSON *style = cJSON_CreateObject();
         ok = style && cJSON_AddStringToObject(style, "file", state->style_path) && cJSON_AddStringToObject(style, "weight", weight) &&
              api_add(document, "style", style);
@@ -833,8 +833,8 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
     if (state->style_path) {
         request.has_style = true;
         snprintf(request.style.path, PLAN_STYLE_PATH_MAX, "%s", state->style_path);
-        request.style.weight_numerator = state->style_weight.numerator;
-        request.style.weight_denominator = state->style_weight.denominator;
+        request.style.weight_numerator = state->style_weight.num;
+        request.style.weight_denominator = state->style_weight.den;
         for (size_t i = 0; i < state->without_count; i++) {
             snprintf(request.style.without[i], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", state->without[i]);
         }

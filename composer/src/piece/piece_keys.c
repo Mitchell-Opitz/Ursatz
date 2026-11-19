@@ -9,7 +9,9 @@
 #include <theory/harmony/harmony_key_change.h>
 #include <theory/harmony/harmony_related_key.h>
 #include <theory/knowledge/knowledge_snapshot.h>
+#include <model/pitch/pitch_arithmetic.h>
 #include <theory/tonality/region_relation.h>
+#include <theory/tonality/tonal_key.h>
 #include <theory/vocabulary/cadence_type.h>
 
 #include <plan/plan_constraint.h>
@@ -309,10 +311,17 @@ static PieceResult refuse_region(size_t index, size_t *refused, char *message, s
 /* The words of a refusal for a region the Composer does not write: its material, until P69 (R-611). */
 static PieceResult refuse_material(size_t index, const char *section, int center, const PitchMaterial *material, size_t *refused,
                                    char *message, size_t size) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+    /* the center spelled in the refused material (the fewest accidentals in its signature), else by its pitch class */
+    PitchLetter letter;
+    int accidental;
+    char tonic[8];
+    if (!material || center < 0 || center >= 12 || !standard_tonality_key_tonic_of_pitch_class_material(center, material, &letter, &accidental) ||
+        !pitch_spelling_name(letter, accidental, tonic, sizeof(tonic))) {
+        snprintf(tonic, sizeof(tonic), "%s", center >= 0 && center < 12 ? pitch_class_name(center, false) : "?");
+    }
     return refuse_region(index, refused, message, size,
-                         "section '%s' is in %s %s: the Composer writes major and natural minor keys until P69", section,
-                         center >= 0 && center < 12 ? NAMES[center] : "?", material && material->name ? material->name : "no material");
+                         "section '%s' is in %s %s: the Composer writes major and natural minor keys until P69", section, tonic,
+                         material && material->name ? material->name : "no material");
 }
 
 PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,

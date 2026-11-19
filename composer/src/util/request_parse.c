@@ -34,7 +34,7 @@ bool request_parse_whole_number(const char *text, unsigned long maximum, unsigne
     return true;
 }
 
-bool request_parse_ratio(const char *text, ComposerRatio *out) {
+bool request_parse_ratio(const char *text, Rational *out) {
     if (!text || !isdigit((unsigned char)text[0])) {
         return false;
     }
@@ -58,8 +58,8 @@ bool request_parse_ratio(const char *text, ComposerRatio *out) {
     if (*end != '\0') {
         return false;
     }
-    out->numerator = numerator;
-    out->denominator = denominator;
+    out->num = numerator;
+    out->den = denominator;
     return true;
 }
 

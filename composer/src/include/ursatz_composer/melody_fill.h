@@ -103,7 +103,7 @@ typedef struct {
     bool plain_shaping;
     unsigned climax_rise;
     unsigned climax_slack;
-    ComposerRatio second_nearest;
+    Rational second_nearest;
     unsigned attempts;
     unsigned keep;
     MelodyWeights weights;

@@ -2,6 +2,8 @@
 #define URSATZ_COMPOSER_STYLE_H
 
 #include <stdbool.h>
+
+#include <model/core/rational.h>
 #include <stddef.h>
 
 #include <theory/tonality/common_practice_materials.h>
@@ -29,11 +31,7 @@ typedef enum {
     COMPOSER_STYLE_ERR_ALLOC
 } ComposerStyleResult;
 
-/* A fraction, not reduced unless a function says so. denominator is at least 1 where a function gives one. */
-typedef struct {
-    unsigned long numerator;
-    unsigned long denominator;
-} ComposerRatio;
+/* The style's fractions are the library's Rational (num, den). A function that takes one says where a denominator of 0 means none. */
 
 const char *composer_style_result_name(ComposerStyleResult result);
 
@@ -81,9 +79,9 @@ bool composer_style_share(const ComposerStyle *style, const char *category, cons
  * `note-density` as attacks per beat (`4+` reads 4), halves over 2, not reduced (ties: the lower density). Each is
  * false, leaving *out alone, when the style has no such category or no label it can read.
  */
-bool composer_style_tempo(const ComposerStyle *style, ComposerRatio *out);
+bool composer_style_tempo(const ComposerStyle *style, Rational *out);
 bool composer_style_mode(const ComposerStyle *style, const CommonPracticeMaterials *materials, const PitchMaterial **material);
-bool composer_style_density(const ComposerStyle *style, ComposerRatio *out);
+bool composer_style_density(const ComposerStyle *style, Rational *out);
 
 /*
  * A style built from a model in memory, for a blend (composer_style_blend). Takes ownership of model on success only,
@@ -103,7 +101,7 @@ typedef struct {
 } ComposerStyleWeights;
 
 /* The same weight, weight, in every dimension. */
-ComposerStyleWeights composer_style_weights_all(ComposerRatio weight);
+ComposerStyleWeights composer_style_weights_all(Rational weight);
 
 /*
  * Blends two styles with a weight per dimension. For each dimension the statistics of that dimension's categories
@@ -186,7 +184,7 @@ bool composer_style_labels_add_nct(ComposerStyleLabels *labels, const char *prev
  * and a label it never saw 0. A label whose category the style does not have says nothing and is left out; material
  * with no labels is neutral, 1/1. The fraction is reduced; one that would not fit in 64 bits is rounded to 30 bits.
  */
-bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLabels *labels, ComposerRatio *out);
+bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLabels *labels, Rational *out);
 
 /*
  * How far a plan is from the style, measured by the Analyzer and nothing the Composer scores with: every note the plan

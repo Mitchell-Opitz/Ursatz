@@ -220,70 +220,63 @@ static bool form_labels(const GrowThemeSpec *spec, ComposerStyleLabels *labels) 
 /* ---------------------------------------------------------------- score */
 
 
-#define SCORE_LIMIT ((Wide)1 << 32)
+#define SCORE_LIMIT (1ULL << 32)
 
-void style_add_to_score(FillCheck *check, ComposerRatio closeness, ComposerRatio weight) {
-    if (closeness.denominator == 0 || weight.denominator == 0 || check->score_denominator == 0) {
+/* A fraction below 2^32 on both sides: shifted down together while a part is at or above the limit. */
+static void below_score_limit(unsigned long long *numerator, unsigned long long *denominator) {
+    while (*numerator >= SCORE_LIMIT || *denominator >= SCORE_LIMIT) {
+        *numerator >>= 1;
+        *denominator >>= 1;
+    }
+    if (*denominator == 0) {
+        *denominator = 1;
+    }
+}
+
+/* The value as a fraction over 2^20, for a sum or product that does not fit 64 bits (the value is capped at 4000). */
+static Rational approximate_value(long double value) {
+    long double capped = value > 4000.0L ? 4000.0L : value;
+    long long scale = 1LL << 20;
+    return rational_ratio((long long)(capped * (long double)scale + 0.5L), scale);
+}
+
+void style_add_to_score(FillCheck *check, Rational closeness, Rational weight) {
+    if (closeness.den == 0 || weight.den == 0 || check->score_denominator == 0) {
         return;
     }
-    /* n/d + (wn * cn) / (wd * cd) over the common denominator d * wd * cd, in 128 bits: each factor is below 2^64, so
-       two products of three do not fit; the check's own parts are below 2^32, which leaves room for all but the
-       largest weights, and those are rounded below. */
-    Wide d = check->score_denominator;
-    Wide n = check->score_numerator;
-    Wide product_den, product_num, scaled_n, numerator;
-    bool fits = !__builtin_mul_overflow((Wide)weight.denominator, (Wide)closeness.denominator, &product_den) &&
-                !__builtin_mul_overflow((Wide)weight.numerator, (Wide)closeness.numerator, &product_num) &&
-                !__builtin_mul_overflow(n, product_den, &scaled_n) &&
-                !__builtin_mul_overflow(d, product_den, &product_den) &&
-                !__builtin_mul_overflow(d, product_num, &product_num) &&
-                !__builtin_add_overflow(scaled_n, product_num, &numerator);
-    Wide denominator = product_den;
-    if (!fits) {
-        /* Past 128 bits: both parts of each fraction to 30 bits first. */
-        long double value = (long double)check->score_numerator / (long double)check->score_denominator +
-                            ((long double)weight.numerator / (long double)weight.denominator) *
-                                ((long double)closeness.numerator / (long double)closeness.denominator);
-        long double capped = value > 4000.0L ? 4000.0L : value;
-        denominator = (Wide)1 << 20;
-        numerator = (Wide)(capped * (long double)denominator + 0.5L);
+    /* n/d + (wn * cn) / (wd * cd): the check's own parts are below 2^32; a weight or closeness that makes the sum overflow 64 bits is
+       rounded to a fraction over 2^20 instead. */
+    Rational score = {(long long)check->score_numerator, (long long)check->score_denominator};
+    Rational term;
+    Rational sum;
+    if (rational_mul(weight, closeness, &term) != RATIONAL_OK || rational_add(score, term, &sum) != RATIONAL_OK) {
+        sum = approximate_value((long double)check->score_numerator / (long double)check->score_denominator +
+                                ((long double)weight.num / (long double)weight.den) *
+                                    ((long double)closeness.num / (long double)closeness.den));
     }
-    Wide divisor = wide_gcd(numerator, denominator);
-    if (divisor > 1) {
-        numerator /= divisor;
-        denominator /= divisor;
-    }
-    while (numerator >= SCORE_LIMIT || denominator >= SCORE_LIMIT) {
-        numerator >>= 1;
-        denominator >>= 1;
-    }
-    if (denominator == 0) {
-        denominator = 1;
-    }
+    unsigned long long numerator = (unsigned long long)sum.num;
+    unsigned long long denominator = (unsigned long long)sum.den;
+    below_score_limit(&numerator, &denominator);
     check->score_numerator = (unsigned long)numerator;
     check->score_denominator = (unsigned long)denominator;
 }
 
 /* The term style_add_to_score adds, weight * closeness, in lowest terms and below 2^32 as the score is. */
-static void style_term(ComposerRatio closeness, ComposerRatio weight, FillCheck *check) {
+static void style_term(Rational closeness, Rational weight, FillCheck *check) {
     check->style_numerator = 0;
     check->style_denominator = 1;
-    if (closeness.denominator == 0 || weight.denominator == 0) {
+    if (closeness.den == 0 || weight.den == 0) {
         return;
     }
-    Wide numerator = (Wide)weight.numerator * (Wide)closeness.numerator;
-    Wide denominator = (Wide)weight.denominator * (Wide)closeness.denominator;
-    Wide divisor = wide_gcd(numerator, denominator);
-    if (divisor > 1) {
-        numerator /= divisor;
-        denominator /= divisor;
+    Rational term;
+    if (rational_mul(weight, closeness, &term) != RATIONAL_OK) {
+        term = approximate_value(((long double)weight.num / (long double)weight.den) * ((long double)closeness.num / (long double)closeness.den));
     }
-    while (numerator >= SCORE_LIMIT || denominator >= SCORE_LIMIT) {
-        numerator >>= 1;
-        denominator >>= 1;
-    }
+    unsigned long long numerator = (unsigned long long)term.num;
+    unsigned long long denominator = (unsigned long long)term.den;
+    below_score_limit(&numerator, &denominator);
     check->style_numerator = (unsigned long)numerator;
-    check->style_denominator = denominator ? (unsigned long)denominator : 1;
+    check->style_denominator = (unsigned long)denominator;
 }
 
 /*
@@ -310,8 +303,8 @@ static unsigned long pattern_halves(PlanAccompanimentPattern pattern, Rational b
  * beat and d the style's. False when the style has no density or the run did not leave the pattern to the operator.
  */
 static bool accompaniment_closeness(const ComposerStyle *style, const Plan *plan, FillTarget target,
-                                    const FillCandidate *candidate, ComposerRatio *out) {
-    ComposerRatio density;
+                                    const FillCandidate *candidate, Rational *out) {
+    Rational density;
     const AccompCandidate *accompaniment = candidate->payload;
     AccompContext *read = calloc(1, sizeof(*read));
     if (!read) {
@@ -322,11 +315,11 @@ static bool accompaniment_closeness(const ComposerStyle *style, const Plan *plan
                  read->pattern == PLAN_ACCOMPANIMENT_ANY;
     if (found) {
         unsigned long rate = pattern_halves(accompaniment->pattern, read->beat);
-        unsigned long wanted = density.numerator;
+        unsigned long wanted = density.num;
         unsigned long low = rate < wanted ? rate : wanted;
         unsigned long high = rate < wanted ? wanted : rate;
-        out->numerator = low;
-        out->denominator = high ? high : 1;
+        out->num = low;
+        out->den = high ? high : 1;
     }
     free(read);
     return found;
@@ -350,7 +343,7 @@ bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator
     }
     const char *name = operator_->generator.name;
     if (style->texture) {
-        ComposerRatio closeness;
+        Rational closeness;
         if (strcmp(name, ACCOMPANIMENT_OPERATOR_NAME) == 0 &&
             accompaniment_closeness(style->style, plan, target, candidate, &closeness)) {
             style_term(closeness, style->weight, out);
@@ -386,7 +379,7 @@ bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator
     } else if (motive_operator) {
         ok = motive_labels(plan, candidate, labels);
     }
-    ComposerRatio closeness;
+    Rational closeness;
     if (ok && composer_style_closeness(style->style, labels, &closeness)) {
         style_term(closeness, style->weight, out);
         style_add_to_score(out, closeness, style->weight);

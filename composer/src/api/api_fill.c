@@ -22,7 +22,7 @@ typedef struct {
     const char *blend_weights_text;
     const char *without[PLAN_STYLE_WITHOUT_MAX];
     size_t without_count;
-    ComposerRatio style_weight; /* 0/0 unless style_weight was given */
+    Rational style_weight; /* 0/0 unless style_weight was given */
 } FillStyle;
 
 /* The style members of a request (fill and the commands that compose a plan again). */
@@ -69,7 +69,7 @@ static ComposerStatus read_style_members(const cJSON *request, FillStyle *out, C
  * request, else the constraint's. *style stays NULL when there is none.
  */
 static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, ComposerStyle **style,
-                                    ComposerRatio *weight, ComposerError *error) {
+                                    Rational *weight, ComposerError *error) {
     const PlanStyle *planned = NULL;
     NodeId root = plan_root(plan);
     for (size_t i = 0; root != PLAN_NODE_NONE && i < plan_node_constraint_count(plan, root); i++) {
@@ -110,8 +110,8 @@ static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, 
         }
         return api_read_blend(false, blend_path, options->blend_weight_text, options->blend_weights_text, &blend_weights, error);
     }
-    weight->numerator = planned ? planned->weight_numerator : 0;
-    weight->denominator = planned ? planned->weight_denominator : 0;
+    weight->num = planned ? planned->weight_numerator : 0;
+    weight->den = planned ? planned->weight_denominator : 0;
     if (options->style_weight_text) {
         *weight = options->style_weight;
     }
@@ -201,7 +201,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     ComposeCandidates candidates;
     memset(&candidates, 0, sizeof(candidates));
     ComposerStyle *style = NULL;
-    ComposerRatio style_weight = {0, 0};
+    Rational style_weight = {0, 0};
     for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == COMPOSER_OK; attempt++) {
         if (job_step(job, "seed", (unsigned)attempt, API_SEED_TRIES)) {
             status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");

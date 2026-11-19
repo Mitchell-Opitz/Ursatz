@@ -88,10 +88,7 @@ bool motive_random_apply_form(const MotiveRandomOptions *options, const Motive *
 bool motive_random_already_made(const Motive *made, size_t count, const Motive *motive);
 
 /* How close a full candidate is to the style, of the category the form keeps. False on allocation failure. */
-bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, ComposerRatio *out);
-
-/* -1, 0 or 1 as a is less than, equal to or more than b. */
-int motive_random_ratio_compare(const ComposerRatio *a, const ComposerRatio *b);
+bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, Rational *out);
 
 /* One candidate of the SEGMENTS strategy (motive_random_segments.c), as the DRAWN one: *found is false when the draw did
    not pass (try again); the result is false only when the check itself could not run. */

@@ -365,7 +365,7 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         snprintf(path, sizeof path, "%s/meter", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "the %s form is in %s", request->form->label, listed);
     }
-    request->weight = (ComposerRatio){1, 1};
+    request->weight = (Rational){1, 1};
     if (style_weight && !request_parse_ratio(style_weight, &request->weight)) {
         snprintf(path, sizeof path, "%s/style_weight", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
@@ -459,20 +459,20 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         return status;
     }
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(root, "tempo");
-    request->tempo = (ComposerRatio){0, 0};
+    request->tempo = (Rational){0, 0};
     request->tempo_from = "none";
     if (tempo && !cJSON_IsNull(tempo)) {
-        request->tempo.numerator = request->export_options.tempo_numerator;
-        request->tempo.denominator = request->export_options.tempo_denominator;
+        request->tempo.num = request->export_options.tempo_numerator;
+        request->tempo.den = request->export_options.tempo_denominator;
         request->tempo_from = "option";
     } else if (composer_style_tempo(request->style, &request->tempo)) {
-        request->export_options.tempo_numerator = request->tempo.numerator;
-        request->export_options.tempo_denominator = request->tempo.denominator;
+        request->export_options.tempo_numerator = request->tempo.num;
+        request->export_options.tempo_denominator = request->tempo.den;
         request->tempo_from = "style";
     } else if (request->form && request->form->tempo > 0) {
-        request->tempo = (ComposerRatio){request->form->tempo, 1};
-        request->export_options.tempo_numerator = request->tempo.numerator;
-        request->export_options.tempo_denominator = request->tempo.denominator;
+        request->tempo = (Rational){request->form->tempo, 1};
+        request->export_options.tempo_numerator = request->tempo.num;
+        request->export_options.tempo_denominator = request->tempo.den;
         request->tempo_from = "form";
     }
     request->mode_from = "request";
@@ -490,8 +490,8 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         PlanStyle *plan_style = &request->request.style;
         memset(plan_style, 0, sizeof(*plan_style));
         snprintf(plan_style->path, sizeof(plan_style->path), "%s", request->style_path);
-        plan_style->weight_numerator = request->weight.numerator;
-        plan_style->weight_denominator = request->weight.denominator;
+        plan_style->weight_numerator = request->weight.num;
+        plan_style->weight_denominator = request->weight.den;
         for (size_t i = 0; i < request->without_count && i < PLAN_STYLE_WITHOUT_MAX; i++) {
             snprintf(plan_style->without[plan_style->without_count++], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", request->without[i]);
         }

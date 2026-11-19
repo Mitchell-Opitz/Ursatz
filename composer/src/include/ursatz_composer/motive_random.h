@@ -147,7 +147,7 @@ typedef struct {
     unsigned leaps_per_motif;
     bool leap_recovery;
     bool pickup_from_accent;
-    ComposerRatio contrast_fidelity_min;
+    Rational contrast_fidelity_min;
     unsigned long long_on_weak;
     bool final_long;
     bool compound_beats;

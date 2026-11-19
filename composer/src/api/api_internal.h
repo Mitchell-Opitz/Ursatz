@@ -72,7 +72,7 @@ ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value);
 bool api_member_string(const cJSON *object, const char *name, const char **out, bool *present, ComposerError *error);
 bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *present, ComposerError *error);
 /* A whole number, or a string "3/2" (request_parse_ratio). */
-bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *out, bool *present, ComposerError *error);
+bool api_member_rational(const cJSON *object, const char *name, Rational *out, bool *present, ComposerError *error);
 /*
  * A whole number from minimum to maximum, given as a JSON number or as a string of digits ("3"). A value that is not one
  * is refused with the message "<name> must be a whole number from <minimum> to <maximum>, not '<value>'".

@@ -51,21 +51,22 @@ void explain_destroy(Explanation *explanation) {
 /* a - b for rationals, never below 0, in lowest terms; parts that would not fit 64 bits are shifted down together. */
 static void ratio_behind(unsigned long an, unsigned long ad, unsigned long bn, unsigned long bd, unsigned long *num,
                          unsigned long *den) {
-    Wide left = (Wide)an * bd;
-    Wide right = (Wide)bn * ad;
-    Wide denominator = (Wide)ad * bd;
-    Wide numerator = left > right ? left - right : 0;
+    /* the parts of a score are below 2^32, so each product fits 64 bits */
+    unsigned long long left = (unsigned long long)an * bd;
+    unsigned long long right = (unsigned long long)bn * ad;
+    unsigned long long denominator = (unsigned long long)ad * bd;
+    unsigned long long numerator = left > right ? left - right : 0;
     if (denominator == 0) {
         *num = 0;
         *den = 1;
         return;
     }
-    Wide divisor = wide_gcd(numerator, denominator);
+    unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
     if (divisor > 1) {
         numerator /= divisor;
         denominator /= divisor;
     }
-    while (numerator > (Wide)~0UL || denominator > (Wide)~0UL) {
+    while (numerator > (unsigned long long)~0UL || denominator > (unsigned long long)~0UL) {
         numerator >>= 1;
         denominator >>= 1;
     }
@@ -75,7 +76,8 @@ static void ratio_behind(unsigned long an, unsigned long ad, unsigned long bn, u
 
 /* Whether a scores higher than b. */
 static bool scores_higher(const FillConsidered *a, const FillConsidered *b) {
-    return (Wide)a->score_numerator * b->score_denominator > (Wide)b->score_numerator * a->score_denominator;
+    /* the parts of a score are below 2^32, so each product fits 64 bits */
+    return (unsigned long long)a->score_numerator * b->score_denominator > (unsigned long long)b->score_numerator * a->score_denominator;
 }
 
 static void candidate_from(const FillConsidered *from, ExplainCandidate *to) {

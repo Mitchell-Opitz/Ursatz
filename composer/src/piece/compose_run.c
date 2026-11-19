@@ -651,9 +651,9 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             style_context.inner_context = fill.checker_context;
             style_context.style = config->style;
             style_context.weight = config->style_weight;
-            if (style_context.weight.denominator == 0) {
-                style_context.weight.numerator = 1;
-                style_context.weight.denominator = 1;
+            if (style_context.weight.den == 0) {
+                style_context.weight.num = 1;
+                style_context.weight.den = 1;
             }
             fill.checker = style_stage_checker;
             fill.checker_context = &style_context;
@@ -684,10 +684,10 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         /* The style's note density, where the run set none: a cell is a beat, so that many notes to a cell. A melody
            of even notes is found by chance and the rules of the melody can leave none, so the last attempt gives the
            motive's own rhythm back rather than leave the stage open. */
-        ComposerRatio density;
+        Rational density;
         if (melody.density == 0 && attempt + 1 < attempts && config->style &&
             composer_style_density(config->style, &density)) {
-            unsigned long notes = (density.numerator + density.denominator / 2) / density.denominator;
+            unsigned long notes = (density.num + density.den / 2) / density.den;
             melody.density = notes < 1 ? 1 : notes > 4 ? 4 : (unsigned)notes;
         }
         /* The first attempt uses the climax_position of the params (the preferences' melody group); the retries use CLIMAX_RETRIES. */
@@ -991,8 +991,8 @@ static PieceResult run_once(Plan *plan, const ComposeConfig *config, unsigned ch
     run.motives.pool = config->pool;
     run.motives.pool_count = config->pool_count;
     /* At a fast tempo the motive-forms stay closer to the basic idea (R-163). */
-    if (config->tempo.denominator > 0 &&
-        config->tempo.numerator >= (unsigned long)MOTIVE_FAST_TEMPO_QPM * config->tempo.denominator) {
+    if (config->tempo.den > 0 &&
+        config->tempo.num >= (long long)MOTIVE_FAST_TEMPO_QPM * config->tempo.den) {
         run.motives.remoteness_limit.numerator = 1;
         run.motives.remoteness_limit.denominator = 2;
     }

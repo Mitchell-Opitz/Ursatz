@@ -319,9 +319,9 @@ static void composer_bag(const ComposerStyleLabels *labels, Bag *bag) {
     bag_sort(bag);
 }
 
-static bool ratio_is(ComposerRatio ratio, unsigned long numerator, unsigned long denominator) {
-    return ratio.denominator != 0 && (unsigned long long)ratio.numerator * denominator ==
-                                         (unsigned long long)numerator * ratio.denominator;
+static bool ratio_is(Rational ratio, unsigned long numerator, unsigned long denominator) {
+    return ratio.den != 0 && (unsigned long long)ratio.num * denominator ==
+                                         (unsigned long long)numerator * ratio.den;
 }
 
 /* ------------------------------------------------------------------ labels */
@@ -441,14 +441,14 @@ static void write_style(const char *path) {
     plan_destroy(plan);
 }
 
-static ComposerRatio closeness_of(const ComposerStyle *style, const char *const *categories, const char *const *names,
+static Rational closeness_of(const ComposerStyle *style, const char *const *categories, const char *const *names,
                                   size_t count) {
     ComposerStyleLabels *labels = composer_style_labels_create();
     assert(labels);
     for (size_t i = 0; i < count; i++) {
         assert(composer_style_labels_add(labels, categories[i], names[i]));
     }
-    ComposerRatio ratio = {0, 0};
+    Rational ratio = {0, 0};
     assert(composer_style_closeness(style, labels, &ratio));
     composer_style_labels_destroy(labels);
     return ratio;
@@ -566,7 +566,7 @@ typedef struct {
     unsigned long long hash;
 } Run;
 
-static Run compose_sentence(unsigned long seed, const ComposerStyle *style, ComposerRatio weight) {
+static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Rational weight) {
     Motive motive;
     Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
@@ -627,8 +627,8 @@ static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */
     ComposerStyle *style = NULL;
     assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &style) == COMPOSER_STYLE_OK);
-    ComposerRatio none = {0, 0};
-    ComposerRatio zero = {0, 1};
+    Rational none = {0, 0};
+    Rational zero = {0, 1};
     for (unsigned long seed = 1; seed <= 5; seed++) {
         Run unstyled = compose_sentence(seed, NULL, none);
         assert(unstyled.complete && !unstyled.measured);
@@ -698,7 +698,7 @@ static int test_motive_categories(void) {
     assert(composer_style_load_without(CHORALES_MOTIVES, unknown, 1, &refused) == COMPOSER_STYLE_ERR_ARGUMENT && !refused);
     /* a blend has both lists, once each, and counts no category either style was read without */
     ComposerStyle *blend = NULL;
-    ComposerStyleWeights half = composer_style_weights_all((ComposerRatio){1, 2});
+    ComposerStyleWeights half = composer_style_weights_all((Rational){1, 2});
     assert(composer_style_blend(cut, kept, &half, &blend) == COMPOSER_STYLE_OK);
     assert(composer_style_without_count(blend) == 4);
     assert(!composer_style_share(blend, "motive-degrees", "3 5 4 2 1", &share));
@@ -910,7 +910,7 @@ typedef struct {
 
 static Means sweep(const ComposerStyle *style, unsigned long last_seed) {
     Means means = {0.0, 0.0, 0};
-    ComposerRatio none = {0, 0};
+    Rational none = {0, 0};
     for (unsigned long seed = 1; seed <= last_seed; seed++) {
         Run run = compose_sentence(seed, style, none);
         if (run.complete && run.measured) {
@@ -929,7 +929,7 @@ static Means sweep(const ComposerStyle *style, unsigned long last_seed) {
 /* The unstyled runs measured against a style: the distance is measured from the style, not from the composing. */
 static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed) {
     Means means = {0.0, 0.0, 0};
-    ComposerRatio zero = {0, 1};
+    Rational zero = {0, 1};
     for (unsigned long seed = 1; seed <= last_seed; seed++) {
         /* weight 0: the notes of the unstyled run, and the style's distance measured over them */
         Run run = compose_sentence(seed, style, zero);
@@ -1140,12 +1140,12 @@ static int test_brief(void) {
     /* The style reads as the fast, minor, two-notes-a-beat style it was written as. */
     ComposerStyle *style = NULL;
     assert(composer_style_load_without(FAST_MINOR, NULL, 0, &style) == COMPOSER_STYLE_OK);
-    ComposerRatio tempo = {0, 0};
+    Rational tempo = {0, 0};
     const PitchMaterial *mode = NULL;
-    ComposerRatio density = {0, 0};
-    assert(composer_style_tempo(style, &tempo) && tempo.numerator == 170 && tempo.denominator == 1);
+    Rational density = {0, 0};
+    assert(composer_style_tempo(style, &tempo) && tempo.num == 170 && tempo.den == 1);
     assert(composer_style_mode(style, test_materials(), &mode) && mode == test_materials()->natural_minor);
-    assert(composer_style_density(style, &density) && density.numerator == 4 && density.denominator == 2);
+    assert(composer_style_density(style, &density) && density.num == 4 && density.den == 2);
     composer_style_destroy(style);
     /* A style without the categories gives none of them (the fixture is chorales plus the motive categories, with no tempo or density: the
        chorales model re-recorded at P41 B7 holds both, which a style applies as the brief even at weight 0). */

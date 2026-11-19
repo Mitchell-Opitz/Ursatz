@@ -346,13 +346,14 @@ static bool measure(const Plan *plan, LaneSpanId span, const PlanNote *notes, si
 }
 
 /* A fraction in lowest terms and below 2^32 on both sides, as the fill loop compares scores in 64 bits (style_check.c does the same). */
-static void set_reduced(unsigned long *numerator_out, unsigned long *denominator_out, Wide numerator, Wide denominator) {
-    Wide divisor = wide_gcd(numerator, denominator);
+static void set_reduced(unsigned long *numerator_out, unsigned long *denominator_out, unsigned long long numerator,
+                        unsigned long long denominator) {
+    unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
     if (divisor > 1) {
         numerator /= divisor;
         denominator /= divisor;
     }
-    while (numerator >= ((Wide)1 << 32) || denominator >= ((Wide)1 << 32)) {
+    while (numerator >= (1ULL << 32) || denominator >= (1ULL << 32)) {
         numerator >>= 1;
         denominator >>= 1;
     }
@@ -412,20 +413,27 @@ bool grow_fidelity_checker(const Plan *plan, FillTarget target, const FillOperat
     unsigned long quantized = measured.score.numerator * 100 / measured.score.denominator;
     /* The inner share in lowest terms, so the same share ranks the same however a checker wrote it (a style of weight 0 adds
        nothing and must change nothing). */
-    Wide held = out->score_numerator;
-    Wide total = out->score_denominator;
-    Wide divisor = wide_gcd(held, total);
+    unsigned long long held = out->score_numerator;
+    unsigned long long total = out->score_denominator;
+    unsigned long long divisor = rational_gcd_unsigned(held, total);
     if (divisor > 1) {
         held /= divisor;
         total /= divisor;
     }
-    Wide scale = 201 * (total + 1);
-    set_reduced(&out->score_numerator, &out->score_denominator, ((measured.agrees ? 100u : 0u) + (Wide)quantized) * (total + 1) + held,
-                scale);
+    /* The score's parts are below 2^32 (style_check.c and set_reduced keep them so), so each product below fits 64 bits except the style's
+       denominator times the scale, which is brought down a bit at a time when it would not. */
+    unsigned long long scale = 201 * (total + 1);
+    set_reduced(&out->score_numerator, &out->score_denominator,
+                ((measured.agrees ? 100u : 0u) + (unsigned long long)quantized) * (total + 1) + held, scale);
     /* The style's part stays a part of the score: it is scaled as the held share is, held/total over 201 (total + 1). */
     if (out->style_denominator > 0) {
-        set_reduced(&out->style_numerator, &out->style_denominator, (Wide)out->style_numerator * total,
-                    (Wide)out->style_denominator * scale);
+        unsigned long long style_numerator = (unsigned long long)out->style_numerator * total;
+        unsigned long long style_denominator;
+        while (!rational_checked_mul_unsigned(out->style_denominator, scale, &style_denominator)) {
+            style_numerator >>= 1;
+            scale >>= 1;
+        }
+        set_reduced(&out->style_numerator, &out->style_denominator, style_numerator, style_denominator);
     }
     return true;
 }

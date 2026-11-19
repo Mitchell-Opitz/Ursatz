@@ -633,14 +633,14 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     setup->style = state->style;
     setup->without = state->brief.without;
     setup->without_count = state->brief.text.without_count;
-    ComposerRatio option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
+    Rational option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
     status = api_grow_set_tempo_and_mode(setup, has_tempo ? &option_tempo : NULL, error);
     if (status != COMPOSER_OK) {
         return status;
     }
-    if (!has_tempo && setup->tempo.denominator > 0) {
-        outputs->export_options.tempo_numerator = setup->tempo.numerator;
-        outputs->export_options.tempo_denominator = setup->tempo.denominator;
+    if (!has_tempo && setup->tempo.den > 0) {
+        outputs->export_options.tempo_numerator = setup->tempo.num;
+        outputs->export_options.tempo_denominator = setup->tempo.den;
     }
 
     state->material = calloc(1, sizeof(*state->material));

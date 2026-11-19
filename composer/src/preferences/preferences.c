@@ -125,7 +125,7 @@ static bool read_unsigned(const cJSON *item, const char *key, unsigned low, unsi
 }
 
 /* "n/d" with 0 <= n <= d and 1 <= d <= denominator_max, digits only. */
-static bool parse_ratio(const char *text, unsigned long denominator_max, ComposerRatio *out) {
+static bool parse_ratio(const char *text, unsigned long denominator_max, Rational *out) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
     size_t i = 0;
@@ -143,8 +143,8 @@ static bool parse_ratio(const char *text, unsigned long denominator_max, Compose
     if (digits == 0 || text[i] != '\0' || denominator < 1 || denominator > denominator_max || numerator > denominator) {
         return false;
     }
-    out->numerator = numerator;
-    out->denominator = denominator;
+    out->num = numerator;
+    out->den = denominator;
     return true;
 }
 
@@ -206,7 +206,7 @@ static bool read_nct_types(const cJSON *list, MelodyFillParams *melody, const Re
     return true;
 }
 
-static bool read_ratio(const cJSON *item, const char *key, ComposerRatio *out, const Refusal *refusal) {
+static bool read_ratio(const cJSON *item, const char *key, Rational *out, const Refusal *refusal) {
     if (!cJSON_IsString(item) || !parse_ratio(item->valuestring, RATIO_DENOMINATOR_MAX, out)) {
         return refuse_melody(refusal, key, "must be a ratio n/d with 0 <= n <= d and 1 <= d <= 16");
     }
@@ -570,7 +570,7 @@ static bool read_motif_bool(const cJSON *item, const char *key, bool *out, const
 }
 
 static bool read_contrast_fidelity_min(const cJSON *item, MotiveRandomPreferences *motif, const Refusal *refusal) {
-    ComposerRatio ratio;
+    Rational ratio;
     if (!cJSON_IsString(item) || !parse_ratio(item->valuestring, FIDELITY_DENOMINATOR_MAX, &ratio)) {
         return refuse_in(refusal, "motif", "contrast_fidelity_min", "must be a ratio n/d from 0 to 1 with 1 <= d <= 1000");
     }
@@ -712,15 +712,15 @@ static bool read_fidelity_setting(const cJSON *setting, const char *name, GrowDe
         bool known = false;
         for (size_t i = 0; i < ROLE_COUNT && !known; i++) {
             if (strcmp(entry->string, ROLE_KEYS[i].name) == 0) {
-                ComposerRatio ratio;
+                Rational ratio;
                 known = true;
                 if (!cJSON_IsString(entry) || !parse_ratio(entry->valuestring, FIDELITY_DENOMINATOR_MAX, &ratio) ||
-                    ratio.denominator < 1) {
+                    ratio.den < 1) {
                     snprintf(path, sizeof(path), "development/fidelity_minimum/%s/%s", name, entry->string);
                     return refuse(refusal, path, "must be a ratio n/d from 0 to 1 with 1 <= d <= 1000");
                 }
-                table->minimum[development][ROLE_KEYS[i].role].numerator = ratio.numerator;
-                table->minimum[development][ROLE_KEYS[i].role].denominator = ratio.denominator;
+                table->minimum[development][ROLE_KEYS[i].role].numerator = ratio.num;
+                table->minimum[development][ROLE_KEYS[i].role].denominator = ratio.den;
             }
         }
         if (!known) {
@@ -952,9 +952,9 @@ static bool add_number(cJSON *object, const char *name, double value) {
     return cJSON_AddNumberToObject(object, name, value) != NULL;
 }
 
-static bool add_ratio(cJSON *object, const char *name, ComposerRatio ratio) {
+static bool add_ratio(cJSON *object, const char *name, Rational ratio) {
     char text[32];
-    snprintf(text, sizeof(text), "%lu/%lu", ratio.numerator, ratio.denominator);
+    snprintf(text, sizeof(text), "%lld/%lld", ratio.num, ratio.den);
     return cJSON_AddStringToObject(object, name, text) != NULL;
 }
 
@@ -1056,8 +1056,8 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
         }
         ok = ok && add_weighted_list(group, &MOTIF_LISTS[i], motif);
     }
-    snprintf(ratio, sizeof(ratio), "%lu/%lu", motif->contrast_fidelity_min.numerator,
-             motif->contrast_fidelity_min.denominator);
+    snprintf(ratio, sizeof(ratio), "%lld/%lld", motif->contrast_fidelity_min.num,
+             motif->contrast_fidelity_min.den);
     ok = ok && cJSON_AddBoolToObject(group, "avoid_repeats", motif->avoid_repeats) != NULL &&
          add_number(group, "leaps_per_motif", motif->leaps_per_motif) &&
          cJSON_AddBoolToObject(group, "leap_recovery", motif->leap_recovery) != NULL &&

@@ -126,7 +126,7 @@ static int test_statistics(void) {
         composer_style_destroy(blend);
     }
     /* half and half: a label's frequency is the mean of the two */
-    ComposerStyleWeights half = composer_style_weights_all((ComposerRatio){1, 2});
+    ComposerStyleWeights half = composer_style_weights_all((Rational){1, 2});
     ComposerStyle *blend = NULL;
     assert(composer_style_blend(chorales, sonatinas, &half, &blend) == COMPOSER_STYLE_OK);
     StyleStatistic *a = NULL, *b = NULL, *m = NULL;
@@ -201,11 +201,11 @@ static int test_labels(void) {
     ComposerStyle *chorales = load(CHORALES);
     labels = composer_style_labels_create();
     assert(composer_style_labels_add_form(labels, "hybrid", bars, 1));
-    ComposerRatio closeness;
+    Rational closeness;
     assert(composer_style_closeness(chorales, labels, &closeness));
     /* hybrid is the form chorales has most of: 8 of 11, the largest, so 1; a phrase of 4 bars is 13 of 36, the largest, so 1 (re-measured at
        P41 B7 with the re-recorded fixture: it was 9 of 10 and 7 of 8, closeness 15/16) */
-    assert(closeness.numerator == closeness.denominator);
+    assert(closeness.num == closeness.den);
     composer_style_labels_destroy(labels);
     composer_style_destroy(chorales);
     printf("the form labels are the Analyzer's words\n");
@@ -266,7 +266,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, cons
     config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
-    config.style_weight = (ComposerRatio){1, 1};
+    config.style_weight = (Rational){1, 1};
     ComposeOutcome outcome;
     Run run;
     memset(&run, 0, sizeof(run));
