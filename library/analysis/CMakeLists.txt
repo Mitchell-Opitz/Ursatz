@@ -17,9 +17,8 @@ add_library(ursatz_analysis
     voices/outer_voice.c
     voices/voice_separation.c
     harmony/analysis_cadence.c
-    harmony/analysis_cadence_claims.c
+    harmony/analysis_cadence_points.c
     harmony/analysis_cadence_readings.c
-    harmony/analysis_claim.c
     harmony/analysis_function.c
     harmony/analysis_input.c
     harmony/analysis_phrase.c
@@ -115,7 +114,7 @@ ursatz_public_headers(ursatz_analysis
         analysis/voices/outer_voice.h
         analysis/voices/voice_separation.h
         analysis/harmony/analysis_cadence.h
-        analysis/harmony/analysis_cadence_claims.h
+        analysis/harmony/analysis_cadence_points.h
         analysis/harmony/analysis_function.h
         analysis/harmony/analysis_input.h
         analysis/harmony/analysis_phrase.h

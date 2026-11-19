@@ -6,8 +6,6 @@
 
 #include "analysis/harmony/analysis_input.h"
 #include "theory/harmony/harmonic_function.h"
-#include "model/interpretation/interpretation.h"
-#include "model/relationship/relationship.h"
 
 /*
  * Prolongations of tonic and dominant (the standard-harmony analysis adapter, step 4). To prolong a harmony is to
@@ -28,19 +26,9 @@
  * second beginning where the first ends. The existing rules model spans only from
  * one T (or D) to the NEXT, so spans never nest; where a nesting could be read the spans are the outermost
  * single-function ones as found, and none is split.
- *
- * OUTPUT, the durable claim pattern, one pair per interior SEGMENT of a span:
- *   - a Relationship, predicate "prolongs": source = the span's first segment's Sonority id (the prolonged harmony's
- *     first segment), target = the interior segment's Sonority id; scope = a HarmonyProlongationScope (the function,
- *     the closing segment's id, how many interior segments); qualifiers = a HarmonyProlongationReason;
- *   - an Interpretation targeting that Relationship's id (not a segment): FrameworkReference standard-harmony,
- *     claim = a HarmonyProlongationClaim, uncertainty = the largest of the span's runs' input uncertainties.
+ * * OUTPUT, one span per prolongation: its function, its first and closing segments and the interior segments with the reason
+ * each is explained.
  */
-
-#define HARMONY_PROLONGS "prolongs"
-#define HARMONY_PROLONGATION_CLAIM_TYPE "standard-harmony/prolongation"
-#define HARMONY_PROLONGATION_SCOPE_TYPE "standard-harmony/prolongation-scope"
-#define HARMONY_PROLONGATION_REASON_TYPE "standard-harmony/prolongation-reason"
 
 typedef enum {
     HARMONY_PROLONGATION_REASON_PASSING_SIX_FOUR = 0,
@@ -54,28 +42,11 @@ typedef enum {
 const char *harmony_prolongation_reason_name(HarmonyProlongationReason reason);
 
 typedef struct {
-    int function;           /* HarmonicFunction: TONIC or DOMINANT */
-    char closing_segment[96];
-    size_t interior_count;  /* the interior segments of the span */
-} HarmonyProlongationScope;
-
-typedef struct {
-    int reason;             /* HarmonyProlongationReason */
-} HarmonyProlongationReasonValue;
-
-typedef struct {
-    int function;           /* HarmonicFunction */
-    int reason;             /* HarmonyProlongationReason */
-} HarmonyProlongationClaim;
-
-typedef struct {
     HarmonicFunction function;
     size_t first_segment;          /* the first segment of the prolonged harmony */
     size_t closing_segment;        /* the first segment of the closing chord */
     size_t *interior_segments;     /* owned: every segment between them, in order */
     HarmonyProlongationReason *reasons; /* owned: one per interior segment */
-    Relationship **relationships;  /* owned: one per interior segment */
-    Interpretation **interpretations; /* owned: one per relationship, targeting its id */
     size_t interior_count;
 } HarmonyProlongationSpan;
 

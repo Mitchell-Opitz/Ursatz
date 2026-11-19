@@ -6,12 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/core/framework_reference.h"
-#include "model/core/provenance_reference.h"
-#include "model/core/value.h"
-#include "theory/tonality/framework.h"
-#include "model/identity/entity_id.h"
-#include "model/interpretation/uncertainty.h"
 #include "theory/tonality/roman_numeral_analysis_rules.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/tonality/seventh_rules.h"
@@ -21,7 +15,6 @@
 #include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
 
-#define CONFIDENCE_DENOMINATOR 1000000UL
 #define NO_RESOLUTION ((size_t)-1)
 
 
@@ -208,11 +201,6 @@ static double clamp01(double value) {
     return value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
 }
 
-static unsigned long millionths(double confidence) {
-    confidence = clamp01(confidence);
-    return (unsigned long)(confidence * (double)CONFIDENCE_DENOMINATOR + 0.5);
-}
-
 static bool fill_claim(const StandardTonalityRomanReading *reading, StandardTonalityRomanClaim *claim) {
     memset(claim, 0, sizeof(*claim));
     if (!standard_tonality_format_roman_reading(reading, claim->label, sizeof(claim->label))) {
@@ -228,84 +216,6 @@ static bool fill_claim(const StandardTonalityRomanReading *reading, StandardTona
         claim->applied_target_degree = reading->applied_target.degree;
     }
     return true;
-}
-
-/* The Interpretation over the segment's Sonority. Owns nothing the caller passed. */
-static Interpretation *build_interpretation(const char *segment_id, const StandardTonalityRomanClaim *claim_fields,
-                                            double uncertainty_value) {
-    const Framework *framework = standard_tonality_framework();
-    if (framework == NULL) {
-        return NULL;
-    }
-    char interpretation_id_value[256];
-    snprintf(interpretation_id_value, sizeof(interpretation_id_value), "standard-tonality-roman-numeral-%s", segment_id);
-
-    EntityID *interpretation_id = NULL;
-    EntityID *target_id = NULL;
-    EntityID *framework_target_id = NULL;
-    FrameworkReference *framework_reference = NULL;
-    Value *claim = NULL;
-    Uncertainty *uncertainty = NULL;
-    ProvenanceReference *provenance = NULL;
-    Interpretation *interpretation = NULL;
-
-    if (entity_id_create(interpretation_id_value, &interpretation_id) != ENTITY_ID_OK ||
-        entity_id_create(segment_id, &target_id) != ENTITY_ID_OK ||
-        entity_id_create(entity_id_value(framework_id(framework)), &framework_target_id) != ENTITY_ID_OK) {
-        goto fail;
-    }
-    if (framework_reference_create(framework_target_id, &framework_reference) != FRAMEWORK_REFERENCE_OK) {
-        goto fail;
-    }
-    framework_target_id = NULL; /* owned by the reference now */
-    if (value_create(STANDARD_TONALITY_ROMAN_CLAIM_TYPE, claim_fields, sizeof(*claim_fields), &claim) != VALUE_OK ||
-        uncertainty_create_scalar_confidence(millionths(1.0 - uncertainty_value), CONFIDENCE_DENOMINATOR,
-                                             &uncertainty) != UNCERTAINTY_OK ||
-        provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
-        goto fail;
-    }
-    if (interpretation_create(interpretation_id, target_id, claim, NULL, NULL, framework_reference, uncertainty,
-                              "standard-tonality-v1", "roman-numeral-adapter",
-                              INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation) !=
-        INTERPRETATION_OK) {
-        goto fail;
-    }
-    return interpretation;
-
-fail:
-    entity_id_destroy(interpretation_id);
-    entity_id_destroy(target_id);
-    entity_id_destroy(framework_target_id);
-    framework_reference_destroy(framework_reference);
-    value_destroy(claim);
-    uncertainty_destroy(uncertainty);
-    provenance_reference_destroy(provenance);
-    return NULL;
-}
-
-/* The "resolves-to" Relationship from one segment's Sonority to another's. */
-static Relationship *build_resolves_to(const char *source_segment, const char *target_segment) {
-    char relationship_id_value[512];
-    snprintf(relationship_id_value, sizeof(relationship_id_value), "standard-tonality-resolves-to-%s-%s",
-             source_segment, target_segment);
-    EntityID *relationship_id = NULL;
-    EntityID *source = NULL;
-    EntityID *target = NULL;
-    ProvenanceReference *provenance = NULL;
-    Relationship *relationship = NULL;
-    if (entity_id_create(relationship_id_value, &relationship_id) != ENTITY_ID_OK ||
-        entity_id_create(source_segment, &source) != ENTITY_ID_OK ||
-        entity_id_create(target_segment, &target) != ENTITY_ID_OK ||
-        provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK ||
-        relationship_create(relationship_id, source, STANDARD_TONALITY_RESOLVES_TO, target, NULL, NULL, NULL, NULL,
-                            NULL, provenance, &relationship) != RELATIONSHIP_OK) {
-        entity_id_destroy(relationship_id);
-        entity_id_destroy(source);
-        entity_id_destroy(target);
-        provenance_reference_destroy(provenance);
-        return NULL;
-    }
-    return relationship;
 }
 
 StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
@@ -349,7 +259,7 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
         }
     }
 
-    /* Pass 2: the claims and the links. */
+    /* Pass 2: the numerals and the resolutions. */
     for (size_t i = 0; i < count; i++) {
         StandardTonalityRomanResult *result = &results[i];
         if (!result->has_numeral) {
@@ -361,31 +271,14 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
         }
         result->uncertainty =
             clamp01(1.0 - (1.0 - clamp01(inputs[i].chord_uncertainty)) * (1.0 - clamp01(inputs[i].key_uncertainty)));
-        result->interpretation = build_interpretation(inputs[i].segment_id, &result->claim, result->uncertainty);
-        if (result->interpretation == NULL) {
-            standard_tonality_roman_results_destroy(results, count);
-            return STANDARD_TONALITY_ROMAN_ERR_ALLOC;
-        }
-        if (result->reading.applied && result->resolution_index != NO_RESOLUTION) {
-            result->resolves_to = build_resolves_to(inputs[i].segment_id, inputs[result->resolution_index].segment_id);
-            if (result->resolves_to == NULL) {
-                standard_tonality_roman_results_destroy(results, count);
-                return STANDARD_TONALITY_ROMAN_ERR_ALLOC;
-            }
-        }
+        result->resolved = result->reading.applied && result->resolution_index != NO_RESOLUTION;
     }
     *out = results;
     return STANDARD_TONALITY_ROMAN_OK;
 }
 
 void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *results, size_t count) {
-    if (results == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        interpretation_destroy(results[i].interpretation);
-        relationship_destroy(results[i].resolves_to);
-    }
+    (void)count;
     free(results);
 }
 

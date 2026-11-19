@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "analysis/harmony/analysis_input.h"
-#include "model/interpretation/interpretation.h"
 #include "theory/harmony/phrase_model_label.h"
 #include "theory/vocabulary/cadence_type.h"
 
@@ -35,12 +34,8 @@
  *   Te   the tonic of an authentic cadence; a half cadence has none
  *
  * A phrase that does not end as its cadence says, has an invalid chord list, or has more than
- * HARMONY_PHRASE_LABELS_MAX chords gets no labels (labeled false for it). Each labeled segment gets one
- * Interpretation: target = the segment's Sonority id, FrameworkReference standard-harmony, claim = a
- * HarmonyPhraseLabelClaim, the segment's uncertainty.
+ * HARMONY_PHRASE_LABELS_MAX chords gets no labels (labeled false for it). Each labeled segment has_label.
  */
-
-#define HARMONY_PHRASE_LABEL_CLAIM_TYPE "standard-harmony/phrase-model-label"
 
 typedef struct {
     size_t first_segment;
@@ -49,16 +44,10 @@ typedef struct {
 } HarmonyPhraseSpan;
 
 typedef struct {
-    int label;           /* PhraseModelLabel */
-    int phrase_index;    /* the index of the span in the caller's list */
-} HarmonyPhraseLabelClaim;
-
-typedef struct {
     const char *segment_id;       /* borrowed from the input */
-    bool has_label;               /* false: no Interpretation */
+    bool has_label;               /* false: no label */
     PhraseModelLabel label;
     int phrase_index;             /* the span the segment is in, or -1 outside every span */
-    Interpretation *interpretation; /* owned; NULL when !has_label */
 } HarmonyPhraseLabelResult;
 
 typedef struct {

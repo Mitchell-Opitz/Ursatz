@@ -67,7 +67,7 @@ static void test_minor_key_leading_tone(void) {
     fixture_destroy(&f);
 }
 
-static void test_uncertainty_and_framework_carry_through(void) {
+static void test_uncertainty_carries_through(void) {
     Fixture f;
     fixture_init(&f);
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7)->uncertainty = 0.25;
@@ -75,11 +75,7 @@ static void test_uncertainty_and_framework_carry_through(void) {
     assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
     HarmonyFunctionResult *results = NULL;
     assert(harmony_analysis_assign_functions(segments, f.count, &results) == HARMONY_FUNCTION_OK);
-    const Interpretation *interpretation = results[0].interpretation;
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "seg-0") == 0);
-    assert(interpretation_framework_reference(interpretation) != NULL);
-    const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_scalar_confidence_numerator(uncertainty) == 750000UL);
+    assert(results[0].has_function && strcmp(results[0].segment_id, "seg-0") == 0);
     assert(fabs(results[0].uncertainty - 0.25) < 1e-12);
     harmony_function_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
@@ -99,7 +95,7 @@ static void test_segments_that_are_not_chords_pass_through(void) {
     HarmonyFunctionResult *results = NULL;
     assert(harmony_analysis_assign_functions(segments, f.count, &results) == HARMONY_FUNCTION_OK);
     for (size_t i = 0; i < f.count; i++) {
-        assert(!segments[i].valid && !results[i].has_function && results[i].interpretation == NULL);
+        assert(!segments[i].valid && !results[i].has_function);
     }
     harmony_function_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
@@ -113,7 +109,7 @@ int main(void) {
     test_diatonic_functions();
     test_applied_chord_is_dominant_toward_its_target();
     test_minor_key_leading_tone();
-    test_uncertainty_and_framework_carry_through();
+    test_uncertainty_carries_through();
     test_segments_that_are_not_chords_pass_through();
     printf("standard-harmony analysis function: all tests passed\n");
     return 0;

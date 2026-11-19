@@ -188,13 +188,13 @@ static void test_no_match_segment_gives_no_numeral(void) {
     }
     StandardTonalityRomanResult *results = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(inputs, count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
-    assert(count == 1 && !results[0].has_numeral && results[0].interpretation == NULL);
+    assert(count == 1 && !results[0].has_numeral);
     assert(strcmp(results[0].segment_id, "unmatched") == 0);
     standard_tonality_roman_results_destroy(results, count);
     standard_tonality_chord_inputs_destroy(inputs);
 }
 
-static void test_interpretation_and_uncertainty(void) {
+static void test_numeral_and_uncertainty(void) {
     StandardTonalityChordInput input = chord_in(7, 11, ADAPTER_DOMINANT_SEVENTH, 4, 0, C_MAJOR);
     input.segment_id = "sonority-12";
     input.chord_uncertainty = 0.2;
@@ -206,14 +206,7 @@ static void test_interpretation_and_uncertainty(void) {
     /* 1 - (1 - 0.2)(1 - 0.5) = 0.6 */
     assert(fabs(results[0].uncertainty - 0.6) < 1e-9);
 
-    const Interpretation *interpretation = results[0].interpretation;
-    assert(interpretation != NULL);
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "sonority-12") == 0);
-    assert(interpretation_framework_reference(interpretation) != NULL);
-    const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_SCALAR_CONFIDENCE);
-    assert(uncertainty_scalar_confidence_numerator(uncertainty) == 400000UL);
-    assert(uncertainty_scalar_confidence_denominator(uncertainty) == 1000000UL);
+    assert(strcmp(results[0].segment_id, "sonority-12") == 0);
     standard_tonality_roman_results_destroy(results, 1);
 
     /* Either source of uncertainty alone carries through; none gives full confidence. */
@@ -236,7 +229,7 @@ int main(void) {
     test_identified_applied_chords_read_directly();
     test_key_boundary_switches_the_numeral_key();
     test_no_match_segment_gives_no_numeral();
-    test_interpretation_and_uncertainty();
+    test_numeral_and_uncertainty();
     printf("standard-tonality roman numeral adapter: all tests passed\n");
     return 0;
 }

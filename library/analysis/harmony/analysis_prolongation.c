@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/harmony/analysis_claim.h"
 #include "analysis/harmony/analysis_six_four.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/value.h"
@@ -127,18 +126,8 @@ static bool explained(const Run *before, const Run *middle, const Run *after, bo
 }
 
 static void free_span(HarmonyProlongationSpan *span) {
-    for (size_t i = 0; i < span->interior_count; i++) {
-        if (span->relationships != NULL) {
-            relationship_destroy(span->relationships[i]);
-        }
-        if (span->interpretations != NULL) {
-            interpretation_destroy(span->interpretations[i]);
-        }
-    }
     free(span->interior_segments);
     free(span->reasons);
-    free(span->relationships);
-    free(span->interpretations);
     memset(span, 0, sizeof(*span));
 }
 
@@ -152,65 +141,6 @@ void harmony_prolongations_destroy(HarmonyProlongations *prolongations) {
     free(prolongations->spans);
     prolongations->spans = NULL;
     prolongations->count = 0;
-}
-
-static bool make_pair(const HarmonySegment *segments, const Run *first_run, const HarmonyProlongationSpan *span,
-                      size_t k, double uncertainty, Relationship **relationship, Interpretation **interpretation) {
-    const char *source = segments[span->first_segment].input->segment.id;
-    const char *target = segments[span->interior_segments[k]].input->segment.id;
-    (void)first_run;
-    char relationship_id_value[512];
-    snprintf(relationship_id_value, sizeof(relationship_id_value), "standard-harmony-prolongs-%s-%s", source, target);
-
-    HarmonyProlongationScope scope;
-    memset(&scope, 0, sizeof(scope));
-    scope.function = (int)span->function;
-    snprintf(scope.closing_segment, sizeof(scope.closing_segment), "%s",
-             segments[span->closing_segment].input->segment.id);
-    scope.interior_count = span->interior_count;
-    HarmonyProlongationReasonValue reason_value;
-    memset(&reason_value, 0, sizeof(reason_value));
-    reason_value.reason = (int)span->reasons[k];
-
-    EntityID *relationship_id = NULL;
-    EntityID *source_id = NULL;
-    EntityID *target_id = NULL;
-    Value *scope_value = NULL;
-    Value *qualifiers = NULL;
-    ProvenanceReference *provenance = NULL;
-    if (entity_id_create(relationship_id_value, &relationship_id) != ENTITY_ID_OK ||
-        entity_id_create(source, &source_id) != ENTITY_ID_OK ||
-        entity_id_create(target, &target_id) != ENTITY_ID_OK ||
-        value_create(HARMONY_PROLONGATION_SCOPE_TYPE, &scope, sizeof(scope), &scope_value) != VALUE_OK ||
-        value_create(HARMONY_PROLONGATION_REASON_TYPE, &reason_value, sizeof(reason_value), &qualifiers) !=
-            VALUE_OK ||
-        provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK ||
-        relationship_create(relationship_id, source_id, HARMONY_PROLONGS, target_id, scope_value, NULL, qualifiers,
-                            NULL, NULL, provenance, relationship) != RELATIONSHIP_OK) {
-        entity_id_destroy(relationship_id);
-        entity_id_destroy(source_id);
-        entity_id_destroy(target_id);
-        value_destroy(scope_value);
-        value_destroy(qualifiers);
-        provenance_reference_destroy(provenance);
-        return false;
-    }
-
-    HarmonyProlongationClaim claim;
-    memset(&claim, 0, sizeof(claim));
-    claim.function = (int)span->function;
-    claim.reason = (int)span->reasons[k];
-    char interpretation_id[512];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-harmony-prolongation-%s-%s", source, target);
-    *interpretation = harmony_analysis_make_interpretation(interpretation_id, relationship_id_value,
-                                                           HARMONY_PROLONGATION_CLAIM_TYPE, &claim, sizeof(claim),
-                                                           uncertainty, "prolongation-adapter");
-    if (*interpretation == NULL) {
-        relationship_destroy(*relationship);
-        *relationship = NULL;
-        return false;
-    }
-    return true;
 }
 
 /* A span from run `i` to the next run of the same function `j`; false if the interior is not all explained. */
@@ -229,14 +159,10 @@ static bool try_span(const HarmonySegment *segments, const Run *runs, size_t i, 
     if (run_reasons == NULL) {
         return false;
     }
-    double uncertainty = runs[i].uncertainty > runs[j].uncertainty ? runs[i].uncertainty : runs[j].uncertainty;
     bool ok = true;
     for (size_t m = i + 1; m < j && ok; m++) {
         /* the tonic line is a three-chord progression: it is the first run, one interior run, the closing run */
         ok = explained(m == i + 1 ? &runs[i] : NULL, &runs[m], &runs[j], m + 1 == j, function, &run_reasons[m - i]);
-        if (runs[m].uncertainty > uncertainty) {
-            uncertainty = runs[m].uncertainty;
-        }
     }
     if (!ok) {
         free(run_reasons);
@@ -245,10 +171,7 @@ static bool try_span(const HarmonySegment *segments, const Run *runs, size_t i, 
     span->interior_count = segment_total;
     span->interior_segments = (size_t *)calloc(segment_total, sizeof(size_t));
     span->reasons = (HarmonyProlongationReason *)calloc(segment_total, sizeof(HarmonyProlongationReason));
-    span->relationships = (Relationship **)calloc(segment_total, sizeof(Relationship *));
-    span->interpretations = (Interpretation **)calloc(segment_total, sizeof(Interpretation *));
-    if (span->interior_segments == NULL || span->reasons == NULL || span->relationships == NULL ||
-        span->interpretations == NULL) {
+    if (span->interior_segments == NULL || span->reasons == NULL) {
         free(run_reasons);
         free_span(span);
         return false;
@@ -262,13 +185,6 @@ static bool try_span(const HarmonySegment *segments, const Run *runs, size_t i, 
         }
     }
     free(run_reasons);
-    for (k = 0; k < segment_total; k++) {
-        if (!make_pair(segments, &runs[i], span, k, uncertainty, &span->relationships[k], &span->interpretations[k])) {
-            span->interior_count = k; /* free only what was built */
-            free_span(span);
-            return false;
-        }
-    }
     return true;
 }
 

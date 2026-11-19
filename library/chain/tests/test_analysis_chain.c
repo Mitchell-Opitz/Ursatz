@@ -338,7 +338,7 @@ static void digest_cadences(Digest *d, const AnalysisChain *c) {
         digest_int(d, a->share);
         digest_span(d, &a->span);
         digest_int(d, a->alternative.share);
-        digest_int(d, a->alternative.interpretation != NULL);
+        digest_int(d, a->alternative.present);
     }
 }
 

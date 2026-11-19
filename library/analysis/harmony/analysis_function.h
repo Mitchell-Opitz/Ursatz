@@ -5,40 +5,28 @@
 #include <stddef.h>
 
 #include "analysis/harmony/analysis_input.h"
-#include "model/interpretation/interpretation.h"
 #include "theory/harmony/harmonic_function.h"
 
 /*
- * Harmonic function per segment (the standard-harmony analysis adapter, step 1). One Interpretation per valid
- * segment: target = the segment's Sonority id, FrameworkReference standard-harmony, claim = a
- * HarmonyFunctionClaim, the uncertainty carried from the input.
+ * Harmonic function per segment (the standard-harmony analysis adapter, step 1). One result per prepared segment:
+ * the function of a valid chord, the uncertainty carried from the input.
  *
  * The function is the existing rules': harmony_function_of (harmony_functions.h) for a diatonic chord, by the
  * scale degree of its root (I tonic; ii IV strong and iii vi weak predominants; V vii dominant; the inversion does
  * not change it), and harmony_applied_function (harmony_applied.h) for an applied chord, which is DOMINANT toward
- * its target: the claim records function DOMINANT, applied true and applied_to the target's degree (and the kind).
+ * its target: the result records function DOMINANT, applied true and applied_to the target's degree.
  *
  * A segment that is not a valid chord, or whose chord the rules give no function (never the case for a valid
- * chord), has no Interpretation.
+ * chord), has no function (has_function false).
  */
-
-#define HARMONY_FUNCTION_CLAIM_TYPE "standard-harmony/harmonic-function"
-
-typedef struct {
-    int function;      /* HarmonicFunction */
-    bool applied;      /* an applied chord: dominant toward applied_to */
-    int applied_to;    /* the target's scale degree, 1..7; 0 when not applied */
-    int applied_kind;  /* AppliedChordKind; meaningful only when applied */
-} HarmonyFunctionClaim;
 
 typedef struct {
     const char *segment_id;       /* borrowed from the input */
-    bool has_function;            /* false: no Interpretation */
+    bool has_function;            /* false: no function */
     HarmonicFunction function;
     bool applied;
     int applied_to;
     double uncertainty;           /* the input's */
-    Interpretation *interpretation; /* owned; NULL when !has_function */
 } HarmonyFunctionResult;
 
 typedef enum {

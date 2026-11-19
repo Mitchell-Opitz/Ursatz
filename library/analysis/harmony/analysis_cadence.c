@@ -7,7 +7,6 @@
 
 #include "analysis/harmony/analysis_cadence_build.h"
 #include "analysis/harmony/analysis_cadence_readings.h"
-#include "analysis/harmony/analysis_claim.h"
 #include "analysis/harmony/analysis_runs.h"
 #include "model/core/value.h"
 #include "theory/harmony/harmony_cadence_rules.h"
@@ -402,36 +401,10 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     /* cadence_create took ownership of the ids; the array itself is ours */
     free(event_ids);
 
-    HarmonyCadenceClaim claim;
-    memset(&claim, 0, sizeof(claim));
-    claim.type = (int)c->type;
-    claim.soprano_degree = c->soprano_degree;
-    claim.post_cadential = c->post_cadential;
-    claim.has_six_four = c->has_six_four;
-    claim.arrival_beat_strength = (int)arrival->segment.strength;
-    claim.reading = (int)HARMONY_CADENCE_READING_CADENCE;
-    claim.rank = 1;
-    claim.share = c->share;
-    snprintf(claim.arrival_segment, sizeof(claim.arrival_segment), "%s", arrival->segment.id);
-    snprintf(claim.dominant_segment, sizeof(claim.dominant_segment), "%s",
-             segments[c->dominant_first].input->segment.id);
-    snprintf(claim.key_ref, sizeof(claim.key_ref), "%s", arrival->key_ref);
     result->share = c->share;
-    char interpretation_id[256];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-harmony-cadence-interpretation-%s",
-             arrival->segment.id);
-    result->interpretation = harmony_analysis_make_interpretation(interpretation_id, cadence_id_value,
-                                                                  HARMONY_CADENCE_CLAIM_TYPE, &claim, sizeof(claim),
-                                                                  result->uncertainty, "cadence-adapter");
-    if (result->interpretation == NULL) {
-        cadence_destroy(result->cadence);
-        result->cadence = NULL;
-        return false;
-    }
 
-    /* the competing reading: the same Cadence, the same uncertainty formula, its own arrival and share */
+    /* the competing reading: the same Cadence, its own arrival and share */
     if (c->has_alt) {
-        const HarmonySegmentInput *alt_arrival = segments[c->alt_arrival_first].input;
         HarmonyCadenceAlternative *alt = &result->alternative;
         alt->present = true;
         alt->reading = c->alt_reading;
@@ -440,38 +413,11 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
         alt->arrival_last = c->alt_arrival_last;
         alt->soprano_degree = c->alt_soprano_degree;
         alt->share = 1000 - c->share;
-        double alt_u = max_uncertainty(segments, c->dominant_first, c->dominant_last, 0.0);
-        alt_u = max_uncertainty(segments, c->alt_arrival_first, c->alt_arrival_last, alt_u);
-        alt_u = 1.0 - (1.0 - alt_u) * (1.0 - c->alt_penalty);
-
-        HarmonyCadenceClaim alt_claim = claim;
-        alt_claim.type = (int)c->alt_type;
-        alt_claim.soprano_degree = c->alt_soprano_degree;
-        alt_claim.arrival_beat_strength = (int)alt_arrival->segment.strength;
-        alt_claim.reading = (int)c->alt_reading;
-        alt_claim.rank = 2;
-        alt_claim.share = alt->share;
-        snprintf(alt_claim.arrival_segment, sizeof(alt_claim.arrival_segment), "%s", alt_arrival->segment.id);
-        char alt_id[300];
-        snprintf(alt_id, sizeof(alt_id), "%s-alt", interpretation_id);
-        alt->interpretation = harmony_analysis_make_interpretation(alt_id, cadence_id_value, HARMONY_CADENCE_CLAIM_TYPE,
-                                                                   &alt_claim, sizeof(alt_claim), alt_u,
-                                                                   "cadence-adapter");
-        if (alt->interpretation == NULL) {
-            interpretation_destroy(result->interpretation);
-            result->interpretation = NULL;
-            cadence_destroy(result->cadence);
-            result->cadence = NULL;
-            memset(alt, 0, sizeof(*alt));
-            return false;
-        }
     }
     return true;
 }
 
 static void destroy_result(HarmonyCadenceResult *result) {
-    interpretation_destroy(result->alternative.interpretation);
-    interpretation_destroy(result->interpretation);
     cadence_destroy(result->cadence);
     memset(result, 0, sizeof(*result));
 }

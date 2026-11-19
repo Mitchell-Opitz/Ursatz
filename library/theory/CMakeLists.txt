@@ -199,7 +199,6 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_framework.h
         theory/tonality/common_practice_materials.h
-        theory/tonality/framework.h
         theory/tonality/interval.h
         theory/tonality/key_vocabulary.h
         theory/tonality/region_relation.h

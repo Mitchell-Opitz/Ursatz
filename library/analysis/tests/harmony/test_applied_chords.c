@@ -3,7 +3,6 @@
 #include "analysis/tests/harmony/adapter_test_util.h"
 #include "analysis/harmony/applied_chords.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
-#include "relationship_test_access.h"
 #include "test_knowledge.h"
 
 /* Applied chords: the diatonic reading is re-checked against V/x, V7/x, vii-diminished/x and the fully
@@ -62,14 +61,11 @@ static void test_v_of_v_resolving_to_v_is_relabelled(void) {
     assert(results[0].claim.applied_kind == (int)APPLIED_CHORD_KIND_SECONDARY_DOMINANT);
     assert(!results[0].deceptive && results[0].resolution_index == 1);
 
-    /* The link to the resolution segment is a Relationship, predicate "resolves-to". */
-    assert(results[0].resolves_to != NULL);
-    assert(strcmp(relationship_predicate_name(results[0].resolves_to), "resolves-to") == 0);
-    assert(strcmp(entity_id_value(relationship_source_id(results[0].resolves_to)), "s1") == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(results[0].resolves_to)), "s2") == 0);
+    /* The result names the resolution segment (s2). */
+    assert(results[0].resolved);
 
     /* The resolution itself is the plain V and carries no link. */
-    assert(strcmp(results[1].claim.label, "V") == 0 && results[1].resolves_to == NULL);
+    assert(strcmp(results[1].claim.label, "V") == 0 && !results[1].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 }
 
@@ -81,7 +77,7 @@ static void test_same_chromatic_chord_not_resolving_keeps_diatonic_label(void) {
     inputs[1] = make_input("s2", 0, 0, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR); /* to C: not G */
 
     StandardTonalityRomanResult *results = run(inputs, 2, NULL);
-    assert(strcmp(results[0].claim.label, "ii") == 0 && !results[0].reading.applied && results[0].resolves_to == NULL);
+    assert(strcmp(results[0].claim.label, "ii") == 0 && !results[0].reading.applied && !results[0].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 
     /* The last segment has nothing to resolve to. */
@@ -273,30 +269,29 @@ static void test_identified_applied_chord_link_only_when_resolved(void) {
     inputs[1] = make_input("s2", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR); /* G major */
     StandardTonalityRomanResult *results = run(inputs, 2, NULL);
     assert(results[0].has_numeral && strcmp(results[0].claim.label, "V/V") == 0 && results[0].reading.applied);
-    assert(results[0].resolves_to != NULL && results[0].resolution_index == 1 && !results[0].deceptive);
-    assert(strcmp(entity_id_value(relationship_target_id(results[0].resolves_to)), "s2") == 0);
-    assert(strcmp(results[1].claim.label, "V") == 0 && results[1].resolves_to == NULL);
+    assert(results[0].resolved && results[0].resolution_index == 1 && !results[0].deceptive);
+    assert(strcmp(results[1].claim.label, "V") == 0 && !results[1].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 
     inputs[1] = make_input("s2", 4, 4, ADAPTER_MINOR_TRIAD, 3, 0, C_MAJOR); /* E minor: vi of G */
     results = run(inputs, 2, NULL);
-    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolves_to != NULL);
+    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolved);
     assert(results[0].resolution_index == 1 && results[0].deceptive);
     standard_tonality_roman_results_destroy(results, 2);
 
     inputs[1] = make_input("s2", 5, 5, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR); /* F major: no resolution */
     results = run(inputs, 2, NULL);
-    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].reading.applied && results[0].resolves_to == NULL);
+    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].reading.applied && !results[0].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 
     /* Nothing after it, or a next segment with no numeral: applied, no link. */
     results = run(inputs, 1, NULL);
-    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolves_to == NULL);
+    assert(strcmp(results[0].claim.label, "V/V") == 0 && !results[0].resolved);
     standard_tonality_roman_results_destroy(results, 1);
     inputs[1] = make_input("s2", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR);
     inputs[1].has_numeral = false;
     results = run(inputs, 2, NULL);
-    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolves_to == NULL);
+    assert(strcmp(results[0].claim.label, "V/V") == 0 && !results[0].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 
     /* A repeat of the chord is looked through. */
@@ -306,8 +301,8 @@ static void test_identified_applied_chord_link_only_when_resolved(void) {
     repeated[1].segment_id = "s1b";
     repeated[2] = make_input("s3", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR);
     results = run(repeated, 3, NULL);
-    assert(results[0].resolves_to != NULL && results[0].resolution_index == 2);
-    assert(results[1].resolves_to != NULL && results[1].resolution_index == 2);
+    assert(results[0].resolved && results[0].resolution_index == 2);
+    assert(results[1].resolved && results[1].resolution_index == 2);
     standard_tonality_roman_results_destroy(results, 3);
 }
 
@@ -325,7 +320,7 @@ static void test_recheck_diatonic_switch(void) {
     StandardTonalityAppliedConfig config = standard_tonality_applied_config_default();
     assert(config.recheck_diatonic);
     StandardTonalityRomanResult *results = run(inputs, 2, &config);
-    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolves_to != NULL);
+    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolved);
     standard_tonality_roman_results_destroy(results, 2);
     results = run(inputs, 2, NULL);
     assert(strcmp(results[0].claim.label, "V/V") == 0);
@@ -333,7 +328,7 @@ static void test_recheck_diatonic_switch(void) {
 
     config.recheck_diatonic = false;
     results = run(inputs, 2, &config);
-    assert(strcmp(results[0].claim.label, "ii") == 0 && !results[0].reading.applied && results[0].resolves_to == NULL);
+    assert(strcmp(results[0].claim.label, "ii") == 0 && !results[0].reading.applied && !results[0].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 
     /* The re-check itself declines too. */
@@ -354,7 +349,7 @@ static void test_recheck_diatonic_switch(void) {
     standard_tonality_roman_results_destroy(results, 2);
     config.recheck_diatonic = false;
     results = run(inputs, 2, &config);
-    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolves_to != NULL);
+    assert(strcmp(results[0].claim.label, "V/V") == 0 && results[0].resolved);
     standard_tonality_roman_results_destroy(results, 2);
 }
 

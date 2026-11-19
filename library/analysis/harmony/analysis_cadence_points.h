@@ -1,9 +1,9 @@
-#ifndef URSATZ_FRAMEWORKS_STANDARD_HARMONY_ANALYSIS_ANALYSIS_CADENCE_CLAIMS_H
-#define URSATZ_FRAMEWORKS_STANDARD_HARMONY_ANALYSIS_ANALYSIS_CADENCE_CLAIMS_H
+#ifndef URSATZ_FRAMEWORKS_STANDARD_HARMONY_ANALYSIS_ANALYSIS_CADENCE_POINTS_H
+#define URSATZ_FRAMEWORKS_STANDARD_HARMONY_ANALYSIS_ANALYSIS_CADENCE_POINTS_H
 
 /*
- * Half cadences a phrase may end on, and the cadences claimed at phrase points (R-390). Nothing in the analysis chain
- * calls these yet.
+ * Half cadences a phrase may end on, and the cadences taken at phrase points (R-390). The chain's phrase-first stage runs
+ * them. (This file was analysis_cadence_claims.h before P62 B11; it never built a claim of its own.)
  */
 
 #include <stdbool.h>
@@ -17,7 +17,7 @@
  * when a tonic or a predominant comes before it and it falls on a cadence point, and drops a V that a later cadence
  * resolves. A phrase on a grid may still end on such a V, so these are the HALF results the grid may end on, beside
  * the found ones. Each is built as harmony_analysis_add_boundary_cadences builds its half reading: the Cadence shell,
- * the Interpretation, the uncertainty of the chords it spans, share 1000 and no alternative. The results are in
+ * the uncertainty of the chords it spans, share 1000 and no alternative. The results are in
  * order of arrival. A measure is the one in a segment's MetricalPosition; a downbeat is offset 0.
  *
  *   END ON V      for each found result whose primary type is PERFECT_AUTHENTIC, IMPERFECT_AUTHENTIC,
@@ -42,13 +42,13 @@ HarmonyCadenceAnalysisStatus harmony_analysis_half_readings(const HarmonySegment
                                                             const HarmonyCadences *found, HarmonyCadences *out);
 
 /*
- * CADENCES CLAIMED AT PHRASE POINTS (harmony_analysis_claim_cadences). A phrase point is a measure where a phrase may
+ * CADENCES AT PHRASE POINTS (harmony_analysis_cadences_at_points). A phrase point is a measure where a phrase may
  * end: a unit's last measure (`unit_end`), or the last measure of the first half of a unit of 8 or 16 (a half point).
  * `unit` numbers the unit, shared by the half point and the end of the same unit. `section_follows` marks a unit end
  * after which the next unit starts on the next measure (not elided). The points are data; where they come from is
  * not decided here. Measures are those of the segments' MetricalPositions.
  *
- * The claims are the cadences that end phrases: the found ones (harmony_analysis_find_cadences) and the readings
+ * The cadences taken are those that end phrases: the found ones (harmony_analysis_find_cadences) and the readings
  * (harmony_analysis_half_readings), taken at the points and no others. The steps:
  *
  *   a. The POINT of a result is the measure of its arrival's first segment; when that is no point and the window of
@@ -81,7 +81,7 @@ typedef struct {
     bool section_follows;
 } HarmonyPhrasePoint;
 
-HarmonyCadenceAnalysisStatus harmony_analysis_claim_cadences(const HarmonySegment *segments, size_t count,
+HarmonyCadenceAnalysisStatus harmony_analysis_cadences_at_points(const HarmonySegment *segments, size_t count,
                                                              const HarmonyCadenceConfig *config,
                                                              const HarmonyCadences *found,
                                                              const HarmonyCadences *readings,

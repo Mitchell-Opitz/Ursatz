@@ -100,7 +100,7 @@ section start at each key region that returns to the home key.
 
 ## Half readings and cadences claimed at phrase points
 
-`analysis_cadence_claims.h` (R-390). Nothing in the analysis chain calls these yet; the chain's phrase-first stage will.
+`analysis_cadence_points.h` (R-390). Nothing in the analysis chain calls these yet; the chain's phrase-first stage will.
 Measures are those of the segments' `MetricalPosition`s; a downbeat is offset 0.
 
 `harmony_analysis_half_readings` offers the half cadences a phrase may end on, beside the cadences found. Each is built as
@@ -116,7 +116,7 @@ order of arrival. Two kinds:
 
 A reading whose arrival is a found HALF's arrival is left out.
 
-`harmony_analysis_claim_cadences` takes `HarmonyPhrasePoint`s (a measure; `unit_end`: a unit's last measure, else the last
+`harmony_analysis_cadences_at_points` takes `HarmonyPhrasePoint`s (a measure; `unit_end`: a unit's last measure, else the last
 measure of the first half of a unit of 8 or 16; `unit`; `section_follows`: the next unit starts on the next measure) and
 returns the cadences that end phrases, as copies, in order of arrival:
 
@@ -134,4 +134,4 @@ returns the cadences that end phrases, as copies, in order of arrival:
    closing V to I bars give one closing cadence.
 6. A post-cadential plagal directly after a kept PAC is kept. Nothing else is.
 
-No points give no cadences. Tests: `analysis/tests/harmony/test_analysis_cadence_claims.c`.
+No points give no cadences. Tests: `analysis/tests/harmony/test_analysis_cadence_points.c`.

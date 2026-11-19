@@ -4,7 +4,6 @@
 #include "analysis/tests/harmony/analysis_test_util.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/tuning_system.h"
-#include "interpretation_test_access.h"
 
 /* Seventh and leading tone resolution on separated voices. The fixture's segments are quarter notes; each test gives a
    chord per segment (degree, intervals, inversion) and the four voices' MIDI pitches, top voice first. */
@@ -103,10 +102,6 @@ static void test_an_unresolved_seventh_is_flagged(void) {
     const HarmonyResolutionResult *r = &found.items[0];
     assert(r->rule == HARMONY_RESOLUTION_SEVENTH_RESOLVES_DOWN && r->voice == 1 && !r->satisfied);
     assert(r->segment_from == 0 && r->segment_to == 1);
-    assert(structure_event_id_count(r->shell) == 2);
-    assert(strcmp(entity_id_value(interpretation_target_id(r->interpretation)),
-                  entity_id_value(entity_id(structure_entity(r->shell)))) == 0);
-    assert(interpretation_framework_reference(r->interpretation) != NULL);
     harmony_resolutions_destroy(&found);
     harmony_analysis_destroy(segments);
     voices_destroy(&v);

@@ -12,7 +12,7 @@
 #include "model/time/time_span.h"
 #include "analysis/form/analysis_phrase_grid.h"
 #include "analysis/form/analysis_repeats.h"
-#include "analysis/harmony/analysis_cadence_claims.h"
+#include "analysis/harmony/analysis_cadence_points.h"
 #include "chain/form_bridge.h"
 #include "chain/kernel_owners.h"
 #include "theory/tonality/common_practice_materials.h"
@@ -379,7 +379,7 @@ static AnalysisChainStatus claim_cadences_on_grid(AnalysisChain *chain, int last
         bool follows = u + 1 < p->grid.count && !p->grid.units[u + 1].elided && p->grid.units[u + 1].first_measure == unit->last_measure + 1;
         points[point_count++] = (HarmonyPhrasePoint){unit->last_measure, true, u, follows};
     }
-    if (harmony_analysis_claim_cadences(p->prepared, chain->count, &chain->config.cadences, &p->cadences, &readings, points, point_count,
+    if (harmony_analysis_cadences_at_points(p->prepared, chain->count, &chain->config.cadences, &p->cadences, &readings, points, point_count,
                                         &claimed) != HARMONY_CADENCE_ANALYSIS_OK) {
         goto done;
     }

@@ -9,10 +9,10 @@
 
 /*
  * Building cadence results from plain data, for the files that make cadences beside analysis_cadence.c (the half
- * readings and the claims at phrase points, analysis_cadence_claims.h). A HarmonyCadenceSpec holds what the result
+ * readings and the cadences at phrase points, analysis_cadence_points.h). A HarmonyCadenceSpec holds what the result
  * builder reads: the type, the dominant, a cadential 6/4, the arrival, the soprano degree and the competing reading.
  * The result built from it is the one harmony_analysis_find_cadences builds from the same data: the Cadence shell, the
- * Interpretation and the uncertainty by the formula in analysis_cadence.h.
+ * uncertainty by the formula in analysis_cadence.h.
  */
 
 typedef struct {

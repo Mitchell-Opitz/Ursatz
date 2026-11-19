@@ -1,4 +1,4 @@
-#include "analysis/harmony/analysis_cadence_claims.h"
+#include "analysis/harmony/analysis_cadence_points.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -169,7 +169,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_half_readings(const HarmonySegment
     return HARMONY_CADENCE_ANALYSIS_OK;
 }
 
-/* --- claims --- */
+/* --- cadences at phrase points --- */
 
 typedef struct {
     HarmonyCadenceResult *result; /* in the working sets; NULL once taken */
@@ -450,7 +450,7 @@ static int compare_arrival(const void *x, const void *y) {
     return a->arrival_first < b->arrival_first ? -1 : (a->arrival_first > b->arrival_first ? 1 : 0);
 }
 
-HarmonyCadenceAnalysisStatus harmony_analysis_claim_cadences(const HarmonySegment *segments, size_t count,
+HarmonyCadenceAnalysisStatus harmony_analysis_cadences_at_points(const HarmonySegment *segments, size_t count,
                                                              const HarmonyCadenceConfig *config,
                                                              const HarmonyCadences *found,
                                                              const HarmonyCadences *readings,
