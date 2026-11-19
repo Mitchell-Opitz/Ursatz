@@ -7,8 +7,8 @@ add_library(ursatz_common STATIC
     hash.c
 )
 ursatz_public_headers(ursatz_common
-    BASE ${PROJECT_SOURCE_DIR}
-    SOURCE_DIRS ${PROJECT_SOURCE_DIR}
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}/..
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/..
     HEADERS
         common/status.h
         common/files.h

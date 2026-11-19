@@ -110,3 +110,8 @@ library/model/structure/structure.c structure_entity  # no app reads a shell's e
 library/theory/framework/framework.c framework_id  # no app reads a framework's id since P62 B11 (the framework references of the claims are gone); its tests call it
 library/theory/tonality/framework.c standard_tonality_framework  # no app reads the standard-tonality framework since P62 B11 (the claims that carried it are gone); its tests call it
 library/analysis/harmony/key_regions.c common_practice_key_region_analysis_key  # no app calls it since P62 B12 (the form hearing reads the reading's region claims); its tests call it
+common/files.c common_file_append_sync  # no app calls it until the journal of P63 B8; its test calls it
+common/json.c common_json_bool  # no app reads a boolean member through it until the formats of P63 B7; its test calls it
+common/json.c common_json_rational_text  # no app writes an "n/d" text through it until P63 B15 (request bodies); its test calls it
+common/status.c ursatz_status_name  # no app names a status until the envelope's code of P63 B12; its test calls it
+common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
