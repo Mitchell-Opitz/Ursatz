@@ -1,6 +1,6 @@
 # Analyzer library and pipeline
 
-The public headers of the `ursatz_analyzer` library, its CMake targets and the pipeline stages behind them. Back to the [docs index](README.md). The GUI entries are in [gui-api.md](gui-api.md) and the Composer entries in [composer-api.md](composer-api.md).
+The public headers of the `ursatz_analyzer` library, its CMake targets and the pipeline stages behind them. Back to the [docs index](README.md). The GUI entries are in [gui-api.md](gui-api.md) and the corpus passage entries in [corpus-passages.md](corpus-passages.md).
 
 ## Library
 
@@ -12,7 +12,6 @@ Its public include directory is `include/`, and consumers include headers as
 | --- | --- |
 | `input_pipeline.h` | The thin import entries for the GUI: `analyzer_import_file` and `analyzer_import_buffer` read a MIDI or MusicXML document into an `ImportedScore`. The imported score, `ImportedFormat` and the readings are the library's (`io/imported_score.h`, which this header includes). |
 | `analysis_result.h` | `analyzer_analyze` turns an `ImportedScore` into an `AnalyzerResult`: the library chain's results and the report view the document is exported from (no claim layer, R-530). See [analysis-result.md](analysis-result.md). |
-| `result_chain.h` | `analyzer_result_chain`, the `AnalysisChain` behind an `AnalyzerResult`. The one public header that includes a chain header; needs the `ursatz_analyzer::chain` target. |
 | `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `ChainResult`. |
 | `chain/chain_result.h` (the library chain's) | `ChainResult` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `ChainResult`), serializes it as JSON, and derives `<stem>.analysis.json`. |
@@ -25,9 +24,9 @@ Its public include directory is `include/`, and consumers include headers as
 | `text_export.h` | `analyzer_text_export_piece` writes an analyzed piece as measure-addressed text: the notes of the score MusicXML and the claims of the analysis document, each claim in the measure where it starts. `analyzer_text_export_material` does the same for store material: sections of MusicXML with facts and segment marks the caller passes. See [text-export.md](text-export.md). |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 | `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
-| `composer_api.h` | Hearing borrowed events into an `AnalyzerResult`, style distance and voice-leading faults, for the Composer. See [composer-api.md](composer-api.md). |
+| `corpus_passages.h` | The passages of a corpus like a passage or a progression, as the Composer API takes them inline (R-619). See [corpus-passages.md](corpus-passages.md). |
 
-The Composer calls `composer_api.h` to analyze a fragment it generated, with no file: see [composer-api.md](composer-api.md).
+The Composer does not call the Analyzer (R-620): it hears a fragment it generated through the library chain (`analysis_chain_run_score` on an `imported_score_view`). The Composer CLI calls `corpus_passages.h`.
 
 Ownership: the caller owns the `ChainResult` and frees it with `chain_result_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
@@ -40,13 +39,11 @@ caller with `free`.
 ```cmake
 add_subdirectory(ursatz/analyzer)             # after ursatz/third_party and ursatz/library, as the root does
 target_link_libraries(my_app PRIVATE ursatz_analyzer)        # the pipeline, and the Ursatz kernel its headers use
-target_link_libraries(my_tool PRIVATE ursatz_analyzer::chain) # also reads the library chain (result_chain.h)
 ```
 
 | Target | Exposes |
 | --- | --- |
-| `ursatz_analyzer` | Every public header except `result_chain.h`. Links `ursatz` PUBLIC (kernel types in the headers); the chain and the frameworks are linked PRIVATE, so a consumer cannot include their headers. |
-| `ursatz_analyzer::chain` | INTERFACE target (`ursatz_analyzer_chain`): `ursatz_analyzer` plus `ursatz_chain`, and `result_chain.h` with `analyzer_result_chain`. Link it only to read the chain's results. |
+| `ursatz_analyzer` | Every public header. Links `ursatz` PUBLIC (kernel types in the headers) and the chain (its result header `chain/chain_result.h` is staged for the report); the chain's internals are invisible to a consumer. |
 
 Private helper modules, each the one home of what several files used to copy:
 

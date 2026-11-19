@@ -113,10 +113,10 @@ Tests:
 
 The layer table (`cmake/layer-table.txt`, test `layer_table`, run with the fast set) fails when `src/` or `include/` includes an
 Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, when a CMake
-file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header other than
-`result_chain.h` includes a chain or framework header. It prints each offending line.
+file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header includes a chain
+header other than the staged result header. It prints each offending line.
 `test_consumer_isolation` builds the targets of `tests/consumer`: one linking only `ursatz_analyzer` compiles every public
-header but `result_chain.h`, and cannot include a chain or framework header.
+header, and cannot include a chain internal header.
 
 ## File scope state check
 

@@ -52,14 +52,14 @@ the result holds the chain's results of the stages that ran; `analyzer_result_re
 
 ## Library results
 
-`analyzer_result_chain(result)` (`<ursatz_analyzer/result_chain.h>`) is the `AnalysisChain` of `chain/analysis_chain.h`,
-read through its accessors. It is NULL for a piece with no notes. The header and the chain's headers reach only a target that
-links `ursatz_analyzer::chain`; a target linking `ursatz_analyzer` alone sees no chain or framework header.
+The `AnalysisChain` behind a result is the Analyzer's own: `analyzer_result_run_chain` (`pipeline/analysis_result_internal.h`) gives it
+to the Analyzer's exports and tests. No public header returns it (R-620: the Composer hears through `library/chain` itself), and a target
+linking `ursatz_analyzer` sees the chain's result header (`chain/chain_result.h`) but no chain internal.
 
 ## No claim layer
 
 The result has no claims (R-530): it is the chain's results plus the report view. There is no per-area list of
-`Interpretation`s to read: a caller reads the chain's own results through `analyzer_result_chain` and the document's
+`Interpretation`s to read: a caller reads the chain's results through the report and the document's
 entries through `analyzer_result_report` or the exported document.
 
 ## Exports

@@ -4,7 +4,7 @@ Ursatz is a computational music platform in C11: a theory-neutral library, an an
 
 ## Parts
 
-Each part builds on the ones before it, in this order.
+Each part builds on the library. The Analyzer and the Composer are siblings: neither includes or links the other (the Composer hears through the library chain), and only the command lines and the GUI call both.
 
 | Folder | Part | Docs |
 |---|---|---|

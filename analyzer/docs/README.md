@@ -23,7 +23,6 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 
 - [library.md](library.md): the public headers, CMake targets and pipeline stages.
 - [gui-api.md](gui-api.md): the entries the GUI calls.
-- [composer-api.md](composer-api.md): the entries the Composer calls.
 - [analysis-result.md](analysis-result.md): the `AnalyzerResult`.
 
 ## Formats and schemas

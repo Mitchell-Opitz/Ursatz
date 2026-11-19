@@ -104,7 +104,7 @@ categories before the model is built, so the model holds no statistics of them (
 none). An unknown category name is `STYLE_MODEL_FILE_ERR_ARGUMENT`. `--compare-styles` takes `--without <category>`,
 repeatable, and drops the categories from both models; an unknown name is exit code 1. The Composer reads styles
 without the four motive categories until it uses them as preferences. To measure a fragment against such a model, use
-`analyzer_style_reference_create` with the same list ([composer-api.md](composer-api.md)); the plain call
+`style_reference_create` with the same list (`theory/style/style_reference.h`); the plain call
 counts each category the model lacks as distance 1.
 
 ## Distance

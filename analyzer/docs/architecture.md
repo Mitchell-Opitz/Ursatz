@@ -12,7 +12,7 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 ## Where it sits
 
 - Below: the [Ursatz library](../../library/docs/architecture.md) in `library/`, built by the same root. the layer table (`cmake/layer-table.txt`, test `layer_table`) allows only its staged public headers (see [building.md](building.md#library-include-check)).
-- Above: the [Composer](../../composer/docs/architecture.md) calls `composer_api.h`, and the [GUI](../../gui/docs/architecture.md) calls the playback and score export entries and reads the analysis document. Both link `ursatz_analyzer`.
+- Beside: the [Composer](../../composer/docs/architecture.md) is a sibling on the library (R-620): it links no Analyzer target and hears through `library/chain`. The CLIs and the [GUI](../../gui/docs/architecture.md) are above both: the Composer CLI finds corpus passages with `corpus_passages.h` and gives them to the Composer; the GUI calls the playback and score export entries and reads the analysis document.
 
 ## Module map
 
@@ -50,13 +50,7 @@ The GUI entries:
 | `playback.h` | `analyzer_playback_build`, `analyzer_playback_to_json` | Tempo regions and notes for a player | [gui-api.md](gui-api.md#playback-timing) |
 | `score_export.h` | `analyzer_score_export_musicxml`, `analyzer_score_note_xml_ids`, `analyzer_imported_meter_defaulted` | MusicXML score of the import, note ids, whether the meter was inferred | [gui-api.md](gui-api.md#score-export) |
 
-The Composer entries:
-
-| Header | Entry | What it does | Doc |
-| --- | --- | --- | --- |
-| `composer_api.h` | `analyzer_hear` | Hears borrowed events into an `AnalyzerResult` | [composer-api.md](composer-api.md#hear-events) |
-| `composer_api.h` | `AnalyzerStyleReference`, `analyzer_result_style_distance` | Style distance of a result | [composer-api.md](composer-api.md#style-reference) |
-| `composer_api.h` | `analyzer_result_violations` | Voice-leading faults of a result | [composer-api.md](composer-api.md#violations) |
+The corpus passage entries a caller gives to the Composer ([corpus-passages.md](corpus-passages.md)): `analyzer_corpus_passages_like` and `analyzer_corpus_passages_numerals` find the passages of a corpus, `analyzer_corpus_passages_to_json` writes the Composer API's `corpus_passages`.
 
 The other public headers (analysis result, report, document, corpus, staleness, chord sequence, similar material, motive links, style profile) are listed in [library.md](library.md#library).
 
