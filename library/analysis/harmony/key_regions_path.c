@@ -89,17 +89,10 @@ CommonPracticeKeyRegionsStatus key_regions_build_region(const CommonPracticeKeyR
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
 
-    char context[160];
-    snprintf(context, sizeof(context), "%s-%zu", config->context_id_prefix, number);
-    EntityID *context_id = NULL;
-    if (entity_id_create(context, &context_id) != ENTITY_ID_OK) {
-        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
-    }
-    KeyResult built = common_practice_build_key(common_practice_material(config->materials, common_practice_key_index_mode(key_index)),
-                                                common_practice_key_index_tonic_name(key_index), context_id, &out->key);
-    if (built != KEY_OK) {
-        entity_id_destroy(context_id);
-        return built == KEY_ERR_ALLOC ? COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC : COMMON_PRACTICE_KEY_REGIONS_ERR_KEY;
+    (void)number; /* the region's number named its Key's context before P62 B11 */
+    if (!common_practice_build_key(common_practice_material(config->materials, common_practice_key_index_mode(key_index)),
+                                   common_practice_key_index_tonic_name(key_index), &out->key)) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_KEY;
     }
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }

@@ -3,14 +3,12 @@
 
 #include "model/interpretation/interpretation.h"
 #include "model/interpretation/interpretation_internal.h"
-#include "model/interpretation/key.h"
-#include "model/interpretation/key_internal.h"
 #include "model/interpretation/texture.h"
 #include "model/interpretation/texture_internal.h"
 
 /*
- * What the tests read of an Interpretation, a Key and a Texture. No application reads these, so they are not in
- * interpretation/interpretation.h, key.h and texture.h.
+ * What the tests read of an Interpretation and a Texture. No application reads these, so they are not in
+ * interpretation/interpretation.h and texture.h.
  */
 
 static inline const EntityID *interpretation_id(const Interpretation *interpretation) {
@@ -35,14 +33,6 @@ static inline const char *interpretation_author(const Interpretation *interpreta
 
 static inline const char *interpretation_method(const Interpretation *interpretation) {
     return interpretation->method;
-}
-
-static inline const Interpretation *key_interpretation(const Key *key) {
-    return key->interpretation;
-}
-
-static inline const char *key_label(const Key *key) {
-    return key->label;
 }
 
 static inline const Interpretation *texture_interpretation(const Texture *texture) {

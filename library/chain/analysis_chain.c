@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/interpretation/chord.h"
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "analysis/harmony/applied_chords.h"
@@ -283,7 +282,7 @@ static bool read_numerals(AnalysisChain *chain) {
     for (size_t i = 0; i < count; i++) {
         p->segment_inputs[i].segment_id = chain->segs.ids[i];
         p->segment_inputs[i].start = chain->key_segments[i].start;
-        p->segment_inputs[i].chord = p->chords[i].matched ? p->chords[i].best_chord : NULL;
+        p->segment_inputs[i].chord = p->chords[i].matched ? &p->chords[i].best_chord : NULL;
         p->segment_inputs[i].weights = chain->key_segments[i].weights.pitch_class;
         p->segment_inputs[i].pitches = &p->segment_pitches[pitch_total];
         p->segment_inputs[i].pitch_count = chain->segs.segments[i].member_count;
@@ -1096,7 +1095,7 @@ AnalysisChainStatus analysis_chain_chord_reading(const AnalysisChain *chain, siz
     sonority.pitch_classes = segment_pitch_classes(segment);
     sonority.bass_pitch_class = has_numeral ? input->bass_pitch_class : -1;
     int root = -1;
-    if (result->matched && result->best_chord != NULL) {
+    if (result->matched) {
         /* a chord the chain found: its tones are the sonority's pitch classes, the leftover tones are not part of the chord */
         sonority.pitch_classes = common_practice_ranked_chord_mask(&result->best, has_numeral ? input->tonic_pitch_class : 0);
         root = result->best.root_pitch_class;

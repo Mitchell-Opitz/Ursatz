@@ -17,16 +17,8 @@ static long region_at(const StandardTonalityKeyRegionInput *regions, size_t regi
     return found;
 }
 
-static double chord_uncertainty_of(const Chord *chord) {
-    const Uncertainty *uncertainty = interpretation_uncertainty(chord_interpretation(chord));
-    if (uncertainty == NULL || uncertainty_kind(uncertainty) != UNCERTAINTY_KIND_SCALAR_CONFIDENCE) {
-        return 1.0;
-    }
-    unsigned long denominator = uncertainty_scalar_confidence_denominator(uncertainty);
-    if (denominator == 0) {
-        return 1.0;
-    }
-    double confidence = (double)uncertainty_scalar_confidence_numerator(uncertainty) / (double)denominator;
+static double chord_uncertainty_of(const ChordCandidate *chord) {
+    double confidence = (double)chord->confidence.num / (double)chord->confidence.den;
     double value = 1.0 - confidence;
     return value < 0.0 ? 0.0 : (value > 1.0 ? 1.0 : value);
 }
@@ -79,27 +71,24 @@ static int chord_bass_of(const StandardTonalityChordInput *input, const Standard
     return -1;
 }
 
-/* Reads the chord's and key's structure into `input`; false (has_numeral stays false) if either is missing. */
-static void read_structures(StandardTonalityChordInput *input, const Chord *chord, const Key *key) {
-    ChordStructure chord_structure_value;
-    KeyStructure key_structure_value;
-    if (chord == NULL || key == NULL || !chord_structure(chord, &chord_structure_value) ||
-        !key_structure(key, &key_structure_value) || chord_structure_value.root_pitch_class < 0 ||
-        chord_structure_value.interval_count == 0) {
+/* Reads the chord's and key's structure into `input`; has_numeral stays false if the chord is missing or has none. */
+static void read_structures(StandardTonalityChordInput *input, const ChordCandidate *chord, const KeyStructure *key) {
+    if (chord == NULL || key == NULL || key->material == NULL || chord->structure.root_pitch_class < 0 || chord->structure.interval_count == 0) {
         return;
     }
+    const ChordStructure *structure = &chord->structure;
     input->has_numeral = true;
     input->chord = chord;
-    input->root_pitch_class = chord_structure_value.root_pitch_class;
-    input->bass_pitch_class = chord_structure_value.bass_pitch_class;
-    input->sounding_bass_pitch_class = chord_structure_value.bass_pitch_class;
-    input->interval_count = chord_structure_value.interval_count;
-    for (size_t i = 0; i < chord_structure_value.interval_count; i++) {
-        input->intervals[i] = chord_structure_value.root_relative_intervals[i];
+    input->root_pitch_class = structure->root_pitch_class;
+    input->bass_pitch_class = structure->bass_pitch_class;
+    input->sounding_bass_pitch_class = structure->bass_pitch_class;
+    input->interval_count = structure->interval_count;
+    for (size_t i = 0; i < structure->interval_count; i++) {
+        input->intervals[i] = structure->root_relative_intervals[i];
     }
-    input->tonic_pitch_class = key_structure_value.tonic_pitch_class;
+    input->tonic_pitch_class = key->tonic_pitch_class;
     CommonPracticeKeyMode key_mode = COMMON_PRACTICE_KEY_MAJOR;
-    common_practice_key_mode_of(key_structure_value.material, &key_mode);
+    common_practice_key_mode_of(key->material, &key_mode);
     input->mode = key_mode == COMMON_PRACTICE_KEY_MINOR ? STANDARD_TONALITY_ROMAN_KEY_MINOR : STANDARD_TONALITY_ROMAN_KEY_MAJOR;
     input->chord_uncertainty = chord_uncertainty_of(chord);
 }
@@ -113,8 +102,7 @@ StandardTonalityChordInputStatus standard_tonality_build_chord_inputs(
         return STANDARD_TONALITY_CHORD_INPUT_ERR_NULL_ARGUMENT;
     }
     for (size_t i = 0; i < region_count; i++) {
-        if (regions[i].key == NULL ||
-            (i > 0 && musical_time_cmp(regions[i - 1].start, regions[i].start) >= 0)) {
+        if (i > 0 && musical_time_cmp(regions[i - 1].start, regions[i].start) >= 0) {
             return STANDARD_TONALITY_CHORD_INPUT_ERR_BAD_REGION;
         }
     }
@@ -148,7 +136,7 @@ StandardTonalityChordInputStatus standard_tonality_build_chord_inputs(
         if (region >= 0) {
             input->region_index = (size_t)region;
             input->key_uncertainty = regions[region].uncertainty;
-            read_structures(input, segments[i].chord, regions[region].key);
+            read_structures(input, segments[i].chord, &regions[region].key);
         }
         if (input->has_numeral &&
             (segments[i].has_bass || (segments[i].pitches != NULL && segments[i].pitch_count > 0))) {

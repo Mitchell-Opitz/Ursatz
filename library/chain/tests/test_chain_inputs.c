@@ -313,7 +313,7 @@ static void test_stage_inputs(TestPiece *piece) {
     const CommonPracticeWeightedResult *results = analysis_chain_chords(chain);
     for (size_t s = 1; s < count; s++) {
         labels[s] = results[s].matched && results[s - 1].matched &&
-                    strcmp(chord_label(results[s].best_chord), chord_label(results[s - 1].best_chord)) != 0;
+                    strcmp(results[s].best_chord.label, results[s - 1].best_chord.label) != 0;
     }
     ChainMeterInput meter;
     memset(&meter, 0, sizeof(meter));

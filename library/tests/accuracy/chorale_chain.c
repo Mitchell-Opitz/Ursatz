@@ -52,8 +52,6 @@ typedef struct {
     const StandardTonalityRomanResult *chain_romans;
     const Rational *starts;
     const Rational *ends;
-    Key **annotation_keys;
-    size_t annotation_key_count;
     StandardTonalityKeyRegionInput *annotation_region_inputs;
     StandardTonalitySegmentInput *segment_inputs;
     int *segment_pitches; /* the members' pitches, segment after segment, for the chord bass */
@@ -71,10 +69,6 @@ static void run_destroy(Run *r) {
     free(r->segment_inputs);
     free(r->segment_pitches);
     free(r->annotation_region_inputs);
-    for (size_t i = 0; i < r->annotation_key_count; i++) {
-        key_destroy(r->annotation_keys[i]);
-    }
-    free(r->annotation_keys);
     free(r->boundaries);
     chain_key_segments_destroy(r->key_segments);
     analysis_chain_destroy(r->chain);
@@ -138,20 +132,19 @@ static bool read_numerals(Run *r) {
     r->segment_inputs = (StandardTonalitySegmentInput *)calloc(n, sizeof(StandardTonalitySegmentInput));
     r->annotation_region_inputs =
         (StandardTonalityKeyRegionInput *)calloc(r->annotation.key_count + 1, sizeof(*r->annotation_region_inputs));
-    r->annotation_keys = (Key **)calloc(r->annotation.key_count + 1, sizeof(Key *));
     size_t pitch_total = 0;
     for (size_t i = 0; i < n; i++) {
         pitch_total += segments->segments[i].member_count;
     }
     r->segment_pitches = (int *)calloc(pitch_total > 0 ? pitch_total : 1, sizeof(int));
-    if (r->segment_pitches == NULL || r->segment_inputs == NULL || r->annotation_region_inputs == NULL || r->annotation_keys == NULL) {
+    if (r->segment_pitches == NULL || r->segment_inputs == NULL || r->annotation_region_inputs == NULL) {
         return false;
     }
     pitch_total = 0;
     for (size_t i = 0; i < n; i++) {
         r->segment_inputs[i].segment_id = segments->ids[i];
         r->segment_inputs[i].start = r->key_segments[i].start;
-        r->segment_inputs[i].chord = results[i].matched ? results[i].best_chord : NULL;
+        r->segment_inputs[i].chord = results[i].matched ? &results[i].best_chord : NULL;
         r->segment_inputs[i].weights = r->key_segments[i].weights.pitch_class;
         r->segment_inputs[i].pitches = &r->segment_pitches[pitch_total];
         r->segment_inputs[i].pitch_count = segments->segments[i].member_count;
@@ -160,7 +153,7 @@ static bool read_numerals(Run *r) {
         }
     }
     size_t count = 0;
-    /* the annotation's keys as kernel Keys; where two keys are written at one time (an analyst's second reading
+    /* the annotation's keys as KeyStructures; where two keys are written at one time (an analyst's second reading
        of one chord), the later one holds, as in key_at, and the regions need distinct starts */
     size_t region_total = 0;
     for (size_t i = 0; i < r->annotation.key_count; i++) {
@@ -171,16 +164,10 @@ static bool read_numerals(Run *r) {
         const RomanTextKey *k = &r->annotation.keys[i];
         CommonPracticeKeyMode mode = k->is_minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
         int index = test_key_index_of(k->tonic_pitch_class, mode);
-        char id[48];
-        snprintf(id, sizeof(id), "annotation-key-%zu", region_total);
-        EntityID *context = NULL;
-        if (entity_id_create(id, &context) != ENTITY_ID_OK ||
-            common_practice_build_key(common_practice_material(test_materials(), mode), common_practice_key_index_tonic_name(index), context,
-                                      &r->annotation_keys[region_total]) != KEY_OK) {
+        if (!common_practice_build_key(common_practice_material(test_materials(), mode), common_practice_key_index_tonic_name(index),
+                                       &r->annotation_region_inputs[region_total].key)) {
             return false;
         }
-        r->annotation_key_count++;
-        r->annotation_region_inputs[region_total].key = r->annotation_keys[region_total];
         r->annotation_region_inputs[region_total].start = r->annotation.keys[i].time;
         r->annotation_region_inputs[region_total].uncertainty = 0.0;
         region_total++;

@@ -4,52 +4,36 @@
 
 #include "theory/tonality/chord_vocabulary.h"
 #include "theory/tonality/chord_vocabulary_seventh.h"
-#include "model/identity/entity_id.h"
-#include "model/interpretation/chord.h"
-#include "interpretation_test_access.h"
 
 /*
  * Construction tests: one per diatonic triad (I through vii\xC2\xB0),
- * confirming each resolves to a real Chord labeled with its actual
+ * confirming each gives a candidate labeled with its actual
  * roman numeral.
  */
 
-static void check_triad(CommonPracticeTriad triad, const char *expected_label, const char *sonority_id_value) {
-
-    EntityID *sonority_id;
-    assert(entity_id_create(sonority_id_value, &sonority_id) == ENTITY_ID_OK);
-
-    Chord *chord;
-    assert(common_practice_build_triad_chord_with_confidence(triad, sonority_id, 1, 1, NULL, &chord) == CHORD_OK);
-    assert(strcmp(chord_label(chord), expected_label) == 0);
-    assert(interpretation_framework_reference(chord_interpretation(chord)) != NULL);
-
-    chord_destroy(chord);
+static void check_triad(CommonPracticeTriad triad, const char *expected_label) {
+    ChordCandidate chord;
+    assert(common_practice_triad_candidate(triad, 1, 1, &chord));
+    assert(strcmp(chord.label, expected_label) == 0);
+    assert(chord.confidence.num == 1 && chord.confidence.den == 1);
+    assert(chord.structure.root_pitch_class == -1 && chord.structure.bass_pitch_class == -1 && chord.structure.interval_count == 0);
 }
 
-/*
- * Regression: two distinct Sonority occurrences of the same triad type
- * must produce two distinct, independently-persisted Interpretation
- * ids (see chord_vocabulary.c history -- the id used to be derived only
- * from the triad type, so every repeated occurrence collided on one id).
- */
-static void check_distinct_occurrences_get_distinct_ids(CommonPracticeTriad triad) {
-    EntityID *sonority_id_a;
-    assert(entity_id_create("sonority-occurrence-a", &sonority_id_a) == ENTITY_ID_OK);
-    EntityID *sonority_id_b;
-    assert(entity_id_create("sonority-occurrence-b", &sonority_id_b) == ENTITY_ID_OK);
-
-    Chord *chord_a;
-    assert(common_practice_build_triad_chord_with_confidence(triad, sonority_id_a, 1, 1, NULL, &chord_a) == CHORD_OK);
-    Chord *chord_b;
-    assert(common_practice_build_triad_chord_with_confidence(triad, sonority_id_b, 1, 1, NULL, &chord_b) == CHORD_OK);
-
-    const EntityID *interpretation_id_a = interpretation_id(chord_interpretation(chord_a));
-    const EntityID *interpretation_id_b = interpretation_id(chord_interpretation(chord_b));
-    assert(!entity_id_equals(interpretation_id_a, interpretation_id_b));
-
-    chord_destroy(chord_a);
-    chord_destroy(chord_b);
+/* The confidence is the given fraction, reduced; a zero denominator and an invalid triad are refused and leave the candidate alone. */
+static void check_confidence_and_refusals(void) {
+    ChordCandidate chord;
+    memset(&chord, 0, sizeof(chord));
+    assert(common_practice_triad_candidate(COMMON_PRACTICE_TRIAD_V, 500000, 1000000, &chord));
+    assert(chord.confidence.num == 1 && chord.confidence.den == 2);
+    assert(common_practice_seventh_candidate(COMMON_PRACTICE_SEVENTH_DOMINANT7, 250000, 1000000, &chord));
+    assert(chord.confidence.num == 1 && chord.confidence.den == 4 && strcmp(chord.label, "dominant7") == 0);
+    ChordCandidate untouched;
+    memset(&untouched, 7, sizeof(untouched));
+    ChordCandidate copy = untouched;
+    assert(!common_practice_triad_candidate(COMMON_PRACTICE_TRIAD_V, 1, 0, &untouched));
+    assert(!common_practice_triad_candidate(COMMON_PRACTICE_TRIAD_COUNT, 1, 1, &untouched));
+    assert(!common_practice_seventh_candidate(COMMON_PRACTICE_SEVENTH_COUNT, 1, 1, &untouched));
+    assert(memcmp(&untouched, &copy, sizeof(copy)) == 0);
 }
 
 static void check_triad_intervals(CommonPracticeTriad triad, const int expected[3]) {
@@ -92,33 +76,29 @@ static void check_quality_set(void) {
     assert(COMMON_PRACTICE_SEVENTH_MAJOR_KEY_COUNT == (int)COMMON_PRACTICE_SEVENTH_DIMINISHED7);
 }
 
-static void check_seventh(CommonPracticeSeventh seventh, const char *expected_label, const char *sonority_id_value) {
+static void check_seventh(CommonPracticeSeventh seventh, const char *expected_label) {
     assert(strcmp(common_practice_seventh_label(seventh), expected_label) == 0);
-    EntityID *sonority_id;
-    assert(entity_id_create(sonority_id_value, &sonority_id) == ENTITY_ID_OK);
-    Chord *chord;
-    assert(common_practice_build_seventh_chord_with_confidence(seventh, sonority_id, 1, 1, NULL, &chord) == CHORD_OK);
-    assert(strcmp(chord_label(chord), expected_label) == 0);
-    chord_destroy(chord);
+    ChordCandidate chord;
+    assert(common_practice_seventh_candidate(seventh, 1, 1, &chord));
+    assert(strcmp(chord.label, expected_label) == 0);
 }
 
 int main(void) {
-    check_triad(COMMON_PRACTICE_TRIAD_I, "I", "sonority-test-I");
-    check_triad(COMMON_PRACTICE_TRIAD_II, "ii", "sonority-test-ii");
-    check_triad(COMMON_PRACTICE_TRIAD_III, "iii", "sonority-test-iii");
-    check_triad(COMMON_PRACTICE_TRIAD_IV, "IV", "sonority-test-IV");
-    check_triad(COMMON_PRACTICE_TRIAD_V, "V", "sonority-test-V");
-    check_triad(COMMON_PRACTICE_TRIAD_VI, "vi", "sonority-test-vi");
-    check_triad(COMMON_PRACTICE_TRIAD_VII_DIM, "vii\xC2\xB0", "sonority-test-vii-dim");
+    check_triad(COMMON_PRACTICE_TRIAD_I, "I");
+    check_triad(COMMON_PRACTICE_TRIAD_II, "ii");
+    check_triad(COMMON_PRACTICE_TRIAD_III, "iii");
+    check_triad(COMMON_PRACTICE_TRIAD_IV, "IV");
+    check_triad(COMMON_PRACTICE_TRIAD_V, "V");
+    check_triad(COMMON_PRACTICE_TRIAD_VI, "vi");
+    check_triad(COMMON_PRACTICE_TRIAD_VII_DIM, "vii\xC2\xB0");
 
-    check_triad(COMMON_PRACTICE_TRIAD_AUGMENTED, "augmented", "sonority-test-augmented");
-    check_triad(COMMON_PRACTICE_TRIAD_MAJOR, "major", "sonority-test-major");
-    check_triad(COMMON_PRACTICE_TRIAD_MINOR, "minor", "sonority-test-minor");
-    check_triad(COMMON_PRACTICE_TRIAD_DIMINISHED, "diminished", "sonority-test-diminished");
-    check_seventh(COMMON_PRACTICE_SEVENTH_DIMINISHED7, "diminished7", "sonority-test-diminished7");
+    check_triad(COMMON_PRACTICE_TRIAD_AUGMENTED, "augmented");
+    check_triad(COMMON_PRACTICE_TRIAD_MAJOR, "major");
+    check_triad(COMMON_PRACTICE_TRIAD_MINOR, "minor");
+    check_triad(COMMON_PRACTICE_TRIAD_DIMINISHED, "diminished");
+    check_seventh(COMMON_PRACTICE_SEVENTH_DIMINISHED7, "diminished7");
     check_quality_set();
-
-    check_distinct_occurrences_get_distinct_ids(COMMON_PRACTICE_TRIAD_I);
+    check_confidence_and_refusals();
 
     printf("test_chord_vocabulary: ok\n");
     return 0;

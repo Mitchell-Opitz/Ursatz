@@ -284,7 +284,7 @@ static void assert_gap_free(const CommonPracticeKeyRegions *regions, int first, 
         assert(region->uncertainty >= 0.0 && region->uncertainty <= 1.0);
         assert(region->source == COMMON_PRACTICE_REGION_SOURCE_PROFILE ||
                region->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
-        assert(region->key != NULL);
+        assert(region->key.material != NULL);
         if (i > 0) {
             assert(region->first_measure == regions->regions[i - 1].last_measure + 1);
             assert(regions->changes[i - 1].from_region == i - 1 && regions->changes[i - 1].to_region == i);
@@ -306,10 +306,8 @@ static void test_a_single_key_piece_is_one_region(void) {
     assert_gap_free(&regions, 1, 8);
     assert(regions.region_count == 1 && regions.change_count == 0);
     assert(regions.regions[0].key_index == 0);
-    assert(strcmp(key_label(regions.regions[0].key), "C major") == 0);
+    assert(regions.regions[0].key.tonic_pitch_class == 0 && regions.regions[0].key.material == test_materials()->major);
     assert(time_is(regions.regions[0].span.start, 0, 1) && time_is(regions.regions[0].span.end, 8, 1));
-    assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))),
-                  "key-region-1") == 0);
     common_practice_key_regions_destroy(&regions);
     common_practice_key_regions_destroy(&regions);
     common_practice_key_regions_destroy(NULL);
@@ -327,11 +325,9 @@ static void test_a_modulation_from_c_to_g_is_two_regions(void) {
     assert_gap_free(&regions, 1, 16);
     assert(regions.region_count == 2);
     assert(regions.regions[0].key_index == 0 && regions.regions[1].key_index == 7);
-    assert(strcmp(key_label(regions.regions[1].key), "G major") == 0);
+    assert(regions.regions[1].key.tonic_pitch_class == 7 && regions.regions[1].key.material == test_materials()->major);
     assert(regions.regions[1].first_measure >= 8 && regions.regions[1].first_measure <= 10);
     assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_MODULATION && !regions.changes[0].is_return);
-    assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[1].key))),
-                  "key-region-2") == 0);
     common_practice_key_regions_destroy(&regions);
 
     /* a penalty above the correlation range allows no change; zero follows every window */
@@ -415,14 +411,7 @@ static void test_region_input_errors(void) {
     config.tonicization_max_measures = 0;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
     config = common_practice_key_regions_config_default(test_materials());
-    config.context_id_prefix = "";
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config.context_id_prefix = NULL;
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config = common_practice_key_regions_config_default(test_materials());
-    config.context_id_prefix = "piece-7";
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))), "piece-7-1") == 0);
     common_practice_key_regions_destroy(&regions);
     assert(regions.regions == NULL);
     meter_map_destroy(map);

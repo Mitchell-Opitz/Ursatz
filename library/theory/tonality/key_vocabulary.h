@@ -1,8 +1,8 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_VOCABULARY_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_VOCABULARY_H
 
-#include "model/identity/entity_id.h"
-#include "model/interpretation/key.h"
+#include <stdbool.h>
+
 #include "model/pitch/pitch_material.h"
 
 /*
@@ -16,19 +16,17 @@ typedef enum {
     COMMON_PRACTICE_KEY_MINOR
 } CommonPracticeKeyMode;
 
+/* A key as the vocabulary gives it: the tonic's pitch class (0 = C ... 11 = B) and the pitch material of the key (borrowed). */
+typedef struct {
+    int tonic_pitch_class;
+    const PitchMaterial *material;
+} KeyStructure;
+
 /*
- * Builds a real, populated Key claiming that the Context named by
- * context_target_id is tonic_name major/minor under
- * common-practice-minimal-v1 (e.g. tonic_name "C", the major material ->
- * label "C major"). The material is read as major or minor by its third
- * (common_practice_key_mode_of) and stays in the Key's structure; KEY_ERR_BAD_STRUCTURE for a NULL material
- * or one with another third. tonic_name is copied, required, non-empty.
- *
- * Takes ownership of context_target_id on success (destroyed
- * transitively by key_destroy(*out)); on failure the caller still owns
- * context_target_id.
+ * The key tonic_name major/minor under common-practice-minimal-v1 (e.g. tonic_name "C", the major material -> C major). The material is read
+ * as major or minor by its third (common_practice_key_mode_of) and stays in the structure. False (out untouched) for a NULL material or one
+ * with another third, an empty or unreadable tonic_name (a letter A-G then '#' or 'b' accidentals) or a NULL out.
  */
-KeyResult common_practice_build_key(const PitchMaterial *material, const char *tonic_name, EntityID *context_target_id,
-                                     Key **out);
+bool common_practice_build_key(const PitchMaterial *material, const char *tonic_name, KeyStructure *out);
 
 #endif

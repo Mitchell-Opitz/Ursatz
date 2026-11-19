@@ -19,7 +19,6 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(const 
     config.profiles = common_practice_krumhansl_kessler_profiles();
     config.change_penalty = 0.2;
     config.tonicization_max_measures = 4;
-    config.context_id_prefix = "key-region";
     config.pivot_search_measures = 2;
     config.evidence_weight = 0.8;
     config.phrase_boundaries = NULL;
@@ -90,9 +89,6 @@ void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions) {
     if (regions == NULL) {
         return;
     }
-    for (size_t i = 0; i < regions->region_count; i++) {
-        key_destroy(regions->regions[i].key);
-    }
     free(regions->regions);
     free(regions->changes);
     regions->regions = NULL;
@@ -120,8 +116,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     }
     if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 || !isfinite(effective.hold_tolerance) ||
         effective.hold_tolerance < 0.0 ||
-        effective.tonicization_max_measures == 0 || effective.context_id_prefix == NULL ||
-        effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100 ||
+        effective.tonicization_max_measures == 0 ||
         (effective.phrase_boundary_count > 0 && effective.phrase_boundaries == NULL) ||
         (effective.phrase_count > 0 && effective.phrases == NULL) ||
         (effective.repeat_count > 0 && effective.repeats == NULL)) {

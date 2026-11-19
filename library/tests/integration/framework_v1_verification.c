@@ -456,33 +456,6 @@ static void fv1_check_form(const Chain *c, Fv1Verifier *v) {
     }
 }
 
-/* --- the Bach regression for PR #36: every Chord of the piece has its own EntityID --- */
-
-static int fv1_compare_strings(const void *a, const void *b) {
-    return strcmp(*(const char *const *)a, *(const char *const *)b);
-}
-
-static size_t fv1_chord_id_count(const Chain *c, bool *unique) {
-    const char **ids = (const char **)calloc(c->count, sizeof(char *));
-    assert(ids != NULL);
-    size_t n = 0;
-    for (size_t s = 0; s < c->count; s++) {
-        if (!c->chords[s].matched) {
-            continue;
-        }
-        ids[n++] = entity_id_value(interpretation_id(chord_interpretation(c->chords[s].best_chord)));
-    }
-    qsort(ids, n, sizeof(char *), fv1_compare_strings);
-    *unique = true;
-    for (size_t i = 1; i < n; i++) {
-        if (strcmp(ids[i - 1], ids[i]) == 0) {
-            *unique = false;
-        }
-    }
-    free(ids);
-    return n;
-}
-
 /* --- the files agree --- */
 
 static void fv1_check_fixture_agreement(void) {
@@ -657,12 +630,6 @@ int main(void) {
             total[a].deviation += v.counts[a].deviation;
             total[a].fail += v.counts[a].fail;
             failures += v.counts[a].fail;
-        }
-        if (strcmp(c.x.piece, "bach114") == 0) {
-            bool unique = false;
-            size_t n = fv1_chord_id_count(&c, &unique);
-            printf("  PR #36 regression: %zu Chord ids across the piece, %s\n", n, unique ? "all distinct" : "DUPLICATES");
-            assert(n > 20 && unique);
         }
         fv1_chain_destroy(&c);
     }

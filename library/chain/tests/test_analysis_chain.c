@@ -254,7 +254,7 @@ static void digest_chords(Digest *d, const AnalysisChain *c) {
         digest_double(d, r->best_score);
         digest_double(d, r->runner_up_score);
         digest_double(d, r->uncertainty);
-        digest_string(d, r->best_chord != NULL ? chord_label(r->best_chord) : NULL);
+        digest_string(d, r->matched ? r->best_chord.label : NULL);
         digest_int(d, (long long)r->leftover_count);
         const char **ids = calloc(r->leftover_count + 1, sizeof(char *));
         assert(ids != NULL);
@@ -737,7 +737,7 @@ static void check_chord_readings(const char *context, const AnalysisChain *c, bo
         if (!CHECK(r.borrowed_from == NULL && !r.has_expected && r.expected_type == NULL && r.expected_root_pitch_class == 0)) abort();
         if (!CHECK(r.bass_pitch_class == r.sonority.bass_pitch_class)) abort();
         bool cadential = prepared != NULL && harmony_cadence_is_cadential_six_four(&prepared[i]);
-        if (chords[i].matched && chords[i].best_chord != NULL) {
+        if (chords[i].matched) {
             matched++;
             if (!CHECK(r.has_root && r.root_pitch_class == chords[i].best.root_pitch_class)) abort();
             const char *id = reading_type_id(&chords[i].best);

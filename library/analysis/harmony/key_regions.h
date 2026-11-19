@@ -10,7 +10,7 @@
 #include <stddef.h>
 
 #include "model/core/rational.h"
-#include "model/interpretation/key.h"
+#include "theory/tonality/key_vocabulary.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "theory/tonality/spelled_key.h"
@@ -127,7 +127,6 @@ typedef struct {
     CommonPracticeKeyProfiles profiles;        /* default Krumhansl-Kessler */
     double change_penalty;                     /* default 0.2: the cost of one key change, in correlation units */
     size_t tonicization_max_measures;          /* default 4 */
-    const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
     size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
     double evidence_weight;                    /* default 0.8: the weight of functional chord evidence in a window's score */
     const MusicalTime *phrase_boundaries;      /* optional: phrase boundary times, whole notes, any order; borrowed array */
@@ -217,8 +216,8 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * region is a run of measures with one key, so its edges are barlines, and the regions are ordered, gap-free
  * and cover every measure from the first segment's to the last's.
  *
- * Each region carries a Key (common_practice_build_key: major or natural-minor label such as "G major", a
- * Context id "<prefix>-<n>", the common-practice-minimal-v1 FrameworkReference), a TimeSpan (the first measure's
+ * Each region carries a KeyStructure (common_practice_build_key: the tonic and the major or natural-minor material of a key such
+ * as "G major"), a TimeSpan (the first measure's
  * start to the last measure's end, left-closed), its first and last measure, its key index, and an
  * UNCERTAINTY in [0, 1]:
  *
@@ -226,8 +225,7 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  *
  * where r is the correlation of the region's pooled pitch-class weights with a key's profile. It is 0 when the
  * chosen key beats every other by a full unit, and 1 when another key fits as well or better (the penalty can
- * keep a worse key). The Key's own Interpretation keeps the vocabulary's confidence of 1/1; the region's
- * uncertainty is this field.
+ * keep a worse key). The region's uncertainty is this field.
  *
  * CHANGES. Between each pair of neighbouring regions there is one change, labelled with the existing
  * KeyChangeExtent values by the length and return of the region it goes INTO (region n):
@@ -353,7 +351,7 @@ typedef enum {
 } CommonPracticeRegionSource;
 
 typedef struct {
-    Key *key;                      /* owned */
+    KeyStructure key;              /* the region's key: its tonic and material */
     int key_index;                 /* 0..23 */
     TimeSpan span;
     int first_measure;             /* MeterMap measure numbers (the first measure is 1), inclusive */
@@ -400,7 +398,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
                                                      const CommonPracticeKeyRegionsConfig *config,
                                                      CommonPracticeKeyRegions *out);
 
-/* Destroys every region's Key and TimeSpan and the arrays. NULL is a no-op. */
+/* Destroys the arrays. NULL is a no-op. */
 void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions);
 
 /*

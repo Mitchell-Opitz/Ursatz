@@ -148,14 +148,14 @@ static void test_key_boundary_switches_the_numeral_key(void) {
     expect_label(chord_in(7, 7, ADAPTER_MAJOR_TRIAD, 3, 7, C_MAJOR), "I");
 
     /* Through the builder: two segments, a region boundary between them. */
-    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
-    Key *g_major = adapter_test_key("G major", 7, COMMON_PRACTICE_KEY_MAJOR);
+    KeyStructure c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
+    KeyStructure g_major = adapter_test_key("G major", 7, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     MusicalTime two = adapter_test_time(2, 1);
     MusicalTime one = adapter_test_time(1, 1);
     MusicalTime three = adapter_test_time(3, 1);
     StandardTonalityKeyRegionInput regions[2] = {{c_major, zero, 0.0}, {g_major, two, 0.0}};
-    Chord *g_chord = adapter_test_chord("g", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
+    ChordCandidate *g_chord = adapter_test_chord("g", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
     StandardTonalitySegmentInput segments[2] = {{"before", one, g_chord, NULL}, {"after", three, g_chord, NULL}};
 
     StandardTonalityChordInput *inputs = NULL;
@@ -171,13 +171,11 @@ static void test_key_boundary_switches_the_numeral_key(void) {
     assert(results[1].has_numeral && strcmp(results[1].claim.label, "I") == 0);
     standard_tonality_roman_results_destroy(results, count);
     standard_tonality_chord_inputs_destroy(inputs);
-    chord_destroy(g_chord);
-    key_destroy(c_major);
-    key_destroy(g_major);
+    free(g_chord);
 }
 
 static void test_no_match_segment_gives_no_numeral(void) {
-    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
+    KeyStructure c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     StandardTonalityKeyRegionInput regions[1] = {{c_major, zero, 0.0}};
     StandardTonalitySegmentInput segments[1] = {{"unmatched", zero, NULL, NULL}};
@@ -194,7 +192,6 @@ static void test_no_match_segment_gives_no_numeral(void) {
     assert(strcmp(results[0].segment_id, "unmatched") == 0);
     standard_tonality_roman_results_destroy(results, count);
     standard_tonality_chord_inputs_destroy(inputs);
-    key_destroy(c_major);
 }
 
 static void test_interpretation_and_uncertainty(void) {

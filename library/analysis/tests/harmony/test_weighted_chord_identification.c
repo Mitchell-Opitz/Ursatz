@@ -61,19 +61,19 @@ static void test_a_pure_triad_resolves_to_its_chord(void) {
     assert(result.matched);
     assert(result.best.degree == 1 && !result.best.is_seventh && result.best.triad == COMMON_PRACTICE_TRIAD_I);
     assert(close_to(result.best_score, 1.05)); /* coverage 1: everything sounding is a chord tone */
-    assert(strcmp(chord_label(result.best_chord), "I") == 0);
+    assert(strcmp(result.best_chord.label, "I") == 0);
     assert(result.runner_up.root_pitch_class != result.best.root_pitch_class); /* a different harmony */
-    assert(result.runner_up_chord != NULL);
+    assert(result.has_runner_up);
     assert(close_to(result.uncertainty, result.runner_up_score / result.best_score));
     assert(result.uncertainty >= 0.0 && result.uncertainty < 1.0);
     assert(result.leftover_count == 0 && result.leftover == NULL);
 
-    const Interpretation *interpretation = chord_interpretation(result.best_chord);
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "sonority-1") == 0);
+    /* The structure the kernel carries: the root, the quality's intervals and the bass. */
+    assert(result.best_chord.structure.root_pitch_class == 0 && result.best_chord.structure.interval_count == 3);
     common_practice_weighted_result_destroy(&result);
 }
 
-static void test_the_interpretation_carries_the_confidence(void) {
+static void test_the_candidate_carries_the_confidence(void) {
     CommonPracticeMember members[3] = {note("c", 48, false, 1.0, S, NULL, 0.0), note("e", 52, false, 1.0, S, NULL, 0.0),
                                        note("g", 55, false, 1.0, S, NULL, 0.0)};
     CommonPracticeSegment seg = segment(members, 3, "sonority-1");
@@ -81,19 +81,10 @@ static void test_the_interpretation_carries_the_confidence(void) {
     assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &result) ==
            COMMON_PRACTICE_WEIGHTED_OK);
 
-    const Uncertainty *best = interpretation_uncertainty(chord_interpretation(result.best_chord));
-    const Uncertainty *runner = interpretation_uncertainty(chord_interpretation(result.runner_up_chord));
-    assert(uncertainty_kind(best) == UNCERTAINTY_KIND_SCALAR_CONFIDENCE);
-    assert(uncertainty_kind(runner) == UNCERTAINTY_KIND_SCALAR_CONFIDENCE);
-    assert(uncertainty_scalar_confidence_denominator(best) == 1000000UL);
-    double best_confidence = (double)uncertainty_scalar_confidence_numerator(best) / 1000000.0;
-    double runner_confidence = (double)uncertainty_scalar_confidence_numerator(runner) / 1000000.0;
+    double best_confidence = (double)result.best_chord.confidence.num / (double)result.best_chord.confidence.den;
+    double runner_confidence = (double)result.runner_up_chord.confidence.num / (double)result.runner_up_chord.confidence.den;
     assert(fabs(best_confidence - (1.0 - result.uncertainty)) < 1e-6); /* confidence = 1 - uncertainty */
     assert(fabs(runner_confidence - result.uncertainty) < 1e-6);       /* the runner-up's plausibility */
-
-    /* The two Chords over one Sonority have distinct Interpretation ids. */
-    assert(!entity_id_equals(interpretation_id(chord_interpretation(result.best_chord)),
-                             interpretation_id(chord_interpretation(result.runner_up_chord))));
     common_practice_weighted_result_destroy(&result);
 }
 
@@ -127,7 +118,7 @@ static void test_below_the_minimum_coverage_is_no_match(void) {
     assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &result) ==
            COMMON_PRACTICE_WEIGHTED_OK);
     assert(!result.matched);
-    assert(result.best_chord == NULL && result.runner_up_chord == NULL && result.leftover_count == 0);
+    assert(!result.matched && !result.has_runner_up && result.leftover_count == 0);
     assert(result.best_score < 0.5); /* the scores are still reported */
     common_practice_weighted_result_destroy(&result);
 
@@ -154,7 +145,7 @@ static void test_an_empty_segment_is_no_match(void) {
     CommonPracticeWeightedResult result;
     assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &result) ==
            COMMON_PRACTICE_WEIGHTED_OK);
-    assert(!result.matched && result.best_chord == NULL && close_to(result.uncertainty, 1.0));
+    assert(!result.matched && !result.has_runner_up && close_to(result.uncertainty, 1.0));
     common_practice_weighted_result_destroy(&result);
 }
 
@@ -271,7 +262,7 @@ static void test_an_incomplete_segment_takes_the_previous_chord(void) {
     assert(results.items[0].context == COMMON_PRACTICE_CONTEXT_NONE && results.items[0].best.degree == 1);
     assert(results.items[1].matched && results.items[1].best.degree == 1 && !results.items[1].best.is_seventh);
     assert(results.items[1].context == COMMON_PRACTICE_CONTEXT_PREVIOUS);
-    assert(results.items[1].best_chord != NULL);
+    assert(results.items[1].best_chord.label[0] != '\0');
     common_practice_weighted_results_destroy(&results);
 
     /* Alone, the same segment is iii. */
@@ -534,7 +525,7 @@ static void test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_major(vo
     assert_applied(&results.items[0], 3, true, 3);
     assert(results.items[0].best.degree == 2 && results.items[0].best.tonic_offset == 3);
     assert(results.items[0].best.seventh == COMMON_PRACTICE_SEVENTH_DIMINISHED7);
-    assert(results.items[0].best_chord != NULL);
+    assert(results.items[0].best_chord.label[0] != '\0');
     common_practice_weighted_results_destroy(&results);
 }
 
@@ -621,7 +612,7 @@ int main(void) {
     test_a_required_bass_chord_tone_beats_the_upper_voices();
     test_a_segment_without_a_bass_override_reads_as_before();
     test_a_pure_triad_resolves_to_its_chord();
-    test_the_interpretation_carries_the_confidence();
+    test_the_candidate_carries_the_confidence();
     test_a_near_tie_reports_the_runner_up_and_a_high_uncertainty();
     test_below_the_minimum_coverage_is_no_match();
     test_an_empty_segment_is_no_match();

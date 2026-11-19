@@ -210,7 +210,7 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
     for (size_t s = 0; s < count; s++) {
         chain->segment_inputs[s].segment_id = p->segment_ids[s];
         chain->segment_inputs[s].start = chain->key_segments[s].start;
-        chain->segment_inputs[s].chord = chain->chords.items[s].matched ? chain->chords.items[s].best_chord : NULL;
+        chain->segment_inputs[s].chord = chain->chords.items[s].matched ? &chain->chords.items[s].best_chord : NULL;
         chain->segment_inputs[s].weights = chain->key_segments[s].weights.pitch_class;
     }
     assert(standard_tonality_build_chord_inputs(chain->segment_inputs, count, chain->region_inputs, chain->regions.region_count,

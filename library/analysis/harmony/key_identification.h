@@ -10,7 +10,7 @@
 #include <stddef.h>
 
 #include "model/identity/entity_id.h"
-#include "model/interpretation/key.h"
+#include "theory/tonality/key_vocabulary.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/key_vocabulary.h"
 

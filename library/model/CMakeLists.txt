@@ -49,8 +49,6 @@ add_library(ursatz_model
     interpretation/uncertainty.c
     interpretation/interpretation.c
     interpretation/claim_interpretation.c
-    interpretation/chord.c
-    interpretation/key.c
     interpretation/texture.c
 )
 ursatz_public_headers(ursatz_model
@@ -73,10 +71,8 @@ ursatz_public_headers(ursatz_model
         model/events/tempo_marking.h
         model/identity/entity_id.h
         model/identity/schema_version.h
-        model/interpretation/chord.h
         model/interpretation/claim_interpretation.h
         model/interpretation/interpretation.h
-        model/interpretation/key.h
         model/interpretation/texture.h
         model/interpretation/uncertainty.h
         model/pitch/chord_type.h

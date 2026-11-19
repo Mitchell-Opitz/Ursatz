@@ -352,8 +352,10 @@ static void test_whole_chain_against_the_hand_analysis(void) {
 
     printf("Bach 114, the whole chain: Roman numerals in the local key (draft hand marks, G major):\n");
     for (size_t i = 0; i < regions.region_count; i++) {
+        char *label = chain_key_label(regions.regions[i].key.tonic_pitch_class, regions.regions[i].key.material);
         printf("  key region: measures %d-%d %s uncertainty %.2f\n", regions.regions[i].first_measure,
-               regions.regions[i].last_measure, key_label(regions.regions[i].key), regions.regions[i].uncertainty);
+               regions.regions[i].last_measure, label, regions.regions[i].uncertainty);
+        free(label);
     }
 
     /* the adapter */
@@ -370,7 +372,7 @@ static void test_whole_chain_against_the_hand_analysis(void) {
     for (size_t s = 0; s < p.segment_count; s++) {
         segment_inputs[s].segment_id = p.segment_ids[s];
         segment_inputs[s].start = key_segments[s].start;
-        segment_inputs[s].chord = chords.items[s].matched ? chords.items[s].best_chord : NULL;
+        segment_inputs[s].chord = chords.items[s].matched ? &chords.items[s].best_chord : NULL;
         segment_inputs[s].weights = key_segments[s].weights.pitch_class;
     }
     StandardTonalityChordInput *inputs = NULL;

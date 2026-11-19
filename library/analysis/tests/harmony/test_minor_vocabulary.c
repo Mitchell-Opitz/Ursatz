@@ -49,8 +49,7 @@ static CommonPracticeWeightedResult identify(const int *pitches, size_t count) {
 }
 
 static void expect_intervals(const CommonPracticeWeightedResult *result, const int *want, size_t count) {
-    ChordStructure structure;
-    assert(chord_structure(result->best_chord, &structure));
+    ChordStructure structure = result->best_chord.structure;
     assert(structure.interval_count == count);
     for (size_t i = 0; i < count; i++) {
         assert(structure.root_relative_intervals[i] == want[i]);
@@ -62,7 +61,7 @@ static void test_harmonic_minor_dominant_seventh(void) {
     CommonPracticeWeightedResult result = identify(pitches, 4);
     assert(result.best.degree == 5 && result.best.is_seventh && result.best.seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7);
     assert(result.best.root_pitch_class == 4);
-    assert(strcmp(chord_label(result.best_chord), "dominant7") == 0);
+    assert(strcmp(result.best_chord.label, "dominant7") == 0);
     const int want[4] = {0, 4, 7, 10};
     expect_intervals(&result, want, 4);
     common_practice_weighted_result_destroy(&result);
@@ -73,7 +72,7 @@ static void test_harmonic_minor_fully_diminished_seventh(void) {
     CommonPracticeWeightedResult result = identify(pitches, 4);
     assert(result.best.degree == 7 && result.best.is_seventh && result.best.seventh == COMMON_PRACTICE_SEVENTH_DIMINISHED7);
     assert(result.best.root_pitch_class == 8);
-    assert(strcmp(chord_label(result.best_chord), "diminished7") == 0);
+    assert(strcmp(result.best_chord.label, "diminished7") == 0);
     const int want[4] = {0, 3, 6, 9};
     expect_intervals(&result, want, 4);
     common_practice_weighted_result_destroy(&result);
@@ -83,7 +82,7 @@ static void test_the_augmented_third_degree_triad(void) {
     const int pitches[3] = {C, E, GS}; /* C E G#: III+ */
     CommonPracticeWeightedResult result = identify(pitches, 3);
     assert(result.best.degree == 3 && !result.best.is_seventh && result.best.triad == COMMON_PRACTICE_TRIAD_AUGMENTED);
-    assert(strcmp(chord_label(result.best_chord), "augmented") == 0);
+    assert(strcmp(result.best_chord.label, "augmented") == 0);
     const int want[3] = {0, 4, 8};
     expect_intervals(&result, want, 3);
     common_practice_weighted_result_destroy(&result);

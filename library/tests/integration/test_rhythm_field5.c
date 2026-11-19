@@ -3,7 +3,6 @@
 
 #include <math.h>
 
-#include "model/interpretation/chord.h"
 #include "analysis/meter/meter_analysis_density.h"
 #include "analysis/meter/meter_analysis_hemiola.h"
 #include "analysis/meter/meter_analysis_hypermeter.h"
@@ -193,7 +192,7 @@ int main(void) {
     assert(labels != NULL);
     for (size_t s = 1; s < scope; s++) {
         labels[s] = chords.items[s].matched && chords.items[s - 1].matched &&
-                    strcmp(chord_label(chords.items[s].best_chord), chord_label(chords.items[s - 1].best_chord)) != 0;
+                    strcmp(chords.items[s].best_chord.label, chords.items[s - 1].best_chord.label) != 0;
     }
 
     /* --- the annotated phrases --- */
