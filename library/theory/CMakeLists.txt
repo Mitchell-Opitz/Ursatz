@@ -25,6 +25,7 @@ add_library(ursatz_theory
     vocabulary/cadence_type.c
     vocabulary/key_change_extent.c
     vocabulary/motive_occurrence_kind.c
+    vocabulary/motive_relation_step.c
     vocabulary/non_chord_tone.c
     vocabulary/voice_part.c
     tonality/brightness.c
@@ -185,6 +186,7 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/cadence_type.h
         theory/vocabulary/key_change_extent.h
         theory/vocabulary/motive_occurrence_kind.h
+        theory/vocabulary/motive_relation_step.h
         theory/vocabulary/non_chord_tone.h
         theory/vocabulary/subphrase_role.h
         theory/vocabulary/voice_part.h
