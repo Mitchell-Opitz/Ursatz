@@ -596,12 +596,6 @@ static bool read_bool(const cJSON *root, const char *base, const char *name, boo
     return false;
 }
 
-/* True when the request has the member and it is not null. */
-static bool given_member(const cJSON *root, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, name);
-    return item && !cJSON_IsNull(item);
-}
-
 /* The names of the built-in forms, joined by commas. */
 static void builtin_form_names(char *out, size_t size) {
     size_t used = 0;
@@ -616,7 +610,7 @@ static ComposerStatus read_form(PieceSpec *request, const cJSON *root, const cha
     char path[128];
     const char *name = API_PIECE_FORM;
     snprintf(path, sizeof path, "%s/form", base);
-    if (!named && given_member(root, "form")) {
+    if (!named && api_has_member(root, "form")) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "schema_version 1 is the game loop; name a form with schema_version 2");
     }
     char names[256];
@@ -830,7 +824,7 @@ static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const ch
     bool has_count = false;
     bool modulate = false;
     bool present = false;
-    if (given_member(root, "voicing")) {
+    if (api_has_member(root, "voicing")) {
         snprintf(path, sizeof path, "%s/voicing", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s has no voicing to give; leave out voicing", form->label);
     }
@@ -892,7 +886,7 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
     } else {
         static const char *const SIZED[] = {"bars", "count", "modulate"};
         for (size_t i = 0; i < sizeof(SIZED) / sizeof(SIZED[0]); i++) {
-            if (given_member(root, SIZED[i])) {
+            if (api_has_member(root, SIZED[i])) {
                 snprintf(path, sizeof path, "%s/%s", base, SIZED[i]);
                 return api_fail(error, COMPOSER_ERR_REQUEST, path,
                                 "%s takes its sections from the request and has no %s; leave out %s", request->form->label,

@@ -204,15 +204,6 @@ static bool sequence_generate(const Plan *plan, FillTarget target, FillRng *rng,
     return ok;
 }
 
-static PlanResult sequence_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    const SkeletonCandidate *skeleton = candidate ? candidate->payload : NULL;
-    (void)context;
-    if (target.kind != FILL_TARGET_LANE_SPAN || !skeleton || skeleton->context.target != (LaneSpanId)target.id) {
-        return PLAN_ERR_NULL;
-    }
-    return harmony_skeleton_apply(plan, skeleton);
-}
-
 FillResult harmony_sequence_register(FillOperatorRegistry *registry, const HarmonySequenceParams *params) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
@@ -226,7 +217,7 @@ FillResult harmony_sequence_register(FillOperatorRegistry *registry, const Harmo
     operator_.kind = FILL_OPERATOR_FILL;
     operator_.applies = sequence_applies;
     operator_.generate = sequence_generate;
-    operator_.apply = sequence_apply;
+    operator_.apply = harmony_skeleton_apply_target;
     operator_.context = (void *)params;
     return fill_registry_register(registry, &operator_);
 }

@@ -36,15 +36,6 @@ typedef struct {
     Motive motive;
 } InventPayload;
 
-static MotiveDevelopContext invent_context(const void *context) {
-    if (context) {
-        return *(const MotiveDevelopContext *)context;
-    }
-    MotiveDevelopContext defaults;
-    motive_develop_context_default(&defaults);
-    return defaults;
-}
-
 /* --------------------------------------------------------------- request */
 
 typedef struct {
@@ -297,7 +288,7 @@ static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights
 
 static bool invent_applies(const Plan *plan, FillTarget target, void *context) {
     InventRequest request;
-    MotiveDevelopContext shared = invent_context(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_invent_request(plan, target, &shared, &request);
 }
 
@@ -324,7 +315,7 @@ static void invent_label(const Motive *motive, char *label, size_t size) {
 
 static bool invent_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    MotiveDevelopContext shared_value = invent_context(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     InventRequest request;
     if (!read_invent_request(plan, target, shared, &request)) {
@@ -368,7 +359,7 @@ static PlanResult invent_apply(Plan *plan, FillTarget target, const FillCandidat
     if (!payload || payload->magic != INVENT_PAYLOAD_MAGIC) {
         return PLAN_ERR_NULL;
     }
-    MotiveDevelopContext request_context = invent_context(context);
+    MotiveDevelopContext request_context = motive_context_or_default(context);
     if (!read_invent_request(plan, target, &request_context, &request)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
@@ -426,7 +417,7 @@ bool motive_invent_checker(const Plan *plan, FillTarget target, const FillOperat
         snprintf(out->reason, sizeof(out->reason), "%s", fault);
         return true;
     }
-    MotiveDevelopContext shared_value = invent_context(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     MotiveScoreWeights weights = shared->weights;
     if (weights.contour + weights.intervals + weights.rhythm + weights.length == 0) {

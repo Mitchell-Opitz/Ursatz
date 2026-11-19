@@ -17,6 +17,7 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "util/position.h"
 #include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
@@ -178,7 +179,7 @@ static int scale_step(int pitch, int direction, int tonic_pc, const PitchMateria
    the room for one only, else two, from the request's motif settings or the defaults. False when it makes none. */
 static bool draw_motif(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec, GrowPlace place,
                        Motive *out) {
-    Rational two_bars = grow_scaled(request->bar, 2);
+    Rational two_bars = position_times(request->bar, 2);
     MotiveRandomPreferences preferences;
     if (request->motif) {
         preferences = *request->motif;

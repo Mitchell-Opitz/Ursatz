@@ -509,25 +509,11 @@ static ComposerStatus seed_failure(CorpusSeedResult result, const char *what, co
     }
 }
 
-static ComposerStatus seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error) {
-    memset(out, 0, sizeof(*out));
-    if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the source piece's path is too long to record");
-    }
-    out->start_measure = seed->start_measure;
-    out->start_beat = seed->start_beat;
-    out->end_measure = seed->end_measure;
-    out->end_beat = seed->end_beat;
-    out->score_numerator = seed->score_numerator;
-    out->score_denominator = seed->score_denominator;
-    return COMPOSER_OK;
-}
-
 static ComposerStatus add_source(Plan *plan, NodeId node, const CorpusSeed *seed, ComposerError *error) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_SOURCE;
-    ComposerStatus status = seed_source(seed, &constraint.params.source, error);
+    ComposerStatus status = api_seed_source(seed, &constraint.params.source, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -747,7 +733,7 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
             corpus_passages_destroy(&passages);
             if (result == CORPUS_SEED_OK) {
                 add_notice(state, &state->seed_found);
-                status = seed_source(&state->seed_found, &state->source, error);
+                status = api_seed_source(&state->seed_found, &state->source, error);
             } else {
                 status = seed_failure(result, "a motive (it needs two or more notes in its first bar)", "/corpus_passages", error);
             }

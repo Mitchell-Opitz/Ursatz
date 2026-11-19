@@ -8,13 +8,8 @@
 
 #include "harmony/harmony_internal.h"
 
-/*
- * The chords of developed motives (R-344): what the motives stage wrote on each idea's motive node (its motive_tones)
- * read as chords over the cells of a harmony target.
- */
-
 /* The motive_tones constraint of a node, or NULL. */
-static const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
+const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
@@ -23,6 +18,11 @@ static const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     }
     return NULL;
 }
+
+/*
+ * The chords of developed motives (R-344): what the motives stage wrote on each idea's motive node (its motive_tones)
+ * read as chords over the cells of a harmony target.
+ */
 
 /*
  * One diatonic chord of the numeral, one cell long. A motive writes its harmony as degrees whatever the mode ("I" for

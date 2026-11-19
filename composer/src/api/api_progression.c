@@ -63,11 +63,6 @@ static bool needs_lead(const Options *options) {
            (options->has_schema && galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
 }
 
-static bool present(const cJSON *request, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, name);
-    return item && !cJSON_IsNull(item);
-}
-
 static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
                                    ApiOutputs *outputs, ComposerError *error) {
     const char *cadence_text = NULL;
@@ -75,7 +70,7 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     bool found;
     memset(options, 0, sizeof(*options));
     options->bass = true;
-    if (!present(request, "key") || !present(request, "meter") || !present(request, "bars") || !present(request, "cadence")) {
+    if (!api_has_member(request, "key") || !api_has_member(request, "meter") || !api_has_member(request, "bars") || !api_has_member(request, "cadence")) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "", "progression needs key, meter, bars and cadence");
     }
     if (!api_member_string(request, "key", &options->key_text, &found, error) ||

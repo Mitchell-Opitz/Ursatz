@@ -98,15 +98,6 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
     }
 }
 
-/* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
-static int bass_degree_of(HarmonyMode mode, const PhraseChord *chord) {
-    if (chord->applied) {
-        return (harmony_applied_root_degree(mode, &chord->applied_chord) - 1 +
-                2 * chord->applied_inversion) % 7 + 1;
-    }
-    return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
-}
-
 /* The soprano the requested cadence implies over chord i, or 0 for none. */
 static int implied_soprano(const HeardPhrase *phrase, size_t i) {
     size_t last = phrase->count - 1;
@@ -219,7 +210,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
             input->applied_to = 0;
             input->inversion = chord->chord.inversion;
         }
-        input->bass_degree = bass_degree_of(mode, chord);
+        input->bass_degree = harmony_member_degree(mode, chord);
         input->soprano_degree = soprano ? soprano[i] : implied_soprano(phrase, i);
         input->key_ref = set->key_refs[i];
         input->mode = mode;

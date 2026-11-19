@@ -82,14 +82,6 @@ static bool lane_open(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan r
     return false;
 }
 
-/* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
-static int scale_degree(const SpelledKey *key, int pitch) {
-    int degree = 1;
-    int alteration;
-    util_scale_degree(spelled_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
-    return degree;
-}
-
 /* The spelling of a pitch over a chord: as the tone of the chord it is, else as a degree of the key. */
 static PitchSpelling *spell_over(const SpelledKey *key, const PhraseChord *chord, int pitch) {
     int pcs[4];
@@ -104,7 +96,7 @@ static PitchSpelling *spell_over(const SpelledKey *key, const PhraseChord *chord
             }
         }
     }
-    return harmony_spell_pitch(key, scale_degree(key, pitch), pitch);
+    return harmony_spell_pitch(key, util_pitch_degree(key, pitch), pitch);
 }
 
 /* The pitch of the note sounding at a position, or -1 for a rest. */

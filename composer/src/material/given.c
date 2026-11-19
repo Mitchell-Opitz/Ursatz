@@ -9,6 +9,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_state.h>
 
+#include "util/position.h"
 #include "harmony/harmony_internal.h"
 #include "material/form_return_internal.h"
 #include "util/util.h"
@@ -60,15 +61,6 @@ static bool is_material(const Plan *plan, NodeId section) {
     return plan_section_has_role(plan, section, SECTION_ROLE_MATERIAL);
 }
 
-static Rational times(Rational unit, size_t count) {
-    Rational out = {0, 1};
-    if (rational_mul_int(unit, (long long)count, &out) != RATIONAL_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
-}
-
 static GivenResult read_placement(const Plan *plan, NodeId section, size_t bar, Placement *out) {
     LaneSpanId meters[2];
     if (!plan || !out) {
@@ -90,7 +82,7 @@ static GivenResult read_placement(const Plan *plan, NodeId section, size_t bar, 
         return GIVEN_ERR_METER;
     }
     Rational end;
-    if (rational_add(out->section.start, times(out->bar_length, bar), &out->start) != RATIONAL_OK ||
+    if (rational_add(out->section.start, position_times(out->bar_length, bar), &out->start) != RATIONAL_OK ||
         plan_span_end(out->section, &end) != PLAN_OK) {
         return GIVEN_ERR_PLAN;
     }
@@ -246,7 +238,7 @@ GivenResult plan_give_progression(Plan *plan, NodeId section, size_t bar, const 
         rational_div_int(placement.bar_length, cells, &cell_length) != RATIONAL_OK) {
         return GIVEN_ERR_METER;
     }
-    PlanSpan whole = {placement.start, times(cell_length, count * cells_per_chord)};
+    PlanSpan whole = {placement.start, position_times(cell_length, count * cells_per_chord)};
     SpelledKey key;
     result = check_room(plan, &placement, PLAN_LANE_HARMONY, 0, whole, &key);
     if (result != GIVEN_OK) {
@@ -264,8 +256,8 @@ GivenResult plan_give_progression(Plan *plan, NodeId section, size_t bar, const 
     }
     result = GIVEN_OK;
     for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
-        PlanSpan span = {{0, 1}, times(cell_length, cells_per_chord)};
-        result = rational_add(placement.start, times(cell_length, i * cells_per_chord), &span.start) == RATIONAL_OK
+        PlanSpan span = {{0, 1}, position_times(cell_length, cells_per_chord)};
+        result = rational_add(placement.start, position_times(cell_length, i * cells_per_chord), &span.start) == RATIONAL_OK
                      ? add_given_harmony(plan, section, span, &payloads[i])
                      : GIVEN_ERR_PLAN;
     }

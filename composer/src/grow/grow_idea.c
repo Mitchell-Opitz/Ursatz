@@ -17,6 +17,7 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "util/position.h"
 #include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
@@ -26,15 +27,6 @@
 /* What a theme's ideas are made of: their places, developments, sources and nodes (grow_theme.c reads the request, grow_draw.c draws the spec). */
 
 /* ------------------------------------------------------------ the spec */
-
-Rational grow_scaled(Rational unit, size_t count) {
-    Rational out = {0, 1};
-    if (rational_mul_int(unit, (long long)count, &out) != RATIONAL_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
-}
 
 Rational grow_unit(const GrowThemeRequest *request) {
     Rational unit = {0, 1};

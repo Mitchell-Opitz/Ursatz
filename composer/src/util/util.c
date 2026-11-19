@@ -128,3 +128,11 @@ const char *util_function_name(bool has_function, HarmonicFunction function) {
     const char *name = has_function ? harmonic_function_name(function) : NULL;
     return name ? name : "unknown";
 }
+
+/* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
+int util_pitch_degree(const SpelledKey *key, int pitch) {
+    int degree = 1;
+    int alteration;
+    util_scale_degree(spelled_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
+    return degree;
+}

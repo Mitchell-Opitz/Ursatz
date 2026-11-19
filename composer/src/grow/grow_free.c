@@ -6,6 +6,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_state.h>
 
+#include "util/position.h"
 #include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
@@ -206,16 +207,6 @@ bool grow_free_applies(const Plan *plan, FillTarget target) {
 
 /* ------------------------------------------------------------- candidates */
 
-/* Every pitch within the range a form may have, so the melody has room to place it. */
-static bool in_range(const Motive *motive) {
-    for (size_t i = 0; i < motive->note_count; i++) {
-        if (motive_pitch(motive, i) < FORM_LOW || motive_pitch(motive, i) > FORM_HIGH) {
-            return false;
-        }
-    }
-    return true;
-}
-
 /*
  * The development of m0 a middle idea is: a leading fragment, a transposition in the key's steps (a sequence), an
  * inversion or an interval changed, drawn from rng. It has to fit the idea and the range. False when no draw does.
@@ -254,7 +245,7 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
         }
         }
         if (motive_develop(source, dev, result) == MOTIVE_DEV_OK && result->note_count >= 1 &&
-            rational_cmp(result->length, room) <= 0 && in_range(result)) {
+            rational_cmp(result->length, room) <= 0 && grow_motive_in_form_range(result)) {
             return true;
         }
     }
@@ -463,7 +454,7 @@ PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *sp
                 ref.step.value[2] = 0;
             }
             snprintf(name, sizeof(name), "m%zu", i);
-            result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + i - 1),
+            result = plan_result_of_rational(rational_add(build.material_span.start, position_times(request.theme.bar, build.slot_base + i - 1),
                                    &bar.start));
             if (result == PLAN_OK) {
                 result = plan_add_node(plan, build.material, PLAN_NODE_MOTIVE, bar, name, &motive);

@@ -169,6 +169,9 @@ cJSON *api_number_g(double value);
 /* A rational as a number (num / den), for a tempo or a density in a result. */
 cJSON *api_ratio_number(const Rational *ratio);
 
+/* True when the object has the member and it is not null. */
+bool api_has_member(const cJSON *object, const char *name);
+
 /* --- the outputs a theme or grow request asks for ---------------------------------------------------- */
 
 typedef struct {

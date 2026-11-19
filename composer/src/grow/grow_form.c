@@ -68,13 +68,13 @@ typedef struct {
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
 } Request;
 
-static MotiveDevelopContext context_or_default(const void *context) {
-    if (context) {
-        return *(const MotiveDevelopContext *)context;
+int grow_widest_leap(const Motive *motive) {
+    int widest = 0;
+    for (size_t i = 1; i < motive->note_count; i++) {
+        int leap = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
+        widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
     }
-    MotiveDevelopContext defaults;
-    motive_develop_context_default(&defaults);
-    return defaults;
+    return widest;
 }
 
 static Slot slot_of(const char *name, GrowSlot *function_slot) {
@@ -277,15 +277,6 @@ static bool within_range(const Motive *motive) {
     return true;
 }
 
-static int widest_leap(const Motive *motive) {
-    int widest = 0;
-    for (size_t i = 1; i < motive->note_count; i++) {
-        int leap = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
-        widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
-    }
-    return widest;
-}
-
 static bool same_pitches(const Motive *a, const Motive *b) {
     if (a->note_count != b->note_count) {
         return false;
@@ -339,8 +330,8 @@ static void label_of(const Payload *payload, char *out, size_t size) {
 /* Whether a motive fits the idea: a full motive in range, no wider a leap than the basic idea's (a fifth at least) and no
    longer than the idea's room. */
 static bool form_fits(const Request *request, const Motive *motive) {
-    int allowed = widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP;
-    return motive->form == MOTIVE_SKETCH_FORM_FULL && within_range(motive) && widest_leap(motive) <= allowed &&
+    int allowed = grow_widest_leap(&request->basic) > FORM_LEAP ? grow_widest_leap(&request->basic) : FORM_LEAP;
+    return motive->form == MOTIVE_SKETCH_FORM_FULL && within_range(motive) && grow_widest_leap(motive) <= allowed &&
            rational_cmp(motive->length, request->room) <= 0;
 }
 
@@ -527,7 +518,7 @@ static bool offer_developed(Proposal *proposal, bool contrast) {
 
 static bool form_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, &request);
 }
 
@@ -535,7 +526,7 @@ static bool form_generate(const Plan *plan, FillTarget target, FillRng *rng, voi
                           FillCandidateList *out) {
     (void)rng;
     Request request;
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     if (!read_request(plan, target, shared, &request)) {
         return true;

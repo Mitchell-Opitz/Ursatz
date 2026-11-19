@@ -97,17 +97,6 @@ static bool read_bass(const Plan *plan, MelodyContext *context) {
     return rational_cmp(at, context->length) == 0;
 }
 
-/* The motive_tones constraint of a node, or NULL. */
-static const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
-        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
-            return &constraint->params.motive_tones;
-        }
-    }
-    return NULL;
-}
-
 /* The tone of a label of the plan: MELODY_TONE_CHORD, MELODY_TONE_NONE or the NonChordTone it names. */
 static int tone_of_label(const char *label) {
     NonChordTone type;

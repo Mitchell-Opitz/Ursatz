@@ -17,6 +17,7 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "util/position.h"
 #include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
@@ -46,9 +47,9 @@ PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *r
         return PLAN_OK;
     }
     size_t bars = build->motive_bars > 0 ? build->motive_bars : 1;
-    PlanSpan span = {{0, 1}, grow_scaled(build->request->bar, bars)};
+    PlanSpan span = {{0, 1}, position_times(build->request->bar, bars)};
     PlanResult result = plan_result_of_rational(rational_add(
-        build->material_span.start, grow_scaled(build->request->bar, build->slot_base + (slot - 1) * bars), &span.start));
+        build->material_span.start, position_times(build->request->bar, build->slot_base + (slot - 1) * bars), &span.start));
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, MOTIVE_NAMES[slot], out);
     }
@@ -343,7 +344,7 @@ static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
     for (size_t bar = bars; bar > 0; bar--) {
         Rational start;
         bool taken = false;
-        if (rational_add(build->material_span.start, grow_scaled(build->request->bar, bar - 1), &start) != RATIONAL_OK) {
+        if (rational_add(build->material_span.start, position_times(build->request->bar, bar - 1), &start) != RATIONAL_OK) {
             return PLAN_NODE_NONE;
         }
         for (size_t i = 0; i < plan_node_child_count(plan, build->material); i++) {
@@ -470,7 +471,7 @@ size_t grow_first_free_bar(const Plan *plan, NodeId material, PlanSpan material_
     size_t run = 0;
     for (size_t at = 0; at < free_bar; at++) {
         Rational start;
-        bool taken = rational_add(material_span.start, grow_scaled(bar, at), &start) != RATIONAL_OK;
+        bool taken = rational_add(material_span.start, position_times(bar, at), &start) != RATIONAL_OK;
         for (size_t i = 0; !taken && i < plan_node_child_count(plan, material); i++) {
             PlanSpan other = plan_node_span(plan, plan_node_child_at(plan, material, i));
             Rational other_end;
@@ -490,9 +491,9 @@ static PlanResult add_section_motive(GrowBuild *build, size_t bar_index, NodeId 
     char name[64];
     const char *section = plan_node_name(build->plan, build->request->section);
     snprintf(name, sizeof(name), "%s motive", section ? section : "section");
-    PlanSpan span = {{0, 1}, grow_scaled(build->request->bar, build->motive_bars > 0 ? build->motive_bars : 1)};
+    PlanSpan span = {{0, 1}, position_times(build->request->bar, build->motive_bars > 0 ? build->motive_bars : 1)};
     PlanResult result =
-        plan_result_of_rational(rational_add(build->material_span.start, grow_scaled(build->request->bar, bar_index), &span.start));
+        plan_result_of_rational(rational_add(build->material_span.start, position_times(build->request->bar, bar_index), &span.start));
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, name, out);
     }
@@ -580,7 +581,7 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
         char name[32];
         snprintf(name, sizeof(name), "shortened for m%zu", k);
         result = plan_result_of_rational(
-            rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+            rational_add(build.material_span.start, position_times(request.bar, short_at), &start));
         result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->shortened[k], name,
                                                       PLAN_STATE_REALIZED, &build.short_node[k], NULL)
                                    : result;
@@ -595,7 +596,7 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
         char name[32];
         snprintf(name, sizeof(name), "distant for m%zu", k);
         result = plan_result_of_rational(
-            rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+            rational_add(build.material_span.start, position_times(request.bar, short_at), &start));
         result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->distant[k], name,
                                                       PLAN_STATE_REALIZED, &build.distant_node[k], NULL)
                                    : result;
@@ -605,7 +606,7 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
     if (result == PLAN_OK && spec->has_new_material) {
         Rational start;
         result = plan_result_of_rational(
-            rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+            rational_add(build.material_span.start, position_times(request.bar, short_at), &start));
         result = result == PLAN_OK ? motive_attach_as(plan, build.material, start,
                                                       &spec->slot_source[GROW_SLOT_CONTRASTING], "new material",
                                                       PLAN_STATE_REALIZED, &build.new_node, NULL)
@@ -621,7 +622,7 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
         char name[32];
         size_t bars = grow_motive_layout_bars(&spec->extended[k], request.bar);
         snprintf(name, sizeof(name), "extension %zu", k + 1);
-        result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+        result = plan_result_of_rational(rational_add(build.material_span.start, position_times(request.bar, short_at), &start));
         result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->extended[k], name,
                                                       PLAN_STATE_REALIZED, &build.extension_node[k], NULL)
                                    : result;

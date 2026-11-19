@@ -310,7 +310,7 @@ static bool schema_generate(const Plan *plan, FillTarget target, FillRng *rng, v
     return ok;
 }
 
-static PlanResult schema_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+PlanResult harmony_skeleton_apply_target(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const SkeletonCandidate *skeleton = candidate ? candidate->payload : NULL;
     (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !skeleton || skeleton->context.target != (LaneSpanId)target.id) {
@@ -332,7 +332,7 @@ FillResult harmony_schema_register(FillOperatorRegistry *registry, const Harmony
     operator_.kind = FILL_OPERATOR_FILL;
     operator_.applies = schema_applies;
     operator_.generate = schema_generate;
-    operator_.apply = schema_apply;
+    operator_.apply = harmony_skeleton_apply_target;
     operator_.context = (void *)params;
     return fill_registry_register(registry, &operator_);
 }

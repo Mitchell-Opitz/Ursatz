@@ -577,4 +577,10 @@ bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned
 /* How many of the standard counterpoint melodic rules have a soft preference. */
 unsigned melody_melodic_soft_rules(void);
 
+/* The motive_tones constraint of a node, or NULL. */
+const PlanMotiveTones *node_tones(const Plan *plan, NodeId node);
+
+/* Applies a skeleton candidate (schema or sequence) to the harmony lane span it was drawn for. */
+PlanResult harmony_skeleton_apply_target(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
+
 #endif

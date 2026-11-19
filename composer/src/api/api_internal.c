@@ -410,3 +410,9 @@ cJSON *api_number_g(double value) {
 cJSON *api_ratio_number(const Rational *ratio) {
     return api_number_g((double)ratio->num / (double)ratio->den);
 }
+
+/* True when the object has the member and it is not null. */
+bool api_has_member(const cJSON *object, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    return item && !cJSON_IsNull(item);
+}

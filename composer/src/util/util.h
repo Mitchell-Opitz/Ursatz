@@ -85,4 +85,7 @@ const char *util_function_name(bool has_function, HarmonicFunction function);
 /* A malloc'd copy of the text ("" for NULL), or NULL when out of memory. The caller frees it. */
 char *util_copy_string(const char *text);
 
+/* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
+int util_pitch_degree(const SpelledKey *key, int pitch);
+
 #endif

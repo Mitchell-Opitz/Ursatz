@@ -69,7 +69,7 @@ typedef struct {
     PlanSpan phrases[PHRASES];
 } CodaRequest;
 
-static bool in_range(const Motive *motive) {
+bool grow_motive_in_form_range(const Motive *motive) {
     for (size_t i = 0; i < motive->note_count; i++) {
         if (motive_pitch(motive, i) < FORM_LOW || motive_pitch(motive, i) > FORM_HIGH) {
             return false;
@@ -81,7 +81,7 @@ static bool in_range(const Motive *motive) {
 /* `start` and `count` bars later. */
 static Rational bar_offset(Rational start, size_t count, Rational bar) {
     Rational out;
-    return rational_add(start, grow_scaled(bar, count), &out) == RATIONAL_OK ? out : start;
+    return rational_add(start, position_times(bar, count), &out) == RATIONAL_OK ? out : start;
 }
 
 static bool read_coda(const Plan *plan, FillTarget target, CodaRequest *out) {
@@ -146,16 +146,16 @@ static bool read_coda(const Plan *plan, FillTarget target, CodaRequest *out) {
     /* m0 (when it is made yet; the draw reads it again): two notes or more, at most a bar, in range. */
     Motive source;
     if (grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &source) &&
-        (source.note_count < 2 || rational_cmp(source.length, theme->bar) > 0 || !in_range(&source))) {
+        (source.note_count < 2 || rational_cmp(source.length, theme->bar) > 0 || !grow_motive_in_form_range(&source))) {
         return false;
     }
     for (size_t i = 0; i < IDEAS; i++) {
         request.ideas[i].start = bar_offset(theme->span.start, IDEA_BAR[i], theme->bar);
-        request.ideas[i].length = grow_scaled(theme->bar, IDEA_BARS[i]);
+        request.ideas[i].length = position_times(theme->bar, IDEA_BARS[i]);
     }
     for (size_t i = 0; i < PHRASES; i++) {
         request.phrases[i].start = bar_offset(theme->span.start, PHRASE_BAR[i], theme->bar);
-        request.phrases[i].length = grow_scaled(theme->bar, PHRASE_BARS[i]);
+        request.phrases[i].length = position_times(theme->bar, PHRASE_BARS[i]);
     }
     *out = request;
     return true;
@@ -222,7 +222,7 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
     memcpy(spec->idea_span, request->ideas, sizeof(spec->idea_span));
     memcpy(spec->phrase_span, request->phrases, sizeof(spec->phrase_span));
     if (!grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &spec->source) || spec->source.note_count < 2 ||
-        rational_cmp(spec->source.length, theme->bar) > 0 || !in_range(&spec->source)) {
+        rational_cmp(spec->source.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->source)) {
         return false;
     }
     const size_t count = spec->source.note_count;
@@ -236,7 +236,7 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
         return false;
     }
     spec->augmented = motive_develop(&spec->source, &spec->augmentation, &spec->augment) == MOTIVE_DEV_OK &&
-                      rational_cmp(spec->augment.length, two) <= 0 && in_range(&spec->augment);
+                      rational_cmp(spec->augment.length, two) <= 0 && grow_motive_in_form_range(&spec->augment);
     /* Phrase 2: m0 liquidated, 1 to half the notes dropped, then one note further (as the retransition's residues). */
     size_t most = count / 2 > 1 ? count / 2 : 1;
     size_t drop = 1 + (size_t)fill_rng_below(rng, most);
@@ -253,9 +253,9 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
     second.value[2] = 0;
     if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
         spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !in_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
+        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
         spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !in_range(&spec->repeated)) {
+        !grow_motive_in_form_range(&spec->repeated)) {
         return false;
     }
     spec->liquidation = first;
@@ -265,7 +265,7 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
     /* Phrase 3: the main theme head, then the tonic nearest its last note. */
     Rational half;
     if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK ||
-        !grow_main_theme_head(&spec->source, half, &spec->head) || !in_range(&spec->head)) {
+        !grow_main_theme_head(&spec->source, half, &spec->head) || !grow_motive_in_form_range(&spec->head)) {
         return false;
     }
     return make_tone(&spec->source, &theme->key, theme->bar, motive_pitch(&spec->head, spec->head.note_count - 1),
@@ -364,9 +364,9 @@ const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *
 static PlanResult add_node_motive(GrowBuild *build, size_t bar, size_t bars, const char *name, const PlanMotiveRef *ref,
                                   NodeId *out) {
     PlanSpan span;
-    span.length = grow_scaled(build->request->bar, bars);
+    span.length = position_times(build->request->bar, bars);
     PlanResult result =
-        plan_result_of_rational(rational_add(build->material_span.start, grow_scaled(build->request->bar, bar), &span.start));
+        plan_result_of_rational(rational_add(build->material_span.start, position_times(build->request->bar, bar), &span.start));
     PlanConstraint constraint;
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, name, out);
@@ -427,14 +427,14 @@ PlanResult grow_coda_apply(Plan *plan, FillTarget target, const GrowCodaSpec *sp
     Rational at;
     if (result == PLAN_OK) {
         result = plan_result_of_rational(
-            rational_add(build.material_span.start, grow_scaled(request.theme.bar, slot++), &at));
+            rational_add(build.material_span.start, position_times(request.theme.bar, slot++), &at));
     }
     if (result == PLAN_OK) {
         result = motive_attach_as(plan, build.material, at, &spec->head, "main theme head", PLAN_STATE_REALIZED, &nodes[5], NULL);
     }
     if (result == PLAN_OK) {
         result = plan_result_of_rational(
-            rational_add(build.material_span.start, grow_scaled(request.theme.bar, slot++), &at));
+            rational_add(build.material_span.start, position_times(request.theme.bar, slot++), &at));
     }
     if (result == PLAN_OK) {
         result = motive_attach_as(plan, build.material, at, &spec->tone, "final tone", PLAN_STATE_REALIZED, &nodes[6], NULL);

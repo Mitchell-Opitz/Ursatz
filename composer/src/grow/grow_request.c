@@ -11,6 +11,7 @@
 #include <plan/plan_state.h>
 #include <theory/tonality/roman_numeral_rules.h>
 
+#include "util/position.h"
 #include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
@@ -147,7 +148,7 @@ bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, 
     Rational idea_end = {0, 1};
     size_t leading = 0;
     if (!grow_motive_fills_part(motive, bar, part_bars, beginning) ||
-        rational_add(motive_pickup(motive), grow_scaled(bar, basic_bars), &idea_end) != RATIONAL_OK) {
+        rational_add(motive_pickup(motive), position_times(bar, basic_bars), &idea_end) != RATIONAL_OK) {
         return false;
     }
     /* The notes that start inside the idea's bars; a note running past the idea's end makes no basic idea. */
@@ -170,15 +171,6 @@ size_t grow_motive_layout_bars(const Motive *motive, Rational bar) {
         return 1;
     }
     return (size_t)bars;
-}
-
-static Rational times(Rational time, size_t count) {
-    Rational out = {0, 1};
-    if (rational_mul_int(time, (long long)count, &out) != RATIONAL_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
 }
 
 static GrowResult from_plan(PlanResult result) {
@@ -751,8 +743,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
     if (!plan) {
         return GROW_ERR_ALLOC;
     }
-    PlanSpan theme = {{0, 1}, times(bar, request->bars)};
-    PlanSpan material = {theme.length, times(bar, material_bars)};
+    PlanSpan theme = {{0, 1}, position_times(bar, request->bars)};
+    PlanSpan material = {theme.length, position_times(bar, material_bars)};
     PlanSpan form = {{0, 1}, {0, 1}};
     Rational total;
     GrowResult result = from_plan(plan_result_of_rational(rational_add(theme.length, material.length, &total)));
@@ -857,7 +849,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
         if (!request->slot_motives[slot]) {
             continue;
         }
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, slot_bar), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, slot_bar), &start)));
         slot_bar += grow_motive_layout_bars(request->slot_motives[slot], bar);
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->slot_motives[slot],
                                                              grow_slot_node_name(slot), NULL, NULL))
@@ -871,7 +863,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
         if (!request->idea_motives[idea_at]) {
             continue;
         }
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, idea_bar), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, idea_bar), &start)));
         idea_bar += grow_motive_layout_bars(request->idea_motives[idea_at], bar);
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->idea_motives[idea_at],
                                                              grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name)),
@@ -880,7 +872,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
     }
     if (result == GROW_OK && accompaniment_motive) {
         Rational start;
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, material_bars - 1), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, material_bars - 1), &start)));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, accompaniment_motive,
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;

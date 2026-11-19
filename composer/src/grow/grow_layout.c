@@ -248,7 +248,7 @@ static bool placed_motive(const GrowThemeSpec *spec, GrowPlace place, const Moti
 }
 
 /* Whether two motives have the same notes: count, pitches and durations. */
-static bool same_notes(const Motive *a, const Motive *b) {
+bool grow_same_notes(const Motive *a, const Motive *b) {
     if (a->note_count != b->note_count) {
         return false;
     }
@@ -285,7 +285,7 @@ static bool repeat_motive(const Motive *base, bool varied, Rational room, Motive
         }
         Motive result;
         if (base->note_count >= (varied ? 2u : 1u) && grow_develop_motive(base, &ref, &result) &&
-            (!varied || !same_notes(&result, base)) && rational_cmp(result.length, room) <= 0 &&
+            (!varied || !grow_same_notes(&result, base)) && rational_cmp(result.length, room) <= 0 &&
             grow_motive_in_range(&result, EXTENSION_LOW, EXTENSION_HIGH, false)) {
             *out = result;
             return true;

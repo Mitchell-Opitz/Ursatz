@@ -115,4 +115,14 @@ static inline Rational position_abs(Rational a) {
     return rational_is_negative(a) ? position_sub(POSITION_ZERO, a) : a;
 }
 
+/* count units as a length; 0 when the product does not fit a Rational. */
+static inline Rational position_times(Rational unit, size_t count) {
+    Rational out = {0, 1};
+    if (rational_mul_int(unit, (long long)count, &out) != RATIONAL_OK) {
+        out.num = 0;
+        out.den = 1;
+    }
+    return out;
+}
+
 #endif

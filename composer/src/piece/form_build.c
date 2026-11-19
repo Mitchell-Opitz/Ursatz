@@ -9,6 +9,7 @@
 #include <ursatz_composer/piece_plan_keys.h>
 #include <plan/plan_state.h>
 
+#include "util/position.h"
 #include "grow/grow_internal.h"
 #include "structure/form_record.h"
 #include "piece/piece_internal.h"
@@ -20,15 +21,6 @@
 
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
     return motive_bars + MATERIAL_BARS_PER_SECTION * motive_bars * section_count;
-}
-
-static Rational bars_of(Rational bar, size_t count) {
-    Rational out = {0, 1};
-    if (rational_mul_int(bar, (long long)count, &out) != RATIONAL_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
 }
 
 /*
@@ -216,7 +208,7 @@ static PieceResult add_independent_motive(Plan *plan, NodeId idea, PlanSpan mate
     PlanNote note;
     PlanConstraint constraint;
     snprintf(name, sizeof(name), "independent %s", section->name);
-    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, bars_of(bar, bar_index), &span.start)));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, bar_index), &span.start)));
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, name, &node));
     }
@@ -249,7 +241,7 @@ PieceResult piece_add_own_motive(Plan *plan, NodeId idea, PlanSpan material, Rat
     char name[64];
     Rational start;
     snprintf(name, sizeof(name), "own %s", section);
-    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, bars_of(bar, bar_index), &start)));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, bar_index), &start)));
     return result == PIECE_OK ? piece_result_of_plan(motive_attach_sourced(plan, idea, start, motive, name, NULL, out, NULL)) : result;
 }
 
@@ -483,8 +475,8 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
-    PlanSpan piece = {{0, 1}, bars_of(bar, size->bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count + own_bars)};
+    PlanSpan piece = {{0, 1}, position_times(bar, size->bars)};
+    PlanSpan material = {piece.length, position_times(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count + own_bars)};
     PlanSpan extent = {{0, 1}, {0, 1}};
     PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &extent.length)));
     NodeId form_id = PLAN_NODE_NONE;
@@ -508,7 +500,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     FillRng connective_rng;
     fill_rng_seed(&connective_rng, request->seed + FORM_CONNECTIVE_SEED_OFFSET);
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
-        PlanSpan span = {start, bars_of(bar, size->sections[i].bars)};
+        PlanSpan span = {start, position_times(bar, size->sections[i].bars)};
         int wants = size->sections[i].leads_in ? (int)size->sections[i].connective : SECTION_CONNECTIVE_NONE;
         bool connective = wants == SECTION_CONNECTIVE_ALWAYS ||
                           (wants == SECTION_CONNECTIVE_SOMETIMES && fill_rng_below(&connective_rng, 2) == 0);

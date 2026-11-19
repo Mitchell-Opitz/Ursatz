@@ -177,4 +177,9 @@ static inline void motive_payload_destroy(void *payload) {
 PlanResult motive_attach_as(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                             PlanState state, NodeId *out_node, LaneSpanId *out_span);
 
+/* The develop context a payload or an operator context points to, else the defaults. */
+MotiveDevelopContext motive_context_or_default(const void *context);
+/* A score from small constants or counts, which always fit. Values from a caller go through motive_score_make. */
+MotiveScore motive_make_score(unsigned long long numerator, unsigned long long denominator);
+
 #endif

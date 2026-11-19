@@ -217,8 +217,6 @@ typedef struct {
     NodeId extension_node[SECTION_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
-/* A length of count units. */
-Rational grow_scaled(Rational unit, size_t count);
 /* A node of the theme, Realized, starting `start` after the theme's start and `length` long. */
 PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, Rational start, Rational length,
                          const char *name, NodeId *out);
@@ -598,5 +596,12 @@ bool grow_same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b);
 void grow_spec_label(const GrowThemeSpec *spec, char *label, size_t size);
 /* Applies a candidate to the plan: the nodes, the targets and the motives of the theme. */
 PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
+
+/* The widest interval of the motive, in semitones. */
+int grow_widest_leap(const Motive *motive);
+/* Whether the two motives have the same pitches and durations, note for note. */
+bool grow_same_notes(const Motive *a, const Motive *b);
+/* Whether every pitch of the motive is within the range a form may have, so the melody has room to place it. */
+bool grow_motive_in_form_range(const Motive *motive);
 
 #endif

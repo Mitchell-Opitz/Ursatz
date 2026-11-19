@@ -272,15 +272,6 @@ static bool make_runs(GrowLiquidateSpec *spec, const SpelledKey *key, size_t run
 
 /* ------------------------------------------------------------- candidates */
 
-static bool in_range(const Motive *motive) {
-    for (size_t i = 0; i < motive->note_count; i++) {
-        if (motive_pitch(motive, i) < FORM_LOW || motive_pitch(motive, i) > FORM_HIGH) {
-            return false;
-        }
-    }
-    return true;
-}
-
 /*
  * The main theme head (R-505, and the coda's, R-507): m0's leading notes that fit half a bar, three at most and two at least, as a literal motive
  * (m0 cut to them, V for its own harmony). When the two leading notes do not fit, their onsets and durations are halved, once.
@@ -342,9 +333,9 @@ static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, Gro
     second.value[2] = 0;
     if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
         spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !in_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
+        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
         spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !in_range(&spec->repeated)) {
+        !grow_motive_in_form_range(&spec->repeated)) {
         return false;
     }
     spec->liquidation = first;
@@ -355,7 +346,7 @@ static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, Gro
     spec->first_degree = fill_rng_below(rng, 2) == 0 ? 2 : 4;
     Rational half;
     if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK || !grow_main_theme_head(&spec->source, half, &spec->head) ||
-        !in_range(&spec->head)) {
+        !grow_motive_in_form_range(&spec->head)) {
         return false;
     }
     return make_runs(spec, &theme->key, request->run, request->bar_run);
@@ -367,7 +358,7 @@ static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, Fi
     spec->magic = GROW_LIQUIDATE_MAGIC;
     memcpy(spec->span, request->ideas, sizeof(spec->span));
     if (!grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &spec->source) || spec->source.note_count < 2 ||
-        rational_cmp(spec->source.length, theme->bar) > 0 || !in_range(&spec->source)) {
+        rational_cmp(spec->source.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->source)) {
         return false;
     }
     if (request->retransition) {
@@ -379,7 +370,7 @@ static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, Fi
     spec->repetition.value[0] = 1;
     spec->repetition.value[1] = -1;
     if (motive_develop(&spec->source, &spec->repetition, &spec->repeated) != MOTIVE_DEV_OK ||
-        rational_cmp(spec->repeated.length, theme->bar) > 0 || !in_range(&spec->repeated)) {
+        rational_cmp(spec->repeated.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->repeated)) {
         return false;
     }
     /* The liquidation: 1 to half the notes dropped, fewer than the notes. */
@@ -396,7 +387,7 @@ static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, Fi
     drawn.value[2] = 1;
     if (motive_develop(&spec->source, &drawn, &spec->liquidated) != MOTIVE_DEV_OK ||
         spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !in_range(&spec->liquidated)) {
+        !grow_motive_in_form_range(&spec->liquidated)) {
         return false;
     }
     spec->liquidation = drawn;
@@ -551,7 +542,7 @@ PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquida
         if (result == PLAN_OK && (i > 0 || retransition)) {
             Rational start;
             result = plan_result_of_rational(rational_add(
-                build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + (retransition ? i : i - 1)),
+                build.material_span.start, position_times(request.theme.bar, build.slot_base + (retransition ? i : i - 1)),
                 &start));
             if (result == PLAN_OK && i < (retransition ? 2u : 3u)) {
                 /* The repetition and the liquidated idea (a retransition's two residues): m0 with a step, named by a motive

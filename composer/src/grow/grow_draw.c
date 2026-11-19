@@ -17,6 +17,7 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "util/position.h"
 #include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
@@ -155,7 +156,7 @@ static bool draw_section_motive(const GrowThemeRequest *request, FillRng *rng, c
         }
         ref.step = dev;
         if (motive_develop(m0, &dev, &result) != MOTIVE_DEV_OK || result.note_count < 2 ||
-            rational_cmp(result.length, grow_scaled(request->bar, spec->layout.basic_bars)) > 0) {
+            rational_cmp(result.length, position_times(request->bar, spec->layout.basic_bars)) > 0) {
             continue;
         }
         spec->has_section_motive = true;

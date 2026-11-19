@@ -36,4 +36,7 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
  */
 bool rendered_plan_note_id(const RenderedPlan *rendered, size_t event, char out[REALIZATION_ID_MAX]);
 
+/* Writes a printf-style message into the export error (nothing for a NULL error). */
+void render_set_message(PlanExportError *error, const char *format, ...);
+
 #endif

@@ -46,7 +46,7 @@ void motive_develop_context_default(MotiveDevelopContext *context) {
     context->weights = motive_score_default_weights();
 }
 
-static MotiveDevelopContext context_or_default(const void *context) {
+MotiveDevelopContext motive_context_or_default(const void *context) {
     if (context) {
         return *(const MotiveDevelopContext *)context;
     }
@@ -362,13 +362,13 @@ static bool propose_rhythms(Proposal *proposal) {
 
 static bool restate_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, FAMILY_RESTATE, &request);
 }
 
 static bool restate_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RESTATE, &request)) {
@@ -380,13 +380,13 @@ static bool restate_generate(const Plan *plan, FillTarget target, FillRng *rng, 
 
 static bool fragment_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, FAMILY_FRAGMENT, &request);
 }
 
 static bool fragment_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_FRAGMENT, &request)) {
@@ -398,14 +398,14 @@ static bool fragment_generate(const Plan *plan, FillTarget target, FillRng *rng,
 
 static bool rhythm_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
-    MotiveDevelopContext shared = context_or_default(context);
+    MotiveDevelopContext shared = motive_context_or_default(context);
     return read_request(plan, target, &shared, FAMILY_RHYTHM, &request);
 }
 
 static bool rhythm_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     (void)rng;
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RHYTHM, &request)) {
@@ -488,7 +488,7 @@ bool motive_develop_checker(const Plan *plan, FillTarget target, const FillOpera
     if (!payload || payload->magic != PAYLOAD_MAGIC) {
         return true;
     }
-    MotiveDevelopContext shared_value = context_or_default(context);
+    MotiveDevelopContext shared_value = motive_context_or_default(context);
     const MotiveDevelopContext *shared = &shared_value;
     Request request;
     MotiveScoreWeights weights = shared->weights;
