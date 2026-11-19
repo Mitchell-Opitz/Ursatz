@@ -4,6 +4,10 @@ ursatz_test(test_asserts_on)
 # Every include follows cmake/layer-table.txt (spec/target-architecture.md 12.2).
 ursatz_test(layer_table COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/cmake/check_layer_table.py ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/library/public/manifest.txt)
 
+# No copy of a shared primitive (a gcd, a 128-bit integer, a rational type, the pitch and Roman numeral names, the scale steps) outside its owner
+# (tools/ci/check-primitives.sh, R-622); what stays is in tools/ci/primitive-allow.txt.
+ursatz_test(primitive_owners COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-primitives.sh)
+
 # Test support every part shares: checks, files, temp paths and JSON (tests/support/ursatz_test.h), and the HTTP client of
 # the GUI backend tests (tests/support/test_http.h). A part's own helpers stay in its tests/support folder.
 ursatz_test_library(ursatz_test_support SOURCES support/ursatz_test.c LIBS cjson
