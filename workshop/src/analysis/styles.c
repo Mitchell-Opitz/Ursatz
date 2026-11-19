@@ -342,8 +342,7 @@ static void free_summaries(WorkshopPieceSummary *pieces, size_t count) {
     free(pieces);
 }
 
-static UrsatzStatus load_style(const char *id, WorkshopStyle *style);
-static void style_destroy_contents(WorkshopStyle *style);
+static UrsatzStatus load_meta(const char *id, cJSON **meta);
 
 /* The pieces of a brief: scopes, ids and styles' last builds, in id order without repeats. */
 static UrsatzStatus resolve_brief(const WorkshopStyleBrief *brief, CommonNames *ids) {
@@ -373,13 +372,15 @@ static UrsatzStatus resolve_brief(const WorkshopStyleBrief *brief, CommonNames *
         result = common_names_add(&all, brief->piece_ids[i]) ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     for (size_t i = 0; result == URSATZ_OK && i < brief->style_count; i++) {
-        WorkshopStyle style;
-        memset(&style, 0, sizeof(style));
-        result = load_style(brief->style_ids[i], &style);
-        for (size_t j = 0; result == URSATZ_OK && j < style.piece_count; j++) {
-            result = common_names_add(&all, style.pieces[j]) ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        cJSON *meta = NULL;
+        result = load_meta(brief->style_ids[i], &meta);
+        const cJSON *piece = NULL;
+        cJSON_ArrayForEach(piece, cJSON_GetObjectItemCaseSensitive(meta, "pieces")) {
+            if (result == URSATZ_OK && cJSON_IsString(piece) && !common_names_add(&all, piece->valuestring)) {
+                result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+            }
         }
-        style_destroy_contents(&style);
+        cJSON_Delete(meta);
     }
 
     if (result == URSATZ_OK && all.count > 1) {
@@ -929,46 +930,6 @@ static void free_strings(char **items, size_t count) {
     free(items);
 }
 
-static void style_destroy_contents(WorkshopStyle *style) {
-    free(style->id);
-    free(style->name);
-    free(style->created_at);
-    free(style->updated_at);
-    free(style->filter_composer);
-    free(style->filter_source);
-    free(style->filter_tag);
-    free(style->collection_id);
-    free_strings(style->source_piece_ids, style->source_piece_count);
-    workshop_style_brief_free(&style->brief);
-    free_strings(style->pieces, style->piece_count);
-    workshop_style_skipped_free(style->skipped, style->skipped_count);
-    for (size_t i = 0; i < style->category_count; i++) {
-        WorkshopStyleCategory *category = &style->categories[i];
-        free(category->dimension);
-        free(category->category);
-        for (size_t j = 0; j < category->label_count; j++) {
-            free(category->labels[j].label);
-        }
-        free(category->labels);
-    }
-    free(style->categories);
-    memset(style, 0, sizeof(*style));
-}
-
-void workshop_style_destroy(WorkshopStyle *style) {
-    if (style) {
-        style_destroy_contents(style);
-        free(style);
-    }
-}
-
-void workshop_style_free_list(WorkshopStyle *styles, size_t count) {
-    for (size_t i = 0; styles && i < count; i++) {
-        style_destroy_contents(&styles[i]);
-    }
-    free(styles);
-}
-
 static bool style_dir_path(const char *id, char *out, size_t out_size) {
     return workshop_collection_is_valid_id(id) && snprintf(out, out_size, "%s/%s", kStylesDir, id) < (int)out_size;
 }
@@ -1151,10 +1112,12 @@ const char *workshop_style_brief_parse(const cJSON *json, WorkshopStyleBrief *ou
     return NULL;
 }
 
-/* Loads styles/<id>/meta.json into style (zeroed by the caller). */
-static UrsatzStatus load_style(const char *id, WorkshopStyle *style) {
+/* Reads styles/<id>/meta.json: the stored tree, whose "id" is set from the directory name (a copy of it inside the file is not
+   trusted). NOT_FOUND when the style is absent. */
+static UrsatzStatus load_meta(const char *id, cJSON **out) {
     char dir[PATH_BYTES];
     char path[PATH_BYTES + 16];
+    *out = NULL;
     if (!style_dir_path(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
@@ -1164,60 +1127,34 @@ static UrsatzStatus load_style(const char *id, WorkshopStyle *style) {
     if (!meta) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
-
-    /* The directory name is the id; a copy of it inside the file is not trusted. */
-    style->id = common_strdup(id);
-    style->name = common_json_string_copy(meta, "name");
-    style->created_at = common_json_string_copy(meta, "created_at");
-    style->updated_at = common_json_string_copy(meta, "updated_at");
-
-    const cJSON *source = cJSON_GetObjectItemCaseSensitive(meta, "source");
-    const cJSON *kind = cJSON_GetObjectItemCaseSensitive(source, "kind");
-    const cJSON *filter = cJSON_GetObjectItemCaseSensitive(source, "filter");
-    style->source_kind = source_kind_from_label(cJSON_IsString(kind) ? kind->valuestring : NULL);
-    style->filter_composer = common_json_string_copy(filter, "composer");
-    style->filter_source = common_json_string_copy(filter, "source");
-    style->filter_tag = common_json_string_copy(filter, "tag");
-    style->collection_id = common_json_string_copy(source, "collection_id");
-    bool ok = style->id && style->name && style->created_at && style->updated_at && style->filter_composer &&
-              style->filter_source && style->filter_tag && style->collection_id &&
-              string_array_copy(cJSON_GetObjectItemCaseSensitive(source, "piece_ids"), &style->source_piece_ids,
-                                &style->source_piece_count) &&
-              string_array_copy(cJSON_GetObjectItemCaseSensitive(meta, "pieces"), &style->pieces,
-                                &style->piece_count);
-
-    if (ok && style->source_kind == WORKSHOP_STYLE_SOURCE_BRIEF) {
-        ok = load_brief(cJSON_GetObjectItemCaseSensitive(source, "brief"), &style->brief);
-    }
-
-    const cJSON *skipped = cJSON_GetObjectItemCaseSensitive(meta, "skipped");
-    int skipped_length = cJSON_IsArray(skipped) ? cJSON_GetArraySize(skipped) : 0;
-    if (ok && skipped_length > 0) {
-        style->skipped = calloc((size_t)skipped_length, sizeof(*style->skipped));
-        ok = style->skipped != NULL;
-        const cJSON *entry = NULL;
-        cJSON_ArrayForEach(entry, skipped) {
-            if (!ok) {
-                break;
-            }
-            style->skipped[style->skipped_count].id = common_json_string_copy(entry, "id");
-            style->skipped[style->skipped_count].reason = common_json_string_copy(entry, "reason");
-            if (!style->skipped[style->skipped_count].id || !style->skipped[style->skipped_count].reason) {
-                free(style->skipped[style->skipped_count].id);
-                free(style->skipped[style->skipped_count].reason);
-                ok = false;
-            } else {
-                style->skipped_count++;
-            }
-        }
-    }
-    cJSON_Delete(meta);
-
-    if (!ok) {
-        style_destroy_contents(style);
+    cJSON_DeleteItemFromObjectCaseSensitive(meta, "id");
+    if (!cJSON_AddStringToObject(meta, "id", id)) {
+        cJSON_Delete(meta);
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
+    *out = meta;
     return URSATZ_OK;
+}
+
+/* The list entry of a stored style: {"id","name","piece_count","source","updated_at"}; takes members of meta. */
+static cJSON *entry_of(cJSON *meta) {
+    cJSON *entry = cJSON_CreateObject();
+    static const char *const kMembers[] = {"id", "name", "piece_count", "source", "updated_at"};
+    for (size_t i = 0; entry && i < sizeof(kMembers) / sizeof(kMembers[0]); i++) {
+        cJSON *member = cJSON_DetachItemFromObjectCaseSensitive(meta, kMembers[i]);
+        if (!member && strcmp(kMembers[i], "piece_count") == 0) {
+            member = cJSON_CreateNumber((double)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(meta, "pieces")));
+        }
+        if (!member) {
+            member = cJSON_CreateString("");
+        }
+        if (!member || !cJSON_AddItemToObject(entry, kMembers[i], member)) {
+            cJSON_Delete(member);
+            cJSON_Delete(entry);
+            return NULL;
+        }
+    }
+    return entry;
 }
 
 /* --- list ----------------------------------------------------------------- */
@@ -1227,17 +1164,21 @@ static bool list_style_dirs(CommonNames *names) {
     return common_dir_list(kStylesDir, names, NULL) != URSATZ_ERR_ALLOC;
 }
 
-/* Newest update first, then id. */
-static int compare_styles(const void *left, const void *right) {
-    const WorkshopStyle *a = left;
-    const WorkshopStyle *b = right;
-    int by_time = strcmp(b->updated_at, a->updated_at);
-    return by_time != 0 ? by_time : strcmp(a->id, b->id);
+static const char *entry_text(const cJSON *entry, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(entry, name);
+    return cJSON_IsString(item) ? item->valuestring : "";
 }
 
-UrsatzStatus workshop_style_list(WorkshopStyle **out_styles, size_t *out_count) {
+/* Newest update first, then id. */
+static int compare_entries(const void *left, const void *right) {
+    const cJSON *a = *(const cJSON *const *)left;
+    const cJSON *b = *(const cJSON *const *)right;
+    int by_time = strcmp(entry_text(b, "updated_at"), entry_text(a, "updated_at"));
+    return by_time != 0 ? by_time : strcmp(entry_text(a, "id"), entry_text(b, "id"));
+}
+
+UrsatzStatus workshop_style_list(cJSON **out_styles) {
     *out_styles = NULL;
-    *out_count = 0;
 
     LOCK();
     CommonNames names = {0};
@@ -1245,14 +1186,20 @@ UrsatzStatus workshop_style_list(WorkshopStyle **out_styles, size_t *out_count) 
         UNLOCK();
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-
-    WorkshopStyle *styles = names.count > 0 ? calloc(names.count, sizeof(*styles)) : NULL;
-    UrsatzStatus result = names.count > 0 && !styles ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : URSATZ_OK;
+    cJSON **entries = names.count > 0 ? calloc(names.count, sizeof(*entries)) : NULL;
+    UrsatzStatus result = names.count > 0 && !entries ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : URSATZ_OK;
     size_t count = 0;
     for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
-        UrsatzStatus loaded = load_style(names.items[i], &styles[count]);
+        cJSON *meta = NULL;
+        UrsatzStatus loaded = load_meta(names.items[i], &meta);
         if (loaded == URSATZ_OK) {
-            count++;
+            entries[count] = entry_of(meta);
+            cJSON_Delete(meta);
+            if (entries[count]) {
+                count++;
+            } else {
+                result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+            }
         } else if (loaded != URSATZ_ERR_NOT_FOUND) {
             result = loaded;
         }
@@ -1260,13 +1207,45 @@ UrsatzStatus workshop_style_list(WorkshopStyle **out_styles, size_t *out_count) 
     common_names_free(&names);
     UNLOCK();
 
-    if (result != URSATZ_OK || count == 0) {
-        workshop_style_free_list(styles, count);
+    cJSON *array = result == URSATZ_OK ? cJSON_CreateArray() : NULL;
+    if (array && count > 1) {
+        qsort(entries, count, sizeof(*entries), compare_entries);
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (array) {
+            cJSON_AddItemToArray(array, entries[i]);
+        } else {
+            cJSON_Delete(entries[i]);
+        }
+    }
+    free(entries);
+    if (result == URSATZ_OK && !array) {
+        result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    *out_styles = array;
+    return result;
+}
+
+UrsatzStatus workshop_style_get_entry(const char *id, cJSON **out_entry, cJSON **out_skipped) {
+    *out_entry = NULL;
+    *out_skipped = NULL;
+    LOCK();
+    cJSON *meta = NULL;
+    UrsatzStatus result = load_meta(id, &meta);
+    UNLOCK();
+    if (result != URSATZ_OK) {
         return result;
     }
-    qsort(styles, count, sizeof(*styles), compare_styles);
-    *out_styles = styles;
-    *out_count = count;
+    cJSON *skipped = cJSON_DetachItemFromObjectCaseSensitive(meta, "skipped");
+    cJSON *entry = entry_of(meta);
+    cJSON_Delete(meta);
+    if (!entry || !(skipped = skipped ? skipped : cJSON_CreateArray())) {
+        cJSON_Delete(entry);
+        cJSON_Delete(skipped);
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    *out_entry = entry;
+    *out_skipped = skipped;
     return URSATZ_OK;
 }
 
@@ -1276,29 +1255,35 @@ UrsatzStatus workshop_style_list(WorkshopStyle **out_styles, size_t *out_count) 
 
 /* Most frequent first, then label. */
 static int compare_labels(const void *left, const void *right) {
-    const WorkshopStyleLabel *a = left;
-    const WorkshopStyleLabel *b = right;
+    const StyleStatistic *a = *(const StyleStatistic *const *)left;
+    const StyleStatistic *b = *(const StyleStatistic *const *)right;
     if (a->count != b->count) {
         return a->count > b->count ? -1 : 1;
     }
     return strcmp(a->label, b->label);
 }
 
-static int dimension_rank(const char *name) {
+/* One category of the statistics: statistics[first, end) share its name. */
+typedef struct {
+    size_t first;
+    size_t end;
     StyleDimension dimension;
-    return style_dimension_from_name(name, &dimension) ? (int)dimension : STYLE_DIMENSION_COUNT;
-}
+} CategoryRange;
 
 /* Harmony, rhythm, melody, form, then category. */
+static const StyleStatistic *g_statistics;
+
 static int compare_categories(const void *left, const void *right) {
-    const WorkshopStyleCategory *a = left;
-    const WorkshopStyleCategory *b = right;
-    int by_dimension = dimension_rank(a->dimension) - dimension_rank(b->dimension);
-    return by_dimension != 0 ? by_dimension : strcmp(a->category, b->category);
+    const CategoryRange *a = left;
+    const CategoryRange *b = right;
+    int by_dimension = (int)a->dimension - (int)b->dimension;
+    return by_dimension != 0 ? by_dimension : strcmp(g_statistics[a->first].category, g_statistics[b->first].category);
 }
 
-/* Fills style->categories from the model file; the statistics come sorted by category then label. */
-static UrsatzStatus load_statistics(const char *model_path, WorkshopStyle *style) {
+/* {dimension: {category: {"labels": [{"label","count","total"}], "more": n}}} from the model file; the labels come by count
+   descending (then label), at most 12, and "more" is how many were cut. */
+static UrsatzStatus statistics_json(const char *model_path, cJSON **out) {
+    *out = NULL;
     StyleModel *model = NULL;
     if (style_model_file_read(model_path, &model, NULL) != STYLE_MODEL_FILE_OK) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
@@ -1311,122 +1296,166 @@ static UrsatzStatus load_statistics(const char *model_path, WorkshopStyle *style
         return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
 
-    UrsatzStatus result = URSATZ_OK;
-    size_t start = 0;
-    while (result == URSATZ_OK && start < count) {
-        size_t end = start;
+    CategoryRange *ranges = count > 0 ? calloc(count, sizeof(*ranges)) : NULL;
+    size_t range_count = 0;
+    UrsatzStatus result = count > 0 && !ranges ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : URSATZ_OK;
+    for (size_t start = 0, end; result == URSATZ_OK && start < count; start = end) {
+        end = start;
         while (end < count && strcmp(statistics[end].category, statistics[start].category) == 0) {
             end++;
         }
         StyleDimension dimension;
-        if (!style_category_dimension(statistics[start].category, &dimension)) {
-            start = end;
-            continue;
+        if (style_category_dimension(statistics[start].category, &dimension)) {
+            ranges[range_count++] = (CategoryRange){start, end, dimension};
         }
+    }
+    g_statistics = statistics;
+    if (range_count > 1) {
+        qsort(ranges, range_count, sizeof(*ranges), compare_categories);
+    }
+    g_statistics = NULL;
 
-        WorkshopStyleCategory *grown =
-            realloc(style->categories, (style->category_count + 1) * sizeof(*style->categories));
-        if (!grown) {
-            result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-            break;
+    cJSON *object = result == URSATZ_OK ? cJSON_CreateObject() : NULL;
+    for (size_t i = 0; object && i < range_count; i++) {
+        const CategoryRange *range = &ranges[i];
+        const char *dimension_name = style_dimension_name(range->dimension);
+        cJSON *dimension = cJSON_GetObjectItemCaseSensitive(object, dimension_name);
+        if (!dimension) {
+            dimension = cJSON_AddObjectToObject(object, dimension_name);
         }
-        style->categories = grown;
-        WorkshopStyleCategory *category = &style->categories[style->category_count];
-        memset(category, 0, sizeof(*category));
-        style->category_count++;
-
-        size_t total_labels = end - start;
-        WorkshopStyleLabel *labels = calloc(total_labels, sizeof(*labels));
-        category->dimension = common_strdup(style_dimension_name(dimension));
-        category->category = common_strdup(statistics[start].category);
-        if (!labels || !category->dimension || !category->category) {
-            free(labels);
-            result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-            break;
+        cJSON *entry = dimension ? cJSON_AddObjectToObject(dimension, statistics[range->first].category) : NULL;
+        cJSON *labels = entry ? cJSON_AddArrayToObject(entry, "labels") : NULL;
+        size_t total_labels = range->end - range->first;
+        const StyleStatistic **sorted = labels ? calloc(total_labels, sizeof(*sorted)) : NULL;
+        bool ok = sorted != NULL;
+        for (size_t j = 0; ok && j < total_labels; j++) {
+            sorted[j] = &statistics[range->first + j];
         }
-        for (size_t i = 0; i < total_labels; i++) {
-            labels[i].label = (char *)statistics[start + i].label; /* borrowed until the cut below */
-            labels[i].count = statistics[start + i].count;
-            labels[i].total = statistics[start + i].total;
+        if (ok) {
+            qsort(sorted, total_labels, sizeof(*sorted), compare_labels);
         }
-        qsort(labels, total_labels, sizeof(*labels), compare_labels);
-
         size_t kept = total_labels < MAX_LABELS_PER_CATEGORY ? total_labels : MAX_LABELS_PER_CATEGORY;
-        for (size_t i = 0; result == URSATZ_OK && i < kept; i++) {
-            labels[i].label = common_strdup(labels[i].label);
-            if (!labels[i].label) {
-                for (size_t j = 0; j < i; j++) {
-                    free(labels[j].label);
-                }
-                free(labels);
-                result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        for (size_t j = 0; ok && j < kept; j++) {
+            cJSON *label = cJSON_CreateObject();
+            ok = label && cJSON_AddStringToObject(label, "label", sorted[j]->label) &&
+                 cJSON_AddNumberToObject(label, "count", (double)sorted[j]->count) &&
+                 cJSON_AddNumberToObject(label, "total", (double)sorted[j]->total);
+            if (ok) {
+                cJSON_AddItemToArray(labels, label);
+            } else {
+                cJSON_Delete(label);
             }
         }
-        if (result != URSATZ_OK) {
-            break;
+        free(sorted);
+        if (!ok || !cJSON_AddNumberToObject(entry, "more", (double)(total_labels - kept))) {
+            cJSON_Delete(object);
+            object = NULL;
         }
-        category->labels = labels;
-        category->label_count = kept;
-        category->more = total_labels - kept;
-        start = end;
     }
+    free(ranges);
     style_statistics_free(statistics, count);
-
-    if (result == URSATZ_OK && style->category_count > 1) {
-        qsort(style->categories, style->category_count, sizeof(*style->categories), compare_categories);
+    if (result == URSATZ_OK && !object) {
+        result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
+    *out = object;
     return result;
 }
 
-UrsatzStatus workshop_style_get(const char *id, WorkshopStyle **out_style) {
+UrsatzStatus workshop_style_get(const char *id, cJSON **out_style) {
     *out_style = NULL;
-    WorkshopStyle *style = calloc(1, sizeof(*style));
-    if (!style) {
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
     LOCK();
-    UrsatzStatus result = load_style(id, style);
+    cJSON *meta = NULL;
+    UrsatzStatus result = load_meta(id, &meta);
+    cJSON *statistics = NULL;
     if (result == URSATZ_OK) {
         char dir[PATH_BYTES];
         char model_path[PATH_BYTES + 32];
         style_dir_path(id, dir, sizeof(dir));
         snprintf(model_path, sizeof(model_path), "%s/style-model.json", dir);
-        result = load_statistics(model_path, style);
+        result = statistics_json(model_path, &statistics);
     }
     UNLOCK();
+    if (result == URSATZ_OK && !cJSON_AddItemToObject(meta, "statistics", statistics)) {
+        cJSON_Delete(statistics);
+        result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
     if (result != URSATZ_OK) {
-        workshop_style_destroy(style);
+        cJSON_Delete(meta);
         return result;
     }
-    *out_style = style;
+    *out_style = meta;
     return URSATZ_OK;
 }
 
 /* --- rebuild, delete, model path ------------------------------------------ */
 
-UrsatzStatus workshop_style_rebuild(const char *id) {
-    WorkshopStyle style;
-    memset(&style, 0, sizeof(style));
+/* The source a stored style was built from, read from its meta.json; the strings point into meta. */
+typedef struct {
+    cJSON *meta;
+    WorkshopStyleBrief brief;
+    const char **piece_ids;
+    WorkshopStyleSource input;
+} StoredSource;
 
+static void stored_source_free(StoredSource *stored) {
+    workshop_style_brief_free(&stored->brief);
+    free(stored->piece_ids);
+    cJSON_Delete(stored->meta);
+    memset(stored, 0, sizeof(*stored));
+}
+
+static const char *json_text(const cJSON *object, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    return cJSON_IsString(item) ? item->valuestring : NULL;
+}
+
+static UrsatzStatus stored_source_load(const char *id, StoredSource *stored) {
+    memset(stored, 0, sizeof(*stored));
+    UrsatzStatus result = load_meta(id, &stored->meta);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(stored->meta, "source");
+    const cJSON *filter = cJSON_GetObjectItemCaseSensitive(source, "filter");
+    WorkshopStyleSource *input = &stored->input;
+    input->kind = source_kind_from_label(json_text(source, "kind"));
+    input->composer = json_text(filter, "composer");
+    input->source = json_text(filter, "source");
+    input->tag = json_text(filter, "tag");
+    input->collection_id = json_text(source, "collection_id");
+    const cJSON *ids = cJSON_GetObjectItemCaseSensitive(source, "piece_ids");
+    int length = cJSON_IsArray(ids) ? cJSON_GetArraySize(ids) : 0;
+    stored->piece_ids = length > 0 ? calloc((size_t)length, sizeof(*stored->piece_ids)) : NULL;
+    bool ok = length == 0 || stored->piece_ids != NULL;
+    const cJSON *piece = NULL;
+    cJSON_ArrayForEach(piece, ids) {
+        if (ok && cJSON_IsString(piece)) {
+            stored->piece_ids[input->piece_count++] = piece->valuestring;
+        }
+    }
+    input->piece_ids = stored->piece_ids;
+    if (ok && input->kind == WORKSHOP_STYLE_SOURCE_BRIEF) {
+        ok = load_brief(cJSON_GetObjectItemCaseSensitive(source, "brief"), &stored->brief);
+    }
+    input->brief = &stored->brief;
+    if (!ok) {
+        stored_source_free(stored);
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    return URSATZ_OK;
+}
+
+UrsatzStatus workshop_style_rebuild(const char *id) {
     LOCK();
-    UrsatzStatus result = load_style(id, &style);
+    StoredSource stored;
+    UrsatzStatus result = stored_source_load(id, &stored);
     if (result != URSATZ_OK) {
         UNLOCK();
         return result;
     }
 
-    WorkshopStyleSource input = {0};
-    input.kind = style.source_kind;
-    input.composer = style.filter_composer;
-    input.source = style.filter_source;
-    input.tag = style.filter_tag;
-    input.collection_id = style.collection_id;
-    input.piece_ids = (const char *const *)style.source_piece_ids;
-    input.piece_count = style.source_piece_count;
-    input.brief = &style.brief;
-
     NormalizedSource source;
-    result = normalized_source_make(&input, &source);
+    result = normalized_source_make(&stored.input, &source);
     if (result == URSATZ_OK) {
         Collected collected;
         result = collect_pieces(&source, &collected);
@@ -1438,7 +1467,9 @@ UrsatzStatus workshop_style_rebuild(const char *id) {
             char now[32];
             common_utc_now(now);
             style_dir_path(id, dir, sizeof(dir));
-            if (!write_style_files(dir, style.id, style.name, style.created_at, now, &source, &collected)) {
+            const char *name = json_text(stored.meta, "name");
+            const char *created_at = json_text(stored.meta, "created_at");
+            if (!write_style_files(dir, id, name ? name : "", created_at ? created_at : "", now, &source, &collected)) {
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
             }
             collected_free(&collected);
@@ -1446,7 +1477,7 @@ UrsatzStatus workshop_style_rebuild(const char *id) {
         normalized_source_free(&source);
     }
     UNLOCK();
-    style_destroy_contents(&style);
+    stored_source_free(&stored);
     return result;
 }
 
@@ -1488,5 +1519,87 @@ UrsatzStatus workshop_style_model_path(const char *id, char *buffer, size_t buff
         return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
     memcpy(buffer, resolved, strlen(resolved) + 1);
+    return URSATZ_OK;
+}
+
+/* --- the build request ---------------------------------------------------- */
+
+void workshop_style_request_free(WorkshopStyleRequest *request) {
+    free(request->ids);
+    workshop_style_brief_free(&request->brief);
+    memset(request, 0, sizeof(*request));
+}
+
+UrsatzStatus workshop_style_build_request_parse(const cJSON *body, WorkshopStyleRequest *request, UrsatzError *error) {
+    memset(request, 0, sizeof(*request));
+    const cJSON *name_item = cJSON_GetObjectItemCaseSensitive(body, "name");
+    const cJSON *filter_item = cJSON_GetObjectItemCaseSensitive(body, "filter");
+    const cJSON *collection_item = cJSON_GetObjectItemCaseSensitive(body, "collection_id");
+    const cJSON *ids_item = cJSON_GetObjectItemCaseSensitive(body, "piece_ids");
+    const cJSON *brief_item = cJSON_GetObjectItemCaseSensitive(body, "brief");
+    if (name_item && !cJSON_IsString(name_item)) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "invalid name");
+    }
+    int sources = (filter_item != NULL) + (collection_item != NULL) + (ids_item != NULL) + (brief_item != NULL);
+    if (sources != 1) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "give exactly one of filter, collection_id, piece_ids and brief");
+    }
+    request->name = name_item ? name_item->valuestring : NULL;
+    WorkshopStyleSource *source = &request->source;
+    const char *failure = NULL;
+
+    if (brief_item) {
+        source->kind = WORKSHOP_STYLE_SOURCE_BRIEF;
+        failure = workshop_style_brief_parse(brief_item, &request->brief);
+        source->brief = &request->brief;
+    } else if (filter_item) {
+        source->kind = WORKSHOP_STYLE_SOURCE_FILTER;
+        const cJSON *composer = cJSON_GetObjectItemCaseSensitive(filter_item, "composer");
+        const cJSON *filter_source = cJSON_GetObjectItemCaseSensitive(filter_item, "source");
+        const cJSON *tag = cJSON_GetObjectItemCaseSensitive(filter_item, "tag");
+        if (!cJSON_IsObject(filter_item) || (composer && !cJSON_IsString(composer) && !cJSON_IsNull(composer)) ||
+            (filter_source && !cJSON_IsString(filter_source) && !cJSON_IsNull(filter_source)) ||
+            (tag && !cJSON_IsString(tag) && !cJSON_IsNull(tag))) {
+            failure = "invalid filter";
+        } else {
+            source->composer = cJSON_IsString(composer) ? composer->valuestring : NULL;
+            source->source = cJSON_IsString(filter_source) ? filter_source->valuestring : NULL;
+            source->tag = cJSON_IsString(tag) ? tag->valuestring : NULL;
+        }
+    } else if (collection_item) {
+        source->kind = WORKSHOP_STYLE_SOURCE_COLLECTION;
+        if (!cJSON_IsString(collection_item) || !workshop_collection_is_valid_id(collection_item->valuestring)) {
+            failure = "invalid collection_id";
+        } else {
+            source->collection_id = collection_item->valuestring;
+        }
+    } else {
+        source->kind = WORKSHOP_STYLE_SOURCE_PIECES;
+        int length = cJSON_IsArray(ids_item) ? cJSON_GetArraySize(ids_item) : 0;
+        if (length <= 0) {
+            failure = "invalid piece_ids";
+        } else if ((size_t)length > WORKSHOP_STYLE_BRIEF_MAX_PIECES) {
+            failure = "too many pieces";
+        } else {
+            request->ids = calloc((size_t)length, sizeof(*request->ids));
+            if (!request->ids) {
+                return ursatz_error_set(error, URSATZ_ERR_ALLOC, NULL, "out of memory");
+            }
+            const cJSON *item = NULL;
+            cJSON_ArrayForEach(item, ids_item) {
+                if (!cJSON_IsString(item) || !workshop_collection_is_valid_id(item->valuestring)) {
+                    failure = "invalid piece_ids";
+                    break;
+                }
+                request->ids[source->piece_count++] = item->valuestring;
+            }
+            source->piece_ids = request->ids;
+        }
+    }
+    if (failure) {
+        UrsatzStatus status = strcmp(failure, "out of memory") == 0 ? URSATZ_ERR_ALLOC : URSATZ_ERR_REQUEST;
+        workshop_style_request_free(request);
+        return ursatz_error_set(error, status, NULL, "%s", failure);
+    }
     return URSATZ_OK;
 }

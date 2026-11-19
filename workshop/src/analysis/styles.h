@@ -115,68 +115,38 @@ UrsatzStatus workshop_style_build_file(const WorkshopStyleSource *source, const 
                                                  char ***out_pieces, size_t *out_piece_count,
                                                  WorkshopStyleSkipped **out_skipped, size_t *out_skipped_count);
 
-/* One label of a category: how often it was seen and how many things the category counted. */
-typedef struct {
-    char *label;
-    unsigned long count;
-    unsigned long total;
-} WorkshopStyleLabel;
-
-/* A category of a style's statistics: its labels by count descending (then label), at most 12, and how many more there are. */
-typedef struct {
-    char *dimension; /* "harmony", "rhythm", "melody" or "form" */
-    char *category;
-    WorkshopStyleLabel *labels;
-    size_t label_count;
-    size_t more;
-} WorkshopStyleCategory;
+/*
+ * Lists every style, newest update first (then id), as JSON entries {"id", "name", "piece_count", "source", "updated_at"} in *out_styles
+ * (an array, empty when none), made from each style's meta.json. A directory in styles/ without a readable meta.json is not a style.
+ */
+UrsatzStatus workshop_style_list(cJSON **out_styles);
 
 /*
- * A stored style. Strings are "" when unset. filter_* are set for a filter
- * source, collection_id for a collection source, source_piece_ids for a
- * pieces source. pieces are the ids used by the last build, skipped the ones
- * left out. categories is only filled by workshop_style_get, sorted by
- * dimension (harmony, rhythm, melody, form) then category.
+ * One style with its statistics: the stored meta.json tree (id, name, created_at, updated_at, source, pieces, skipped, piece_count) plus
+ * "statistics": {dimension: {category: {"labels": [{"label", "count", "total"}], "more": n}}} (the labels by count, at most 12 a
+ * category; style_model_file_read, then style_model_statistics). NOT_FOUND if absent; INTERNAL if the model file cannot be read.
+ */
+UrsatzStatus workshop_style_get(const char *id, cJSON **out_style);
+
+/* The list entry of a style (as workshop_style_list gives it) in *out_entry and its skipped pieces ([{"id", "reason"}]) in *out_skipped:
+ * the answer of a build or a rebuild. NOT_FOUND if absent. */
+UrsatzStatus workshop_style_get_entry(const char *id, cJSON **out_entry, cJSON **out_skipped);
+
+/*
+ * A style build request as the styles route takes it: {name?, and exactly one of filter, collection_id, piece_ids, brief}. The source
+ * points into the request body and holds the strings the parse made (release with workshop_style_request_free). REQUEST with the message
+ * ("invalid name", "give exactly one of ...", "invalid filter", "invalid collection_id", "invalid piece_ids", "too many pieces", the brief
+ * messages) when it is not one; ALLOC on no memory.
  */
 typedef struct {
-    char *id;
-    char *name;
-    char *created_at;
-    char *updated_at;
-    WorkshopStyleSourceKind source_kind;
-    char *filter_composer;
-    char *filter_source;
-    char *filter_tag;
-    char *collection_id;
-    char **source_piece_ids;
-    size_t source_piece_count;
-    WorkshopStyleBrief brief; /* for a brief source; owns its strings */
-    char **pieces;
-    size_t piece_count;
-    WorkshopStyleSkipped *skipped;
-    size_t skipped_count;
-    WorkshopStyleCategory *categories;
-    size_t category_count;
-} WorkshopStyle;
+    WorkshopStyleSource source;
+    WorkshopStyleBrief brief;
+    const char **ids;
+    const char *name; /* NULL when not given */
+} WorkshopStyleRequest;
 
-/*
- * Lists every style, newest update first (then id). *out_styles has *out_count
- * entries (NULL when none) without statistics; free with
- * workshop_style_free_list. A directory in styles/ without a readable
- * meta.json is not a style.
- */
-UrsatzStatus workshop_style_list(WorkshopStyle **out_styles, size_t *out_count);
-
-void workshop_style_free_list(WorkshopStyle *styles, size_t count);
-
-/*
- * Loads one style with its statistics (style_model_file_read, then
- * style_model_statistics). NOT_FOUND if absent; FAILED if the model file
- * cannot be read. Free with workshop_style_destroy.
- */
-UrsatzStatus workshop_style_get(const char *id, WorkshopStyle **out_style);
-
-void workshop_style_destroy(WorkshopStyle *style);
+UrsatzStatus workshop_style_build_request_parse(const cJSON *body, WorkshopStyleRequest *request, UrsatzError *error);
+void workshop_style_request_free(WorkshopStyleRequest *request);
 
 /*
  * Reads a brief object {"scopes": [...], "piece_ids": [...], "style_ids": [...]} as the styles route takes it, with
