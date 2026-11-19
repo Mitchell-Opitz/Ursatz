@@ -22,12 +22,6 @@
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalysisChain **out);
 
 /*
- * The chain over the whole piece: from the plan's start to where its last section that is not material ends (the whole
- * plan when it has no section). It is one span of hearing_section, so the checks of the piece share one analysis.
- */
-HearingResult hearing_piece(ComposerHearing *hearing, const AnalysisChain **out);
-
-/*
  * The reading of the notes that start inside span: the library reading_build of the span's chain (hearing_section: the same cache), source
  * the Composer (its composition key, all the chain's stages, the snapshot's hash), target work `w1`, movement `m1` and no digest (the layers
  * output sets it), and the performer note ids of rendered_plan_work's work as evidence (`rendered_plan_note_id`). Built on the first request
@@ -35,7 +29,10 @@ HearingResult hearing_piece(ComposerHearing *hearing, const AnalysisChain **out)
  */
 HearingResult hearing_section_reading(ComposerHearing *hearing, PlanSpan span, const Reading **out);
 
-/* hearing_section_reading over the whole piece (hearing_piece's span). */
+/*
+ * hearing_section_reading over the whole piece: from the plan's start to where its last section that is not material ends (the whole
+ * plan when it has no section). It is one span of hearing_section_reading, so the checks of the piece share one analysis.
+ */
 HearingResult hearing_piece_reading(ComposerHearing *hearing, const Reading **out);
 
 /*

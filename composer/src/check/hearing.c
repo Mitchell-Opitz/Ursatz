@@ -161,20 +161,6 @@ static bool key_signature_of(int tonic, const PitchMaterial *material, int *fift
     return true;
 }
 
-HearingResult hearing_piece(ComposerHearing *hearing, const AnalysisChain **out) {
-    if (!hearing) {
-        if (out) {
-            *out = NULL;
-        }
-        return HEARING_ERR_NULL;
-    }
-    PlanSpan whole = {{0, 1}, hearing->rendered.piece_end};
-    if (whole.length.num <= 0) {
-        whole.length = (Rational){1000000, 1};
-    }
-    return hearing_section(hearing, whole, out);
-}
-
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalysisChain **out) {
     if (!out) {
         return HEARING_ERR_NULL;
@@ -325,6 +311,7 @@ HearingResult hearing_piece_reading(ComposerHearing *hearing, const Reading **ou
     if (!hearing) {
         return HEARING_ERR_NULL;
     }
+    /* the whole piece: from the plan's start to where its last section that is not material ends */
     PlanSpan whole = {{0, 1}, hearing->rendered.piece_end};
     if (whole.length.num <= 0) {
         whole.length = (Rational){1000000, 1};
