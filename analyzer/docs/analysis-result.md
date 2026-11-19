@@ -3,15 +3,16 @@
 The `AnalyzerResult` the analysis returns and the exports built from it. Back to the [docs index](README.md).
 
 `analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedScore` and returns an
-`AnalyzerResult`: the library chain's results and the report view the document is exported from (R-217, R-220, R-252,
-R-530). The analysis document is an export of the
-result, not its source.
+`AnalyzerResult`: the library chain's results, the report view the document is exported from, the realization of the notes and the Analyzer's
+reading of it (R-217, R-220, R-252, R-530, R-630). The analysis document is an export of the result, not its source.
 
 ```c
 AnalyzerResult *result = NULL;
 AnalyzerOptions options = analyzer_options_default();
 if (analyzer_analyze(&notes, &options, &result) == ANALYZER_OK) {
     const ChainResult *report = analyzer_result_report(result);
+    const Work *realization = analyzer_result_realization(result);
+    const Reading *reading = analyzer_result_reading(result);
     char *json = analysis_document_render_result("piece.mid", result);
     ...
     analyzer_result_destroy(result);
@@ -43,24 +44,26 @@ it needs (see the chain header).
 Voicing stays on its own entry (`voicing_check.h`); counterpoint is checked with standard-counterpoint, not by the
 Analyzer.
 
-`AnalyzerOptions.harmonic_spans` (default true) reads the chords on harmonic spans; false reads one chord per segment, as before
-Ursatz P39. The Composer's hearing sets it false until P41 (R-378). Nothing records it in the document, report or schema.
-
 The report view, and so the document, is built only when every chain stage ran. With fewer,
 the result holds the chain's results of the stages that ran; `analyzer_result_report` is an empty report and
 `analysis_document_build_from_result` returns NULL.
 
 ## Library results
 
-The `AnalysisChain` behind a result is the Analyzer's own: `analyzer_result_run_chain` (`pipeline/analysis_result_internal.h`) gives it
+The `AnalysisChain` behind a result is the Analyzer's own: `analyzer_result_run_chain` (`result/analysis_result_internal.h`) gives it
 to the Analyzer's exports and tests. No public header returns it (R-620: the Composer hears through `library/chain` itself), and a target
 linking `ursatz_analyzer` sees the chain's result header (`chain/chain_result.h`) but no chain internal.
 
-## No claim layer
+## The layers
 
-The result has no claims (R-530): it is the chain's results plus the report view. There is no per-area list of
-`Interpretation`s to read: a caller reads the chain's results through the report and the document's
-entries through `analyzer_result_report` or the exported document.
+After the chain run `analyzer_analyze` makes the two objects a reader of the piece shares with others (R-630):
+
+- `analyzer_result_realization`: the realization of the notes (`imported_score_realization`, R-628): work `w1`, movement `m1`, one performer part for each part of the import, every note with an id (`library/docs/modules/realization.md`).
+- `analyzer_result_reading`: the Analyzer's reading of it (`reading_build`, R-629): regions, chords, cadences, groups, motive occurrences, meters, lines and voice faults, each with its performer note ids as evidence. Its source is `ursatz-analyzer` with the producer key, the stages of the run and the knowledge hash; its target is `w1`, `m1` and `realization_digest` of the realization. The reading's detail is the chain, so the document can be printed from it.
+
+Both are owned by the result (the reading is freed before the chain). A failure to build either is `ANALYZER_ERR_ALLOC` or `ANALYZER_ERR_LIBRARY`, as for the chain. With a partial stage set the reading holds the claims the chain can give (the meters and the voice faults).
+
+`ursatz-analyzer --layers <dir> <input>` writes them: `<dir>/realization.json` (`realization_work_to_json`) and `<dir>/readings/analyzer.json` (`reading_to_json`), making the folders (a write failure exits 2 with `cannot write '<path>'`). Another reader's file sits beside the Analyzer's in `readings/`: `tools/annotations/annotation_to_reading.py` turns a verified annotation (`tests/fixtures/annotations/*_v1_expected.txt`) into Michelle's reading of the same realization, and `test_layers_two_readings` holds both readings of Mozart 545. The `.analysis.json` output is unchanged.
 
 ## Exports
 
