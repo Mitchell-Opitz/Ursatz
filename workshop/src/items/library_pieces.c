@@ -126,7 +126,7 @@ cJSON *workshop_library_meta_read(const char *dir_path) {
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/" WORKSHOP_FILE_PIECE, dir_path);
     cJSON *meta = NULL;
-    if (workshop_format_read(meta_path, WORKSHOP_FORMAT_LIBRARY_PIECE, true, &meta, NULL) != URSATZ_OK) {
+    if (workshop_format_read(workshop_txn_read_path(t_txn, meta_path), WORKSHOP_FORMAT_LIBRARY_PIECE, true, &meta, NULL) != URSATZ_OK) {
         return NULL;
     }
     meta_to_memory(meta);

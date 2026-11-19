@@ -737,21 +737,24 @@ static UrsatzStatus end_library(WorkshopTxn *txn, UrsatzStatus result) {
     return workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_IO, NULL);
 }
 
-/* Stages the removal of the piece's folder, under the piece lock. */
+/* Stages the removal of the piece's folder; the caller holds the piece lock (the commit is made under it too, so a reader never sees half a change). */
 static UrsatzStatus delete_piece_staged(const char *pieces_dir, const char *id) {
-    UrsatzStatus result;
-    if (!workshop_library_piece_lock_enter(id, &result)) {
-        return result;
-    }
     workshop_import_cache_invalidate(id);
-    result = workshop_library_delete_piece_unlocked(pieces_dir, id);
-    workshop_piece_unlock(id);
-    return result;
+    return workshop_library_delete_piece_unlocked(pieces_dir, id);
 }
 
 UrsatzStatus workshop_analysis_delete_piece(const char *pieces_dir, const char *id) {
     WorkshopTxn *txn = begin_library("library.delete", id);
-    return end_library(txn, txn ? delete_piece_staged(pieces_dir, id) : workshop_fail(URSATZ_ERR_IO, NULL));
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_IO, NULL);
+    }
+    UrsatzStatus result;
+    if (!workshop_library_piece_lock_enter(id, &result)) {
+        return end_library(txn, result);
+    }
+    result = end_library(txn, delete_piece_staged(pieces_dir, id));
+    workshop_piece_unlock(id);
+    return result;
 }
 
 UrsatzStatus workshop_analysis_reanalyze(const char *pieces_dir, const char *id) {
@@ -763,9 +766,9 @@ UrsatzStatus workshop_analysis_reanalyze(const char *pieces_dir, const char *id)
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return end_library(txn, result);
     }
-    result = reanalyze_unlocked(pieces_dir, id);
+    result = end_library(txn, reanalyze_unlocked(pieces_dir, id));
     workshop_piece_unlock(id);
-    return end_library(txn, result);
+    return result;
 }
 
 /* True when the stored analysis of the piece is current and its metadata needs no back-fill: a read, so nothing is begun for it. */
@@ -798,9 +801,9 @@ UrsatzStatus workshop_analysis_ensure_current(const char *pieces_dir, const char
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return end_library(txn, result);
     }
-    result = ensure_current_unlocked(pieces_dir, id);
+    result = end_library(txn, ensure_current_unlocked(pieces_dir, id));
     workshop_piece_unlock(id);
-    return end_library(txn, result);
+    return result;
 }
 
 UrsatzStatus workshop_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
@@ -855,7 +858,7 @@ static bool notation_equal(bool has_a, const WorkshopNotation *a, bool has_b, co
                       strcmp(a->pickup, b->pickup) == 0);
 }
 
-static UrsatzStatus update_piece_unlocked_enter(const char *pieces_dir, const char *id, const WorkshopMetaUpdate *update, UrsatzError *error);
+static UrsatzStatus update_piece_locked(const char *pieces_dir, const char *id, const WorkshopMetaUpdate *update, UrsatzError *error);
 
 UrsatzStatus workshop_analysis_update_piece(const char *pieces_dir, const char *id,
                                                           const WorkshopMetaUpdate *update, UrsatzError *error) {
@@ -863,14 +866,18 @@ UrsatzStatus workshop_analysis_update_piece(const char *pieces_dir, const char *
     if (!txn) {
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }
-    return end_library(txn, update_piece_unlocked_enter(pieces_dir, id, update, error));
-}
-
-static UrsatzStatus update_piece_unlocked_enter(const char *pieces_dir, const char *id, const WorkshopMetaUpdate *update, UrsatzError *error) {
     UrsatzStatus result;
     if (!workshop_library_piece_lock_enter(id, &result)) {
-        return result;
+        return end_library(txn, result);
     }
+    result = end_library(txn, update_piece_locked(pieces_dir, id, update, error));
+    workshop_piece_unlock(id);
+    return result;
+}
+
+/* The change itself, staged; the caller holds the piece lock and commits under it. */
+static UrsatzStatus update_piece_locked(const char *pieces_dir, const char *id, const WorkshopMetaUpdate *update, UrsatzError *error) {
+    UrsatzStatus result = URSATZ_OK;
     bool had_notation = false;
     WorkshopNotation previous;
     memset(&previous, 0, sizeof(previous));
@@ -896,7 +903,6 @@ static UrsatzStatus update_piece_unlocked_enter(const char *pieces_dir, const ch
             }
         }
     }
-    workshop_piece_unlock(id);
     return result;
 }
 
@@ -1006,7 +1012,12 @@ UrsatzStatus workshop_library_delete(const char *pieces_dir, const char *id) {
     if (!txn) {
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }
-    UrsatzStatus result = delete_piece_staged(pieces_dir, id);
+    UrsatzStatus result;
+    if (!workshop_library_piece_lock_enter(id, &result)) {
+        return end_library(txn, result);
+    }
+    result = delete_piece_staged(pieces_dir, id);
+    workshop_piece_unlock(id); /* the collections and the subjects take their own locks, which come before a piece lock */
     if (result == URSATZ_OK) {
         /* A collection never keeps an id whose piece is gone, and neither does a subject: the cleanups are in the same transaction. */
         if (workshop_collection_remove_piece_everywhere(txn, id) != URSATZ_OK) {

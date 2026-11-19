@@ -68,6 +68,10 @@ void workshop_txn_abort(WorkshopTxn *txn);
  * recovery (items/recover.h) use it. */
 UrsatzStatus workshop_txn_write_header(const cJSON *item, long long seq, UrsatzError *error);
 
+/* Where a reader of this transaction finds final_path: the pending file when the transaction staged one for it (so a writer reads what it wrote a
+ * moment ago), else final_path itself. */
+const char *workshop_txn_read_path(const WorkshopTxn *txn, const char *final_path);
+
 /* The file name of a pending or removed entry for final_path in transaction seq (kind is "pending" or "removed"). false when it does not fit. */
 bool workshop_txn_aside_path(const char *kind, long long seq, const char *final_path, char *out, size_t size);
 

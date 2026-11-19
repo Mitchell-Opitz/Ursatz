@@ -70,3 +70,19 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED migrated_routes_files)
 endif()
+
+# Recovery after a stop in the middle of a change (P63 B8): hand-made leftovers of every kind, recovered by workshop_open from the journal.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_recovery)
+ursatz_test(workshop_recovery SOURCES test_recovery.c LIBS ursatz_workshop WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_recovery)
+
+# A stop at every step of every kind of change, in a forked child, and what the folder holds after the open recovers it (P63 B8). Each case copies one base
+# folder, so the test makes its own folders in its working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points_smoke)
+ursatz_test_executable(test_workshop_crash_points SOURCES test_crash_points.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_TEST_HOOKS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
+ursatz_test(workshop_crash_points TARGET test_workshop_crash_points LABELS slow
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points)
+# Slow: about 35 s (a Library piece is analyzed and a theme composed at each stop). The smoke run (argument smoke) stops the item commands alone.
+ursatz_test(workshop_crash_points_smoke TARGET test_workshop_crash_points ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points_smoke)

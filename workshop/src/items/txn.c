@@ -309,6 +309,15 @@ UrsatzStatus workshop_txn_set_header(WorkshopTxn *txn, const cJSON *item) {
     return URSATZ_OK;
 }
 
+const char *workshop_txn_read_path(const WorkshopTxn *txn, const char *final_path) {
+    for (size_t i = 0; txn && i < txn->write_count; i++) {
+        if (strcmp(txn->writes[i].final, final_path) == 0) {
+            return txn->writes[i].pending;
+        }
+    }
+    return final_path;
+}
+
 /* --- abort -------------------------------------------------------------------------------------------------------------------------- */
 
 static void unlock(void) {
