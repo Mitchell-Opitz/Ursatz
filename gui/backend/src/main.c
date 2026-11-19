@@ -89,6 +89,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (workshop_recovery_summary(workshop)[0] != '\0') {
+    fprintf(stderr, "ursatz-gui-backend: %s\n", workshop_recovery_summary(workshop));
+  }
   signal(SIGINT, handle_signal);
   signal(SIGTERM, handle_signal);
 

@@ -104,6 +104,10 @@ void workshop_close(Workshop *workshop);
  */
 UrsatzStatus workshop_status(Workshop *workshop, cJSON **out, UrsatzError *error);
 
+/* What the open recovered after a stop in the middle of a change (R-643): one line of counts, "" when there was nothing to recover. Valid until
+ * workshop_close. */
+const char *workshop_recovery_summary(const Workshop *workshop);
+
 /* The settings the workshop opened with. Valid until workshop_close. */
 const char *workshop_data_dir(const Workshop *workshop);
 int workshop_http_threads(const Workshop *workshop);

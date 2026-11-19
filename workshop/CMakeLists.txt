@@ -11,6 +11,7 @@ add_library(ursatz_workshop STATIC
     src/items/journal.c
     src/items/layout.c
     src/items/migrate.c
+    src/items/recover.c
     src/items/txn.c
     src/items/library_pieces.c
     src/items/library_metadata.c

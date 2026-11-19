@@ -15,6 +15,7 @@ struct Workshop {
     int http_threads;
     int job_workers;
     int lock_descriptor; /* the data folder's lock, held until close */
+    char recovery[512];  /* what the open recovered from the journal, "" when nothing (workshop_recovery_summary) */
 };
 
 /*

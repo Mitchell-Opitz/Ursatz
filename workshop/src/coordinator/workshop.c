@@ -11,6 +11,7 @@
 
 #include "coordinator.h"
 #include "items/migrate.h"
+#include "items/recover.h"
 #include "items/store.h"
 #include "items/subjects.h"
 
@@ -44,6 +45,13 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
         workshop_data_lock_release(lock);
         return prepared;
     }
+    /* A stop in the middle of a change is finished or undone before any service starts (items/recover.h). */
+    WorkshopRecoverReport recovered;
+    UrsatzStatus recovery = workshop_recover(resolved->data_dir, &recovered, error);
+    if (recovery != URSATZ_OK) {
+        workshop_data_lock_release(lock);
+        return recovery;
+    }
     if (!workshop_knowledge_init()) {
         workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the knowledge cannot be read");
@@ -55,6 +63,7 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     workshop->lock_descriptor = lock;
+    workshop_recover_summary(&recovered, workshop->recovery, sizeof(workshop->recovery));
     /* The folder as an absolute path: a service that changes its working directory still finds it. */
     char absolute[PATH_MAX];
     const char *folder = realpath(resolved->data_dir, absolute) ? absolute : resolved->data_dir;
@@ -109,6 +118,10 @@ UrsatzStatus workshop_status(Workshop *workshop, cJSON **out, UrsatzError *error
     }
     *out = object;
     return URSATZ_OK;
+}
+
+const char *workshop_recovery_summary(const Workshop *workshop) {
+    return workshop->recovery;
 }
 
 const char *workshop_data_dir(const Workshop *workshop) {
