@@ -86,3 +86,10 @@ ursatz_test(workshop_crash_points TARGET test_workshop_crash_points LABELS slow
 # Slow: about 35 s (a Library piece is analyzed and a theme composed at each stop). The smoke run (argument smoke) stops the item commands alone.
 ursatz_test(workshop_crash_points_smoke TARGET test_workshop_crash_points ARGS smoke
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points_smoke)
+
+# The layers a piece and a composed theme keep (P63 B9): Mozart 545's MIDI imported, a theme composed, a reading of another digest refused. The test makes
+# its own data folder in its working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_layers)
+ursatz_test(workshop_layers SOURCES test_layers.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_TEST_MOZART="${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Mozart 545.mid"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_layers)
