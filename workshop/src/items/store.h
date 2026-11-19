@@ -286,6 +286,12 @@ bool workshop_material_version_dir(const char *id, int number, char *out, size_t
 bool workshop_material_render_tmp_dir(char *out, size_t out_size);
 
 /*
+ * The layers beside version number of item id (items/layers.h): {"realization": {"digest", "movements"}, "readings": [{"source", "name"}]}, or JSON
+ * null when the version has no realization (a version made before the layers were stored). *out is caller-owned. NOT_FOUND for an absent version.
+ */
+UrsatzStatus workshop_material_version_layers(const char *id, int number, cJSON **out);
+
+/*
  * The bytes of one of the five files of version number (1 to current_version). NOT_FOUND for any other name, an
  * absent item, version or file. *out_data is caller-owned (free).
  */

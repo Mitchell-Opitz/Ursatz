@@ -145,6 +145,32 @@ UrsatzStatus workshop_compose_stage_make(const char *id, int number, WorkshopCom
     return URSATZ_OK;
 }
 
+UrsatzStatus workshop_compose_write_layers(const char *stage, cJSON *document, UrsatzError *error) {
+    cJSON *realization = cJSON_DetachItemFromObjectCaseSensitive(document, "realization");
+    cJSON *reading = cJSON_DetachItemFromObjectCaseSensitive(document, "reading");
+    UrsatzStatus result = URSATZ_OK;
+    if (cJSON_IsObject(realization) && cJSON_IsObject(reading)) {
+        char path[PATH_BYTES + 64];
+        char folder[PATH_BYTES + 64];
+        char *realization_text = cJSON_Print(realization);
+        char *reading_text = cJSON_Print(reading);
+        snprintf(folder, sizeof(folder), "%s/readings", stage);
+        bool ok = realization_text && reading_text && snprintf(path, sizeof(path), "%s/realization.json", stage) < (int)sizeof(path) &&
+                  common_file_write_atomic(path, realization_text, strlen(realization_text), NULL) == URSATZ_OK &&
+                  common_dir_make(folder, NULL) == URSATZ_OK && snprintf(path, sizeof(path), "%s/composer.json", folder) < (int)sizeof(path) &&
+                  common_file_write_atomic(path, reading_text, strlen(reading_text), NULL) == URSATZ_OK;
+        if (!ok) {
+            workshop_error_text(error, "the layers of the version could not be written");
+            result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+        }
+        free(realization_text);
+        free(reading_text);
+    }
+    cJSON_Delete(realization);
+    cJSON_Delete(reading);
+    return result;
+}
+
 void workshop_compose_stage_discard(const WorkshopComposeStage *stage) {
     common_dir_remove(stage->path, NULL);
 }

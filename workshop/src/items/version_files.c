@@ -1,4 +1,5 @@
 #include "store_internal.h"
+#include "layers.h"
 #include "layout.h"
 
 /* --- version files ------------------------------------------------------- */
@@ -92,6 +93,18 @@ bool workshop_material_render_tmp_dir(char *out, size_t out_size) {
     bool ok = store_ready && workshop_layout_render_tmp_dir(out, out_size);
     UNLOCK();
     return ok;
+}
+
+UrsatzStatus workshop_material_version_layers(const char *id, int number, cJSON **out) {
+    *out = NULL;
+    char dir[PATH_BYTES];
+    LOCK();
+    bool found = store_ready && number >= 1 && store_version_dir_path(id, number, dir, sizeof(dir)) && common_path_is_dir(dir);
+    UNLOCK();
+    if (!found) {
+        return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
+    return workshop_layers_describe(dir, out) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
 }
 
 UrsatzStatus workshop_material_version_file(const char *id, int number, const char *name,

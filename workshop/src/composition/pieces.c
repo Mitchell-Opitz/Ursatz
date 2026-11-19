@@ -421,7 +421,7 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
     }
     ok = ok && (!use_seed || cJSON_AddStringToObject(api, "seed", seed_text)) && cJSON_AddBoolToObject(api, "check", check) &&
          cJSON_AddBoolToObject(api, "plain_midi", 0) && cJSON_AddBoolToObject(api, "midi", 1) &&
-         cJSON_AddBoolToObject(api, "musicxml", 1) && cJSON_AddBoolToObject(api, "musicxml_versions", 1);
+         cJSON_AddBoolToObject(api, "musicxml", 1) && cJSON_AddBoolToObject(api, "musicxml_versions", 1) && cJSON_AddBoolToObject(api, "layers", 1);
     char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
     cJSON_Delete(api);
     if (!text) {
@@ -492,6 +492,9 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
             }
         }
         written++;
+    }
+    if (result == URSATZ_OK) {
+        result = workshop_compose_write_layers(stage, document, error);
     }
     if (result == URSATZ_OK) {
         /* Each version names its plan file; the summary lists every file of the versions. */

@@ -546,7 +546,7 @@ static char *api_request(const cJSON *request, bool check, bool use_seed, long l
     bool ok = copy && (!use_seed || cJSON_AddStringToObject(copy, "seed", seed_text)) &&
               cJSON_AddBoolToObject(copy, "check", check) && cJSON_AddBoolToObject(copy, "midi", 1) &&
               cJSON_AddBoolToObject(copy, "musicxml", 1) && cJSON_AddBoolToObject(copy, "plain_midi", 0) &&
-              cJSON_AddBoolToObject(copy, "plans", 0);
+              cJSON_AddBoolToObject(copy, "plans", 0) && cJSON_AddBoolToObject(copy, "layers", 1);
     char *text = ok ? cJSON_PrintUnformatted(copy) : NULL;
     cJSON_Delete(copy);
     return text;
@@ -581,6 +581,9 @@ static UrsatzStatus run_theme(const WorkshopComposeRun *run, cJSON **out_summary
             workshop_error_text(error, "a file of the version could not be written");
             result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
         }
+    }
+    if (result == URSATZ_OK) {
+        result = workshop_compose_write_layers(run->stage, document, error);
     }
     if (result == URSATZ_OK) {
         cJSON *theme = NULL;

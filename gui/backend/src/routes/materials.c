@@ -210,6 +210,13 @@ static int handle_get_item(struct mg_connection *conn, const char *id) {
                                             : send_material_failure(conn, result);
   }
   cJSON_AddItemToObject(object, "body", body);
+  {
+    cJSON *layers = NULL;
+    int current = (int)(cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(meta, "current_version")) ? cJSON_GetObjectItemCaseSensitive(meta, "current_version")->valuedouble : 0);
+    if (workshop_material_version_layers(id, current, &layers) == URSATZ_OK) {
+      cJSON_AddItemToObject(object, "layers", layers);
+    }
+  }
   cJSON_AddItemToObject(object, "uses_status", uses_status);
   cJSON_AddItemToObject(object, "used_by", used_by);
   cJSON_AddItemToObject(object, "subjects", subjects);
@@ -384,6 +391,10 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
     return send_failure(conn, 500, "out of memory");
   }
   cJSON_AddItemToObject(object, "body", version_body);
+  cJSON *layers = NULL;
+  if (workshop_material_version_layers(id, (int)number, &layers) == URSATZ_OK) {
+    cJSON_AddItemToObject(object, "layers", layers);
+  }
   return ursatz_gui_send_object(conn, 200, object);
 }
 

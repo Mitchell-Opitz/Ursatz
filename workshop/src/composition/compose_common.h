@@ -74,6 +74,13 @@ UrsatzStatus workshop_compose_stage_make(const char *id, int number, WorkshopCom
 
 /* The staging folder becomes the version's folder when the version is written (workshop_material_item_add_version_staged). */
 
+/*
+ * Moves the realization and the reading the Composer answered with layers (R-634) out of document into the stage as realization.json and
+ * readings/composer.json, so the version keeps its layers (R-644); the members are gone from document, which is what the version's result keeps.
+ * A document without them is left as it is.
+ */
+UrsatzStatus workshop_compose_write_layers(const char *stage, cJSON *document, UrsatzError *error);
+
 /* Removes the staging folder and what it holds. */
 void workshop_compose_stage_discard(const WorkshopComposeStage *stage);
 
