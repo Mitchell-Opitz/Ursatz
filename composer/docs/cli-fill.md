@@ -3,7 +3,7 @@
 The `fill` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file.json>] [--explain <file>] [--format text|json]
+ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file.json>] [--explain <file>] [--format text|json]
 ```
 
 Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
@@ -38,6 +38,7 @@ with a message that says it is an analysis document. The document is recognized 
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
 | `--out <plan.json>` | The realized plan as JSON. |
+| `--layers <dir>` | The three layers of the realized plan: `plan.json`, `realization.json` and `readings/composer.json` ([cli-theme.md](cli-theme.md)). |
 | `--midi <file>`, `--musicxml <file>` | The piece, one part for each voice. The source material is not part of the piece, and a layered form sounds as its layers say. |
 | `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
 | `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |

@@ -3,7 +3,7 @@
 The `piece` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer piece <request.json> [--seed <n>] [--check] [--out <loop-plan.json>] [--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz-composer piece <request.json> [--seed <n>] [--check] [--out <loop-plan.json>] [--layers <dir>] [--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
 The command is a wrapper of the [composer API](api.md): it reads the request file (and the plan file of each theme fill, and
@@ -29,6 +29,7 @@ Analyzer) is passed over. `--check` runs `analyzer_check_piece_in` on each versi
 | Option | Effect |
 | --- | --- |
 | `--out`, `--ending-out` | The plan of the first version (the loop's) and of the ending version as JSON. |
+| `--layers <dir>` | The three layers of the first version: `plan.json`, `realization.json` and `readings/composer.json` ([cli-theme.md](cli-theme.md)). |
 | `--midi`, `--ending-midi` | The first version and the ending version as a MIDI file with the tempo of the brief. The loop's file has the markers `loopStart` and `loopEnd` in the conductor track ([export.md](export.md#loop-markers)); the ending's has none. |
 | `--musicxml`, `--ending-musicxml` | Each version as MusicXML. |
 
@@ -62,7 +63,7 @@ JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"sta
 ## Regenerate
 
 ```sh
-ursatz-composer piece --from <loop-plan.json> --request <request.json> --regenerate <section id>|none [--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz-composer piece --from <loop-plan.json> --request <request.json> --regenerate <section id>|none [--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--layers <dir>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
 Writes one section of a loop plan the command wrote again (R-173), and nothing the section does not reach. `--request` is

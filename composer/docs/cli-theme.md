@@ -3,13 +3,18 @@
 The `theme` command of the Composer command line, with options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz-composer theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file.json>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
 Grows a theme from the motives of a request ([theme-request.md](theme-request.md)): up to 16 motives, which the slots of
 the theme and its single ideas name, and the brief. It is `grow` over the same library (`grow_build_plan_checked` and `grow_run`, see
 [grow.md](grow.md)): the options after the request file, the seeds, `--check`, the files and the output are
 [grow's](cli-grow.md), and a request with one motive gives the plan `grow` gives for the same options and seed.
+
+`--layers <dir>` (R-634) writes the first theme's three layers into `dir` (made, with `dir/readings`): `plan.json`, `realization.json`
+(the work its MIDI and MusicXML are written from) and `readings/composer.json` (the Composer's hearing of it, naming the realization by
+its digest). The result printed does not carry them; a folder that cannot be written is exit 3. `piece` (the first version) and `fill`
+take it too ([cli-piece.md](cli-piece.md), [cli-fill.md](cli-fill.md)); `piece --variations` refuses it.
 
 The tempo of the brief (the request's, else the style's) is written to the MIDI and MusicXML files, as for `grow`. The mode
 `style` takes the style's most common mode.

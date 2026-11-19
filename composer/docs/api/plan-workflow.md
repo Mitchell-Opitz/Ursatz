@@ -44,6 +44,7 @@ Realizes a plan ([cli-fill.md](../cli-fill.md)): every open theme section is com
 | `seed`, `check`, `candidates` | as the options (`candidates`: 1 to 32; the best is kept and every one is listed) |
 | `style`, `style_weight`, `style_without`, `blend`, `blend_weight`, `blend_weights` | replace the plan's own style; without them the plan's is used |
 | `midi`, `musicxml`, `plain_midi`, `tempo` | the files to make, as for `composer_api_export` |
+| `layers` | `true`: `realization` and `reading` of the realized plan in the document ([layers](theme-and-piece.md#layers)) |
 | `record` | `true`: the records of the stages as the text of the `--record` file, in `record` of the document |
 | `explain` | `"text"` or `"json"`: the explanation as the string `explanation` of the document |
 
