@@ -1,0 +1,213 @@
+{
+  "format": "ursatz-reading",
+  "format_version": 1,
+  "source": {
+    "kind": "analyzer",
+    "name": "ursatz-analyzer",
+    "producer_key": "0123456789abcdef",
+    "stages": 255,
+    "knowledge_hash": "fedcba9876543210"
+  },
+  "target": {
+    "work": "w1",
+    "movement": "m1",
+    "digest": "a1b2c3d4e5f60789"
+  },
+  "regions": [{
+      "id": "region-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": {
+        "num": 3,
+        "den": 4
+      },
+      "evidence": ["piano-n1", "piano-n2", "piano-n3"],
+      "center": 0,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "C major"
+    }],
+  "chords": [{
+      "id": "chord-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 1,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["piano-n1", "piano-n2"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 0,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": "omt.material.natural-minor",
+        "role": "embellishing",
+        "expected": {
+          "root": 7,
+          "type": "omt.chord-type.major-triad"
+        }
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "C major"
+    }, {
+      "id": "chord-2",
+      "start": {
+        "num": 1,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "reading": null,
+      "numeral": "",
+      "function": "",
+      "label": "no match"
+    }],
+  "cadences": [{
+      "id": "cadence-1",
+      "start": {
+        "num": 3,
+        "den": 1
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n1"],
+      "type": "perfect-authentic",
+      "arrival": {
+        "num": 7,
+        "den": 2
+      },
+      "alternatives": ["imperfect-authentic", "half"]
+    }],
+  "groups": [{
+      "id": "group-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "theme",
+      "parent": null,
+      "label": "A",
+      "form": "sentence",
+      "beginning": "presentation",
+      "ending": "continuation",
+      "commonality": "rhythm",
+      "first_measure": 1,
+      "last_measure": 8,
+      "phrase_count": 1,
+      "part_cadences": ["half"],
+      "archetypal": true,
+      "fragmentation": false
+    }, {
+      "id": "group-2",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "phrase",
+      "parent": 0,
+      "label": "A",
+      "form": "sentence",
+      "beginning": "presentation",
+      "ending": "continuation",
+      "commonality": "rhythm",
+      "first_measure": 1,
+      "last_measure": 8,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": true,
+      "fragmentation": true
+    }],
+  "motive_occurrences": [{
+      "id": "motive-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n1", "piano-n2", "piano-n3"],
+      "motive": 2,
+      "kind": "transposition"
+    }],
+  "meters": [{
+      "id": "meter-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "time_signature": "3/4"
+    }],
+  "lines": [{
+      "id": "line-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n1", "piano-n2", "piano-n3"],
+      "role": "bass"
+    }],
+  "voice_faults": [{
+      "id": "fault-1",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 3,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n1", "piano-n2"],
+      "rule": "parallel-fifths",
+      "hard": true,
+      "measure": 3
+    }]
+}

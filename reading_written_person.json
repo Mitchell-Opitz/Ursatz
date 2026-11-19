@@ -1,0 +1,61 @@
+{
+  "format": "ursatz-reading",
+  "format_version": 1,
+  "source": {
+    "kind": "person",
+    "name": "michelle",
+    "producer_key": "",
+    "stages": 0,
+    "knowledge_hash": ""
+  },
+  "target": {
+    "work": "w1",
+    "movement": "m1",
+    "digest": "a1b2c3d4e5f60789"
+  },
+  "regions": [{
+      "id": "region-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 9,
+      "material": "omt.material.natural-minor",
+      "strength": "established",
+      "label": ""
+    }],
+  "chords": [],
+  "cadences": [{
+      "id": "cadence-1",
+      "start": {
+        "num": 7,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 2
+      },
+      "evidence": [],
+      "type": "half",
+      "arrival": {
+        "num": 7,
+        "den": 1
+      },
+      "alternatives": []
+    }],
+  "groups": [],
+  "motive_occurrences": [],
+  "meters": [],
+  "lines": [],
+  "voice_faults": []
+}
