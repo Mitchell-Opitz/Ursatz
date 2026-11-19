@@ -175,15 +175,6 @@ HearingResult hearing_piece(ComposerHearing *hearing, const AnalysisChain **out)
     return hearing_section(hearing, whole, out);
 }
 
-size_t hearing_source_event(const ComposerHearing *hearing, const AnalysisChain *chain, size_t index) {
-    for (size_t i = 0; hearing && i < hearing->span_count; i++) {
-        if (hearing->spans[i].chain == chain && index < hearing->spans[i].count) {
-            return hearing->spans[i].source[index];
-        }
-    }
-    return (size_t)-1;
-}
-
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalysisChain **out) {
     if (!out) {
         return HEARING_ERR_NULL;

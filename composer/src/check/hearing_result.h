@@ -44,10 +44,4 @@ HearingResult hearing_piece_reading(ComposerHearing *hearing, const Reading **ou
  */
 size_t hearing_event_of_note(const ComposerHearing *hearing, const char *note_id);
 
-/*
- * The index among hearing_rendered's events of event index of the notes a chain was run on (the ids a voice fault names are
- * indices into those notes). (size_t)-1 for a chain the hearing did not make or an index it does not have.
- */
-size_t hearing_source_event(const ComposerHearing *hearing, const AnalysisChain *chain, size_t index);
-
 #endif

@@ -11,7 +11,7 @@
 #include <theory/tonality/common_practice_materials.h>
 
 #include <plan/plan_constraint.h>
-#include <ursatz_composer/harmony_phrase.h>
+#include <theory/vocabulary/cadence_type.h>
 #include <plan/plan_state.h>
 
 #include "check/hearing_result.h"
@@ -145,17 +145,17 @@ static size_t bar_of(Rational at, const PlanMeter *meter) {
     return bar;
 }
 
-/* The bar (0-based from the section's start) the chord of a report entry starts in; SIZE_MAX before the section. */
-static size_t entry_bar(const ChainEntry *entry, Rational origin, const PlanMeter *meter) {
+/* The bar (0-based from the section's start) a time in whole notes falls in; SIZE_MAX before the section. */
+static size_t time_bar(Rational at, Rational origin, const PlanMeter *meter) {
     Rational from_origin;
-    if (rational_sub(entry->time, origin, &from_origin) != RATIONAL_OK || rational_is_negative(from_origin)) {
+    if (rational_sub(at, origin, &from_origin) != RATIONAL_OK || rational_is_negative(from_origin)) {
         return (size_t)-1;
     }
     return bar_of(from_origin, meter);
 }
 
 static void compare_cadences(const Plan *plan, NodeId section, size_t bars, Rational origin, const PlanMeter *meter,
-                             const ChainResult *report, Items *items) {
+                             const Reading *reading, Items *items) {
     CadenceType planned[MAX_CADENCES];
     size_t count = 0;
     const SectionDescription *described = plan_section_or_empty(plan, section);
@@ -170,18 +170,15 @@ static void compare_cadences(const Plan *plan, NodeId section, size_t bars, Rati
         size_t bar = i == 0 ? bars - 1 : bars / 2 - 1;
         const char *heard = "none";
         bool agreed = false;
-        for (size_t c = 0; c < report->cadence_count; c++) {
-            const AnalysisCadence *cadence = &report->cadences[c];
-            if (cadence->arrival_first >= report->entry_count) {
+        for (size_t c = 0; c < reading_cadence_count(reading); c++) {
+            const ReadingCadence *cadence = reading_cadence_at(reading, c);
+            if (time_bar(cadence->arrival, origin, meter) != bar) {
                 continue;
             }
-            const ChainEntry *entry = &report->entries[cadence->arrival_first];
-            if (entry_bar(entry, origin, meter) != bar) {
-                continue;
-            }
-            bool matches = cadence_agrees(planned[i], cadence->type);
+            const char *type = cadence_type_name(cadence->type);
+            bool matches = cadence_agrees(planned[i], type);
             if (matches || !agreed) {
-                heard = cadence->type;
+                heard = type;
                 agreed = matches;
             }
         }
@@ -190,17 +187,17 @@ static void compare_cadences(const Plan *plan, NodeId section, size_t bars, Rati
     }
 }
 
-static void compare_key(const ChainResult *report, SpelledKey key, Items *items) {
+static void compare_key(const Reading *reading, SpelledKey key, Items *items) {
     char planned[32];
     char heard[32] = "none";
     bool agreed = false;
     util_key_name(spelled_key_tonic_pitch_class(&key), key.material, planned, sizeof(planned));
-    if (report->key_region_count > 0) {
-        const AnalysisKeyRegion *region = &report->key_regions[0];
+    if (reading_region_count(reading) > 0) {
+        const ReadingRegion *region = reading_region_at(reading, 0);
         CommonPracticeKeyMode mode;
         if (common_practice_key_mode_of(region->material, &mode)) {
-            util_key_name(region->tonic_pitch_class, region->material, heard, sizeof(heard));
-            agreed = region->tonic_pitch_class == spelled_key_tonic_pitch_class(&key) &&
+            util_key_name(region->center, region->material, heard, sizeof(heard));
+            agreed = region->center == spelled_key_tonic_pitch_class(&key) &&
                      (mode == COMMON_PRACTICE_KEY_MAJOR) == (!composer_key_is_minor(&key));
         }
     }
@@ -226,31 +223,24 @@ static AnalyzerCheckResult result_of(HearingResult status) {
     }
 }
 
-/* The hard faults the plan's own notes take part in, added to the items; first_bar is the heard span's first bar. */
-static bool add_violations(ComposerHearing *hearing, const AnalysisChain *chain, size_t first_bar, Items *items,
-                           bool *contradicts) {
+/* The hard faults the plan's own notes take part in, added to the items; first_bar is the heard span's first bar. A fault is one of
+   the reading's voice fault claims; it writes the plan when one of its evidence notes is a rendered event whose lane span is not Given. */
+static void add_violations(ComposerHearing *hearing, const Reading *reading, size_t first_bar, Items *items, bool *contradicts) {
     const Plan *plan = hearing_plan(hearing);
     const RenderedPlan *rendered = hearing_rendered(hearing);
-    ChainVoiceFault *violations = NULL;
-    size_t violation_count = 0;
-    if (!chain_result_voice_faults(chain, &violations, &violation_count)) {
-        return false;
-    }
-    for (size_t i = 0; i < violation_count; i++) {
+    for (size_t i = 0; i < reading_voice_fault_count(reading); i++) {
+        const ReadingVoiceFault *fault = reading_voice_fault_at(reading, i);
         bool writes = false;
-        for (size_t n = 0; n < violations[i].note_id_count && !writes; n++) {
-            size_t event = hearing_source_event(hearing, chain, violations[i].note_ids[n]);
+        for (size_t n = 0; n < fault->evidence.count && !writes; n++) {
+            size_t event = hearing_event_of_note(hearing, fault->evidence.ids[n]);
             writes = event < rendered->count && plan_lane_span_state(plan, rendered->spans[event]) != PLAN_STATE_GIVEN;
         }
-        if (violations[i].hard && writes) {
-            size_t bar = violations[i].measure > 0 ? (size_t)violations[i].measure - 1 : 0;
-            add_item(items, ANALYZER_CHECK_VIOLATION, bar >= first_bar ? bar - first_bar : 0, "none", violations[i].rule,
-                     false);
+        if (fault->hard && writes) {
+            size_t bar = fault->measure > 0 ? (size_t)fault->measure - 1 : 0;
+            add_item(items, ANALYZER_CHECK_VIOLATION, bar >= first_bar ? bar - first_bar : 0, "none", fault->rule, false);
             *contradicts = true;
         }
     }
-    chain_voice_faults_free(violations, violation_count);
-    return true;
 }
 
 AnalyzerCheckResult analyzer_check_section(const Plan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
@@ -298,25 +288,22 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
     }
     size_t bars = bars_in(span.length.num, span.length.den, &meter);
 
-    const AnalysisChain *heard = NULL;
-    AnalyzerCheckResult hear_status = result_of(hearing_section(hearing, span, &heard));
+    const Reading *heard = NULL;
+    AnalyzerCheckResult hear_status = result_of(hearing_section_reading(hearing, span, &heard));
     if (hear_status != ANALYZER_CHECK_OK) {
         return hear_status;
     }
-    const ChainResult *report = analysis_chain_result(heard);
     Items items;
     memset(&items, 0, sizeof(items));
-    compare_cadences(plan, section, bars, span.start, &meter, report, &items);
-    compare_key(report, key, &items);
+    compare_cadences(plan, section, bars, span.start, &meter, heard, &items);
+    compare_key(heard, key, &items);
     out->planned = items.count;
     for (size_t i = 0; i < items.count; i++) {
         out->agreed += items.items[i].agreed;
     }
     out->contradicts = out->agreed != out->planned;
     bool contradicts = false;
-    if (!add_violations(hearing, heard, bar_of(span.start, &meter), &items, &contradicts)) {
-        items.failed = true;
-    }
+    add_violations(hearing, heard, bar_of(span.start, &meter), &items, &contradicts);
     out->contradicts = out->contradicts || contradicts;
     if (items.failed) {
         free(items.items);
@@ -349,31 +336,17 @@ static bool is_part_section(const Plan *plan, NodeId id) {
            !plan_section_has_role(plan, id, SECTION_ROLE_SEAM);
 }
 
-/* Where the Analyzer heard a cadence end: the start of the chord after its arrival, else the end of the fragment. */
-static Rational cadence_end(const ChainResult *report, const AnalysisCadence *cadence, Rational fragment_end) {
-    Rational out = fragment_end;
-    if (cadence->arrival_last + 1 < report->entry_count) {
-        const ChainEntry *next = &report->entries[cadence->arrival_last + 1];
-        out = next->time;
-    }
-    return out;
-}
-
 /*
  * Whether a cadence the Analyzer heard belongs to the end of a section: it ends within one beat of it (the chord of its
  * arrival gives way to the next), or its arrival begins in the section's last bar. A tonic that arrives in the last bar
  * and carries on into the next section ends a bar or more after it, and is the section's cadence all the same.
  */
-static bool cadence_at(const ChainResult *report, const AnalysisCadence *cadence, Rational section_end, Rational fragment_end,
-                       const PlanMeter *meter) {
-    if (within_a_beat(cadence_end(report, cadence, fragment_end), section_end, meter)) {
+static bool cadence_at(const ReadingCadence *cadence, Rational section_end, const PlanMeter *meter) {
+    /* the claim ends where the chord after its arrival starts, else at the end of the heard notes */
+    if (within_a_beat(cadence->end, section_end, meter)) {
         return true;
     }
-    if (cadence->arrival_first >= report->entry_count) {
-        return false;
-    }
-    const ChainEntry *arrival = &report->entries[cadence->arrival_first];
-    Rational start = arrival->time;
+    Rational start = cadence->arrival;
     Rational last_bar;
     Rational bar = {meter->beats_per_bar, (unsigned long)meter->beat_unit};
     if (rational_sub(section_end, bar, &last_bar) != RATIONAL_OK) {
@@ -382,8 +355,8 @@ static bool cadence_at(const ChainResult *report, const AnalysisCadence *cadence
     return rational_cmp(start, last_bar) >= 0 && rational_cmp(start, section_end) <= 0;
 }
 
-static void compare_piece_cadences(const Plan *plan, const PlanMeter *meter, const ChainResult *report,
-                                   Rational fragment_end, Items *items) {
+static void compare_piece_cadences(const Plan *plan, const PlanMeter *meter, const Reading *reading, Rational fragment_end,
+                                   Items *items) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!is_part_section(plan, id)) {
             continue;
@@ -402,14 +375,15 @@ static void compare_piece_cadences(const Plan *plan, const PlanMeter *meter, con
                          : 0;
         const char *heard = "none";
         bool agreed = false;
-        for (size_t c = 0; c < report->cadence_count; c++) {
-            const AnalysisCadence *cadence = &report->cadences[c];
-            if (!cadence_at(report, cadence, end, fragment_end, meter)) {
+        for (size_t c = 0; c < reading_cadence_count(reading); c++) {
+            const ReadingCadence *cadence = reading_cadence_at(reading, c);
+            if (!cadence_at(cadence, end, meter)) {
                 continue;
             }
-            bool matches = cadence_agrees(planned_cadence, cadence->type);
+            const char *type = cadence_type_name(cadence->type);
+            bool matches = cadence_agrees(planned_cadence, type);
             if (matches || !agreed) {
-                heard = cadence->type;
+                heard = type;
                 agreed = matches;
             }
         }
@@ -425,10 +399,8 @@ static void compare_piece_cadences(const Plan *plan, const PlanMeter *meter, con
         if (planned_cadence == CADENCE_TYPE_HALF && !agreed) {
             bool last = at_end;
             bool resolved = false;
-            for (size_t c = 0; c < report->cadence_count && !resolved; c++) {
-                const AnalysisCadence *cadence = &report->cadences[c];
-                resolved = cadence->arrival_first < report->entry_count &&
-                           within_a_beat(report->entries[cadence->arrival_first].time, end, meter);
+            for (size_t c = 0; c < reading_cadence_count(reading) && !resolved; c++) {
+                resolved = within_a_beat(reading_cadence_at(reading, c)->arrival, end, meter);
             }
             if (last || resolved) {
                 heard = last ? "none (the piece ends)" : "resolved into the next section";
@@ -464,25 +436,22 @@ AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCh
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
         return ANALYZER_CHECK_ERR_PLAN;
     }
-    const AnalysisChain *heard = NULL;
-    AnalyzerCheckResult hear_status = result_of(hearing_piece(hearing, &heard));
+    const Reading *heard = NULL;
+    AnalyzerCheckResult hear_status = result_of(hearing_piece_reading(hearing, &heard));
     if (hear_status != ANALYZER_CHECK_OK) {
         return hear_status;
     }
-    const ChainResult *report = analysis_chain_result(heard);
     Items items;
     memset(&items, 0, sizeof(items));
-    compare_piece_cadences(plan, &meter, report, rendered->piece_end, &items);
-    compare_key(report, key, &items);
+    compare_piece_cadences(plan, &meter, heard, rendered->piece_end, &items);
+    compare_key(heard, key, &items);
     out->planned = items.count;
     for (size_t i = 0; i < items.count; i++) {
         out->agreed += items.items[i].agreed;
     }
     out->contradicts = out->agreed != out->planned;
     bool contradicts = false;
-    if (!add_violations(hearing, heard, 0, &items, &contradicts)) {
-        items.failed = true;
-    }
+    add_violations(hearing, heard, 0, &items, &contradicts);
     if (items.failed) {
         free(items.items);
         memset(out, 0, sizeof(*out));
