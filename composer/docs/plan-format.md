@@ -40,7 +40,7 @@ number with an optional spelling (the file writes `spelling` for a spelled note 
 | `format` | Always `"ursatz-composer-plan"`. |
 | `format_version` | Always `4`. |
 | `next_note_id` | The id the next new note gets: an integer from 1, above every note id of the file. |
-| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the Analyzer's producer key, `ursatz_analyzer_producer_key()`; the member keeps its name until plan format 3) and, only for a plan loaded from an Analyzer result, `analyzer_version` (`ursatz_analyzer_version()`). |
+| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the library's producer key, `analysis_chain_producer_key()` since P61 B8, R-620; the member keeps its name until plan format 3) and, only for a plan that has one, `analyzer_version` (kept; none is written). |
 | `meter` | `null`, or `{"spans": [<claim>, ...]}` for meter spans. |
 | `keys` | Key lane claims. |
 | `chords` | Harmony lane claims. |

@@ -50,8 +50,8 @@ set(producer_key_header ${PROJECT_BINARY_DIR}/include/ursatz_analyzer/producer_k
 add_custom_command(
     OUTPUT ${producer_key_header}
     COMMAND ${CMAKE_COMMAND} -DROOT=${URSATZ_REPO_ROOT} -DLIST=${producer_list} -DOUT=${producer_key_header}
-            -P ${PROJECT_SOURCE_DIR}/cmake/ProducerKey.cmake
-    DEPENDS ${producer_source_files} ${producer_list} ${PROJECT_SOURCE_DIR}/cmake/ProducerKey.cmake
+            -DMACRO=URSATZ_ANALYZER_PRODUCER_KEY -P ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
+    DEPENDS ${producer_source_files} ${producer_list} ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
     COMMENT "Computing the Analyzer producer key"
     VERBATIM)
 target_sources(ursatz_analyzer PRIVATE ${producer_key_header})

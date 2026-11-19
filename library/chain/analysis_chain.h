@@ -175,6 +175,11 @@ typedef struct {
 
 AnalysisChainConfig analysis_chain_config_default(void);
 
+/* The library's producer key (R-620): 16 hex digits, a hash of the library sources that produce an analysis (model, theory, analysis, io,
+   chain and the vendored cJSON and ezxml; no test, doc or app). It changes when any of them changes and not otherwise. A plan and the
+   Composer's versions record it as `ursatz_commit`. */
+const char *analysis_chain_producer_key(void);
+
 typedef enum {
     ANALYSIS_CHAIN_OK = 0,
     ANALYSIS_CHAIN_ERR_NULL_ARGUMENT,

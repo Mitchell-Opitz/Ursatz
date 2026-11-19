@@ -122,6 +122,7 @@ target ursatz_realization realization
 target ursatz_plan plan
 staged model theory analysis chain io realization plan analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
+generated chain producer_key.h chain/producer_key.h
 
 uses analyzer-api  model theory analysis chain io
 allow analyzer/include/ursatz_analyzer/result_chain.h chain -- the chain's claims, for a consumer that links ursatz_analyzer::chain

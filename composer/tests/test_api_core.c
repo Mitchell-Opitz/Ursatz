@@ -53,7 +53,7 @@ static void test_versions(void) {
     snprintf(expected, sizeof expected, "\"composer_version\":\"%s\"", composer_version());
     assert(strstr(response.json, expected));
     assert(strstr(response.json, "\"api_version\":\"3.0\""));
-    assert(strstr(response.json, "\"analyzer_version\":\""));
+    assert(strstr(response.json, "\"analyzer_version\"") == NULL); /* R-620: the Composer knows no Analyzer */
     assert(strstr(response.json, "\"ursatz_commit\":\""));
     snprintf(expected, sizeof expected, "\"plan_format_version\":%d", URSATZ_COMPOSER_PLAN_FORMAT_VERSION);
     assert(strstr(response.json, expected));
