@@ -145,7 +145,7 @@ uses analyzer-style  model theory analysis chain io realization reading analyzer
 # corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
 uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h
 uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
-uses analyzer-cli    model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
+uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
 uses composer      model theory realization plan reading analysis chain io composer-api cjson
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson

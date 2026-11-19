@@ -172,7 +172,6 @@ static PlanResult add_section(Builder *builder, const Reading *reading, const Me
     section_description_init(&description);
     char name[SECTION_ID_MAX];
     unique_name(builder, builder->plan, letter, name);
-    snprintf(description.name, sizeof(description.name), "%s", name);
     snprintf(description.id, sizeof(description.id), "%s", name);
     snprintf(description.letter, sizeof(description.letter), "%c", letter);
     Rational bar_start;
@@ -371,14 +370,18 @@ RealizationResult reading_to_plan(const Reading *reading, const Movement *moveme
     memset(&derivation, 0, sizeof(derivation));
     snprintf(derivation.reading, sizeof(derivation.reading), "%s", reading_source(reading)->name);
     snprintf(derivation.realization, sizeof(derivation.realization), "%s", target->digest);
+    const char *stage = "the form";
     PlanResult result = plan_add_node(builder.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, "form", &builder.form);
     if (result == PLAN_OK) {
+        stage = "the meters";
         result = add_meters(&builder, map);
     }
     if (result == PLAN_OK) {
+        stage = "the sections";
         result = add_sections(&builder, reading, map);
     }
     if (result == PLAN_OK) {
+        stage = "the keys";
         result = add_regions(&builder, reading, &regions);
     }
     if (result == PLAN_OK && regions == 0) {
@@ -387,16 +390,19 @@ RealizationResult reading_to_plan(const Reading *reading, const Movement *moveme
         return refuse(error, "the reading names no region");
     }
     if (result == PLAN_OK) {
+        stage = "the chords";
         result = add_harmony(&builder, reading);
     }
     if (result == PLAN_OK) {
+        stage = "the source";
         result = plan_set_derived_from(builder.plan, &derivation);
     }
     free(builder.sections);
     if (result != PLAN_OK) {
         plan_destroy(builder.plan);
         if (error) {
-            snprintf(error->message, sizeof(error->message), "the reading cannot be made into a plan (plan result %d)", (int)result);
+            snprintf(error->message, sizeof(error->message), "the reading cannot be made into a plan: %s (plan result %d)", stage,
+                     (int)result);
         }
         return from_plan(result);
     }

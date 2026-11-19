@@ -15,6 +15,7 @@ ursatz_public_headers(ursatz_reading
         reading/reading.h
         reading/reading_build.h
         reading/reading_json.h
+        reading/reading_plan.h
 )
 target_link_libraries(ursatz_reading PUBLIC ursatz_realization ursatz_plan ursatz_chain ursatz_analysis ursatz_theory ursatz_model cjson)
 
