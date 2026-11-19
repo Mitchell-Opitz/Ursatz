@@ -9,11 +9,11 @@ gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test h
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test hook: test_analyzer_route reads the import counter
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
-library/analysis/harmony/chord_reading.c chord_reading_of_sonority  # only analysis_chain_chord_reading calls it, which no app reads until P62's reading layer; its tests call it
-library/analysis/harmony/chord_reading.c mask_above_root  # helper of chord_reading_of_sonority, which no app calls until P62; its tests call it
+library/analysis/harmony/chord_reading.c chord_reading_of_sonority  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/analysis/harmony/chord_reading.c mask_above_root  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
-library/chain/analysis_chain.c analysis_chain_chord_reading  # no app reads a chord reading until P62's reading layer; its tests call it
-library/chain/analysis_chain.c segment_pitch_classes  # helper of analysis_chain_chord_reading, which no app calls until P62; its tests call it
+library/chain/analysis_chain.c analysis_chain_chord_reading  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/chain/analysis_chain.c segment_pitch_classes  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
 library/io/musicxml_importer.c musicxml_import_file  # the imported score reads a file into a buffer and calls musicxml_import_buffer (R-614); its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P69 (composing in modes tests pitches against materials); its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
@@ -57,7 +57,7 @@ library/realization/work.c work_material_count  # no app calls it until P62 B9 (
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app calls it until P62 B9 (reading files name chord types); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # only chord_reading_of_sonority reads a chord type, and no app reads a chord reading until P62's reading layer; its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 
@@ -210,3 +210,25 @@ library/reading/reading_json.c set_error  # no app calls it until P62 B9 (the An
 library/reading/reading_json.c text_or_null  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
 library/reading/reading_json.c write_fail  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
 library/theory/vocabulary/cadence_type.c cadence_type_from_name  # no app calls it until P62 B9 (reading files name cadence types); its tests call it
+library/reading/reading_build.c add  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c add_group  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_cadences  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_chords  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_groups  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_meters  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_motive_occurrences  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_outer_line  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_regions  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c build_voice_faults  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c chord_exists  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c claim_head  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c evidence_begin  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c evidence_notes  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c fail  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c has_trait  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c in_span  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c reading_build  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c score_end  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c section_holding  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c set_text  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
+library/reading/reading_build.c touch  # no app calls it until P62 B9 (the Analyzer builds its reading); its tests call it
