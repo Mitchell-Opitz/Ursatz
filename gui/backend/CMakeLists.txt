@@ -2,27 +2,6 @@
 add_library(ursatz_gui_core STATIC
   src/server.c
   src/routes/route_util.c
-  src/service/data_check.c
-  src/service/analysis_service.c
-  src/service/import_cache.c
-  src/service/piece_metadata.c
-  src/service/id_service.c
-  src/service/last_error.c
-  src/service/collection_service.c
-  src/service/style_service.c
-  src/service/composer_client.c
-  src/service/job_queue.c
-  src/service/compose_jobs.c
-  src/service/material_service.c
-  src/service/motif_service.c
-  src/service/material_export_service.c
-  src/service/compose_common.c
-  src/service/piece_lock.c
-  src/service/theme_service.c
-  src/service/piece_service.c
-  src/service/playback_service.c
-  src/service/subject_service.c
-  src/service/link_service.c
   src/routes/analyzer.c
   src/routes/corpus.c
   src/routes/composer.c
@@ -39,8 +18,6 @@ target_include_directories(ursatz_gui_core PUBLIC
 target_link_libraries(ursatz_gui_core PUBLIC
   ursatz_workshop
   ursatz_common
-  ursatz_composer
-  ursatz_analyzer
   cjson
   civetweb-c-library
 )

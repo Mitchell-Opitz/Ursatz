@@ -34,22 +34,8 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
 ursatz_test(corpus_route LIBS ursatz_gui_core ursatz_test_http gui_server_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
 # The test creates collections/ and pieces/ in its own working directory.
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
-ursatz_test(piece_metadata LIBS ursatz_gui_core ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/id_service)
-ursatz_test(id_service LIBS ursatz_gui_core ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/id_service)
 # The one status-to-HTTP table of the routes and the last error the services keep for them (R-639).
 ursatz_test(gui_http_status SOURCES test_http_status.c LIBS ursatz_gui_core ursatz_test_support)
-# The test makes one data folder per case in its own working directory and removes it.
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data_check)
-ursatz_test(data_check LIBS ursatz_gui_core ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data_check)
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/job_queue)
-ursatz_test(job_queue LIBS ursatz_gui_core ursatz_test_http gui_server_support
-    DEFINITIONS URSATZ_GUI_TEST_THEME_REQUEST="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer/theme-request.json"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/job_queue)
-# The test cancels a theme compose made from a request fixture; no server is started.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
 ursatz_test(composer_route LIBS ursatz_gui_core ursatz_test_http gui_server_support
@@ -72,23 +58,6 @@ ursatz_test(styles_route_smoke TARGET test_styles_route ARGS smoke
 # The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own
 # working directory.
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
-ursatz_test(material_service LIBS ursatz_gui_core ursatz_test_support
-    DEFINITIONS URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/material_service"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
-# The test creates its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR) and removes it.
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gui_material_migration)
-ursatz_test(gui_material_migration SOURCES test_material_migration.c LIBS ursatz_gui_core ursatz_test_support
-    DEFINITIONS URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/gui_material_migration"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gui_material_migration)
-# The test reads old motif, theme and piece files (the key text and the mode words), composes them and saves them again with
-# the Composer API in its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR), and removes it.
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
-ursatz_test(subject_service LIBS ursatz_gui_core ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
-# The test creates its own materials_<pid>/, subjects_<pid>/ and pieces/ in its working directory.
-
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/materials_route)
 ursatz_test(materials_route LIBS ursatz_gui_core ursatz_test_http gui_server_support
     DEFINITIONS URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
@@ -102,13 +71,6 @@ ursatz_test(materials_route LIBS ursatz_gui_core ursatz_test_http gui_server_sup
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subjects_route)
 ursatz_test(subjects_route LIBS ursatz_gui_core ursatz_test_http gui_server_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subjects_route)
 # The test creates materials/, subjects/ and pieces/ in its own working directory.
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/link_service)
-ursatz_test(link_service LIBS ursatz_gui_core ursatz_test_http gui_server_support
-    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/link_service)
-# The test creates pieces/, collections/, materials/, subjects/ and links/ in its own working directory and reads the
-# link fixtures.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/links_route)
 ursatz_test(links_route LIBS ursatz_gui_core ursatz_test_http gui_server_support
@@ -152,16 +114,3 @@ ursatz_test(piece_snapshot LIBS ursatz_gui_core ursatz_test_http gui_server_supp
 # The test compares the detail note ids, score and playback replies of three pieces with fixtures/pieces (the Bach 114
 # playback with the Analyzer's own snapshot); it creates pieces/ in its own working directory.
 # URSATZ_UPDATE_GOLDENS=1 rewrites the snapshot in fixtures/pieces, never the Analyzer's.
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_lock)
-ursatz_test(piece_lock LIBS ursatz_gui_core ursatz_test_http gui_server_support
-    DEFINITIONS URSATZ_GUI_TEST_SOURCE="${URSATZ_FIXTURES_DIR}/musicxml/chords_backup.musicxml"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_lock)
-# The test makes pieces/ in its own working directory and uploads this MusicXML file as the piece.
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stale_analysis)
-ursatz_test(stale_analysis LIBS ursatz_gui_core ursatz_test_support
-    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stale_analysis)
-# The test creates pieces/, styles/, collections/, materials/, subjects/ and links/ in its own working directory and reads
-# the link fixtures.

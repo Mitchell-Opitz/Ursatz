@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "service/composer_client.h"
 #include "workshop_internal.h"
 
 static int write_fixture(const char *folder, const char *name, const char *text) {
@@ -44,8 +43,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "write_frontend_fixtures: the knowledge snapshot cannot be built\n");
     return 1;
   }
-  int failed = write_fixture(argv[1], "vocabulary.json", ursatz_gui_composer_vocabulary());
-  failed |= write_fixture(argv[1], "forms.json", ursatz_gui_composer_forms());
+  int failed = write_fixture(argv[1], "vocabulary.json", workshop_composer_vocabulary());
+  failed |= write_fixture(argv[1], "forms.json", workshop_composer_forms());
   workshop_knowledge_shutdown();
   return failed ? 1 : 0;
 }

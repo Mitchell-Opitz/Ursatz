@@ -146,10 +146,18 @@ module composer-request composer/src/api composer/src/preferences composer/src/i
 group composer-core composer-util composer-structure composer-fill composer-render composer-style
 group composer-operators composer-harmony composer-motive composer-melody composer-texture composer-counterpoint composer-material
 module composer-cli  composer/cli
-module gui           gui/backend/src   root gui/backend/src workshop/src/coordinator
-# The workshop (R-641): the API header and the coordinator, the first of the workshop's folders (P63 B4).
+module gui           gui/backend/src   root gui/backend/src workshop/src
+# The workshop (R-641): the API header, the coordinator and the service folders, lowest first (P63 B4, B5). Files of workshop/src include
+# one another as "<folder>/<name>.h" (the root dir workshop/src), their own folder's as "<name>.h".
 module workshop-api         workshop/include           prefix ursatz_workshop/workshop_api.h
-module workshop-coordinator workshop/src/coordinator   root workshop/src/coordinator workshop/include
+module workshop-base        workshop/src/base          root workshop/src
+module workshop-jobs        workshop/src/jobs          root workshop/src
+module workshop-items       workshop/src/items         root workshop/src
+module workshop-analysis    workshop/src/analysis      root workshop/src
+module workshop-composition workshop/src/composition   root workshop/src
+module workshop-rendering   workshop/src/rendering     root workshop/src
+module workshop-coordinator workshop/src/coordinator   root workshop/src workshop/include
+module workshop-internal    workshop/src/workshop_internal.h  root workshop/src -- the one header the GUI routes include until B11
 # A CMake target builds these modules; an include between two modules of one target needs no staging, one between targets (or from
 # an application) must name a staged header, and a staged header nothing outside its target includes is an error.
 target ursatz_model model
@@ -197,15 +205,24 @@ uses composer-request model theory realization plan reading analysis chain io cj
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson common
 uses workshop-api common cjson
-uses workshop-coordinator workshop-api composer-api analyzer-api theory common cjson
-uses gui           analyzer-api composer-api cjson civetweb common theory-style workshop-api workshop-coordinator -- B5 moves the style service and B11 the coordinator calls into the workshop
-allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
-allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
+uses workshop-base common composer-api analyzer-api theory cjson
+uses workshop-jobs workshop-base common composer-api cjson
+uses workshop-items workshop-base workshop-jobs common composer-api analyzer-api cjson
+uses workshop-analysis workshop-base workshop-items workshop-jobs common composer-api analyzer-api theory-style cjson
+uses workshop-composition workshop-base workshop-items workshop-analysis workshop-jobs common composer-api analyzer-api cjson
+uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
+uses workshop-coordinator workshop-api workshop-base composer-api analyzer-api common cjson
+uses workshop-internal workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering
+allow workshop/src/items/collections.c analysis/analysis_service.h -- until P63 B5 commit 3 splits the Library piece store out of the analysis service
+allow workshop/src/items/library_metadata.h analysis/analysis_service.h -- until P63 B5 commit 3 (WorkshopPieceSummary moves to items/library_pieces.h)
+allow workshop/src/items/material_service.c composition/motifs.h -- until P63 B5 commit 4 (the include is unused)
+allow workshop/src/items/material_service.c composition/composer_client.h -- the body rules read the Composer's vocabulary and forms; B14 moves the checks into the Composer
+uses gui           cjson civetweb common theory-style workshop-api workshop-internal -- the routes include workshop_internal.h until B11 gives the GUI the query and command API
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
 # Tests: a test folder may include its module and what that module may include, plus the rows below.
-module test-support          tests/support prefix ursatz_test.h test_http.h
+module test-support          tests/support prefix ursatz_test.h ursatz_check.h test_http.h
 module root-tests            tests
 module library-tests         library/tests          root library/tests library/tests/support
 module library-test-support  library/tests/support
@@ -348,8 +365,8 @@ module analyzer-tests     analyzer/tests            root analyzer/tests analyzer
 module analyzer-consumer  analyzer/tests/consumer
 module composer-tests     composer/tests            root composer/tests composer/tests/support composer/src composer/src/include composer/include
 module composer-consumer  composer/tests/consumer
-module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src workshop/src/coordinator
-module workshop-tests     workshop/tests            root workshop/tests workshop/src/coordinator workshop/include
+module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src workshop/src
+module workshop-tests     workshop/tests            root workshop/tests workshop/src workshop/include
 uses analyzer-tests test-support
 like analyzer-tests analyzer
 like analyzer-tests analyzer-util
@@ -363,9 +380,15 @@ like analyzer-tests analyzer-cli
 like analyzer-tests analyzer-internal
 uses composer-tests test-support
 like composer-tests composer-request
-uses gui-tests test-support
+uses gui-tests test-support analyzer-api composer-api workshop-base
 uses workshop-tests test-support
 like workshop-tests workshop-coordinator
+like workshop-tests workshop-base
+like workshop-tests workshop-jobs
+like workshop-tests workshop-items
+like workshop-tests workshop-analysis
+like workshop-tests workshop-composition
+like workshop-tests workshop-rendering
 like gui-tests gui
 free analyzer-consumer composer-consumer -- consumer projects include what a consumer may not, to check that it fails
 

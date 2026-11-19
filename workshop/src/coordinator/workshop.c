@@ -9,7 +9,7 @@
 #include <common/files.h>
 #include <common/json.h>
 
-#include "workshop_internal.h"
+#include "coordinator.h"
 
 #include <limits.h>
 
@@ -65,16 +65,6 @@ void workshop_close(Workshop *workshop) {
         workshop_data_lock_release(workshop->lock_descriptor);
     }
     free(workshop);
-}
-
-const KnowledgeSnapshot *workshop_knowledge(const Workshop *workshop) {
-    (void)workshop;
-    return workshop_knowledge_snapshot();
-}
-
-const ComposerContext *workshop_composer_context(const Workshop *workshop) {
-    (void)workshop;
-    return workshop_composer_context_global();
 }
 
 UrsatzStatus workshop_status(Workshop *workshop, cJSON **out, UrsatzError *error) {

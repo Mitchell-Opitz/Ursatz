@@ -9,7 +9,7 @@
 #include <civetweb.h>
 
 #include "route_util.h"
-#include "../service/collection_service.h"
+#include "workshop_internal.h"
 
 static const char *kCorpusPrefix = "/api/corpus";
 /* "Add all matching" sends every id of a filtered Library in one request. */
@@ -38,8 +38,8 @@ static bool add_summary_members(cJSON *object, const char *id, const char *name,
 /* {"ok":true,"id","name","description","piece_count","updated_at"} for the
  * stored collection id, so an answer shows the normalized values. */
 static int send_collection_summary(struct mg_connection *conn, const char *id) {
-  UrsatzGuiCollection *collection = NULL;
-  UrsatzStatus result = ursatz_gui_collection_get(id, &collection);
+  WorkshopCollection *collection = NULL;
+  UrsatzStatus result = workshop_collection_get(id, &collection);
   if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
@@ -47,7 +47,7 @@ static int send_collection_summary(struct mg_connection *conn, const char *id) {
   bool built = object && cJSON_AddBoolToObject(object, "ok", 1) &&
                add_summary_members(object, collection->id, collection->name, collection->description,
                                    collection->piece_count, collection->updated_at);
-  ursatz_gui_collection_destroy(collection);
+  workshop_collection_destroy(collection);
   if (!built) {
     cJSON_Delete(object);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
@@ -88,9 +88,9 @@ static int handle_create_corpus(struct mg_connection *conn) {
       return ursatz_gui_send_failure(conn, 200, "out of memory");
     }
     strcpy(id, id_item->valuestring);
-    result = ursatz_gui_collection_create_with_id(id, name_item->valuestring, description);
+    result = workshop_collection_create_with_id(id, name_item->valuestring, description);
   } else {
-    result = ursatz_gui_collection_create(name_item->valuestring, description, &id);
+    result = workshop_collection_create(name_item->valuestring, description, &id);
   }
   cJSON_Delete(body);
 
@@ -104,9 +104,9 @@ static int handle_create_corpus(struct mg_connection *conn) {
 }
 
 static int handle_list_corpora(struct mg_connection *conn) {
-  UrsatzGuiCollectionEntry *entries = NULL;
+  WorkshopCollectionEntry *entries = NULL;
   size_t count = 0;
-  UrsatzStatus result = ursatz_gui_collection_list(&entries, &count);
+  UrsatzStatus result = workshop_collection_list(&entries, &count);
   if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
@@ -124,7 +124,7 @@ static int handle_list_corpora(struct mg_connection *conn) {
       cJSON_Delete(item);
     }
   }
-  ursatz_gui_collection_free_entries(entries, count);
+  workshop_collection_free_entries(entries, count);
   if (!built) {
     cJSON_Delete(object);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
@@ -133,8 +133,8 @@ static int handle_list_corpora(struct mg_connection *conn) {
 }
 
 static int handle_get_corpus(struct mg_connection *conn, const char *id) {
-  UrsatzGuiCollection *collection = NULL;
-  UrsatzStatus result = ursatz_gui_collection_get(id, &collection);
+  WorkshopCollection *collection = NULL;
+  UrsatzStatus result = workshop_collection_get(id, &collection);
   if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
@@ -152,7 +152,7 @@ static int handle_get_corpus(struct mg_connection *conn, const char *id) {
       cJSON_AddItemToArray(pieces, piece_id);
     }
   }
-  ursatz_gui_collection_destroy(collection);
+  workshop_collection_destroy(collection);
   if (!built) {
     cJSON_Delete(object);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
@@ -181,7 +181,7 @@ static int handle_patch_corpus(struct mg_connection *conn, const char *id) {
     return ursatz_gui_send_failure(conn, 200, "invalid description");
   }
 
-  UrsatzStatus result = ursatz_gui_collection_update(
+  UrsatzStatus result = workshop_collection_update(
       id, name_item ? name_item->valuestring : NULL, description_item ? description_item->valuestring : NULL);
   cJSON_Delete(body);
   if (result != URSATZ_OK) {
@@ -191,7 +191,7 @@ static int handle_patch_corpus(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = ursatz_gui_collection_delete(id);
+  UrsatzStatus result = workshop_collection_delete(id);
   if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
@@ -229,7 +229,7 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
       } else {
         const cJSON *item = NULL;
         cJSON_ArrayForEach(item, list) {
-          if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
+          if (!cJSON_IsString(item) || !workshop_collection_is_valid_id(item->valuestring)) {
             failure = "invalid piece_id";
             break;
           }
@@ -237,7 +237,7 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
         }
       }
     }
-  } else if (cJSON_IsString(single) && ursatz_gui_collection_is_valid_id(single->valuestring)) {
+  } else if (cJSON_IsString(single) && workshop_collection_is_valid_id(single->valuestring)) {
     ids = calloc(1, sizeof(*ids));
     if (!ids) {
       failure = "out of memory";
@@ -255,13 +255,13 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
   }
 
   /* An unknown collection is a 404 before any piece is looked at. */
-  if (!ursatz_gui_collection_exists(corpus_id)) {
+  if (!workshop_collection_exists(corpus_id)) {
     free(ids);
     cJSON_Delete(body);
     return ursatz_gui_send_failure(conn, 404, "collection not found");
   }
   for (size_t i = 0; i < count; i++) {
-    if (!ursatz_gui_collection_piece_exists(ids[i])) {
+    if (!workshop_collection_piece_exists(ids[i])) {
       char message[128];
       snprintf(message, sizeof(message), "unknown piece: %s", ids[i]);
       free(ids);
@@ -272,7 +272,7 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
 
   size_t added = 0;
   size_t already = 0;
-  UrsatzStatus result = ursatz_gui_collection_add_pieces(corpus_id, ids, count, &added, &already);
+  UrsatzStatus result = workshop_collection_add_pieces(corpus_id, ids, count, &added, &already);
   free(ids);
   cJSON_Delete(body);
   if (result != URSATZ_OK) {
@@ -289,7 +289,7 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
 }
 
 static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id, const char *piece_id) {
-  UrsatzStatus result = ursatz_gui_collection_remove_piece(corpus_id, piece_id);
+  UrsatzStatus result = workshop_collection_remove_piece(corpus_id, piece_id);
   if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
@@ -298,8 +298,8 @@ static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id
 }
 
 static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id) {
-  UrsatzGuiCollection *collection = NULL;
-  UrsatzStatus result = ursatz_gui_collection_get(corpus_id, &collection);
+  WorkshopCollection *collection = NULL;
+  UrsatzStatus result = workshop_collection_get(corpus_id, &collection);
   if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
@@ -316,7 +316,7 @@ static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id)
       cJSON_Delete(piece);
     }
   }
-  ursatz_gui_collection_destroy(collection);
+  workshop_collection_destroy(collection);
   if (!built) {
     cJSON_Delete(object);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
@@ -367,7 +367,7 @@ static int corpus_handler(struct mg_connection *conn, void *cbdata) {
   memcpy(corpus_id, rest, corpus_id_len);
   corpus_id[corpus_id_len] = '\0';
 
-  if (!ursatz_gui_collection_is_valid_id(corpus_id)) {
+  if (!workshop_collection_is_valid_id(corpus_id)) {
     send_ok_false(conn, "invalid id");
     return 200;
   }
@@ -408,7 +408,7 @@ static int corpus_handler(struct mg_connection *conn, void *cbdata) {
 
   if (after_pieces[0] == '/' && after_pieces[1] != '\0') {
     const char *piece_id = after_pieces + 1;
-    if (!ursatz_gui_collection_is_valid_id(piece_id)) {
+    if (!workshop_collection_is_valid_id(piece_id)) {
       send_ok_false(conn, "invalid piece_id");
       return 200;
     }

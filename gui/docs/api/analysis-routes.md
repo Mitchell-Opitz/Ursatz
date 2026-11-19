@@ -113,7 +113,7 @@ The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md)
 ## Corpus routes
 
 The Collections tool keeps its `/api/corpus` paths. Collections are owned by
-the GUI (`service/collection_service.c`):
+the GUI (`workshop/src/items/collections.c`):
 
 - `POST /api/corpus`: body `{"name":"<name>"}`, with an optional
   `"description":"<text>"` and an optional `"id":"<collection-id>"` (accepted
@@ -155,7 +155,7 @@ Storage: one file per collection, `collections/<id>.json`, with `id`, `name`,
 one, and one mutex serializes the writes. A collection is a fixed set of
 piece ids: tagging a piece later does not add it.
 `DELETE /api/analyzer/pieces/<id>` also removes the id from every collection
-that holds it (a service call, `ursatz_gui_collection_remove_piece_everywhere`).
+that holds it (a service call, `workshop_collection_remove_piece_everywhere`).
 
 A `data/corpus.db` of the old Corpus store is not read: the start refuses a folder that never imported it (see
 [Data check](../storage.md#data-check)).
@@ -163,7 +163,7 @@ A `data/corpus.db` of the old Corpus store is not read: the start refuses a fold
 ## Styles routes
 
 A style is a StyleModel file built from a set of pieces through the
-Analyzer's style profile (`service/style_service.c`). The Composer reads it
+Analyzer's style profile (`workshop/src/analysis/styles.c`). The Composer reads it
 with `--style` (the GUI option for that comes later). Styles are not
 collections and not tags: they are a count of harmony, rhythm, melody and
 form labels over the pieces they were built from.
@@ -210,7 +210,7 @@ An unknown style id is `404` `{"ok":false,"message":"style not found"}` on
 every route.
 
 The backend can also build a style into one model file at a path without a
-store entry (`ursatz_gui_style_build_file`, written to a temporary file and
+store entry (`workshop_style_build_file`, written to a temporary file and
 renamed); a theme version uses it for its brief.
 
 A piece that cannot be added is skipped with a reason and the build goes on:
@@ -232,7 +232,7 @@ rebuild changes what that plan's later steps use.
 
 Motive links show which motive families of different pieces are variants of one another: for each family the
 Analyzer finds the nearest families of other pieces and the chain of at most two relations that turns one prototype
-into the other (`ursatz_analyzer/analyzer_api.h`). `service/link_service.c` is the only code that calls it; it reads
+into the other (`ursatz_analyzer/analyzer_api.h`). `workshop/src/analysis/links.c` is the only code that calls it; it reads
 only analysis documents, never the scores.
 
 A scope names the pieces to link:

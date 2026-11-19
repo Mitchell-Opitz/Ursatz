@@ -1,7 +1,7 @@
 #ifndef URSATZ_GUI_ROUTE_JOBS_H
 #define URSATZ_GUI_ROUTE_JOBS_H
 
-#include "../service/job_queue.h"
+#include "workshop_internal.h"
 
 struct mg_connection;
 struct mg_context;

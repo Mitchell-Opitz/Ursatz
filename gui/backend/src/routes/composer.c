@@ -8,11 +8,9 @@
 #include <civetweb.h>
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analyzer_api.h>
-
 #include "route_util.h"
 #include "../server.h"
-#include "../service/composer_client.h"
+#include "workshop_internal.h"
 
 static const char *kComposerPrefix = "/api/composer";
 #define MAX_SEGMENTS 8
@@ -64,7 +62,7 @@ static int handle_status(struct mg_connection *conn) {
 /* GET /api/composer/vocabulary: the words the Composer reads, as composer_api_vocabulary gives them (built once and
  * kept, R-270). */
 static int handle_vocabulary(struct mg_connection *conn) {
-  const char *vocabulary = ursatz_gui_composer_vocabulary();
+  const char *vocabulary = workshop_composer_vocabulary();
   if (!vocabulary) {
     return send_error(conn, 500, "composer failed");
   }
@@ -74,7 +72,7 @@ static int handle_vocabulary(struct mg_connection *conn) {
 /* GET /api/composer/forms: the forms the Composer builds and their sections, sizes and slots, as composer_api_forms
  * gives them (built once and kept). */
 static int handle_forms(struct mg_connection *conn) {
-  const char *forms = ursatz_gui_composer_forms();
+  const char *forms = workshop_composer_forms();
   if (!forms) {
     return send_error(conn, 500, "composer failed");
   }

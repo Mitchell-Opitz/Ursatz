@@ -39,7 +39,7 @@ static bool ok_true(const cJSON *json) {
 
 
 #include "support/server_support.h"
-#include "gui_check.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 

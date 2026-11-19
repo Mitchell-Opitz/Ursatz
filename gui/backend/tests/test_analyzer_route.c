@@ -28,10 +28,9 @@
 #include <ursatz_analyzer/analyzer_api.h>
 
 #include "support/server_support.h"
-#include "gui_check.h"
+#include "ursatz_check.h"
 #include "server.h"
-#include "service/import_cache.h"
-#include "service/subject_service.h"
+#include "workshop_internal.h"
 #include "test_http.h"
 
 /* The full test serves on 18766, the smoke run (the argument smoke) on 18778, so both can run at once. */
@@ -806,14 +805,14 @@ static void check_document_sections(const char *id) {
 static void check_import_cache(const char *id) {
   char path[320];
   const char *tails[] = {"", "/musicxml", "/musicxml/meta", "/playback", "?document=summary", "/musicxml"};
-  ursatz_gui_import_cache_reset();
+  workshop_import_cache_reset();
   for (size_t i = 0; i < sizeof(tails) / sizeof(tails[0]); i++) {
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s%s", id, tails[i]);
     char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
     check(test_http_status(response) == 200, "a cached read answers 200");
     free(response);
   }
-  check(ursatz_gui_import_cache_imports() == 1, "detail, score, meta and playback of one piece import it once");
+  check(workshop_import_cache_imports() == 1, "detail, score, meta and playback of one piece import it once");
 
   char *patched = patch_piece(id, "{\"composer\":\"Cache Test\"}");
   check(test_http_status(patched) == 200, "the PATCH answers 200");
@@ -826,7 +825,7 @@ static void check_import_cache(const char *id) {
   check(test_http_status(response) == 200 && strstr(test_http_body(response), "Cache Test") != NULL,
         "the score after a PATCH carries the new composer, not the cached one");
   free(response);
-  check(ursatz_gui_import_cache_imports() == 2, "the open after a PATCH imports once more");
+  check(workshop_import_cache_imports() == 2, "the open after a PATCH imports once more");
 
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", id);
   char *reanalyzed = test_http_exchange(PORT, "POST", path, NULL, "", 0);
@@ -835,10 +834,10 @@ static void check_import_cache(const char *id) {
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
   response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   free(response);
-  check(ursatz_gui_import_cache_imports() == 3, "the open after a re-analyze imports once more");
+  check(workshop_import_cache_imports() == 3, "the open after a re-analyze imports once more");
 
   /* More pieces than the cache holds: the table stays at 8 entries and every read still answers. */
-  ursatz_gui_import_cache_reset();
+  workshop_import_cache_reset();
   for (int i = 0; i < 10; i++) {
     char name[32];
     char piece_file[64];
@@ -857,7 +856,7 @@ static void check_import_cache(const char *id) {
     }
     free(other);
   }
-  check(ursatz_gui_import_cache_entries() <= 8, "the import cache holds at most 8 pieces");
+  check(workshop_import_cache_entries() <= 8, "the import cache holds at most 8 pieces");
 }
 
 int main(int argc, char **argv) {
@@ -1145,24 +1144,24 @@ int main(int argc, char **argv) {
 
     /* Delete. A subject that linked the piece forgets it. */
     cJSON *subject = NULL;
-    check(ursatz_gui_subject_create("Delete test", "idea", "", &subject) == URSATZ_OK,
+    check(workshop_subject_create("Delete test", "idea", "", &subject) == URSATZ_OK,
           "a subject is created");
     char *subject_id = subject ? strdup(cJSON_GetObjectItemCaseSensitive(subject, "id")->valuestring) : NULL;
     cJSON_Delete(subject);
     subject = NULL;
-    check(subject_id && ursatz_gui_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_OK,
+    check(subject_id && workshop_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_OK,
           "the subject links the piece");
     char dir[256];
     snprintf(dir, sizeof(dir), "pieces/%s", mozart_id);
     response = test_http_exchange(PORT, "DELETE", path, NULL, NULL, 0);
     check(test_http_status(response) == 200, "DELETE removes a piece");
     free(response);
-    check(subject_id && ursatz_gui_subject_get(subject_id, &subject) == URSATZ_OK &&
+    check(subject_id && workshop_subject_get(subject_id, &subject) == URSATZ_OK &&
               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(subject, "pieces")) == 0,
           "deleting a piece removes it from the subjects that linked it");
     cJSON_Delete(subject);
     if (subject_id) {
-      ursatz_gui_subject_delete(subject_id);
+      workshop_subject_delete(subject_id);
     }
     free(subject_id);
     check(!is_directory(dir), "deleting a piece removes its directory");

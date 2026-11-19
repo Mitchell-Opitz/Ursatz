@@ -23,7 +23,7 @@
 
 #include "support/server_support.h"
 #include "server.h"
-#include "gui_check.h"
+#include "ursatz_check.h"
 #include "test_http.h"
 
 #ifndef URSATZ_GUI_TEST_PIECE_FIXTURES

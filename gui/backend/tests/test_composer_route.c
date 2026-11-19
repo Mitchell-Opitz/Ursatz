@@ -13,7 +13,7 @@
 
 #include "support/server_support.h"
 #include "server.h"
-#include "gui_check.h"
+#include "ursatz_check.h"
 #include "test_http.h"
 #include "ursatz_composer/composer_api.h"
 

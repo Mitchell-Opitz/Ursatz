@@ -9,8 +9,7 @@
 #include <civetweb.h>
 
 #include "route_util.h"
-#include "../service/collection_service.h"
-#include "../service/link_service.h"
+#include "workshop_internal.h"
 
 static const char *kLinksPrefix = "/api/links";
 
@@ -30,7 +29,7 @@ static const char *optional_string(const cJSON *object, const char *key, bool *b
 }
 
 /* Reads {"kind", "collection_id", "filter": {...}, "subject_id", "project_id"}. false when it cannot be a scope. */
-static bool parse_scope(const cJSON *json, UrsatzGuiLinkScope *scope) {
+static bool parse_scope(const cJSON *json, WorkshopLinkScope *scope) {
   memset(scope, 0, sizeof(*scope));
   if (!cJSON_IsObject(json)) {
     return false;
@@ -41,15 +40,15 @@ static bool parse_scope(const cJSON *json, UrsatzGuiLinkScope *scope) {
     return false;
   }
   if (strcmp(kind, "all") == 0) {
-    scope->kind = URSATZ_GUI_LINK_SCOPE_ALL;
+    scope->kind = WORKSHOP_LINK_SCOPE_ALL;
   } else if (strcmp(kind, "collection") == 0) {
-    scope->kind = URSATZ_GUI_LINK_SCOPE_COLLECTION;
+    scope->kind = WORKSHOP_LINK_SCOPE_COLLECTION;
   } else if (strcmp(kind, "filter") == 0) {
-    scope->kind = URSATZ_GUI_LINK_SCOPE_FILTER;
+    scope->kind = WORKSHOP_LINK_SCOPE_FILTER;
   } else if (strcmp(kind, "subject") == 0) {
-    scope->kind = URSATZ_GUI_LINK_SCOPE_SUBJECT;
+    scope->kind = WORKSHOP_LINK_SCOPE_SUBJECT;
   } else if (strcmp(kind, "project") == 0) {
-    scope->kind = URSATZ_GUI_LINK_SCOPE_PROJECT;
+    scope->kind = WORKSHOP_LINK_SCOPE_PROJECT;
   } else {
     return false;
   }
@@ -76,7 +75,7 @@ static bool add_title(cJSON *end) {
   if (!cJSON_IsString(piece)) {
     return true;
   }
-  char *title = ursatz_gui_link_piece_title(piece->valuestring);
+  char *title = workshop_link_piece_title(piece->valuestring);
   bool ok = title && cJSON_AddStringToObject(end, "title", title);
   free(title);
   return ok;
@@ -130,19 +129,19 @@ static int handle_start_run(struct mg_connection *conn) {
   if (!body) {
     return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
-  UrsatzGuiLinkScope scope;
+  WorkshopLinkScope scope;
   if (!parse_scope(cJSON_GetObjectItemCaseSensitive(body, "scope"), &scope)) {
     cJSON_Delete(body);
     return ursatz_gui_send_failure(conn, 400, "invalid scope");
   }
   char *id = NULL;
-  UrsatzStatus result = ursatz_gui_link_run_start(&scope, &id);
+  UrsatzStatus result = workshop_link_run_start(&scope, &id);
   cJSON_Delete(body);
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
   cJSON *run = NULL;
-  result = ursatz_gui_link_run_get(id, &run);
+  result = workshop_link_run_get(id, &run);
   free(id);
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
@@ -152,7 +151,7 @@ static int handle_start_run(struct mg_connection *conn) {
 
 static int handle_list_runs(struct mg_connection *conn) {
   cJSON *runs = NULL;
-  UrsatzStatus result = ursatz_gui_link_run_list(&runs);
+  UrsatzStatus result = workshop_link_run_list(&runs);
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
@@ -161,7 +160,7 @@ static int handle_list_runs(struct mg_connection *conn) {
 
 static int handle_get_run(struct mg_connection *conn, const char *id) {
   cJSON *run = NULL;
-  UrsatzStatus result = ursatz_gui_link_run_get(id, &run);
+  UrsatzStatus result = workshop_link_run_get(id, &run);
   if (result != URSATZ_OK) {
     return result == URSATZ_ERR_NOT_FOUND ? ursatz_gui_send_failure(conn, 404, "run not found")
                                                     : send_link_failure(conn, result);
@@ -174,7 +173,7 @@ static int handle_get_run(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_run(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = ursatz_gui_link_run_delete(id);
+  UrsatzStatus result = workshop_link_run_delete(id);
   if (result == URSATZ_ERR_NOT_FOUND) {
     return ursatz_gui_send_failure(conn, 404, "run not found");
   }
@@ -187,7 +186,7 @@ static int handle_delete_run(struct mg_connection *conn, const char *id) {
 
 static int handle_piece_links(struct mg_connection *conn, const char *piece_id) {
   cJSON *links = NULL;
-  UrsatzStatus result = ursatz_gui_link_piece_links(piece_id, &links);
+  UrsatzStatus result = workshop_link_piece_links(piece_id, &links);
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
@@ -242,7 +241,7 @@ static int links_handler(struct mg_connection *conn, void *cbdata) {
   }
 
   if (strncmp(rest, "runs/", 5) == 0) {
-    if (!path_id(rest + 5, id, sizeof(id)) || !ursatz_gui_collection_is_valid_id(id)) {
+    if (!path_id(rest + 5, id, sizeof(id)) || !workshop_collection_is_valid_id(id)) {
       return ursatz_gui_send_failure(conn, 404, "run not found");
     }
     if (strcmp(method, "GET") == 0) {
@@ -256,7 +255,7 @@ static int links_handler(struct mg_connection *conn, void *cbdata) {
   }
 
   if (strncmp(rest, "pieces/", 7) == 0) {
-    if (!path_id(rest + 7, id, sizeof(id)) || !ursatz_gui_collection_is_valid_id(id)) {
+    if (!path_id(rest + 7, id, sizeof(id)) || !workshop_collection_is_valid_id(id)) {
       return ursatz_gui_send_failure(conn, 404, "piece not found");
     }
     if (strcmp(method, "GET") == 0) {

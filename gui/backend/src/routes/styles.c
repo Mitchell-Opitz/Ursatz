@@ -9,12 +9,11 @@
 #include <civetweb.h>
 
 #include "route_util.h"
-#include "../service/collection_service.h"
-#include "../service/style_service.h"
+#include "workshop_internal.h"
 
 static const char *kStylesPrefix = "/api/styles";
 /* A style built from ids names every piece of a filtered Library. */
-static const size_t kMaxPieceIds = URSATZ_GUI_STYLE_BRIEF_MAX_PIECES;
+static const size_t kMaxPieceIds = WORKSHOP_STYLE_BRIEF_MAX_PIECES;
 
 static cJSON *string_or_null(const char *text) {
   return text && text[0] != '\0' ? cJSON_CreateString(text) : cJSON_CreateNull();
@@ -33,15 +32,15 @@ static cJSON *string_array(char *const *items, size_t count) {
   return array;
 }
 
-static const char *source_kind_label(UrsatzGuiStyleSourceKind kind) {
+static const char *source_kind_label(WorkshopStyleSourceKind kind) {
   switch (kind) {
-    case URSATZ_GUI_STYLE_SOURCE_FILTER:
+    case WORKSHOP_STYLE_SOURCE_FILTER:
       return "filter";
-    case URSATZ_GUI_STYLE_SOURCE_COLLECTION:
+    case WORKSHOP_STYLE_SOURCE_COLLECTION:
       return "collection";
-    case URSATZ_GUI_STYLE_SOURCE_BRIEF:
+    case WORKSHOP_STYLE_SOURCE_BRIEF:
       return "brief";
-    case URSATZ_GUI_STYLE_SOURCE_PIECES:
+    case WORKSHOP_STYLE_SOURCE_PIECES:
     default:
       return "pieces";
   }
@@ -50,7 +49,7 @@ static const char *source_kind_label(UrsatzGuiStyleSourceKind kind) {
 static const char *const kScopeKinds[] = {"all", "collection", "filter", "subject", "project"};
 
 /* {"kind","collection_id","filter":{"composer","source","tag"},"subject_id","project_id"} as the links routes take it. */
-static cJSON *scope_json(const UrsatzGuiLinkScope *scope) {
+static cJSON *scope_json(const WorkshopLinkScope *scope) {
   cJSON *object = cJSON_CreateObject();
   cJSON *filter = cJSON_CreateObject();
   bool ok = object && filter && (size_t)scope->kind < sizeof(kScopeKinds) / sizeof(kScopeKinds[0]) &&
@@ -74,7 +73,7 @@ static cJSON *scope_json(const UrsatzGuiLinkScope *scope) {
 }
 
 /* {"scopes","piece_ids","style_ids"} */
-static cJSON *brief_json(const UrsatzGuiStyleBrief *brief) {
+static cJSON *brief_json(const WorkshopStyleBrief *brief) {
   cJSON *object = cJSON_CreateObject();
   cJSON *scopes = cJSON_CreateArray();
   cJSON *piece_ids = string_array(brief->piece_ids, brief->piece_count);
@@ -101,12 +100,12 @@ static cJSON *brief_json(const UrsatzGuiStyleBrief *brief) {
 }
 
 /* {"kind","filter","collection_id","piece_ids","brief"}: the members that do not belong to the kind are null. */
-static cJSON *source_json(const UrsatzGuiStyle *style) {
+static cJSON *source_json(const WorkshopStyle *style) {
   cJSON *source = cJSON_CreateObject();
   cJSON *filter = NULL;
   cJSON *piece_ids = NULL;
   bool ok = source && cJSON_AddStringToObject(source, "kind", source_kind_label(style->source_kind));
-  if (ok && style->source_kind == URSATZ_GUI_STYLE_SOURCE_FILTER) {
+  if (ok && style->source_kind == WORKSHOP_STYLE_SOURCE_FILTER) {
     filter = cJSON_CreateObject();
     ok = filter && cJSON_AddItemToObject(filter, "composer", string_or_null(style->filter_composer)) &&
          cJSON_AddItemToObject(filter, "source", string_or_null(style->filter_source)) &&
@@ -115,13 +114,13 @@ static cJSON *source_json(const UrsatzGuiStyle *style) {
     filter = cJSON_CreateNull();
     ok = filter != NULL;
   }
-  if (ok && style->source_kind == URSATZ_GUI_STYLE_SOURCE_PIECES) {
+  if (ok && style->source_kind == WORKSHOP_STYLE_SOURCE_PIECES) {
     piece_ids = string_array(style->source_piece_ids, style->source_piece_count);
   } else if (ok) {
     piece_ids = cJSON_CreateNull();
   }
   cJSON *brief = NULL;
-  if (ok && style->source_kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+  if (ok && style->source_kind == WORKSHOP_STYLE_SOURCE_BRIEF) {
     brief = brief_json(&style->brief);
   } else if (ok) {
     brief = cJSON_CreateNull();
@@ -146,7 +145,7 @@ static cJSON *source_json(const UrsatzGuiStyle *style) {
 }
 
 /* The list entry: {"id","name","piece_count","source","updated_at"}. */
-static cJSON *entry_json(const UrsatzGuiStyle *style) {
+static cJSON *entry_json(const WorkshopStyle *style) {
   cJSON *entry = cJSON_CreateObject();
   cJSON *source = entry ? source_json(style) : NULL;
   if (!source || !cJSON_AddStringToObject(entry, "id", style->id) ||
@@ -164,7 +163,7 @@ static cJSON *entry_json(const UrsatzGuiStyle *style) {
   return entry;
 }
 
-static cJSON *skipped_json(const UrsatzGuiStyleSkipped *skipped, size_t count) {
+static cJSON *skipped_json(const WorkshopStyleSkipped *skipped, size_t count) {
   cJSON *array = cJSON_CreateArray();
   for (size_t i = 0; array && i < count; i++) {
     cJSON *item = cJSON_CreateObject();
@@ -180,10 +179,10 @@ static cJSON *skipped_json(const UrsatzGuiStyleSkipped *skipped, size_t count) {
 }
 
 /* {dimension: {category: {"labels": [{"label","count","total"}], "more": n}}} */
-static cJSON *statistics_json(const UrsatzGuiStyle *style) {
+static cJSON *statistics_json(const WorkshopStyle *style) {
   cJSON *statistics = cJSON_CreateObject();
   for (size_t i = 0; statistics && i < style->category_count; i++) {
-    const UrsatzGuiStyleCategory *category = &style->categories[i];
+    const WorkshopStyleCategory *category = &style->categories[i];
     cJSON *dimension = cJSON_GetObjectItemCaseSensitive(statistics, category->dimension);
     if (!dimension) {
       dimension = cJSON_AddObjectToObject(statistics, category->dimension);
@@ -211,7 +210,7 @@ static cJSON *statistics_json(const UrsatzGuiStyle *style) {
 }
 
 /* The full style: the list entry plus "created_at", "pieces", "skipped" and "statistics". */
-static cJSON *style_json(const UrsatzGuiStyle *style) {
+static cJSON *style_json(const WorkshopStyle *style) {
   cJSON *object = entry_json(style);
   cJSON *pieces = object ? string_array(style->pieces, style->piece_count) : NULL;
   cJSON *skipped = pieces ? skipped_json(style->skipped, style->skipped_count) : NULL;
@@ -235,15 +234,15 @@ static int send_style_failure(struct mg_connection *conn, UrsatzStatus result) {
 
 /* {"ok":true,"style":{list entry},"skipped":[...]} for the stored style id. */
 static int send_built_style(struct mg_connection *conn, const char *id) {
-  UrsatzGuiStyle *style = NULL;
-  UrsatzStatus result = ursatz_gui_style_get(id, &style);
+  WorkshopStyle *style = NULL;
+  UrsatzStatus result = workshop_style_get(id, &style);
   if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   cJSON *object = cJSON_CreateObject();
   cJSON *entry = object ? entry_json(style) : NULL;
   cJSON *skipped = entry ? skipped_json(style->skipped, style->skipped_count) : NULL;
-  ursatz_gui_style_destroy(style);
+  workshop_style_destroy(style);
   if (!skipped || !cJSON_AddBoolToObject(object, "ok", 1)) {
     cJSON_Delete(entry);
     cJSON_Delete(skipped);
@@ -276,19 +275,19 @@ static int handle_build_style(struct mg_connection *conn) {
     return ursatz_gui_send_failure(conn, 400, "give exactly one of filter, collection_id, piece_ids and brief");
   }
 
-  UrsatzGuiStyleSource source;
+  WorkshopStyleSource source;
   memset(&source, 0, sizeof(source));
-  UrsatzGuiStyleBrief brief;
+  WorkshopStyleBrief brief;
   memset(&brief, 0, sizeof(brief));
   const char **ids = NULL;
   const char *failure = NULL;
 
   if (brief_item) {
-    source.kind = URSATZ_GUI_STYLE_SOURCE_BRIEF;
-    failure = ursatz_gui_style_brief_parse(brief_item, &brief);
+    source.kind = WORKSHOP_STYLE_SOURCE_BRIEF;
+    failure = workshop_style_brief_parse(brief_item, &brief);
     source.brief = &brief;
   } else if (filter_item) {
-    source.kind = URSATZ_GUI_STYLE_SOURCE_FILTER;
+    source.kind = WORKSHOP_STYLE_SOURCE_FILTER;
     const cJSON *composer = cJSON_GetObjectItemCaseSensitive(filter_item, "composer");
     const cJSON *filter_source = cJSON_GetObjectItemCaseSensitive(filter_item, "source");
     const cJSON *tag = cJSON_GetObjectItemCaseSensitive(filter_item, "tag");
@@ -302,14 +301,14 @@ static int handle_build_style(struct mg_connection *conn) {
       source.tag = cJSON_IsString(tag) ? tag->valuestring : NULL;
     }
   } else if (collection_item) {
-    source.kind = URSATZ_GUI_STYLE_SOURCE_COLLECTION;
-    if (!cJSON_IsString(collection_item) || !ursatz_gui_collection_is_valid_id(collection_item->valuestring)) {
+    source.kind = WORKSHOP_STYLE_SOURCE_COLLECTION;
+    if (!cJSON_IsString(collection_item) || !workshop_collection_is_valid_id(collection_item->valuestring)) {
       failure = "invalid collection_id";
     } else {
       source.collection_id = collection_item->valuestring;
     }
   } else {
-    source.kind = URSATZ_GUI_STYLE_SOURCE_PIECES;
+    source.kind = WORKSHOP_STYLE_SOURCE_PIECES;
     int length = cJSON_IsArray(ids_item) ? cJSON_GetArraySize(ids_item) : 0;
     if (length <= 0) {
       failure = "invalid piece_ids";
@@ -323,7 +322,7 @@ static int handle_build_style(struct mg_connection *conn) {
       }
       const cJSON *item = NULL;
       cJSON_ArrayForEach(item, ids_item) {
-        if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
+        if (!cJSON_IsString(item) || !workshop_collection_is_valid_id(item->valuestring)) {
           failure = "invalid piece_ids";
           break;
         }
@@ -335,21 +334,21 @@ static int handle_build_style(struct mg_connection *conn) {
 
   if (failure) {
     free(ids);
-    ursatz_gui_style_brief_free(&brief);
+    workshop_style_brief_free(&brief);
     cJSON_Delete(body);
     return ursatz_gui_send_failure(conn, strcmp(failure, "out of memory") == 0 ? 500 : 400, failure);
   }
 
   char *id = NULL;
   UrsatzStatus result =
-      ursatz_gui_style_build(name_item ? name_item->valuestring : NULL, &source, &id, NULL, NULL);
+      workshop_style_build(name_item ? name_item->valuestring : NULL, &source, &id, NULL, NULL);
   free(ids);
-  ursatz_gui_style_brief_free(&brief);
+  workshop_style_brief_free(&brief);
   cJSON_Delete(body);
-  if (result == URSATZ_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
+  if (result == URSATZ_ERR_NOT_FOUND && source.kind == WORKSHOP_STYLE_SOURCE_COLLECTION) {
     return ursatz_gui_send_failure(conn, 404, "collection not found");
   }
-  if (result == URSATZ_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+  if (result == URSATZ_ERR_NOT_FOUND && source.kind == WORKSHOP_STYLE_SOURCE_BRIEF) {
     return ursatz_gui_send_failure(conn, 404, "brief source not found");
   }
   if (result != URSATZ_OK) {
@@ -361,9 +360,9 @@ static int handle_build_style(struct mg_connection *conn) {
 }
 
 static int handle_list_styles(struct mg_connection *conn) {
-  UrsatzGuiStyle *styles = NULL;
+  WorkshopStyle *styles = NULL;
   size_t count = 0;
-  UrsatzStatus result = ursatz_gui_style_list(&styles, &count);
+  UrsatzStatus result = workshop_style_list(&styles, &count);
   if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
@@ -378,7 +377,7 @@ static int handle_list_styles(struct mg_connection *conn) {
       cJSON_AddItemToArray(list, entry);
     }
   }
-  ursatz_gui_style_free_list(styles, count);
+  workshop_style_free_list(styles, count);
   if (!built) {
     cJSON_Delete(object);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
@@ -387,14 +386,14 @@ static int handle_list_styles(struct mg_connection *conn) {
 }
 
 static int handle_get_style(struct mg_connection *conn, const char *id) {
-  UrsatzGuiStyle *style = NULL;
-  UrsatzStatus result = ursatz_gui_style_get(id, &style);
+  WorkshopStyle *style = NULL;
+  UrsatzStatus result = workshop_style_get(id, &style);
   if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   cJSON *object = cJSON_CreateObject();
   cJSON *body = object ? style_json(style) : NULL;
-  ursatz_gui_style_destroy(style);
+  workshop_style_destroy(style);
   if (!body || !cJSON_AddBoolToObject(object, "ok", 1)) {
     cJSON_Delete(body);
     cJSON_Delete(object);
@@ -405,7 +404,7 @@ static int handle_get_style(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = ursatz_gui_style_rebuild(id);
+  UrsatzStatus result = workshop_style_rebuild(id);
   if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
@@ -413,7 +412,7 @@ static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_style(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = ursatz_gui_style_delete(id);
+  UrsatzStatus result = workshop_style_delete(id);
   if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
@@ -463,7 +462,7 @@ static int styles_handler(struct mg_connection *conn, void *cbdata) {
   id[id_len] = '\0';
 
   /* An id that cannot name a style is an unknown style. */
-  if (!ursatz_gui_collection_is_valid_id(id)) {
+  if (!workshop_collection_is_valid_id(id)) {
     return ursatz_gui_send_failure(conn, 404, "style not found");
   }
 

@@ -16,7 +16,7 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 | Directory | What it holds | Doc |
 |---|---|---|
 | `backend/src/routes/` | Route families: parse, call a service, answer | [api/](api/analysis-routes.md) |
-| `backend/src/service/` | The only code that calls the Analyzer, Composer and stores | [storage.md](storage.md), [motifs-backend.md](motifs-backend.md) |
+| `workshop/src/` | The only code that calls the Analyzer, Composer and stores | [storage.md](storage.md), [motifs-backend.md](motifs-backend.md) |
 | `backend/src/util/` | File, JSON and lock helpers | [Helpers](backend-modules.md#backend-helper-modules) |
 | `backend/tests/` | Tests and fixtures | [testing.md](testing.md) |
 | `frontend/public/` | The static pages, models and views | [frontend.md](frontend.md), [views/](views/library.md) |
@@ -47,16 +47,16 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 | `version`, `api_version`, `analyzer_version`, `producer_key` | `GET /api/composer/status`, from `composer_api_versions` | the Composer of this tree and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
 | `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `analyzer_version`, `analyzer_producer_key` (kept under the member `ursatz_commit`) and `ANALYZER_DOCUMENT_SCHEMA_VERSION` | the Analyzer of this tree | [Piece store](storage.md#piece-store) |
 | `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the Composer of this tree | [Motif score and playback](views/playback.md#motif-score-and-playback) |
-| `schema_version` of a Composer request | `theme_service.c`, `piece_service.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](storage.md#theme-bodies-and-version-files) |
+| `schema_version` of a Composer request | `themes.c`, `pieces.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](storage.md#theme-bodies-and-version-files) |
 
 ## What it calls below
 
 | Service | Entry used | From | For |
 |---|---|---|---|
 | `analysis_service.c` | `analyzer_import_file`, `analyzer_analyze`, `analyzer_document_build`, `analyzer_document_status`, `analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`, `analyzer_playback_build` | Analyzer | import, analysis, score and playback of a piece |
-| `playback_service.c` | `analyzer_import_file`, `analyzer_playback_build` | Analyzer | playback of a stored file |
-| `style_service.c`, `link_service.c` | `style_profile_*`, `style_model_*`, `motive_link_scope_*`, `analyzer_links_run` | Analyzer | style models and motive links |
-| `motif_service.c`, `theme_service.c`, `piece_service.c`, `compose_common.c` | `composer_api_*`, listed in [Backend services](backend-modules.md#backend-services-and-who-calls-the-composer) | Composer | motifs, themes, pieces, export, vocabulary |
+| `playback.c` | `analyzer_import_file`, `analyzer_playback_build` | Analyzer | playback of a stored file |
+| `styles.c`, `links.c` | `style_profile_*`, `style_model_*`, `motive_link_scope_*`, `analyzer_links_run` | Analyzer | style models and motive links |
+| `motifs.c`, `themes.c`, `pieces.c`, `compose_common.c` | `composer_api_*`, listed in [Backend services](backend-modules.md#backend-services-and-who-calls-the-composer) | Composer | motifs, themes, pieces, export, vocabulary |
 
 ## Data flow
 
@@ -76,12 +76,12 @@ One piece, from file to composed motif, across four repos.
 |---|---|---|---|
 | Import or analyze a piece | `POST /api/analyzer/pieces`, `.../<id>/reanalyze` | `analysis_service.c` | Analyzer: `analyzer_import_file`, `analyzer_analyze` |
 | Open the Score | `GET .../musicxml`, `.../document?sections=` | `analysis_service.c` | Analyzer: `analyzer_score_export_musicxml`, `analyzer_document_to_json` |
-| Play | `GET .../pieces/<id>/playback` | `playback_service.c` | Analyzer: `analyzer_playback_build` |
-| Create, analyze and save a motif | `POST /api/materials/items`, `.../<id>/versions`, `.../reanalyze` | `motif_service.c` | Composer: `composer_api_motive` |
-| Random motif | `POST /api/materials/motifs/random` | `motif_service.c` | Composer: `composer_api_random_motive` |
-| Variants | `POST .../items/<id>/variants`, `.../variants/save` | `motif_service.c` | Composer: `composer_api_variants`, `composer_api_variant_operations` |
-| Compose a theme | `POST .../items/<thm-id>/compose` | `theme_service.c`, `compose_jobs.c` | Composer: `composer_api_theme` |
-| Compose a piece | `POST .../items/<pce-id>/compose` | `piece_service.c`, `compose_jobs.c` | Composer: `composer_api_piece`, `composer_api_piece_variations` |
+| Play | `GET .../pieces/<id>/playback` | `playback.c` | Analyzer: `analyzer_playback_build` |
+| Create, analyze and save a motif | `POST /api/materials/items`, `.../<id>/versions`, `.../reanalyze` | `motifs.c` | Composer: `composer_api_motive` |
+| Random motif | `POST /api/materials/motifs/random` | `motifs.c` | Composer: `composer_api_random_motive` |
+| Variants | `POST .../items/<id>/variants`, `.../variants/save` | `motifs.c` | Composer: `composer_api_variants`, `composer_api_variant_operations` |
+| Compose a theme | `POST .../items/<thm-id>/compose` | `themes.c`, `compose_jobs.c` | Composer: `composer_api_theme` |
+| Compose a piece | `POST .../items/<pce-id>/compose` | `pieces.c`, `compose_jobs.c` | Composer: `composer_api_piece`, `composer_api_piece_variations` |
 | Export | `GET .../versions/<n>/files/<name>`, `/score` | `compose_common.c` | Composer: `composer_api_export` writes the files at compose |
 
 ## Finding things
@@ -92,7 +92,7 @@ Every doc is in the [docs index](README.md). The backend helper modules and the 
 
 Three layers, in order of how rarely they should change:
 
-- **Shared service layer** (`backend/src/service/`): the only code that
+- **Shared service layer** (`workshop/src/`): the only code that
   calls the Analyzer and Composer libraries. Every tool goes through this
   layer; nothing calls them from route code. The GUI is a client of the
   apps (R-218, R-219): it displays and takes input, and every music answer
@@ -103,14 +103,14 @@ Three layers, in order of how rarely they should change:
   `.h` with one `ursatz_gui_<tool_name>_register(struct mg_context *ctx)`
   that `server.c`'s route setup calls (the only place that wires routes). Its
   HTTP routes sit under `/api/<tool_name>/...`, it never calls another tool,
-  and it reaches data only through `backend/src/service/`.
+  and it reaches data only through `workshop/src/`.
 - **Host/shell** (`backend/src/server.c`, `frontend/public/`): starts the
   HTTP server, wires tool routes together, and serves the static frontend
   shell (top bar, tool sidebar, content area) that tool UIs render into.
 
 New tool code goes in `backend/src/routes/`. New shared persistence or query
-logic goes in `backend/src/service/`. If you find yourself calling an
-Analyzer or Composer function from inside `routes/`, it belongs in `service/` instead.
+logic goes in `workshop/src/`. If you find yourself calling an
+Analyzer or Composer function from inside `routes/`, it belongs in `workshop/src/` instead.
 
 The Analyzer library (`analyzer/`, linked as
 `ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls

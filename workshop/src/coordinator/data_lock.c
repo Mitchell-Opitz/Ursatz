@@ -8,7 +8,7 @@
 
 #include <common/files.h>
 
-#include "workshop_internal.h"
+#include "coordinator.h"
 
 #define LOCK_NAME ".ursatz.lock"
 

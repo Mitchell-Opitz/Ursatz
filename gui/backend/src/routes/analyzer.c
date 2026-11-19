@@ -10,10 +10,7 @@
 #include <cJSON.h>
 
 #include "route_util.h"
-#include "../service/analysis_service.h"
-#include "../service/collection_service.h"
-#include "../service/piece_metadata.h"
-#include "../service/subject_service.h"
+#include "workshop_internal.h"
 #include "materials.h"
 
 static const char *kPiecesDir = "pieces";
@@ -219,7 +216,7 @@ static int handle_post(struct mg_connection *conn) {
 
   char *id = NULL;
   UrsatzStatus result =
-      ursatz_gui_analysis_import_and_save(kPiecesDir, body_data, body_size, filename, &id);
+      workshop_analysis_import_and_save(kPiecesDir, body_data, body_size, filename, &id);
   free(body_data);
 
   if (result == URSATZ_ERR_REQUEST) {
@@ -257,7 +254,7 @@ static int handle_post(struct mg_connection *conn) {
   return 200;
 }
 
-static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
+static void free_pieces(WorkshopPieceSummary *pieces, size_t count) {
   for (size_t i = 0; i < count; i++) {
     free(pieces[i].id);
     free(pieces[i].filename);
@@ -265,13 +262,13 @@ static void free_pieces(UrsatzGuiPieceSummary *pieces, size_t count) {
     free(pieces[i].uploaded_at);
     free(pieces[i].composer);
     free(pieces[i].source);
-    ursatz_gui_meta_tags_free(pieces[i].tags, pieces[i].tag_count);
+    workshop_meta_tags_free(pieces[i].tags, pieces[i].tag_count);
   }
   free(pieces);
 }
 
 /* Appends a piece's notation override as JSON: null when it has none. */
-static void append_notation(JsonBuffer *buf, bool has_notation, const UrsatzGuiNotation *notation) {
+static void append_notation(JsonBuffer *buf, bool has_notation, const WorkshopNotation *notation) {
   if (!has_notation) {
     json_buffer_append(buf, "null");
     return;
@@ -286,7 +283,7 @@ static void append_notation(JsonBuffer *buf, bool has_notation, const UrsatzGuiN
 }
 
 /* Appends one piece as the list route and the PATCH answer show it. */
-static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *piece) {
+static void append_piece_entry(JsonBuffer *buf, const WorkshopPieceSummary *piece) {
   json_buffer_append(buf, "{\"id\":");
   json_buffer_append_string(buf, piece->id);
   json_buffer_append(buf, ",\"filename\":");
@@ -325,7 +322,7 @@ static bool query_value(const struct mg_request_info *info, const char *name, in
 
 /* Builds the metadata filter from composer, source, tag, unassigned (composer
  * or source, may repeat) and untagged=1. The strings live in the buffers. */
-static void read_filter(const struct mg_request_info *info, UrsatzGuiMetaFilter *filter, char *composer,
+static void read_filter(const struct mg_request_info *info, WorkshopMetaFilter *filter, char *composer,
                         char *source, char *tag, size_t size) {
   memset(filter, 0, sizeof(*filter));
   filter->composer = query_value(info, "composer", 0, composer, size) ? composer : NULL;
@@ -347,9 +344,9 @@ static void read_filter(const struct mg_request_info *info, UrsatzGuiMetaFilter 
 }
 
 static int handle_get(struct mg_connection *conn) {
-  UrsatzGuiPieceSummary *pieces = NULL;
+  WorkshopPieceSummary *pieces = NULL;
   size_t count = 0;
-  UrsatzStatus result = ursatz_gui_analysis_list(kPiecesDir, &pieces, &count);
+  UrsatzStatus result = workshop_analysis_list(kPiecesDir, &pieces, &count);
 
   if (result != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
@@ -357,7 +354,7 @@ static int handle_get(struct mg_connection *conn) {
   }
 
   char composer[256], source[256], tag[256];
-  UrsatzGuiMetaFilter filter;
+  WorkshopMetaFilter filter;
   read_filter(mg_get_request_info(conn), &filter, composer, source, tag, sizeof(composer));
 
   JsonBuffer buf;
@@ -365,7 +362,7 @@ static int handle_get(struct mg_connection *conn) {
   json_buffer_append(&buf, "{\"ok\":true,\"pieces\":[");
   bool first = true;
   for (size_t i = 0; i < count; i++) {
-    if (!ursatz_gui_meta_matches(&pieces[i], &filter)) {
+    if (!workshop_meta_matches(&pieces[i], &filter)) {
       continue;
     }
     if (!first) {
@@ -388,7 +385,7 @@ static int handle_get(struct mg_connection *conn) {
   return 200;
 }
 
-static void append_group_array(JsonBuffer *buf, const char *name, const UrsatzGuiMetaGroup *groups, size_t count) {
+static void append_group_array(JsonBuffer *buf, const char *name, const WorkshopMetaGroup *groups, size_t count) {
   json_buffer_append(buf, "\"");
   json_buffer_append(buf, name);
   json_buffer_append(buf, "\":[");
@@ -407,14 +404,14 @@ static void append_group_array(JsonBuffer *buf, const char *name, const UrsatzGu
 
 /* GET /api/analyzer/groups: the distinct composers, sources and tags with piece counts. */
 static int handle_get_groups(struct mg_connection *conn) {
-  UrsatzGuiPieceSummary *pieces = NULL;
+  WorkshopPieceSummary *pieces = NULL;
   size_t count = 0;
-  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+  if (workshop_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
-  UrsatzGuiMetaGroups groups;
-  UrsatzStatus grouped = ursatz_gui_meta_group(pieces, count, &groups);
+  WorkshopMetaGroups groups;
+  UrsatzStatus grouped = workshop_meta_group(pieces, count, &groups);
   free_pieces(pieces, count);
   if (grouped != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
@@ -431,7 +428,7 @@ static int handle_get_groups(struct mg_connection *conn) {
   snprintf(tail, sizeof(tail), "\"unassigned\":{\"composer\":%zu,\"source\":%zu},\"untagged\":%zu,\"total\":%zu}",
            groups.unassigned_composer, groups.unassigned_source, groups.untagged, groups.total);
   json_buffer_append(&buf, tail);
-  ursatz_gui_meta_groups_destroy(&groups);
+  workshop_meta_groups_destroy(&groups);
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
@@ -462,8 +459,8 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   char document_mode[16];
   bool summary = query_value(mg_get_request_info(conn), "document", 0, document_mode, sizeof(document_mode)) &&
                  strcmp(document_mode, "summary") == 0;
-  UrsatzGuiPieceDetail *detail = NULL;
-  UrsatzStatus result = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail);
+  WorkshopPieceDetail *detail = NULL;
+  UrsatzStatus result = workshop_analysis_get_piece(kPiecesDir, id, &detail);
 
   if (result == URSATZ_ERR_NOT_FOUND) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -508,10 +505,10 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   if (summary) {
     char *summary_json = NULL;
     char *names_json = NULL;
-    if (!ursatz_gui_document_subset(detail->document_json, kSummarySections,
+    if (!workshop_document_subset(detail->document_json, kSummarySections,
                                     sizeof(kSummarySections) / sizeof(kSummarySections[0]), &summary_json,
                                     &names_json)) {
-      ursatz_gui_piece_detail_destroy(detail);
+      workshop_piece_detail_destroy(detail);
       json_buffer_destroy(&buf);
       ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
       return 200;
@@ -534,7 +531,7 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   free(subjects_text);
   json_buffer_append(&buf, "}");
 
-  ursatz_gui_piece_detail_destroy(detail);
+  workshop_piece_detail_destroy(detail);
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
@@ -616,9 +613,9 @@ static int send_invalid_member(struct mg_connection *conn, const char *member) {
 
 /* Answers a successful metadata change with the piece as the list shows it. */
 static int send_updated_piece(struct mg_connection *conn, const char *id) {
-  UrsatzGuiPieceSummary *pieces = NULL;
+  WorkshopPieceSummary *pieces = NULL;
   size_t count = 0;
-  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+  if (workshop_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
@@ -647,15 +644,15 @@ static int send_updated_piece(struct mg_connection *conn, const char *id) {
 
 /* Reads a PATCH "notation" member: an object whose meter, value_scale and
  * pickup are strings (each optional, absent = not set). False for anything else. */
-static bool read_notation_member(const cJSON *item, UrsatzGuiNotation *out) {
+static bool read_notation_member(const cJSON *item, WorkshopNotation *out) {
   static const struct {
     const char *name;
     size_t offset;
     size_t size;
   } kMembers[] = {
-      {"meter", offsetof(UrsatzGuiNotation, meter), sizeof(((UrsatzGuiNotation *)0)->meter)},
-      {"value_scale", offsetof(UrsatzGuiNotation, value_scale), sizeof(((UrsatzGuiNotation *)0)->value_scale)},
-      {"pickup", offsetof(UrsatzGuiNotation, pickup), sizeof(((UrsatzGuiNotation *)0)->pickup)},
+      {"meter", offsetof(WorkshopNotation, meter), sizeof(((WorkshopNotation *)0)->meter)},
+      {"value_scale", offsetof(WorkshopNotation, value_scale), sizeof(((WorkshopNotation *)0)->value_scale)},
+      {"pickup", offsetof(WorkshopNotation, pickup), sizeof(((WorkshopNotation *)0)->pickup)},
   };
   memset(out, 0, sizeof(*out));
   if (!cJSON_IsObject(item)) {
@@ -691,7 +688,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
     return ursatz_gui_send_json_status(conn, 400, "Bad Request", "{\"ok\":false,\"message\":\"invalid request body\"}");
   }
 
-  UrsatzGuiMetaUpdate update = {0};
+  WorkshopMetaUpdate update = {0};
   const char **tags = NULL;
   const char **add_tags = NULL;
   const char **remove_tags = NULL;
@@ -749,7 +746,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
       bad_member = "remove_tags";
     }
   }
-  UrsatzGuiNotation notation;
+  WorkshopNotation notation;
   memset(&notation, 0, sizeof(notation));
   const cJSON *notation_item = cJSON_GetObjectItemCaseSensitive(root, "notation");
   if (!bad_member && notation_item) {
@@ -775,7 +772,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
   } else {
     UrsatzError failure = {{0}};
-    UrsatzStatus result = ursatz_gui_analysis_update_piece(kPiecesDir, id, &update, &failure);
+    UrsatzStatus result = workshop_analysis_update_piece(kPiecesDir, id, &update, &failure);
     if (result == URSATZ_ERR_NOT_FOUND) {
       mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
       status = 404;
@@ -805,7 +802,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_piece(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
+  UrsatzStatus result = workshop_analysis_delete_piece(kPiecesDir, id);
 
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -818,12 +815,12 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
 
   /* A collection never keeps an id whose piece is gone. The piece itself is
    * already deleted, so a failure here is logged, not answered. */
-  if (ursatz_gui_collection_remove_piece_everywhere(id) != URSATZ_OK) {
+  if (workshop_collection_remove_piece_everywhere(id) != URSATZ_OK) {
     fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every collection\n", id);
   }
 
   /* The same goes for the subjects that linked the piece. */
-  if (ursatz_gui_subject_forget_piece(id) != URSATZ_OK) {
+  if (workshop_subject_forget_piece(id) != URSATZ_OK) {
     fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
   }
 
@@ -834,7 +831,7 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
 static const char *kReanalyzeSuffix = "/reanalyze";
 
 static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = ursatz_gui_analysis_reanalyze(kPiecesDir, id);
+  UrsatzStatus result = workshop_analysis_reanalyze(kPiecesDir, id);
 
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -910,7 +907,7 @@ static int handle_get_piece_document(struct mg_connection *conn, const char *id)
   }
 
   char *sections = NULL;
-  UrsatzStatus result = ursatz_gui_analysis_get_document(kPiecesDir, id, names, count, &sections);
+  UrsatzStatus result = workshop_analysis_get_document(kPiecesDir, id, names, count, &sections);
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
@@ -977,7 +974,7 @@ static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
   }
 
   char *text = NULL;
-  UrsatzStatus result = ursatz_gui_analysis_get_piece_export(kPiecesDir, id, first, last, &text);
+  UrsatzStatus result = workshop_analysis_get_piece_export(kPiecesDir, id, first, last, &text);
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
@@ -1005,7 +1002,7 @@ static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
   bool meter_defaulted = false;
-  UrsatzStatus result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted);
+  UrsatzStatus result = workshop_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted);
 
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -1032,7 +1029,7 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
   bool meter_defaulted = false;
-  UrsatzStatus result = ursatz_gui_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
+  UrsatzStatus result = workshop_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
 
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -1052,7 +1049,7 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
 
 static int handle_get_piece_playback(struct mg_connection *conn, const char *id) {
   char *json = NULL;
-  UrsatzStatus result = ursatz_gui_analysis_get_piece_playback(kPiecesDir, id, &json);
+  UrsatzStatus result = workshop_analysis_get_piece_playback(kPiecesDir, id, &json);
 
   if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");

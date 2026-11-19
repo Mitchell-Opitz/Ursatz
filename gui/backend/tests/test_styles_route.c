@@ -28,14 +28,14 @@
 #include <theory/style/style_model_file.h>
 
 #include "support/server_support.h"
-#include "gui_check.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 
 /* The full test serves on 18769, the smoke run (the argument smoke) on 18779, so both can run at once. */
 static const char *g_port = "18769";
 #define PORT g_port
-#include "service/style_service.h"
+#include "workshop_internal.h"
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -238,13 +238,13 @@ int main(int argc, char **argv) {
   /* The model path the Composer will use. */
   {
     char path[1024];
-    check(ursatz_gui_style_model_path(tag_style_id, path, sizeof(path)) == URSATZ_OK,
+    check(workshop_style_model_path(tag_style_id, path, sizeof(path)) == URSATZ_OK,
           "model_path finds the model");
     check(path[0] == '/' || (path[0] && path[1] == ':'), "the model path is absolute");
     size_t length = strlen(path);
     check(length > 16 && strcmp(path + length - 16, "style-model.json") == 0, "the path ends with style-model.json");
     check(test_file_exists(path), "the path names an existing file");
-    check(ursatz_gui_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_ERR_NOT_FOUND,
+    check(workshop_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_ERR_NOT_FOUND,
           "model_path of an unknown style is not found");
   }
 

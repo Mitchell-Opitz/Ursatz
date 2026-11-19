@@ -40,7 +40,7 @@ Items:
 - `GET /api/materials/items/<id>/export[?version=<n>]`: the Analyzer's text export of a motif, theme or piece
   (`analyzer_text_export_material`, [format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)),
   `200 text/plain; charset=utf-8`; the current version unless `version` is given. The route calls
-  `ursatz_gui_material_export` (`service/material_export_service.c`) and nothing else. A motif's text has a `motif`
+  `workshop_material_export` (`workshop/src/rendering/export.c`) and nothing else. A motif's text has a `motif`
   section (the Composer's render of its request, its segments from `features` marked on the notes, the facts role, form,
   meter, key, pickup, notes, base harmony and tones) and one `variant <n>: <operations>` section for each of its variants
   (facts kind, kept, changed, functions, flag). A theme's header carries its form, chords (`bar <n>`) and slots; its

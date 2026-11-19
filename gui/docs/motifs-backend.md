@@ -69,7 +69,7 @@ from the pure `variant-tree.js`, global `VariantTree`).
 - A variant belongs to its motif (R-187). A motif version is a variant when
   its `motif.derived` record exists and `derived.standalone` is not `true`
   (`standalone` is an optional boolean the derived validation accepts;
-  `ursatz_gui_material_item_is_variant(body)`). Every item answer from the list
+  `workshop_material_item_is_variant(body)`). Every item answer from the list
   routes and the item GET carries `variant_of`: the `derived.source_item` of a
   variant, else `null`; it is computed from the current version and never
   stored. Variants are left out of the Motifs list, the motif, theme and piece
@@ -108,7 +108,7 @@ from the pure `variant-tree.js`, global `VariantTree`).
     there are none) and `PUT` replaces it: `{"checks": {"<op>": {verdict
     ("works" | "wrong"), comment (up to 500 characters), seed, notes_text (the
     result checked), date ("YYYY-MM-DD")}}}`, at most 64 operations, validated
-    by `ursatz_gui_material_op_checks_validate` (`400` with the reason, `404`
+    by `workshop_material_op_checks_validate` (`400` with the reason, `404`
     for an item that is not a motif). Deleting the motif deletes the file.
   - A marked result shows its verdict, comment and date, and `changed since`
     when the stored `notes_text` differs from the new result.
@@ -127,7 +127,7 @@ from the pure `variant-tree.js`, global `VariantTree`).
   Variants tab lists it under `Promoted` as `<name> (opens it)` with its
   derivation line. A motif linked as a form of another (link-form) is written
   standalone too. A promoted motif and its own variants stay out of the source
-  motif's theme pool: `ursatz_gui_theme_add_pool` skips standalone entries and
+  motif's theme pool: `workshop_theme_add_pool` skips standalone entries and
   the derived chain it follows stops at one. Promoting cannot be undone.
 
 ## Comparing and linking motifs
@@ -205,7 +205,7 @@ candidate comes with its base harmony and its segments; `randomCandidateToBody` 
 - `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` calls the Composer's
   `composer_api_random_motive` and answers its JSON (`seed`, `motives`, and `drawn` when `mode` or `meter` was `random`) plus
   `ok`. `mode` is `major`, `minor` or `random`, `meter` is like `3/4` or `random`, `key` is like `D minor`, `count` is 1 to
-  16, `seed` a whole number from 0 (the Composer holds its upper limit). A bad input or an unknown style is 400. The style model path comes from `ursatz_gui_style_model_path`.
+  16, `seed` a whole number from 0 (the Composer holds its upper limit). A bad input or an unknown style is 400. The style model path comes from `workshop_style_model_path`.
 - Pure helpers in `materials-model.js`: `randomRequest` (one motif), `drawnSettings` (the mode and meter the answer
   names), `randomCandidateToBody`,
   `candidateKeyText`.

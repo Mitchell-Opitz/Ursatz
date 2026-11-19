@@ -2,6 +2,8 @@
 
 The backend server and its file stores: pieces, materials, theme and piece versions, item references and subjects. [Docs index](README.md).
 
+The services this page names are in `workshop/src/`, as `<folder>/<file>`.
+
 C HTTP server using [civetweb](https://github.com/civetweb/civetweb) (MIT),
 fetched by CMake `FetchContent`. Civetweb is small, permissively licensed
 and has a simple C API, with no GPL or commercial dual-licensing.
@@ -9,7 +11,7 @@ and has a simple C API, with no GPL or commercial dual-licensing.
 ## Data check
 
 At start, before any store opens, the backend checks its data folder (its working directory) once
-(`service/data_check.c`). The GUI before the overhaul migrated its stores on start and let a motif stand on any tonic;
+(`items/data_check.c`). The GUI before the overhaul migrated its stores on start and let a motif stand on any tonic;
 those paths are gone, so a folder they never ran on is refused. The folder passes at once when `.pre-overhaul-checked`
 exists in it. Otherwise it is refused when any of these holds:
 
@@ -27,7 +29,7 @@ and start this one.
 ## Piece store
 
 Each piece is a directory `pieces/<id>/`. Ids are `piece-<16 lowercase hex>`
-from `ursatz_gui_new_id` in `service/id_service.c` (8 bytes of
+from `workshop_new_id` in `items/ids.c` (8 bytes of
 `/dev/urandom`, with a hash fallback), redrawn if the directory exists, at
 most 8 tries.
 
@@ -41,7 +43,7 @@ most 8 tries.
   strings). A member that is absent reads as `""` or no tags, so pieces
   stored before the metadata existed list as unassigned.
 
-Metadata rules (`service/piece_metadata.c`): composer and source are trimmed,
+Metadata rules (`items/library_metadata.c`): composer and source are trimmed,
 runs of whitespace become one space and control characters are dropped; `""`
 means unset; at most 120 bytes. A tag gets the same treatment, is lowercased
 (ASCII), must not be empty, longer than 48 bytes or contain a comma, and a
@@ -58,7 +60,7 @@ Staleness keys: a stored analysis is current only when its `schema_version`, `me
 `ursatz_commit`, so the Library list reads the flag without opening a document. A `meta.json` from before
 `ursatz_commit` gets it from its document's `metadata.producer_key` the first time the piece is opened (written back
 under the piece lock); with neither it is stale. A stale analysis is analyzed again once, under the piece lock, when
-the piece is opened, when a style is built from it and before a link run reads it (`ursatz_gui_analysis_ensure_current`);
+the piece is opened, when a style is built from it and before a link run reads it (`workshop_analysis_ensure_current`);
 the link worker's re-analysis after a feature or format error stays as a fallback. If that analysis fails, the
 stored document is served. Motif and theme analyses are Composer output, not analysis documents, and are not checked.
 Pieces saved by earlier versions (`pieces/<id>.db`) are ignored: they are
@@ -66,20 +68,20 @@ not listed and cannot be opened, so upload those files again.
 
 ### Concurrency
 
-One lock per piece directory (`service/piece_lock.c`, a table of per-id mutexes with a reference count; an entry
+One lock per piece directory (`items/piece_lock.c`, a table of per-id mutexes with a reference count; an entry
 is freed when its count reaches 0) is held around every writer of `pieces/<id>/` and every read that must not see
-half a write. All of them are in `service/analysis_service.c` and take the lock themselves, so no caller holds it:
+half a write. All of them are in `analysis/analysis_service.c` and take the lock themselves, so no caller holds it:
 
-- upload (`ursatz_gui_analysis_import_and_save`, from the moment the directory exists until it is complete);
-- PATCH (`ursatz_gui_analysis_update_piece`: the metadata, the re-analysis a changed notation needs and, if that
+- upload (`workshop_analysis_import_and_save`, from the moment the directory exists until it is complete);
+- PATCH (`workshop_analysis_update_piece`: the metadata, the re-analysis a changed notation needs and, if that
   fails, the undo of the notation, as one hold);
-- re-analyze (`ursatz_gui_analysis_reanalyze`), which the style build and the link worker call for a stale piece;
+- re-analyze (`workshop_analysis_reanalyze`), which the style build and the link worker call for a stale piece;
 - delete (the directory removal; the collection and subject cleanups run after the lock is released);
 - the reads of `analysis.json` plus the source: detail, `/musicxml`, `/musicxml/meta` and `/playback`.
 
 ### Import cache
 
-`service/import_cache.c` keeps the imported notes of up to 8 pieces, so opening a piece imports its source once: the
+`analysis/import_cache.c` keeps the imported notes of up to 8 pieces, so opening a piece imports its source once: the
 detail's note ids, `/musicxml`, `/musicxml/meta` and `/playback` share one `ImportedScore`. An entry belongs to one
 piece id and one source version (the notation fields of `meta.json` plus the source file's size and modification
 time); a different version imports again. It also holds the exported score (with the title and composer added) and
@@ -87,7 +89,7 @@ whether the meter was defaulted, so a second `/musicxml` exports nothing. The le
 request holds is dropped to make room. Entries are made and read under the piece lock; PATCH, re-analyze and delete
 invalidate the piece's entry. Memory only: a restart starts empty.
 
-Lock order, stated in `service/piece_lock.h`: a store lock (style, link, collection, subject) first, then one piece
+Lock order, stated in `items/piece_lock.h`: a store lock (style, link, collection, subject) first, then one piece
 lock; never the reverse, and never two piece locks. The lock is not recursive. A reader of a piece that is deleted
 meanwhile gets `404` or the whole piece. Lists read only `meta.json`, which is replaced by a rename, so they take no
 lock. `test_piece_lock` covers it.
@@ -95,7 +97,7 @@ lock. `test_piece_lock` covers it.
 ## Material store
 
 Motifs, themes and pieces live in `materials/` beside `pieces/` and
-`collections/`. `service/material_service.c` is the only code that touches
+`collections/`. `items/material_service.c` is the only code that touches
 it; every operation runs under one mutex, and every file is written to
 `<name>.tmp` and renamed.
 
@@ -110,7 +112,7 @@ materials/
                            "Piece bodies and version files")
 ```
 
-- Ids are `<prefix>-<16 lowercase hex>` from `ursatz_gui_new_id`: `prj` for
+- Ids are `<prefix>-<16 lowercase hex>` from `workshop_new_id`: `prj` for
   projects, `mot`, `thm` and `pce` for motif, theme and piece items.
 - On first start a project named `General` is created. A project name is 1 to
   200 characters after trimming, a description at most 2000; a project that
@@ -119,12 +121,12 @@ materials/
   body writes `v<n+1>.json` and then `item.json`, which advances
   `current_version`; rename and move change `item.json` only. Deleting an item
   removes its whole directory.
-- A version body is validated by `ursatz_gui_material_body_validate` before it
+- A version body is validated by `workshop_material_body_validate` before it
   is written: an object with a `uses` array, and the member of its own type
   (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
   `notes`, `meter`, `material` (the id of a material the Composer offers: a motif is in C, so the material says the key), `pickup`, `harmony` (null or text, at most 200
   characters), `features`, `segments_proposed`, `analysis` and `derived`; the rules are listed in
-  `service/material_service.h`. `features` are the motif's segments. `segments_proposed` (a bool; a body without it
+  `items/material_service.h`. `features` are the motif's segments. `segments_proposed` (a bool; a body without it
   reads as false) is true while the segments are the Composer's proposal rather than ones Michelle set: the proposal is
   stored as `features` and proposed again when the notes, pickup, meter or form change.
 - Projects and items are passed as cJSON objects; the caller frees what it
@@ -134,11 +136,11 @@ materials/
 
 Items name a material (R-597). A motif holds `material` (the id, `omt.material.major` or `omt.material.natural-minor`) where it held the key text (`"C minor"`); a theme's `form` and a piece's `structure` hold `material` (an id or `style`) where they held `mode`.
 
-Version files are never rewritten. Every body read from the store, and every body saved, goes through `ursatz_gui_material_body_migrate`, the uses' copies included: a motif's `key` "C major" or "C minor" becomes the `material` of that key word, and a form's or structure's `mode` word becomes its `material`. A member already new wins and the old one goes. A value that names no material stays as it was: a motif key on another tonic (the data check refuses it), a mode such as `dorian`. A save writes the new members into the next version. `ursatz_gui_motif_key_text` gives the key text the Composer reads: "C" and the key word of the material, or the old key.
+Version files are never rewritten. Every body read from the store, and every body saved, goes through `workshop_material_body_migrate`, the uses' copies included: a motif's `key` "C major" or "C minor" becomes the `material` of that key word, and a form's or structure's `mode` word becomes its `material`. A member already new wins and the old one goes. A value that names no material stays as it was: a motif key on another tonic (the data check refuses it), a mode such as `dorian`. A save writes the new members into the next version. `workshop_motif_key_text` gives the key text the Composer reads: "C" and the key word of the material, or the old key.
 
 ### Theme bodies and version files
 
-A theme body (the rules are in `service/material_service.h`) is a placeholder or a composable theme (R-167). The
+A theme body (the rules are in `items/material_service.h`) is a placeholder or a composable theme (R-167). The
 placeholder, `form` null or a string and `slots` an array of anything, stays valid so earlier versions still read. A
 body with a `form` object, a slot written as `{slot, item_id, version}` or any of the members below is a composable theme:
 
@@ -178,7 +180,7 @@ directory.
 
 ### Piece bodies and version files
 
-A piece body (the rules are in `service/material_service.h`) is a placeholder or a composable piece (R-174). The
+A piece body (the rules are in `items/material_service.h`) is a placeholder or a composable piece (R-174). The
 placeholder, `structure` null, a string, an array or an object without a list of `sections`, stays valid so earlier
 versions still read. A body whose `structure` has a `sections` list, or that has any of the members below, is a
 composable piece. A structure alone is valid: every fill may be left out.
@@ -227,15 +229,15 @@ An item can use other items, from any project. Each entry of a body's `uses` is
   version exist (an unknown one, or an item using itself, is `INVALID_BODY`)
   and fills `copy` with that version's body. A `copy` the client sends is
   replaced.
-- `ursatz_gui_material_uses_status` reports each use of the current version
+- `workshop_material_uses_status` reports each use of the current version
   with the source's name, type, project and `current_version`. `updated` is
   true when the source is newer than the used version.
-- `ursatz_gui_material_used_by` lists the items whose current version uses an
+- `workshop_material_used_by` lists the items whose current version uses an
   item.
-- `ursatz_gui_material_update_use` writes a new version that points the use at
+- `workshop_material_update_use` writes a new version that points the use at
   the source's current version with a fresh copy (note
   `updated <name> to v<n>`). Older versions keep their old copy.
-- `ursatz_gui_material_item_delete(id, force)` returns `ERR_REFERENCED` while
+- `workshop_material_item_delete(id, force)` returns `ERR_REFERENCED` while
   other items use the item. A forced delete leaves the users' copies as they
   are; their uses report `missing: true`. Saving a new version of such a user
   needs the missing use removed first.
@@ -244,7 +246,7 @@ An item can use other items, from any project. Each entry of a body's `uses` is
 
 A subject is a character, place, idea or note that items and Library pieces
 link to. They live in `subjects/`, one file per subject, beside `materials/`.
-`service/subject_service.c` is the only code that touches them; every
+`items/subjects.c` is the only code that touches them; every
 operation runs under one mutex, and every file is written to `<name>.tmp` and
 renamed.
 
@@ -257,20 +259,20 @@ subjects/
 
 - Ids are `sub-<16 lowercase hex>`. `kind` is `character`, `place`, `idea` or
   `note`. A name is 1 to 200 characters after trimming, a note at most 4000.
-- `ursatz_gui_subject_link_item` and `ursatz_gui_subject_link_piece` check
+- `workshop_subject_link_item` and `workshop_subject_link_piece` check
   that the item is in the material store and the piece is in `pieces/`.
   Linking something already linked is not an error: `*out_already` is set and
   nothing changes. Unlinking something that is not linked is `ERR_NOT_LINKED`.
-- `ursatz_gui_subject_relate` stores the relation on both subjects. A subject
+- `workshop_subject_relate` stores the relation on both subjects. A subject
   cannot relate to itself (`ERR_SELF`); relating twice reports `already`.
 - Deleting a subject removes it from every `related` list. It does not touch
   the items or pieces it linked.
 - Deleting a Library piece (`DELETE /api/analyzer/pieces/<id>`) calls
-  `ursatz_gui_subject_forget_piece`, and `ursatz_gui_material_item_delete`
-  calls `ursatz_gui_subject_forget_item`, so a subject never keeps a link to
+  `workshop_subject_forget_piece`, and `workshop_material_item_delete`
+  calls `workshop_subject_forget_item`, so a subject never keeps a link to
   something that is gone. A failure there is logged, not answered.
-- `ursatz_gui_subject_list` returns the subjects in name order with
-  `item_count`, `piece_count` and `related_count`. `ursatz_gui_subject_groups`
+- `workshop_subject_list` returns the subjects in name order with
+  `item_count`, `piece_count` and `related_count`. `workshop_subject_groups`
   is the panel's view: one group per kind, each with its subjects and their
   `item_count`, `piece_count` and `link_count` (items plus pieces).
 - `server.c` starts both the material store (`materials/`) and the subject
