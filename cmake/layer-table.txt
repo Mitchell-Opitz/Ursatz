@@ -215,6 +215,7 @@ uses tests-plan test-helpers
 module tests-reading             library/reading/tests             root library/tests library/tests/support library
 like tests-reading reading
 uses tests-reading test-helpers
+uses tests-reading io -- the builder test imports a piece and realizes it (io/imported_realization.h)
 
 module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library
