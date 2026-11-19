@@ -15,3 +15,5 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED reading_files RESOURCE_LOCK reading_files)
 endif()
+
+ursatz_test(reading SOURCES test_reading.c LIBS ursatz_reading VALGRIND)
