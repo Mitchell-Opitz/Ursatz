@@ -114,7 +114,7 @@ bool text_export_write_measures(CommonText *out, const cJSON *document, const Sc
 
 /* The text export of a piece from its analysis document tree (analyzer_text_export_piece parses the text and calls it; the material
    export builds the tree itself). The tree is read, not kept. */
-AnalyzerStatus analyzer_text_export_piece_tree(const ImportedScore *notes, const cJSON *document,
+UrsatzStatus analyzer_text_export_piece_tree(const ImportedScore *notes, const cJSON *document,
                                                const AnalyzerTextExportOptions *options, char **text);
 
 #endif

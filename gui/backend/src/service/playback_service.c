@@ -18,20 +18,20 @@ UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi(const char *path, char **jso
     }
     *json = NULL;
     ImportedScore notes;
-    if (analyzer_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL, 0) != ANALYZER_OK) {
+    if (analyzer_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != URSATZ_OK) {
         return URSATZ_GUI_PLAYBACK_ERR_IMPORT;
     }
     AnalyzerPlayback playback;
-    AnalyzerStatus status = analyzer_playback_build(&notes, &playback);
-    if (status == ANALYZER_OK) {
+    UrsatzStatus status = analyzer_playback_build(&notes, &playback);
+    if (status == URSATZ_OK) {
         status = analyzer_playback_to_json(&playback, &notes, json);
         analyzer_playback_destroy(&playback);
     }
     imported_score_destroy(&notes);
-    if (status == ANALYZER_ERR_ALLOC) {
+    if (status == URSATZ_ERR_ALLOC) {
         return URSATZ_GUI_PLAYBACK_ERR_ALLOC;
     }
-    return status == ANALYZER_OK ? URSATZ_GUI_PLAYBACK_OK : URSATZ_GUI_PLAYBACK_ERR_IMPORT;
+    return status == URSATZ_OK ? URSATZ_GUI_PLAYBACK_OK : URSATZ_GUI_PLAYBACK_ERR_IMPORT;
 }
 
 UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi_bytes(const uint8_t *bytes, size_t size, const char *tmp_dir,

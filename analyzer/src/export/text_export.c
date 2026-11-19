@@ -12,6 +12,7 @@
 #include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/version.h>
 
+#include "util/misc_util.h"
 #include "export/score_export_internal.h"
 #include "export/text_export_internal.h"
 
@@ -786,36 +787,36 @@ bool text_export_write_measures(CommonText *out, const cJSON *document, const Sc
     return !out->failed;
 }
 
-AnalyzerStatus analyzer_text_export_piece_tree(const ImportedScore *notes, const cJSON *document,
+UrsatzStatus analyzer_text_export_piece_tree(const ImportedScore *notes, const cJSON *document,
                                                const AnalyzerTextExportOptions *options, char **text) {
     if (text) {
         *text = NULL;
     }
     if (!notes || !document || !options || !text) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     bool whole_piece = options->first_measure == 0 && options->last_measure == 0;
     if (options->first_measure < 0 || options->last_measure < 0 ||
         (!whole_piece && options->first_measure > options->last_measure)) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
 
     ScoreLayout layout;
-    AnalyzerStatus status = analyzer_score_layout(notes, &layout);
-    if (status != ANALYZER_OK) {
+    UrsatzStatus status = analyzer_score_layout(notes, &layout);
+    if (status != URSATZ_OK) {
         return status;
     }
     ScoreTextScore *score = score_text_from_layout(&layout);
     score_layout_destroy(&layout);
     if (!score) {
-        return ANALYZER_ERR_LIBRARY;
+        return URSATZ_ERR_INTERNAL;
     }
 
     size_t first = 0;
     size_t last = 0;
     if (!text_export_find_range(score, options->first_measure, options->last_measure, &first, &last)) {
         score_text_destroy(score);
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     bool whole = first == 0 && last == score->measure_count - 1;
 
@@ -830,28 +831,32 @@ AnalyzerStatus analyzer_text_export_piece_tree(const ImportedScore *notes, const
     score_text_destroy(score);
     if (out.failed) {
         free(out.data);
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     *text = out.data;
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
-AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
+static UrsatzStatus text_export_piece(const ImportedScore *notes, const char *document_json,
                                           const AnalyzerTextExportOptions *options, char **text) {
     if (text) {
         *text = NULL;
     }
     if (!notes || !document_json || !options || !text) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     cJSON *document = cJSON_Parse(document_json);
     const cJSON *version = member(document, "schema_version");
     if (!document || !cJSON_IsNumber(version) ||
         (int)version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
-    AnalyzerStatus status = analyzer_text_export_piece_tree(notes, document, options, text);
+    UrsatzStatus status = analyzer_text_export_piece_tree(notes, document, options, text);
     cJSON_Delete(document);
     return status;
+}
+
+UrsatzStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,                                           const AnalyzerTextExportOptions *options, char **text, UrsatzError *error) {
+    return analyzer_status_error(error, text_export_piece(notes, document_json, options, text), "export the piece as text");
 }

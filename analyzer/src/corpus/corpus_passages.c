@@ -65,9 +65,9 @@ static bool read_chords(const cJSON *document, AnalyzerPassageChord **out, size_
     *count = 0;
     AnalyzerChord *sequence = NULL;
     size_t sequence_count = 0;
-    AnalyzerStatus status = chord_sequence_from_tree(document, &sequence, &sequence_count);
-    if (status != ANALYZER_OK) {
-        return status != ANALYZER_ERR_ALLOC;
+    UrsatzStatus status = chord_sequence_from_tree(document, &sequence, &sequence_count);
+    if (status != URSATZ_OK) {
+        return status != URSATZ_ERR_ALLOC;
     }
     if (sequence_count == 0) {
         return true;
@@ -164,7 +164,7 @@ static bool passage_from_match(const char *corpus_dir, const SimilarMatch *match
     return true;
 }
 
-static AnalyzerPassagesStatus passages_of(const char *corpus_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+static UrsatzStatus passages_of(const char *corpus_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
                                           size_t max, AnalyzerCorpusPassages *out) {
     SimilarOptions options = similar_options_default();
     options.minimum_numerator = MINIMUM_NUMERATOR;
@@ -172,20 +172,20 @@ static AnalyzerPassagesStatus passages_of(const char *corpus_dir, const Knowledg
     options.max_results = max;
     SimilarResults results;
     memset(&results, 0, sizeof(results));
-    SimilarResult found = similar_material_find(corpus_dir, knowledge, query, &options, &results);
-    if (found != SIMILAR_OK) {
+    UrsatzStatus found = similar_material_find(corpus_dir, knowledge, query, &options, &results);
+    if (found != URSATZ_OK) {
         similar_results_destroy(&results);
-        return found == SIMILAR_ERR_ALLOC ? ANALYZER_PASSAGES_ERR_ALLOC
-               : found == SIMILAR_ERR_ARGUMENT ? ANALYZER_PASSAGES_ERR_ARGUMENT
-               : found == SIMILAR_ERR_QUERY ? ANALYZER_PASSAGES_ERR_QUERY
-                                           : ANALYZER_PASSAGES_ERR_CORPUS;
+        return found == URSATZ_ERR_ALLOC ? URSATZ_ERR_ALLOC
+               : found == URSATZ_ERR_REQUEST ? URSATZ_ERR_REQUEST
+               : found == URSATZ_ERR_REQUEST ? URSATZ_ERR_REQUEST
+                                           : URSATZ_ERR_NOT_FOUND;
     }
     AnalyzerCorpusPassages made = {0};
     if (results.count > 0) {
         made.passages = calloc(results.count, sizeof(*made.passages));
         if (!made.passages) {
             similar_results_destroy(&results);
-            return ANALYZER_PASSAGES_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
     }
     for (size_t i = 0; i < results.count; i++) {
@@ -193,49 +193,49 @@ static AnalyzerPassagesStatus passages_of(const char *corpus_dir, const Knowledg
             made.count = i;
             analyzer_corpus_passages_destroy(&made);
             similar_results_destroy(&results);
-            return ANALYZER_PASSAGES_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
         made.count = i + 1;
     }
     similar_results_destroy(&results);
     *out = made;
-    return ANALYZER_PASSAGES_OK;
+    return URSATZ_OK;
 }
 
-AnalyzerPassagesStatus analyzer_corpus_passages_like(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
+UrsatzStatus analyzer_corpus_passages_like(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
                                                      const char *passage_path, size_t max, AnalyzerCorpusPassages *out) {
     if (!out) {
-        return ANALYZER_PASSAGES_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     memset(out, 0, sizeof(*out));
     if (!corpus_dir || !knowledge || !passage_path || max == 0) {
-        return ANALYZER_PASSAGES_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     SimilarQuery query;
-    SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
-    if (read != SIMILAR_OK) {
-        return read == SIMILAR_ERR_ALLOC ? ANALYZER_PASSAGES_ERR_ALLOC : ANALYZER_PASSAGES_ERR_QUERY;
+    UrsatzStatus read = similar_query_from_file(passage_path, knowledge, &query);
+    if (read != URSATZ_OK) {
+        return read == URSATZ_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_REQUEST;
     }
-    AnalyzerPassagesStatus status = passages_of(corpus_dir, knowledge, &query, max, out);
+    UrsatzStatus status = passages_of(corpus_dir, knowledge, &query, max, out);
     similar_query_destroy(&query);
     return status;
 }
 
-AnalyzerPassagesStatus analyzer_corpus_passages_numerals(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
+UrsatzStatus analyzer_corpus_passages_numerals(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
                                                          const char *numerals, size_t max, AnalyzerCorpusPassages *out) {
     if (!out) {
-        return ANALYZER_PASSAGES_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     memset(out, 0, sizeof(*out));
     if (!corpus_dir || !knowledge || !numerals || max == 0) {
-        return ANALYZER_PASSAGES_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     SimilarQuery query;
-    SimilarResult read = similar_query_from_numerals(numerals, &query);
-    if (read != SIMILAR_OK) {
-        return read == SIMILAR_ERR_ALLOC ? ANALYZER_PASSAGES_ERR_ALLOC : ANALYZER_PASSAGES_ERR_QUERY;
+    UrsatzStatus read = similar_query_from_numerals(numerals, &query);
+    if (read != URSATZ_OK) {
+        return read == URSATZ_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_REQUEST;
     }
-    AnalyzerPassagesStatus status = passages_of(corpus_dir, knowledge, &query, max, out);
+    UrsatzStatus status = passages_of(corpus_dir, knowledge, &query, max, out);
     similar_query_destroy(&query);
     return status;
 }

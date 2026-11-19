@@ -33,13 +33,14 @@ AnalyzerTextExportOptions analyzer_text_export_options_default(void);
  * Exports one analyzed piece. notes is the import the analysis was run on; document_json is its analysis document
  * (analysis_document_render_result or the stored analysis.json).
  *
- * On ANALYZER_OK *text is the export, which the caller frees with free(); otherwise *text is NULL.
- * ANALYZER_ERR_ARGUMENT for a NULL argument, a document that is not JSON or whose schema_version is not
+ * On URSATZ_OK *text is the export, which the caller frees with free(); otherwise *text is NULL.
+ * URSATZ_ERR_REQUEST for a NULL argument, a document that is not JSON or whose schema_version is not
  * URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION, or an empty range (first greater than last, or no measure in range);
- * ANALYZER_ERR_LIBRARY when the score cannot be written or read back; ANALYZER_ERR_ALLOC.
+ * URSATZ_ERR_INTERNAL when the score cannot be written or read back; URSATZ_ERR_ALLOC. On a failure error (NULL for none) holds a
+ * message.
  */
-AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
-                                          const AnalyzerTextExportOptions *options, char **text);
+UrsatzStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
+                                          const AnalyzerTextExportOptions *options, char **text, UrsatzError *error);
 
 /* A name and its value, printed as "<name>: <value>" on one line (a line break in either becomes a space). */
 typedef struct {
@@ -80,7 +81,7 @@ typedef struct {
     size_t fact_count;
     const AnalyzerTextExportSection *sections;
     size_t section_count;
-    /* The knowledge snapshot the sections are analyzed with (borrowed; ANALYZER_ERR_ARGUMENT without it). */
+    /* The knowledge snapshot the sections are analyzed with (borrowed; URSATZ_ERR_REQUEST without it). */
     const KnowledgeSnapshot *knowledge;
 } AnalyzerTextExportMaterial;
 
@@ -89,11 +90,11 @@ typedef struct {
  * measures, analyzed and formatted as analyzer_text_export_piece does. Every value is printed as the caller passed it;
  * the Analyzer reads no store or Composer format.
  *
- * On ANALYZER_OK *text is the export, which the caller frees with free(); otherwise *text is NULL.
- * ANALYZER_ERR_ARGUMENT for a NULL material, kind, knowledge or text, a NULL label, or a segment outside its section's notes;
- * ANALYZER_ERR_LIBRARY when a section's bytes cannot be imported or its score cannot be written or read back;
- * ANALYZER_ERR_ALLOC.
+ * On URSATZ_OK *text is the export, which the caller frees with free(); otherwise *text is NULL.
+ * URSATZ_ERR_REQUEST for a NULL material, kind, knowledge or text, a NULL label, or a segment outside its section's notes;
+ * URSATZ_ERR_INTERNAL when a section's bytes cannot be imported or its score cannot be written or read back;
+ * URSATZ_ERR_ALLOC.
  */
-AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *material, char **text);
+UrsatzStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *material, char **text, UrsatzError *error);
 
 #endif

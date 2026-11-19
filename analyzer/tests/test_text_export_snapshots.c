@@ -46,7 +46,7 @@ static char *export_piece(const char *fixture) {
         return NULL;
     }
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(&notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
+    if (analyzer_analyze(&notes, test_analyzer_defaults(), &result) != URSATZ_OK) {
         imported_score_destroy(&notes);
         return NULL;
     }
@@ -55,7 +55,7 @@ static char *export_piece(const char *fixture) {
     char *text = NULL;
     if (document) {
         AnalyzerTextExportOptions options = analyzer_text_export_options_default();
-        if (analyzer_text_export_piece(&notes, document, &options, &text) != ANALYZER_OK) {
+        if (analyzer_text_export_piece(&notes, document, &options, &text, NULL) != URSATZ_OK) {
             text = NULL;
         }
     }

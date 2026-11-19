@@ -66,7 +66,7 @@ static unsigned char *read_request_body(struct mg_connection *conn, size_t *out_
 static void send_musicxml_export_error(struct mg_connection *conn, const char *message) {
   char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
-           message[0] != '\0' ? message : "ANALYZER_ERR_LIBRARY");
+           message[0] != '\0' ? message : "URSATZ_ERR_INTERNAL");
   ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
 }
 
@@ -989,7 +989,7 @@ static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED && strcmp(export_message, "ANALYZER_ERR_ARGUMENT") == 0) {
+  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED && strcmp(export_message, "URSATZ_ERR_REQUEST") == 0) {
     return ursatz_gui_send_json_status(conn, 400, "Bad Request",
                             "{\"ok\":false,\"message\":\"no measure in that range\"}");
   }

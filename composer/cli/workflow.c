@@ -274,18 +274,18 @@ cJSON *cli_corpus_passages(const char *corpus_dir, const char *like_path, const 
     AnalyzerCorpusPassages found;
     const char *what = like_path ? like_path : numerals;
     const KnowledgeSnapshot *knowledge = cli_context()->knowledge;
-    AnalyzerPassagesStatus searched = like_path ? analyzer_corpus_passages_like(corpus_dir, knowledge, like_path, 10, &found)
+    UrsatzStatus searched = like_path ? analyzer_corpus_passages_like(corpus_dir, knowledge, like_path, 10, &found)
                                                 : analyzer_corpus_passages_numerals(corpus_dir, knowledge, numerals, 100, &found);
-    if (searched == ANALYZER_PASSAGES_ERR_QUERY) {
+    if (searched == URSATZ_ERR_REQUEST) {
         *status = cli_fail(CLI_EXIT_USAGE, "cannot read %s as a passage to look for", what);
         return NULL;
     }
-    if (searched == ANALYZER_PASSAGES_ERR_CORPUS) {
+    if (searched == URSATZ_ERR_NOT_FOUND) {
         *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the corpus '%s' (the output directory of ursatz-analyzer --corpus)",
                            corpus_dir);
         return NULL;
     }
-    if (searched != ANALYZER_PASSAGES_OK) {
+    if (searched != URSATZ_OK) {
         *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", knowledge ? "out of memory" : "a knowledge snapshot is required");
         return NULL;
     }

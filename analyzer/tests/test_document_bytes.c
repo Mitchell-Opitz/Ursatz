@@ -58,7 +58,7 @@ static char *render_bach_114(void) {
     char *text = NULL;
     AnalyzerResult *result = NULL;
     AnalyzerOptions options = test_analyzer_options();
-    if (analyzer_analyze(&notes, &options, &result) == ANALYZER_OK) {
+    if (analyzer_analyze(&notes, &options, &result) == URSATZ_OK) {
         AnalysisDocument *document = analysis_document_build_from_result("Bach 114.mid", result);
         if (document) {
             text = analysis_document_to_json(document);

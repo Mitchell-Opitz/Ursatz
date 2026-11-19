@@ -107,11 +107,11 @@ static void check_scale(void) {
         return;
     }
     AnalyzerPlayback before, after;
-    CHECKF(analyzer_playback_build(&notes, &before) == ANALYZER_OK, "scale: build before");
+    CHECKF(analyzer_playback_build(&notes, &before) == URSATZ_OK, "scale: build before");
     ImportedReading reading = imported_reading_none();
     reading.scale = rational_ratio(2, 1);
     CHECKF(imported_reading_apply(&notes, &reading) == IMPORTED_READING_OK, "scale: apply");
-    CHECKF(analyzer_playback_build(&notes, &after) == ANALYZER_OK, "scale: build after");
+    CHECKF(analyzer_playback_build(&notes, &after) == URSATZ_OK, "scale: build after");
     CHECKF(after.tempo_count == before.tempo_count, "scale: %zu regions after, %zu before", after.tempo_count,
            before.tempo_count);
     for (size_t i = 0; i < before.tempo_count && i < after.tempo_count; i++) {
@@ -133,20 +133,20 @@ static void check_arguments(void) {
     ImportedScore notes;
     AnalyzerPlayback playback;
     char *json = (char *)1;
-    CHECKF(analyzer_playback_build(NULL, &playback) == ANALYZER_ERR_ARGUMENT, "NULL notes");
-    CHECKF(analyzer_playback_build(&notes, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
-    CHECKF(analyzer_playback_to_json(NULL, &notes, &json) == ANALYZER_ERR_ARGUMENT && json == NULL, "NULL playback");
+    CHECKF(analyzer_playback_build(NULL, &playback) == URSATZ_ERR_REQUEST, "NULL notes");
+    CHECKF(analyzer_playback_build(&notes, NULL) == URSATZ_ERR_REQUEST, "NULL out");
+    CHECKF(analyzer_playback_to_json(NULL, &notes, &json) == URSATZ_ERR_REQUEST && json == NULL, "NULL playback");
     if (!import_file(0, &notes)) {
         CHECKF(false, "arguments: cannot import %s", FILES[0].file);
         return;
     }
-    CHECKF(analyzer_playback_build(&notes, &playback) == ANALYZER_OK, "build");
-    CHECKF(analyzer_playback_to_json(&playback, NULL, &json) == ANALYZER_ERR_ARGUMENT && json == NULL, "NULL notes (json)");
-    CHECKF(analyzer_playback_to_json(&playback, &notes, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out (json)");
+    CHECKF(analyzer_playback_build(&notes, &playback) == URSATZ_OK, "build");
+    CHECKF(analyzer_playback_to_json(&playback, NULL, &json) == URSATZ_ERR_REQUEST && json == NULL, "NULL notes (json)");
+    CHECKF(analyzer_playback_to_json(&playback, &notes, NULL) == URSATZ_ERR_REQUEST, "NULL out (json)");
     analyzer_playback_destroy(&playback);
     TempoMap *map = notes.tempo_map;
     notes.tempo_map = NULL;
-    CHECKF(analyzer_playback_build(&notes, &playback) == ANALYZER_ERR_ARGUMENT, "MIDI import with no tempo map");
+    CHECKF(analyzer_playback_build(&notes, &playback) == URSATZ_ERR_REQUEST, "MIDI import with no tempo map");
     notes.tempo_map = map;
     analyzer_playback_destroy(&playback);
     analyzer_playback_destroy(NULL);
@@ -168,12 +168,12 @@ int main(int argc, char **argv) {
         }
         AnalyzerPlayback playback;
         char *json = NULL;
-        AnalyzerStatus status = analyzer_playback_build(&notes, &playback);
-        CHECKF(status == ANALYZER_OK, "%s: build status %d", FILES[i].stem, (int)status);
-        if (status == ANALYZER_OK) {
+        UrsatzStatus status = analyzer_playback_build(&notes, &playback);
+        CHECKF(status == URSATZ_OK, "%s: build status %d", FILES[i].stem, (int)status);
+        if (status == URSATZ_OK) {
             check_numbers(FILES[i].stem, &notes, &playback);
             status = analyzer_playback_to_json(&playback, &notes, &json);
-            CHECKF(status == ANALYZER_OK && json != NULL, "%s: json status %d", FILES[i].stem, (int)status);
+            CHECKF(status == URSATZ_OK && json != NULL, "%s: json status %d", FILES[i].stem, (int)status);
             if (json) {
                 check_snapshot(i, json, update);
                 printf("%s: %zu tempo regions (%s), %zu notes\n", FILES[i].stem, playback.tempo_count,

@@ -35,7 +35,7 @@ static void check_piece(const char *fixture) {
     }
     AnalyzerResult *result = NULL;
     AnalyzerOptions options = test_analyzer_options();
-    CHECKF(analyzer_analyze(&notes, &options, &result) == ANALYZER_OK && result, "%s: analyze", fixture);
+    CHECKF(analyzer_analyze(&notes, &options, &result) == URSATZ_OK && result, "%s: analyze", fixture);
     if (result) {
         char *json = analysis_document_render_result(fixture, result);
         StyleProfile *from_json = style_profile_create();

@@ -71,7 +71,7 @@ int main(void) {
     char *json = test_render_document(path, &notes, &report);
     MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     CHECK(json != NULL && scope != NULL);
-    CHECK(json && scope && motive_link_scope_add_document(scope, "mozart-545", json) == MOTIVE_LINKS_OK);
+    CHECK(json && scope && motive_link_scope_add_document(scope, "mozart-545", json) == URSATZ_OK);
     CHECK(report.motive_count > 0);
     size_t mapped = 0;
     for (size_t i = 0; i < report.motive_count; i++) {

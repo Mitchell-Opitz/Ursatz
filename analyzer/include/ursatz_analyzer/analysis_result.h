@@ -1,6 +1,7 @@
 #ifndef URSATZ_ANALYZER_ANALYSIS_RESULT_H
 #define URSATZ_ANALYZER_ANALYSIS_RESULT_H
 
+#include <common/status.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -19,13 +20,6 @@
 
 typedef struct AnalyzerResult AnalyzerResult;
 
-typedef enum {
-    ANALYZER_OK = 0,
-    ANALYZER_ERR_ARGUMENT,
-    ANALYZER_ERR_ALLOC,
-    ANALYZER_ERR_LIBRARY
-} AnalyzerStatus;
-
 /*
  * The stages of a run. `stages` holds ANALYSIS_CHAIN_STAGE_* bits (chain/analysis_chain.h): bits 0 to 11 are the library chain,
  * bits 12 to 17 the stages of the collected result only. The chain stages pull in the stages they need.
@@ -37,7 +31,7 @@ typedef enum {
 typedef struct {
     unsigned stages;
     /* The knowledge snapshot the analysis reads its pitch materials from (borrowed). Required: the defaults carry none, so
-       analyzer_analyze with no knowledge is ANALYZER_ERR_ARGUMENT. It must outlive the result: the keys of the result point into it. */
+       analyzer_analyze with no knowledge is URSATZ_ERR_REQUEST. It must outlive the result: the keys of the result point into it. */
     const KnowledgeSnapshot *knowledge;
 } AnalyzerOptions;
 
@@ -46,12 +40,12 @@ AnalyzerOptions analyzer_options_default(void);
 
 /*
  * Analyzes notes. options may be NULL for the defaults, which have no knowledge snapshot, so every caller passes options with one
- * (ANALYZER_ERR_ARGUMENT otherwise). On ANALYZER_OK *out is the result, which the caller releases with
+ * (URSATZ_ERR_REQUEST otherwise). On URSATZ_OK *out is the result, which the caller releases with
  * analyzer_result_destroy and which borrows notes: notes must outlive it. On any other status *out is left NULL and
- * nothing is kept: ANALYZER_ERR_ARGUMENT for a NULL notes, options with no stages, no knowledge or out, ANALYZER_ERR_ALLOC,
- * ANALYZER_ERR_LIBRARY when the chain refuses the notes.
+ * nothing is kept: URSATZ_ERR_REQUEST for a NULL notes, options with no stages, no knowledge or out, URSATZ_ERR_ALLOC,
+ * URSATZ_ERR_INTERNAL when the chain refuses the notes.
  */
-AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOptions *options, AnalyzerResult **out);
+UrsatzStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOptions *options, AnalyzerResult **out);
 
 /* NULL is a no-op. */
 void analyzer_result_destroy(AnalyzerResult *result);

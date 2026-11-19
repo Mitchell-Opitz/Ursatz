@@ -267,7 +267,7 @@ static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, Importe
     AnalyzerOptions options = analyzer_options_default();
     options.knowledge = ursatz_gui_knowledge();
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(&notes, &options, &result) != ANALYZER_OK) {
+    if (analyzer_analyze(&notes, &options, &result) != URSATZ_OK) {
         imported_score_destroy(&notes);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
@@ -526,7 +526,7 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
 static bool import_piece(const char *dir_path, ImportedFormat format, ImportedScore *out) {
     char source_path[400];
     if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        analyzer_import_file(source_path, format, out, NULL, 0) != ANALYZER_OK) {
+        analyzer_import_file(source_path, format, out, NULL) != URSATZ_OK) {
         return false;
     }
     cJSON *meta = read_meta_file(dir_path);
@@ -653,11 +653,11 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
     }
     char **ids = NULL;
     size_t id_count = 0;
-    AnalyzerStatus ids_status = analyzer_score_note_xml_ids(ursatz_gui_import_entry_notes(import), &ids, &id_count);
+    UrsatzStatus ids_status = analyzer_score_note_xml_ids(ursatz_gui_import_entry_notes(import), &ids, &id_count, NULL);
     ursatz_gui_import_cache_release(import);
-    if (ids_status != ANALYZER_OK) {
+    if (ids_status != URSATZ_OK) {
         ursatz_gui_piece_detail_destroy(detail);
-        return ids_status == ANALYZER_ERR_ALLOC ? URSATZ_GUI_ANALYSIS_ERR_ALLOC : URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+        return ids_status == URSATZ_ERR_ALLOC ? URSATZ_GUI_ANALYSIS_ERR_ALLOC : URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
     detail->note_xml_ids = id_count > 0 ? calloc(id_count, sizeof(char *)) : NULL;
     bool ok = id_count == 0 || detail->note_xml_ids != NULL;
@@ -1117,17 +1117,17 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
         }
     } else {
         const ImportedScore *notes = ursatz_gui_import_entry_notes(import);
-        AnalyzerStatus status = analyzer_score_export_musicxml(notes, &xml);
+        UrsatzStatus status = analyzer_score_export_musicxml(notes, &xml, NULL);
         meter_defaulted = analyzer_imported_meter_defaulted(notes);
 
-        if (status != ANALYZER_OK) {
+        if (status != URSATZ_OK) {
             ursatz_gui_import_cache_release(import);
             fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: analyzer_score_export_musicxml failed for piece "
-                             "'%s' with AnalyzerStatus=%d\n",
+                             "'%s' with UrsatzStatus=%d\n",
                     id, (int)status);
-            const char *name = status == ANALYZER_ERR_ALLOC      ? "ANALYZER_ERR_ALLOC"
-                               : status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT"
-                                                                 : "ANALYZER_ERR_LIBRARY";
+            const char *name = status == URSATZ_ERR_ALLOC      ? "URSATZ_ERR_ALLOC"
+                               : status == URSATZ_ERR_REQUEST ? "URSATZ_ERR_REQUEST"
+                                                                 : "URSATZ_ERR_INTERNAL";
             snprintf(message, 256, "%s", name);
             free(title);
             free(composer);
@@ -1198,17 +1198,17 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
     const ImportedScore *notes = ursatz_gui_import_entry_notes(import);
 
     AnalyzerPlayback playback;
-    AnalyzerStatus status = analyzer_playback_build(notes, &playback);
+    UrsatzStatus status = analyzer_playback_build(notes, &playback);
     char *json = NULL;
-    if (status == ANALYZER_OK) {
+    if (status == URSATZ_OK) {
         status = analyzer_playback_to_json(&playback, notes, &json);
         analyzer_playback_destroy(&playback);
     }
     ursatz_gui_import_cache_release(import);
-    if (status == ANALYZER_ERR_ALLOC) {
+    if (status == URSATZ_ERR_ALLOC) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
-    if (status != ANALYZER_OK) {
+    if (status != URSATZ_OK) {
         /* A source that imported a moment ago and now has no readable tempo is a failed import. */
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
@@ -1266,19 +1266,19 @@ static UrsatzGuiAnalysisResult get_piece_export_unlocked(const char *pieces_dir,
     options.first_measure = first_measure;
     options.last_measure = last_measure;
     char *text = NULL;
-    AnalyzerStatus status =
-        analyzer_text_export_piece(ursatz_gui_import_entry_notes(import), document_json, &options, &text);
+    UrsatzStatus status =
+        analyzer_text_export_piece(ursatz_gui_import_entry_notes(import), document_json, &options, &text, NULL);
     ursatz_gui_import_cache_release(import);
     free(title);
     free(document_json);
-    if (status == ANALYZER_ERR_ALLOC) {
+    if (status == URSATZ_ERR_ALLOC) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
-    if (status != ANALYZER_OK) {
+    if (status != URSATZ_OK) {
         fprintf(stderr, "ursatz_gui_analysis_get_piece_export: analyzer_text_export_piece failed for piece '%s' "
-                         "with AnalyzerStatus=%d\n",
+                         "with UrsatzStatus=%d\n",
                 id, (int)status);
-        snprintf(message, 256, "%s", status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT" : "ANALYZER_ERR_LIBRARY");
+        snprintf(message, 256, "%s", status == URSATZ_ERR_REQUEST ? "URSATZ_ERR_REQUEST" : "URSATZ_ERR_INTERNAL");
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
     *out_text = text;

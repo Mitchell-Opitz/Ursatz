@@ -1,6 +1,7 @@
 #ifndef URSATZ_ANALYZER_SIMILAR_MATERIAL_H
 #define URSATZ_ANALYZER_SIMILAR_MATERIAL_H
 
+#include <common/status.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -13,15 +14,6 @@
  * only the analysis documents of the corpus, never the scores (R-079). A match says how much two passages agree on
  * the dimensions that were scored; it is not a claim that the passage is the motive.
  */
-
-typedef enum {
-    SIMILAR_OK = 0,
-    SIMILAR_ERR_ARGUMENT,
-    SIMILAR_ERR_QUERY,  /* a query with fewer than two notes or numerals, or a text that is not numerals */
-    SIMILAR_ERR_IO,     /* a file could not be read or imported */
-    SIMILAR_ERR_FORMAT, /* not an analysis document of schema version 13, or not a corpus index */
-    SIMILAR_ERR_ALLOC
-} SimilarResult;
 
 /* One soprano note. onset is measured from the start of the passage it belongs to; a query's onset is not read. */
 typedef struct {
@@ -46,16 +38,16 @@ typedef struct {
 /*
  * A motive from the highest line of the MIDI or MusicXML file at path: the file is analyzed and its soprano notes
  * (a note held across several chord segments is one note) are the query. `knowledge` is the snapshot the analysis reads its pitch
- * materials from (SIMILAR_ERR_ARGUMENT without it). On any result other than SIMILAR_OK
- * *query is untouched; SIMILAR_ERR_IO also writes a message to stderr.
+ * materials from (URSATZ_ERR_REQUEST without it). On any result other than URSATZ_OK
+ * *query is untouched; URSATZ_ERR_IO also writes a message to stderr.
  */
-SimilarResult similar_query_from_file(const char *path, const KnowledgeSnapshot *knowledge, SimilarQuery *query);
+UrsatzStatus similar_query_from_file(const char *path, const KnowledgeSnapshot *knowledge, SimilarQuery *query);
 
 /*
  * A progression from numerals separated by spaces or '-' ("I IV V7 I", "ii-V7-I"). Each token must be a Roman
  * numeral the Analyzer can print (style_label_numeral); an inversion figure is dropped, so "V6/5" reads "V7".
  */
-SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query);
+UrsatzStatus similar_query_from_numerals(const char *text, SimilarQuery *query);
 
 /* Frees what the query holds; safe on a query that was never filled. */
 void similar_query_destroy(SimilarQuery *query);
@@ -103,9 +95,9 @@ typedef struct {
  * Searches the pieces "<corpus_output_dir>/corpus-index.json" lists as analyzed. Every window of the query's length
  * is scored; in each piece the best window of any run of overlapping ones is kept, and the highest-scoring
  * max_results over all pieces are returned. `knowledge` is the snapshot that gives the key words of the documents their materials
- * (SIMILAR_ERR_ARGUMENT without it). options may be NULL for the defaults. No match is not an error.
+ * (URSATZ_ERR_REQUEST without it). options may be NULL for the defaults. No match is not an error.
  */
-SimilarResult similar_material_find(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+UrsatzStatus similar_material_find(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
                                     const SimilarOptions *options, SimilarResults *results);
 
 /* Frees the matches; safe on a result that was never filled. */

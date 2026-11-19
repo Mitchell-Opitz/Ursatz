@@ -181,7 +181,7 @@ static bool read_pair(const cJSON *entry, MotiveLinkCachePair *pair) {
     return true;
 }
 
-static MotiveLinksResult read_cache(const cJSON *root, MotiveLinkCache *cache) {
+static UrsatzStatus read_cache(const cJSON *root, MotiveLinkCache *cache) {
     const cJSON *schema = common_json_member(root, "schema");
     const cJSON *version = common_json_member(root, "schema_version");
     const cJSON *commit = common_json_member(root, "producer_key");
@@ -198,70 +198,70 @@ static MotiveLinksResult read_cache(const cJSON *root, MotiveLinkCache *cache) {
         cache->analyzer_version = text_copy("");
         motive_link_options_default(&cache->options);
         if (!cache->producer_key || !cache->analyzer_version) {
-            return MOTIVE_LINKS_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
         cache->keyed = true;
-        return MOTIVE_LINKS_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsString(schema) || strcmp(schema->valuestring, CACHE_SCHEMA) != 0 || !cJSON_IsNumber(version) ||
         version->valuedouble != CACHE_SCHEMA_VERSION || !cJSON_IsString(commit) || !cJSON_IsString(analyzer) ||
         !whole_number(common_json_member(options, "max_depth"), &cache->options.max_depth) ||
         !whole_number(common_json_member(options, "beam"), &cache->options.beam) || !cJSON_IsNumber(nearness) ||
         !cJSON_IsBool(contour) || !cJSON_IsArray(pairs)) {
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
     cache->options.min_nearness = nearness->valuedouble;
     cache->options.contour = cJSON_IsTrue(contour);
     cache->producer_key = text_copy(commit->valuestring);
     cache->analyzer_version = text_copy(analyzer->valuestring);
     if (!cache->producer_key || !cache->analyzer_version) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     cache->keyed = true;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, pairs) {
         MotiveLinkCachePair pair;
         if (!read_pair(entry, &pair)) {
-            return MOTIVE_LINKS_ERR_FORMAT;
+            return URSATZ_ERR_FORMAT;
         }
         if (!motive_link_cache_insert(cache, &pair)) {
-            return MOTIVE_LINKS_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
     }
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
-MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out) {
+UrsatzStatus motive_link_cache_load(const char *path, MotiveLinkCache **out) {
     if (!path || !out) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     MotiveLinkCache *cache = calloc(1, sizeof *cache);
     if (!cache) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     FILE *probe = fopen(path, "rb");
     if (!probe) {
         if (errno == ENOENT) {
             *out = cache;
-            return MOTIVE_LINKS_OK;
+            return URSATZ_OK;
         }
         free(cache);
-        return MOTIVE_LINKS_ERR_IO;
+        return URSATZ_ERR_IO;
     }
     fclose(probe);
     char *text = NULL;
     common_file_read(path, &text, NULL, NULL);
     cJSON *root = text ? cJSON_Parse(text) : NULL;
-    MotiveLinksResult result = !text ? MOTIVE_LINKS_ERR_IO : (root ? read_cache(root, cache) : MOTIVE_LINKS_ERR_FORMAT);
+    UrsatzStatus result = !text ? URSATZ_ERR_IO : (root ? read_cache(root, cache) : URSATZ_ERR_FORMAT);
     free(text);
     cJSON_Delete(root);
-    if (result != MOTIVE_LINKS_OK) {
+    if (result != URSATZ_OK) {
         motive_link_cache_destroy(cache);
         return result;
     }
     *out = cache;
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
 static cJSON *pair_json(const MotiveLinkCachePair *pair) {
@@ -311,9 +311,9 @@ static cJSON *pair_json(const MotiveLinkCachePair *pair) {
     return entry;
 }
 
-MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path) {
+UrsatzStatus motive_link_cache_save(const MotiveLinkCache *cache, const char *path) {
     if (!cache || !path) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     MotiveLinkOptions defaults;
     motive_link_options_default(&defaults);
@@ -325,7 +325,7 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
         cJSON_Delete(root);
         cJSON_Delete(object);
         cJSON_Delete(pairs);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     bool ok = cJSON_AddStringToObject(root, "schema", CACHE_SCHEMA) &&
               cJSON_AddNumberToObject(root, "schema_version", CACHE_SCHEMA_VERSION) &&
@@ -357,18 +357,18 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
     char *text = ok ? cJSON_Print(root) : NULL;
     cJSON_Delete(root);
     if (!text) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     size_t text_length = strlen(text);
     char *terminated = malloc(text_length + 2);
     if (!terminated) {
         cJSON_free(text);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     memcpy(terminated, text, text_length);
     memcpy(terminated + text_length, "\n", 2);
     bool wrote = (common_file_write_atomic(path, terminated, strlen(terminated), NULL) == URSATZ_OK);
     free(terminated);
     cJSON_free(text);
-    return wrote ? MOTIVE_LINKS_OK : MOTIVE_LINKS_ERR_IO;
+    return wrote ? URSATZ_OK : URSATZ_ERR_IO;
 }

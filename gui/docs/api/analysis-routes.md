@@ -75,7 +75,7 @@ The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md)
   an error status: unknown id `404`; a stored source that no longer imports
   `422` with `{"ok":false,"message":"could not import the stored source"}`;
   a failed export `500` with
-  `{"ok":false,"message":"failed to export piece","code":"<AnalyzerStatus name>"}`;
+  `{"ok":false,"message":"failed to export piece","code":"<UrsatzStatus name>"}`;
   anything else `500` with `{"ok":false,"message":"failed to export piece"}`.
 - `GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]`: the piece as measure-addressed text
   (`text/plain; charset=utf-8`), written by the Analyzer (`analyzer_text_export_piece`,

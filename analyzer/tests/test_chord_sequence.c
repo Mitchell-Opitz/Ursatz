@@ -88,14 +88,14 @@ static void check_piece(const char *fixture, const char *slug) {
     }
     AnalyzerResult *result = NULL;
     AnalyzerOptions options = test_analyzer_options();
-    CHECKF(analyzer_analyze(&notes, &options, &result) == ANALYZER_OK && result, "%s: analyze", slug);
+    CHECKF(analyzer_analyze(&notes, &options, &result) == URSATZ_OK && result, "%s: analyze", slug);
     if (result) {
         AnalyzerChord *chords = NULL;
         size_t count = 0;
         char *json = analysis_document_render_result(fixture, result);
         cJSON *document = json ? cJSON_Parse(json) : NULL;
         CHECKF(document != NULL, "%s: no document", slug);
-        CHECKF(json && analyzer_chord_sequence_from_document(json, &chords, &count) == ANALYZER_OK,
+        CHECKF(json && analyzer_chord_sequence_from_document(json, &chords, &count) == URSATZ_OK,
                "%s: document sequence", slug);
         CHECKF(count > 0, "%s: empty sequence", slug);
         if (document) {
@@ -140,7 +140,7 @@ static void check_case(const char *name, const CaseEntry *entries, size_t count,
     char *json = case_document(entries, count, URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
     AnalyzerChord *chords = NULL;
     size_t found = 0;
-    CHECKF(analyzer_chord_sequence_from_document(json, &chords, &found) == ANALYZER_OK, "%s: not read", name);
+    CHECKF(analyzer_chord_sequence_from_document(json, &chords, &found) == URSATZ_OK, "%s: not read", name);
     CHECKF(found == expected_count, "%s: %zu chords, expected %zu", name, found, expected_count);
     for (size_t i = 0; i < found && i < expected_count; i++) {
         CHECKF(chords[i].first_entry == expected[i][0] && chords[i].last_entry == expected[i][1],
@@ -183,16 +183,16 @@ static void check_cases(void) {
 static void check_arguments(void) {
     AnalyzerChord *chords = (AnalyzerChord *)0x1;
     size_t count = 7;
-    CHECKF(analyzer_chord_sequence_from_document(NULL, &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL &&
+    CHECKF(analyzer_chord_sequence_from_document(NULL, &chords, &count) == URSATZ_ERR_REQUEST && chords == NULL &&
                count == 0,
            "a NULL document");
-    CHECKF(analyzer_chord_sequence_from_document("not json", &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL,
+    CHECKF(analyzer_chord_sequence_from_document("not json", &chords, &count) == URSATZ_ERR_REQUEST && chords == NULL,
            "text that is not JSON");
     char *old_version = case_document(NULL, 0, 1);
-    CHECKF(analyzer_chord_sequence_from_document(old_version, &chords, &count) == ANALYZER_ERR_ARGUMENT,
+    CHECKF(analyzer_chord_sequence_from_document(old_version, &chords, &count) == URSATZ_ERR_REQUEST,
            "another schema version");
     free(old_version);
-    CHECKF(analyzer_chord_sequence_from_document("{}", NULL, &count) == ANALYZER_ERR_ARGUMENT, "a NULL out");
+    CHECKF(analyzer_chord_sequence_from_document("{}", NULL, &count) == URSATZ_ERR_REQUEST, "a NULL out");
     analyzer_chord_sequence_free(NULL, 0);
 }
 

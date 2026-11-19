@@ -91,7 +91,7 @@ bool test_analyze_report(const ImportedScore *notes, ChainResult *report) {
     memset(report, 0, sizeof(*report));
     report->home_duration.den = 1;
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
+    if (analyzer_analyze(notes, test_analyzer_defaults(), &result) != URSATZ_OK) {
         return false;
     }
     AnalyzerResult **grown = realloc(test_results, (test_result_count + 1) * sizeof(*grown));

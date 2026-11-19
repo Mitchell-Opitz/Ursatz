@@ -136,7 +136,7 @@ static void print_corpus_piece(const char *path, CorpusPieceStatus status, const
 static int run_corpus(const char *input_dir, const char *output_dir, bool resume, const KnowledgeSnapshot *knowledge) {
     CorpusRunOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL, knowledge};
     CorpusRunSummary summary;
-    if (corpus_run(&options, &summary) != CORPUS_RUN_OK) {
+    if (corpus_run(&options, &summary) != URSATZ_OK) {
         return 2;
     }
     printf("%zu analyzed, %zu skipped, %zu failed\n", summary.analyzed, summary.skipped, summary.failed);
@@ -425,27 +425,27 @@ static void print_similar_text(const SimilarQuery *query, const SimilarResults *
 static int run_similar(const char *corpus_output_dir, const char *motive_file, const char *progression, const SimilarOptions *options,
                        bool json, const KnowledgeSnapshot *knowledge) {
     SimilarQuery query = {0};
-    SimilarResult read = motive_file ? similar_query_from_file(motive_file, knowledge, &query)
+    UrsatzStatus read = motive_file ? similar_query_from_file(motive_file, knowledge, &query)
                                      : similar_query_from_numerals(progression, &query);
-    if (read == SIMILAR_ERR_QUERY || read == SIMILAR_ERR_ARGUMENT) {
+    if (read == URSATZ_ERR_REQUEST || read == URSATZ_ERR_REQUEST) {
         fprintf(stderr, "Error: %s\n",
                 motive_file ? "the motive must have at least two notes" : "the progression must be two or more Roman numerals");
         return 1;
     }
-    if (read != SIMILAR_OK) {
-        if (read != SIMILAR_ERR_IO) {
+    if (read != URSATZ_OK) {
+        if (read != URSATZ_ERR_IO) {
             fprintf(stderr, "Error: cannot read the motive '%s'\n", motive_file);
         }
         return 2;
     }
     SimilarResults results = {0};
     report_stale_documents(corpus_output_dir);
-    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, &query, options, &results);
+    UrsatzStatus found = similar_material_find(corpus_output_dir, knowledge, &query, options, &results);
     int exit_code = 0;
-    if (found == SIMILAR_ERR_QUERY) {
+    if (found == URSATZ_ERR_REQUEST) {
         fprintf(stderr, "Error: the query is not a motive or a progression this search can score\n");
         exit_code = 1;
-    } else if (found != SIMILAR_OK) {
+    } else if (found != URSATZ_OK) {
         fprintf(stderr, "Error: cannot read the corpus in '%s'\n", corpus_output_dir);
         exit_code = 2;
     } else if (json) {
@@ -499,10 +499,10 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
         return 2;
     }
     report_stale_documents(corpus_output_dir);
-    MotiveLinksResult added = motive_link_scope_add_corpus(scope, corpus_output_dir);
-    if (added != MOTIVE_LINKS_OK) {
+    UrsatzStatus added = motive_link_scope_add_corpus(scope, corpus_output_dir);
+    if (added != URSATZ_OK) {
         const char *piece = motive_link_scope_failed_piece(scope);
-        if (added == MOTIVE_LINKS_ERR_NO_FEATURES) {
+        if (added == URSATZ_ERR_UNSATISFIABLE) {
             fprintf(stderr, "Error: the analysis of '%s' has motives without features; run the corpus again\n",
                     piece ? piece : corpus_output_dir);
         } else if (piece) {
@@ -526,8 +526,8 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
     }
     int exit_code = 2;
     MotiveLinkCache *cache = NULL;
-    MotiveLinksResult loaded = motive_link_cache_load(cache_file, &cache);
-    if (loaded != MOTIVE_LINKS_OK) {
+    UrsatzStatus loaded = motive_link_cache_load(cache_file, &cache);
+    if (loaded != URSATZ_OK) {
         fprintf(stderr, "Error: cannot read the motive link cache '%s'\n", cache_file);
     } else {
         MotiveLinksOptions options;
@@ -539,14 +539,14 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
             options.candidates = candidates;
         }
         MotiveLinks links;
-        MotiveLinksResult ran = motive_links_run(scope, cache, &options, &links);
+        UrsatzStatus ran = motive_links_run(scope, cache, &options, &links);
         char *json = NULL;
-        if (ran == MOTIVE_LINKS_OK && as_json) {
+        if (ran == URSATZ_OK && as_json) {
             ran = motive_links_render(&links, &json);
         }
-        if (ran != MOTIVE_LINKS_OK) {
+        if (ran != URSATZ_OK) {
             fprintf(stderr, "Error: cannot link the motives of '%s'\n", corpus_output_dir);
-        } else if (motive_link_cache_save(cache, cache_file) != MOTIVE_LINKS_OK) {
+        } else if (motive_link_cache_save(cache, cache_file) != URSATZ_OK) {
             fprintf(stderr, "Error: cannot write the motive link cache '%s'\n", cache_file);
         } else {
             if (as_json) {
@@ -644,10 +644,10 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
 
     ImportedScore notes;
     AnalyzerResult *result = NULL;
-    switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL)) {
+    switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL, NULL)) {
     case RUN_FILE_OK:
         break;
-    case RUN_FILE_ERR_ALLOC:
+    case RUN_FILE_ERR_ANALYZE:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
     default:
@@ -665,13 +665,13 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
     }
 
     char *text = NULL;
-    AnalyzerStatus status = analyzer_text_export_piece(&notes, json, &options, &text);
+    UrsatzStatus status = analyzer_text_export_piece(&notes, json, &options, &text, NULL);
     free(json);
     imported_score_destroy(&notes);
-    if (status != ANALYZER_OK) {
-        if (status == ANALYZER_ERR_ARGUMENT) {
+    if (status != URSATZ_OK) {
+        if (status == URSATZ_ERR_REQUEST) {
             fprintf(stderr, "Error: no measure of '%s' falls in the range given to --measures\n", path);
-        } else if (status == ANALYZER_ERR_LIBRARY) {
+        } else if (status == URSATZ_ERR_INTERNAL) {
             fprintf(stderr, "Error: cannot write the score of '%s' as MusicXML to export it\n", path);
         } else {
             fprintf(stderr, "Error: out of memory while exporting '%s'\n", path);
@@ -898,8 +898,9 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     AnalyzerResult *result = NULL;
     ImportedScoreResult import_status;
     ImportedReadingResult reading_status = IMPORTED_READING_OK;
+    UrsatzStatus analyze_status = URSATZ_OK;
     switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, knowledge, &notes, &result, &import_status,
-                              &reading_status)) {
+                              &reading_status, &analyze_status)) {
     case RUN_FILE_OK:
         break;
     case RUN_FILE_ERR_IMPORT:
@@ -910,7 +911,7 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
                     ? "the pickup must be shorter than one measure of the meter"
                     : (reading_status == IMPORTED_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
         return 1;
-    case RUN_FILE_ERR_ALLOC:
+    case RUN_FILE_ERR_ANALYZE:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
     }

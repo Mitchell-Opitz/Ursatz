@@ -4,7 +4,7 @@
 
 RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const ImportedReading *reading,
                                 const KnowledgeSnapshot *knowledge, ImportedScore *notes, AnalyzerResult **result, ImportedScoreResult *import_status,
-                                ImportedReadingResult *reading_status) {
+                                ImportedReadingResult *reading_status, UrsatzStatus *analyze_status) {
     ImportedScoreError error = {{0}};
     ImportedScoreResult imported = imported_score_import_file(path, format, notes, &error);
     if (import_status) {
@@ -29,9 +29,13 @@ RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const I
     }
     AnalyzerOptions options = analyzer_options_default();
     options.knowledge = knowledge;
-    if (analyzer_analyze(notes, &options, result) != ANALYZER_OK) {
+    UrsatzStatus analyzed = analyzer_analyze(notes, &options, result);
+    if (analyzed != URSATZ_OK) {
+        if (analyze_status) {
+            *analyze_status = analyzed;
+        }
         imported_score_destroy(notes);
-        return RUN_FILE_ERR_ALLOC;
+        return RUN_FILE_ERR_ANALYZE;
     }
     return RUN_FILE_OK;
 }

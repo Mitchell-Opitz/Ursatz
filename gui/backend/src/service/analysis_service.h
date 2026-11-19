@@ -234,7 +234,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_ensure_current(const char *pieces_di
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
  * URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no longer
  * imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export itself
- * fails; message is then the name of the AnalyzerStatus it returned and is
+ * fails; message is then the name of the UrsatzStatus it returned and is
  * empty for every other outcome. The title (the filename without its
  * extension) and the composer are added to the score here: the Analyzer
  * leaves both out.
@@ -290,8 +290,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
  * On URSATZ_GUI_ANALYSIS_OK, *out_text is newly allocated and caller-owned (free() it).
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the
  * stored source no longer imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export failed; message is then
- * "ANALYZER_ERR_ARGUMENT" (an empty range, or a stored document the Analyzer will not read) or
- * "ANALYZER_ERR_LIBRARY", and is empty for every other outcome.
+ * "URSATZ_ERR_REQUEST" (an empty range, or a stored document the Analyzer will not read) or
+ * "URSATZ_ERR_INTERNAL", and is empty for every other outcome.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_export(const char *pieces_dir, const char *id,
                                                               int first_measure, int last_measure, char **out_text,

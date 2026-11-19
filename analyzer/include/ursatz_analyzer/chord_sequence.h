@@ -28,12 +28,12 @@ typedef struct {
 } AnalyzerChord;
 
 /*
- * On ANALYZER_OK *out is the sequence (NULL when *count is 0), which the caller releases with
- * analyzer_chord_sequence_free. On any other status *out is NULL and *count is 0: ANALYZER_ERR_ARGUMENT for a NULL
+ * On URSATZ_OK *out is the sequence (NULL when *count is 0), which the caller releases with
+ * analyzer_chord_sequence_free. On any other status *out is NULL and *count is 0: URSATZ_ERR_REQUEST for a NULL
  * argument, text that is not an analysis document
- * of the current schema version, or a chord whose time cannot be read; ANALYZER_ERR_ALLOC.
+ * of the current schema version, or a chord whose time cannot be read; URSATZ_ERR_ALLOC.
  */
-AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, AnalyzerChord **out, size_t *count);
+UrsatzStatus analyzer_chord_sequence_from_document(const char *document_json, AnalyzerChord **out, size_t *count);
 
 /* Frees a sequence. NULL is a no-op. */
 void analyzer_chord_sequence_free(AnalyzerChord *chords, size_t count);

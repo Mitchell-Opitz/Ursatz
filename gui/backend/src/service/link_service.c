@@ -467,13 +467,13 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
         if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_GUI_ANALYSIS_OK) {
             return "unreadable analysis";
         }
-        MotiveLinksResult result = motive_link_scope_add_document(scope, id, document);
+        UrsatzStatus result = motive_link_scope_add_document(scope, id, document);
         free(document);
-        if (result == MOTIVE_LINKS_OK) {
+        if (result == URSATZ_OK) {
             return NULL;
         }
         /* A document from before the features (or another schema version): analyze the piece again, once. */
-        bool stale = result == MOTIVE_LINKS_ERR_NO_FEATURES || result == MOTIVE_LINKS_ERR_FORMAT;
+        bool stale = result == URSATZ_ERR_UNSATISFIABLE || result == URSATZ_ERR_FORMAT;
         if (!stale || attempt > 0) {
             return "unreadable analysis";
         }
@@ -543,11 +543,11 @@ static void job_run(Job *job) {
     char cache_path[PATH_BYTES + 64];
     snprintf(cache_path, sizeof(cache_path), "%s/%s", g_state.dir, kCacheFile);
     MotiveLinkCache *cache = NULL;
-    if (motive_link_cache_load(cache_path, &cache) != MOTIVE_LINKS_OK) {
+    if (motive_link_cache_load(cache_path, &cache) != URSATZ_OK) {
         /* An unreadable cache is only a cache: start it again. */
         remove(cache_path);
         cache = NULL;
-        if (motive_link_cache_load(cache_path, &cache) != MOTIVE_LINKS_OK) {
+        if (motive_link_cache_load(cache_path, &cache) != URSATZ_OK) {
             motive_link_scope_destroy(scope);
             job_fail(job, "cache unreadable");
             return;
@@ -561,15 +561,15 @@ static void job_run(Job *job) {
 
     MotiveLinks links;
     memset(&links, 0, sizeof(links));
-    MotiveLinksResult run = motive_links_run(scope, cache, &options, &links);
+    UrsatzStatus run = motive_links_run(scope, cache, &options, &links);
     char *rendered = NULL;
-    if (run == MOTIVE_LINKS_OK) {
+    if (run == URSATZ_OK) {
         /* A cache that cannot be saved costs only time on the next run. */
         motive_link_cache_save(cache, cache_path);
         run = motive_links_render(&links, &rendered);
     }
     size_t pairs = links.pairs;
-    if (run == MOTIVE_LINKS_OK) {
+    if (run == URSATZ_OK) {
         motive_links_destroy(&links);
     }
     motive_link_cache_destroy(cache);
@@ -577,7 +577,7 @@ static void job_run(Job *job) {
 
     cJSON *result = rendered ? cJSON_Parse(rendered) : NULL;
     free(rendered);
-    if (run != MOTIVE_LINKS_OK || !result) {
+    if (run != URSATZ_OK || !result) {
         cJSON_Delete(result);
         job_fail(job, "linking failed");
         return;

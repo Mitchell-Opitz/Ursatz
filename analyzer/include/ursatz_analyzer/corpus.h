@@ -1,6 +1,7 @@
 #ifndef URSATZ_ANALYZER_CORPUS_H
 #define URSATZ_ANALYZER_CORPUS_H
 
+#include <common/status.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -31,7 +32,7 @@ typedef struct {
     /* Optional progress callback (NULL for none) and its user pointer. */
     CorpusPieceCallback on_piece;
     void *user;
-    /* The knowledge snapshot every piece is analyzed with (borrowed); required (CORPUS_RUN_ERR_ARGUMENT without it). */
+    /* The knowledge snapshot every piece is analyzed with (borrowed); required (URSATZ_ERR_REQUEST without it). */
     const KnowledgeSnapshot *knowledge;
 } CorpusRunOptions;
 
@@ -40,15 +41,6 @@ typedef struct {
     size_t skipped;
     size_t failed;
 } CorpusRunSummary;
-
-typedef enum {
-    CORPUS_RUN_OK = 0,
-    CORPUS_RUN_ERR_ARGUMENT,
-    CORPUS_RUN_ERR_INPUT_DIR,
-    CORPUS_RUN_ERR_OUTPUT_DIR,
-    CORPUS_RUN_ERR_INDEX, /* resume: the existing index is unreadable */
-    CORPUS_RUN_ERR_WRITE
-} CorpusRunResult;
 
 /*
  * Walks input_dir recursively and takes the files with the extensions
@@ -59,9 +51,9 @@ typedef enum {
  * created as needed. A piece that cannot be imported or analyzed is
  * counted as failed; that is not a failed run.
  *
- * out may be NULL. On any result other than CORPUS_RUN_OK, a message has
+ * out may be NULL. On any result other than URSATZ_OK, a message has
  * been written to stderr.
  */
-CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out);
+UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out);
 
 #endif

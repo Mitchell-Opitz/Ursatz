@@ -1,6 +1,7 @@
 #ifndef URSATZ_ANALYZER_CORPUS_PASSAGES_H
 #define URSATZ_ANALYZER_CORPUS_PASSAGES_H
 
+#include <common/status.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -13,14 +14,6 @@
  * (similar_material.h, the same ranking), and each match's document is read once, for the chords and for whether it is current.
  * Only the analysis documents of the corpus are read, never the scores (R-079).
  */
-
-typedef enum {
-    ANALYZER_PASSAGES_OK = 0,
-    ANALYZER_PASSAGES_ERR_ARGUMENT,
-    ANALYZER_PASSAGES_ERR_QUERY,  /* the passage or the numerals cannot be read as a query */
-    ANALYZER_PASSAGES_ERR_CORPUS, /* the corpus output directory or one of its documents cannot be read */
-    ANALYZER_PASSAGES_ERR_ALLOC
-} AnalyzerPassagesStatus;
 
 /* One soprano note of a passage: a MIDI note number, the onset from the passage's start and the duration, in whole notes. */
 typedef struct {
@@ -69,11 +62,11 @@ typedef struct {
 
 /*
  * The passages of the corpus (the output directory of `ursatz-analyzer --corpus`) that look like the melody of the MIDI or
- * MusicXML file at passage_path: the best `max` with a similarity of 1/2 or more. No match is ANALYZER_PASSAGES_OK with
- * count 0. `knowledge` reads the passage and the documents (ANALYZER_PASSAGES_ERR_ARGUMENT without it). out is filled only on
- * ANALYZER_PASSAGES_OK and released with analyzer_corpus_passages_destroy; on any other status it is empty.
+ * MusicXML file at passage_path: the best `max` with a similarity of 1/2 or more. No match is URSATZ_OK with
+ * count 0. `knowledge` reads the passage and the documents (URSATZ_ERR_REQUEST without it). out is filled only on
+ * URSATZ_OK and released with analyzer_corpus_passages_destroy; on any other status it is empty.
  */
-AnalyzerPassagesStatus analyzer_corpus_passages_like(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
+UrsatzStatus analyzer_corpus_passages_like(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
                                                      const char *passage_path, size_t max, AnalyzerCorpusPassages *out);
 
 /*
@@ -81,7 +74,7 @@ AnalyzerPassagesStatus analyzer_corpus_passages_like(const char *corpus_dir, con
  * similar_query_from_numerals reads them): the best `max` with a similarity of 1/2 or more. Otherwise as
  * analyzer_corpus_passages_like.
  */
-AnalyzerPassagesStatus analyzer_corpus_passages_numerals(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
+UrsatzStatus analyzer_corpus_passages_numerals(const char *corpus_dir, const KnowledgeSnapshot *knowledge,
                                                          const char *numerals, size_t max, AnalyzerCorpusPassages *out);
 
 /* Frees the passages and clears *passages. Safe on a value that was never filled. */

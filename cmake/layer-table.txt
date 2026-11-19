@@ -159,7 +159,7 @@ generated analyzer ursatz_analyzer/version.h ursatz_analyzer/producer_key.h
 generated chain producer_key.h chain/producer_key.h
 generated composer-util composer/composition_key.h
 
-uses analyzer-api  model theory analysis chain io realization reading
+uses analyzer-api  model theory analysis chain io realization reading common
 uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml common
 uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml common
 uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util common

@@ -186,8 +186,8 @@ static void test_motif(void) {
     AnalyzerTextExportMaterial material = {"motif", "motif-7", "Rising arch", 3, material_facts, 2, sections, 3, test_knowledge()};
 
     char *text = NULL;
-    AnalyzerStatus status = analyzer_text_export_material(&material, &text);
-    CHECKF(status == ANALYZER_OK && text, "motif export: status %d", (int)status);
+    UrsatzStatus status = analyzer_text_export_material(&material, &text, NULL);
+    CHECKF(status == URSATZ_OK && text, "motif export: status %d", (int)status);
     if (text) {
         CHECKF(strncmp(text, "# Ursatz export v2: motif\nname: Rising arch\nid: motif-7\nversion: 3\nrole: head\nmeter: 4/4\n",
                        strlen("# Ursatz export v2: motif\nname: Rising arch\nid: motif-7\nversion: 3\nrole: head\nmeter: 4/4\n")) == 0,
@@ -208,10 +208,10 @@ static void test_motif(void) {
     sections[0].segments = outside;
     sections[0].segment_count = 1;
     text = NULL;
-    CHECKF(analyzer_text_export_material(&material, &text) == ANALYZER_ERR_ARGUMENT && !text, "segment past the notes");
+    CHECKF(analyzer_text_export_material(&material, &text, NULL) == URSATZ_ERR_REQUEST && !text, "segment past the notes");
     AnalyzerTextExportSegment backwards[] = {{"x", 3, 1}};
     sections[0].segments = backwards;
-    CHECKF(analyzer_text_export_material(&material, &text) == ANALYZER_ERR_ARGUMENT && !text, "segment first > last");
+    CHECKF(analyzer_text_export_material(&material, &text, NULL) == URSATZ_ERR_REQUEST && !text, "segment first > last");
     sections[0].segments = segments;
     sections[0].segment_count = 2;
 
@@ -222,8 +222,8 @@ static void test_motif(void) {
     }
     material.sections = many;
     material.section_count = 7;
-    status = analyzer_text_export_material(&material, &text);
-    CHECKF(status == ANALYZER_OK && text, "motif with 6 variants: status %d", (int)status);
+    status = analyzer_text_export_material(&material, &text, NULL);
+    CHECKF(status == URSATZ_OK && text, "motif with 6 variants: status %d", (int)status);
     if (text) {
         CHECKF(strlen(text) < MATERIAL_BYTES_MOTIF_WITH_VARIANTS, "motif with 6 variants is %zu bytes", strlen(text));
         free(text);
@@ -251,8 +251,8 @@ static void test_theme(void) {
     };
     AnalyzerTextExportMaterial material = {"theme", "theme-3", "Opening theme", 2, material_facts, 3, sections, 3, test_knowledge()};
     char *text = NULL;
-    AnalyzerStatus status = analyzer_text_export_material(&material, &text);
-    CHECKF(status == ANALYZER_OK && text, "theme export: status %d", (int)status);
+    UrsatzStatus status = analyzer_text_export_material(&material, &text, NULL);
+    CHECKF(status == URSATZ_OK && text, "theme export: status %d", (int)status);
     if (text) {
         CHECKF(strncmp(text, "# Ursatz export v2: theme\n", 26) == 0, "theme header");
         CHECKF(strstr(text, "\n## theme\n") && strstr(text, "\n## slot 1: Rising arch v1\n") &&
@@ -270,8 +270,8 @@ static void test_theme(void) {
     sections[0].fact_count = 1;
     material.section_count = 1;
     text = NULL;
-    status = analyzer_text_export_material(&material, &text);
-    CHECKF(status == ANALYZER_OK && text, "uncomposed theme: status %d", (int)status);
+    status = analyzer_text_export_material(&material, &text, NULL);
+    CHECKF(status == URSATZ_OK && text, "uncomposed theme: status %d", (int)status);
     if (text) {
         CHECKF(strstr(text, "\n## theme\nwhy: no plan\nnot composed\n") != NULL, "not composed:\n%s", text);
         CHECKF(strstr(text, "\nm1") == NULL, "no measures for a section with no MusicXML");
@@ -297,8 +297,8 @@ static void test_piece(void) {
     };
     AnalyzerTextExportMaterial material = {"piece", "piece-2", "Night piece", 4, material_facts, 2, sections, 2, test_knowledge()};
     char *text = NULL;
-    AnalyzerStatus status = analyzer_text_export_material(&material, &text);
-    CHECKF(status == ANALYZER_OK && text, "piece export: status %d", (int)status);
+    UrsatzStatus status = analyzer_text_export_material(&material, &text, NULL);
+    CHECKF(status == URSATZ_OK && text, "piece export: status %d", (int)status);
     if (text) {
         CHECKF(strncmp(text, "# Ursatz export v2: piece\n", 26) == 0, "piece header");
         CHECKF(strstr(text, "\n## loop\n") && strstr(text, "\n## ending\n"), "piece sections");
@@ -313,11 +313,11 @@ static void test_piece(void) {
 static void test_material_refusals(void) {
     char *text = NULL;
     AnalyzerTextExportMaterial no_kind = {NULL, "id", "name", 1, NULL, 0, NULL, 0, test_knowledge()};
-    CHECKF(analyzer_text_export_material(NULL, &text) == ANALYZER_ERR_ARGUMENT, "NULL material");
-    CHECKF(analyzer_text_export_material(&no_kind, &text) == ANALYZER_ERR_ARGUMENT && !text, "NULL kind");
+    CHECKF(analyzer_text_export_material(NULL, &text, NULL) == URSATZ_ERR_REQUEST, "NULL material");
+    CHECKF(analyzer_text_export_material(&no_kind, &text, NULL) == URSATZ_ERR_REQUEST && !text, "NULL kind");
     AnalyzerTextExportMaterial empty = {"motif", "id", "name", 1, NULL, 0, NULL, 0, test_knowledge()};
-    CHECKF(analyzer_text_export_material(&empty, NULL) == ANALYZER_ERR_ARGUMENT, "NULL text");
-    CHECKF(analyzer_text_export_material(&empty, &text) == ANALYZER_OK && text &&
+    CHECKF(analyzer_text_export_material(&empty, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL text");
+    CHECKF(analyzer_text_export_material(&empty, &text, NULL) == URSATZ_OK && text &&
                strncmp(text, "# Ursatz export v2: motif\nname: name\nid: id\nversion: 1\n", 53) == 0,
            "material with no sections");
     free(text);
@@ -325,11 +325,11 @@ static void test_material_refusals(void) {
 
     AnalyzerTextExportSection no_label = {NULL, NULL, NULL, 0, NULL, 0};
     AnalyzerTextExportMaterial unlabelled = {"motif", "id", "name", 1, NULL, 0, &no_label, 1, test_knowledge()};
-    CHECKF(analyzer_text_export_material(&unlabelled, &text) == ANALYZER_ERR_ARGUMENT && !text, "NULL section label");
+    CHECKF(analyzer_text_export_material(&unlabelled, &text, NULL) == URSATZ_ERR_REQUEST && !text, "NULL section label");
 
     AnalyzerTextExportSection garbage = {"bad", "this is not music", NULL, 0, NULL, 0};
     AnalyzerTextExportMaterial bad = {"motif", "id", "name", 1, NULL, 0, &garbage, 1, test_knowledge()};
-    CHECKF(analyzer_text_export_material(&bad, &text) == ANALYZER_ERR_LIBRARY && !text, "section that is not music");
+    CHECKF(analyzer_text_export_material(&bad, &text, NULL) == URSATZ_ERR_INTERNAL && !text, "section that is not music");
 }
 
 int main(void) {

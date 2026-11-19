@@ -1,6 +1,7 @@
 #ifndef URSATZ_ANALYZER_MOTIVE_LINKS_H
 #define URSATZ_ANALYZER_MOTIVE_LINKS_H
 
+#include <common/status.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -27,15 +28,6 @@
 typedef struct MotiveLinkScope MotiveLinkScope;
 typedef struct MotiveLinkCache MotiveLinkCache;
 
-typedef enum {
-    MOTIVE_LINKS_OK = 0,
-    MOTIVE_LINKS_ERR_ARGUMENT,    /* a NULL argument, an option out of range, or a piece id added twice */
-    MOTIVE_LINKS_ERR_IO,          /* a file could not be read */
-    MOTIVE_LINKS_ERR_FORMAT,      /* not an analysis document of schema version 13, a corpus index or a cache file */
-    MOTIVE_LINKS_ERR_NO_FEATURES, /* a motive family without features: analyze the piece again */
-    MOTIVE_LINKS_ERR_ALLOC
-} MotiveLinksResult;
-
 /*
  * An empty scope that reads the materials of the documents it adds from knowledge. The snapshot is borrowed and must outlive the
  * scope: a family's sketch points to its material. NULL for a NULL snapshot or on allocation failure.
@@ -46,15 +38,15 @@ void motive_link_scope_destroy(MotiveLinkScope *scope);
 /*
  * Adds the piece whose analysis document is json: every motive family's features become a sketch (the same one the
  * Analyzer fingerprints, motive_features_to_sketch). A piece without families is added with none. On any result other
- * than MOTIVE_LINKS_OK the scope is unchanged.
+ * than URSATZ_OK the scope is unchanged.
  */
-MotiveLinksResult motive_link_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json);
+UrsatzStatus motive_link_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json);
 
 /*
  * Adds every analyzed piece of <output_dir>/corpus-index.json, in index order, with the index path as its piece id.
  * Stops at the first piece that fails and leaves the pieces before it in the scope.
  */
-MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const char *output_dir);
+UrsatzStatus motive_link_scope_add_corpus(MotiveLinkScope *scope, const char *output_dir);
 
 /*
  * The id of the piece the last failed motive_link_scope_add_document (or the piece add_corpus stopped at) was for, or
@@ -133,16 +125,16 @@ typedef struct {
  * nothing, so the next run empties it and says so). Save: written to <path>.tmp and renamed over path. The file
  * follows schema/motive-link-cache.v2.schema.json.
  */
-MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out);
-MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path);
+UrsatzStatus motive_link_cache_load(const char *path, MotiveLinkCache **out);
+UrsatzStatus motive_link_cache_save(const MotiveLinkCache *cache, const char *path);
 void motive_link_cache_destroy(MotiveLinkCache *cache);
 
 
 /*
  * Links the scope's families. cache may be NULL (nothing is kept between runs); otherwise it is read and new results are
- * added to it, in memory: the caller saves it. *out is written on MOTIVE_LINKS_OK only.
+ * added to it, in memory: the caller saves it. *out is written on URSATZ_OK only.
  */
-MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cache,
+UrsatzStatus motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cache,
                                    const MotiveLinksOptions *options, MotiveLinks *out);
 
 void motive_links_destroy(MotiveLinks *links);
@@ -151,6 +143,6 @@ void motive_links_destroy(MotiveLinks *links);
  * The links as JSON text (schema/motive-links.v1.schema.json), formatted, with a final newline, newly allocated
  * and freed with free(). The same links give the same bytes.
  */
-MotiveLinksResult motive_links_render(const MotiveLinks *links, char **out);
+UrsatzStatus motive_links_render(const MotiveLinks *links, char **out);
 
 #endif

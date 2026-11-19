@@ -35,7 +35,7 @@ typedef enum {
  * Exports version `version` of item `item_id` (0 is the current one) as text. On OK, *text is newly allocated and
  * caller-owned (free() it). NOT_FOUND: no such item (any id the store does not hold) or version. REFUSED: the
  * Composer refused to render a motif; message holds its reason. FAILED: the Analyzer or the store failed; message is
- * "ANALYZER_ERR_ARGUMENT", "ANALYZER_ERR_LIBRARY" or a short reason. ALLOC: out of memory. message is empty for NOT_FOUND
+ * "URSATZ_ERR_REQUEST", "URSATZ_ERR_INTERNAL" or a short reason. ALLOC: out of memory. message is empty for NOT_FOUND
  * and OK.
  */
 UrsatzGuiMaterialExportResult ursatz_gui_material_export(const char *item_id, int version, char **text,

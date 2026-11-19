@@ -19,9 +19,9 @@ has no tempo map; its tempo is in `ImportedSource` (`tempo_declared`, `initial_q
 ImportedScore notes;
 AnalyzerPlayback playback;
 char *json = NULL;
-if (analyzer_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL, 0) == ANALYZER_OK &&
-    analyzer_playback_build(&notes, &playback) == ANALYZER_OK) {
-    if (analyzer_playback_to_json(&playback, &notes, &json) == ANALYZER_OK) {
+if (analyzer_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL, 0) == URSATZ_OK &&
+    analyzer_playback_build(&notes, &playback) == URSATZ_OK) {
+    if (analyzer_playback_to_json(&playback, &notes, &json) == URSATZ_OK) {
         /* send json, then free(json) */
     }
     analyzer_playback_destroy(&playback);
@@ -45,18 +45,18 @@ The JSON is `{"ok":true,"tempo_source":s,"tempo":[{"at":[n,d],"qpm":q}],"parts":
 "end":[n,d],"notes":[{"i":i,"on":[n,d],"len":[n,d],"pitch":m,"part":p}]}`. `parts` lists the parts that have a note; the
 name is the MusicXML part name, empty for a MIDI file.
 
-| `AnalyzerStatus` | Meaning |
+| `UrsatzStatus` | Meaning |
 | --- | --- |
-| `ANALYZER_ERR_ARGUMENT` | A NULL argument, or a MIDI import with no tempo map. |
-| `ANALYZER_ERR_LIBRARY` | A tempo region the library cannot read, or a time that does not fit. |
-| `ANALYZER_ERR_ALLOC` | Out of memory. |
+| `URSATZ_ERR_REQUEST` | A NULL argument, or a MIDI import with no tempo map. |
+| `URSATZ_ERR_INTERNAL` | A tempo region the library cannot read, or a time that does not fit. |
+| `URSATZ_ERR_ALLOC` | Out of memory. |
 
 ## Score export
 
 `<ursatz_analyzer/score_export.h>`: `analyzer_score_export_musicxml(&notes, &xml)` writes the imported notes as MusicXML
 3.1 (free with `free()`): parts with their General MIDI programs, staves, the source's own meter, key signatures in
 part 0, times quantized to notated values. Tempo markings, dynamics, the title and the composer are not written; the
-GUI keeps the last two with the piece. `ANALYZER_ERR_LIBRARY` when the library cannot write the score.
+GUI keeps the last two with the piece. `URSATZ_ERR_INTERNAL` when the library cannot write the score.
 
 ### Note ids and defaulted meter
 

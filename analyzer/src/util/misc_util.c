@@ -17,3 +17,10 @@ int size_compare(const void *left, const void *right) {
     size_t b = *(const size_t *)right;
     return a < b ? -1 : (a > b ? 1 : 0);
 }
+
+UrsatzStatus analyzer_status_error(UrsatzError *error, UrsatzStatus status, const char *what) {
+    if (status != URSATZ_OK) {
+        ursatz_error_set(error, status, "", "%s failed: %s", what, ursatz_status_name(status));
+    }
+    return status;
+}

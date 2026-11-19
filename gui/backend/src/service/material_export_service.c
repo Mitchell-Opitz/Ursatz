@@ -617,17 +617,17 @@ static UrsatzGuiMaterialExportResult write_text(Build *build, const char *kind, 
       .section_count = build->draft_count,
       .knowledge = ursatz_gui_knowledge(),
   };
-  AnalyzerStatus status = analyzer_text_export_material(&material, text);
+  UrsatzStatus status = analyzer_text_export_material(&material, text, NULL);
   free(sections);
-  if (status == ANALYZER_OK) {
+  if (status == URSATZ_OK) {
     return URSATZ_GUI_MATERIAL_EXPORT_OK;
   }
-  if (status == ANALYZER_ERR_ALLOC) {
+  if (status == URSATZ_ERR_ALLOC) {
     return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
   }
   snprintf(build->message, sizeof(build->message), "%s",
-           status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT" : "ANALYZER_ERR_LIBRARY");
-  fprintf(stderr, "ursatz_gui_material_export: analyzer_text_export_material failed for item '%s' with AnalyzerStatus=%d\n", id,
+           status == URSATZ_ERR_REQUEST ? "URSATZ_ERR_REQUEST" : "URSATZ_ERR_INTERNAL");
+  fprintf(stderr, "ursatz_gui_material_export: analyzer_text_export_material failed for item '%s' with UrsatzStatus=%d\n", id,
           (int)status);
   return URSATZ_GUI_MATERIAL_EXPORT_FAILED;
 }

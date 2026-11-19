@@ -34,23 +34,23 @@ static cJSON *document_json(DocBuild *build, const char *input_path, const Impor
     return document;
 }
 
-AnalyzerStatus analysis_document_build_from_reading(const char *path, const Reading *reading, const ImportedScore *score,
+UrsatzStatus analysis_document_build_from_reading(const char *path, const Reading *reading, const ImportedScore *score,
                                                     const KnowledgeSnapshot *knowledge, AnalysisDocument **out) {
     if (!out) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     const AnalysisChain *chain = reading ? reading_detail(reading) : NULL;
     if (!path || !score || !knowledge || !chain || (reading_source(reading)->stages & ANALYSIS_CHAIN_STAGE_PERCEPTION) != ANALYSIS_CHAIN_STAGE_PERCEPTION) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     DocBuild build = {false, {NULL, NULL, NULL, NULL}, reading};
     if (!common_practice_materials_resolve(knowledge, &build.materials, NULL, 0)) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     AnalysisDocument *document = malloc(sizeof(AnalysisDocument));
     if (!document) {
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     document->root = document_json(&build, path, score, analysis_chain_result(chain));
     if (document->root && build.overflowed) {
@@ -59,10 +59,10 @@ AnalyzerStatus analysis_document_build_from_reading(const char *path, const Read
     }
     if (!document->root) {
         free(document);
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     *out = document;
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 AnalysisDocument *analysis_document_build_from_result(const char *input_path, const AnalyzerResult *result) {
@@ -71,7 +71,7 @@ AnalysisDocument *analysis_document_build_from_result(const char *input_path, co
     }
     AnalysisDocument *document = NULL;
     if (analysis_document_build_from_reading(input_path, analyzer_result_reading(result), analyzer_result_notes(result),
-                                             analyzer_result_knowledge(result), &document) != ANALYZER_OK) {
+                                             analyzer_result_knowledge(result), &document) != URSATZ_OK) {
         return NULL;
     }
     return document;

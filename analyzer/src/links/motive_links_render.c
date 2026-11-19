@@ -89,9 +89,9 @@ static cJSON *group_json(const MotiveLinkGroup *group) {
     return object;
 }
 
-MotiveLinksResult motive_links_render(const MotiveLinks *links, char **out) {
+UrsatzStatus motive_links_render(const MotiveLinks *links, char **out) {
     if (!links || !out) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     cJSON *root = cJSON_CreateObject();
@@ -116,18 +116,18 @@ MotiveLinksResult motive_links_render(const MotiveLinks *links, char **out) {
     char *text = ok ? cJSON_Print(root) : NULL;
     cJSON_Delete(root);
     if (!text) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     size_t length = strlen(text);
     char *result = malloc(length + 2);
     if (!result) {
         cJSON_free(text);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     memcpy(result, text, length);
     result[length] = '\n';
     result[length + 1] = '\0';
     cJSON_free(text);
     *out = result;
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }

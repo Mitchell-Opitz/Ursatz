@@ -24,11 +24,11 @@ typedef struct AnalysisDocument AnalysisDocument;
  * other area reads the chain's result itself. Only the basename of path is recorded. knowledge is the snapshot the chain ran with: the
  * labels of a notated key signature are spelled with its major and natural minor materials.
  *
- * ANALYZER_ERR_ARGUMENT for a NULL argument, a reading that holds no detail (one read from a file) or one whose chain did not run every
- * stage (its report view is empty), ANALYZER_ERR_ALLOC on allocation failure. On ANALYZER_OK *out is a document the caller releases
+ * URSATZ_ERR_REQUEST for a NULL argument, a reading that holds no detail (one read from a file) or one whose chain did not run every
+ * stage (its report view is empty), URSATZ_ERR_ALLOC on allocation failure. On URSATZ_OK *out is a document the caller releases
  * with analysis_document_destroy; it references none of the arguments after returning, and is NULL on any other status.
  */
-AnalyzerStatus analysis_document_build_from_reading(const char *path, const Reading *reading, const ImportedScore *score,
+UrsatzStatus analysis_document_build_from_reading(const char *path, const Reading *reading, const ImportedScore *score,
                                                     const KnowledgeSnapshot *knowledge, AnalysisDocument **out);
 
 /*

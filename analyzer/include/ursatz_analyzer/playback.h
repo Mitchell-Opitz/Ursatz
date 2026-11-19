@@ -47,11 +47,11 @@ typedef struct {
 
 /*
  * Builds the playback of an import (input_pipeline_import_file or a pipeline import: a MIDI import carries its tempo
- * map, B4). ANALYZER_OK fills *out, which the caller releases with analyzer_playback_destroy; any other status leaves it
- * zeroed. ANALYZER_ERR_ARGUMENT for a NULL argument or a MIDI import with no tempo map; ANALYZER_ERR_LIBRARY for a tempo
- * region the library cannot read or a time that does not fit; ANALYZER_ERR_ALLOC.
+ * map, B4). URSATZ_OK fills *out, which the caller releases with analyzer_playback_destroy; any other status leaves it
+ * zeroed. URSATZ_ERR_REQUEST for a NULL argument or a MIDI import with no tempo map; URSATZ_ERR_INTERNAL for a tempo
+ * region the library cannot read or a time that does not fit; URSATZ_ERR_ALLOC.
  */
-AnalyzerStatus analyzer_playback_build(const ImportedScore *notes, AnalyzerPlayback *out);
+UrsatzStatus analyzer_playback_build(const ImportedScore *notes, AnalyzerPlayback *out);
 
 /* Releases a playback and zeroes it. NULL is a no-op. */
 void analyzer_playback_destroy(AnalyzerPlayback *playback);
@@ -61,8 +61,8 @@ void analyzer_playback_destroy(AnalyzerPlayback *playback);
  * "parts":[{"index":i,"name":s,"program":0}],"end":[num,den],"notes":[{"i":i,"on":[num,den],"len":[num,den],
  * "pitch":m,"part":p}]}. Positions are [numerator, denominator] pairs in whole notes. parts lists each part that has a
  * note, by index; the name is the MusicXML part name, empty for a MIDI file. notes is the ImportedScore the playback was
- * built from. On ANALYZER_OK *out is a string the caller frees with free(); otherwise *out is NULL.
+ * built from. On URSATZ_OK *out is a string the caller frees with free(); otherwise *out is NULL.
  */
-AnalyzerStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedScore *notes, char **out);
+UrsatzStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedScore *notes, char **out);
 
 #endif

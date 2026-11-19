@@ -109,28 +109,28 @@ static bool fraction_member(const cJSON *object, const char *name, Rational *out
            rational_make(n, d, out) == RATIONAL_OK;
 }
 
-AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, AnalyzerChord **out, size_t *count) {
+UrsatzStatus analyzer_chord_sequence_from_document(const char *document_json, AnalyzerChord **out, size_t *count) {
     if (!out || !count) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     *count = 0;
     if (!document_json) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     cJSON *document = cJSON_Parse(document_json);
     long long version;
     if (!document || !common_json_long(document, "schema_version", &version) ||
         version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
-    AnalyzerStatus status = chord_sequence_from_tree(document, out, count);
+    UrsatzStatus status = chord_sequence_from_tree(document, out, count);
     cJSON_Delete(document);
     return status;
 }
 
-AnalyzerStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **out, size_t *count) {
+UrsatzStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **out, size_t *count) {
     *out = NULL;
     *count = 0;
     const cJSON *entries = common_json_member(document, "chords");
@@ -139,7 +139,7 @@ AnalyzerStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **o
     if (joiner.capacity > 0) {
         joiner.chords = malloc(joiner.capacity * sizeof *joiner.chords);
         if (!joiner.chords) {
-            return ANALYZER_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
     }
     size_t index = 0;
@@ -158,16 +158,16 @@ AnalyzerStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **o
         if (!fraction_member(common_json_member(entry, "span"), "start", &start) ||
             !fraction_member(common_json_member(entry, "span"), "end", &end)) {
             joiner_fail(&joiner);
-            return ANALYZER_ERR_ARGUMENT;
+            return URSATZ_ERR_REQUEST;
         }
         if (joiner_add(&joiner, index, base->valuestring, root_name->valuestring, region, start, end) != JOIN_OK) {
             joiner_fail(&joiner);
-            return ANALYZER_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
         index++;
     }
     joiner_finish(&joiner, out, count);
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 void analyzer_chord_sequence_free(AnalyzerChord *chords, size_t count) {

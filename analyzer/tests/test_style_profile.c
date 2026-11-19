@@ -39,7 +39,7 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
     CorpusRunOptions options = {input, output, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK, "%s run failed", name);
+    CHECKF(corpus_run(&options, &summary) == URSATZ_OK, "%s run failed", name);
     CHECKF(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,
            summary.failed);
     StyleProfile *profile = style_profile_create();

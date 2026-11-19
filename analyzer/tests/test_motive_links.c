@@ -52,7 +52,7 @@ static bool analyze_fixtures(void) {
 static MotiveLinkScope *scope_of(size_t count) {
     MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     for (size_t i = 0; scope && i < count; i++) {
-        CHECK(motive_link_scope_add_document(scope, piece_ids[i], documents[i]) == MOTIVE_LINKS_OK);
+        CHECK(motive_link_scope_add_document(scope, piece_ids[i], documents[i]) == URSATZ_OK);
     }
     return scope;
 }
@@ -135,12 +135,12 @@ static void on_progress(size_t done, size_t total, void *context) {
 
 static void check_scope_errors(void) {
     MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
-    CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == MOTIVE_LINKS_OK);
-    CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == MOTIVE_LINKS_ERR_ARGUMENT);
-    CHECK(motive_link_scope_add_document(scope, "x", "not json") == MOTIVE_LINKS_ERR_FORMAT);
+    CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == URSATZ_OK);
+    CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == URSATZ_ERR_REQUEST);
+    CHECK(motive_link_scope_add_document(scope, "x", "not json") == URSATZ_ERR_FORMAT);
     CHECK(motive_link_scope_add_document(scope, "x", "{\"schema_version\": 8, \"motives\": []}") ==
-          MOTIVE_LINKS_ERR_FORMAT);
-    CHECK(motive_link_scope_add_document(NULL, "x", documents[0]) == MOTIVE_LINKS_ERR_ARGUMENT);
+          URSATZ_ERR_FORMAT);
+    CHECK(motive_link_scope_add_document(NULL, "x", documents[0]) == URSATZ_ERR_REQUEST);
     CHECK(scope->piece_count == 1);
 
     /* a document written before features: the family has none */
@@ -150,15 +150,15 @@ static void check_scope_errors(void) {
     cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetArrayItem(motives, 0), "features");
     char *stripped = cJSON_PrintUnformatted(document);
     cJSON_Delete(document);
-    CHECK(motive_link_scope_add_document(scope, "b.musicxml", stripped) == MOTIVE_LINKS_ERR_NO_FEATURES);
+    CHECK(motive_link_scope_add_document(scope, "b.musicxml", stripped) == URSATZ_ERR_UNSATISFIABLE);
     CHECK(strcmp(motive_link_scope_failed_piece(scope), "b.musicxml") == 0);
     CHECK(scope->piece_count == 1);
-    CHECK(motive_link_scope_add_document(scope, "b.musicxml", documents[1]) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_scope_add_document(scope, "b.musicxml", documents[1]) == URSATZ_OK);
     cJSON_free(stripped);
 
     /* a piece without motives is a piece without families */
     CHECK(motive_link_scope_add_document(scope, "empty", "{\"schema_version\": 13, \"motives\": []}") ==
-          MOTIVE_LINKS_OK);
+          URSATZ_OK);
     CHECK(scope->piece_count == 3);
     CHECK(scope->family_count == 2);
 
@@ -166,7 +166,7 @@ static void check_scope_errors(void) {
     motive_links_options_default(&options);
     options.candidates = 0;
     MotiveLinks links;
-    CHECK(motive_links_run(scope, NULL, &options, &links) == MOTIVE_LINKS_ERR_ARGUMENT);
+    CHECK(motive_links_run(scope, NULL, &options, &links) == URSATZ_ERR_REQUEST);
     motive_link_scope_destroy(scope);
 }
 
@@ -190,14 +190,14 @@ int main(void) {
     CHECK(scope->piece_count == 3);
     CHECK(scope->family_count == 3);
     MotiveLinkCache *cache = NULL;
-    CHECK(motive_link_cache_load(cache_path, &cache) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_cache_load(cache_path, &cache) == URSATZ_OK);
     CHECK(cache->count == 0);
     MotiveLinksOptions options;
     motive_links_options_default(&options);
     options.progress = on_progress;
     options.progress_context = &progress_calls;
     MotiveLinks first;
-    CHECK(motive_links_run(scope, cache, &options, &first) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_run(scope, cache, &options, &first) == URSATZ_OK);
     CHECK(first.pieces == 3);
     CHECK(first.pairs == 1 && first.compared == 1 && first.cached == 0 && !first.cache_reset);
     CHECK(progress_calls == 2 && progress_last_done == 1 && progress_last_total == 1);
@@ -220,9 +220,9 @@ int main(void) {
     CHECK(strcmp(first.groups[0].members[1].piece, "b.musicxml") == 0);
 
     char *first_json = NULL;
-    CHECK(motive_links_render(&first, &first_json) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_render(&first, &first_json) == URSATZ_OK);
     char *first_json_again = NULL;
-    CHECK(motive_links_render(&first, &first_json_again) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_render(&first, &first_json_again) == URSATZ_OK);
     CHECK(first_json && first_json_again && strcmp(first_json, first_json_again) == 0);
     cJSON *rendered = first_json ? cJSON_Parse(first_json) : NULL;
     CHECK(rendered != NULL);
@@ -233,13 +233,13 @@ int main(void) {
     free(first_json_again);
 
     /* a second run with the saved cache compares nothing and gives the same links */
-    CHECK(motive_link_cache_save(cache, cache_path) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_cache_save(cache, cache_path) == URSATZ_OK);
     motive_link_cache_destroy(cache);
     cache = NULL;
-    CHECK(motive_link_cache_load(cache_path, &cache) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_cache_load(cache_path, &cache) == URSATZ_OK);
     CHECK(cache->count == 1);
     MotiveLinks second;
-    CHECK(motive_links_run(scope, cache, &options, &second) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_run(scope, cache, &options, &second) == URSATZ_OK);
     CHECK(second.pairs == 1 && second.compared == 0 && second.cached == 1 && !second.cache_reset);
     CHECK(second.link_count == 1 && second.group_count == 1);
     const MotiveLinkFound *again = link_between(&second, "a.musicxml", "b.musicxml");
@@ -252,7 +252,7 @@ int main(void) {
     /* adding d compares only the pairs with d's family, and links it into the group */
     scope = scope_of(4);
     MotiveLinks third;
-    CHECK(motive_links_run(scope, cache, &options, &third) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_run(scope, cache, &options, &third) == URSATZ_OK);
     CHECK(third.pairs == 3 && third.cached == 1 && third.compared == 2);
     CHECK(third.link_count == 3);
     const MotiveLinkFound *ad = link_between(&third, "a.musicxml", "d.musicxml");
@@ -271,7 +271,7 @@ int main(void) {
     motive_links_destroy(&third);
 
     /* another analyzer version empties the cache */
-    CHECK(motive_link_cache_save(cache, cache_path) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_cache_save(cache, cache_path) == URSATZ_OK);
     motive_link_cache_destroy(cache);
     cache = NULL;
     char *saved = test_read_file(cache_path, NULL);
@@ -284,12 +284,12 @@ int main(void) {
         CHECK(test_write_file(cache_path, saved, strlen(saved)));
     }
     free(saved);
-    CHECK(motive_link_cache_load(cache_path, &cache) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_cache_load(cache_path, &cache) == URSATZ_OK);
     MotiveLinks reset;
-    CHECK(motive_links_run(scope, cache, &options, &reset) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_run(scope, cache, &options, &reset) == URSATZ_OK);
     CHECK(reset.cache_reset && reset.compared == reset.pairs && reset.cached == 0 && reset.pairs == 3);
     MotiveLinks settled;
-    CHECK(motive_links_run(scope, cache, &options, &settled) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_run(scope, cache, &options, &settled) == URSATZ_OK);
     CHECK(!settled.cache_reset && settled.compared == 0);
     motive_links_destroy(&settled);
     motive_links_destroy(&reset);
@@ -298,13 +298,13 @@ int main(void) {
     MotiveLinksOptions shallower = options;
     shallower.link.max_depth = 1;
     MotiveLinks shallow;
-    CHECK(motive_links_run(scope, cache, &shallower, &shallow) == MOTIVE_LINKS_OK);
+    CHECK(motive_links_run(scope, cache, &shallower, &shallow) == URSATZ_OK);
     CHECK(shallow.cache_reset && shallow.compared == shallow.pairs);
     CHECK(shallow.link_count == 2); /* a-b (augment) and a-d (invert) are single steps; b-d needs two */
     motive_links_destroy(&shallow);
 
     /* a cache of schema version 1 (keyed by ursatz_commit) loads as an empty cache and is emptied by the next run */
-    CHECK(motive_link_cache_save(cache, cache_path) == MOTIVE_LINKS_OK);
+    CHECK(motive_link_cache_save(cache, cache_path) == URSATZ_OK);
     char *current = test_read_file(cache_path, NULL);
     char *version_at = current ? strstr(current, "\"schema_version\":\t2") : NULL;
     CHECK(version_at != NULL);
@@ -314,10 +314,10 @@ int main(void) {
     }
     free(current);
     MotiveLinkCache *older = NULL;
-    CHECK(motive_link_cache_load(cache_path, &older) == MOTIVE_LINKS_OK && older != NULL);
+    CHECK(motive_link_cache_load(cache_path, &older) == URSATZ_OK && older != NULL);
     if (older) {
         MotiveLinks restarted;
-        CHECK(motive_links_run(scope, older, &options, &restarted) == MOTIVE_LINKS_OK);
+        CHECK(motive_links_run(scope, older, &options, &restarted) == URSATZ_OK);
         CHECK(restarted.cache_reset && restarted.compared == restarted.pairs && restarted.cached == 0);
         motive_links_destroy(&restarted);
         motive_link_cache_destroy(older);
@@ -327,7 +327,7 @@ int main(void) {
     const char *other_schema = "{\"schema\": \"other\"}";
     CHECK(test_write_file(cache_path, other_schema, strlen(other_schema)));
     MotiveLinkCache *refused = NULL;
-    CHECK(motive_link_cache_load(cache_path, &refused) == MOTIVE_LINKS_ERR_FORMAT && refused == NULL);
+    CHECK(motive_link_cache_load(cache_path, &refused) == URSATZ_ERR_FORMAT && refused == NULL);
 
     motive_link_cache_destroy(cache);
     motive_link_scope_destroy(scope);

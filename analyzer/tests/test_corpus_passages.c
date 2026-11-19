@@ -64,7 +64,7 @@ static bool make_corpus(const char *name, char *corpus, size_t size) {
     free(data);
     CorpusRunOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    return corpus_run(&run, &summary) == CORPUS_RUN_OK && summary.analyzed == 1;
+    return corpus_run(&run, &summary) == URSATZ_OK && summary.analyzed == 1;
 }
 
 static bool ascending(const AnalyzerCorpusPassage *passage) {
@@ -109,7 +109,7 @@ static void test_search(const char *corpus) {
     CHECK(write_motive_midi(passage_file));
 
     AnalyzerCorpusPassages like;
-    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &like) == ANALYZER_PASSAGES_OK,
+    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &like) == URSATZ_OK,
            "the numerals search failed");
     check_passages("numerals", &like);
     size_t all = like.count;
@@ -120,13 +120,13 @@ static void test_search(const char *corpus) {
     CHECK(like.passages == NULL && like.count == 0);
 
     AnalyzerCorpusPassages cut;
-    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 1, &cut) == ANALYZER_PASSAGES_OK && cut.count == 1 && all >= 1,
+    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 1, &cut) == URSATZ_OK && cut.count == 1 && all >= 1,
            "max 1 gives %zu of %zu", cut.count, all);
     analyzer_corpus_passages_destroy(&cut);
 
     AnalyzerCorpusPassages motive;
-    AnalyzerPassagesStatus status = analyzer_corpus_passages_like(corpus, test_knowledge(), passage_file, 10, &motive);
-    CHECKF(status == ANALYZER_PASSAGES_OK && motive.count <= 10, "the passage search gives status %d", (int)status);
+    UrsatzStatus status = analyzer_corpus_passages_like(corpus, test_knowledge(), passage_file, 10, &motive);
+    CHECKF(status == URSATZ_OK && motive.count <= 10, "the passage search gives status %d", (int)status);
     if (motive.count > 0) {
         check_passages("passage", &motive);
     }
@@ -159,7 +159,7 @@ static void test_stale(const char *corpus) {
     cJSON_Delete(document);
 
     AnalyzerCorpusPassages stale;
-    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &stale) == ANALYZER_PASSAGES_OK && stale.count > 0,
+    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &stale) == URSATZ_OK && stale.count > 0,
            "a stale document is still searched");
     for (size_t i = 0; i < stale.count; i++) {
         CHECKF(stale.passages[i].stale, "passage %zu of a stale document is not marked stale", i);
@@ -169,7 +169,7 @@ static void test_stale(const char *corpus) {
 
 static void test_json(const char *corpus) {
     AnalyzerCorpusPassages passages;
-    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 2, &passages) == ANALYZER_PASSAGES_OK && passages.count > 0);
+    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 2, &passages) == URSATZ_OK && passages.count > 0);
     char *text = analyzer_corpus_passages_to_json(&passages);
     cJSON *array = text ? cJSON_Parse(text) : NULL;
     CHECK(cJSON_IsArray(array) && (size_t)cJSON_GetArraySize(array) == passages.count);
@@ -217,9 +217,9 @@ static void test_no_match(void) {
     CHECK(test_write_file(broken, "not a midi file", 15));
     CorpusRunOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    CHECK(corpus_run(&run, &summary) == CORPUS_RUN_OK && summary.analyzed == 0);
+    CHECK(corpus_run(&run, &summary) == URSATZ_OK && summary.analyzed == 0);
     AnalyzerCorpusPassages none;
-    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &none) == ANALYZER_PASSAGES_OK && none.count == 0 &&
+    CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &none) == URSATZ_OK && none.count == 0 &&
                none.passages == NULL,
            "an empty corpus is a result with no passage");
     analyzer_corpus_passages_destroy(&none);
@@ -229,17 +229,17 @@ static void test_refusals(const char *corpus) {
     AnalyzerCorpusPassages out;
     char passage_file[1200];
     snprintf(passage_file, sizeof passage_file, "%s/motive.mid", work_dir);
-    CHECK(analyzer_corpus_passages_like(corpus, test_knowledge(), "no-such-file.mid", 10, &out) == ANALYZER_PASSAGES_ERR_QUERY && out.count == 0);
-    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "not numerals", 10, &out) == ANALYZER_PASSAGES_ERR_QUERY);
-    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I", 10, &out) == ANALYZER_PASSAGES_ERR_QUERY);
-    CHECK(analyzer_corpus_passages_like("no-such-directory", test_knowledge(), passage_file, 10, &out) == ANALYZER_PASSAGES_ERR_CORPUS);
-    CHECK(analyzer_corpus_passages_numerals("no-such-directory", test_knowledge(), "I IV V I", 10, &out) == ANALYZER_PASSAGES_ERR_CORPUS);
-    CHECK(analyzer_corpus_passages_numerals(NULL, test_knowledge(), "I IV V I", 10, &out) == ANALYZER_PASSAGES_ERR_ARGUMENT);
-    CHECK(analyzer_corpus_passages_numerals(corpus, NULL, "I IV V I", 10, &out) == ANALYZER_PASSAGES_ERR_ARGUMENT);
-    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), NULL, 10, &out) == ANALYZER_PASSAGES_ERR_ARGUMENT);
-    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 0, &out) == ANALYZER_PASSAGES_ERR_ARGUMENT);
-    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 10, NULL) == ANALYZER_PASSAGES_ERR_ARGUMENT);
-    CHECK(analyzer_corpus_passages_like(corpus, test_knowledge(), NULL, 10, &out) == ANALYZER_PASSAGES_ERR_ARGUMENT);
+    CHECK(analyzer_corpus_passages_like(corpus, test_knowledge(), "no-such-file.mid", 10, &out) == URSATZ_ERR_REQUEST && out.count == 0);
+    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "not numerals", 10, &out) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I", 10, &out) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_like("no-such-directory", test_knowledge(), passage_file, 10, &out) == URSATZ_ERR_NOT_FOUND);
+    CHECK(analyzer_corpus_passages_numerals("no-such-directory", test_knowledge(), "I IV V I", 10, &out) == URSATZ_ERR_NOT_FOUND);
+    CHECK(analyzer_corpus_passages_numerals(NULL, test_knowledge(), "I IV V I", 10, &out) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_numerals(corpus, NULL, "I IV V I", 10, &out) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), NULL, 10, &out) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 0, &out) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 10, NULL) == URSATZ_ERR_REQUEST);
+    CHECK(analyzer_corpus_passages_like(corpus, test_knowledge(), NULL, 10, &out) == URSATZ_ERR_REQUEST);
     analyzer_corpus_passages_destroy(NULL);
 }
 
