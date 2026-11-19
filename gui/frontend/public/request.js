@@ -33,7 +33,95 @@
     return jsonRequest("POST", "/api/materials/items/validate", { type, body });
   }
 
-  const api = { jsonRequest, errorText, fieldForPath, validateRequest };
+  /*
+   * The versions the page has read (R-646). Every answer that holds an item (or a list of them) records its current version; a write to an item
+   * that has versions carries the one the page holds as base_version (in the JSON body, or in the query of a DELETE), so the workshop refuses it
+   * with the item's current version when another change got in since the page read it (409, "changed since you read it").
+   */
+  const knownVersions = new Map();
+
+  function rememberVersions(data) {
+    const items = [];
+    if (data && typeof data === "object") {
+      if (data.item && typeof data.item === "object") {
+        items.push(data.item);
+      }
+      if (Array.isArray(data.items)) {
+        items.push(...data.items);
+      }
+      if (typeof data.current_version === "number" && typeof data.id === "string") {
+        items.push(data);
+      }
+    }
+    for (const item of items) {
+      if (item && typeof item.id === "string" && Number.isInteger(item.current_version)) {
+        knownVersions.set(item.id, item.current_version);
+      }
+    }
+  }
+
+  function knownVersion(id) {
+    return knownVersions.has(id) ? knownVersions.get(id) : null;
+  }
+
+  function forgetVersions() {
+    knownVersions.clear();
+  }
+
+  /* The item a write changes the versions of, or null: PATCH and DELETE of an item, and the POSTs that save, compose, regenerate or choose a
+   * version, reanalyze, reroll, flag, promote, link a form or update a use. */
+  function writtenItemId(method, url) {
+    const match = /^\/api\/materials\/items\/([^/?]+)([^?]*)/.exec(String(url || ""));
+    if (!match || !match[1].includes("-")) {
+      return null;
+    }
+    const tail = match[2];
+    const verb = String(method || "GET").toUpperCase();
+    if (verb === "PATCH" || verb === "DELETE") {
+      return tail === "" ? decodeURIComponent(match[1]) : null;
+    }
+    if (verb !== "POST") {
+      return null;
+    }
+    const whole = ["/versions", "/compose", "/reanalyze", "/reroll", "/flag", "/promote", "/link-form"];
+    if (
+      whole.includes(tail) ||
+      /^\/uses\/[^/]+\/update$/.test(tail) ||
+      /^\/versions\/\d+\/regenerate$/.test(tail) ||
+      /^\/versions\/\d+\/variations\/\d+\/choose$/.test(tail)
+    ) {
+      return decodeURIComponent(match[1]);
+    }
+    return null;
+  }
+
+  /* The request with the version the page holds for the item it writes; a request for any other item, a request that gives base_version already
+   * and one for an item the page has not read go as they are. */
+  function withBaseVersion(request) {
+    const id = writtenItemId(request.method, request.url);
+    const version = id === null ? null : knownVersion(id);
+    if (version === null || String(request.url).includes("base_version=")) {
+      return request;
+    }
+    if (String(request.method).toUpperCase() === "DELETE") {
+      const joiner = String(request.url).includes("?") ? "&" : "?";
+      return { ...request, url: `${request.url}${joiner}base_version=${version}` };
+    }
+    let body = {};
+    if (typeof request.body === "string" && request.body !== "") {
+      try {
+        body = JSON.parse(request.body);
+      } catch (error) {
+        return request;
+      }
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body) || "base_version" in body) {
+      return request;
+    }
+    return { ...request, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, base_version: version }) };
+  }
+
+  const api = { jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions, withBaseVersion };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {

@@ -269,9 +269,19 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
             brief_summary = NULL;
             if (!new_body) {
                 result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
-            } else if (workshop_material_item_add_version_staged(id, new_body, note, stage.path, &item) != URSATZ_OK) {
-                workshop_error_text(error, "the version could not be written");
-                result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+            } else {
+                UrsatzStatus written = workshop_material_item_add_version_staged(id, new_body, note, stage.path, &item);
+                if (written == URSATZ_ERR_CONFLICT) {
+                    /* the item changed since the command was made (R-646): the refusal is the job's answer */
+                    const UrsatzError *refusal = workshop_last_error();
+                    if (error) {
+                        *error = *refusal;
+                    }
+                    result = workshop_fail_with(URSATZ_ERR_CONFLICT, refusal);
+                } else if (written != URSATZ_OK) {
+                    workshop_error_text(error, "the version could not be written");
+                    result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+                }
             }
         }
     }

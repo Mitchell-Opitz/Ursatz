@@ -982,7 +982,8 @@ static void test_update_uses(const Motifs *m) {
   free(theme);
 }
 
-/* Two composes of one theme may run at once; the staging folders keep both versions apart. */
+/* Two composes of one theme made against the same version may run at once; the staging folders keep them apart, and the one that writes
+ * second is refused (R-646: "changed since you read it") and leaves nothing behind. */
 static void test_concurrent(const Motifs *m) {
   int status = 0;
   int status_a = 0;
@@ -1003,19 +1004,21 @@ static void test_concurrent(const Motifs *m) {
   check(status_a == 202 && status_b == 202, "both composes are accepted as jobs at once");
   first = finish_job(first, &status_a);
   second = finish_job(second, &status_b);
-  check(status_a == 200 && status_b == 200, "both composes finish");
+  check((status_a == 200 && status_b == 409) || (status_a == 409 && status_b == 200),
+        "one compose finishes and the other is refused: it was made against a version that is no longer the current one");
+  check(strcmp(string_of(status_a == 409 ? first : second, "error"), "changed since you read it") == 0, "the refusal says so");
   cJSON_Delete(first);
   cJSON_Delete(second);
-  check(current_version(theme) == 3, "both versions are kept (version 3)");
+  check(current_version(theme) == 2, "one version was written (version 2)");
   bool all = true;
-  for (int version = 2; version <= 3; version++) {
+  for (int version = 2; version <= 2; version++) {
     static const char *const files[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
     for (size_t i = 0; i < 4; i++) {
       { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/%s", version, files[i]); item_file(theme, tail_, path, sizeof(path)); }
       all = all && test_file_exists(path);
     }
   }
-  check(all, "each version has its four files");
+  check(all, "the version has its four files");
   item_file(theme, "", path, sizeof(path));
   DIR *folder = opendir(path);
   bool clean = folder != NULL;

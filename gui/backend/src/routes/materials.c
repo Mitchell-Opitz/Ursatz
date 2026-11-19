@@ -79,9 +79,13 @@ static int handle_patch_item(struct mg_connection *conn, const char *id) {
 
 static int handle_delete_item(struct mg_connection *conn, const char *id) {
   char force[8];
+  char base[16];
   cJSON *params = cJSON_CreateObject();
   if (params && query_value(conn, "force", force, sizeof(force))) {
     cJSON_AddStringToObject(params, "force", force);
+  }
+  if (params && query_value(conn, "base_version", base, sizeof(base))) {
+    cJSON_AddStringToObject(params, "base_version", base);
   }
   WorkshopReply reply;
   UrsatzError error = {{0}, {0}};
@@ -99,6 +103,18 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
     cJSON_AddItemToObject(object, "used_by", used_by);
     return ursatz_gui_send_object(conn, 409, object);
   }
+  if (status == URSATZ_ERR_CONFLICT && reply.json && cJSON_GetObjectItemCaseSensitive(reply.json, "current_version")) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *current = cJSON_DetachItemFromObjectCaseSensitive(reply.json, "current_version");
+    workshop_reply_destroy(&reply);
+    if (!object || !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", error.message)) {
+      cJSON_Delete(object);
+      cJSON_Delete(current);
+      return send_failure(conn, 500, "out of memory");
+    }
+    cJSON_AddItemToObject(object, "current_version", current);
+    return ursatz_gui_send_object(conn, 409, object);
+  }
   if (status != URSATZ_OK) {
     workshop_reply_destroy(&reply);
     return failed_material_cmd(conn, status, &error);
@@ -113,7 +129,7 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
 /* POST /api/materials/items/<id>/reanalyze: analyzes the current version of a motif again and saves the result as a
    new version (versions are never rewritten, R-130). A refusal writes nothing. */
 static int handle_reanalyze(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "item.reanalyze", id, NULL, NULL, failed_material_cmd, false);
+  return command_with_optional_body(conn, "item.reanalyze", id, failed_material_cmd);
 }
 
 static int handle_get_version(struct mg_connection *conn, const char *id, const char *number_text) {
@@ -231,8 +247,18 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
 
 
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
-  cJSON *params = cJSON_CreateObject();
+  int status = 0;
+  cJSON *params = NULL;
+  if (mg_get_request_info(conn)->content_length > 0) {
+    params = read_json_body(conn, &status);
+    if (!params) {
+      return status;
+    }
+  } else {
+    params = cJSON_CreateObject();
+  }
   if (params) {
+    cJSON_DeleteItemFromObjectCaseSensitive(params, "source_id");
     cJSON_AddStringToObject(params, "source_id", source_id);
   }
   return ursatz_gui_answer_command(conn, "item.update-use", id, params, NULL, failed_material_cmd, false);

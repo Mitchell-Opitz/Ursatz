@@ -57,15 +57,21 @@ async function sendJobRequest(request) {
   }
 }
 
-function sendMaterialsRequest(request) {
-  if (request.job) {
-    return sendJobRequest(request);
+/* Sends a materials request: a write to an item carries the version the page holds (ApiRequest.withBaseVersion), and every answer that holds
+ * an item records its current version. */
+async function sendMaterialsRequest(original) {
+  const request = ApiRequest.withBaseVersion(original);
+  const answer = request.job
+    ? await sendJobRequest(request)
+    : await fetchJsonResult(request.url, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+      });
+  if (answer && answer.ok) {
+    ApiRequest.rememberVersions(answer.data);
   }
-  return fetchJsonResult(request.url, {
-    method: request.method,
-    headers: request.headers,
-    body: request.body,
-  });
+  return answer;
 }
 
 function materialsViewActive() {

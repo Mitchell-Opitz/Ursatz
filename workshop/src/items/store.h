@@ -169,6 +169,9 @@ bool workshop_material_item_is_variant(const cJSON *body);
  */
 UrsatzStatus workshop_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body);
 
+/* The text of the refusal of a command made against a version that is no longer the current one (R-646). */
+#define WORKSHOP_CHANGED_SINCE_READ "changed since you read it"
+
 /* Renames the item. *out_item (may be NULL) is the updated item.json, caller-owned. */
 UrsatzStatus workshop_material_item_rename(const char *id, const char *name, cJSON **out_item);
 

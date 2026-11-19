@@ -1,5 +1,6 @@
 #include "test_http.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,11 +69,84 @@ static char *exchange_with(const char *port, const char *method, const char *pat
     return response;
 }
 
+/*
+ * The frontend sends the version it read with every write to an item that has versions (R-646). The route tests play the frontend: a write
+ * of that kind that does not give base_version gets the item's current version, read with a GET first (in the JSON body, or the query of a
+ * DELETE). A test of the refusal sends base_version itself, so it is left as given.
+ */
+static bool writes_with_base_version(const char *method, const char *path, char *id, size_t id_size) {
+    static const char kPrefix[] = "/api/materials/items/";
+    if (strncmp(path, kPrefix, sizeof(kPrefix) - 1) != 0 || strstr(path, "base_version") != NULL) {
+        return false;
+    }
+    const char *start = path + sizeof(kPrefix) - 1;
+    size_t length = strcspn(start, "/?");
+    if (length == 0 || length >= id_size || memchr(start, '-', length) == NULL) {
+        return false;
+    }
+    memcpy(id, start, length);
+    id[length] = '\0';
+    const char *rest = start + length;
+    if (strcmp(method, "PATCH") == 0 || strcmp(method, "DELETE") == 0) {
+        return *rest == '\0' || *rest == '?';
+    }
+    if (strcmp(method, "POST") != 0) {
+        return false;
+    }
+    static const char *const kTails[] = {"/versions", "/compose", "/reanalyze", "/reroll", "/flag", "/promote", "/link-form"};
+    for (size_t i = 0; i < sizeof(kTails) / sizeof(kTails[0]); i++) {
+        if (strcmp(rest, kTails[i]) == 0) {
+            return true;
+        }
+    }
+    size_t rest_length = strlen(rest);
+    return (strncmp(rest, "/uses/", 6) == 0 && rest_length > 7 && strcmp(rest + rest_length - 7, "/update") == 0) ||
+           (strncmp(rest, "/versions/", 10) == 0 && ((rest_length > 11 && strcmp(rest + rest_length - 11, "/regenerate") == 0) ||
+                                                      (rest_length > 7 && strcmp(rest + rest_length - 7, "/choose") == 0)));
+}
+
+/* The current version of item id, -1 when it has none (a request for an item that is not there goes through as it was). */
+static long current_version_of(const char *port, const char *id) {
+    char path[320];
+    snprintf(path, sizeof path, "/api/materials/items/%s", id);
+    char *response = exchange_with(port, "GET", path, "", "", 0);
+    cJSON *answer = response ? cJSON_Parse(test_http_body(response)) : NULL;
+    const cJSON *item = answer ? cJSON_GetObjectItemCaseSensitive(answer, "item") : NULL;
+    const cJSON *current = item ? cJSON_GetObjectItemCaseSensitive(item, "current_version") : NULL;
+    long version = cJSON_IsNumber(current) ? (long)current->valuedouble : -1;
+    cJSON_Delete(answer);
+    free(response);
+    return version;
+}
+
 char *test_http_exchange(const char *port, const char *method, const char *path, const char *content_type,
                          const char *body, size_t body_size) {
+    char id[128];
+    char with_path[1024];
+    char *with_body = NULL;
+    if (writes_with_base_version(method, path, id, sizeof id)) {
+        long version = current_version_of(port, id);
+        if (version >= 0) {
+            if (strcmp(method, "DELETE") == 0) {
+                snprintf(with_path, sizeof with_path, "%s%cbase_version=%ld", path, strchr(path, '?') ? '&' : '?', version);
+                path = with_path;
+            } else {
+                cJSON *object = body_size > 0 ? cJSON_Parse(body) : cJSON_CreateObject();
+                if (cJSON_IsObject(object) && !cJSON_HasObjectItem(object, "base_version")) {
+                    cJSON_AddNumberToObject(object, "base_version", (double)version);
+                    with_body = cJSON_PrintUnformatted(object);
+                    body = with_body;
+                    body_size = strlen(with_body);
+                }
+                cJSON_Delete(object);
+            }
+        }
+    }
     char headers[256];
     snprintf(headers, sizeof headers, "Content-Type: %s\r\n", content_type ? content_type : "application/json");
-    return exchange_with(port, method, path, headers, body, body_size);
+    char *response = exchange_with(port, method, path, headers, body, body_size);
+    free(with_body);
+    return response;
 }
 
 int test_http_status(const char *response) {

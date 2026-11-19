@@ -175,6 +175,14 @@ static inline int command_with_body(struct mg_connection *conn, const char *name
   return ursatz_gui_answer_command(conn, name, target, body, NULL, failed, false);
 }
 
+/* command_with_body for a command whose body is optional: no body is an empty one (the page sends the version it read in it). */
+static inline int command_with_optional_body(struct mg_connection *conn, const char *name, const char *target, UrsatzGuiFailureFn failed) {
+  if (mg_get_request_info(conn)->content_length <= 0) {
+    return ursatz_gui_answer_command(conn, name, target, cJSON_CreateObject(), NULL, failed, false);
+  }
+  return command_with_body(conn, name, target, failed);
+}
+
 /* The failures the material routes answer: the message shape for the store's own failures, the error shape (with the request path at
  * fault) for what is wrong with the request. */
 static inline int failed_material(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {

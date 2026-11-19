@@ -1,3 +1,5 @@
+#include "base/command_context.h"
+#include <common/files.h>
 #include "store_internal.h"
 #include "formats.h"
 #include "ids.h"
@@ -1047,6 +1049,19 @@ UrsatzStatus workshop_material_item_move(const char *id, const char *project_id,
  * header is set last, so a version a header names has everything.
  */
 UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage) {
+    /* A command made against a version of this item (base/command_context.h) writes only on top of it: a job that composes finds, when it
+     * comes to write, that another change got in first, and fails with the refusal a stale base version gets at submit. */
+    const WorkshopCommandContext *context = workshop_command_context();
+    if (context && context->base_version >= 0 && strcmp(context->target, id) == 0 && store_current_version_of(item) != context->base_version) {
+        UrsatzError refusal;
+        memset(&refusal, 0, sizeof(refusal));
+        snprintf(refusal.message, sizeof(refusal.message), "%s", WORKSHOP_CHANGED_SINCE_READ);
+        snprintf(refusal.path, sizeof(refusal.path), "/base_version");
+        if (stage) {
+            common_dir_remove(stage, NULL); /* the stage is gone on a failure of the commit too */
+        }
+        return workshop_fail_with(URSATZ_ERR_CONFLICT, &refusal);
+    }
     int number = store_current_version_of(item) + 1;
     const char *project = common_json_string(item, "project_id");
     char dir[PATH_BYTES];
@@ -1066,7 +1081,11 @@ UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     UrsatzStatus result = write_version_files_locked(pending, id, common_json_string(item, "type"), number, body, note);
-    return result == URSATZ_OK ? save_item_locked(txn, item) : result;
+    result = result == URSATZ_OK ? save_item_locked(txn, item) : result;
+    if (result == URSATZ_OK && context && context->base_version >= 0 && strcmp(context->target, id) == 0) {
+        workshop_command_context_set_base_version(number);
+    }
+    return result;
 }
 
 UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,

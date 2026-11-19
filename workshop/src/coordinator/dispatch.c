@@ -331,6 +331,36 @@ UrsatzStatus workshop_query(Workshop *workshop, const char *name, const cJSON *p
 
 /* --- commands -------------------------------------------------------------------------------------------------------------------- */
 
+/*
+ * A command that changes an item that has versions needs the version the caller read (base_version) and is refused with CONFLICT, "changed
+ * since you read it" and the current_version in the reply, when it is not the item's current one. An absent item is left to the handler. A
+ * job command is checked here, at submit, and again when it writes (items/store.c).
+ */
+static UrsatzStatus check_base_version(const WorkshopCall *call, WorkshopReply *reply, UrsatzError *error) {
+    if (call->target[0] == '\0') {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "the command needs a target");
+    }
+    cJSON *meta = NULL;
+    if (workshop_material_item_get(call->target, &meta, NULL) != URSATZ_OK) {
+        return URSATZ_OK; /* an item that is not there is the handler's to report: not found */
+    }
+    if (call->base_version < 0) {
+        cJSON_Delete(meta);
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/base_version", "base_version is required: the version you read");
+    }
+    const cJSON *current = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
+    long current_version = cJSON_IsNumber(current) ? (long)current->valuedouble : 0;
+    cJSON_Delete(meta);
+    if (current_version == call->base_version) {
+        return URSATZ_OK;
+    }
+    cJSON *object = workshop_reply_object(reply);
+    if (object) {
+        cJSON_AddNumberToObject(object, "current_version", (double)current_version);
+    }
+    return workshop_call_fail(error, URSATZ_ERR_CONFLICT, "/base_version", "%s", WORKSHOP_CHANGED_SINCE_READ);
+}
+
 UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const WorkshopBytes *bytes, WorkshopReply *reply,
                               UrsatzError *error) {
     if (reply) {
@@ -381,7 +411,15 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
     memset(&context, 0, sizeof(context));
     snprintf(context.command, sizeof(context.command), "%s", entry->name);
     snprintf(context.actor, sizeof(context.actor), "%s", actor->valuestring);
+    snprintf(context.target, sizeof(context.target), "%s", call.target);
     context.base_version = base_version;
+    if (entry->takes_base_version) {
+        UrsatzStatus refused = check_base_version(&call, reply, error);
+        if (refused != URSATZ_OK) {
+            cJSON_Delete(empty);
+            return refused;
+        }
+    }
     workshop_command_context_set(&context);
     workshop_command_context_set_last_seq(0);
     UrsatzStatus status = entry->handler(&call, reply, error);

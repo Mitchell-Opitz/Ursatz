@@ -20,6 +20,12 @@ const WorkshopCommandContext *workshop_command_context(void) {
     return t_has_context ? &t_context : NULL;
 }
 
+void workshop_command_context_set_base_version(long base_version) {
+    if (t_has_context) {
+        t_context.base_version = base_version;
+    }
+}
+
 void workshop_command_context_set_last_seq(long long seq) {
     t_last_seq = seq;
 }

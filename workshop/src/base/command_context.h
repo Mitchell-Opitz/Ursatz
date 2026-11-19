@@ -13,7 +13,8 @@
 typedef struct {
     char command[64];
     char actor[64];
-    long base_version; /* the version the caller read, -1 when it gave none */
+    char target[256];  /* the item the command is about, "" for none */
+    long base_version; /* the version of the target the caller read, -1 when it gave none */
 } WorkshopCommandContext;
 
 /* Sets this thread's context (a copy); NULL clears it. */
@@ -21,6 +22,10 @@ void workshop_command_context_set(const WorkshopCommandContext *context);
 
 /* This thread's context, NULL when none. */
 const WorkshopCommandContext *workshop_command_context(void);
+
+/* After a version of the target is written, the version the command works from is that one: a command that writes more than one (a compose that
+ * first moves the uses to their sources' newest versions) is not refused for its own first write. */
+void workshop_command_context_set_base_version(long base_version);
 
 /* The journal sequence number of the last transaction this thread committed (0 for none yet), and a way to forget it before a command. */
 void workshop_command_context_set_last_seq(long long seq);

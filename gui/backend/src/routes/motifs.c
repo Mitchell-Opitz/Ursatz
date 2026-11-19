@@ -92,7 +92,7 @@ int ursatz_gui_motifs_each_op(struct mg_connection *conn, const char *id) {
 /* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and stores the
    result as a new version. Runs on the job queue. */
 int ursatz_gui_motifs_reroll(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "item.reroll", id, NULL, NULL, failed_material_error, false);
+  return command_with_optional_body(conn, "item.reroll", id, failed_material_error);
 }
 
 /* POST .../items/<id>/{variants/save, flag, promote, link-form}: a body in, the item out. */

@@ -866,7 +866,15 @@ static cJSON *kept_brief_summary(const Source *source) {
 /* Writes new_body as the next version. */
 static UrsatzStatus add_version(const char *id, const cJSON *new_body, const char *note, const char *stage, cJSON **out_item,
                                         UrsatzError *error) {
-    if (workshop_material_item_add_version_staged(id, new_body, note, stage, out_item) != URSATZ_OK) {
+    UrsatzStatus written = workshop_material_item_add_version_staged(id, new_body, note, stage, out_item);
+    if (written == URSATZ_ERR_CONFLICT) {
+        const UrsatzError *refusal = workshop_last_error(); /* the item changed since the command was made (R-646) */
+        if (error) {
+            *error = *refusal;
+        }
+        return workshop_fail_with(URSATZ_ERR_CONFLICT, refusal);
+    }
+    if (written != URSATZ_OK) {
         workshop_error_text(error, "the version could not be written");
         return workshop_fail(URSATZ_ERR_INTERNAL, NULL);
     }
