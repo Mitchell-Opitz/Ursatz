@@ -72,7 +72,6 @@ library/realization/realization_json.c read_time_member  # no app calls it until
 library/realization/realization_json.c read_work  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
 library/realization/realization_json.c realization_work_from_json  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
 library/realization/realization_json.c refuse  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/reading/reading.c reading_set_target_digest  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/reading/reading_json.c bad  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/reading/reading_json.c child_index  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/reading/reading_json.c child_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
