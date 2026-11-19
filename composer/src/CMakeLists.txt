@@ -19,6 +19,11 @@ add_library(ursatz_composer STATIC
     api/api_variations.c
     api/api_piece_request.c
     api/api_piece.c
+    api/api_piece_compose.c
+    api/api_piece_json.c
+    api/api_piece_output.c
+    api/api_piece_regenerate.c
+    api/api_piece_rows.c
     api/api_piece_variations.c
     api/api_progression.c
     api/api_counterpoint.c
