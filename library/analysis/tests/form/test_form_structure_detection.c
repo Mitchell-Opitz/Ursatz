@@ -7,19 +7,14 @@
 #include "model/containers/section.h"
 #include "model/core/occurrence.h"
 #include "model/core/provenance_reference.h"
-#include "model/core/value.h"
 #include "model/identity/entity_id.h"
-#include "model/interpretation/interpretation.h"
-#include "model/interpretation/uncertainty.h"
-#include "model/relationship/relationship.h"
 #include "theory/vocabulary/cadence_type.h"
 #include "model/structure/phrase_occurrence.h"
-#include "relationship_test_access.h"
 
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,
  * and an input with no structural cadence among its entries is a valid,
- * empty Section / Relationship set (requirement 4 -- no
+ * empty Section / order set (requirement 4 -- no
  * detected form structure is legitimate, never forced).
  *
  * Analysis-regression test: a five-phrase sequence with a structural
@@ -28,7 +23,7 @@
  * only the first two are closed by a structural cadence and thus
  * reported (entries[4] trails with no closing cadence, so it is not
  * turned into a Section of its own, skip-don't-guess). Pins the resulting
- * Section (phrase_ids) and Relationship/Interpretation ("precedes")
+ * Section (phrase_ids) and order
  * shape against a future refactor.
  */
 
@@ -58,12 +53,11 @@ int main(void) {
     assert(empty_sections == NULL);
     assert(empty_section_count == 0);
 
-    Relationship **empty_relationships;
-    size_t empty_relationship_count;
-    assert(form_structure_detection_build_relationships(NULL, 0, &empty_relationships, &empty_relationship_count) ==
-           FORM_STRUCTURE_DETECTION_REL_OK);
-    assert(empty_relationships == NULL);
-    assert(empty_relationship_count == 0);
+    FormStructureOrder *empty_order;
+    size_t empty_order_count;
+    assert(form_structure_detection_order(NULL, 0, &empty_order, &empty_order_count) == FORM_STRUCTURE_DETECTION_OK);
+    assert(empty_order == NULL);
+    assert(empty_order_count == 0);
 
     /* Requirement 4: no structural cadence anywhere -> no boundary found, no output. */
     PhraseOccurrence *only_phrase = make_phrase_occurrence("phrase-occ-only", "phrase-only", "note-only");
@@ -126,18 +120,13 @@ int main(void) {
 
     form_structure_detection_destroy_sections(sections, section_count);
 
-    /* form_structure_detection_build_relationships mirrors the same single "precedes" link. */
-    Relationship **relationships;
-    size_t relationship_count;
-    assert(form_structure_detection_build_relationships(entries, 5, &relationships, &relationship_count) ==
-           FORM_STRUCTURE_DETECTION_REL_OK);
-    assert(relationship_count == 1);
-    assert(strcmp(entity_id_value(relationship_source_id(relationships[0])),
-                   "section-formstructure-phrase-occ-0-phrase-occ-1") == 0);
-    assert(strcmp(relationship_predicate_name(relationships[0]), "precedes") == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(relationships[0])),
-                   "section-formstructure-phrase-occ-2-phrase-occ-3") == 0);
-    form_structure_detection_destroy_relationships(relationships, relationship_count);
+    /* form_structure_detection_order gives the same single link: section 0 before section 1. */
+    FormStructureOrder *order;
+    size_t order_count;
+    assert(form_structure_detection_order(entries, 5, &order, &order_count) == FORM_STRUCTURE_DETECTION_OK);
+    assert(order_count == 1);
+    assert(order[0].earlier == 0 && order[0].later == 1);
+    free(order);
 
     phrase_occurrence_destroy(phrase0);
     phrase_occurrence_destroy(phrase1);

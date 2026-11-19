@@ -13,7 +13,6 @@
 #include <model/core/value.h>
 #include <model/identity/entity_id.h>
 #include <model/pitch/pitch_identity.h>
-#include <model/relationship/relationship.h>
 #include <analysis/notes/contour.h>
 #include <analysis/notes/rhythmic_pattern.h>
 #include <model/time/duration.h>
@@ -359,17 +358,6 @@ static ReturnHearResult add_skeleton(const Plan *plan, NodeId section, NodeId fi
     return status;
 }
 
-/* The index of the theme whose id is the entity's. */
-static bool theme_of(const Theme *themes, size_t count, const EntityID *id, size_t *out) {
-    for (size_t i = 0; i < count; i++) {
-        if (themes[i].id && entity_id_equals(themes[i].id, id)) {
-            *out = i;
-            return true;
-        }
-    }
-    return false;
-}
-
 /* Keeps the best similarity of the themes of a pair of sections. */
 static bool add_pair(ReturnHeard *out, size_t *capacity, const ReturnHeardPair *pair) {
     for (size_t i = 0; i < out->count; i++) {
@@ -403,8 +391,8 @@ ReturnHearResult return_hear_in(ComposerHearing *hearing, const Plan *plan, Retu
     size_t *entry_theme = calloc(MAX_THEMES, sizeof(size_t));
     size_t theme_count = 0;
     size_t entry_count = 0;
-    Relationship **relationships = NULL;
-    size_t relationship_count = 0;
+    ThematicReturnPair *found = NULL;
+    size_t found_count = 0;
     ReturnHearResult status = themes && entries && entry_theme ? RETURN_HEAR_OK : RETURN_HEAR_ERR_ALLOC;
 
     for (NodeId id = 1; status == RETURN_HEAR_OK && id <= plan_node_count(plan); id++) {
@@ -429,28 +417,18 @@ ReturnHearResult return_hear_in(ComposerHearing *hearing, const Plan *plan, Retu
         }
     }
     if (status == RETURN_HEAR_OK) {
-        ThematicReturnDetectionRelationshipResult built = thematic_return_detection_build_relationships_configured(
-            entries, entry_count, NULL, &relationships, &relationship_count);
-        status = built == THEMATIC_RETURN_DETECTION_REL_OK
+        ThematicReturnDetectionResult built =
+            thematic_return_detection_build_pairs_configured(entries, entry_count, NULL, &found, &found_count);
+        status = built == THEMATIC_RETURN_DETECTION_OK
                      ? RETURN_HEAR_OK
-                     : (built == THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC ? RETURN_HEAR_ERR_ALLOC
-                                                                           : RETURN_HEAR_ERR_ANALYSIS);
+                     : (built == THEMATIC_RETURN_DETECTION_ERR_ALLOC ? RETURN_HEAR_ERR_ALLOC : RETURN_HEAR_ERR_ANALYSIS);
     }
     size_t capacity = 0;
-    for (size_t r = 0; status == RETURN_HEAR_OK && r < relationship_count; r++) {
-        size_t later;
-        size_t earlier;
-        const Value *qualifiers = relationship_qualifiers(relationships[r]);
-        size_t size = 0;
-        const ThematicReturnSimilarity *evidence = qualifiers ? value_content(qualifiers, &size) : NULL;
-        if (!theme_of(themes, theme_count, relationship_source_id(relationships[r]), &later) ||
-            !theme_of(themes, theme_count, relationship_target_id(relationships[r]), &earlier) || !evidence ||
-            size != sizeof(*evidence)) {
-            status = RETURN_HEAR_ERR_ANALYSIS;
-            break;
-        }
-        ReturnHeardPair pair = {themes[earlier].section, themes[later].section, evidence->contour_score,
-                                evidence->rhythm_score, evidence->similarity};
+    for (size_t r = 0; status == RETURN_HEAR_OK && r < found_count; r++) {
+        size_t later = entry_theme[found[r].later];
+        size_t earlier = entry_theme[found[r].earlier];
+        ReturnHeardPair pair = {themes[earlier].section, themes[later].section, found[r].contour_score,
+                                found[r].rhythm_score, found[r].similarity};
         /* A skeleton is heard only against the skeleton of its own figured section; the figured section's pair with the
            section it returns is the skeletons', not the notes'. */
         NodeId source;
@@ -463,9 +441,7 @@ ReturnHearResult return_hear_in(ComposerHearing *hearing, const Plan *plan, Retu
             status = RETURN_HEAR_ERR_ALLOC;
         }
     }
-    if (relationships) {
-        thematic_return_detection_destroy_relationships(relationships, relationship_count);
-    }
+    free(found);
     for (size_t t = 0; themes && t < theme_count; t++) {
         theme_destroy(&themes[t]);
     }

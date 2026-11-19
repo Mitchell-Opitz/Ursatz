@@ -4,11 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/core/provenance_reference.h"
-#include "model/core/value.h"
 #include "model/identity/entity_id.h"
-#include "model/interpretation/interpretation.h"
-#include "model/interpretation/uncertainty.h"
 
 #define FORM_STRUCTURE_DETECTION_ID_MINT_BUFFER_SIZE 288
 
@@ -66,12 +62,6 @@ static bool section_span_id(const FormStructureDetectionEntry *entries, size_t s
     const char *first_value = entity_id_value(phrase_occurrence_id(entries[start].phrase_occurrence));
     const char *last_value = entity_id_value(phrase_occurrence_id(entries[end].phrase_occurrence));
     return make_id("section-formstructure", first_value, last_value, out);
-}
-
-static void destroy_partial_relationships(Relationship **relationships, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        relationship_destroy(relationships[i]);
-    }
 }
 
 static void destroy_partial_sections(Section **sections, size_t count) {
@@ -191,113 +181,39 @@ void form_structure_detection_destroy_sections(Section **sections, size_t sectio
     free(sections);
 }
 
-FormStructureDetectionRelationshipResult form_structure_detection_build_relationships(
-    const FormStructureDetectionEntry *entries, size_t entry_count, Relationship ***out_relationships,
-    size_t *out_relationship_count) {
+FormStructureDetectionSectionResult form_structure_detection_order(const FormStructureDetectionEntry *entries, size_t entry_count,
+                                                                    FormStructureOrder **out_pairs, size_t *out_pair_count) {
+    *out_pairs = NULL;
+    *out_pair_count = 0;
     if (entry_count > 0 && entries == NULL) {
-        return FORM_STRUCTURE_DETECTION_REL_ERR_NULL_ENTRIES;
+        return FORM_STRUCTURE_DETECTION_ERR_NULL_ENTRIES;
     }
     for (size_t i = 0; i < entry_count; i++) {
         if (entries[i].phrase_occurrence == NULL) {
-            return FORM_STRUCTURE_DETECTION_REL_ERR_NULL_ENTRY;
+            return FORM_STRUCTURE_DETECTION_ERR_NULL_ENTRY;
         }
     }
 
     size_t *boundaries;
     size_t boundary_count;
     if (!compute_boundaries(entries, entry_count, &boundaries, &boundary_count)) {
-        return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
+        return FORM_STRUCTURE_DETECTION_ERR_ALLOC;
     }
-
-    size_t link_count = boundary_count < 2 ? 0 : boundary_count - 1;
-    if (link_count == 0) {
-        free(boundaries);
-        *out_relationships = NULL;
-        *out_relationship_count = 0;
-        return FORM_STRUCTURE_DETECTION_REL_OK;
-    }
-
-    Relationship **relationships = (Relationship **)calloc(link_count, sizeof(Relationship *));
-    if (relationships == NULL) {
-        free(boundaries);
-        return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
-    }
-
-    size_t out_index = 0;
-    size_t previous_start = 0;
-    for (size_t s = 0; s + 1 < boundary_count; s++) {
-        size_t earlier_start = previous_start;
-        size_t earlier_end = boundaries[s];
-        size_t later_start = boundaries[s] + 1;
-        size_t later_end = boundaries[s + 1];
-        previous_start = later_start;
-
-        EntityID *earlier_section_id;
-        if (!section_span_id(entries, earlier_start, earlier_end, &earlier_section_id)) {
-            destroy_partial_relationships(relationships, out_index);
-            free(relationships);
-            free(boundaries);
-            return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
-        }
-        EntityID *later_section_id;
-        if (!section_span_id(entries, later_start, later_end, &later_section_id)) {
-            entity_id_destroy(earlier_section_id);
-            destroy_partial_relationships(relationships, out_index);
-            free(relationships);
-            free(boundaries);
-            return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
-        }
-
-        const char *earlier_value = entity_id_value(earlier_section_id);
-        const char *later_value = entity_id_value(later_section_id);
-
-        EntityID *relationship_id;
-        if (!make_id("relationship-formstructure-order", earlier_value, later_value, &relationship_id)) {
-            entity_id_destroy(later_section_id);
-            entity_id_destroy(earlier_section_id);
-            destroy_partial_relationships(relationships, out_index);
-            free(relationships);
-            free(boundaries);
-            return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
-        }
-        EntityID *source_id = earlier_section_id;
-        EntityID *target_id = later_section_id;
-
-        ProvenanceReference *provenance;
-        if (provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK) {
-            entity_id_destroy(target_id);
-            entity_id_destroy(source_id);
-            entity_id_destroy(relationship_id);
-            destroy_partial_relationships(relationships, out_index);
-            free(relationships);
-            free(boundaries);
-            return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
-        }
-
-        Relationship *relationship;
-        if (relationship_create(relationship_id, source_id, "precedes", target_id, NULL, NULL, NULL, NULL, NULL,
-                                 provenance, &relationship) != RELATIONSHIP_OK) {
-            destroy_partial_relationships(relationships, out_index);
-            free(relationships);
-            free(boundaries);
-            return FORM_STRUCTURE_DETECTION_REL_ERR_ALLOC;
-        }
-        relationships[out_index] = relationship;
-        out_index++;
-    }
-
     free(boundaries);
-    *out_relationships = relationships;
-    *out_relationship_count = out_index;
-    return FORM_STRUCTURE_DETECTION_REL_OK;
-}
 
-void form_structure_detection_destroy_relationships(Relationship **relationships, size_t relationship_count) {
-    if (relationships == NULL) {
-        return;
+    size_t pair_count = boundary_count < 2 ? 0 : boundary_count - 1;
+    if (pair_count == 0) {
+        return FORM_STRUCTURE_DETECTION_OK;
     }
-    for (size_t i = 0; i < relationship_count; i++) {
-        relationship_destroy(relationships[i]);
+    FormStructureOrder *pairs = (FormStructureOrder *)calloc(pair_count, sizeof(FormStructureOrder));
+    if (pairs == NULL) {
+        return FORM_STRUCTURE_DETECTION_ERR_ALLOC;
     }
-    free(relationships);
+    for (size_t s = 0; s < pair_count; s++) {
+        pairs[s].earlier = s;
+        pairs[s].later = s + 1;
+    }
+    *out_pairs = pairs;
+    *out_pair_count = pair_count;
+    return FORM_STRUCTURE_DETECTION_OK;
 }

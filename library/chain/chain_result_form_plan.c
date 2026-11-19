@@ -7,11 +7,9 @@
 #include "analysis/form/form_structure_detection.h"
 #include "analysis/form/thematic_return_detection.h"
 #include "model/containers/section.h"
-#include "model/core/value.h"
 #include "model/events/note_event.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_identity.h"
-#include "model/relationship/relationship.h"
 #include "theory/vocabulary/cadence_type.h"
 #include "analysis/notes/contour.h"
 #include "analysis/notes/rhythmic_pattern.h"
@@ -49,23 +47,18 @@ static void fill_section(AnalysisSection *section, const ChainResult *report, si
     }
 }
 
-/* The relationships "precedes" the kernel builds link its sections in order; they must agree with the sections. */
-static bool relationships_agree(const FormStructureDetectionEntry *entries, size_t entry_count, Section **sections,
-                                size_t section_count) {
-    Relationship **relationships = NULL;
-    size_t relationship_count = 0;
-    if (form_structure_detection_build_relationships(entries, entry_count, &relationships, &relationship_count) !=
-        FORM_STRUCTURE_DETECTION_REL_OK) {
+/* The order the kernel gives (each section before the next) must agree with the sections. */
+static bool order_agrees(const FormStructureDetectionEntry *entries, size_t entry_count, size_t section_count) {
+    FormStructureOrder *pairs = NULL;
+    size_t pair_count = 0;
+    if (form_structure_detection_order(entries, entry_count, &pairs, &pair_count) != FORM_STRUCTURE_DETECTION_OK) {
         return false;
     }
-    bool agree = relationship_count == (section_count > 0 ? section_count - 1 : 0);
-    for (size_t k = 0; agree && k < relationship_count; k++) {
-        agree = strcmp(entity_id_value(relationship_source_id(relationships[k])),
-                       entity_id_value(section_id(sections[k]))) == 0 &&
-                strcmp(entity_id_value(relationship_target_id(relationships[k])),
-                       entity_id_value(section_id(sections[k + 1]))) == 0;
+    bool agree = pair_count == (section_count > 0 ? section_count - 1 : 0);
+    for (size_t k = 0; agree && k < pair_count; k++) {
+        agree = pairs[k].earlier == k && pairs[k].later == k + 1;
     }
-    form_structure_detection_destroy_relationships(relationships, relationship_count);
+    free(pairs);
     return agree;
 }
 
@@ -84,7 +77,7 @@ static bool build_sections(const FormStage *stage, ChainResult *report) {
     size_t found_count = 0;
     bool ok = form_structure_detection_build_sections(entries, phrase_count, &found, &found_count) ==
                   FORM_STRUCTURE_DETECTION_OK &&
-              relationships_agree(entries, phrase_count, found, found_count);
+              order_agrees(entries, phrase_count, found_count);
     size_t covered = 0;
     size_t total = 0;
     if (ok) {
@@ -259,18 +252,6 @@ static size_t section_of_phrase(const ChainResult *report, size_t phrase) {
     return report->section_count;
 }
 
-static bool theme_index_of(const EntityID *id, size_t theme_count, size_t *index) {
-    const char *value = entity_id_value(id);
-    size_t prefix = strlen(THEME_ID_PREFIX);
-    if (strncmp(value, THEME_ID_PREFIX, prefix) != 0) {
-        return false;
-    }
-    char *end = NULL;
-    unsigned long parsed = strtoul(value + prefix, &end, 10);
-    *index = parsed;
-    return end && *end == '\0' && parsed < theme_count;
-}
-
 static int compare_returns(const void *a, const void *b) {
     const AnalysisThematicReturn *x = a;
     const AnalysisThematicReturn *y = b;
@@ -280,46 +261,33 @@ static int compare_returns(const void *a, const void *b) {
     return x->earlier_theme < y->earlier_theme ? -1 : (x->earlier_theme > y->earlier_theme ? 1 : 0);
 }
 
-/* Reads the returns of the kernel's relationships into the report, dropping those between themes that share a
-   phrase. */
-static bool collect_returns(Relationship **relationships, size_t relationship_count, ChainResult *report) {
-    AnalysisThematicReturn *returns = calloc(relationship_count > 0 ? relationship_count : 1, sizeof(*returns));
+/* Reads the returns of the kernel's pairs into the report, dropping those between themes that share a phrase. entry_theme[k] is the
+   theme of the kernel's entry k. */
+static bool collect_returns(const ThematicReturnPair *pairs, size_t pair_count, const size_t *entry_theme, ChainResult *report) {
+    AnalysisThematicReturn *returns = calloc(pair_count > 0 ? pair_count : 1, sizeof(*returns));
     if (!returns) {
         return false;
     }
     size_t count = 0;
-    for (size_t r = 0; r < relationship_count; r++) {
-        size_t later = 0;
-        size_t earlier = 0;
-        const Value *qualifiers = relationship_qualifiers(relationships[r]);
-        size_t size = 0;
-        const void *content = qualifiers && strcmp(value_type(qualifiers), THEMATIC_RETURN_SIMILARITY_VALUE_TYPE) == 0
-                                  ? value_content(qualifiers, &size)
-                                  : NULL;
-        if (!theme_index_of(relationship_source_id(relationships[r]), report->theme_count, &later) ||
-            !theme_index_of(relationship_target_id(relationships[r]), report->theme_count, &earlier) ||
-            !content || size != sizeof(ThematicReturnSimilarity)) {
-            free(returns);
-            return false;
-        }
+    for (size_t r = 0; r < pair_count; r++) {
+        size_t later = entry_theme[pairs[r].later];
+        size_t earlier = entry_theme[pairs[r].earlier];
         const AnalysisTheme *a = &report->themes[earlier];
         const AnalysisTheme *b = &report->themes[later];
         if (a->first_phrase + a->phrase_count > b->first_phrase) {
             continue;
         }
-        ThematicReturnSimilarity similarity;
-        memcpy(&similarity, content, sizeof(similarity));
         AnalysisThematicReturn *item = &returns[count++];
         item->earlier_theme = earlier;
         item->later_theme = later;
         item->earlier_section = section_of_phrase(report, a->first_phrase);
         item->later_section = section_of_phrase(report, b->first_phrase);
-        item->similarity = similarity.similarity;
-        item->contour_score = similarity.contour_score;
-        item->rhythm_score = similarity.rhythm_score;
-        item->earlier_offset = similarity.earlier_offset;
-        item->later_offset = similarity.later_offset;
-        item->window_length = similarity.window_length;
+        item->similarity = pairs[r].similarity;
+        item->contour_score = pairs[r].contour_score;
+        item->rhythm_score = pairs[r].rhythm_score;
+        item->earlier_offset = pairs[r].earlier_offset;
+        item->later_offset = pairs[r].later_offset;
+        item->window_length = pairs[r].window_length;
     }
     if (count == 0) {
         free(returns);
@@ -338,9 +306,11 @@ static bool find_returns(const FormStage *stage, ChainResult *report) {
     }
     ThemeWindow *windows = calloc(theme_count, sizeof(ThemeWindow));
     ThematicReturnDetectionEntry *entries = calloc(theme_count, sizeof(*entries));
-    if (!windows || !entries) {
+    size_t *entry_theme = calloc(theme_count, sizeof(size_t));
+    if (!windows || !entries || !entry_theme) {
         free(windows);
         free(entries);
+        free(entry_theme);
         return false;
     }
     bool ok = true;
@@ -350,25 +320,25 @@ static bool find_returns(const FormStage *stage, ChainResult *report) {
         if (ok && windows[t].usable) {
             entries[entry_count].theme_occurrence_id = windows[t].id;
             entries[entry_count].window = &windows[t].window;
-            entry_count++;
+            entry_theme[entry_count++] = t;
         }
     }
-    Relationship **relationships = NULL;
-    size_t relationship_count = 0;
+    ThematicReturnPair *pairs = NULL;
+    size_t pair_count = 0;
     if (ok) {
-        ok = thematic_return_detection_build_relationships_configured(entries, entry_count, NULL, &relationships,
-                                                                      &relationship_count) ==
-             THEMATIC_RETURN_DETECTION_REL_OK;
+        ok = thematic_return_detection_build_pairs_configured(entries, entry_count, NULL, &pairs, &pair_count) ==
+             THEMATIC_RETURN_DETECTION_OK;
     }
     if (ok) {
-        ok = collect_returns(relationships, relationship_count, report);
-        thematic_return_detection_destroy_relationships(relationships, relationship_count);
+        ok = collect_returns(pairs, pair_count, entry_theme, report);
+        free(pairs);
     }
     for (size_t t = 0; t < theme_count; t++) {
         theme_window_destroy(&windows[t]);
     }
     free(windows);
     free(entries);
+    free(entry_theme);
     return ok;
 }
 
