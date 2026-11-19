@@ -147,6 +147,9 @@ group composer-core composer-util composer-structure composer-fill composer-rend
 group composer-operators composer-harmony composer-motive composer-melody composer-texture composer-counterpoint composer-material
 module composer-cli  composer/cli
 module gui           gui/backend/src   root gui/backend/src
+# The workshop (R-641): the API header and the coordinator, the first of the workshop's folders (P63 B4).
+module workshop-api         workshop/include           prefix ursatz_workshop/workshop_api.h
+module workshop-coordinator workshop/src/coordinator   root workshop/src/coordinator workshop/include
 # A CMake target builds these modules; an include between two modules of one target needs no staging, one between targets (or from
 # an application) must name a staged header, and a staged header nothing outside its target includes is an error.
 target ursatz_model model
@@ -193,6 +196,8 @@ uses composer-explain model theory realization plan reading analysis chain io cj
 uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson common
+uses workshop-api common cjson
+uses workshop-coordinator workshop-api composer-api analyzer-api theory common cjson
 uses gui           analyzer-api composer-api cjson civetweb common theory-style -- B5 moves the style service into the workshop
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
@@ -344,6 +349,7 @@ module analyzer-consumer  analyzer/tests/consumer
 module composer-tests     composer/tests            root composer/tests composer/tests/support composer/src composer/src/include composer/include
 module composer-consumer  composer/tests/consumer
 module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src
+module workshop-tests     workshop/tests            root workshop/tests workshop/src/coordinator workshop/include
 uses analyzer-tests test-support
 like analyzer-tests analyzer
 like analyzer-tests analyzer-util
@@ -358,6 +364,8 @@ like analyzer-tests analyzer-internal
 uses composer-tests test-support
 like composer-tests composer-request
 uses gui-tests test-support
+uses workshop-tests test-support
+like workshop-tests workshop-coordinator
 like gui-tests gui
 free analyzer-consumer composer-consumer -- consumer projects include what a consumer may not, to check that it fails
 
