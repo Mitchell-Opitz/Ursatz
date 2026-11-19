@@ -67,7 +67,7 @@ static unsigned long long fnv1a(const char *data, size_t length) {
 static CorpusRunSummary run(const char *input, const char *output, bool resume, UrsatzStatus *result) {
     CorpusRunOptions options = {input, output, resume, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    *result = corpus_run(&options, &summary);
+    *result = corpus_run(&options, &summary, NULL);
     return summary;
 }
 
@@ -362,8 +362,8 @@ static void test_resume_changes(const char *work) {
 static void test_arguments(const char *work) {
     UrsatzStatus result;
     CorpusRunOptions options = {NULL, NULL, false, NULL, NULL, test_knowledge()};
-    CHECKF(corpus_run(&options, NULL) == URSATZ_ERR_REQUEST, "NULL input_dir");
-    CHECKF(corpus_run(NULL, NULL) == URSATZ_ERR_REQUEST, "NULL options");
+    CHECKF(corpus_run(&options, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL input_dir");
+    CHECKF(corpus_run(NULL, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL options");
     char missing[1024];
     snprintf(missing, sizeof(missing), "%s/does-not-exist", work);
     run(missing, work, false, &result);
@@ -377,6 +377,50 @@ static void test_arguments(const char *work) {
     CHECKF(result == URSATZ_ERR_IO, "output dir that is a file gave %d", (int)result);
 }
 
+/* The run prints nothing: its failures come back in the error, and what a piece said (the importer's text of a failed import) in the report
+   the callback gets. */
+typedef struct {
+    size_t pieces;
+    size_t with_message;
+    char message[256];
+} Reports;
+
+static void collect_report(const char *path, CorpusPieceStatus status, const char *error, const CorpusPieceReport *report, void *user) {
+    (void)path;
+    (void)error;
+    Reports *reports = user;
+    reports->pieces++;
+    if (status == CORPUS_PIECE_FAILED && report->message) {
+        reports->with_message++;
+        snprintf(reports->message, sizeof(reports->message), "%s", report->message);
+    }
+}
+
+static void test_messages(const char *work) {
+    UrsatzError error = {{0}};
+    char missing[1024];
+    snprintf(missing, sizeof(missing), "%s/no-such-input", work);
+    CorpusRunOptions options = {missing, work, false, NULL, NULL, test_knowledge()};
+    CHECKF(corpus_run(&options, NULL, &error) == URSATZ_ERR_NOT_FOUND, "a missing input folder");
+    CHECKF(strstr(error.message, "cannot read input directory") != NULL && strcmp(error.path, missing) == 0,
+           "the error names the input folder: '%s' at '%s'", error.message, error.path);
+
+    CorpusRunOptions no_knowledge = {work, work, false, NULL, NULL, NULL};
+    CHECKF(corpus_run(&no_knowledge, NULL, &error) == URSATZ_ERR_REQUEST && strstr(error.message, "knowledge snapshot") != NULL,
+           "no knowledge snapshot is a request error with its message");
+
+    char output[1024];
+    char input[1024];
+    snprintf(output, sizeof(output), "%s/messages-out", work);
+    snprintf(input, sizeof(input), "%s/mixed", URSATZ_CORPORA_DIR);
+    Reports reports = {0};
+    CorpusRunOptions mixed = {input, output, false, collect_report, &reports, test_knowledge()};
+    CorpusRunSummary summary;
+    CHECKF(corpus_run(&mixed, &summary, &error) == URSATZ_OK && summary.failed == 1 && reports.pieces == 3,
+           "the mixed corpus runs: %zu pieces, %zu failed", reports.pieces, summary.failed);
+    CHECKF(reports.with_message == 1 && reports.message[0] != '\0', "the failed piece's importer text reaches the callback: '%s'", reports.message);
+}
+
 int main(void) {
     const char *work = URSATZ_CORPUS_WORK_DIR;
     remove_tree(work);
@@ -386,6 +430,7 @@ int main(void) {
     test_mixed(work);
     test_resume_changes(work);
     test_arguments(work);
+    test_messages(work);
 
     if (test_failure_count == 0) {
         remove_tree(work);

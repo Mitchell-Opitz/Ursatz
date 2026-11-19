@@ -6,7 +6,7 @@ Corpus mode, which analyzes every piece in a folder into documents and a corpus 
 ursatz-analyzer --corpus <dir> [--out <dir>] [--resume]
 ```
 
-Library: `corpus_run` in `src/include/ursatz_analyzer_internal/corpus.h`.
+Library: `corpus_run` in `src/include/ursatz_analyzer_internal/corpus.h`. The run prints nothing: a failure comes back in its `UrsatzError`, and what a piece said (the importer's text of a failed import, the warnings of one that worked) in the `CorpusPieceReport` its callback gets; the command line prints them as before.
 
 ## Folder walk
 

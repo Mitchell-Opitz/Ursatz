@@ -123,8 +123,21 @@ static bool write_model_plan(const char *path, const AnalyzerResult *result, con
     return ok;
 }
 
-static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
+/* The warnings an import raised, one line each on stderr. */
+static void print_import_warnings(const ImportedScore *notes) {
+    for (size_t i = 0; i < notes->source.warning_line_count; i++) {
+        fprintf(stderr, "%s\n", notes->source.warnings[i]);
+    }
+}
+
+static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, const CorpusPieceReport *report, void *user) {
     (void)user;
+    if (report->message) {
+        fprintf(stderr, "%s\n", report->message);
+    }
+    for (size_t i = 0; i < report->warning_count; i++) {
+        fprintf(stderr, "%s\n", report->warnings[i]);
+    }
     const char *word = status == CORPUS_PIECE_ANALYZED ? "analyzed" : (status == CORPUS_PIECE_SKIPPED ? "skipped" : "failed");
     if (error) {
         printf("%s %s: %s\n", word, path, error);
@@ -136,7 +149,9 @@ static void print_corpus_piece(const char *path, CorpusPieceStatus status, const
 static int run_corpus(const char *input_dir, const char *output_dir, bool resume, const KnowledgeSnapshot *knowledge) {
     CorpusRunOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL, knowledge};
     CorpusRunSummary summary;
-    if (corpus_run(&options, &summary) != URSATZ_OK) {
+    UrsatzError failure = {{0}};
+    if (corpus_run(&options, &summary, &failure) != URSATZ_OK) {
+        fprintf(stderr, "Error: %s\n", failure.message);
         return 2;
     }
     printf("%zu analyzed, %zu skipped, %zu failed\n", summary.analyzed, summary.skipped, summary.failed);
@@ -644,9 +659,14 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
 
     ImportedScore notes;
     AnalyzerResult *result = NULL;
-    switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL, NULL)) {
+    UrsatzError import_error = {{0}};
+    switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL, NULL, &import_error)) {
     case RUN_FILE_OK:
+        print_import_warnings(&notes);
         break;
+    case RUN_FILE_ERR_IMPORT:
+        fprintf(stderr, "%s\n", import_error.message);
+        return 1;
     case RUN_FILE_ERR_ANALYZE:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
@@ -896,14 +916,17 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     }
     ImportedScore notes;
     AnalyzerResult *result = NULL;
+    UrsatzError import_error = {{0}};
     ImportedScoreResult import_status;
     ImportedReadingResult reading_status = IMPORTED_READING_OK;
     UrsatzStatus analyze_status = URSATZ_OK;
     switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, knowledge, &notes, &result, &import_status,
-                              &reading_status, &analyze_status)) {
+                              &reading_status, &analyze_status, &import_error)) {
     case RUN_FILE_OK:
+        print_import_warnings(&notes);
         break;
     case RUN_FILE_ERR_IMPORT:
+        fprintf(stderr, "%s\n", import_error.message);
         return 1;
     case RUN_FILE_ERR_READING:
         fprintf(stderr, "Error: cannot apply the notation reading to '%s': %s\n", path,

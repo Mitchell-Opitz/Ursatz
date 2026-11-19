@@ -19,10 +19,21 @@ typedef enum {
 } CorpusPieceStatus;
 
 /*
+ * What a piece said besides its status, for the caller to say (the run prints nothing): the importer's own text of a failed
+ * import (NULL when none) and the warnings an import that worked raised. Valid during the callback.
+ */
+typedef struct {
+    const char *message;
+    const char *const *warnings;
+    size_t warning_count;
+} CorpusPieceReport;
+
+/*
  * Called once per piece, in path order, as soon as the piece is done.
  * path is relative to input_dir; error is NULL unless the piece failed.
  */
-typedef void (*CorpusPieceCallback)(const char *path, CorpusPieceStatus status, const char *error, void *user);
+typedef void (*CorpusPieceCallback)(const char *path, CorpusPieceStatus status, const char *error, const CorpusPieceReport *report,
+                                    void *user);
 
 typedef struct {
     const char *input_dir;
@@ -51,9 +62,9 @@ typedef struct {
  * created as needed. A piece that cannot be imported or analyzed is
  * counted as failed; that is not a failed run.
  *
- * out may be NULL. On any result other than URSATZ_OK, a message has
- * been written to stderr.
+ * out may be NULL. On any result other than URSATZ_OK, error (NULL for
+ * none) holds the message; nothing is printed.
  */
-UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out);
+UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out, UrsatzError *error);
 
 #endif

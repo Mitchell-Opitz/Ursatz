@@ -34,7 +34,21 @@ typedef struct {
     unsigned long long content_hash; /* FNV-1a 64 of the input file's bytes */
     long measures;                   /* -1 when unknown */
     char home_key[HOME_KEY_CAPACITY]; /* empty when unknown */
+    char *message;                   /* the importer's text of a failed import, for the caller's report; NULL when none */
+    char **warnings;                 /* the warnings an import raised, for the caller's report */
+    size_t warning_count;
 } PieceRecord;
+
+static void record_report_free(PieceRecord *record) {
+    free(record->message);
+    for (size_t i = 0; i < record->warning_count; i++) {
+        free(record->warnings[i]);
+    }
+    free(record->warnings);
+    record->message = NULL;
+    record->warnings = NULL;
+    record->warning_count = 0;
+}
 
 typedef struct {
     char **paths;
@@ -172,7 +186,7 @@ static const char *import_error_text(ImportedScoreResult result) {
 }
 
 /* Writes text to <output_dir>/<relative><suffix>, creating directories. */
-static bool write_output_file(const char *output_dir, const char *relative, const char *suffix, const char *text) {
+static bool write_output_file(const char *output_dir, const char *relative, const char *suffix, const char *text, UrsatzError *error) {
     char *name = malloc(strlen(relative) + strlen(suffix) + 1);
     if (!name) {
         return false;
@@ -186,7 +200,7 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
     }
     bool ok = corpus_make_parent_dirs(path) && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     if (!ok) {
-        fprintf(stderr, "Error: cannot write '%s'\n", path);
+        ursatz_error_set(error, URSATZ_ERR_IO, path, "cannot write '%s'", path);
     }
     free(path);
     return ok;
@@ -225,7 +239,7 @@ static void read_document_summary(const AnalysisDocument *document, PieceRecord 
 /* Imports, analyzes and writes one piece into record. A piece that cannot be analyzed is a failed record and still
    returns OK; only a failure to write an output file is a run error. */
 static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, const char *input_path,
-                                     const KnowledgeSnapshot *knowledge, PieceRecord *record) {
+                                     const KnowledgeSnapshot *knowledge, PieceRecord *record, UrsatzError *error) {
     record->status = CORPUS_PIECE_FAILED;
     record->error = NULL;
     record->document = NULL;
@@ -237,14 +251,24 @@ static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, 
     AnalyzerResult *result = NULL;
     ImportedScoreResult imported = IMPORTED_SCORE_OK;
     UrsatzStatus analyzed = URSATZ_OK;
-    RunFileResult ran = analyzer_run_file(input_path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL, &analyzed);
+    UrsatzError import_error = {{0}};
+    RunFileResult ran =
+        analyzer_run_file(input_path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL, &analyzed, &import_error);
     if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
+        record->message = strdup(import_error.message);
         return URSATZ_OK;
     }
     if (ran != RUN_FILE_OK) {
         record->error = analyzed == URSATZ_ERR_ALLOC ? "out of memory" : "analysis failed";
         return URSATZ_OK;
+    }
+    if (notes.source.warning_line_count > 0) {
+        record->warnings = calloc(notes.source.warning_line_count, sizeof(char *));
+        for (size_t i = 0; record->warnings && i < notes.source.warning_line_count; i++) {
+            record->warnings[i] = strdup(notes.source.warnings[i]);
+            record->warning_count += record->warnings[i] != NULL;
+        }
     }
     AnalysisDocument *document = analyzer_run_file_document(input_path, &notes, result);
     if (!document) {
@@ -267,7 +291,7 @@ static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, 
     strcpy(document_name, relative);
     strcat(document_name, ANALYSIS_DOCUMENT_SUFFIX);
 
-    bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json);
+    bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json, error);
     free(json);
     if (!wrote) {
         free(document_name);
@@ -336,12 +360,11 @@ static char *render_index(const char *input_dir, const char *const *paths, const
    analyzer, document schema version or producer key (nothing in it can be reused; an index of schema version 1 holds
    ursatz_commit instead of producer_key, so it reuses nothing and is written again). An index that exists but cannot be
    read is URSATZ_ERR_FORMAT. */
-static UrsatzStatus load_previous_index(const char *output_dir, cJSON **out) {
+static UrsatzStatus load_previous_index(const char *output_dir, cJSON **out, UrsatzError *error) {
     *out = NULL;
     char *path = corpus_join(output_dir, INDEX_NAME);
     if (!path) {
-        fprintf(stderr, "Error: out of memory\n");
-        return URSATZ_ERR_FORMAT;
+        return ursatz_error_set(error, URSATZ_ERR_FORMAT, output_dir, "out of memory");
     }
     char *text = NULL;
     if (common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
@@ -353,10 +376,10 @@ static UrsatzStatus load_previous_index(const char *output_dir, cJSON **out) {
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "schema");
     const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(root, "pieces");
     if (!cJSON_IsString(name) || strcmp(name->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
-        fprintf(stderr, "Error: cannot read the corpus index '%s'\n", path);
+        UrsatzStatus status = ursatz_error_set(error, URSATZ_ERR_FORMAT, path, "cannot read the corpus index '%s'", path);
         cJSON_Delete(root);
         free(path);
-        return URSATZ_ERR_FORMAT;
+        return status;
     }
     free(path);
 
@@ -441,20 +464,18 @@ static bool write_index(const char *output_dir, const char *input_dir, const cha
     return ok;
 }
 
-UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) {
+UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out, UrsatzError *error) {
     CorpusRunSummary summary = {0, 0, 0};
     if (out) {
         *out = summary;
     }
     if (!options || !options->knowledge || !options->input_dir || !options->input_dir[0]) {
-        fprintf(stderr, "Error: corpus run needs an input directory and a knowledge snapshot\n");
-        return URSATZ_ERR_REQUEST;
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "corpus run needs an input directory and a knowledge snapshot");
     }
 
     struct stat input_info;
     if (stat(options->input_dir, &input_info) != 0 || !S_ISDIR(input_info.st_mode)) {
-        fprintf(stderr, "Error: cannot read input directory '%s'\n", options->input_dir);
-        return URSATZ_ERR_NOT_FOUND;
+        return ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, options->input_dir, "cannot read input directory '%s'", options->input_dir);
     }
 
     char *default_output = NULL;
@@ -462,15 +483,14 @@ UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) 
     if (!output_dir) {
         default_output = corpus_join(options->input_dir, CORPUS_DEFAULT_OUTPUT_NAME);
         if (!default_output) {
-            fprintf(stderr, "Error: out of memory\n");
-            return URSATZ_ERR_IO;
+            return ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
         }
         output_dir = default_output;
     }
     if (!corpus_make_dirs(output_dir)) {
-        fprintf(stderr, "Error: cannot create output directory '%s'\n", output_dir);
+        UrsatzStatus status = ursatz_error_set(error, URSATZ_ERR_IO, output_dir, "cannot create output directory '%s'", output_dir);
         free(default_output);
-        return URSATZ_ERR_IO;
+        return status;
     }
 
     struct stat output_info;
@@ -480,20 +500,18 @@ UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) 
     PieceRecord *records = NULL;
     UrsatzStatus result = URSATZ_OK;
     if (!walk_directory(options->input_dir, "", have_output_info ? &output_info : NULL, &pieces)) {
-        fprintf(stderr, "Error: out of memory while listing '%s'\n", options->input_dir);
-        result = URSATZ_ERR_NOT_FOUND;
+        result = ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, options->input_dir, "out of memory while listing '%s'", options->input_dir);
     } else {
         qsort(pieces.paths, pieces.count, sizeof(char *), compare_paths);
         records = calloc(pieces.count ? pieces.count : 1, sizeof(PieceRecord));
         if (!records) {
-            fprintf(stderr, "Error: out of memory\n");
-            result = URSATZ_ERR_IO;
+            result = ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
         }
     }
 
     cJSON *previous = NULL;
     if (result == URSATZ_OK && options->resume) {
-        result = load_previous_index(output_dir, &previous);
+        result = load_previous_index(output_dir, &previous, error);
     }
 
     size_t done = 0;
@@ -501,21 +519,21 @@ UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) 
         const char *relative = pieces.paths[done];
         char *input_path = corpus_join(options->input_dir, relative);
         if (!input_path) {
-            fprintf(stderr, "Error: out of memory\n");
-            result = URSATZ_ERR_IO;
+            result = ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
             break;
         }
         PieceRecord *record = &records[done];
         if (!(previous && reuse_previous(previous, output_dir, relative, fnv1a_file(input_path), record))) {
-            result = analyze_piece(output_dir, relative, input_path, options->knowledge, record);
+            result = analyze_piece(output_dir, relative, input_path, options->knowledge, record, error);
         }
         free(input_path);
         if (result != URSATZ_OK) {
+            record_report_free(record);
             break;
         }
         if (!write_index(output_dir, options->input_dir, (const char *const *)pieces.paths, records, done + 1)) {
-            fprintf(stderr, "Error: cannot write the corpus index in '%s'\n", output_dir);
-            result = URSATZ_ERR_IO;
+            result = ursatz_error_set(error, URSATZ_ERR_IO, output_dir, "cannot write the corpus index in '%s'", output_dir);
+            record_report_free(record);
             done++;
             break;
         }
@@ -527,13 +545,14 @@ UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) 
             summary.failed++;
         }
         if (options->on_piece) {
-            options->on_piece(relative, record->status, record->error, options->user);
+            CorpusPieceReport report = {record->message, (const char *const *)record->warnings, record->warning_count};
+            options->on_piece(relative, record->status, record->error, &report, options->user);
         }
+        record_report_free(record);
     }
     if (result == URSATZ_OK && pieces.count == 0 &&
         !write_index(output_dir, options->input_dir, (const char *const *)pieces.paths, records, 0)) {
-        fprintf(stderr, "Error: cannot write the corpus index in '%s'\n", output_dir);
-        result = URSATZ_ERR_IO;
+        result = ursatz_error_set(error, URSATZ_ERR_IO, output_dir, "cannot write the corpus index in '%s'", output_dir);
     }
     for (size_t i = 0; records && i < done && i < pieces.count; i++) {
         free(records[i].document);

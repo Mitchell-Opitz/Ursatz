@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
 
     CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    if (corpus_run(&run, &summary) != URSATZ_OK || summary.analyzed != corpus_pieces) {
+    if (corpus_run(&run, &summary, NULL) != URSATZ_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");
         return 1;
     }

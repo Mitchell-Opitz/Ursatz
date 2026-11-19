@@ -64,7 +64,7 @@ static bool make_corpus(const char *name, char *corpus, size_t size) {
     free(data);
     CorpusRunOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    return corpus_run(&run, &summary) == URSATZ_OK && summary.analyzed == 1;
+    return corpus_run(&run, &summary, NULL) == URSATZ_OK && summary.analyzed == 1;
 }
 
 static bool ascending(const AnalyzerCorpusPassage *passage) {
@@ -217,7 +217,7 @@ static void test_no_match(void) {
     CHECK(test_write_file(broken, "not a midi file", 15));
     CorpusRunOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    CHECK(corpus_run(&run, &summary) == URSATZ_OK && summary.analyzed == 0);
+    CHECK(corpus_run(&run, &summary, NULL) == URSATZ_OK && summary.analyzed == 0);
     AnalyzerCorpusPassages none;
     CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &none) == URSATZ_OK && none.count == 0 &&
                none.passages == NULL,
