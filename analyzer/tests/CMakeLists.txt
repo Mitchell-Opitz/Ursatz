@@ -2,16 +2,16 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/support)
 
 ursatz_test_library(analyzer_test_support SOURCES support/test_support.c LIBS ursatz_analyzer ursatz_test_support cjson
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/support)
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/support ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test(test_analysis_pipeline LIBS ursatz_analyzer analyzer_test_support)
 
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
-ursatz_test(test_corpus_key_estimation LIBS ursatz_analyzer
+ursatz_test(test_corpus_key_estimation LIBS ursatz_analyzer analyzer_test_support
     LABELS slow)
 
 # Over 10 s in the fast set (about 37 s of CPU measured): runs nightly.
-ursatz_test(test_long_labels LIBS ursatz_analyzer
+ursatz_test(test_long_labels LIBS ursatz_analyzer analyzer_test_support
     LABELS slow)
 
 ursatz_test(test_analysis_document LIBS ursatz_analyzer analyzer_test_support cjson)
@@ -98,7 +98,7 @@ ursatz_test(test_measure_locations_smoke TARGET test_measure_locations ARGS smok
 # Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
 ursatz_test(test_measure_locations TARGET test_measure_locations LABELS slow)
 
-ursatz_test_executable(test_chord_coverage LIBS ursatz_analyzer)
+ursatz_test_executable(test_chord_coverage LIBS ursatz_analyzer analyzer_test_support)
 ursatz_test(test_chord_coverage_smoke TARGET test_chord_coverage ARGS smoke)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
 ursatz_test(test_chord_coverage TARGET test_chord_coverage LABELS slow)
@@ -188,15 +188,15 @@ ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
 # stay as the target; remove WILL_FAIL when the form adapter reports elision.
 ursatz_test(test_rhythm_field5_target TARGET test_rhythm ARGS field5-target PROPERTIES WILL_FAIL TRUE)
 
-ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer)
+ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer analyzer_test_support)
 
-ursatz_test(test_voice_leading LIBS ursatz_test_support ursatz_analyzer
+ursatz_test(test_voice_leading LIBS ursatz_test_support ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-ursatz_test(test_markings LIBS ursatz_test_support ursatz_analyzer
+ursatz_test(test_markings LIBS ursatz_test_support ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-ursatz_test_executable(test_schemas LIBS ursatz_test_support ursatz_analyzer m
+ursatz_test_executable(test_schemas LIBS ursatz_test_support ursatz_analyzer analyzer_test_support m
     DEFINITIONS URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 ursatz_test(test_schemas_smoke TARGET test_schemas ARGS smoke)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.

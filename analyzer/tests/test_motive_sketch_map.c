@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 #include <ursatz_analyzer/motive_links.h>
 
@@ -65,7 +64,7 @@ int main(void) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedScore notes;
     ChainResult report;
-    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }

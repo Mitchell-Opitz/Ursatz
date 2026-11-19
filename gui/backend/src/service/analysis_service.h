@@ -11,7 +11,7 @@
  * This is the ONLY place outside collection_service.c allowed to call
  * into Ursatz or the Analyzer. Every
  * analysis goes through the Analyzer library (analyzer_import_file,
- * run_analysis_pipeline, analysis_document_build); the GUI keeps no
+ * analyzer_analyze, analysis_document_build_from_result); the GUI keeps no
  * analysis code of its own (R-084).
  *
  * A piece is a directory pieces_dir/<id>/ holding:

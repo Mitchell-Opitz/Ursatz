@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -43,7 +42,7 @@ static void check_claim(const cJSON *claim, size_t note_count) {
 static bool analyze(const char *path, bool midi, ImportedScore *notes, ChainResult *report, cJSON **document) {
     bool imported = midi ? imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) == IMPORTED_SCORE_OK
                          : imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) == IMPORTED_SCORE_OK;
-    if (!imported || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+    if (!imported || !test_analyze_report(notes, report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;

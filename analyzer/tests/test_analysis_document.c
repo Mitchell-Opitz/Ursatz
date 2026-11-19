@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -106,7 +105,7 @@ int main(void) {
     ImportedScore notes;
     assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     ChainResult report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    assert(test_analyze_report(&notes, &report));
 
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);

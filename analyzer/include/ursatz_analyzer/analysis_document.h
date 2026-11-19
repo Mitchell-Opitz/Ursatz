@@ -19,7 +19,7 @@ typedef struct AnalysisDocument AnalysisDocument;
 
 /*
  * Builds the analysis document for one piece from the imported notes
- * and the report run_analysis_pipeline produced for them. Fills
+ * and the report an AnalyzerResult holds for them (analyzer_analyze). Fills
  * metadata, meter, keys, chords, outer voices and notes; every other section is an empty array, or
  * null for form. Only the basename of input_path is recorded.
  *

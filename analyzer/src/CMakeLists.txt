@@ -2,7 +2,6 @@ add_library(ursatz_analyzer STATIC
     version.c
     result/input_pipeline.c
     result/analysis_result.c
-    result/analysis_pipeline.c
     corpus/chord_sequence.c
     corpus/corpus_passages.c
     store/staleness.c

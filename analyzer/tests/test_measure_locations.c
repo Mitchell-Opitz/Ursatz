@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -159,7 +158,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
     ImportedScore notes;
     assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     ChainResult report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    assert(test_analyze_report(&notes, &report));
     AnalysisDocument *built = analysis_document_build(display_name, &notes, &report, test_knowledge());
     assert(built != NULL);
     char *json = analysis_document_to_json(built);

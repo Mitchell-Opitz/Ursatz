@@ -5,9 +5,10 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include "test_knowledge.h"
+#include "result/analysis_result_internal.h"
 
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
     memcpy(buf + *pos, bytes, len);
@@ -66,11 +67,23 @@ char *test_render_document(const char *input_path, const ImportedScore *notes, c
     return json;
 }
 
+bool test_analyze_report(const ImportedScore *notes, ChainResult *report) {
+    memset(report, 0, sizeof(*report));
+    report->home_duration.den = 1;
+    AnalyzerResult *result = NULL;
+    if (analyzer_analyze(notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
+        return false;
+    }
+    analyzer_result_take_report(result, report);
+    analyzer_result_destroy(result);
+    return true;
+}
+
 cJSON *test_analyze_midi(const char *path) {
     ImportedScore notes;
     assert(imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_OK);
     ChainResult report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    assert(test_analyze_report(&notes, &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     chain_result_destroy(&report);

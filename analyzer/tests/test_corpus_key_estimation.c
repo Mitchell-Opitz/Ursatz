@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 #include "test_knowledge.h"
 
@@ -37,7 +36,7 @@ int main(void) {
         assert(import_result == IMPORTED_SCORE_OK);
 
         ChainResult report;
-        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+        assert(test_analyze_report(&notes, &report));
         assert(report.key_region_count > 0);
         assert(report.entry_count > 0);
 

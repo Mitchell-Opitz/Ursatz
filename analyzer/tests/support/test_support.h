@@ -30,4 +30,8 @@ char *test_render_document(const char *input_path, const ImportedScore *notes, c
    caller deletes. Asserts on any failure. */
 cJSON *test_analyze_midi(const char *path);
 
+/* Analyzes imported notes with the test snapshot (analyzer_analyze, every stage) and moves the report view out into *report, which the
+   caller releases with chain_result_destroy. false when the analysis fails. */
+bool test_analyze_report(const ImportedScore *notes, ChainResult *report);
+
 #endif

@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -353,7 +352,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
     ChainResult report;
     bool imported = piece->midi ? imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK
                                 : imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) == IMPORTED_SCORE_OK;
-    if (!imported || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (!imported || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;

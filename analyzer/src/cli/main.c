@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/motive_links.h>

@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
 #include "chain/chain_result_progressions.h"
 #include <io/imported_score.h>
@@ -254,7 +253,7 @@ static void check_progressions(const cJSON *document, const ChainResult *report)
 static cJSON *analyze(const Piece *piece, ChainResult *report, ImportedScore *notes) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
-    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(notes, report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return NULL;

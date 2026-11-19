@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
 
@@ -29,7 +28,7 @@ static void check_chorale(const char *dir) {
     snprintf(path, sizeof(path), "%s/chorale-voice-leading.musicxml", dir);
     ImportedScore notes;
     ChainResult report;
-    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return;

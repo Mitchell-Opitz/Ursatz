@@ -9,7 +9,6 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include "theory/style/style_labels.h"

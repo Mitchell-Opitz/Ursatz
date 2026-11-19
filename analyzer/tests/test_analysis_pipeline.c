@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "test_support.h"
@@ -74,7 +73,7 @@ int main(void) {
     assert(notes.count == 11);
 
     ChainResult report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    assert(test_analyze_report(&notes, &report));
     assert(report.key_region_count > 0);
     /* Harmonic spans: D F A read as one ii, and the B with the closing C E G D as one iii; three chords where the
        sonority segmentation gave six. */

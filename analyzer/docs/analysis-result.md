@@ -68,6 +68,4 @@ entries through `analyzer_result_report` or the exported document.
 result: the same bytes as `analysis_document_build` over the same notes and report. `analysis_document_build` takes the knowledge
 snapshot the report was made with (the labels of a notated key signature are spelled with its major and natural minor materials).
 
-`run_analysis_pipeline` is a wrapper over `analyzer_analyze`: it moves the result's report out into the caller's
-`ChainResult`, with the same ownership as before. `ChainResult` and the fragment API stay until the Composer and
-the GUI have switched to the result.
+The wrapper `run_analysis_pipeline` (and `analysis_pipeline.h`) is gone (P61 B9): the GUI calls `analyzer_analyze` and `analysis_document_build_from_result`, and the Analyzer's tests call `analyzer_analyze` through `test_analyze_report` (`tests/support/test_support.h`).

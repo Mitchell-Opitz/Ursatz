@@ -6,7 +6,6 @@
 #include "cJSON.h"
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
 
 #include "test_support.h"
@@ -40,7 +39,7 @@ static char *render_piece(const char *fixture) {
         return NULL;
     }
     ChainResult report;
-    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (!test_analyze_report(&notes, &report)) {
         imported_score_destroy(&notes);
         return NULL;
     }

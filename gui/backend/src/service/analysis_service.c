@@ -27,7 +27,7 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
@@ -303,14 +303,16 @@ static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, Importe
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    ChainResult report;
-    if (!run_analysis_pipeline(&notes, ursatz_gui_knowledge(), &report)) {
+    AnalyzerOptions options = analyzer_options_default();
+    options.knowledge = ursatz_gui_knowledge();
+    AnalyzerResult *result = NULL;
+    if (analyzer_analyze(&notes, &options, &result) != ANALYZER_OK) {
         imported_score_destroy(&notes);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    AnalysisDocument *document = analysis_document_build(source_path, &notes, &report, ursatz_gui_knowledge());
-    chain_result_destroy(&report);
+    AnalysisDocument *document = analysis_document_build_from_result(source_path, result);
+    analyzer_result_destroy(result);
     imported_score_destroy(&notes);
     if (!document) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;

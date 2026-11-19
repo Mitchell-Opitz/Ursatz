@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -135,7 +134,7 @@ typedef struct {
 
 static void analyze(const char *path, Analyzed *out) {
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &out->notes, NULL) != IMPORTED_SCORE_OK ||
-        !run_analysis_pipeline(&out->notes, test_knowledge(), &out->report)) {
+        !test_analyze_report(&out->notes, &out->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         exit(1);
     }

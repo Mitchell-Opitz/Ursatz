@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 #include "test_knowledge.h"
 
@@ -33,7 +32,7 @@ int main(void) {
     assert(imported_score_import_file(URSATZ_FIXTURES_DIR "/framework-v1-corpus/Mozart 545.mid", IMPORTED_FORMAT_MIDI, &notes, NULL) ==
            IMPORTED_SCORE_OK);
     ChainResult report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    assert(test_analyze_report(&notes, &report));
     assert(report.key_region_count > 0);
     assert(report.entry_count > 0);
 

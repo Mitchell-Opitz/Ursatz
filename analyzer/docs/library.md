@@ -12,7 +12,6 @@ Its public include directory is `include/`, and consumers include headers as
 | --- | --- |
 | `input_pipeline.h` | The thin import entries for the GUI: `analyzer_import_file` and `analyzer_import_buffer` read a MIDI or MusicXML document into an `ImportedScore`. The imported score, `ImportedFormat` and the readings are the library's (`io/imported_score.h`, which this header includes). |
 | `analysis_result.h` | `analyzer_analyze` turns an `ImportedScore` into an `AnalyzerResult`: the library chain's results and the report view the document is exported from (no claim layer, R-530). See [analysis-result.md](analysis-result.md). |
-| `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `ChainResult`. |
 | `chain/chain_result.h` (the library chain's) | `ChainResult` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `ChainResult`), serializes it as JSON, and derives `<stem>.analysis.json`. |
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |

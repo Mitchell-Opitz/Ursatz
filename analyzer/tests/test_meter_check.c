@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <io/imported_score.h>
 
@@ -45,7 +44,7 @@ static void analyze(const char *name, const ImportedReading *reading, Analysis *
     if (reading) {
         assert(imported_reading_apply(&analysis->notes, reading) == IMPORTED_READING_OK);
     }
-    assert(run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report));
+    assert(test_analyze_report(&analysis->notes, &analysis->report));
     char *json = test_render_document(musicxml(name), &analysis->notes, &analysis->report);
     assert(json);
     analysis->document = cJSON_Parse(json);
@@ -179,7 +178,7 @@ static void test_empty_score(void) {
         return; /* the importer refuses an empty score: nothing to check */
     }
     ChainResult report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    assert(test_analyze_report(&notes, &report));
     assert(!report.meter_check.present);
     chain_result_destroy(&report);
     imported_score_destroy(&notes);

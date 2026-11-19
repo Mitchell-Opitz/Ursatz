@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 #include <ursatz_analyzer/motive_links.h>
 
@@ -35,7 +34,7 @@ static bool analyze_fixtures(void) {
             fprintf(stderr, "cannot import %s\n", path);
             return false;
         }
-        if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+        if (!test_analyze_report(&notes, &report)) {
             fprintf(stderr, "cannot analyze %s\n", path);
             imported_score_destroy(&notes);
             return false;

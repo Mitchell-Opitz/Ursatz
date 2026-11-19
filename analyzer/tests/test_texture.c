@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
 
@@ -135,7 +134,7 @@ int main(void) {
         fprintf(stderr, "cannot import %s\n", path);
         return 1;
     }
-    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (!test_analyze_report(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         imported_score_destroy(&notes);
         return 1;

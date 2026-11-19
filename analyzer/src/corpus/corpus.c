@@ -9,7 +9,6 @@
 #include <sys/stat.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/version.h>

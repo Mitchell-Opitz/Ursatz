@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
 
@@ -235,7 +234,7 @@ typedef struct {
 static bool analyze(const char *path, Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &analysis->notes, NULL) != IMPORTED_SCORE_OK ||
-        !run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
+        !test_analyze_report(&analysis->notes, &analysis->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;

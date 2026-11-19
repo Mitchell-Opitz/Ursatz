@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -53,7 +52,7 @@ static bool analyze(const char *path, Analysis *analysis) {
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &analysis->notes, NULL) != IMPORTED_SCORE_OK) {
         return false;
     }
-    if (!run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
+    if (!test_analyze_report(&analysis->notes, &analysis->report)) {
         imported_score_destroy(&analysis->notes);
         return false;
     }

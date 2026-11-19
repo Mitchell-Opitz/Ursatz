@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
 
@@ -26,7 +25,7 @@ static bool starts_measure(long numerator, unsigned long denominator, int measur
 static bool analyze(const char *dir, const char *name, ImportedScore *notes, ChainResult *report) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", dir, name);
-    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(notes, report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <io/imported_score.h>
 
 #include "model/events/note_event.h"
@@ -103,7 +102,7 @@ int main(int argc, char **argv) {
         ImportedScore notes;
         assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
         ChainResult report;
-        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+        assert(test_analyze_report(&notes, &report));
 
         size_t matched_chords = 0;
         double fraction = coverage(&notes, &report, &matched_chords);
