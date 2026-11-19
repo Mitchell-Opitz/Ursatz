@@ -6,6 +6,7 @@ add_library(ursatz_reading
     reading.c
     reading_build.c
     reading_json.c
+    reading_plan.c
 )
 ursatz_public_headers(ursatz_reading
     BASE ${PROJECT_SOURCE_DIR}

@@ -102,6 +102,28 @@ library/reading/reading_json.c read_rational_member  # no app calls it until P63
 library/reading/reading_json.c read_reading  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/reading/reading_json.c read_text_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/reading/reading_json.c reading_from_json  # no app calls it until P63 (the Analyzer writes readings); its tests call it
+library/reading/reading_plan.c reading_to_plan  # until P62 B14 commit 2
+library/reading/reading_plan.c add_cut  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c add_harmony  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c add_meters  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c add_regions  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c add_section  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c add_sections  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c barline_at_or_after  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c compare_ordered  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c from_plan  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c is_letter  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c last_bar_before  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c last_cadence_in  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c last_note_end  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c length_of  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c measure_of  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c musical_time_of  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c owner_at  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c rational_max  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c rational_min  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c refuse  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
+library/reading/reading_plan.c unique_name  # until P62 B14 commit 2 (reading_to_plan has no app caller yet)
 library/reading/reading_json.c refuse  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/model/containers/section.c section_id  # no app reads a section's id since P62 B11 (the claims that named it are gone); its tests call it
 library/model/core/entity.c entity_id  # no app reads an entity's id since P62 B11 (the claims that named it are gone); its tests call it
