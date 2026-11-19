@@ -16,7 +16,6 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 #include <plan/section_json.h>
-#include <ursatz_composer/theme_shape.h>
 
 #include "plan/constraint_kinds.h"
 #include "plan/plan_internal.h"
@@ -639,7 +638,7 @@ static bool read_return_setting(JsonReader *reader, const cJSON *object, const c
     return true;
 }
 
-/* A theme pairing's beginning or ending by its plan name (the theme shape table's). */
+/* A theme pairing's beginning or ending by its plan name (the section tables'). */
 static bool read_theme_half(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool beginning,
                             int *out) {
     const cJSON *item = plan_json_member(reader, object, path, key, true);
@@ -651,24 +650,25 @@ static bool read_theme_half(JsonReader *reader, const cJSON *object, const char 
     if (!cJSON_IsString(item)) {
         return json_bad_format(reader, at, "expected a string");
     }
-    const ThemeShapeHalf *half = theme_shape_half_find(beginning, item->valuestring);
-    if (!half) {
+    SectionBeginning found_beginning;
+    SectionEnding found_ending;
+    if (beginning ? !section_beginning_find(item->valuestring, &found_beginning) : !section_ending_find(item->valuestring, &found_ending)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
     }
-    *out = half->value;
+    *out = beginning ? (int)found_beginning : (int)found_ending;
     return true;
 }
 
-/* An idea by the name the theme shape table gives it; `at` is its path. */
+/* An idea by the name the section tables give it; `at` is its path. */
 static bool read_idea_name(JsonReader *reader, const cJSON *item, const char *at, int *out) {
     if (!cJSON_IsString(item)) {
         return json_bad_format(reader, at, "expected an idea name");
     }
-    const ThemeShapeIdea *row = theme_shape_idea_find(item->valuestring);
-    if (!row) {
+    SectionIdea idea;
+    if (!section_idea_find(item->valuestring, &idea)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown idea '%.40s'", item->valuestring);
     }
-    *out = (int)row->idea;
+    *out = (int)idea;
     return true;
 }
 
@@ -687,15 +687,15 @@ static bool read_construction(JsonReader *reader, const cJSON *item, const char 
     }
     for (const cJSON *member = ideas->child; member; member = member->next) {
         char member_at[PLAN_JSON_PATH_MAX];
-        const ThemeShapeIdea *row = theme_shape_idea_find(member->string);
+        SectionIdea idea;
         json_child_path(member_at, at, member->string);
-        if (!row) {
+        if (!section_idea_find(member->string, &idea)) {
             return json_fail(reader, PLAN_ERR_FORMAT, member_at, "unknown idea '%.40s'", member->string);
         }
         if (!json_read_long(reader, member, member_at, 0, 16, &number)) {
             return false;
         }
-        out->idea_bars[row->idea] = (unsigned char)number;
+        out->idea_bars[idea] = (unsigned char)number;
     }
     const cJSON *extensions = plan_json_member(reader, item, path, "extensions", true);
     if (!extensions) {
