@@ -28,7 +28,6 @@ static void test_four_bar_hypermeasures_in_an_eight_bar_period(void) {
     assert(found.hypermeasures[1].claim.first_measure == 5 && found.hypermeasures[1].claim.last_measure == 8);
     assert(found.hypermeasures[0].claim.kind == (int)STANDARD_METER_HYPERMEASURE_REGULAR);
     assert(found.hypermeasures[0].claim.contains_cadence == 1 && found.phrases[1].arrival_measure == 8);
-    assert(found.hypermeasures[0].relationship != NULL && found.hypermeasures[0].interpretation != NULL);
     assert(found.hypermeasures[0].uncertainty == 0.0);
     standard_meter_hypermeter_destroy(&found);
     piece_destroy(&piece);
@@ -105,7 +104,6 @@ static void test_an_elision_is_reinterpreted(void) {
     const StandardMeterReinterpretationClaim *claim = &found.reinterpretations[0].claim;
     assert(claim->phrase == 0 && claim->next_phrase == 1 && claim->measure == 5);
     assert(claim->count_in_ending == 4 && claim->count_in_next == 1);
-    assert(found.reinterpretations[0].relationship != NULL && found.reinterpretations[0].interpretation != NULL);
     assert(found.phrases[0].arrival_measure == -1 && found.phrases[1].first_measure == 5);
     standard_meter_hypermeter_destroy(&found);
     piece_destroy(&piece);

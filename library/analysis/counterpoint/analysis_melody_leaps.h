@@ -30,12 +30,10 @@
  *                    spellings when both ends have one, else from the semitones: two thirds spanning 7 semitones)
  *   three_in_a_row   the pair is followed by a third leap
  *
- * Each claim is a Structure shell (the note ids) and an Interpretation targeting it; uncertainty is the greatest of the
+ * Each claim carries an uncertainty, the greatest of the
  * intervals' involved.
  */
 
-#define STANDARD_COUNTERPOINT_LEAP_RECOVERY_CLAIM_TYPE "standard-counterpoint/leap-recovery"
-#define STANDARD_COUNTERPOINT_CONSECUTIVE_LEAPS_CLAIM_TYPE "standard-counterpoint/consecutive-leaps"
 
 typedef enum {
     STANDARD_COUNTERPOINT_LEAP_RECOVERED = 0,
@@ -61,8 +59,6 @@ typedef struct {
 typedef struct {
     StandardCounterpointLeapRecoveryClaim claim;
     double uncertainty;
-    Structure *shell;               /* owned: the leap's two note ids, and the next note's */
-    Interpretation *interpretation; /* owned */
 } StandardCounterpointLeapRecovery;
 
 typedef struct {
@@ -86,8 +82,6 @@ typedef struct {
 typedef struct {
     StandardCounterpointConsecutiveLeapsClaim claim;
     double uncertainty;
-    Structure *shell;
-    Interpretation *interpretation;
 } StandardCounterpointConsecutiveLeaps;
 
 typedef struct {

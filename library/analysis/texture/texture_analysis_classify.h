@@ -1,8 +1,6 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_TEXTURE_ANALYSIS_TEXTURE_ANALYSIS_CLASSIFY_H
 #define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_ANALYSIS_TEXTURE_ANALYSIS_CLASSIFY_H
 
-#include "model/interpretation/interpretation.h"
-#include "model/interpretation/texture.h"
 #include "model/relationship/relationship.h"
 #include "analysis/texture/texture_analysis_features.h"
 #include "theory/vocabulary/texture_rules.h"
@@ -43,13 +41,9 @@
  * point is the first measure of a passage after the first, on a barline by construction. Its confidence is the mean of its windows'
  * confidence (the windows that were classified); its feature summary is the mean of its windows' features (the maximum for the voice count).
  *
- * OUTPUT, per passage, a Texture (interpretation/texture.h) labeled with the texture's name whose Interpretation (FrameworkReference
- * standard-texture, scalar confidence) targets the passage id "standard-texture-passage-<n>" with the claim "standard-texture/passage";
- * and, between consecutive passages, a Relationship "changes-to" with an Interpretation "standard-texture/change" targeting its id.
+ * OUTPUT, per passage, its claim (the texture, the confidence and the feature summary), its uncertainty and its time span; and,
+ * between consecutive passages, a change claim.
  */
-
-#define STANDARD_TEXTURE_PASSAGE_CLAIM_TYPE "standard-texture/passage"
-#define STANDARD_TEXTURE_CHANGE_CLAIM_TYPE "standard-texture/change"
 
 typedef struct {
     bool has_texture;
@@ -99,7 +93,6 @@ typedef struct {
     StandardTexturePassageClaim claim;
     double uncertainty;
     TimeSpan span;    /* the passage's time span, [start of its first measure, end of its last) */
-    Texture *texture; /* owned */
 } StandardTexturePassage;
 
 typedef struct {
@@ -114,8 +107,6 @@ typedef struct {
 typedef struct {
     StandardTextureChangeClaim claim;
     double uncertainty;
-    Relationship *relationship;     /* owned */
-    Interpretation *interpretation; /* owned */
 } StandardTextureChange;
 
 typedef struct {

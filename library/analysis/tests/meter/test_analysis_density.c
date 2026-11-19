@@ -49,7 +49,6 @@ static void test_a_known_rhythm(void) {
     assert(bass->line == 1 && bass->notes == 2 && bass->attacks == 2 && near(bass->mean_inter_onset, 1.0));
     assert(near(bass->attacks_per_beat_mean, 0.25) && near(bass->on_beat_share, 1.0) && bass->bin_count == 1 &&
            bass->bins[0].numerator == 1 && bass->bins[0].denominator == 1 && bass->bins[0].count == 2);
-    assert(found.items[0].interpretation != NULL && found.items[2].interpretation != NULL);
     standard_meter_densities_destroy(&found);
     piece_destroy(&piece);
 }

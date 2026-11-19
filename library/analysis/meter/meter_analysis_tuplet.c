@@ -6,7 +6,6 @@
 
 #include "model/core/rational.h"
 #include "model/core/value.h"
-#include "analysis/meter/meter_analysis_claim.h"
 #include "analysis/meter/meter_analysis_position.h"
 #include "model/time/duration.h"
 #include "model/time/meter_arithmetic.h"

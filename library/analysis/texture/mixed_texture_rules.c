@@ -3,11 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "model/core/framework_reference.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/value.h"
 #include "analysis/texture/framework.h"
-#include "model/interpretation/uncertainty.h"
 
 bool standard_texture_segments_valid(const StandardTextureSegment *segments, size_t count) {
     if (segments == NULL || count == 0) {

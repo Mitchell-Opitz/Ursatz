@@ -13,8 +13,7 @@
  * never modifies src/theory/ or src/rules/, and does not depend on any
  * other framework module.
  *
- * Texture is the Interpretation-family type this framework's names are
- * the vocabulary for (src/interpretation/texture.h). Classification takes
+ * Classification takes
  * features the caller has already measured; reading them from events is
  * analysis (src/analysis), not a rule. See README.md for the full scope
  * statement.

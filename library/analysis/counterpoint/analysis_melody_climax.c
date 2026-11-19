@@ -4,21 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/counterpoint/analysis_melody_emit.h"
-#include "model/core/value.h"
-
-static void destroy_climax(StandardCounterpointClimax *climax) {
-    interpretation_destroy(climax->interpretation);
-    structure_destroy(climax->shell);
-    memset(climax, 0, sizeof(*climax));
-}
 
 void standard_counterpoint_climaxes_destroy(StandardCounterpointClimaxes *climaxes) {
     if (climaxes == NULL) {
         return;
-    }
-    for (size_t i = 0; i < climaxes->count; i++) {
-        destroy_climax(&climaxes->items[i]);
     }
     free(climaxes->items);
     climaxes->items = NULL;
@@ -87,7 +76,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_climaxes(const Sta
         claim.span_last = (int)span->last;
         claim.pitch = top;
         claim.first_index = (int)first_top;
-        const char *ids[STANDARD_COUNTERPOINT_CLIMAX_LISTED];
         size_t listed = 0;
         size_t rank = 0;
         size_t first_rank = 0;
@@ -103,7 +91,7 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_climaxes(const Sta
             if (semitone_of(note) == top) {
                 if (listed < STANDARD_COUNTERPOINT_CLIMAX_LISTED) {
                     claim.occurrences[listed] = (int)i;
-                    ids[listed++] = note->note_id;
+                    listed++;
                 }
                 claim.occurrence_count++;
             }
@@ -125,12 +113,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_climaxes(const Sta
         snprintf(climax->span_id, sizeof(climax->span_id), "%s", span->id);
         climax->claim = claim;
         climax->uncertainty = 1.0 - least;
-        if (!standard_counterpoint_melody_emit("melodic-climax", span->id, ids, listed,
-                                               STANDARD_COUNTERPOINT_CLIMAX_CLAIM_TYPE, &claim, sizeof(claim),
-                                               climax->uncertainty, &climax->shell, &climax->interpretation)) {
-            standard_counterpoint_climaxes_destroy(&found);
-            return STANDARD_COUNTERPOINT_MELODY_ERR_ALLOC;
-        }
         found.count++;
     }
     if (found.count == 0) {

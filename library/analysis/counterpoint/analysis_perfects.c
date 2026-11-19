@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/counterpoint/analysis_claim.h"
 #include "model/core/value.h"
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
@@ -18,18 +17,9 @@ const char *standard_counterpoint_violation_rule_name(StandardCounterpointViolat
     return rule >= 0 && rule < STANDARD_COUNTERPOINT_VIOLATION_COUNT ? RULE_NAMES[rule] : NULL;
 }
 
-static void destroy_violation(StandardCounterpointViolation *violation) {
-    interpretation_destroy(violation->interpretation);
-    structure_destroy(violation->shell);
-    memset(violation, 0, sizeof(*violation));
-}
-
 void standard_counterpoint_violations_destroy(StandardCounterpointViolations *violations) {
     if (violations == NULL) {
         return;
-    }
-    for (size_t i = 0; i < violations->count; i++) {
-        destroy_violation(&violations->items[i]);
     }
     free(violations->items);
     violations->items = NULL;
@@ -40,7 +30,7 @@ void standard_counterpoint_violations_destroy(StandardCounterpointViolations *vi
 static bool add_violation(const StandardCounterpointPreparedGrid *prepared, StandardCounterpointViolations *found,
                           StandardCounterpointViolationRule rule, size_t s, size_t upper, size_t lower, int arrival,
                           const StandardCounterpointVoiceCell *const cells[4]) {
-    const StandardCounterpointVoiceGrid *grid = prepared->grid;
+    (void)prepared;
     StandardCounterpointViolation *violation = &found->items[found->count];
     violation->rule = rule;
     violation->segment_from = s;
@@ -53,35 +43,6 @@ static bool add_violation(const StandardCounterpointPreparedGrid *prepared, Stan
         least = cells[i]->confidence < least ? cells[i]->confidence : least;
     }
     violation->uncertainty = 1.0 - least;
-
-    char key[256];
-    snprintf(key, sizeof(key), "%s-%s-%s-v%zu-v%zu", RULE_NAMES[rule], grid->segment_ids[s], grid->segment_ids[s + 1],
-             upper, lower);
-    char shell_id[300];
-    snprintf(shell_id, sizeof(shell_id), "standard-counterpoint-violation-notes-%s", key);
-    const char *note_ids[4] = {cells[0]->note_id, cells[1]->note_id, cells[2]->note_id, cells[3]->note_id};
-    violation->shell = standard_counterpoint_analysis_note_group(shell_id, note_ids, 4);
-
-    StandardCounterpointViolationClaim claim;
-    memset(&claim, 0, sizeof(claim));
-    claim.rule = (int)rule;
-    snprintf(claim.rule_name, sizeof(claim.rule_name), "%s", RULE_NAMES[rule]);
-    claim.upper_voice = (int)upper;
-    claim.lower_voice = (int)lower;
-    claim.segment_from = (int)s;
-    claim.segment_to = (int)(s + 1);
-    claim.arrival_interval = arrival;
-    char interpretation_id[340];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-counterpoint-violation-%s", key);
-    if (violation->shell != NULL) {
-        violation->interpretation = standard_counterpoint_analysis_interpretation(
-            interpretation_id, entity_id_value(entity_id(structure_entity(violation->shell))),
-            STANDARD_COUNTERPOINT_VIOLATION_CLAIM_TYPE, &claim, sizeof(claim), violation->uncertainty, "perfects-adapter");
-    }
-    if (violation->shell == NULL || violation->interpretation == NULL) {
-        destroy_violation(violation);
-        return false;
-    }
     found->count++;
     return true;
 }

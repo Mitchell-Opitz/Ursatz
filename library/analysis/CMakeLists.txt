@@ -59,7 +59,6 @@ add_library(ursatz_analysis
     form/thematic_return_detection.c
     meter/beat_grid_length.c
     meter/meter_analysis_check.c
-    meter/meter_analysis_claim.c
     meter/meter_analysis_density.c
     meter/meter_analysis_hemiola.c
     meter/meter_analysis_hypermeter.c
@@ -69,24 +68,19 @@ add_library(ursatz_analysis
     meter/meter_analysis_tuplet.c
     texture/framework.c
     texture/mixed_texture_rules.c
-    texture/texture_analysis_claim.c
     texture/texture_analysis_classify.c
     texture/texture_analysis_features.c
     texture/texture_analysis_input.c
     texture/texture_classification_rules.c
-    counterpoint/analysis_claim.c
     counterpoint/analysis_grid.c
     counterpoint/analysis_melody.c
     counterpoint/analysis_melody_climax.c
-    counterpoint/analysis_melody_emit.c
     counterpoint/analysis_melody_leaps.c
     counterpoint/analysis_melody_nct.c
     counterpoint/analysis_motion.c
     counterpoint/analysis_perfects.c
-    galant/galant_analysis_claim.c
     galant/galant_analysis_input.c
     galant/galant_analysis_match.c
-    galant/scale_analysis_claim.c
     galant/scale_analysis_detect.c
     similarity/similarity_model.c
     similarity/similarity_scoring.c

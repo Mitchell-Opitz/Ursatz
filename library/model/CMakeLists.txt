@@ -71,9 +71,7 @@ ursatz_public_headers(ursatz_model
         model/events/tempo_marking.h
         model/identity/entity_id.h
         model/identity/schema_version.h
-        model/interpretation/claim_interpretation.h
         model/interpretation/interpretation.h
-        model/interpretation/texture.h
         model/interpretation/uncertainty.h
         model/pitch/chord_type.h
         model/pitch/key_signature.h

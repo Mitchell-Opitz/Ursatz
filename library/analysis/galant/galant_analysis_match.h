@@ -4,8 +4,6 @@
 #include "analysis/galant/galant_analysis_input.h"
 #include "model/core/rational.h"
 #include "theory/galant/galant_prototype.h"
-#include "model/interpretation/interpretation.h"
-#include "model/relationship/relationship.h"
 
 /*
  * Schema matching (the galant-schemas adapter): the prototypes of galant_prototypes.h (none added) matched against the outer-voice degrees of
@@ -42,12 +40,9 @@
  * earlier prototype's SchemaFunction does not come after the later's in the order opening gambit, continuation, pre-cadential, cadence,
  * post-cadential (schemas that lead on to one another).
  *
- * OUTPUT, per match: a Relationship over the stage segments (from the first stage's segment to the last's, predicate "galant-schema") and an
- * Interpretation (FrameworkReference galant-schemas, scalar confidence = 1 - uncertainty) targeting the Relationship's id, with the claim
- * "galant-schemas/schema": the schema name, the stage list with the segment refs and the degrees as read, the frame, and the confidence parts.
+ * OUTPUT, per match: its claim (the schema name, the stage list with the segment refs and the degrees as read, the frame, and the
+ * confidence parts) and its uncertainty (1 - the confidence).
  */
-
-#define GALANT_SCHEMA_CLAIM_TYPE "galant-schemas/schema"
 
 typedef struct {
     Rational max_gap_beats;
@@ -92,8 +87,6 @@ typedef struct {
 typedef struct {
     GalantSchemaClaim claim;
     double uncertainty;             /* 1 - confidence */
-    Relationship *relationship;     /* owned */
-    Interpretation *interpretation; /* owned */
 } GalantSchemaMatch;
 
 typedef struct {

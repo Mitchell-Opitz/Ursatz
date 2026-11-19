@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/meter/meter_analysis_claim.h"
 #include "analysis/meter/meter_analysis_position.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
@@ -147,7 +146,7 @@ static void profile(const StandardMeterInput *input, const Member *members, size
 }
 
 static StandardMeterAnalysisStatus add_profile(StandardMeterDensities *found, size_t *capacity,
-                                               const StandardMeterDensityClaim *claim, const char *phrase_id) {
+                                               const StandardMeterDensityClaim *claim) {
     if (found->count == *capacity) {
         size_t next = *capacity == 0 ? 16 : *capacity * 2;
         StandardMeterDensity *grown = (StandardMeterDensity *)realloc(found->items, next * sizeof(*grown));
@@ -160,17 +159,6 @@ static StandardMeterAnalysisStatus add_profile(StandardMeterDensities *found, si
     StandardMeterDensity *item = &found->items[found->count];
     memset(item, 0, sizeof(*item));
     item->claim = *claim;
-    char interpretation_id[200];
-    if (claim->line == -1) {
-        snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-density-p%d-all", claim->phrase);
-    } else {
-        snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-density-p%d-line%d", claim->phrase, claim->line);
-    }
-    item->interpretation = standard_meter_analysis_interpretation(interpretation_id, phrase_id, STANDARD_METER_DENSITY_CLAIM_TYPE,
-                                                                  claim, sizeof(*claim), 0.0, "density-profile");
-    if (item->interpretation == NULL) {
-        return STANDARD_METER_ANALYSIS_ERR_ALLOC;
-    }
     found->count++;
     return STANDARD_METER_ANALYSIS_OK;
 }
@@ -240,10 +228,10 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
         }
         StandardMeterDensityClaim claim;
         profile(input, members, count, -1, (int)p, start, end, first, last, &claim);
-        status = add_profile(&found, &capacity, &claim, input->phrases[p].id);
+        status = add_profile(&found, &capacity, &claim);
         for (size_t l = 0; status == STANDARD_METER_ANALYSIS_OK && l < distinct; l++) {
             profile(input, members, count, lines[l], (int)p, start, end, first, last, &claim);
-            status = add_profile(&found, &capacity, &claim, input->phrases[p].id);
+            status = add_profile(&found, &capacity, &claim);
         }
     }
     free(members);
@@ -259,9 +247,6 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
 void standard_meter_densities_destroy(StandardMeterDensities *densities) {
     if (densities == NULL) {
         return;
-    }
-    for (size_t i = 0; i < densities->count; i++) {
-        interpretation_destroy(densities->items[i].interpretation);
     }
     free(densities->items);
     densities->items = NULL;

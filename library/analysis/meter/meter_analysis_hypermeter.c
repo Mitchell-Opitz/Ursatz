@@ -6,7 +6,6 @@
 
 #include "theory/meter/hypermeter_rules.h"
 #include "model/identity/entity_id.h"
-#include "analysis/meter/meter_analysis_claim.h"
 #include "analysis/meter/meter_analysis_position.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
@@ -15,10 +14,6 @@ typedef struct {
     int measures;
     int kind;
 } Seg;
-
-static void measure_entity(int measure, char *out, size_t size) {
-    snprintf(out, size, "standard-meter-measure-%d", measure);
-}
 
 /* The hypermeasures of a phrase read over `base` measures in lengths of `length`, then changed by the expansion. */
 static size_t build_segments(unsigned base, unsigned length, StandardMeterExpansionKind expansion, int added, Seg *segments) {
@@ -88,23 +83,8 @@ static StandardMeterAnalysisStatus emit_hypermeasure(StandardMeterHypermeter *fo
     if (item->uncertainty < 0.0) {
         item->uncertainty = 0.0;
     }
-    char key[64];
-    char source[64];
-    char target[64];
-    char interpretation_id[160];
-    snprintf(key, sizeof(key), "p%d-h%d", claim->phrase, claim->hypermeasure);
-    measure_entity(claim->first_measure, source, sizeof(source));
-    measure_entity(claim->last_measure, target, sizeof(target));
-    item->relationship = standard_meter_analysis_relationship("hypermeasure", key, source, target, "hypermeasure");
-    if (item->relationship == NULL) {
-        return STANDARD_METER_ANALYSIS_ERR_ALLOC;
-    }
-    found->hypermeasure_count++; /* counted now: destroy frees the relationship even if the interpretation fails */
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-hypermeasure-claim-%s", key);
-    item->interpretation = standard_meter_analysis_interpretation(
-        interpretation_id, entity_id_value(relationship_id(item->relationship)), STANDARD_METER_HYPERMEASURE_CLAIM_TYPE, claim,
-        sizeof(*claim), item->uncertainty, "hypermeter-inference");
-    return item->interpretation == NULL ? STANDARD_METER_ANALYSIS_ERR_ALLOC : STANDARD_METER_ANALYSIS_OK;
+    found->hypermeasure_count++;
+    return STANDARD_METER_ANALYSIS_OK;
 }
 
 static StandardMeterAnalysisStatus read_phrase(const StandardMeterInput *input, size_t index, StandardMeterHypermeter *found,
@@ -235,23 +215,7 @@ static StandardMeterAnalysisStatus read_elisions(const StandardMeterInput *input
         memset(item, 0, sizeof(*item));
         item->claim = claim;
         item->uncertainty = 1.0 - ending->score;
-        char key[64];
-        snprintf(key, sizeof(key), "p%d-p%d", claim.phrase, claim.next_phrase);
-        item->relationship = standard_meter_analysis_relationship("reinterpretation", key, input->phrases[claim.phrase].id,
-                                                                  input->phrases[claim.next_phrase].id,
-                                                                  "hypermetric-reinterpretation");
-        if (item->relationship == NULL) {
-            return STANDARD_METER_ANALYSIS_ERR_ALLOC;
-        }
         found->reinterpretation_count++;
-        char interpretation_id[160];
-        snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-reinterpretation-claim-%s", key);
-        item->interpretation = standard_meter_analysis_interpretation(
-            interpretation_id, entity_id_value(relationship_id(item->relationship)), STANDARD_METER_REINTERPRETATION_CLAIM_TYPE,
-            &claim, sizeof(claim), item->uncertainty, "hypermeter-inference");
-        if (item->interpretation == NULL) {
-            return STANDARD_METER_ANALYSIS_ERR_ALLOC;
-        }
     }
     return STANDARD_METER_ANALYSIS_OK;
 }
@@ -285,14 +249,6 @@ StandardMeterAnalysisStatus standard_meter_find_hypermeter(const StandardMeterIn
 void standard_meter_hypermeter_destroy(StandardMeterHypermeter *hypermeter) {
     if (hypermeter == NULL) {
         return;
-    }
-    for (size_t i = 0; i < hypermeter->hypermeasure_count; i++) {
-        interpretation_destroy(hypermeter->hypermeasures[i].interpretation);
-        relationship_destroy(hypermeter->hypermeasures[i].relationship);
-    }
-    for (size_t i = 0; i < hypermeter->reinterpretation_count; i++) {
-        interpretation_destroy(hypermeter->reinterpretations[i].interpretation);
-        relationship_destroy(hypermeter->reinterpretations[i].relationship);
     }
     free(hypermeter->phrases);
     free(hypermeter->hypermeasures);

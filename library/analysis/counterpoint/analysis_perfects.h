@@ -5,8 +5,6 @@
 #include <stddef.h>
 
 #include "analysis/counterpoint/analysis_grid.h"
-#include "model/interpretation/interpretation.h"
-#include "model/structure/structure.h"
 
 /*
  * Parallel and direct perfect intervals across separated voices (the standard-counterpoint analysis adapter, step 2). The
@@ -28,14 +26,11 @@
  * checked. The intervals are between the two pitches whichever sounds higher, so voices that have crossed are still
  * read; there is no crossing check here yet (a later analyzer reports crossing, doubling and spacing).
  *
- * Each occurrence is a Structure shell (the note ids of the two voices in both segments) and an Interpretation targeting the
- * shell's id: FrameworkReference standard-counterpoint, claim = a StandardCounterpointViolationClaim (the rule name, the voice
- * pair, the segment pair, the interval arrived at), and
+ * Each occurrence carries the rule, the voice pair, the segment pair, the interval arrived at, and
  *
  *   uncertainty = 1 - (the least voice-assignment confidence of the four cells involved).
  */
 
-#define STANDARD_COUNTERPOINT_VIOLATION_CLAIM_TYPE "standard-counterpoint/voice-leading-violation"
 
 typedef enum {
     STANDARD_COUNTERPOINT_VIOLATION_PARALLEL_FIFTHS = 0,
@@ -65,8 +60,6 @@ typedef struct {
     size_t lower_voice;
     int arrival_interval;
     double uncertainty;
-    Structure *shell;               /* owned */
-    Interpretation *interpretation; /* owned; targets the shell's id */
 } StandardCounterpointViolation;
 
 typedef struct {

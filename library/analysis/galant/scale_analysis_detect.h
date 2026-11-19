@@ -2,8 +2,6 @@
 #define URSATZ_FRAMEWORKS_SCALE_HARMONIZATION_ANALYSIS_SCALE_ANALYSIS_DETECT_H
 
 #include "analysis/galant/galant_analysis_input.h"
-#include "model/interpretation/interpretation.h"
-#include "model/relationship/relationship.h"
 #include "theory/galant/scale_patterns.h"
 #include "theory/galant/sequence_kind.h"
 
@@ -36,13 +34,10 @@
  * OVERLAPS. Sequences that share a segment are resolved: the one with more units, then higher confidence, then rule-backed, then the earlier, is kept.
  * A run longer than SCALE_ANALYSIS_MAX_STAGES stages is cut there.
  *
- * OUTPUT, per sequence: a Relationship over the segments (from the first to the last, predicate "harmonic-sequence") and an Interpretation
- * (FrameworkReference scale-harmonization, scalar confidence = 1 - uncertainty) targeting its id, with the claim "scale-harmonization/sequence":
- * the SequenceKind, the pattern (or -1), whether it is rule-backed, the direction, the unit length and count, the transposition in diatonic
+ * OUTPUT, per sequence: its claim and its uncertainty (1 - the confidence): the SequenceKind, the pattern (or -1), whether it is rule-backed, the direction, the unit length and count, the transposition in diatonic
  * steps between units, and the stage list with the segment refs and the degrees (bass, soprano and root, in the home key).
  */
 
-#define SCALE_SEQUENCE_CLAIM_TYPE "scale-harmonization/sequence"
 #define SCALE_ANALYSIS_MAX_STAGES 32
 
 typedef struct {
@@ -86,8 +81,6 @@ typedef struct {
 typedef struct {
     ScaleSequenceClaim claim;
     double uncertainty;
-    Relationship *relationship;     /* owned */
-    Interpretation *interpretation; /* owned */
 } ScaleSequenceMatch;
 
 typedef struct {

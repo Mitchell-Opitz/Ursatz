@@ -1,7 +1,6 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_SYNCOPATION_H
 #define URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_SYNCOPATION_H
 
-#include "model/interpretation/interpretation.h"
 #include "analysis/meter/meter_analysis_input.h"
 
 /*
@@ -16,10 +15,9 @@
  * held through (the first of them, if two have the same level). Times are snapped per the configuration (a release with the
  * wider tolerance), and a note whose onset moved by the snap is reported with an uncertainty of 0.1 (otherwise 0).
  *
- * The claim is an Interpretation targeting the note id: claim type "standard-meter/syncopation".
+ * The claim is about the note.
  */
 
-#define STANDARD_METER_SYNCOPATION_CLAIM_TYPE "standard-meter/syncopation"
 
 typedef struct {
     char note_id[STANDARD_METER_ID_MAX];
@@ -36,7 +34,6 @@ typedef struct {
 typedef struct {
     StandardMeterSyncopationClaim claim;
     double uncertainty;
-    Interpretation *interpretation; /* owned */
 } StandardMeterSyncopation;
 
 typedef struct {

@@ -7,7 +7,6 @@
 #include "model/identity/entity_id.h"
 #include "analysis/texture/mixed_texture_rules.h"
 #include "model/time/musical_time.h"
-#include "analysis/texture/texture_analysis_claim.h"
 
 /* The left-closed TimeSpan [start, end); false for a negative start or end, or an end before the start. */
 static bool make_span(Rational start, Rational end, TimeSpan *out) {
@@ -175,21 +174,7 @@ static StandardTextureAnalysisStatus build_passage(const StandardTextureAnalysis
         claim->pattern /= n;
     }
     out->uncertainty = 1.0 - clip(claim->confidence);
-    bool spanned = make_span(windows[first].start, windows[last].end, &out->span);
-
-    char id[96];
-    char interpretation_id[128];
-    passage_ids(index, id, sizeof(id));
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-texture-passage-claim-%d", index);
-    Interpretation *interpretation = standard_texture_analysis_interpretation(
-        interpretation_id, id, STANDARD_TEXTURE_PASSAGE_CLAIM_TYPE, claim, sizeof(*claim), out->uncertainty, "texture-classification");
-    if (!spanned || interpretation == NULL) {
-        interpretation_destroy(interpretation);
-        return STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
-    }
-    if (texture_create(interpretation, standard_texture_name((StandardTexture)claim->texture), &out->texture) != TEXTURE_OK) {
-        interpretation_destroy(interpretation);
-        out->texture = NULL;
+    if (!make_span(windows[first].start, windows[last].end, &out->span)) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
     }
     return STANDARD_TEXTURE_ANALYSIS_OK;
@@ -207,22 +192,7 @@ static StandardTextureAnalysisStatus build_change(const StandardTextureAnalysis 
     out->claim.category_changed = before->category != after->category ? 1 : 0;
     double confidence = least(before->confidence, after->confidence);
     out->uncertainty = 1.0 - clip(confidence);
-    char source[96];
-    char target[96];
-    char key[48];
-    char interpretation_id[128];
-    passage_ids(before->index, source, sizeof(source));
-    passage_ids(after->index, target, sizeof(target));
-    snprintf(key, sizeof(key), "%d-%d", before->index, after->index);
-    out->relationship = standard_texture_analysis_relationship("change", key, source, target, "changes-to");
-    if (out->relationship == NULL) {
-        return STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
-    }
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-texture-change-claim-%s", key);
-    out->interpretation = standard_texture_analysis_interpretation(
-        interpretation_id, entity_id_value(relationship_id(out->relationship)), STANDARD_TEXTURE_CHANGE_CLAIM_TYPE, &out->claim,
-        sizeof(out->claim), out->uncertainty, "texture-classification");
-    return out->interpretation == NULL ? STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC : STANDARD_TEXTURE_ANALYSIS_OK;
+    return STANDARD_TEXTURE_ANALYSIS_OK;
 }
 
 static StandardTextureAnalysisStatus standard_texture_analyze_windows(const StandardTextureWindows *windows,
@@ -348,13 +318,6 @@ StandardTextureAnalysisStatus standard_texture_analyze(const AnalysisNoteSet *no
 void standard_texture_analysis_destroy(StandardTextureAnalysis *analysis) {
     if (analysis == NULL) {
         return;
-    }
-    for (size_t i = 0; i < analysis->passage_count; i++) {
-        texture_destroy(analysis->passages[i].texture);
-    }
-    for (size_t i = 0; i < analysis->change_count; i++) {
-        interpretation_destroy(analysis->changes[i].interpretation);
-        relationship_destroy(analysis->changes[i].relationship);
     }
     free(analysis->windows.items);
     free(analysis->classes);

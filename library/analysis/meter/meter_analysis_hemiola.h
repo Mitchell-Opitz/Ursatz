@@ -1,7 +1,6 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HEMIOLA_H
 #define URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HEMIOLA_H
 
-#include "model/interpretation/interpretation.h"
 #include "analysis/meter/meter_analysis_input.h"
 #include "model/structure/structure.h"
 
@@ -19,11 +18,9 @@
  * measures and measures that are not full (a short measure, a change of signature inside the window) are not read. Signatures
  * with no hemiola (12/8, 4/4, the irregular meters) report none. Times are snapped per the configuration.
  *
- * The claim is an Interpretation targeting a Structure shell over the notes attacked on the window's pulses: claim type
- * "standard-meter/hemiola". Its uncertainty is 1 - agreeing / 3.
+ * The claim comes with a Structure shell over the notes attacked on the window's pulses. Its uncertainty is 1 - agreeing / 3.
  */
 
-#define STANDARD_METER_HEMIOLA_CLAIM_TYPE "standard-meter/hemiola"
 
 typedef struct {
     int first_measure;
@@ -39,7 +36,6 @@ typedef struct {
     StandardMeterHemiolaClaim claim;
     double uncertainty;
     Structure *shell;               /* owned */
-    Interpretation *interpretation; /* owned */
 } StandardMeterHemiola;
 
 typedef struct {
