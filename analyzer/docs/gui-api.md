@@ -53,10 +53,11 @@ name is the MusicXML part name, empty for a MIDI file.
 
 ## Score export
 
-`<ursatz_analyzer/analyzer_api.h>`: `analyzer_score_export_musicxml(&notes, &xml)` writes the imported notes as MusicXML
+`<ursatz_analyzer/analyzer_api.h>`: `analyzer_score_export_musicxml(&notes, &metadata, &xml, &error)` writes the imported notes as MusicXML
 3.1 (free with `free()`): parts with their General MIDI programs, staves, the source's own meter, key signatures in
-part 0, times quantized to notated values. Tempo markings, dynamics, the title and the composer are not written; the
-GUI keeps the last two with the piece. `URSATZ_ERR_INTERNAL` when the library cannot write the score.
+part 0, times quantized to notated values. Tempo markings and dynamics are not written. The title and the composer are not in an
+import: the caller gives them in `AnalyzerScoreMetadata {title, composer}` (NULL, or an empty member, writes nothing) and the score
+carries them in its own `<work>` and `<identification>`. `URSATZ_ERR_INTERNAL` when the library cannot write the score.
 
 ### Note ids and defaulted meter
 

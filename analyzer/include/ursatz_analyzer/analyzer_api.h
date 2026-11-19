@@ -149,18 +149,27 @@ AnalyzerDocumentStatus analyzer_document_status(const char *document_json);
 
 /* ------------------------------------------------------------------ score */
 
+/* What the export writes besides the notes: the work title and the composer, which the caller keeps with the piece. A NULL member
+ * or an empty one is left out. */
+typedef struct {
+    const char *title;    /* <work><work-title> */
+    const char *composer; /* <creator type="composer"> */
+} AnalyzerScoreMetadata;
+
 /*
  * The score of an import as MusicXML (R-218), written the way the GUI wrote it before the Analyzer owned it: from the
  * imported notes, their parts, staves and General MIDI programs, the source's own meter, and its key signatures in
  * part 0, with times quantized to notated values (score_quantize_options_default). Tempo markings and dynamics are left
- * out, and so are the title and composer: the caller keeps those with the piece and they are not in an import.
+ * out. The title and composer are not in an import: the caller gives them in metadata (NULL for none), and they are
+ * written in the score's own <work> and <identification>.
  *
  * On URSATZ_OK *xml is a MusicXML 3.1 string the caller frees with free(); otherwise *xml is NULL.
  * URSATZ_ERR_REQUEST for a NULL argument or an import with a note count but no events; URSATZ_ERR_INTERNAL when the
  * library cannot write the score (overlapping or unwritable times, a missing spelling); URSATZ_ERR_ALLOC. On a failure error (NULL for
  * none) holds a message.
  */
-UrsatzStatus analyzer_score_export_musicxml(const ImportedScore *notes, char **xml, UrsatzError *error);
+UrsatzStatus analyzer_score_export_musicxml(const ImportedScore *score, const AnalyzerScoreMetadata *metadata, char **out,
+                                            UrsatzError *error);
 
 /*
  * The base xml:id of each note of an import in the MusicXML analyzer_score_export_musicxml writes (R-273), in

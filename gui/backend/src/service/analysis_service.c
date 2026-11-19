@@ -946,112 +946,6 @@ static UrsatzStatus ensure_current_unlocked(const char *pieces_dir, const char *
     return reanalyze_unlocked(pieces_dir, id);
 }
 
-static bool append_escaped(char **out, size_t *length, size_t *capacity, const char *text) {
-    for (const char *c = text; *c != '\0'; c++) {
-        const char *piece = NULL;
-        char single[2] = {*c, '\0'};
-        switch (*c) {
-            case '&': piece = "&amp;"; break;
-            case '<': piece = "&lt;"; break;
-            case '>': piece = "&gt;"; break;
-            case '"': piece = "&quot;"; break;
-            case '\'': piece = "&apos;"; break;
-            default: piece = single; break;
-        }
-        size_t piece_length = strlen(piece);
-        if (*length + piece_length + 1 > *capacity) {
-            size_t grown = (*capacity + piece_length + 1) * 2;
-            char *resized = realloc(*out, grown);
-            if (!resized) {
-                return false;
-            }
-            *out = resized;
-            *capacity = grown;
-        }
-        memcpy(*out + *length, piece, piece_length + 1);
-        *length += piece_length;
-    }
-    return true;
-}
-
-/* Adds the piece's title and composer to the score the Analyzer wrote (it leaves both out, they are kept with the
-   piece): <work><work-title> after <score-partwise>, <creator type="composer"> first in <identification>, which is
-   created before <part-list> when the score has none. Returns a new string and frees xml, or NULL (xml is freed). */
-static char *score_add_title_composer(char *xml, const char *title, const char *composer) {
-    bool has_title = title && title[0] != '\0';
-    bool has_composer = composer && composer[0] != '\0';
-    if (!has_title && !has_composer) {
-        return xml;
-    }
-    static const char kRoot[] = "<score-partwise version=\"3.1\">\n";
-    static const char kIdentification[] = "  <identification>\n";
-    static const char kPartList[] = "  <part-list>\n";
-    char *root = strstr(xml, kRoot);
-    char *identification = strstr(xml, kIdentification);
-    char *part_list = strstr(xml, kPartList);
-    if (!root || !part_list) {
-        free(xml);
-        return NULL;
-    }
-    root += sizeof(kRoot) - 1;
-
-    size_t capacity = strlen(xml) + 1024;
-    size_t length = 0;
-    char *out = malloc(capacity);
-    bool ok = out != NULL;
-#define APPEND_RAW(text) \
-    do { \
-        const char *raw_ = (text); \
-        size_t raw_length_ = strlen(raw_); \
-        if (ok && length + raw_length_ + 1 > capacity) { \
-            capacity = (capacity + raw_length_ + 1) * 2; \
-            char *resized_ = realloc(out, capacity); \
-            if (resized_) { out = resized_; } else { ok = false; } \
-        } \
-        if (ok) { memcpy(out + length, raw_, raw_length_ + 1); length += raw_length_; } \
-    } while (0)
-#define APPEND_RANGE(from, to) \
-    do { \
-        size_t range_length_ = (size_t)((to) - (from)); \
-        char *range_copy_ = ok ? malloc(range_length_ + 1) : NULL; \
-        if (range_copy_) { memcpy(range_copy_, (from), range_length_); range_copy_[range_length_] = '\0'; APPEND_RAW(range_copy_); free(range_copy_); } else { ok = false; } \
-    } while (0)
-
-    if (ok) {
-        out[0] = '\0';
-    }
-    APPEND_RANGE(xml, root);
-    if (has_title) {
-        APPEND_RAW("  <work>\n    <work-title>");
-        ok = ok && append_escaped(&out, &length, &capacity, title);
-        APPEND_RAW("</work-title>\n  </work>\n");
-    }
-    if (has_composer && identification && identification < part_list) {
-        char *after = identification + sizeof(kIdentification) - 1;
-        APPEND_RANGE(root, after);
-        APPEND_RAW("    <creator type=\"composer\">");
-        ok = ok && append_escaped(&out, &length, &capacity, composer);
-        APPEND_RAW("</creator>\n");
-        APPEND_RAW(after);
-    } else if (has_composer) {
-        APPEND_RANGE(root, part_list);
-        APPEND_RAW("  <identification>\n    <creator type=\"composer\">");
-        ok = ok && append_escaped(&out, &length, &capacity, composer);
-        APPEND_RAW("</creator>\n  </identification>\n");
-        APPEND_RAW(part_list);
-    } else {
-        APPEND_RAW(root);
-    }
-#undef APPEND_RANGE
-#undef APPEND_RAW
-    free(xml);
-    if (!ok) {
-        free(out);
-        return NULL;
-    }
-    return out;
-}
-
 static UrsatzStatus get_piece_musicxml_unlocked(const char *pieces_dir, const char *id,
                                                                 char **out_xml, bool *out_meter_defaulted) {
     char dir_path[320];
@@ -1098,7 +992,8 @@ static UrsatzStatus get_piece_musicxml_unlocked(const char *pieces_dir, const ch
         }
     } else {
         const ImportedScore *notes = ursatz_gui_import_entry_notes(import);
-        UrsatzStatus status = analyzer_score_export_musicxml(notes, &xml, NULL);
+        AnalyzerScoreMetadata metadata = {title, composer};
+        UrsatzStatus status = analyzer_score_export_musicxml(notes, &metadata, &xml, NULL);
         meter_defaulted = analyzer_imported_meter_defaulted(notes);
 
         if (status != URSATZ_OK) {
@@ -1111,7 +1006,6 @@ static UrsatzStatus get_piece_musicxml_unlocked(const char *pieces_dir, const ch
             return ursatz_gui_fail(status == URSATZ_ERR_ALLOC || status == URSATZ_ERR_REQUEST ? status : URSATZ_ERR_INTERNAL, NULL);
         }
 
-        xml = score_add_title_composer(xml, title, composer);
         free(title);
         free(composer);
         char *kept = xml ? common_strdup(xml) : NULL;

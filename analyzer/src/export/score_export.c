@@ -41,7 +41,8 @@ static UrsatzStatus status_of(MusicXmlExportResult result) {
 }
 
 /* The export score of an import: its parts and key signatures are the caller's to free (*parts and *keys). */
-static UrsatzStatus build_export_score(const ImportedScore *notes, const ScoreQuantizeOptions *quantize, MusicXmlExportScore *score,
+static UrsatzStatus build_export_score(const ImportedScore *notes, const AnalyzerScoreMetadata *metadata,
+                                       const ScoreQuantizeOptions *quantize, MusicXmlExportScore *score,
                                          MusicXmlExportPart **parts_out, MusicXmlExportKeySignature **keys_out) {
     /* The parts, with their programs, and the key signatures of part 0, as the importer read them. */
     size_t part_count = notes->source.part_count;
@@ -78,6 +79,8 @@ static UrsatzStatus build_export_score(const ImportedScore *notes, const ScoreQu
     score->key_signatures = keys;
     score->key_signature_count = key_count;
     score->quantize = quantize;
+    score->title = metadata ? metadata->title : NULL;
+    score->composer = metadata ? metadata->composer : NULL;
     *parts_out = parts;
     *keys_out = keys;
     return URSATZ_OK;
@@ -87,7 +90,7 @@ static bool export_arguments_ok(const ImportedScore *notes) {
     return notes && (notes->count == 0 || (notes->events && notes->pitch_values));
 }
 
-static UrsatzStatus score_export_musicxml(const ImportedScore *notes, char **xml) {
+static UrsatzStatus score_export_musicxml(const ImportedScore *notes, const AnalyzerScoreMetadata *metadata, char **xml) {
     if (!xml) {
         return URSATZ_ERR_REQUEST;
     }
@@ -99,7 +102,7 @@ static UrsatzStatus score_export_musicxml(const ImportedScore *notes, char **xml
     MusicXmlExportScore score;
     MusicXmlExportPart *parts = NULL;
     MusicXmlExportKeySignature *keys = NULL;
-    UrsatzStatus status = build_export_score(notes, &quantize, &score, &parts, &keys);
+    UrsatzStatus status = build_export_score(notes, metadata, &quantize, &score, &parts, &keys);
     if (status != URSATZ_OK) {
         return status;
     }
@@ -114,8 +117,9 @@ static UrsatzStatus score_export_musicxml(const ImportedScore *notes, char **xml
     return URSATZ_OK;
 }
 
-UrsatzStatus analyzer_score_export_musicxml(const ImportedScore *notes, char **xml, UrsatzError *error) {
-    return analyzer_status_error(error, score_export_musicxml(notes, xml), "export the score as MusicXML");
+UrsatzStatus analyzer_score_export_musicxml(const ImportedScore *notes, const AnalyzerScoreMetadata *metadata, char **xml,
+                                            UrsatzError *error) {
+    return analyzer_status_error(error, score_export_musicxml(notes, metadata, xml), "export the score as MusicXML");
 }
 
 UrsatzStatus analyzer_score_layout(const ImportedScore *notes, ScoreLayout *out) {
@@ -130,7 +134,7 @@ UrsatzStatus analyzer_score_layout(const ImportedScore *notes, ScoreLayout *out)
     MusicXmlExportScore score;
     MusicXmlExportPart *parts = NULL;
     MusicXmlExportKeySignature *keys = NULL;
-    UrsatzStatus status = build_export_score(notes, &quantize, &score, &parts, &keys);
+    UrsatzStatus status = build_export_score(notes, NULL, &quantize, &score, &parts, &keys);
     if (status != URSATZ_OK) {
         return status;
     }
