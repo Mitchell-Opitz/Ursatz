@@ -11,34 +11,11 @@
 #include <string.h>
 #include <time.h>
 
+#include <common/files.h>
 
 
 bool cli_read_file(const char *path, char **text, size_t *size) {
-    *text = NULL;
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return false;
-    }
-    long length = -1;
-    if (fseek(file, 0, SEEK_END) == 0) {
-        length = ftell(file);
-        if (length < 0 || fseek(file, 0, SEEK_SET) != 0) {
-            length = -1;
-        }
-    }
-    char *buffer = length >= 0 ? malloc((size_t)length + 1) : NULL;
-    bool read = buffer && fread(buffer, 1, (size_t)length, file) == (size_t)length;
-    fclose(file);
-    if (!read) {
-        free(buffer);
-        return false;
-    }
-    buffer[length] = '\0';
-    *text = buffer;
-    if (size) {
-        *size = (size_t)length;
-    }
-    return true;
+    return common_file_read(path, text, size, NULL) == URSATZ_OK;
 }
 
 bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *out) {

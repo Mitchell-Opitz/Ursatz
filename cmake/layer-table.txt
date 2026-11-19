@@ -170,25 +170,25 @@ uses analyzer-corpus model theory analysis chain io realization reading analyzer
 uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
 uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links common
 # The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for ComposerJob, ComposerStatus and ComposerError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
-uses composer-util model theory realization plan reading analysis chain io cjson composer-api
+uses composer-util model theory realization plan reading analysis chain io cjson composer-api common
 uses composer-structure model theory realization plan reading analysis chain io cjson composer-util common
-uses composer-fill model theory realization plan reading analysis chain io cjson composer-api composer-structure composer-util
-uses composer-render model theory realization plan reading analysis chain io cjson composer-structure composer-util
+uses composer-fill model theory realization plan reading analysis chain io cjson composer-api composer-structure composer-util common
+uses composer-render model theory realization plan reading analysis chain io cjson composer-structure composer-util common
 uses composer-style model theory realization plan reading analysis chain io cjson composer-fill composer-structure composer-util common
-uses composer-harmony model theory realization plan reading analysis chain io cjson composer-core
-uses composer-motive model theory realization plan reading analysis chain io cjson composer-harmony composer-core
-uses composer-melody model theory realization plan reading analysis chain io cjson composer-harmony composer-motive composer-core
-uses composer-texture model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core
-uses composer-counterpoint model theory realization plan reading analysis chain io cjson composer-harmony composer-texture composer-core
-uses composer-material model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core
+uses composer-harmony model theory realization plan reading analysis chain io cjson composer-core common
+uses composer-motive model theory realization plan reading analysis chain io cjson composer-harmony composer-core common
+uses composer-melody model theory realization plan reading analysis chain io cjson composer-harmony composer-motive composer-core common
+uses composer-texture model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core common
+uses composer-counterpoint model theory realization plan reading analysis chain io cjson composer-harmony composer-texture composer-core common
+uses composer-material model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core common
 uses composer-grow model theory realization plan reading analysis chain io cjson composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
-uses composer-check model theory realization plan reading analysis chain io cjson composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
-uses composer-piece model theory realization plan reading analysis chain io cjson composer-api composer-check composer-operators composer-grow composer-core
+uses composer-check model theory realization plan reading analysis chain io cjson composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core common
+uses composer-piece model theory realization plan reading analysis chain io cjson composer-api composer-check composer-operators composer-grow composer-core common
 uses composer-candidates model theory realization plan reading analysis chain io cjson composer-piece composer-core common
-uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core
-uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain
+uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core common
+uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
-uses composer-cli  composer-api analyzer-api cjson
+uses composer-cli  composer-api analyzer-api cjson common
 uses gui           analyzer-api composer-api cjson civetweb common
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer

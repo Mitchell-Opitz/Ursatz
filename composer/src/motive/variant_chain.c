@@ -13,7 +13,7 @@
 
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
-#include "util/composer_json.h"
+#include <common/json.h>
 #include "structure/plan_util.h"
 
 /* How many draws of its open parameters a refused step gets. */
@@ -677,25 +677,25 @@ static cJSON *value_json(const VariantParam *param, const VariantValue *value) {
         return cJSON_CreateString(text);
     }
     default:
-        return composer_json_number(value->value);
+        return common_json_number(value->value);
     }
 }
 
 static cJSON *step_json(const VariantStepRecord *step) {
     const VariantOperation *operation = variant_registry_find(step->op);
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && operation && composer_json_add(object, "op", cJSON_CreateString(step->op));
+    bool ok = object && operation && common_json_add(object, "op", cJSON_CreateString(step->op));
     cJSON *params = ok ? cJSON_CreateObject() : NULL;
-    ok = ok && composer_json_add(object, "params", params);
+    ok = ok && common_json_add(object, "params", params);
     cJSON *open = ok ? cJSON_CreateArray() : NULL;
-    ok = ok && composer_json_add(object, "open", open);
+    ok = ok && common_json_add(object, "open", open);
     for (size_t p = 0; ok && p < step->param_count; p++) {
         if (step->values[p].set) {
             VariantParam described = param_at(operation, p);
-            ok = composer_json_add(params, described.name, value_json(&described, &step->values[p]));
+            ok = common_json_add(params, described.name, value_json(&described, &step->values[p]));
         }
         if (ok && step->open[p]) {
-            ok = composer_json_append(open, cJSON_CreateString(param_at(operation, p).name));
+            ok = common_json_append(open, cJSON_CreateString(param_at(operation, p).name));
         }
     }
     if (!ok) {
@@ -707,11 +707,11 @@ static cJSON *step_json(const VariantStepRecord *step) {
 
 static bool names_json(cJSON *object, const char *key, const char *const *names, size_t count) {
     cJSON *array = cJSON_CreateArray();
-    if (!composer_json_add(object, key, array)) {
+    if (!common_json_add(object, key, array)) {
         return false;
     }
     for (size_t i = 0; i < count; i++) {
-        if (!composer_json_append(array, cJSON_CreateString(names[i]))) {
+        if (!common_json_append(array, cJSON_CreateString(names[i]))) {
             return false;
         }
     }
@@ -724,24 +724,24 @@ char *variant_record_to_json(const VariantRecord *record) {
     }
     cJSON *document = cJSON_CreateObject();
     cJSON *chain = document ? cJSON_CreateObject() : NULL;
-    bool ok = document && composer_json_add(document, "seed", composer_json_number((long)record->seed)) && composer_json_add(document, "chain", chain);
+    bool ok = document && common_json_add(document, "seed", common_json_number((long)record->seed)) && common_json_add(document, "chain", chain);
     cJSON *steps = ok ? cJSON_CreateArray() : NULL;
-    ok = ok && composer_json_add(chain, "steps", steps);
+    ok = ok && common_json_add(chain, "steps", steps);
     for (size_t s = 0; ok && s < record->step_count; s++) {
-        ok = composer_json_append(steps, step_json(&record->steps[s]));
+        ok = common_json_append(steps, step_json(&record->steps[s]));
     }
     double score = record->recognizability.denominator == 0
                        ? 0.0
                        : (double)record->recognizability.numerator / (double)record->recognizability.denominator;
-    ok = ok && composer_json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
+    ok = ok && common_json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
          names_json(document, "kept", record->kept, record->kept_count) &&
          names_json(document, "changed", record->changed, record->changed_count) &&
-         (record->harmony[0] == '\0' || composer_json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
+         (record->harmony[0] == '\0' || common_json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
          names_json(document, "functions", record->functions, record->function_count) &&
-         composer_json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
-         composer_json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0)) &&
+         common_json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
+         common_json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0)) &&
          (record->remoteness_den == 0 ||
-          composer_json_add(document, "remoteness",
+          common_json_add(document, "remoteness",
                    cJSON_CreateNumber((double)(long)((double)record->remoteness_num / (double)record->remoteness_den *
                                                          10000.0 + 0.5) / 10000.0)));
     if (!ok) {

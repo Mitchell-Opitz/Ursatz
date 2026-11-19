@@ -4,6 +4,8 @@
 
 #include <cJSON.h>
 
+#include <common/files.h>
+
 #include "counterpoint.h"
 #include "cli_context.h"
 #include "develop.h"
@@ -46,61 +48,12 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", HARMONIZE_USAGE_LINE);
 }
 
-/* The whole file as text, NUL-terminated; false when it cannot be read. */
-static bool read_text_file(const char *path, char **text, size_t *size) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return false;
-    }
-    size_t capacity = 4096;
-    size_t used = 0;
-    char *buffer = malloc(capacity);
-    bool ok = buffer != NULL;
-    while (ok && !feof(file)) {
-        if (used + 1 >= capacity) {
-            char *grown = realloc(buffer, capacity * 2);
-            ok = grown != NULL;
-            if (ok) {
-                buffer = grown;
-                capacity *= 2;
-            }
-        }
-        if (ok) {
-            used += fread(buffer + used, 1, capacity - used - 1, file);
-            ok = !ferror(file);
-        }
-    }
-    fclose(file);
-    if (!ok) {
-        free(buffer);
-        return false;
-    }
-    buffer[used] = '\0';
-    *text = buffer;
-    *size = used;
-    return true;
-}
-
-/* Writes to "<path>.tmp", then renames, so a failure leaves no half-written file at path. */
+/* Writes the file atomically (common_file_write_atomic), so a failure leaves no half-written file at path. */
 static bool write_file_atomically(const char *path, const void *data, size_t size, char *message, size_t message_size) {
-    size_t length = strlen(path);
-    char *temporary = malloc(length + sizeof(".tmp"));
-    if (!temporary) {
-        snprintf(message, message_size, "out of memory");
-        return false;
-    }
-    memcpy(temporary, path, length);
-    memcpy(temporary + length, ".tmp", sizeof(".tmp"));
-    FILE *file = fopen(temporary, "wb");
-    bool wrote = file && fwrite(data, 1, size, file) == size;
-    bool closed = file && fclose(file) == 0;
-    if (!wrote || !closed || rename(temporary, path) != 0) {
-        remove(temporary);
+    if (common_file_write_atomic(path, data, size, NULL) != URSATZ_OK) {
         snprintf(message, message_size, "could not write '%s'", path);
-        free(temporary);
         return false;
     }
-    free(temporary);
     return true;
 }
 
@@ -166,7 +119,7 @@ static int run_export(int argc, char **argv) {
 
     char *plan_text = NULL;
     size_t plan_size = 0;
-    if (!read_text_file(plan_path, &plan_text, &plan_size)) {
+    if (!cli_read_file(plan_path, &plan_text, &plan_size)) {
         fprintf(stderr, "Error: cannot read plan '%s': could not open '%s'\n", plan_path, plan_path);
         return 1;
     }

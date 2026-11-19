@@ -17,7 +17,8 @@ ursatz_public_headers(ursatz_common
         common/hash.h
         common/job.h
 )
-target_link_libraries(ursatz_common PUBLIC cjson)
+# floor in the JSON number readers
+target_link_libraries(ursatz_common PUBLIC cjson m)
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

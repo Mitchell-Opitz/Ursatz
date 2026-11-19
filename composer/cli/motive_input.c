@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/files.h>
 
 #include "cli_options.h"
 
@@ -14,31 +15,23 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
     const char *why = NULL;
     char limit[64];
     const char *result = "io";
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        why = "cannot open the file";
+    char *data = NULL;
+    size_t length = 0;
+    UrsatzStatus status = common_file_read(path, &data, &length, NULL);
+    if (status != URSATZ_OK) {
+        why = status == URSATZ_ERR_ALLOC ? "out of memory" : "cannot open the file";
+        result = status == URSATZ_ERR_ALLOC ? "alloc" : "io";
+    } else if (length == 0) {
+        free(data);
+        result = "empty";
+        why = "the file is empty";
+    } else if (length > (size_t)MOTIVE_INPUT_FILE_LIMIT) {
+        free(data);
+        snprintf(limit, sizeof limit, "the file is empty or larger than %ld bytes", MOTIVE_INPUT_FILE_LIMIT);
+        why = limit;
     } else {
-        fseek(file, 0, SEEK_END);
-        long length = ftell(file);
-        fseek(file, 0, SEEK_SET);
-        if (length == 0) {
-            result = "empty";
-            why = "the file is empty";
-        } else if (length < 0 || length > MOTIVE_INPUT_FILE_LIMIT) {
-            snprintf(limit, sizeof limit, "the file is empty or larger than %ld bytes", MOTIVE_INPUT_FILE_LIMIT);
-            why = limit;
-        } else {
-            unsigned char *data = malloc((size_t)length);
-            if (data && fread(data, 1, (size_t)length, file) == (size_t)length) {
-                *bytes = data;
-                *size = (size_t)length;
-            } else {
-                free(data);
-                result = data ? "io" : "alloc";
-                why = data ? "cannot read the file" : "out of memory";
-            }
-        }
-        fclose(file);
+        *bytes = (unsigned char *)data;
+        *size = length;
     }
     if (why) {
         snprintf(error, error_size, "cannot load '%s' (%s) at %s: %s", path, result, path, why);

@@ -1,15 +1,15 @@
 #include "listen.h"
 #include "cli_context.h"
 
-#include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #include <cJSON.h>
+
+#include <common/files.h>
 
 #include <ursatz_composer/composer_api.h>
 
@@ -255,21 +255,9 @@ static int check_readable(const char *path, const char *what) {
 }
 
 static int make_directory(const char *path) {
-    char partial[LISTEN_PATH_SIZE];
-    if (snprintf(partial, sizeof partial, "%s", path) >= (int)sizeof partial) {
-        return cli_fail(CLI_EXIT_WRITE, "directory name '%s' is too long", path);
-    }
-    for (char *c = partial + 1; *c; c++) {
-        if (*c == '/') {
-            *c = '\0';
-            if (mkdir(partial, 0755) != 0 && errno != EEXIST) {
-                return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", partial, strerror(errno));
-            }
-            *c = '/';
-        }
-    }
-    if (mkdir(partial, 0755) != 0 && errno != EEXIST) {
-        return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", partial, strerror(errno));
+    UrsatzError error;
+    if (common_dir_make(path, &error) != URSATZ_OK) {
+        return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", error.path, error.message);
     }
     return 0;
 }

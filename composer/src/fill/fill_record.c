@@ -10,7 +10,7 @@
 #include <ursatz_composer/composer.h>
 
 #include "fill/fill_internal.h"
-#include "util/composer_json.h"
+#include <common/json.h>
 
 static const char *const OPERATOR_KINDS[] = {"refine", "grow", "fill"};
 static const char *const STATUS_NAMES[] = {"complete", "stuck", "max_iterations", "error"};
@@ -102,19 +102,19 @@ static cJSON *decimal_string(unsigned long long value) {
 static cJSON *considered_json(const FillConsidered *considered) {
     cJSON *object = cJSON_CreateObject();
     cJSON *operator_ = cJSON_CreateObject();
-    bool ok = object && operator_ && composer_json_add(operator_, "name", cJSON_CreateString(considered->operator_name)) &&
-              composer_json_add(operator_, "version", cJSON_CreateString(considered->operator_version)) &&
-              composer_json_add(operator_, "kind", cJSON_CreateString(OPERATOR_KINDS[considered->kind]));
+    bool ok = object && operator_ && common_json_add(operator_, "name", cJSON_CreateString(considered->operator_name)) &&
+              common_json_add(operator_, "version", cJSON_CreateString(considered->operator_version)) &&
+              common_json_add(operator_, "kind", cJSON_CreateString(OPERATOR_KINDS[considered->kind]));
     if (ok) {
-        ok = composer_json_add(object, "operator", operator_);
+        ok = common_json_add(object, "operator", operator_);
         operator_ = NULL;
     }
-    ok = ok && composer_json_add(object, "label", cJSON_CreateString(considered->label)) &&
-         composer_json_add(object, "score", composer_json_rational((long long)considered->score_numerator, (long long)considered->score_denominator)) &&
+    ok = ok && common_json_add(object, "label", cJSON_CreateString(considered->label)) &&
+         common_json_add(object, "score", common_json_rational_object((long long)considered->score_numerator, (long long)considered->score_denominator)) &&
          (!considered->styled ||
-          composer_json_add(object, "style", composer_json_rational((long long)considered->style_numerator, (long long)considered->style_denominator))) &&
-         composer_json_add(object, "rejected", cJSON_CreateBool(considered->rejected)) &&
-         composer_json_add(object, "reason", cJSON_CreateString(considered->reason));
+          common_json_add(object, "style", common_json_rational_object((long long)considered->style_numerator, (long long)considered->style_denominator))) &&
+         common_json_add(object, "rejected", cJSON_CreateBool(considered->rejected)) &&
+         common_json_add(object, "reason", cJSON_CreateString(considered->reason));
     if (!ok) {
         cJSON_Delete(object);
         cJSON_Delete(operator_);
@@ -128,23 +128,23 @@ static cJSON *step_json(const FillStep *step) {
     cJSON *target = cJSON_CreateObject();
     cJSON *considered = cJSON_CreateArray();
     bool ok = object && target && considered &&
-              composer_json_add(target, "kind", cJSON_CreateString(step->target.kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
-              composer_json_add(target, "id", composer_json_number((long)step->target.id));
+              common_json_add(target, "kind", cJSON_CreateString(step->target.kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
+              common_json_add(target, "id", common_json_number((long)step->target.id));
     if (ok) {
-        ok = composer_json_add(object, "target", target);
+        ok = common_json_add(object, "target", target);
         target = NULL;
     }
-    ok = ok && composer_json_add(object, "outcome", cJSON_CreateString(STEP_OUTCOMES[step->outcome])) &&
-         composer_json_add(object, "rng_state_before", decimal_string(step->rng_state_before)) &&
-         composer_json_add(object, "rng_state_after", decimal_string(step->rng_state_after));
+    ok = ok && common_json_add(object, "outcome", cJSON_CreateString(STEP_OUTCOMES[step->outcome])) &&
+         common_json_add(object, "rng_state_before", decimal_string(step->rng_state_before)) &&
+         common_json_add(object, "rng_state_after", decimal_string(step->rng_state_after));
     for (size_t i = 0; ok && i < step->considered_count; i++) {
-        ok = composer_json_append(considered, considered_json(&step->considered[i]));
+        ok = common_json_append(considered, considered_json(&step->considered[i]));
     }
     if (ok) {
-        ok = composer_json_add(object, "considered", considered);
+        ok = common_json_add(object, "considered", considered);
         considered = NULL;
     }
-    ok = ok && composer_json_add(object, "chosen", step->chosen >= 0 ? composer_json_number(step->chosen) : cJSON_CreateNull());
+    ok = ok && common_json_add(object, "chosen", step->chosen >= 0 ? common_json_number(step->chosen) : cJSON_CreateNull());
     if (!ok) {
         cJSON_Delete(object);
         cJSON_Delete(target);
@@ -161,24 +161,24 @@ char *fill_record_to_json(const FillRecord *record) {
     cJSON *document = cJSON_CreateObject();
     cJSON *steps = cJSON_CreateArray();
     bool ok = document && steps;
-    ok = ok && composer_json_add(document, "schema_version", composer_json_number(1)) &&
-         composer_json_add(document, "record_id", cJSON_CreateString(entity_id_value(generation_record_id(record->generation)))) &&
-         composer_json_add(document, "random_seed", decimal_string(generation_record_random_seed(record->generation))) &&
-         composer_json_add(document, "generator_version", cJSON_CreateString(generation_record_generator_version(record->generation))) &&
-         composer_json_add(document, "framework_version", cJSON_CreateNull()) &&
-         composer_json_add(document, "status", cJSON_CreateString(STATUS_NAMES[record->status])) &&
-         composer_json_add(document, "iterations", composer_json_number((long)record->iterations));
+    ok = ok && common_json_add(document, "schema_version", common_json_number(1)) &&
+         common_json_add(document, "record_id", cJSON_CreateString(entity_id_value(generation_record_id(record->generation)))) &&
+         common_json_add(document, "random_seed", decimal_string(generation_record_random_seed(record->generation))) &&
+         common_json_add(document, "generator_version", cJSON_CreateString(generation_record_generator_version(record->generation))) &&
+         common_json_add(document, "framework_version", cJSON_CreateNull()) &&
+         common_json_add(document, "status", cJSON_CreateString(STATUS_NAMES[record->status])) &&
+         common_json_add(document, "iterations", common_json_number((long)record->iterations));
     for (size_t i = 0; ok && i < record->step_count; i++) {
-        ok = composer_json_append(steps, step_json(&record->steps[i]));
+        ok = common_json_append(steps, step_json(&record->steps[i]));
     }
     if (ok) {
-        ok = composer_json_add(document, "steps", steps);
+        ok = common_json_add(document, "steps", steps);
         steps = NULL;
     }
     char *printed = ok ? cJSON_Print(document) : NULL;
     cJSON_Delete(document);
     cJSON_Delete(steps);
-    char *text = printed ? composer_json_indent(printed) : NULL;
+    char *text = printed ? common_json_indent(printed) : NULL;
     cJSON_free(printed);
     return text;
 }

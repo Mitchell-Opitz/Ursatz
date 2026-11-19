@@ -12,7 +12,7 @@
 #include <ursatz_composer/locks.h>
 
 #include "util/shaping.h"
-#include "util/composer_json.h"
+#include <common/json.h>
 #include "check/style_check.h"
 #include "style/style_internal.h"
 #include "structure/plan_util.h"
@@ -643,14 +643,14 @@ char *explain_to_text(const Explanation *explanation) {
 
 static cJSON *candidate_json(const ExplainCandidate *candidate, bool runner_up) {
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && composer_json_add(object, "operator", cJSON_CreateString(candidate->operator_name)) &&
-              composer_json_add(object, "label", cJSON_CreateString(candidate->label)) &&
-              composer_json_add(object, "score", composer_json_rational((long long)candidate->score_numerator, (long long)candidate->score_denominator));
+    bool ok = object && common_json_add(object, "operator", cJSON_CreateString(candidate->operator_name)) &&
+              common_json_add(object, "label", cJSON_CreateString(candidate->label)) &&
+              common_json_add(object, "score", common_json_rational_object((long long)candidate->score_numerator, (long long)candidate->score_denominator));
     ok = ok && (!candidate->styled ||
-                composer_json_add(object, "style", composer_json_rational((long long)candidate->style_numerator, (long long)candidate->style_denominator)));
-    ok = ok && (!runner_up || composer_json_add(object, "behind", composer_json_rational((long long)candidate->behind_numerator, (long long)candidate->behind_denominator)));
-    ok = ok && (!candidate->rejected || composer_json_add(object, "reason", cJSON_CreateString(candidate->reason)));
-    ok = ok && (!not_held_of(candidate) || composer_json_add(object, "not_held", cJSON_CreateString(not_held_of(candidate))));
+                common_json_add(object, "style", common_json_rational_object((long long)candidate->style_numerator, (long long)candidate->style_denominator)));
+    ok = ok && (!runner_up || common_json_add(object, "behind", common_json_rational_object((long long)candidate->behind_numerator, (long long)candidate->behind_denominator)));
+    ok = ok && (!candidate->rejected || common_json_add(object, "reason", cJSON_CreateString(candidate->reason)));
+    ok = ok && (!not_held_of(candidate) || common_json_add(object, "not_held", cJSON_CreateString(not_held_of(candidate))));
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -663,42 +663,42 @@ static cJSON *target_json(const ExplainTarget *target) {
     cJSON *place = cJSON_CreateObject();
     cJSON *runners = cJSON_CreateArray();
     cJSON *rejected = cJSON_CreateArray();
-    bool ok = object && place && runners && rejected && composer_json_add(object, "step", composer_json_number((long)target->step)) &&
-              composer_json_add(place, "kind", cJSON_CreateString(target->kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
-              composer_json_add(place, "id", composer_json_number((long)target->id)) &&
-              composer_json_add(place, "name", cJSON_CreateString(target->name)) &&
-              composer_json_add(place, "section", target->letter[0] ? cJSON_CreateString(target->letter) : cJSON_CreateNull());
+    bool ok = object && place && runners && rejected && common_json_add(object, "step", common_json_number((long)target->step)) &&
+              common_json_add(place, "kind", cJSON_CreateString(target->kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
+              common_json_add(place, "id", common_json_number((long)target->id)) &&
+              common_json_add(place, "name", cJSON_CreateString(target->name)) &&
+              common_json_add(place, "section", target->letter[0] ? cJSON_CreateString(target->letter) : cJSON_CreateNull());
     if (ok && target->kind == FILL_TARGET_LANE_SPAN) {
-        ok = composer_json_add(place, "lane", cJSON_CreateString(target->lane)) &&
-             composer_json_add(place, "voice", composer_json_number(target->voice));
+        ok = common_json_add(place, "lane", cJSON_CreateString(target->lane)) &&
+             common_json_add(place, "voice", common_json_number(target->voice));
     }
     if (ok && target->first_bar > 0) {
         cJSON *bars = cJSON_CreateObject();
-        ok = bars && composer_json_add(bars, "first", composer_json_number((long)target->first_bar)) &&
-             composer_json_add(bars, "last", composer_json_number((long)target->last_bar)) && composer_json_add(place, "bars", bars);
+        ok = bars && common_json_add(bars, "first", common_json_number((long)target->first_bar)) &&
+             common_json_add(bars, "last", common_json_number((long)target->last_bar)) && common_json_add(place, "bars", bars);
         if (!ok) {
             cJSON_Delete(bars);
         }
     }
     if (ok) {
-        ok = composer_json_add(object, "target", place);
+        ok = common_json_add(object, "target", place);
         place = NULL;
     }
-    ok = ok && composer_json_add(object, "outcome", cJSON_CreateString(OUTCOME_NAMES[target->outcome])) &&
-         composer_json_add(object, "considered", composer_json_number((long)target->considered)) &&
-         composer_json_add(object, "chosen", target->has_chosen ? candidate_json(&target->chosen, false) : cJSON_CreateNull());
+    ok = ok && common_json_add(object, "outcome", cJSON_CreateString(OUTCOME_NAMES[target->outcome])) &&
+         common_json_add(object, "considered", common_json_number((long)target->considered)) &&
+         common_json_add(object, "chosen", target->has_chosen ? candidate_json(&target->chosen, false) : cJSON_CreateNull());
     for (size_t i = 0; ok && i < target->runner_up_count; i++) {
-        ok = composer_json_append(runners, candidate_json(&target->runners_up[i], true));
+        ok = common_json_append(runners, candidate_json(&target->runners_up[i], true));
     }
     for (size_t i = 0; ok && i < target->rejected_count; i++) {
-        ok = composer_json_append(rejected, candidate_json(&target->rejected[i], false));
+        ok = common_json_append(rejected, candidate_json(&target->rejected[i], false));
     }
     if (ok) {
-        ok = composer_json_add(object, "runners_up", runners);
+        ok = common_json_add(object, "runners_up", runners);
         runners = NULL;
     }
     if (ok) {
-        ok = composer_json_add(object, "rejected", rejected);
+        ok = common_json_add(object, "rejected", rejected);
         rejected = NULL;
     }
     if (!ok) {
@@ -713,11 +713,11 @@ static cJSON *target_json(const ExplainTarget *target) {
 
 static cJSON *item_json(const AnalyzerCheckItem *item) {
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && composer_json_add(object, "kind", cJSON_CreateString(KIND_NAMES[item->kind])) &&
-              composer_json_add(object, "bar", composer_json_number((long)item->bar + 1)) &&
-              composer_json_add(object, "planned", cJSON_CreateString(item->planned)) &&
-              composer_json_add(object, "heard", cJSON_CreateString(item->heard)) &&
-              composer_json_add(object, "agreed", cJSON_CreateBool(item->agreed));
+    bool ok = object && common_json_add(object, "kind", cJSON_CreateString(KIND_NAMES[item->kind])) &&
+              common_json_add(object, "bar", common_json_number((long)item->bar + 1)) &&
+              common_json_add(object, "planned", cJSON_CreateString(item->planned)) &&
+              common_json_add(object, "heard", cJSON_CreateString(item->heard)) &&
+              common_json_add(object, "agreed", cJSON_CreateBool(item->agreed));
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -729,37 +729,37 @@ static cJSON *section_json(const ExplainSection *section) {
     cJSON *object = cJSON_CreateObject();
     cJSON *heard = cJSON_CreateObject();
     cJSON *items = cJSON_CreateArray();
-    bool ok = object && heard && items && composer_json_add(object, "name", cJSON_CreateString(section->name)) &&
-              composer_json_add(object, "letter", section->letter[0] ? cJSON_CreateString(section->letter) : cJSON_CreateNull()) &&
-              composer_json_add(heard, "heard", cJSON_CreateBool(section->heard)) &&
-              composer_json_add(heard, "form", cJSON_CreateString(section->heard_form)) &&
-              composer_json_add(heard, "requested", cJSON_CreateString(section->requested_form)) &&
-              composer_json_add(heard, "as_requested", cJSON_CreateBool(section->heard_as_requested));
+    bool ok = object && heard && items && common_json_add(object, "name", cJSON_CreateString(section->name)) &&
+              common_json_add(object, "letter", section->letter[0] ? cJSON_CreateString(section->letter) : cJSON_CreateNull()) &&
+              common_json_add(heard, "heard", cJSON_CreateBool(section->heard)) &&
+              common_json_add(heard, "form", cJSON_CreateString(section->heard_form)) &&
+              common_json_add(heard, "requested", cJSON_CreateString(section->requested_form)) &&
+              common_json_add(heard, "as_requested", cJSON_CreateBool(section->heard_as_requested));
     if (ok && section->development[0]) {
-        ok = composer_json_add(object, "development", cJSON_CreateString(section->development));
+        ok = common_json_add(object, "development", cJSON_CreateString(section->development));
     }
     if (ok) {
-        ok = composer_json_add(object, "form", heard);
+        ok = common_json_add(object, "form", heard);
         heard = NULL;
     }
     if (ok && section->checked) {
         cJSON *check = cJSON_CreateObject();
-        ok = check && composer_json_add(check, "contradicts", cJSON_CreateBool(section->check.contradicts)) &&
-             composer_json_add(check, "planned", composer_json_number((long)section->check.planned)) &&
-             composer_json_add(check, "agreed", composer_json_number((long)section->check.agreed));
+        ok = check && common_json_add(check, "contradicts", cJSON_CreateBool(section->check.contradicts)) &&
+             common_json_add(check, "planned", common_json_number((long)section->check.planned)) &&
+             common_json_add(check, "agreed", common_json_number((long)section->check.agreed));
         for (size_t i = 0; ok && i < section->check.item_count; i++) {
-            ok = composer_json_append(items, item_json(&section->check.items[i]));
+            ok = common_json_append(items, item_json(&section->check.items[i]));
         }
         if (ok) {
-            ok = composer_json_add(check, "items", items);
+            ok = common_json_add(check, "items", items);
             items = NULL;
         }
-        ok = ok && composer_json_add(object, "check", check);
+        ok = ok && common_json_add(object, "check", check);
         if (!ok) {
             cJSON_Delete(check);
         }
     } else if (ok) {
-        ok = composer_json_add(object, "check", cJSON_CreateNull());
+        ok = common_json_add(object, "check", cJSON_CreateNull());
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -775,17 +775,17 @@ static cJSON *rejection_json(const ComposeRejection *rejection) {
     cJSON *items = cJSON_CreateArray();
     char seed[32];
     snprintf(seed, sizeof(seed), "%lu", rejection->seed);
-    bool ok = object && items && composer_json_add(object, "round", composer_json_number((long)rejection->round)) &&
-              composer_json_add(object, "seed", cJSON_CreateString(seed)) &&
-              composer_json_add(object, "stage", cJSON_CreateString(rejection->stage)) &&
-              composer_json_add(object, "reason", cJSON_CreateString(rejection->reason)) &&
-              composer_json_add(object, "detail", cJSON_CreateString(rejection->detail));
+    bool ok = object && items && common_json_add(object, "round", common_json_number((long)rejection->round)) &&
+              common_json_add(object, "seed", cJSON_CreateString(seed)) &&
+              common_json_add(object, "stage", cJSON_CreateString(rejection->stage)) &&
+              common_json_add(object, "reason", cJSON_CreateString(rejection->reason)) &&
+              common_json_add(object, "detail", cJSON_CreateString(rejection->detail));
     for (size_t i = 0; ok && i < rejection->item_count; i++) {
         cJSON *item = item_json(&rejection->items[i].item);
-        ok = item && composer_json_add(item, "section", cJSON_CreateString(rejection->items[i].section)) && composer_json_append(items, item);
+        ok = item && common_json_add(item, "section", cJSON_CreateString(rejection->items[i].section)) && common_json_append(items, item);
     }
     if (ok) {
-        ok = composer_json_add(object, "items", items);
+        ok = common_json_add(object, "items", items);
         items = NULL;
     }
     if (!ok) {
@@ -804,8 +804,8 @@ char *explain_to_json(const Explanation *explanation) {
     cJSON *stages = cJSON_CreateArray();
     cJSON *sections = cJSON_CreateArray();
     cJSON *rejections = cJSON_CreateArray();
-    bool ok = document && stages && sections && rejections && composer_json_add(document, "schema", cJSON_CreateString("explanation")) &&
-              composer_json_add(document, "version", composer_json_number(1));
+    bool ok = document && stages && sections && rejections && common_json_add(document, "schema", cJSON_CreateString("explanation")) &&
+              common_json_add(document, "version", common_json_number(1));
     cJSON *stage = NULL;
     cJSON *targets = NULL;
     for (size_t t = 0; ok && t < explanation->target_count; t++) {
@@ -814,11 +814,11 @@ char *explain_to_json(const Explanation *explanation) {
         if (!stage || strcmp(target->stage, explanation->targets[t - 1].stage) != 0) {
             stage = cJSON_CreateObject();
             targets = cJSON_CreateArray();
-            ok = stage && targets && composer_json_add(stage, "stage", cJSON_CreateString(target->stage));
+            ok = stage && targets && common_json_add(stage, "stage", cJSON_CreateString(target->stage));
             if (ok) {
-                ok = composer_json_add(stage, "targets", targets);
+                ok = common_json_add(stage, "targets", targets);
                 if (ok) {
-                    ok = composer_json_append(stages, stage);
+                    ok = common_json_append(stages, stage);
                 }
             } else {
                 cJSON_Delete(stage);
@@ -830,24 +830,24 @@ char *explain_to_json(const Explanation *explanation) {
                 break;
             }
         }
-        ok = composer_json_append(targets, target_json(target));
+        ok = common_json_append(targets, target_json(target));
     }
     if (ok) {
-        ok = composer_json_add(document, "stages", stages);
+        ok = common_json_add(document, "stages", stages);
         stages = NULL;
     }
     for (size_t s = 0; ok && s < explanation->section_count; s++) {
-        ok = composer_json_append(sections, section_json(&explanation->sections[s]));
+        ok = common_json_append(sections, section_json(&explanation->sections[s]));
     }
     if (ok) {
-        ok = composer_json_add(document, "sections", sections);
+        ok = common_json_add(document, "sections", sections);
         sections = NULL;
     }
     for (size_t r = 0; ok && r < explanation->rejection_count; r++) {
-        ok = composer_json_append(rejections, rejection_json(&explanation->rejections[r]));
+        ok = common_json_append(rejections, rejection_json(&explanation->rejections[r]));
     }
     if (ok) {
-        ok = composer_json_add(document, "rejections", rejections);
+        ok = common_json_add(document, "rejections", rejections);
         rejections = NULL;
     }
     char *printed = ok ? cJSON_Print(document) : NULL;
@@ -855,7 +855,7 @@ char *explain_to_json(const Explanation *explanation) {
     cJSON_Delete(stages);
     cJSON_Delete(sections);
     cJSON_Delete(rejections);
-    char *text = printed ? composer_json_indent(printed) : NULL;
+    char *text = printed ? common_json_indent(printed) : NULL;
     cJSON_free(printed);
     return text;
 }
