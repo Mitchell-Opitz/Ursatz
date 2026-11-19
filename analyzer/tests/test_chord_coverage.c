@@ -11,6 +11,7 @@
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * Chord coverage: the fraction of the piece's sounding notes, by duration,

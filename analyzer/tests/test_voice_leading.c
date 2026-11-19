@@ -8,6 +8,7 @@
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The voice leading of the report, on a constructed four-part chorale (tests/musicxml/chorale-voice-leading.musicxml,

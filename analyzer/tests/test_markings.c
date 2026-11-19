@@ -8,6 +8,7 @@
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The tempo and dynamics markings of the report, on a constructed score (tests/musicxml/markings.musicxml, four

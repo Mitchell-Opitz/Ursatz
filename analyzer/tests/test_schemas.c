@@ -9,6 +9,7 @@
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The schemas and sequences of the report, on the hand-written galant fixture of Ursatz's tests/integration/

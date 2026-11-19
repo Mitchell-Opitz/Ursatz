@@ -5,6 +5,7 @@
 
 #include <io/imported_score.h>
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The home key of the six reference pieces: the key with the most total time over the key regions Ursatz's key-region detection finds.

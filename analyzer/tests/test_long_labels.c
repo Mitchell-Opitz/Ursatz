@@ -6,6 +6,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <io/imported_score.h>
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * Labels are owned strings, not fixed 32-byte buffers: a report whose

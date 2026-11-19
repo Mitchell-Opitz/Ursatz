@@ -8,6 +8,7 @@
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The texture of the report, against the hand reading of Field 1 (Nocturne No. 1 in E-flat major, in 12/8), the same
