@@ -1,3 +1,4 @@
+#include <math.h>
 #include "analysis/form/analysis_phrase.h"
 #include "model/core/rational.h"
 #include "model/time/meter_arithmetic.h"
@@ -54,10 +55,7 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     const StandardFormPhrase *phrase = &phrases.items[0];
     assert(phrase_occurrence_region_event_id_count(phrase->occurrence) == 16);
     assert(strcmp(entity_id_value(phrase_occurrence_phrase_id(phrase->occurrence)), "standard-form-phrase-0") == 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(phrase->interpretation)),
-                  entity_id_value(phrase_occurrence_id(phrase->occurrence))) == 0);
-    assert(interpretation_framework_reference(phrase->interpretation) != NULL);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(phrase->interpretation)) == 800000UL);
+    assert(fabs(phrase->uncertainty - 0.2) < 1e-12);
     Rational start = phrase->span.start.value;
     Rational end = phrase->span.end.value;
     assert(start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);

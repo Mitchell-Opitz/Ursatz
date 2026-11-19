@@ -6,7 +6,6 @@
 
 #include "analysis/form/analysis_theme.h"
 #include "model/identity/entity_id.h"
-#include "model/relationship/relationship.h"
 #include "analysis/notes/contour.h"
 #include "analysis/notes/motif_window.h"
 #include "analysis/notes/rhythmic_pattern.h"
@@ -43,15 +42,9 @@
  *   TONAL     the same generic intervals but not the same semitones: a diatonic transposition or sequence
  *   (the others: analysis_motive_match.h and step 3)
  *
- * FAMILY OUTPUT. One Motif per family (the prototype's note ids), an Interpretation targeting it (claim StandardFormMotiveClaim);
- * a MotifOccurrence per occurrence (its note ids) and an Interpretation targeting it with the KIND (claim
- * StandardFormMotiveOccurrenceClaim), whose uncertainty is 1 - score (0 for a full match); a Relationship Motif -> MotifOccurrence,
- * predicate "occurrence-of" (the family); and a Relationship MotifOccurrence -> the innermost idea shell that holds all its notes,
- * else the phrase occurrence that does, predicate "contained-in" (none when neither).
+ * FAMILY OUTPUT. One Motif per family (the prototype's note ids) with its StandardFormMotiveClaim; a MotifOccurrence per occurrence
+ * (its note ids) with its StandardFormMotiveOccurrenceClaim, the KIND, and an uncertainty of 1 - score (0 for a full match).
  */
-
-#define STANDARD_FORM_MOTIVE_CLAIM_TYPE "standard-form/motive"
-#define STANDARD_FORM_MOTIVE_OCCURRENCE_CLAIM_TYPE "standard-form/motive-occurrence"
 
 /* StandardFormMotiveKind is MotiveOccurrenceKind (semantics/motive_occurrence_kind.h), kept as an alias until B12. */
 
@@ -97,15 +90,11 @@ typedef struct {
     StandardFormMotiveOccurrenceClaim claim;
     double uncertainty;                  /* 1 - score */
     MotifOccurrence *occurrence;         /* owned */
-    Interpretation *interpretation;      /* owned; targets the occurrence's id */
-    Relationship *family_relationship;   /* owned: Motif -> occurrence, "occurrence-of" */
-    Relationship *contained_relationship; /* owned: occurrence -> idea or phrase, "contained-in"; NULL with none */
 } StandardFormMotiveOccurrence;
 
 typedef struct {
     StandardFormMotiveClaim claim;
     Motif *motif;                         /* owned */
-    Interpretation *interpretation;       /* owned; targets the motif's id */
     StandardFormMotiveOccurrence *occurrences; /* owned; the prototype first, then in time order */
     size_t occurrence_count;
 } StandardFormMotiveFamily;

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form/analysis_claim.h"
 #include "analysis/form/analysis_motive_match.h"
 #include "analysis/form/analysis_motive_shape.h"
 #include "theory/form/phrase_ending.h"
@@ -730,40 +729,14 @@ void standard_form_motives_destroy(StandardFormMotives *motives) {
         StandardFormMotiveFamily *family = &motives->families[f];
         for (size_t k = 0; k < family->occurrence_count; k++) {
             StandardFormMotiveOccurrence *occurrence = &family->occurrences[k];
-            relationship_destroy(occurrence->contained_relationship);
-            relationship_destroy(occurrence->family_relationship);
-            interpretation_destroy(occurrence->interpretation);
             motif_occurrence_destroy(occurrence->occurrence);
         }
         free(family->occurrences);
-        interpretation_destroy(family->interpretation);
         motif_destroy(family->motif);
     }
     free(motives->families);
     motives->families = NULL;
     motives->family_count = 0;
-}
-
-/* The entity that holds a span of measures: the innermost idea shell, else the phrase occurrence; NULL with neither. */
-static const char *container_of(const StandardFormPhrases *phrases, const StandardFormSegmentation *segmentation, int first_measure,
-                                int last_measure) {
-    if (segmentation != NULL) {
-        for (size_t i = 0; i < segmentation->idea_count; i++) {
-            const StandardFormIdea *idea = &segmentation->ideas[i];
-            if (idea->shell != NULL && idea->claim.first_measure <= first_measure && last_measure <= idea->claim.last_measure) {
-                return entity_id_value(entity_id(structure_entity(idea->shell)));
-            }
-        }
-    }
-    if (phrases != NULL) {
-        for (size_t i = 0; i < phrases->count; i++) {
-            const StandardFormPhraseClaim *claim = &phrases->items[i].claim;
-            if (phrases->items[i].occurrence != NULL && claim->first_measure <= first_measure && last_measure <= claim->last_measure) {
-                return entity_id_value(phrase_occurrence_id(phrases->items[i].occurrence));
-            }
-        }
-    }
-    return NULL;
 }
 
 static StandardFormAnalysisStatus emit_family(const StandardFormInput *input, const StandardFormMotiveLine *lines,
@@ -802,13 +775,6 @@ static StandardFormAnalysisStatus emit_family(const StandardFormInput *input, co
     free(ids);
     char motif_text[160];
     snprintf(motif_text, sizeof(motif_text), "%s", entity_id_value(motif_id(out->motif)));
-    char interpretation_id[200];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-form-motive-claim-%d-%d", fam->line, index);
-    out->interpretation = standard_form_analysis_interpretation(interpretation_id, motif_text, STANDARD_FORM_MOTIVE_CLAIM_TYPE,
-                                                                claim, sizeof(*claim), 0.0, "motive-discovery");
-    if (out->interpretation == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
     out->occurrences = (StandardFormMotiveOccurrence *)calloc(fam->occ_count, sizeof(StandardFormMotiveOccurrence));
     if (out->occurrences == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
@@ -878,30 +844,6 @@ static StandardFormAnalysisStatus emit_family(const StandardFormInput *input, co
             return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
         }
         free(region);
-        const char *occurrence_text = entity_id_value(motif_occurrence_id(item->occurrence));
-        snprintf(interpretation_id, sizeof(interpretation_id), "standard-form-motive-occurrence-%d-%d-%zu", fam->line, index, j);
-        item->interpretation = standard_form_analysis_interpretation(interpretation_id, occurrence_text,
-                                                                     STANDARD_FORM_MOTIVE_OCCURRENCE_CLAIM_TYPE, oc, sizeof(*oc),
-                                                                     item->uncertainty, "motive-matching");
-        char key[64];
-        snprintf(key, sizeof(key), "%d-%d-o%zu", fam->line, index, j);
-        item->family_relationship = standard_form_analysis_relationship("motive-family", key, motif_text, occurrence_text,
-                                                                        "occurrence-of");
-        if (item->interpretation == NULL || item->family_relationship == NULL) {
-            return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-        }
-        int last_measure = oc->first_measure;
-        if (meter_map_last_measure_touched(input->map, line->end[occ->first + occ->n - 1], &last_measure) != METER_MAP_OK) {
-            last_measure = oc->first_measure;
-        }
-        const char *container = container_of(phrases, segmentation, oc->first_measure, last_measure);
-        if (container != NULL) {
-            item->contained_relationship =
-                standard_form_analysis_relationship("motive-contained", key, occurrence_text, container, "contained-in");
-            if (item->contained_relationship == NULL) {
-                return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-            }
-        }
     }
     return STANDARD_FORM_ANALYSIS_OK;
 }

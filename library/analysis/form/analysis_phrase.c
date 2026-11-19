@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form/analysis_claim.h"
 #include "model/core/occurrence.h"
 #include "model/core/rational.h"
 #include "model/core/value.h"
@@ -39,7 +38,6 @@ typedef struct {
 } Point;
 
 static void destroy_phrase(StandardFormPhrase *phrase) {
-    interpretation_destroy(phrase->interpretation);
     phrase_occurrence_destroy(phrase->occurrence);
     memset(phrase, 0, sizeof(*phrase));
 }
@@ -154,15 +152,8 @@ static StandardFormAnalysisStatus build_phrase(const StandardFormInput *input, c
         free(ids);
         return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
     }
-    (void)ids_owned;
     free(ids);
-    snprintf(text, sizeof(text), "%d", claim->index);
-    char interpretation_id[200];
-    snprintf(interpretation_id, sizeof(interpretation_id), "standard-form-phrase-%s", text);
-    phrase->interpretation = standard_form_analysis_interpretation(
-        interpretation_id, entity_id_value(phrase_occurrence_id(phrase->occurrence)), STANDARD_FORM_PHRASE_CLAIM_TYPE, claim,
-        sizeof(*claim), uncertainty, "phrase-segmentation");
-    return phrase->interpretation != NULL ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    return STANDARD_FORM_ANALYSIS_OK;
 }
 
 /* The boundaries on the grid: a unit's last or half measure with a goal cadence on its point ends a phrase by that cadence; a

@@ -4,6 +4,7 @@ add_library(ursatz_analysis
     notes/analysis_note.c
     notes/analysis_note_build.c
     notes/contour.c
+    notes/note_group.c
     notes/rhythmic_pattern.c
     notes/sonority.c
     notes/sonority_segmentation.c
@@ -42,7 +43,6 @@ add_library(ursatz_analysis
     harmony/roman_numeral_adapter.c
     harmony/weighted_chord_identification.c
     harmony/weighted_identification.c
-    form/analysis_claim.c
     form/analysis_expansion.c
     form/analysis_ideas.c
     form/analysis_input.c

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form/analysis_claim.h"
 #include "model/core/value.h"
 #include "theory/form/external_expansion_rules.h"
 #include "theory/form/internal_expansion_rules.h"
@@ -19,48 +18,22 @@
 #include "model/time/meter_map.h"
 #include "model/time/score_time.h"
 
-static void destroy_expansion(StandardFormExpansion *expansion) {
-    interpretation_destroy(expansion->interpretation);
-    structure_destroy(expansion->shell);
-    memset(expansion, 0, sizeof(*expansion));
-}
-
 void standard_form_expansions_destroy(StandardFormExpansions *expansions) {
     if (expansions == NULL) {
         return;
-    }
-    for (size_t i = 0; i < expansions->count; i++) {
-        destroy_expansion(&expansions->items[i]);
     }
     free(expansions->items);
     expansions->items = NULL;
     expansions->count = 0;
 }
 
-static StandardFormAnalysisStatus emit(const StandardFormInput *input, StandardFormExpansions *list,
-                                       StandardFormExpansionClaim *claim, double uncertainty, int note_first,
-                                       int note_end) {
+static StandardFormAnalysisStatus emit(StandardFormExpansions *list, StandardFormExpansionClaim *claim, double uncertainty,
+                                       int note_first, int note_end) {
     StandardFormExpansion *item = &list->items[list->count];
     claim->index = (int)list->count;
     item->claim = *claim;
     item->uncertainty = uncertainty;
-    if (note_end <= note_first) {
-        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
-    }
-    size_t count = (size_t)(note_end - note_first);
-    const char **ids = (const char **)calloc(count, sizeof(char *));
-    if (ids == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    for (size_t k = 0; k < count; k++) {
-        ids[k] = input->notes[(size_t)note_first + k].note_id;
-    }
-    char key[64];
-    snprintf(key, sizeof(key), "e%d", claim->index);
-    bool ok = standard_form_analysis_emit("length-change", key, ids, count, STANDARD_FORM_EXPANSION_CLAIM_TYPE, claim,
-                                          sizeof(*claim), uncertainty, &item->shell, &item->interpretation);
-    free(ids);
-    return ok ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    return note_end <= note_first ? STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT : STANDARD_FORM_ANALYSIS_OK;
 }
 
 /* The ideas of the ending of a theme: [*first, *first + *count) in the segmentation's ideas. */
@@ -186,7 +159,7 @@ StandardFormAnalysisStatus standard_form_detect_expansions(const StandardFormInp
             status = STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
             break;
         }
-        status = emit(input, &found, &claim, theme->uncertainty, segmentation->ideas[first].claim.note_first,
+        status = emit(&found, &claim, theme->uncertainty, segmentation->ideas[first].claim.note_first,
                       segmentation->ideas[first + count - 1].claim.note_end);
         found.count++;
     }
@@ -237,7 +210,7 @@ StandardFormAnalysisStatus standard_form_detect_expansions(const StandardFormInp
         if (from < 0) {
             continue;
         }
-        status = emit(input, &found, &claim, phrases->items[p].uncertainty, from, pc->note_end);
+        status = emit(&found, &claim, phrases->items[p].uncertainty, from, pc->note_end);
         found.count++;
     }
     if (status != STANDARD_FORM_ANALYSIS_OK) {
