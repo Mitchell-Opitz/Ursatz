@@ -163,11 +163,15 @@ void workshop_library_patch_free(WorkshopLibraryPatch *patch);
 /* The name a status goes by in the routes and the stored flags. */
 const char *workshop_library_status_name(AnalyzerDocumentStatus status);
 
-/* Writes <dir_path>/meta.json. */
+/* Writes <dir_path>/piece.json. */
 bool workshop_library_meta_write_new(const char *dir_path, const char *filename, const char *format, const char *uploaded_at);
 
-/* Parses <dir_path>/meta.json; NULL when it is missing or not an object. */
+/* Reads <dir_path>/piece.json into the shape the services hold (the source's format as "format", the analysis key as
+ * "ursatz_commit"); NULL when it is missing or is not a piece file. */
 cJSON *workshop_library_meta_read(const char *dir_path);
+
+/* Writes meta (in that shape) as <dir_path>/piece.json, atomically. */
+bool workshop_library_meta_write(const char *dir_path, const cJSON *meta);
 
 /* A copy of a string member of meta, "" when it is absent. */
 char *workshop_library_meta_string_copy(const cJSON *meta, const char *key);

@@ -31,8 +31,7 @@
 #define PATH_BYTES 400
 #define PIECE_ID_MAX 15
 
-/* The store's directory, whether it is ready, and the one lock every operation runs under (store.c). */
-extern char store_dir[300];
+/* Whether the store is ready, and the one lock every operation runs under (store.c). */
 extern bool store_ready;
 extern WorkshopLock store_lock;
 /* Calls the forget hook (workshop_store_set_forget_item) for item_id, if there is one. */
@@ -43,9 +42,19 @@ void store_forget_item(const char *item_id);
 
 bool store_is_valid_id(const char *id);
 
+/* The folder of an item that exists (found across the projects), its file, and the folder of one of its versions; false for an id that
+ * is not an item. */
 bool store_item_dir_path(const char *id, char *out, size_t out_size);
 
 bool store_item_file_path(const char *id, const char *file, char *out, size_t out_size);
+
+bool store_version_dir_path(const char *id, int number, char *out, size_t out_size);
+
+/* The project an item is in (the folder it is under). */
+bool store_find_item_project(const char *id, char *project, size_t project_size);
+
+/* Adds the id of every item, across the projects, to out (sorted). */
+UrsatzStatus store_item_ids_locked(CommonNames *out);
 
 UrsatzStatus store_invalid_body(UrsatzError *error, const char *message);
 
@@ -75,8 +84,9 @@ UrsatzStatus store_fill_body_uses_locked(const char *self_id, const cJSON *body,
  * reads it. */
 bool store_annotate_variant_of_locked(cJSON *item, const cJSON *known_body);
 
-/* Writes body as the next version of item and saves item.json with it made current. */
-UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note);
+/* Writes body as the next version of item and saves its header with it made current; stage (NULL for none) is a folder of the version's
+ * files that becomes the version folder. */
+UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage);
 
 const char *store_prefix_for_type(const char *type);
 

@@ -22,6 +22,15 @@
 #include "test_http.h"
 #include "version_check.h"
 
+/* The data folder path of a file under an item: projects/<prj>/items/<id>/<tail> (the project the item is in is found). */
+static void item_file(const char *id, const char *tail, char *out, size_t size) {
+  char dir[400];
+  if (!test_gui_item_dir(id, dir, sizeof(dir))) {
+    snprintf(dir, sizeof(dir), "projects/none/items/%s", id);
+  }
+  snprintf(out, size, "%s%s%s", dir, tail[0] ? "/" : "", tail);
+}
+
 /* The full test serves on 18773, the smoke run (the argument smoke) on 18777, so both can run at once. */
 static const char *g_port = "18773";
 #define PORT g_port
@@ -226,13 +235,13 @@ static cJSON *compose(const char *id, const char *body, int *status) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
   if (*status == 200 && cJSON_IsNumber(version)) {
-    snprintf(g_last_request_path, sizeof(g_last_request_path), "materials/items/%s/v%d/request.json", id, version->valueint);
+    { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/request.json", version->valueint); item_file(id, tail_, g_last_request_path, sizeof(g_last_request_path)); }
   }
   return answer;
 }
 
 static void version_dir(const char *id, int version, char *out, size_t size) {
-  snprintf(out, size, "materials/items/%s/v%d", id, version);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d", version); item_file(id, tail_, out, size); }
 }
 
 /* The request the last compose read, as the version kept it. */
@@ -713,7 +722,7 @@ static void test_compose(const Motifs *m) {
 /* True when the folder of item id holds nothing but version files: no staging folder is left over from a run. */
 static bool no_stage_left(const char *id) {
   char path[300];
-  snprintf(path, sizeof(path), "materials/items/%s", id);
+  item_file(id, "", path, sizeof(path));
   DIR *folder = opendir(path);
   bool clean = folder != NULL;
   struct dirent *entry;
@@ -825,7 +834,7 @@ static void test_files(const Motifs *m) {
 
   /* Deleting the item removes its version folders. */
   char dir[200];
-  snprintf(dir, sizeof(dir), "materials/items/%s", theme);
+  item_file(theme, "", dir, sizeof(dir));
   check(dir_exists(dir), "the item directory exists before the delete");
   snprintf(path, sizeof(path), "/api/materials/items/%s", theme);
   answer = exchange("DELETE", path, NULL, &status);
@@ -1002,12 +1011,12 @@ static void test_concurrent(const Motifs *m) {
   for (int version = 2; version <= 3; version++) {
     static const char *const files[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
     for (size_t i = 0; i < 4; i++) {
-      snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", theme, version, files[i]);
+      { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/%s", version, files[i]); item_file(theme, tail_, path, sizeof(path)); }
       all = all && test_file_exists(path);
     }
   }
   check(all, "each version has its four files");
-  snprintf(path, sizeof(path), "materials/items/%s", theme);
+  item_file(theme, "", path, sizeof(path));
   DIR *folder = opendir(path);
   bool clean = folder != NULL;
   struct dirent *entry;
@@ -1360,7 +1369,7 @@ int main(int argc, char **argv) {
   if (smoke) {
     g_port = "18777";
   }
-  system("rm -rf materials subjects pieces collections styles");
+  system("rm -rf projects subjects library settings cache");
 
   struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");

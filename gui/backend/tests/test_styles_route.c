@@ -86,7 +86,7 @@ static int listed_styles(void) {
 /* The Analyzer reads styles/<id>/style-model.json and it holds the piece count. */
 static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
   char path[512];
-  snprintf(path, sizeof(path), "styles/%s/style-model.json", id);
+  snprintf(path, sizeof(path), "settings/styles/%s/style-model.json", id);
   StyleModel *model = NULL;
   size_t pieces = 0;
   if (style_model_file_read(path, &model, &pieces) != STYLE_MODEL_FILE_OK) {
@@ -153,11 +153,12 @@ int main(int argc, char **argv) {
   }
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections styles data 2> nul");
+  system("rmdir /s /q library settings cache data 2> nul");
 #else
-  system("rm -rf pieces collections styles data");
+  system("rm -rf library settings cache data");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   const char *fixtures = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char clementi_path[512];
@@ -206,8 +207,8 @@ int main(int argc, char **argv) {
   check(model_reads_with_pieces(tag_style_id, 2), "the Analyzer reads the model back with 2 pieces");
   {
     char path[512];
-    snprintf(path, sizeof(path), "styles/%s/meta.json", tag_style_id);
-    check(test_file_exists(path), "meta.json is stored next to the model");
+    snprintf(path, sizeof(path), "settings/styles/%s/style.json", tag_style_id);
+    check(test_file_exists(path), "style.json is stored next to the model");
   }
   check(listed_styles() == 1, "the list holds the new style");
 
@@ -460,8 +461,8 @@ int main(int argc, char **argv) {
   {
     char meta_path[512];
     char analysis_path[512];
-    snprintf(meta_path, sizeof(meta_path), "pieces/%s/meta.json", mozart_id);
-    snprintf(analysis_path, sizeof(analysis_path), "pieces/%s/analysis.json", mozart_id);
+    snprintf(meta_path, sizeof(meta_path), "library/pieces/%s/piece.json", mozart_id);
+    snprintf(analysis_path, sizeof(analysis_path), "library/pieces/%s/analysis.json", mozart_id);
     char *meta_text = test_read_file(meta_path, NULL);
     cJSON *meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
@@ -486,7 +487,7 @@ int main(int argc, char **argv) {
     meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
     check(number_of(meta, "document_schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION,
-          "its meta.json records the current schema version");
+          "its piece.json records the current schema version");
     cJSON_Delete(meta);
   }
 
@@ -529,7 +530,7 @@ int main(int argc, char **argv) {
     cJSON_Delete(deleted);
     check(listed_styles() == before - 1, "the list no longer holds it");
     char model[512];
-    snprintf(model, sizeof(model), "styles/%s/style-model.json", tag_style_id);
+    snprintf(model, sizeof(model), "settings/styles/%s/style-model.json", tag_style_id);
     check(!test_file_exists(model), "its files are gone");
     answer = test_http_json(PORT, "GET", path, NULL, &status);
     check(status == 404 && !ok_true(answer), "GET a deleted style answers 404");

@@ -33,11 +33,11 @@
  */
 
 /*
- * Prepares the store in dir (created if absent, with projects/ inside it).
+ * Prepares the store (projects/ in the data folder, created if absent).
  * Called once at server startup. When projects/ holds no project, a project
  * named "General" is created. Returns false when the store cannot be used.
  */
-bool workshop_material_service_init(const char *dir);
+bool workshop_material_service_init(void);
 
 /* Forgets the store's directory. Nothing persistent is freed or deleted. */
 void workshop_material_service_shutdown(void);
@@ -181,6 +181,13 @@ UrsatzStatus workshop_material_item_move(const char *id, const char *project_id,
 UrsatzStatus workshop_material_item_add_version(const char *id, const cJSON *body, const char *note,
                                                               cJSON **out_item);
 
+/*
+ * As workshop_material_item_add_version, with the files of the version made beforehand: stage is a folder (beside the version folder) that
+ * becomes the version folder, so a version never exists without its files. The stage is gone on success and on failure of the commit.
+ */
+UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,
+                                                       cJSON **out_item);
+
 /* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
 UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSON **out_body);
 
@@ -253,7 +260,7 @@ UrsatzStatus workshop_material_op_checks_put(const char *id, const cJSON *body, 
 /* --- version files ------------------------------------------------------- */
 
 /*
- * A theme version keeps its Composer files beside its body, in items/<id>/v<n>/ (R-167): request.json,
+ * A theme version keeps its Composer files beside its body, in projects/<prj>/items/<id>/v<n>/ (R-167): request.json,
  * brief.style.json, plan.json, theme.mid and theme.musicxml. A piece version keeps request.json, brief.style.json
  * and, for each version of its form named <name> (the game loop's loop and ending, a sized form's piece), <name>.mid and
  * <name>.musicxml with the plan: plan.json for the first version, <name>-plan.json for each later one (so a game loop
@@ -269,10 +276,10 @@ const char *workshop_material_version_file_type(const char *name);
  * hyphens. The names of the files of a version are made from it. */
 bool workshop_material_version_name_ok(const char *name);
 
-/* The folder of version number of item id, as a path under the store (it need not exist). false if it does not fit. */
+/* The folder of version number of item id, as a path under the data folder (it need not exist; the item must). false if it does not fit. */
 bool workshop_material_version_dir(const char *id, int number, char *out, size_t out_size);
 
-/* The folder for the MIDI files of unsaved renders, "<store>/.render-tmp" (the Analyzer imports by path, R-275). It
+/* The folder for the MIDI files of unsaved renders, "cache/tmp" (the Analyzer imports by path, R-275). It
  * need not exist; false if the store is not ready or the path does not fit. */
 bool workshop_material_render_tmp_dir(char *out, size_t out_size);
 

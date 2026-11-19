@@ -72,8 +72,7 @@ typedef struct {
 /* Makes the staging folder for version number of item id. */
 UrsatzStatus workshop_compose_stage_make(const char *id, int number, WorkshopComposeStage *stage, UrsatzError *error);
 
-/* Moves the staging folder to the folder of the version item (an item.json) was written with. */
-void workshop_compose_stage_finish(const char *id, const cJSON *item, const WorkshopComposeStage *stage);
+/* The staging folder becomes the version's folder when the version is written (workshop_material_item_add_version_staged). */
 
 /* Removes the staging folder and what it holds. */
 void workshop_compose_stage_discard(const WorkshopComposeStage *stage);

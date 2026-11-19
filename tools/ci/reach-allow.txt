@@ -114,16 +114,14 @@ common/files.c common_file_append_sync  # no app calls it until the journal of P
 common/json.c common_json_bool  # no app reads a boolean member through it until the formats of P63 B7; its test calls it
 common/json.c common_json_rational_text  # no app writes an "n/d" text through it until P63 B15 (request bodies); its test calls it
 common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
-workshop/src/items/formats.c ends_with  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c ends_with_segment  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c find_format  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c starts_with  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c type_ok  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_check  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_known  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_of_path  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_read  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_stamp  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_strip  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_version  # until P63 B7: the stores read and write their files through the formats
-workshop/src/items/formats.c workshop_format_write  # until P63 B7: the stores read and write their files through the formats
+workshop/src/items/formats.c ends_with  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
+workshop/src/items/formats.c ends_with_segment  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
+workshop/src/items/formats.c starts_with  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
+workshop/src/items/formats.c workshop_format_known  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
+workshop/src/items/formats.c workshop_format_of_path  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
+workshop/src/items/data_check.c append  # until P63 B7 (the migration refuses a folder the data check refuses)
+workshop/src/items/data_check.c key_is_off_c  # until P63 B7 (the migration refuses a folder the data check refuses)
+workshop/src/items/data_check.c motif_is_off_c  # until P63 B7 (the migration refuses a folder the data check refuses)
+workshop/src/items/data_check.c read_item  # until P63 B7 (the migration refuses a folder the data check refuses)
+workshop/src/items/data_check.c workshop_data_check  # until P63 B7 (the migration refuses a folder the data check refuses)
+common/json.c common_json_read_object  # until P63 B7 (the data check reads items through it, and the migration calls the data check)

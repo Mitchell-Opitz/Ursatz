@@ -344,15 +344,8 @@ static UrsatzStatus reanalyze_unlocked(const char *pieces_dir, const char *id) {
     ok = ok && workshop_library_meta_set_string(meta, "analyzer_version", analyzer_version()) &&
          workshop_library_meta_set_number(meta, "document_schema_version", ANALYZER_DOCUMENT_SCHEMA_VERSION) &&
          workshop_library_meta_set_string(meta, "ursatz_commit", analyzer_producer_key());
-    char *text = ok ? cJSON_Print(meta) : NULL;
+    ok = ok && workshop_library_meta_write(dir_path, meta);
     cJSON_Delete(meta);
-    if (!text) {
-        return workshop_fail(URSATZ_ERR_IO, NULL);
-    }
-    char meta_path[400];
-    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    ok = (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
-    free(text);
     return ok ? URSATZ_OK : workshop_fail(URSATZ_ERR_IO, NULL);
 }
 
@@ -367,13 +360,7 @@ static void meta_backfill_ursatz_commit(const char *dir_path, cJSON *meta, const
     const cJSON *metadata = document ? cJSON_GetObjectItemCaseSensitive(document, "metadata") : NULL;
     const cJSON *commit = metadata ? cJSON_GetObjectItemCaseSensitive(metadata, "producer_key") : NULL;
     if (cJSON_IsString(commit) && workshop_library_meta_set_string(meta, "ursatz_commit", commit->valuestring)) {
-        char *text = cJSON_Print(meta);
-        if (text) {
-            char meta_path[400];
-            snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-            (void)common_file_write_atomic(meta_path, text, strlen(text), NULL); /* best effort: the backfill is made again on the next read */
-            free(text);
-        }
+        (void)workshop_library_meta_write(dir_path, meta); /* best effort: the backfill is made again on the next read */
     }
     cJSON_Delete(document);
 }

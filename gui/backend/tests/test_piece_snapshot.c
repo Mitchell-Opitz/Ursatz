@@ -134,11 +134,12 @@ static void snapshot_piece(const char *name, const char *source_path, const char
 
 int main(void) {
 #ifdef _WIN32
-  system("rmdir /s /q pieces 2> nul");
+  system("rmdir /s /q library settings cache 2> nul");
 #else
-  system("rm -rf pieces");
+  system("rm -rf library settings cache");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
   capture = test_update_goldens();
   if (capture) {
     MKDIR(URSATZ_GUI_TEST_PIECE_FIXTURES);

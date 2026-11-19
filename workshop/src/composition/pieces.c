@@ -860,9 +860,9 @@ static cJSON *kept_brief_summary(const Source *source) {
 }
 
 /* Writes new_body as the next version. */
-static UrsatzStatus add_version(const char *id, const cJSON *new_body, const char *note, cJSON **out_item,
+static UrsatzStatus add_version(const char *id, const cJSON *new_body, const char *note, const char *stage, cJSON **out_item,
                                         UrsatzError *error) {
-    if (workshop_material_item_add_version(id, new_body, note, out_item) != URSATZ_OK) {
+    if (workshop_material_item_add_version_staged(id, new_body, note, stage, out_item) != URSATZ_OK) {
         workshop_error_text(error, "the version could not be written");
         return workshop_fail(URSATZ_ERR_INTERNAL, NULL);
     }
@@ -956,11 +956,10 @@ static UrsatzStatus regenerate_locked(const char *id, int version, const char *s
         if (!new_body) {
             result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
         } else {
-            result = add_version(id, new_body, note, &item, error);
+            result = add_version(id, new_body, note, stage.path, &item, error);
         }
     }
     if (result == URSATZ_OK) {
-        workshop_compose_stage_finish(id, item, &stage);
         *out_item = item;
     } else if (made) {
         workshop_compose_stage_discard(&stage);
@@ -1338,11 +1337,10 @@ static UrsatzStatus choose_locked(const char *id, int version, int set, int inde
             workshop_error_text(error, "the version could not be made from the variation");
             result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
         } else {
-            result = add_version(id, new_body, note, &item, error);
+            result = add_version(id, new_body, note, stage.path, &item, error);
         }
     }
     if (result == URSATZ_OK) {
-        workshop_compose_stage_finish(id, item, &stage);
         *out_item = item;
     } else if (made) {
         workshop_compose_stage_discard(&stage);

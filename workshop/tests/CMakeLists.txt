@@ -24,18 +24,11 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
 ursatz_test(material_service LIBS ursatz_workshop ursatz_test_support
     DEFINITIONS URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/material_service"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/material_service)
-# The test creates its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR) and removes it.
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gui_material_migration)
-ursatz_test(gui_material_migration SOURCES test_material_migration.c LIBS ursatz_workshop ursatz_test_support
-    DEFINITIONS URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/gui_material_migration"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gui_material_migration)
-# The test reads old motif, theme and piece files (the key text and the mode words), composes them and saves them again with
-# the Composer API in its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR), and removes it.
+# The test creates its own materials_<pid>/ folder in the build tree (URSATZ_GUI_TEST_STORE_DIR), works in it as its data folder, and removes it.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
 ursatz_test(subject_service LIBS ursatz_workshop ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
-# The test creates its own materials_<pid>/, subjects_<pid>/ and pieces/ in its working directory.
+# The test creates its own projects/, subjects_<pid>/ and library/pieces/ in its working directory.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/link_service)
 ursatz_test(link_service LIBS ursatz_workshop ursatz_test_http

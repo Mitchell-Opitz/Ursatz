@@ -1,4 +1,6 @@
 #include "library_pieces.h"
+#include "formats.h"
+#include "layout.h"
 #include "base/last_error.h"
 #include "ids.h"
 #include "library_metadata.h"
@@ -48,7 +50,44 @@ static const char *meta_status_name(const cJSON *meta) {
     return workshop_library_status_name(analyzer_document_status_of(schema->valueint, analyzer->valuestring, commit->valuestring));
 }
 
-/* Writes <dir_path>/meta.json. */
+/* The piece's metadata as the services hold it is the file's, with the source's format under "format" and the analysis key under
+ * "ursatz_commit" (the file says source_format and producer_key, and carries its own format members). */
+static void meta_to_memory(cJSON *meta) {
+    cJSON *source_format = cJSON_DetachItemFromObjectCaseSensitive(meta, "source_format");
+    cJSON *key = cJSON_DetachItemFromObjectCaseSensitive(meta, "producer_key");
+    if (source_format) {
+        cJSON_AddItemToObject(meta, "format", source_format);
+    }
+    if (key) {
+        cJSON_AddItemToObject(meta, "ursatz_commit", key);
+    }
+}
+
+static void meta_to_file(cJSON *meta) {
+    cJSON *source_format = cJSON_DetachItemFromObjectCaseSensitive(meta, "format");
+    cJSON *key = cJSON_DetachItemFromObjectCaseSensitive(meta, "ursatz_commit");
+    if (source_format) {
+        cJSON_AddItemToObject(meta, "source_format", source_format);
+    }
+    if (key) {
+        cJSON_AddItemToObject(meta, "producer_key", key);
+    }
+}
+
+bool workshop_library_meta_write(const char *dir_path, const cJSON *meta) {
+    cJSON *file = cJSON_Duplicate(meta, 1);
+    char path[400];
+    if (!file || snprintf(path, sizeof(path), "%s/" WORKSHOP_FILE_PIECE, dir_path) >= (int)sizeof(path)) {
+        cJSON_Delete(file);
+        return false;
+    }
+    meta_to_file(file);
+    bool ok = workshop_format_write(path, WORKSHOP_FORMAT_LIBRARY_PIECE, file, NULL) == URSATZ_OK;
+    cJSON_Delete(file);
+    return ok;
+}
+
+/* Writes <dir_path>/piece.json. */
 bool workshop_library_meta_write_new(const char *dir_path, const char *filename, const char *format, const char *uploaded_at) {
     cJSON *meta = cJSON_CreateObject();
     if (!meta) {
@@ -60,33 +99,20 @@ bool workshop_library_meta_write_new(const char *dir_path, const char *filename,
     cJSON_AddStringToObject(meta, "analyzer_version", analyzer_version());
     cJSON_AddNumberToObject(meta, "document_schema_version", ANALYZER_DOCUMENT_SCHEMA_VERSION);
     cJSON_AddStringToObject(meta, "ursatz_commit", analyzer_producer_key());
-    char *text = cJSON_Print(meta);
+    bool ok = workshop_library_meta_write(dir_path, meta);
     cJSON_Delete(meta);
-    if (!text) {
-        return false;
-    }
-    char meta_path[400];
-    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
-    free(text);
     return ok;
 }
 
-/* Parses <dir_path>/meta.json; NULL when it is missing or not an object. */
+/* Reads <dir_path>/piece.json; NULL when it is missing or is not a piece file. */
 cJSON *workshop_library_meta_read(const char *dir_path) {
     char meta_path[400];
-    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    char *text = NULL;
-    common_file_read(meta_path, &text, NULL, NULL);
-    if (!text) {
+    snprintf(meta_path, sizeof(meta_path), "%s/" WORKSHOP_FILE_PIECE, dir_path);
+    cJSON *meta = NULL;
+    if (workshop_format_read(meta_path, WORKSHOP_FORMAT_LIBRARY_PIECE, true, &meta, NULL) != URSATZ_OK) {
         return NULL;
     }
-    cJSON *meta = cJSON_Parse(text);
-    free(text);
-    if (meta && !cJSON_IsObject(meta)) {
-        cJSON_Delete(meta);
-        return NULL;
-    }
+    meta_to_memory(meta);
     return meta;
 }
 
@@ -526,15 +552,8 @@ UrsatzStatus workshop_library_update_metadata_unlocked(const char *pieces_dir, c
         return result;
     }
 
-    char *text = cJSON_Print(meta);
+    bool ok = workshop_library_meta_write(dir_path, meta);
     cJSON_Delete(meta);
-    if (!text) {
-        return workshop_fail(URSATZ_ERR_ALLOC, NULL);
-    }
-    char meta_path[400];
-    snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
-    free(text);
     return ok ? URSATZ_OK : workshop_fail(URSATZ_ERR_IO, NULL);
 }
 
@@ -573,7 +592,7 @@ bool workshop_library_piece_exists(const char *pieces_dir, const char *id) {
     char dir_path[320];
     char meta_path[400];
     return workshop_library_piece_dir(pieces_dir, id, dir_path, sizeof(dir_path)) &&
-           snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path) < (int)sizeof(meta_path) &&
+           snprintf(meta_path, sizeof(meta_path), "%s/" WORKSHOP_FILE_PIECE, dir_path) < (int)sizeof(meta_path) &&
            common_path_exists(meta_path);
 }
 

@@ -107,6 +107,7 @@ static pthread_once_t g_build_once = PTHREAD_ONCE_INIT;
 static char g_build_api[32];
 static char g_build_composer[64];
 static char g_build_ursatz[64];
+static char g_build_composition[64];
 
 static void build_copy(char *out, size_t out_size, const cJSON *item) {
   if (cJSON_IsString(item) && strlen(item->valuestring) < out_size) {
@@ -125,6 +126,7 @@ static void build_read(void) {
     build_copy(g_build_api, sizeof(g_build_api), cJSON_GetObjectItemCaseSensitive(versions, "api_version"));
     build_copy(g_build_composer, sizeof(g_build_composer), cJSON_GetObjectItemCaseSensitive(versions, "composer_version"));
     build_copy(g_build_ursatz, sizeof(g_build_ursatz), cJSON_GetObjectItemCaseSensitive(versions, "producer_key"));
+    build_copy(g_build_composition, sizeof(g_build_composition), cJSON_GetObjectItemCaseSensitive(versions, "composition_key"));
   }
   cJSON_Delete(versions);
   workshop_composer_reply_destroy(&reply);
@@ -132,7 +134,7 @@ static void build_read(void) {
 
 WorkshopComposerBuild workshop_composer_build(void) {
   pthread_once(&g_build_once, build_read);
-  WorkshopComposerBuild build = {g_build_api, g_build_composer, g_build_ursatz};
+  WorkshopComposerBuild build = {g_build_api, g_build_composer, g_build_ursatz, g_build_composition};
   return build;
 }
 

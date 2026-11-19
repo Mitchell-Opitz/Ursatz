@@ -15,6 +15,7 @@
 #include "items/collections.h"
 #include "items/data_check.h"
 #include "items/ids.h"
+#include "items/layout.h"
 #include "items/library_metadata.h"
 #include "items/lock.h"
 #include "items/store.h"

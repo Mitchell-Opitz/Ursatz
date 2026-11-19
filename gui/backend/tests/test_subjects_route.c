@@ -269,11 +269,12 @@ static void test_links(const char *anna, const char *piece) {
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections materials subjects data 2> nul");
+  system("rmdir /s /q library settings cache projects subjects data 2> nul");
 #else
-  system("rm -rf pieces collections materials subjects data");
+  system("rm -rf library settings cache projects subjects data");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   char clementi_path[512];
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid",

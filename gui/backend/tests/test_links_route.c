@@ -96,11 +96,12 @@ static const cJSON *first_link(const cJSON *run) {
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections materials subjects links data 2> nul");
+  system("rmdir /s /q library settings cache projects subjects data 2> nul");
 #else
-  system("rm -rf pieces collections materials subjects links data");
+  system("rm -rf library settings cache projects subjects data");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
@@ -310,9 +311,9 @@ int main(void) {
   answer = test_http_json(PORT, "GET", "/api/links/runs", NULL, &status);
   check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "runs")) == 2, "two runs are left");
   cJSON_Delete(answer);
-  check(test_file_exists("links/motive-link-cache.json"), "the cache is kept under links/");
+  check(test_file_exists("cache/motive-link-cache.json"), "the cache is kept under links/");
   char deleted_file[160];
-  snprintf(deleted_file, sizeof(deleted_file), "links/runs/%s/run.json", first_id);
+  snprintf(deleted_file, sizeof(deleted_file), "library/links/%s/run.json", first_id);
   check(!test_file_exists(deleted_file), "the deleted run's file is gone");
 
   for (int i = 0; i < 12; i++) {
@@ -320,9 +321,9 @@ int main(void) {
   }
   test_gui_server_stop(ctx);
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections materials subjects links data 2> nul");
+  system("rmdir /s /q library settings cache projects subjects data 2> nul");
 #else
-  system("rm -rf pieces collections materials subjects links data");
+  system("rm -rf library settings cache projects subjects data");
 #endif
 
   return test_finish("links_route");

@@ -1,6 +1,8 @@
 #include "server_support.h"
 
+#include <dirent.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <string.h>
 
 #include <ursatz_workshop/workshop_api.h>
@@ -33,4 +35,25 @@ void test_gui_server_stop(struct mg_context *ctx) {
   ursatz_gui_server_stop(ctx);
   workshop_close(g_workshop);
   g_workshop = NULL;
+}
+
+bool test_gui_item_dir(const char *id, char *out, size_t size) {
+  DIR *projects = opendir("projects");
+  bool found = false;
+  for (struct dirent *entry = projects ? readdir(projects) : NULL; entry && !found; entry = readdir(projects)) {
+    if (entry->d_name[0] == '.') {
+      continue;
+    }
+    struct stat st;
+    found = snprintf(out, size, "projects/%s/items/%s", entry->d_name, id) < (int)size && stat(out, &st) == 0 && S_ISDIR(st.st_mode);
+  }
+  if (projects) {
+    closedir(projects);
+  }
+  return found;
+}
+
+bool test_gui_version_dir(const char *id, int version, char *out, size_t size) {
+  char item[400];
+  return test_gui_item_dir(id, item, sizeof(item)) && snprintf(out, size, "%s/v%d", item, version) < (int)size;
 }

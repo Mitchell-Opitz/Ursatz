@@ -145,17 +145,6 @@ UrsatzStatus workshop_compose_stage_make(const char *id, int number, WorkshopCom
     return URSATZ_OK;
 }
 
-void workshop_compose_stage_finish(const char *id, const cJSON *item, const WorkshopComposeStage *stage) {
-    /* The version written may have another number than the one planned: another writer may have added a version while
-       the Composer ran. */
-    int actual = cJSON_GetObjectItemCaseSensitive(item, "current_version")->valueint;
-    char target[PATH_BYTES];
-    if (workshop_material_version_dir(id, actual, target, sizeof(target))) {
-        common_dir_remove(target, NULL); /* a folder no version named is left over from a failed run */
-        rename(stage->path, target);
-    }
-}
-
 void workshop_compose_stage_discard(const WorkshopComposeStage *stage) {
     common_dir_remove(stage->path, NULL);
 }
@@ -254,15 +243,14 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
             brief_summary = NULL;
             if (!new_body) {
                 result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
-            } else if (workshop_material_item_add_version(id, new_body, note, &item) != URSATZ_OK) {
+            } else if (workshop_material_item_add_version_staged(id, new_body, note, stage.path, &item) != URSATZ_OK) {
                 workshop_error_text(error, "the version could not be written");
                 result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
             }
         }
     }
     if (result == URSATZ_OK) {
-        workshop_compose_stage_finish(id, item, &stage);
-        *out_item = item;
+        *out_item = item; /* the stage is the version's folder now */
     } else if (made) {
         workshop_compose_stage_discard(&stage);
     }

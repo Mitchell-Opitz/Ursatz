@@ -1,4 +1,6 @@
 #include "links.h"
+#include "items/formats.h"
+#include "items/layout.h"
 #include "base/last_error.h"
 #include "items/lock.h"
 
@@ -26,7 +28,7 @@
 #include "items/library_metadata.h"
 #include "items/subjects.h"
 
-static const char *kPiecesDir = "pieces";
+static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
 
 /* --- id lists ------------------------------------------------------------- */
 
@@ -289,14 +291,12 @@ static cJSON *string_or_null(const char *text) {
 
 /* --- store state ---------------------------------------------------------- */
 
-static const char *kCacheFile = "motive-link-cache.json";
 
 static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
 #define LOCK() workshop_lock_acquire(&g_lock)
 #define UNLOCK() workshop_lock_release(&g_lock)
 
 static struct {
-    char dir[PATH_BYTES];
     bool ready;
     bool active; /* a worker is running */
     char id[64]; /* the active run */
@@ -305,16 +305,15 @@ static struct {
 } g_state;
 
 static bool runs_dir_path(char *out, size_t out_size) {
-    return snprintf(out, out_size, "%s/runs", g_state.dir) < (int)out_size;
+    return snprintf(out, out_size, "%s", WORKSHOP_DIR_LINKS) < (int)out_size;
 }
 
 static bool run_dir_path(const char *id, char *out, size_t out_size) {
-    return workshop_collection_is_valid_id(id) && snprintf(out, out_size, "%s/runs/%s", g_state.dir, id) < (int)out_size;
+    return workshop_collection_is_valid_id(id) && workshop_layout_link_dir(id, out, out_size);
 }
 
 static bool run_file_path(const char *id, char *out, size_t out_size) {
-    return workshop_collection_is_valid_id(id) &&
-           snprintf(out, out_size, "%s/runs/%s/run.json", g_state.dir, id) < (int)out_size;
+    return workshop_collection_is_valid_id(id) && workshop_layout_link_file(id, out, out_size);
 }
 
 /* The names in the runs directory. false only when memory ran out. */
@@ -411,9 +410,9 @@ static void job_free(Job *job) {
 
 static bool job_write(const Job *job) {
     char path[PATH_BYTES];
-    char *text = run_file_path(job->id, path, sizeof(path)) ? cJSON_PrintUnformatted(job->run) : NULL;
-    bool ok = text && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
-    free(text);
+    cJSON *copy = run_file_path(job->id, path, sizeof(path)) ? cJSON_Duplicate(job->run, 1) : NULL;
+    bool ok = copy && workshop_format_write(path, WORKSHOP_FORMAT_LINK_RUN, copy, NULL) == URSATZ_OK;
+    cJSON_Delete(copy);
     return ok;
 }
 
@@ -527,7 +526,7 @@ static void job_run(Job *job) {
     }
 
     char cache_path[PATH_BYTES + 64];
-    snprintf(cache_path, sizeof(cache_path), "%s/%s", g_state.dir, kCacheFile);
+    snprintf(cache_path, sizeof(cache_path), "%s", WORKSHOP_FILE_LINK_CACHE);
     MotiveLinkCache *cache = NULL;
     if (analyzer_links_cache_load(cache_path, &cache) != URSATZ_OK) {
         /* An unreadable cache is only a cache: start it again. */
@@ -613,7 +612,7 @@ static void mark_interrupted(void) {
             continue;
         }
         cJSON *run = NULL;
-        common_json_read_object(path, &run, NULL);
+        workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL);
         const cJSON *status = cJSON_GetObjectItemCaseSensitive(run, "status");
         if (cJSON_IsString(status) && strcmp(status->valuestring, "running") == 0) {
             char now[40];
@@ -621,25 +620,16 @@ static void mark_interrupted(void) {
             set_member(run, "status", cJSON_CreateString("failed"));
             set_member(run, "message", cJSON_CreateString("interrupted"));
             set_member(run, "finished_at", cJSON_CreateString(now));
-            char *text = cJSON_PrintUnformatted(run);
-            if (text) {
-                (void)common_file_write_atomic(path, text, strlen(text), NULL);
-            }
-            free(text);
+            (void)workshop_format_write(path, WORKSHOP_FORMAT_LINK_RUN, run, NULL);
         }
         cJSON_Delete(run);
     }
     common_names_free(&names);
 }
 
-bool workshop_link_service_init(const char *dir) {
-    char runs[PATH_BYTES];
-    if (!dir || dir[0] == '\0' || snprintf(runs, sizeof(runs), "%s/runs", dir) >= (int)sizeof(runs)) {
-        return false;
-    }
+bool workshop_link_service_init(void) {
     LOCK();
-    snprintf(g_state.dir, sizeof(g_state.dir), "%s", dir);
-    bool ok = (common_dir_make(dir, NULL) == URSATZ_OK) && (common_dir_make(runs, NULL) == URSATZ_OK);
+    bool ok = (common_dir_make(WORKSHOP_DIR_LINKS, NULL) == URSATZ_OK) && (common_dir_make(WORKSHOP_DIR_CACHE, NULL) == URSATZ_OK);
     g_state.ready = ok;
     if (ok) {
         mark_interrupted();
@@ -784,7 +774,7 @@ static UrsatzStatus load_runs(cJSON ***out_runs, size_t *out_count) {
             continue;
         }
         cJSON *run = NULL;
-        common_json_read_object(path, &run, NULL);
+        workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL);
         if (run && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(run, "id"))) {
             runs[count++] = run;
         } else {
@@ -849,7 +839,7 @@ UrsatzStatus workshop_link_run_get(const char *id, cJSON **out_run) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     cJSON *run = NULL;
-    common_json_read_object(path, &run, NULL);
+    workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL);
     if (!run) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }

@@ -113,7 +113,7 @@ static void remove_store(void) {
 int main(void) {
     test_knowledge();
     snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
-    check_quiet(workshop_material_service_init(g_dir), "init");
+    check_quiet(workshop_material_service_init(), "init");
 
     cJSON *projects = NULL;
     check_quiet(workshop_material_project_list(&projects) == URSATZ_OK && cJSON_GetArraySize(projects) > 0, "a project exists");

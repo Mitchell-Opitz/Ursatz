@@ -1,4 +1,6 @@
 #include "store_internal.h"
+#include "formats.h"
+#include "layout.h"
 
 /* --- operation marks ----------------------------------------------------- */
 
@@ -80,7 +82,7 @@ static UrsatzStatus op_checks_path_locked(const char *id, char *path, size_t pat
     if (result == URSATZ_OK) {
         if (strcmp(common_json_string(item, "type"), "motif") != 0) {
             result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
-        } else if (!store_item_file_path(id, "op-checks.json", path, path_size)) {
+        } else if (!store_item_file_path(id, WORKSHOP_FILE_OP_CHECKS, path, path_size)) {
             result = workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
         }
     }
@@ -95,7 +97,7 @@ UrsatzStatus workshop_material_op_checks_get(const char *id, cJSON **out) {
     UrsatzStatus result = store_ready ? op_checks_path_locked(id, path, sizeof(path)) : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     if (result == URSATZ_OK) {
         cJSON *stored = NULL;
-        common_json_read_object(path, &stored, NULL);
+        workshop_format_read(path, WORKSHOP_FORMAT_OP_CHECKS, true, &stored, NULL);
         if (stored && workshop_material_op_checks_validate(stored, NULL) == URSATZ_OK) {
             *out = stored;
         } else {
@@ -141,7 +143,7 @@ UrsatzStatus workshop_material_op_checks_put(const char *id, const cJSON *body, 
                 break;
             }
         }
-        if (ok && (common_json_write_file(path, stored, true, NULL) == URSATZ_OK)) {
+        if (ok && (workshop_format_write(path, WORKSHOP_FORMAT_OP_CHECKS, stored, NULL) == URSATZ_OK)) {
             *out = stored;
         } else {
             cJSON_Delete(stored);

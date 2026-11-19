@@ -11,6 +11,8 @@
 #include "base/last_error.h"
 #include "composition/composer_client.h"
 #include "composition/motifs.h"
+#include "items/formats.h"
+#include "items/layout.h"
 #include "items/store.h"
 #include "rendering/playback.h"
 
@@ -194,9 +196,7 @@ UrsatzStatus workshop_motif_render(const cJSON *body, cJSON **answer_out, int *h
 
 /* The render cache of a motif version, see render_cache.h. */
 static bool render_cache_dir(const char *id, int number, char *out, size_t out_size) {
-  char version_dir[512];
-  return workshop_material_version_dir(id, number, version_dir, sizeof(version_dir)) &&
-         snprintf(out, out_size, "%s/render", version_dir) < (int)out_size;
+  return workshop_layout_render_dir(id, number, out, out_size);
 }
 
 static bool render_cache_file(const char *dir, const char *name, char *out, size_t out_size) {
@@ -216,13 +216,13 @@ static bool render_cache_matches(const char *dir, const char *render_key, int te
     return false;
   }
   cJSON *meta = NULL;
-  common_json_read_object(path, &meta, NULL);
+  workshop_format_read(path, WORKSHOP_FORMAT_RENDER, true, &meta, NULL);
   WorkshopComposerBuild build = workshop_composer_build();
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(meta, "render_key");
   const cJSON *cached_tempo = cJSON_GetObjectItemCaseSensitive(meta, "tempo");
   bool same = render_meta_is(meta, "api_version", build.api_version) &&
               render_meta_is(meta, "composer_version", build.composer_version) &&
-              render_meta_is(meta, "ursatz_commit", build.ursatz_commit) && cJSON_IsString(key) &&
+              render_meta_is(meta, "composition_key", build.composition_key) && cJSON_IsString(key) &&
               strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) && cached_tempo->valueint == tempo;
   cJSON_Delete(meta);
   return same;
@@ -245,12 +245,9 @@ static char *render_cache_read_score(const char *id, int number, const char *ren
    silent: the next request renders again. */
 static void render_cache_write(const char *id, int number, const char *render_key, int tempo, const char *xml,
                                const uint8_t *midi, size_t midi_size) {
-  char version_dir[512];
   char dir[576];
   char path[640];
-  if (!workshop_material_version_dir(id, number, version_dir, sizeof(version_dir)) ||
-      !render_cache_dir(id, number, dir, sizeof(dir)) || !(common_dir_make(version_dir, NULL) == URSATZ_OK) ||
-      !(common_dir_make(dir, NULL) == URSATZ_OK)) {
+  if (!render_cache_dir(id, number, dir, sizeof(dir)) || !(common_dir_make(dir, NULL) == URSATZ_OK)) {
     return;
   }
   cJSON *meta = cJSON_CreateObject();
@@ -260,17 +257,15 @@ static void render_cache_write(const char *id, int number, const char *render_ke
   WorkshopComposerBuild build = workshop_composer_build();
   cJSON_AddStringToObject(meta, "api_version", build.api_version);
   cJSON_AddStringToObject(meta, "composer_version", build.composer_version);
-  cJSON_AddStringToObject(meta, "ursatz_commit", build.ursatz_commit);
+  cJSON_AddStringToObject(meta, "composition_key", build.composition_key);
   cJSON_AddStringToObject(meta, "render_key", render_key);
   cJSON_AddNumberToObject(meta, "tempo", tempo);
-  char *meta_text = cJSON_PrintUnformatted(meta);
-  cJSON_Delete(meta);
-  if (meta_text && render_cache_file(dir, "score.musicxml", path, sizeof(path)) &&
-      (common_file_write_atomic(path, xml, strlen(xml), NULL) == URSATZ_OK) && render_cache_file(dir, "motif.mid", path, sizeof(path)) &&
-      (common_file_write_atomic(path, midi, midi_size, NULL) == URSATZ_OK) && render_cache_file(dir, "render.json", path, sizeof(path))) {
-    (void)common_file_write_atomic(path, meta_text, strlen(meta_text), NULL);
+  if (render_cache_file(dir, "score.musicxml", path, sizeof(path)) && (common_file_write_atomic(path, xml, strlen(xml), NULL) == URSATZ_OK) &&
+      render_cache_file(dir, "motif.mid", path, sizeof(path)) && (common_file_write_atomic(path, midi, midi_size, NULL) == URSATZ_OK) &&
+      render_cache_file(dir, "render.json", path, sizeof(path))) {
+    (void)workshop_format_write(path, WORKSHOP_FORMAT_RENDER, meta, NULL);
   }
-  free(meta_text);
+  cJSON_Delete(meta);
 }
 
 /* The playback of a theme version's MIDI file or of the MIDI file of a version of a piece's form (loop, ending, piece...), built by

@@ -8,6 +8,7 @@ add_library(ursatz_workshop STATIC
     src/items/data_check.c
     src/items/formats.c
     src/items/ids.c
+    src/items/layout.c
     src/items/library_pieces.c
     src/items/library_metadata.c
     src/items/store.c

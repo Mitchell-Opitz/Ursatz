@@ -1,7 +1,8 @@
 #include "store_internal.h"
+#include "formats.h"
 #include "ids.h"
+#include "layout.h"
 
-char store_dir[300];
 bool store_ready = false;
 WorkshopLock store_lock = WORKSHOP_LOCK_INIT;
 static void (*g_forget_item)(const char *item_id);
@@ -26,13 +27,6 @@ bool store_is_valid_id(const char *id) {
         }
     }
     return true;
-}
-
-/* True when name ends in suffix and has at least one character before it. */
-static bool has_suffix(const char *name, const char *suffix) {
-    size_t name_len = strlen(name);
-    size_t suffix_len = strlen(suffix);
-    return name_len > suffix_len && strcmp(name + name_len - suffix_len, suffix) == 0;
 }
 
 /* --- text ---------------------------------------------------------------- */
@@ -87,45 +81,86 @@ static UrsatzStatus normalize_description(const char *text, char **out) {
 /* --- paths --------------------------------------------------------------- */
 
 static bool project_path(const char *id, char *out, size_t out_size) {
-    return store_is_valid_id(id) && snprintf(out, out_size, "%s/projects/%s.json", store_dir, id) < (int)out_size;
+    return workshop_layout_project_file(id, out, out_size);
+}
+
+/* The project folder an item is in, found by looking in each project's items folder (a handful of stats). */
+bool store_find_item_project(const char *id, char *project, size_t project_size) {
+    if (!store_is_valid_id(id)) {
+        return false;
+    }
+    CommonNames projects = {0};
+    if (common_dir_list(WORKSHOP_DIR_PROJECTS, &projects, NULL) != URSATZ_OK) {
+        return false;
+    }
+    bool found = false;
+    for (size_t i = 0; !found && i < projects.count; i++) {
+        char path[PATH_BYTES];
+        if (workshop_layout_item_file(projects.items[i], id, WORKSHOP_FILE_ITEM, path, sizeof(path)) && common_path_exists(path)) {
+            found = snprintf(project, project_size, "%s", projects.items[i]) < (int)project_size;
+        }
+    }
+    common_names_free(&projects);
+    return found;
+}
+
+/* Every item id of the store, across the projects. */
+UrsatzStatus store_item_ids_locked(CommonNames *out) {
+    CommonNames projects = {0};
+    if (common_dir_list(WORKSHOP_DIR_PROJECTS, &projects, NULL) != URSATZ_OK) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    UrsatzStatus result = URSATZ_OK;
+    for (size_t i = 0; result == URSATZ_OK && i < projects.count; i++) {
+        char dir[PATH_BYTES];
+        CommonNames names = {0};
+        if (!workshop_layout_items_dir(projects.items[i], dir, sizeof(dir)) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+            continue;
+        }
+        for (size_t j = 0; result == URSATZ_OK && j < names.count; j++) {
+            char path[PATH_BYTES];
+            if (workshop_layout_item_file(projects.items[i], names.items[j], WORKSHOP_FILE_ITEM, path, sizeof(path)) &&
+                common_path_exists(path) && !common_names_add(out, names.items[j])) {
+                result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+            }
+        }
+        common_names_free(&names);
+    }
+    common_names_free(&projects);
+    if (result == URSATZ_OK) {
+        common_names_sort(out);
+    }
+    return result;
 }
 
 /* --- projects ------------------------------------------------------------ */
 
-/* Number of items whose item.json names project_id. */
+/* Number of items in a project. */
 static size_t count_items_locked(const char *project_id) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
     size_t found = 0;
-    if (snprintf(dir, sizeof(dir), "%s/items", store_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+    if (!workshop_layout_items_dir(project_id, dir, sizeof(dir)) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         return 0;
     }
     for (size_t i = 0; i < names.count; i++) {
         char path[PATH_BYTES];
-        if (!store_is_valid_id(names.items[i]) ||
-            snprintf(path, sizeof(path), "%s/items/%s/item.json", store_dir, names.items[i]) >= (int)sizeof(path)) {
-            continue;
-        }
-        cJSON *meta = NULL;
-        common_json_read_object(path, &meta, NULL);
-        if (meta && strcmp(common_json_string(meta, "project_id"), project_id) == 0) {
+        if (workshop_layout_item_file(project_id, names.items[i], WORKSHOP_FILE_ITEM, path, sizeof(path)) && common_path_exists(path)) {
             found++;
         }
-        cJSON_Delete(meta);
     }
     common_names_free(&names);
     return found;
 }
 
-/* Loads projects/<id>.json; the file name is the id, a copy inside the file is not trusted. */
+/* Loads projects/<id>/project.json; the folder name is the id, a copy inside the file is not trusted. */
 static UrsatzStatus load_project_locked(const char *id, cJSON **out) {
     char path[PATH_BYTES];
     if (!project_path(id, path, sizeof(path))) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     cJSON *project = NULL;
-    common_json_read_object(path, &project, NULL);
-    if (!project) {
+    if (workshop_format_read(path, WORKSHOP_FORMAT_PROJECT, true, &project, NULL) != URSATZ_OK) {
         return common_path_exists(path) ? workshop_fail(URSATZ_ERR_INTERNAL, "material store failure") : workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     cJSON_DeleteItemFromObjectCaseSensitive(project, "id");
@@ -141,12 +176,22 @@ static UrsatzStatus load_project_locked(const char *id, cJSON **out) {
 
 static UrsatzStatus save_project_locked(const cJSON *project) {
     char path[PATH_BYTES];
-    if (!project_path(common_json_string(project, "id"), path, sizeof(path))) {
+    char dir[PATH_BYTES];
+    const char *id = common_json_string(project, "id");
+    if (!project_path(id, path, sizeof(path)) || !workshop_layout_items_dir(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    return (common_json_write_file(path, project, true, NULL) == URSATZ_OK) ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    if (common_dir_make(dir, NULL) != URSATZ_OK) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    cJSON *copy = cJSON_Duplicate(project, 1);
+    if (!copy) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    UrsatzStatus written = workshop_format_write(path, WORKSHOP_FORMAT_PROJECT, copy, NULL);
+    cJSON_Delete(copy);
+    return written == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
 }
-
 
 static UrsatzStatus create_project_locked(const char *name, const char *description, cJSON **out_project) {
     char *clean_name = NULL;
@@ -169,7 +214,7 @@ static UrsatzStatus create_project_locked(const char *name, const char *descript
             result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
-        if (project_path(id, path, sizeof(path)) && !common_path_exists(path)) {
+        if (workshop_layout_project_dir(id, path, sizeof(path)) && !common_path_exists(path)) {
             break;
         }
         free(id);
@@ -202,26 +247,19 @@ static UrsatzStatus create_project_locked(const char *name, const char *descript
     return result;
 }
 
-bool workshop_material_service_init(const char *dir) {
-    if (!dir || dir[0] == '\0') {
-        return false;
-    }
+bool workshop_material_service_init(void) {
     LOCK();
     store_ready = false;
-    char projects[PATH_BYTES];
-    char items[PATH_BYTES];
-    bool ok = snprintf(store_dir, sizeof(store_dir), "%s", dir) < (int)sizeof(store_dir) &&
-              snprintf(projects, sizeof(projects), "%s/projects", dir) < (int)sizeof(projects) &&
-              snprintf(items, sizeof(items), "%s/items", dir) < (int)sizeof(items) && (common_dir_make(store_dir, NULL) == URSATZ_OK) &&
-              (common_dir_make(projects, NULL) == URSATZ_OK) && (common_dir_make(items, NULL) == URSATZ_OK);
+    bool ok = common_dir_make(WORKSHOP_DIR_PROJECTS, NULL) == URSATZ_OK;
 
     CommonNames names = {0};
     if (ok) {
-        ok = (common_dir_list(projects, &names, NULL) == URSATZ_OK);
+        ok = (common_dir_list(WORKSHOP_DIR_PROJECTS, &names, NULL) == URSATZ_OK);
     }
     bool has_project = false;
     for (size_t i = 0; i < names.count; i++) {
-        has_project = has_project || has_suffix(names.items[i], ".json");
+        char path[PATH_BYTES];
+        has_project = has_project || (workshop_layout_project_file(names.items[i], path, sizeof(path)) && common_path_exists(path));
     }
     common_names_free(&names);
 
@@ -239,7 +277,6 @@ bool workshop_material_service_init(const char *dir) {
 void workshop_material_service_shutdown(void) {
     LOCK();
     store_ready = false;
-    store_dir[0] = '\0';
     UNLOCK();
 }
 
@@ -270,9 +307,8 @@ UrsatzStatus workshop_material_project_list(cJSON **out_projects) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
-    char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (snprintf(dir, sizeof(dir), "%s/projects", store_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+    if (common_dir_list(WORKSHOP_DIR_PROJECTS, &names, NULL) != URSATZ_OK) {
         UNLOCK();
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
@@ -284,16 +320,7 @@ UrsatzStatus workshop_material_project_list(cJSON **out_projects) {
         result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
-        if (!has_suffix(names.items[i], ".json")) {
-            continue;
-        }
-        char id[ID_MAX_BYTES + 1];
-        size_t id_len = strlen(names.items[i]) - strlen(".json");
-        if (id_len > ID_MAX_BYTES) {
-            continue;
-        }
-        memcpy(id, names.items[i], id_len);
-        id[id_len] = '\0';
+        const char *id = names.items[i];
         cJSON *project = NULL;
         if (load_project_locked(id, &project) != URSATZ_OK) {
             continue;
@@ -397,8 +424,12 @@ UrsatzStatus workshop_material_project_delete(const char *id) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else if (count_items_locked(id) > 0) {
         result = workshop_fail(URSATZ_ERR_CONFLICT, "the project still holds items");
-    } else if (remove(path) != 0) {
-        result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    } else {
+        char dir[PATH_BYTES];
+        /* project.json first: a folder without it is no longer a project */
+        if (remove(path) != 0 || !workshop_layout_project_dir(id, dir, sizeof(dir)) || common_dir_remove(dir, NULL) != URSATZ_OK) {
+            result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+        }
     }
     UNLOCK();
     return result;
@@ -422,16 +453,20 @@ const char *store_prefix_for_type(const char *type) {
     return NULL;
 }
 
+/* The folder of an item that exists; false for an id that is not one or an item that is not there. */
 bool store_item_dir_path(const char *id, char *out, size_t out_size) {
-    return store_is_valid_id(id) && snprintf(out, out_size, "%s/items/%s", store_dir, id) < (int)out_size;
+    char project[ID_MAX_BYTES + 1];
+    return store_find_item_project(id, project, sizeof(project)) && workshop_layout_item_dir(project, id, out, out_size);
 }
 
 bool store_item_file_path(const char *id, const char *file, char *out, size_t out_size) {
-    return store_is_valid_id(id) && snprintf(out, out_size, "%s/items/%s/%s", store_dir, id, file) < (int)out_size;
+    char project[ID_MAX_BYTES + 1];
+    return store_find_item_project(id, project, sizeof(project)) && workshop_layout_item_file(project, id, file, out, out_size);
 }
 
-static bool version_path(const char *id, int number, char *out, size_t out_size) {
-    return store_is_valid_id(id) && number >= 1 && snprintf(out, out_size, "%s/items/%s/v%d.json", store_dir, id, number) < (int)out_size;
+bool store_version_dir_path(const char *id, int number, char *out, size_t out_size) {
+    char project[ID_MAX_BYTES + 1];
+    return store_find_item_project(id, project, sizeof(project)) && workshop_layout_version_dir(project, id, number, out, out_size);
 }
 
 static bool project_exists_locked(const char *project_id) {
@@ -439,35 +474,86 @@ static bool project_exists_locked(const char *project_id) {
     return project_path(project_id, path, sizeof(path)) && common_path_exists(path);
 }
 
-UrsatzStatus store_load_item_locked(const char *id, cJSON **out) {
-    char path[PATH_BYTES];
-    if (!store_item_file_path(id, "item.json", path, sizeof(path))) {
-        return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
-    }
-    cJSON *item = NULL;
-    common_json_read_object(path, &item, NULL);
-    if (!item) {
-        return common_path_exists(path) ? workshop_fail(URSATZ_ERR_INTERNAL, "material store failure") : workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
-    }
-    if (!common_json_set_string(item, "id", id)) {
-        cJSON_Delete(item);
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
-    *out = item;
-    return URSATZ_OK;
-}
-
-static UrsatzStatus save_item_locked(const cJSON *item) {
-    char path[PATH_BYTES];
-    if (!store_item_file_path(common_json_string(item, "id"), "item.json", path, sizeof(path))) {
-        return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
-    }
-    return (common_json_write_file(path, item, true, NULL) == URSATZ_OK) ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+static const char *body_format_of(const char *type) {
+    return strcmp(type, "motif") == 0   ? WORKSHOP_FORMAT_MOTIF_BODY
+           : strcmp(type, "theme") == 0 ? WORKSHOP_FORMAT_THEME_BODY
+                                        : WORKSHOP_FORMAT_PIECE_BODY;
 }
 
 int store_current_version_of(const cJSON *item) {
     const cJSON *number = cJSON_GetObjectItemCaseSensitive(item, "current_version");
     return cJSON_IsNumber(number) ? number->valueint : 0;
+}
+
+/* The versions of an item, {number, created_at, note} each, from the envelopes of its version folders. */
+static cJSON *versions_from_envelopes(const char *project, const char *id, int current) {
+    cJSON *versions = cJSON_CreateArray();
+    for (int number = 1; versions && number <= current; number++) {
+        char path[PATH_BYTES];
+        cJSON *envelope = NULL;
+        if (!workshop_layout_version_file(project, id, number, WORKSHOP_FILE_ENVELOPE, path, sizeof(path)) ||
+            workshop_format_read(path, WORKSHOP_FORMAT_ITEM_VERSION, true, &envelope, NULL) != URSATZ_OK) {
+            continue;
+        }
+        cJSON *entry = cJSON_CreateObject();
+        if (!entry || !cJSON_AddNumberToObject(entry, "number", number) ||
+            !cJSON_AddStringToObject(entry, "created_at", common_json_string(envelope, "created_at")) ||
+            !cJSON_AddStringToObject(entry, "note", common_json_string(envelope, "note"))) {
+            cJSON_Delete(entry);
+            cJSON_Delete(versions);
+            versions = NULL;
+        } else {
+            cJSON_AddItemToArray(versions, entry);
+        }
+        cJSON_Delete(envelope);
+    }
+    return versions;
+}
+
+/* The item as the services hold it: its header, the project the folder is in and the versions its envelopes give. */
+UrsatzStatus store_load_item_locked(const char *id, cJSON **out) {
+    char project[ID_MAX_BYTES + 1];
+    char path[PATH_BYTES];
+    if (!store_is_valid_id(id)) {
+        return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
+    }
+    if (!store_find_item_project(id, project, sizeof(project))) {
+        return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
+    cJSON *item = NULL;
+    if (!workshop_layout_item_file(project, id, WORKSHOP_FILE_ITEM, path, sizeof(path)) ||
+        workshop_format_read(path, WORKSHOP_FORMAT_ITEM, true, &item, NULL) != URSATZ_OK) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    cJSON *versions = versions_from_envelopes(project, id, store_current_version_of(item));
+    if (!common_json_set_string(item, "id", id) || !common_json_set_string(item, "project_id", project) || !versions) {
+        cJSON_Delete(versions);
+        cJSON_Delete(item);
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    cJSON_AddItemToObject(item, "versions", versions);
+    *out = item;
+    return URSATZ_OK;
+}
+
+/* Writes the header of an item (without the members the services add for answers) into its folder. */
+static UrsatzStatus save_item_locked(const cJSON *item) {
+    const char *id = common_json_string(item, "id");
+    const char *project = common_json_string(item, "project_id");
+    char path[PATH_BYTES];
+    if (!workshop_layout_item_file(project, id, WORKSHOP_FILE_ITEM, path, sizeof(path))) {
+        return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
+    }
+    cJSON *header = cJSON_Duplicate(item, 1);
+    if (!header) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(header, "project_id");
+    cJSON_DeleteItemFromObjectCaseSensitive(header, "versions");
+    cJSON_DeleteItemFromObjectCaseSensitive(header, "variant_of");
+    UrsatzStatus written = workshop_format_write(path, WORKSHOP_FORMAT_ITEM, header, NULL);
+    cJSON_Delete(header);
+    return written == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
 }
 
 static bool touch_item(cJSON *item) {
@@ -476,13 +562,8 @@ static bool touch_item(cJSON *item) {
     return common_json_set_string(item, "updated_at", now);
 }
 
-static bool write_version_locked(const char *id, int number, const cJSON *body) {
-    char path[PATH_BYTES];
-    return version_path(id, number, path, sizeof(path)) && (common_json_write_file(path, body, true, NULL) == URSATZ_OK);
-}
-
-/* Appends {number, created_at, note} to the item's versions and makes it current. */
-static bool append_version_entry(cJSON *item, int number, const char *note) {
+/* Makes number the current version of the item object (the versions list is read from the envelopes again on the next load). */
+static bool advance_item(cJSON *item, int number, const char *note) {
     char now[32];
     common_utc_now(now);
     cJSON *versions = cJSON_GetObjectItemCaseSensitive(item, "versions");
@@ -502,17 +583,87 @@ static bool append_version_entry(cJSON *item, int number, const char *note) {
     return cJSON_AddNumberToObject(item, "current_version", number) != NULL && touch_item(item);
 }
 
+/* The lineage of a version: the version of another item a motif's body says it derives from, else none. */
+static cJSON *lineage_of(const char *type, const cJSON *body) {
+    cJSON *lineage = cJSON_CreateObject();
+    const cJSON *derived =
+        strcmp(type, "motif") == 0 ? cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived") : NULL;
+    const char *source = common_json_string(derived, "source_item");
+    long long version = 0;
+    cJSON *from = NULL;
+    if (source[0] != '\0' && common_json_long(derived, "source_version", &version) && version >= 1) {
+        from = cJSON_CreateObject();
+        if (!from || !cJSON_AddStringToObject(from, "item_id", source) || !cJSON_AddNumberToObject(from, "version", (double)version)) {
+            cJSON_Delete(from);
+            cJSON_Delete(lineage);
+            return NULL;
+        }
+    } else {
+        from = cJSON_CreateNull();
+    }
+    if (!lineage || !from) {
+        cJSON_Delete(from);
+        cJSON_Delete(lineage);
+        return NULL;
+    }
+    cJSON_AddItemToObject(lineage, "derived_from", from);
+    return lineage;
+}
+
+/* Writes the version folder's body, then its envelope (a version exists once its envelope does), into dir, which exists. */
+static UrsatzStatus write_version_files_locked(const char *dir, const char *id, const char *type, int number, const cJSON *body,
+                                               const char *note) {
+    char path[PATH_BYTES];
+    cJSON *stored = cJSON_Duplicate(body, 1);
+    UrsatzStatus result = stored ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    if (result == URSATZ_OK) {
+        result = snprintf(path, sizeof(path), "%s/%s", dir, WORKSHOP_FILE_BODY) < (int)sizeof(path) &&
+                         workshop_format_write(path, body_format_of(type), stored, NULL) == URSATZ_OK
+                     ? URSATZ_OK
+                     : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    cJSON_Delete(stored);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    char now[32];
+    common_utc_now(now);
+    cJSON *envelope = cJSON_CreateObject();
+    cJSON *lineage = lineage_of(type, body);
+    bool attached = false;
+    bool ok = envelope && lineage && cJSON_AddStringToObject(envelope, "id", id) && cJSON_AddStringToObject(envelope, "kind", type) &&
+              cJSON_AddNumberToObject(envelope, "version", number) && cJSON_AddStringToObject(envelope, "note", note) &&
+              (attached = cJSON_AddItemToObject(envelope, "lineage", lineage)) && cJSON_AddStringToObject(envelope, "actor", "michelle") &&
+              cJSON_AddStringToObject(envelope, "created_at", now);
+    if (!ok) {
+        cJSON_Delete(envelope);
+        if (!attached) {
+            cJSON_Delete(lineage);
+        }
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    result = snprintf(path, sizeof(path), "%s/%s", dir, WORKSHOP_FILE_ENVELOPE) < (int)sizeof(path) &&
+                     workshop_format_write(path, WORKSHOP_FORMAT_ITEM_VERSION, envelope, NULL) == URSATZ_OK
+                 ? URSATZ_OK
+                 : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    cJSON_Delete(envelope);
+    return result;
+}
+
 UrsatzStatus store_read_version_locked(const char *id, int number, cJSON **out_body) {
     char path[PATH_BYTES];
-    if (!version_path(id, number, path, sizeof(path))) {
+    char project[ID_MAX_BYTES + 1];
+    if (!store_is_valid_id(id) || number < 1) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
+    if (!store_find_item_project(id, project, sizeof(project))) {
+        return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
     cJSON *body = NULL;
-    common_json_read_object(path, &body, NULL);
-    if (!body) {
+    if (!workshop_layout_version_file(project, id, number, WORKSHOP_FILE_BODY, path, sizeof(path)) ||
+        workshop_format_read(path, NULL, true, &body, NULL) != URSATZ_OK) {
         return common_path_exists(path) ? workshop_fail(URSATZ_ERR_INTERNAL, "material store failure") : workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
-    workshop_material_body_migrate(body);
     *out_body = body;
     return URSATZ_OK;
 }
@@ -549,11 +700,13 @@ static UrsatzStatus create_item_locked(const char *type, const char *name, const
 
     char *id = NULL;
     char dir[PATH_BYTES];
+    char probe[ID_MAX_BYTES + 1];
     for (int attempt = 0; result == URSATZ_OK && attempt < ID_MAX_TRIES; attempt++) {
         id = workshop_new_id(prefix);
         if (!id) {
             result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-        } else if (store_item_dir_path(id, dir, sizeof(dir)) && !common_path_exists(dir)) {
+        } else if (workshop_layout_item_dir(project_id, id, dir, sizeof(dir)) && !store_find_item_project(id, probe, sizeof(probe)) &&
+                   !common_path_exists(dir)) {
             break;
         } else {
             free(id);
@@ -568,23 +721,25 @@ static UrsatzStatus create_item_locked(const char *type, const char *name, const
     bool dir_made = false;
     if (result == URSATZ_OK) {
         char now[32];
+        char version_dir[PATH_BYTES];
         common_utc_now(now);
         item = cJSON_CreateObject();
         bool ok = item && cJSON_AddStringToObject(item, "id", id) && cJSON_AddStringToObject(item, "type", type) &&
                   cJSON_AddStringToObject(item, "name", clean_name) &&
                   cJSON_AddStringToObject(item, "project_id", project_id) &&
                   cJSON_AddStringToObject(item, "created_at", now) && cJSON_AddStringToObject(item, "updated_at", now) &&
-                  append_version_entry(item, 1, clean_note);
+                  advance_item(item, 1, clean_note);
         if (!ok) {
             result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-        } else if (!(common_dir_create(dir, NULL) == URSATZ_OK)) {
+        } else if (common_dir_make(dir, NULL) != URSATZ_OK || !workshop_layout_version_dir(project_id, id, 1, version_dir, sizeof(version_dir)) ||
+                   common_dir_make(version_dir, NULL) != URSATZ_OK) {
             result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+            dir_made = common_path_exists(dir);
         } else {
             dir_made = true;
-            /* item.json goes last: a directory without it is not an item. */
-            if (!write_version_locked(id, 1, stored)) {
-                result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
-            } else {
+            /* item.json goes last: a folder without it is not an item. */
+            result = write_version_files_locked(version_dir, id, type, 1, stored, clean_note);
+            if (result == URSATZ_OK) {
                 result = save_item_locked(item);
             }
         }
@@ -638,14 +793,14 @@ UrsatzStatus workshop_material_item_list(const char *project_id, const char *typ
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
-    char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (snprintf(dir, sizeof(dir), "%s/items", store_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+    UrsatzStatus result = store_item_ids_locked(&names);
+    if (result != URSATZ_OK) {
         UNLOCK();
-        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+        common_names_free(&names);
+        return result;
     }
 
-    UrsatzStatus result = URSATZ_OK;
     cJSON **items = names.count ? calloc(names.count, sizeof(cJSON *)) : NULL;
     size_t loaded = 0;
     if (names.count && !items) {
@@ -743,7 +898,7 @@ UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSO
     return result;
 }
 
-/* Sets the name and/or project (each NULL = unchanged) on the item and saves it. */
+/* Sets the name and/or project (each NULL = unchanged) on the item and saves it; a new project is a rename of the item's folder. */
 static UrsatzStatus change_item(const char *id, const char *name, const char *project_id,
                                            cJSON **out_item) {
     if (out_item) {
@@ -768,9 +923,22 @@ static UrsatzStatus change_item(const char *id, const char *name, const char *pr
         }
     }
     if (result == URSATZ_OK) {
-        bool ok = (!clean_name || common_json_set_string(item, "name", clean_name)) &&
-                  (!project_id || common_json_set_string(item, "project_id", project_id)) && touch_item(item);
-        result = ok ? save_item_locked(item) : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        bool ok = (!clean_name || common_json_set_string(item, "name", clean_name)) && touch_item(item);
+        if (ok && project_id && strcmp(project_id, common_json_string(item, "project_id")) != 0) {
+            char from[PATH_BYTES];
+            char to[PATH_BYTES];
+            char items[PATH_BYTES];
+            if (!workshop_layout_item_dir(common_json_string(item, "project_id"), id, from, sizeof(from)) ||
+                !workshop_layout_item_dir(project_id, id, to, sizeof(to)) || !workshop_layout_items_dir(project_id, items, sizeof(items)) ||
+                common_dir_make(items, NULL) != URSATZ_OK || rename(from, to) != 0) {
+                result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+            } else {
+                ok = common_json_set_string(item, "project_id", project_id);
+            }
+        }
+        if (result == URSATZ_OK) {
+            result = ok ? save_item_locked(item) : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        }
     }
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
@@ -796,21 +964,36 @@ UrsatzStatus workshop_material_item_move(const char *id, const char *project_id,
     return change_item(id, NULL, project_id, out_item);
 }
 
-/* Writes body as the next version of item and saves item.json with it made current. */
-UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note) {
+/*
+ * Writes body as the next version of item and saves the header with it made current. The version folder is the stage (a folder of
+ * the files a compose made, renamed into place) when there is one, else a new folder; the body and the envelope go into it and the
+ * header last, so a version a header names has everything.
+ */
+UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage) {
     int number = store_current_version_of(item) + 1;
-    /* The body goes first; the version exists once item.json names it. */
-    if (!append_version_entry(item, number, note)) {
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
-    if (!write_version_locked(id, number, body)) {
+    const char *project = common_json_string(item, "project_id");
+    char dir[PATH_BYTES];
+    if (!workshop_layout_version_dir(project, id, number, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
-    return save_item_locked(item);
+    if (!advance_item(item, number, note)) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    common_dir_remove(dir, NULL); /* a folder no version named is left over from a failed run */
+    bool made = stage ? rename(stage, dir) == 0 : common_dir_make(dir, NULL) == URSATZ_OK;
+    UrsatzStatus result = made ? write_version_files_locked(dir, id, common_json_string(item, "type"), number, body, note)
+                               : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    if (result == URSATZ_OK) {
+        result = save_item_locked(item);
+    }
+    if (result != URSATZ_OK && made) {
+        common_dir_remove(dir, NULL);
+    }
+    return result;
 }
 
-UrsatzStatus workshop_material_item_add_version(const char *id, const cJSON *body, const char *note,
-                                                              cJSON **out_item) {
+UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,
+                                                       cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
     }
@@ -837,7 +1020,7 @@ UrsatzStatus workshop_material_item_add_version(const char *id, const cJSON *bod
         result = store_fill_body_uses_locked(id, body, &stored);
     }
     if (result == URSATZ_OK) {
-        result = store_commit_version_locked(id, item, stored, clean_note);
+        result = store_commit_version_locked(id, item, stored, clean_note, stage);
     }
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
@@ -848,4 +1031,9 @@ UrsatzStatus workshop_material_item_add_version(const char *id, const cJSON *bod
     cJSON_Delete(stored);
     free(clean_note);
     return result;
+}
+
+UrsatzStatus workshop_material_item_add_version(const char *id, const cJSON *body, const char *note,
+                                                              cJSON **out_item) {
+    return workshop_material_item_add_version_staged(id, body, note, NULL, out_item);
 }

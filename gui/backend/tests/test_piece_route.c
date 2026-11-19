@@ -22,6 +22,15 @@
 #include "test_http.h"
 #include "version_check.h"
 
+/* The data folder path of a file under an item: projects/<prj>/items/<id>/<tail> (the project the item is in is found). */
+static void item_file(const char *id, const char *tail, char *out, size_t size) {
+  char dir[400];
+  if (!test_gui_item_dir(id, dir, sizeof(dir))) {
+    snprintf(dir, sizeof(dir), "projects/none/items/%s", id);
+  }
+  snprintf(out, size, "%s%s%s", dir, tail[0] ? "/" : "", tail);
+}
+
 /* The full test serves on 18774, the smoke run (the argument smoke) on 18776, so both can run at once. */
 static const char *g_port = "18774";
 #define PORT g_port
@@ -180,7 +189,7 @@ static void remember_request(const char *id, const cJSON *answer, int status) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
   if (status == 200 && cJSON_IsNumber(version)) {
-    snprintf(g_last_request_path, sizeof(g_last_request_path), "materials/items/%s/v%d/request.json", id, version->valueint);
+    { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/request.json", version->valueint); item_file(id, tail_, g_last_request_path, sizeof(g_last_request_path)); }
   }
 }
 
@@ -235,7 +244,7 @@ static cJSON *compose(const char *id, const char *body, int *status) {
 }
 
 static void version_dir(const char *id, int version, char *out, size_t size) {
-  snprintf(out, size, "materials/items/%s/v%d", id, version);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d", version); item_file(id, tail_, out, size); }
 }
 
 /* Uploads a link fixture to the Library; the new piece's id (caller frees), or NULL. */
@@ -324,7 +333,7 @@ static bool files_equal(const char *a, const char *b) {
 /* True when the file at plan is the plan.json of version number of theme item id. */
 static bool is_theme_plan(const char *plan, const char *id, int number) {
   char path[400];
-  snprintf(path, sizeof(path), "materials/items/%s/v%d/plan.json", id, number);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/plan.json", number); item_file(id, tail_, path, sizeof(path)); }
   return files_equal(plan, path);
 }
 
@@ -878,7 +887,7 @@ static void test_files(const Items *m) {
 
   /* Deleting the item removes its version folders. */
   char dir[200];
-  snprintf(dir, sizeof(dir), "materials/items/%s", piece);
+  item_file(piece, "", dir, sizeof(dir));
   check(dir_exists(dir), "the item directory exists before the delete");
   snprintf(path, sizeof(path), "/api/materials/items/%s", piece);
   answer = exchange("DELETE", path, NULL, &status);
@@ -1234,7 +1243,7 @@ static void test_regenerate(const Items *m) {
   version_dir(piece, before + 1, dir, sizeof(dir));
   snprintf(path, sizeof(path), "%s/plan.json", dir);
   char chosen_plan[500];
-  snprintf(chosen_plan, sizeof(chosen_plan), "materials/items/%s/v6/variations-1/variation-2.json", piece);
+  item_file(piece, "v6/variations-1/variation-2.json", chosen_plan, sizeof(chosen_plan));
   check(files_equal(path, chosen_plan), "the Composer built the version from the chosen plan");
   answer = get_item(piece, &status);
   result = member(piece_of_answer(answer), "result");
@@ -1255,7 +1264,7 @@ static void test_regenerate(const Items *m) {
   check(current_version(piece) == before + 1, "the refused chooses wrote no version");
 
   /* Deleting the item removes the variation sets with it. */
-  snprintf(dir, sizeof(dir), "materials/items/%s", piece);
+  item_file(piece, "", dir, sizeof(dir));
   snprintf(path, sizeof(path), "/api/materials/items/%s", piece);
   answer = exchange("DELETE", path, NULL, &status);
   cJSON_Delete(answer);
@@ -1315,7 +1324,7 @@ static void check_piece_version(const char *id, int number, bool with_ending) {
   }
   snprintf(path, sizeof(path), "%s/request.json", dir);
   cJSON *request = test_read_json(path);
-  snprintf(path, sizeof(path), "materials/items/%s/v%d.json", id, number);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/body.json", number); item_file(id, tail_, path, sizeof(path)); }
   cJSON *body = test_read_json(path);
   const cJSON *summary = member(member(member(body, "piece"), "result"), "summary");
   const cJSON *versions = member(summary, "versions");
@@ -1707,7 +1716,7 @@ static void test_old_game_loop_piece(const Items *m) {
   cJSON_Delete(answer);
 
   /* Take form out of the stored body, as a piece saved before the forms has it. */
-  snprintf(path, sizeof(path), "materials/items/%s/v2.json", piece);
+  item_file(piece, "v2/body.json", path, sizeof(path));
   cJSON *stored = test_read_json(path);
   cJSON *structure = (cJSON *)member(member(stored, "piece"), "structure");
   cJSON_DeleteItemFromObjectCaseSensitive(structure, "form");
@@ -1824,7 +1833,7 @@ int main(int argc, char **argv) {
   if (smoke) {
     g_port = "18776";
   }
-  system("rm -rf materials subjects pieces collections styles");
+  system("rm -rf projects subjects library settings cache");
 
   struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");

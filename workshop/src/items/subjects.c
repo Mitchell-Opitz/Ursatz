@@ -1,4 +1,6 @@
 #include "subjects.h"
+#include "formats.h"
+#include "layout.h"
 #include "base/last_error.h"
 #include "lock.h"
 
@@ -25,7 +27,6 @@
 #define ID_MAX_TRIES 8
 #define PATH_BYTES 400
 
-static char g_dir[300];
 static bool g_ready = false;
 
 static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
@@ -84,7 +85,7 @@ static bool valid_kind(const char *kind) {
 }
 
 static bool subject_path(const char *id, char *out, size_t out_size) {
-    return is_valid_id(id) && snprintf(out, out_size, "%s/%s.json", g_dir, id) < (int)out_size;
+    return is_valid_id(id) && workshop_layout_subject_file(id, out, out_size);
 }
 
 
@@ -118,7 +119,7 @@ static UrsatzStatus load_subject_locked(const char *id, cJSON **out) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     cJSON *subject = NULL;
-    common_json_read_object(path, &subject, NULL);
+    workshop_format_read(path, WORKSHOP_FORMAT_SUBJECT, true, &subject, NULL);
     if (!subject) {
         return common_path_exists(path) ? workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure") : workshop_fail(URSATZ_ERR_NOT_FOUND, "subject not found");
     }
@@ -135,15 +136,18 @@ static UrsatzStatus save_subject_locked(const cJSON *subject) {
     if (!subject_path(common_json_string(subject, "id"), path, sizeof(path))) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    return (common_json_write_file(path, subject, true, NULL) == URSATZ_OK) ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    cJSON *copy = cJSON_Duplicate(subject, 1);
+    if (!copy) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    UrsatzStatus written = workshop_format_write(path, WORKSHOP_FORMAT_SUBJECT, copy, NULL);
+    cJSON_Delete(copy);
+    return written == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
 }
 
-bool workshop_subject_service_init(const char *dir) {
-    if (!dir || dir[0] == '\0') {
-        return false;
-    }
+bool workshop_subject_service_init(void) {
     LOCK();
-    g_ready = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) && (common_dir_make(g_dir, NULL) == URSATZ_OK);
+    g_ready = common_dir_make(WORKSHOP_DIR_SUBJECTS, NULL) == URSATZ_OK;
     bool ok = g_ready;
     UNLOCK();
     return ok;
@@ -152,7 +156,6 @@ bool workshop_subject_service_init(const char *dir) {
 void workshop_subject_service_shutdown(void) {
     LOCK();
     g_ready = false;
-    g_dir[0] = '\0';
     UNLOCK();
 }
 
@@ -250,7 +253,7 @@ UrsatzStatus workshop_subject_list(cJSON **out_subjects) {
     }
 
     CommonNames listing = {0};
-    if (common_dir_list(g_dir, &listing, NULL) != URSATZ_OK) {
+    if (common_dir_list(WORKSHOP_DIR_SUBJECTS, &listing, NULL) != URSATZ_OK) {
         UNLOCK();
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -367,7 +370,7 @@ static UrsatzStatus edit_list(cJSON *subject, const char *name, const char *ref,
 /* Removes ref from the array member `name` of every subject that holds it. */
 static UrsatzStatus remove_from_all_locked(const char *name, const char *ref) {
     CommonNames listing = {0};
-    if (common_dir_list(g_dir, &listing, NULL) != URSATZ_OK) {
+    if (common_dir_list(WORKSHOP_DIR_SUBJECTS, &listing, NULL) != URSATZ_OK) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     char **names = listing.items;

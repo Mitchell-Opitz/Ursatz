@@ -8,6 +8,8 @@
 
 #include "items/store.h"
 #include "items/subjects.h"
+#include <common/files.h>
+#include "items/layout.h"
 #include "ursatz_check.h"
 
 #define OK URSATZ_OK
@@ -344,32 +346,22 @@ static void remove_stores(void) {
         cJSON_Delete(projects);
     }
     workshop_material_service_shutdown();
-    char path[100];
-    snprintf(path, sizeof(path), "%s/projects", g_materials);
-    rmdir(path);
-    snprintf(path, sizeof(path), "%s/items", g_materials);
-    rmdir(path);
-    rmdir(g_materials);
-
-    remove(g_piece_meta);
-    rmdir(g_piece_dir);
-    rmdir("pieces");
+    system("rm -rf projects library");
 }
 
 int main(void) {
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)getpid());
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)getpid());
     snprintf(g_piece, sizeof(g_piece), "piece-%d", (int)getpid());
-    snprintf(g_piece_dir, sizeof(g_piece_dir), "pieces/%s", g_piece);
-    snprintf(g_piece_meta, sizeof(g_piece_meta), "%s/meta.json", g_piece_dir);
+    snprintf(g_piece_dir, sizeof(g_piece_dir), WORKSHOP_DIR_PIECES "/%s", g_piece);
+    snprintf(g_piece_meta, sizeof(g_piece_meta), "%s/" WORKSHOP_FILE_PIECE, g_piece_dir);
 
-    check_quiet(workshop_material_service_init(g_materials), "init materials");
-    check_quiet(workshop_subject_service_init(g_subjects), "init subjects");
+    check_quiet(workshop_material_service_init(), "init materials");
+    check_quiet(workshop_subject_service_init(), "init subjects");
     workshop_store_set_forget_item(forget_item_in_subjects);
 
-    /* A Library piece is a directory with a meta.json; the subject service only asks whether it exists. */
-    mkdir("pieces", 0755);
-    mkdir(g_piece_dir, 0755);
+    /* A Library piece is a directory with a piece.json; the subject service only asks whether it exists. */
+    common_dir_make(g_piece_dir, NULL);
     FILE *meta = fopen(g_piece_meta, "wb");
     check_quiet(meta != NULL, "create piece");
     if (meta) {

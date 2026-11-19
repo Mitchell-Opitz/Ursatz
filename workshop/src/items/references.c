@@ -1,4 +1,5 @@
 #include "store_internal.h"
+#include "layout.h"
 #include "composition/composer_client.h"
 
 /*
@@ -127,7 +128,7 @@ static UrsatzStatus check_reference_locked(const cJSON *reference, ReferenceKind
         char plan[PATH_BYTES];
         const cJSON *composed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version, "theme"), "result");
         if (!cJSON_IsObject(composed) ||
-            snprintf(plan, sizeof(plan), "%s/items/%s/v%d/plan.json", store_dir, source_id, number) >= (int)sizeof(plan) ||
+            !workshop_layout_version_file(common_json_string(source, "project_id"), source_id, number, "plan.json", plan, sizeof(plan)) ||
             !common_path_exists(plan)) {
             result = workshop_fail(URSATZ_ERR_REQUEST, "invalid body");
         }
@@ -353,12 +354,12 @@ UrsatzStatus workshop_material_uses_status(const char *id, cJSON **out_status) {
  * project_id, version}. The item need not exist (a deleted source still has users).
  */
 static UrsatzStatus used_by_locked(const char *id, cJSON **out) {
-    char dir[PATH_BYTES];
     CommonNames names = {0};
     if (!store_is_valid_id(id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    if (snprintf(dir, sizeof(dir), "%s/items", store_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+    if (store_item_ids_locked(&names) != URSATZ_OK) {
+        common_names_free(&names);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *users = cJSON_CreateArray();
@@ -404,9 +405,9 @@ static UrsatzStatus used_by_locked(const char *id, cJSON **out) {
 }
 
 static UrsatzStatus derived_motifs_locked(cJSON **out) {
-    char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (snprintf(dir, sizeof(dir), "%s/items", store_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+    if (store_item_ids_locked(&names) != URSATZ_OK) {
+        common_names_free(&names);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *found = cJSON_CreateArray();
@@ -511,7 +512,7 @@ UrsatzStatus workshop_material_update_use(const char *id, const char *source_id,
         }
     }
     if (result == URSATZ_OK) {
-        result = store_commit_version_locked(id, item, stored, note);
+        result = store_commit_version_locked(id, item, stored, note, NULL);
     }
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
@@ -572,9 +573,9 @@ static void id_set_free(IdSet *set) {
 /* Fills out with the ids of the variants of id, recursively (a variant of a variant too), in one scan of the store.
  * id itself is not in the set. */
 static UrsatzStatus variant_closure_locked(const char *id, IdSet *out) {
-    char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (snprintf(dir, sizeof(dir), "%s/items", store_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
+    if (store_item_ids_locked(&names) != URSATZ_OK) {
+        common_names_free(&names);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     IdSet children = {0};
@@ -677,26 +678,29 @@ UrsatzStatus workshop_material_item_delete(const char *id, bool force) {
     IdSet variants = {0};
     IdSet removed = {0};
     UrsatzStatus result = URSATZ_OK;
-    if (!store_item_dir_path(id, dir, sizeof(dir)) || !store_item_file_path(id, "item.json", meta, sizeof(meta))) {
+    if (!store_is_valid_id(id)) {
         result = workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
-    } else if (!common_path_exists(meta)) {
+    } else if (!store_item_dir_path(id, dir, sizeof(dir)) || !store_item_file_path(id, WORKSHOP_FILE_ITEM, meta, sizeof(meta))) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else if ((result = variant_closure_locked(id, &variants)) != URSATZ_OK) {
         /* nothing is deleted when the variants cannot be found */
     } else if (!force && (result = delete_blockers_locked(id, &variants, &users)) == URSATZ_OK && users->child) {
         result = workshop_fail(URSATZ_ERR_CONFLICT, "the item is used by other items");
     } else if (result == URSATZ_OK) {
-        /* The variants go with their motif (R-187), then the motif. item.json first: a half-deleted directory is no
-         * longer an item. */
+        /* The variants go with their motif (R-187), then the motif. The header first: a half-deleted folder is no longer an item. */
         for (size_t member = 0; result == URSATZ_OK && member <= variants.count; member++) {
             const char *member_id = member < variants.count ? variants.ids[member] : id;
             char member_dir[PATH_BYTES];
             char member_meta[PATH_BYTES];
             if (!store_item_dir_path(member_id, member_dir, sizeof(member_dir)) ||
-                !store_item_file_path(member_id, "item.json", member_meta, sizeof(member_meta)) || remove(member_meta) != 0) {
+                !store_item_file_path(member_id, WORKSHOP_FILE_ITEM, member_meta, sizeof(member_meta)) || remove(member_meta) != 0) {
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
             } else {
                 common_dir_remove(member_dir, NULL);
+                char render[PATH_BYTES];
+                if (snprintf(render, sizeof(render), WORKSHOP_DIR_RENDERS "/%s", member_id) < (int)sizeof(render)) {
+                    common_dir_remove(render, NULL);
+                }
                 if (!id_set_add(&removed, member_id)) {
                     result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
                 }

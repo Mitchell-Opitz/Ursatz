@@ -85,7 +85,7 @@ static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size
 
 static bool piece_file_exists(const char *id, const char *name) {
   char path[512];
-  snprintf(path, sizeof(path), "pieces/%s/%s", id, name);
+  snprintf(path, sizeof(path), "library/pieces/%s/%s", id, name);
   FILE *file = fopen(path, "rb");
   if (!file) {
     return false;
@@ -96,14 +96,14 @@ static bool piece_file_exists(const char *id, const char *name) {
 
 static void seed_piece_meta(const char *id, const char *filename, const char *uploaded_at) {
   char dir[256];
-  snprintf(dir, sizeof(dir), "pieces/%s", id);
+  snprintf(dir, sizeof(dir), "library/pieces/%s", id);
   MKDIR(dir);
   char path[320];
-  snprintf(path, sizeof(path), "%s/meta.json", dir);
+  snprintf(path, sizeof(path), "%s/piece.json", dir);
   char text[512];
   snprintf(text, sizeof(text),
-           "{\"filename\":\"%s\",\"format\":\"midi\",\"uploaded_at\":\"%s\",\"analyzer_version\":\"0.1.0\","
-           "\"document_schema_version\":9}",
+           "{\"format\":\"ursatz-library-piece\",\"format_version\":1,\"filename\":\"%s\",\"source_format\":\"midi\","
+           "\"uploaded_at\":\"%s\",\"analyzer_version\":\"0.1.0\",\"document_schema_version\":9}",
            filename, uploaded_at);
   test_write_file(path, text, strlen(text));
 }
@@ -866,11 +866,12 @@ int main(int argc, char **argv) {
   }
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces 2> nul");
+  system("rmdir /s /q library settings cache 2> nul");
 #else
-  system("rm -rf pieces");
+  system("rm -rf library settings cache");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   const char *fixtures = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char mozart_path[512];
@@ -915,11 +916,11 @@ int main(int argc, char **argv) {
   check(mozart_id != NULL && test_http_status(response) == 200, "Mozart 545.mid uploads with 200 OK");
   free(response);
   check(mozart_id && piece_file_exists(mozart_id, "source.mid"), "the MIDI upload is stored as source.mid");
-  check(mozart_id && piece_file_exists(mozart_id, "analysis.json") && piece_file_exists(mozart_id, "meta.json"),
-        "analysis.json and meta.json are stored next to the source");
+  check(mozart_id && piece_file_exists(mozart_id, "analysis.json") && piece_file_exists(mozart_id, "piece.json"),
+        "analysis.json and piece.json are stored next to the source");
   if (mozart_id) {
     char path[512];
-    snprintf(path, sizeof(path), "pieces/%s/source.mid", mozart_id);
+    snprintf(path, sizeof(path), "library/pieces/%s/source.mid", mozart_id);
     size_t stored_size = 0, original_size = 0;
     char *stored = test_read_file(path, &stored_size);
     char *original = test_read_file(mozart_path, &original_size);
@@ -1007,7 +1008,7 @@ int main(int argc, char **argv) {
     /* A piece whose stored source is gone: the score routes answer 422 with
        a JSON message, not a 200 the viewer would hand to OSMD. */
     char source_path[512];
-    snprintf(source_path, sizeof(source_path), "pieces/%s/source.musicxml", chords_id);
+    snprintf(source_path, sizeof(source_path), "library/pieces/%s/source.musicxml", chords_id);
     check(remove(source_path) == 0, "the chord piece's stored source can be deleted");
     char route[256];
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml", chords_id);
@@ -1046,10 +1047,10 @@ int main(int argc, char **argv) {
   free(response);
 
   /* The list: newest first, then id; anything that is not a piece directory
-     with a meta.json is left out. */
+     with a piece.json is left out. */
   seed_piece_meta("seed-newest", "newest.mid", "2099-01-01T00:00:00Z");
   seed_piece_meta("seed-oldest", "oldest.mid", "2001-01-01T00:00:00Z");
-  test_write_file("pieces/old-piece.db", "old", 3);
+  test_write_file("library/pieces/old-piece.db", "old", 3);
   char *list = test_http_exchange(PORT, "GET", "/api/analyzer/pieces", NULL, NULL, 0);
   check(test_http_status(list) == 200, "the list is 200 OK");
   const char *list_body = test_http_body(list);
@@ -1064,12 +1065,12 @@ int main(int argc, char **argv) {
   free(list);
 
   /* Re-run the analysis: the document is rebuilt from the stored source and
-     the versions in meta.json are rewritten; the rest of meta.json stays. */
+     the versions in piece.json are rewritten; the rest of piece.json stays. */
   if (mozart_id) {
     char analysis_path[512];
     char meta_path[512];
-    snprintf(analysis_path, sizeof(analysis_path), "pieces/%s/analysis.json", mozart_id);
-    snprintf(meta_path, sizeof(meta_path), "pieces/%s/meta.json", mozart_id);
+    snprintf(analysis_path, sizeof(analysis_path), "library/pieces/%s/analysis.json", mozart_id);
+    snprintf(meta_path, sizeof(meta_path), "library/pieces/%s/piece.json", mozart_id);
     char *document_before = test_read_file(analysis_path, NULL);
     char *meta_text = test_read_file(meta_path, NULL);
     cJSON *meta = meta_text ? cJSON_Parse(meta_text) : NULL;
@@ -1111,9 +1112,9 @@ int main(int argc, char **argv) {
     const cJSON *filename = meta ? cJSON_GetObjectItemCaseSensitive(meta, "filename") : NULL;
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
               schema->valuedouble == 13,
-          "re-running the analysis rewrites the versions in meta.json");
+          "re-running the analysis rewrites the versions in piece.json");
     check(cJSON_IsString(version) && strcmp(version->valuestring, analyzer_version()) == 0,
-          "meta.json records the version the Analyzer reports");
+          "piece.json records the version the Analyzer reports");
     check(cJSON_IsString(uploaded_after) && strcmp(uploaded_after->valuestring, uploaded_at_before) == 0 &&
               cJSON_IsString(filename) && strcmp(filename->valuestring, "Mozart 545.mid") == 0,
           "re-running the analysis keeps the filename and uploaded_at");
@@ -1152,7 +1153,7 @@ int main(int argc, char **argv) {
     check(subject_id && workshop_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_OK,
           "the subject links the piece");
     char dir[256];
-    snprintf(dir, sizeof(dir), "pieces/%s", mozart_id);
+    snprintf(dir, sizeof(dir), "library/pieces/%s", mozart_id);
     response = test_http_exchange(PORT, "DELETE", path, NULL, NULL, 0);
     check(test_http_status(response) == 200, "DELETE removes a piece");
     free(response);

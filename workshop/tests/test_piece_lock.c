@@ -45,6 +45,8 @@ static void thread_join(thread_t thread) {
 #include "analysis/analysis.h"
 #include "analysis/links.h"
 #include "items/piece_lock.h"
+#include <common/files.h>
+#include "items/layout.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 #include "test_http.h"
@@ -55,7 +57,7 @@ static void thread_join(thread_t thread) {
 
 #define ROUNDS 50
 
-static const char *kPiecesDir = "pieces";
+static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
 static const char *kOverrideMeter = "2/4";
 
 static volatile int stop_readers = 0;

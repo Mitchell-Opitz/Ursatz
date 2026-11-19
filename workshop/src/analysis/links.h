@@ -63,7 +63,7 @@ void workshop_link_ids_free(char **ids, size_t count);
 
 /* Prepares the store in dir (created if absent). A run left "running" by an earlier process is marked failed with
  * "interrupted". Returns false when the store cannot be used. */
-bool workshop_link_service_init(const char *dir);
+bool workshop_link_service_init(void);
 
 /* Waits for a run in progress to end, then forgets the store's directory. */
 void workshop_link_service_shutdown(void);

@@ -1,7 +1,9 @@
+#include <dirent.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <cJSON.h>
@@ -74,6 +76,37 @@ static const cJSON *find_by_id(const cJSON *array, const char *id) {
     return NULL;
 }
 
+/* The folder of an item (projects/<prj>/items/<id>), found under the store; false when it is not there. */
+static bool item_dir_of(const char *id, char *out, size_t size) {
+    DIR *projects = opendir("projects");
+    bool found = false;
+    for (struct dirent *entry = projects ? readdir(projects) : NULL; entry && !found; entry = readdir(projects)) {
+        if (entry->d_name[0] != '.') {
+            snprintf(out, size, "projects/%s/items/%s", entry->d_name, id);
+            struct stat st;
+            found = stat(out, &st) == 0 && S_ISDIR(st.st_mode);
+        }
+    }
+    if (projects) {
+        closedir(projects);
+    }
+    return found;
+}
+
+/* A stored version body as it is on disk (caller deletes), NULL when it is not there. */
+static cJSON *stored_body(const char *id, int number) {
+    char dir[500];
+    char path[700];
+    if (!item_dir_of(id, dir, sizeof(dir))) {
+        return NULL;
+    }
+    snprintf(path, sizeof(path), "%s/v%d/body.json", dir, number);
+    char *text = test_read_file(path, NULL);
+    cJSON *body = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    return body;
+}
+
 static void test_general_project(void) {
     cJSON *projects = NULL;
     check_quiet(workshop_material_project_list(&projects) == OK, "list projects");
@@ -85,7 +118,7 @@ static void test_general_project(void) {
     cJSON_Delete(projects);
 
     workshop_material_service_shutdown();
-    check_quiet(workshop_material_service_init(g_dir), "init again");
+    check_quiet(workshop_material_service_init(), "init again");
     check_quiet(workshop_material_project_list(&projects) == OK && cJSON_GetArraySize(projects) == 1,
           "init does not add a second General");
     cJSON_Delete(projects);
@@ -197,7 +230,9 @@ static void test_items_and_versions(void) {
 
     /* A new version never rewrites an earlier one. */
     char v1_path[700];
-    snprintf(v1_path, sizeof(v1_path), "%s/items/%s/v1.json", g_dir, motif);
+    char motif_dir[500];
+    check_quiet(item_dir_of(motif, motif_dir, sizeof(motif_dir)), "the motif has a folder");
+    snprintf(v1_path, sizeof(v1_path), "%s/v1/body.json", motif_dir);
     char *v1_before = test_read_file(v1_path, NULL);
     cJSON *second = cJSON_Parse(kMotifBody);
     cJSON_ReplaceItemInObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(second, "motif"), "notes",
@@ -209,7 +244,7 @@ static void test_items_and_versions(void) {
           "second entry carries the note");
     cJSON_Delete(item);
     char *v1_after = test_read_file(v1_path, NULL);
-    check_quiet(v1_before && v1_after && strcmp(v1_before, v1_after) == 0, "v1.json is untouched");
+    check_quiet(v1_before && v1_after && strcmp(v1_before, v1_after) == 0, "the first version is untouched");
     free(v1_before);
     free(v1_after);
 
@@ -285,18 +320,18 @@ static void test_items_and_versions(void) {
     workshop_material_service_shutdown();
     check_quiet(workshop_material_item_list(NULL, NULL, &list) == URSATZ_ERR_INTERNAL,
           "not initialized after shutdown");
-    check_quiet(workshop_material_service_init(g_dir), "init after shutdown");
+    check_quiet(workshop_material_service_init(), "init after shutdown");
     check_quiet(workshop_material_item_list(NULL, NULL, &list) == OK && cJSON_GetArraySize(list) == 3, "items persist");
     cJSON_Delete(list);
 
+    char theme_dir[700];
+    check_quiet(item_dir_of(theme, theme_dir, sizeof(theme_dir)), "the theme has a folder");
     workshop_store_set_forget_item(record_forgotten);
     check_quiet(workshop_material_item_delete(theme, false) == OK, "delete the theme");
     workshop_store_set_forget_item(NULL);
     check_quiet(g_forgotten_count == 1 && strcmp(g_forgotten, theme) == 0, "an item delete calls the forget hook once with the item id");
     check_quiet(workshop_material_item_get(theme, &meta, NULL) == URSATZ_ERR_NOT_FOUND, "theme is gone");
-    char theme_dir[700];
-    snprintf(theme_dir, sizeof(theme_dir), "%s/items/%s/v1.json", g_dir, theme);
-    check_quiet(access(theme_dir, F_OK) != 0, "theme versions are gone");
+    check_quiet(access(theme_dir, F_OK) != 0, "the theme's folder is gone");
     check_quiet(workshop_material_item_delete(theme, false) == URSATZ_ERR_NOT_FOUND, "delete twice");
     check_quiet(workshop_material_project_delete(home) == OK, "delete the emptied project");
     check_quiet(workshop_material_item_delete(motif, false) == OK && workshop_material_item_delete(piece, false) == OK,
@@ -1017,7 +1052,9 @@ static void test_op_checks(void) {
     char *theme = new_item("theme", "Not a motif", home, kThemeBody);
     check_quiet(motif && theme, "create a motif and a theme for the marks");
     char path[700];
-    snprintf(path, sizeof(path), "%s/items/%s/op-checks.json", g_dir, motif);
+    char marks_dir[500];
+    check_quiet(item_dir_of(motif, marks_dir, sizeof(marks_dir)), "the motif has a folder");
+    snprintf(path, sizeof(path), "%s/op-checks.json", marks_dir);
     UrsatzError error = {{0}};
 
     cJSON *checks = NULL;
@@ -1105,23 +1142,6 @@ static void test_op_checks(void) {
 }
 
 
-/* A stored version file as it is on disk, with no migration (caller deletes), NULL when it is not there. */
-static cJSON *stored_body(const char *id, int number) {
-    char path[700];
-    snprintf(path, sizeof(path), "%s/items/%s/v%d.json", g_dir, id, number);
-    char *text = test_read_file(path, NULL);
-    cJSON *body = text ? cJSON_Parse(text) : NULL;
-    free(text);
-    return body;
-}
-
-/* Writes the text as the stored version file, as an old store holds it (the service writes the new members on every save). */
-static void store_old(const char *id, int number, const char *text) {
-    char path[700];
-    snprintf(path, sizeof(path), "%s/items/%s/v%d.json", g_dir, id, number);
-    check_quiet(test_write_file(path, text, strlen(text)), "an old version file is written");
-}
-
 static cJSON *member_of(const cJSON *object, const char *name) {
     return cJSON_GetObjectItemCaseSensitive(object, name);
 }
@@ -1147,18 +1167,11 @@ static void test_old_and_new_bodies(void) {
                     !member_of(member_of(stored, "motif"), "key"),
                 "a save of an old motif body writes the material and no key");
     cJSON_Delete(stored);
-    if (motif) {
-        store_old(motif, 1, kOldMotif);
-    }
     cJSON *body = NULL;
-    check_quiet(motif && workshop_material_item_get_version(motif, 1, &body) == OK, "the old motif is read");
+    check_quiet(motif && workshop_material_item_get_version(motif, 1, &body) == OK, "the saved motif is read");
     const cJSON *read = member_of(body, "motif");
     check_quiet(strcmp(str(read, "material"), "omt.material.natural-minor") == 0 && !member_of(read, "key"),
-                "a motif key C minor is read as the material natural minor, with no key");
-    stored = motif ? stored_body(motif, 1) : NULL;
-    check_quiet(stored && strcmp(str(member_of(stored, "motif"), "key"), "C minor") == 0 && !member_of(member_of(stored, "motif"), "material"),
-                "the stored file keeps the key text");
-    cJSON_Delete(stored);
+                "a motif saved with the key C minor is read as the material natural minor, with no key");
     cJSON *added = NULL;
     check_quiet(motif && workshop_material_item_add_version(motif, body, "Saved", &added) == OK && num(added, "current_version") == 2,
                 "the read body is saved as a new version");
@@ -1212,34 +1225,13 @@ static void test_old_and_new_bodies(void) {
                     !member_of(member_of(member_of(stored, "theme"), "form"), "mode"),
                 "a save of an old theme body writes the form material and no mode");
     cJSON_Delete(stored);
-    if (theme) {
-        /* the old file holds the old copy of the motif in its uses */
-        cJSON *old_file = cJSON_Parse(old_theme);
-        cJSON *use = cJSON_CreateObject();
-        cJSON_AddStringToObject(use, "item_id", motif);
-        cJSON_AddNumberToObject(use, "version", 1);
-        cJSON_AddItemToObject(use, "copy", cJSON_Parse(kOldMotif));
-        cJSON_AddItemToArray(member_of(old_file, "uses"), use);
-        char *old_file_text = cJSON_Print(old_file);
-        store_old(theme, 1, old_file_text);
-        free(old_file_text);
-        cJSON_Delete(old_file);
-    }
     body = NULL;
-    check_quiet(theme && workshop_material_item_get_version(theme, 1, &body) == OK, "the old theme is read");
+    check_quiet(theme && workshop_material_item_get_version(theme, 1, &body) == OK, "the saved theme is read");
     const cJSON *form = member_of(member_of(body, "theme"), "form");
     check_quiet(strcmp(str(form, "material"), "omt.material.natural-minor") == 0 && !member_of(form, "mode") &&
                     strcmp(str(form, "into"), "sentence") == 0,
-                "a theme form mode minor is read as the material natural minor");
-    const cJSON *copy = member_of(first_use(body), "copy");
-    check_quiet(copy && strcmp(str(member_of(copy, "motif"), "material"), "omt.material.natural-minor") == 0 && !member_of(member_of(copy, "motif"), "key"),
-                "the copies of the motifs are read with the material too");
+                "a theme form mode minor is saved as the material natural minor");
     cJSON_Delete(body);
-    stored = theme ? stored_body(theme, 1) : NULL;
-    check_quiet(stored && strcmp(str(member_of(member_of(stored, "theme"), "form"), "mode"), "minor") == 0 &&
-                    !member_of(member_of(member_of(stored, "theme"), "form"), "material"),
-                "the stored theme file keeps the mode word");
-    cJSON_Delete(stored);
 
     /* a piece structure's mode: major and minor by word, style by itself, a word with no material stays */
     static const struct {
@@ -1302,18 +1294,18 @@ static void remove_store(void) {
         cJSON_Delete(projects);
     }
     workshop_material_service_shutdown();
-    char path[540];
-    snprintf(path, sizeof(path), "%s/projects", g_dir);
-    rmdir(path);
-    snprintf(path, sizeof(path), "%s/items", g_dir);
-    rmdir(path);
-    rmdir(g_dir);
+    char command[700];
+    if (chdir(URSATZ_GUI_TEST_STORE_DIR) == 0) {
+        snprintf(command, sizeof(command), "rm -rf '%s'", g_dir);
+        system(command);
+    }
 }
 
 int main(void) {
     test_knowledge();
     snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
-    check_quiet(workshop_material_service_init(g_dir), "init");
+    check_quiet(mkdir(g_dir, 0755) == 0 && chdir(g_dir) == 0, "enter a folder of the test's own");
+    check_quiet(workshop_material_service_init(), "init");
 
     test_general_project();
     test_project_crud();

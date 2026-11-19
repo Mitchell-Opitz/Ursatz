@@ -58,6 +58,7 @@ typedef struct {
   const char *api_version;
   const char *composer_version;
   const char *ursatz_commit;
+  const char *composition_key;
 } WorkshopComposerBuild;
 
 WorkshopComposerBuild workshop_composer_build(void);

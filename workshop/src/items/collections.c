@@ -1,4 +1,6 @@
 #include "collections.h"
+#include "formats.h"
+#include "layout.h"
 #include "base/last_error.h"
 #include "lock.h"
 
@@ -22,14 +24,13 @@
 #include "ids.h"
 #include "library_metadata.h"
 
-static const char *kPiecesDir = "pieces";
+static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
 
 #define DESCRIPTION_MAX_BYTES 500
 #define ID_MAX_BYTES 64
 #define ID_MAX_TRIES 8
 #define PATH_BYTES 400
 
-static char g_dir[200];
 static bool g_ready = false;
 
 static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
@@ -57,7 +58,7 @@ bool workshop_collection_piece_exists(const char *piece_id) {
 }
 
 static bool collection_path(const char *id, char *out, size_t out_size) {
-    return workshop_collection_is_valid_id(id) && snprintf(out, out_size, "%s/%s.json", g_dir, id) < (int)out_size;
+    return workshop_collection_is_valid_id(id) && workshop_layout_collection_file(id, out, out_size);
 }
 
 /* --- in-memory collection ------------------------------------------------ */
@@ -89,16 +90,9 @@ static UrsatzStatus load_collection(const char *id, WorkshopCollection *collecti
     if (!collection_path(id, path, sizeof(path))) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    char *text = NULL;
-    common_file_read(path, &text, NULL, NULL);
-    if (!text) {
+    cJSON *root = NULL;
+    if (workshop_format_read(path, WORKSHOP_FORMAT_COLLECTION, true, &root, NULL) != URSATZ_OK) {
         return common_path_exists(path) ? workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed") : workshop_fail(URSATZ_ERR_NOT_FOUND, "collection not found");
-    }
-    cJSON *root = cJSON_Parse(text);
-    free(text);
-    if (!cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
 
     /* The file name is the id; a copy of it inside the file is not trusted. */
@@ -159,13 +153,12 @@ static UrsatzStatus save_collection(const WorkshopCollection *collection) {
             cJSON_AddItemToArray(pieces, piece);
         }
     }
-    char *text = ok ? cJSON_Print(root) : NULL;
-    cJSON_Delete(root);
-    if (!text) {
+    if (!ok) {
+        cJSON_Delete(root);
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    ok = (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
-    free(text);
+    ok = workshop_format_write(path, WORKSHOP_FORMAT_COLLECTION, root, NULL) == URSATZ_OK;
+    cJSON_Delete(root);
     return ok ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
 }
 
@@ -265,7 +258,7 @@ static bool file_name_to_id(const char *name, char *id, size_t id_size) {
 /* Every collection id in the store directory, sorted. */
 static bool list_collection_ids(CommonNames *ids) {
     CommonNames files = {0};
-    if (common_dir_list(g_dir, &files, NULL) != URSATZ_OK) {
+    if (common_dir_list(WORKSHOP_DIR_COLLECTIONS, &files, NULL) != URSATZ_OK) {
         return false;
     }
     char id[ID_MAX_BYTES + 8];
@@ -284,15 +277,9 @@ static bool list_collection_ids(CommonNames *ids) {
 
 /* --- lifecycle ----------------------------------------------------------- */
 
-bool ursatz_gui_collection_service_init(const char *dir) {
-    if (!dir || strlen(dir) >= sizeof(g_dir)) {
-        return false;
-    }
+bool ursatz_gui_collection_service_init(void) {
     LOCK();
-    bool ok = (common_dir_make(dir, NULL) == URSATZ_OK);
-    if (ok) {
-        strcpy(g_dir, dir);
-    }
+    bool ok = (common_dir_make(WORKSHOP_DIR_COLLECTIONS, NULL) == URSATZ_OK);
     g_ready = ok;
     UNLOCK();
     return ok;
@@ -301,7 +288,6 @@ bool ursatz_gui_collection_service_init(const char *dir) {
 void workshop_collection_service_shutdown(void) {
     LOCK();
     g_ready = false;
-    g_dir[0] = '\0';
     UNLOCK();
 }
 

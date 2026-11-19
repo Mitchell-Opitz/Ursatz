@@ -28,7 +28,7 @@
  */
 
 /* Prepares the store in dir (created if absent). Returns false when it cannot be used. */
-bool workshop_subject_service_init(const char *dir);
+bool workshop_subject_service_init(void);
 
 /* Forgets the store's directory. Nothing persistent is freed or deleted. */
 void workshop_subject_service_shutdown(void);

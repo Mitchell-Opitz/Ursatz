@@ -17,10 +17,6 @@
 
 /* Every store path below is relative to the data folder, which is the backend's working directory once the server starts. */
 static Workshop *g_workshop = NULL;
-static const char *kCollectionsDir = "collections";
-static const char *kMaterialsDir = "materials";
-static const char *kSubjectsDir = "subjects";
-static const char *kLinksDir = "links";
 
 Workshop *ursatz_gui_workshop(void) {
   return g_workshop;
@@ -36,14 +32,7 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
       NULL,
   };
 
-  /* A data folder the one-time migrations of the GUI before the overhaul never ran on is refused (service/data_check.h),
-   * before any store is opened. */
-  char data_message[2048];
   const char *data_dir = workshop_data_dir(workshop);
-  if (!workshop_data_check(data_dir, data_message, sizeof(data_message))) {
-    fprintf(stderr, "ursatz-gui-backend: %s\n", data_message);
-    return NULL;
-  }
   if (chdir(data_dir) != 0) {
     fprintf(stderr, "ursatz-gui-backend: cannot enter the data folder %s\n", data_dir);
     return NULL;
@@ -51,24 +40,24 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
 
   /* Collections are files under collections/ (see
    * service/collection_service.h); the store is prepared once here. */
-  if (!ursatz_gui_collection_service_init(kCollectionsDir)) {
+  if (!ursatz_gui_collection_service_init()) {
     return NULL;
   }
 
   /* Materials and subjects are files too (service/material_service.h,
    * service/subject_service.h), prepared beside collections. */
-  if (!workshop_material_service_init(kMaterialsDir)) {
+  if (!workshop_material_service_init()) {
     workshop_collection_service_shutdown();
     return NULL;
   }
-  if (!workshop_subject_service_init(kSubjectsDir)) {
+  if (!workshop_subject_service_init()) {
     workshop_material_service_shutdown();
     workshop_collection_service_shutdown();
     return NULL;
   }
 
   /* Motive link runs and their cache are files too (service/link_service.h). */
-  if (!workshop_link_service_init(kLinksDir)) {
+  if (!workshop_link_service_init()) {
     workshop_subject_service_shutdown();
     workshop_material_service_shutdown();
     workshop_collection_service_shutdown();

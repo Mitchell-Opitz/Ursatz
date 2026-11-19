@@ -1,4 +1,5 @@
 #include "store_internal.h"
+#include "layout.h"
 
 /* --- version files ------------------------------------------------------- */
 
@@ -81,15 +82,14 @@ const char *workshop_material_version_file_type(const char *name) {
 
 bool workshop_material_version_dir(const char *id, int number, char *out, size_t out_size) {
     LOCK();
-    bool ok = store_ready && store_is_valid_id(id) && number >= 1 &&
-              snprintf(out, out_size, "%s/items/%s/v%d", store_dir, id, number) < (int)out_size;
+    bool ok = store_ready && number >= 1 && store_version_dir_path(id, number, out, out_size);
     UNLOCK();
     return ok;
 }
 
 bool workshop_material_render_tmp_dir(char *out, size_t out_size) {
     LOCK();
-    bool ok = store_ready && snprintf(out, out_size, "%s/.render-tmp", store_dir) < (int)out_size;
+    bool ok = store_ready && workshop_layout_render_tmp_dir(out, out_size);
     UNLOCK();
     return ok;
 }
@@ -111,7 +111,7 @@ UrsatzStatus workshop_material_version_file(const char *id, int number, const ch
     char path[PATH_BYTES];
     if (result == URSATZ_OK &&
         (number < 1 || number > store_current_version_of(item) ||
-         snprintf(path, sizeof(path), "%s/items/%s/v%d/%s", store_dir, id, number, name) >= (int)sizeof(path))) {
+         !workshop_layout_version_file(common_json_string(item, "project_id"), id, number, name, path, sizeof(path)))) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     if (result == URSATZ_OK) {

@@ -852,7 +852,7 @@ static void test_served_playback(void) {
     /* The MIDI file of an unsaved render is deleted once the Analyzer has read it. */
     int leftovers = 0;
 #ifndef _WIN32
-    DIR *dir = opendir("materials/.render-tmp");
+    DIR *dir = opendir("cache/tmp");
     for (struct dirent *entry = dir ? readdir(dir) : NULL; entry; entry = readdir(dir)) {
       leftovers += entry->d_name[0] != '.';
     }
@@ -868,7 +868,7 @@ static void test_served_playback(void) {
   cJSON *saved = save_motif_form(project, "full", "C4:q Eb4:e G4:e C5:h", "\"C minor\"", "0", &status);
   const char *id = string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id");
   char render_dir[256];
-  snprintf(render_dir, sizeof(render_dir), "materials/items/%s/v1/render", id);
+  snprintf(render_dir, sizeof(render_dir), "cache/renders/%s/v1", id);
 
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
   cJSON *first = test_http_json(PORT, "GET", path, NULL, &status);
@@ -2280,7 +2280,7 @@ static char *export_response(const char *id, const char *query) {
 static bool install_score(const char *id, const char *name) {
   char *bytes = test_read_file(URSATZ_GUI_TEST_EXPORT_FIXTURES "/one-bar.musicxml", NULL);
   char dir[300];
-  snprintf(dir, sizeof(dir), "materials/items/%s/v1", id);
+  check(test_gui_version_dir(id, 1, dir, sizeof(dir)), "the item has a folder");
   MKDIR(dir);
   char to[400];
   snprintf(to, sizeof(to), "%s/%s", dir, name);
@@ -2415,11 +2415,12 @@ static void test_material_export(void) {
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections materials subjects data 2> nul");
+  system("rmdir /s /q library settings cache projects subjects data 2> nul");
 #else
-  system("rm -rf pieces collections materials subjects data");
+  system("rm -rf library settings cache projects subjects data");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");

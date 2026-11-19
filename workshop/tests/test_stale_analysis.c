@@ -1,6 +1,6 @@
 /* Stale analyses (R-277): a stored analysis whose schema, Analyzer version or Ursatz commit differs from the build is
  * analyzed again the first time it is opened (and only then), by the detail, the style build and the link worker; an
- * old meta.json without ursatz_commit gets it from its document; the list reports the flag from meta.json. Runs in its
+ * old piece.json without ursatz_commit gets it from its document; the list reports the flag from piece.json. Runs in its
  * own working directory (pieces/, styles/, links/, collections/, data/ and the material and subject stores). */
 
 #include <stdbool.h>
@@ -30,6 +30,8 @@
 #include "items/store.h"
 #include "analysis/styles.h"
 #include "items/subjects.h"
+#include <common/files.h>
+#include "items/layout.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 
@@ -52,7 +54,7 @@ static bool import_piece(const char *name, char *out_id, size_t out_size) {
     snprintf(path, sizeof(path), "%s/%s", URSATZ_GUI_TEST_LINK_FIXTURES, name);
     char *text = test_read_file(path, NULL);
     char *id = NULL;
-    bool ok = text && workshop_analysis_import_and_save("pieces", (const unsigned char *)text, strlen(text), name,
+    bool ok = text && workshop_analysis_import_and_save(WORKSHOP_DIR_PIECES, (const unsigned char *)text, strlen(text), name,
                                                           &id) == URSATZ_OK;
     free(text);
     if (ok) {
@@ -63,7 +65,7 @@ static bool import_piece(const char *name, char *out_id, size_t out_size) {
 }
 
 static void piece_path(const char *id, const char *file, char *out, size_t size) {
-    snprintf(out, size, "pieces/%s/%s", id, file);
+    snprintf(out, size, WORKSHOP_DIR_PIECES "/%s/%s", id, file);
 }
 
 static const char *str(const cJSON *object, const char *name) {
@@ -89,7 +91,7 @@ static void make_stale(const char *id) {
     cJSON_ReplaceItemInObjectCaseSensitive(metadata, "analyzer_version", cJSON_CreateString("0.0.1-old"));
     check_quiet(write_json(path, document), "write the stale document");
     cJSON_Delete(document);
-    piece_path(id, "meta.json", path, sizeof(path));
+    piece_path(id, "piece.json", path, sizeof(path));
     cJSON *meta = test_read_json(path);
     cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString("0.0.1-old"));
     check_quiet(write_json(path, meta), "write the stale meta");
@@ -119,7 +121,7 @@ static const char *listed_status(const char *id, char *out, size_t size) {
     WorkshopPieceSummary *pieces = NULL;
     size_t count = 0;
     out[0] = '\0';
-    check_quiet(workshop_library_list("pieces", &pieces, &count) == URSATZ_OK, "list the pieces");
+    check_quiet(workshop_library_list(WORKSHOP_DIR_PIECES, &pieces, &count) == URSATZ_OK, "list the pieces");
     for (size_t i = 0; i < count; i++) {
         if (strcmp(pieces[i].id, id) == 0 && pieces[i].analysis_status) {
             snprintf(out, size, "%s", pieces[i].analysis_status);
@@ -142,23 +144,23 @@ static void test_list_flag(const char *id) {
     char status[32], path[400];
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "current") == 0, "a new piece lists as current");
 
-    piece_path(id, "meta.json", path, sizeof(path));
+    piece_path(id, "piece.json", path, sizeof(path));
     cJSON *meta = test_read_json(path);
     cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString("0.0.1-old"));
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "stale_analyzer") == 0, "another Analyzer lists stale");
 
     cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(analyzer_version()));
-    cJSON_ReplaceItemInObjectCaseSensitive(meta, "ursatz_commit", cJSON_CreateString("0000000"));
+    cJSON_ReplaceItemInObjectCaseSensitive(meta, "producer_key", cJSON_CreateString("0000000"));
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "stale_ursatz") == 0, "another Ursatz lists stale");
 
-    cJSON_DeleteItemFromObjectCaseSensitive(meta, "ursatz_commit");
+    cJSON_DeleteItemFromObjectCaseSensitive(meta, "producer_key");
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "unreadable") == 0, "no ursatz_commit lists as stale");
 
     cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(analyzer_version()));
-    cJSON_AddStringToObject(meta, "ursatz_commit", analyzer_producer_key());
+    cJSON_AddStringToObject(meta, "producer_key", analyzer_producer_key());
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "current") == 0, "restored lists as current");
     cJSON_Delete(meta);
@@ -171,7 +173,7 @@ static void test_detail(const char *id) {
     check_quiet(strcmp(version, "0.0.1-old") == 0, "the document is stale before the first open");
 
     WorkshopPieceDetail *detail = NULL;
-    check_quiet(workshop_analysis_get_piece("pieces", id, &detail) == URSATZ_OK && detail, "first open");
+    check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK && detail, "first open");
     check_quiet(detail && strcmp(detail->analysis_status, "current") == 0, "the first open serves a current analysis");
     workshop_piece_detail_destroy(detail);
     document_analyzer_version(id, version, sizeof(version));
@@ -179,25 +181,25 @@ static void test_detail(const char *id) {
 
     add_marker(id);
     detail = NULL;
-    check_quiet(workshop_analysis_get_piece("pieces", id, &detail) == URSATZ_OK, "second open");
+    check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK, "second open");
     workshop_piece_detail_destroy(detail);
     check_quiet(has_marker(id), "the second open does not analyze again");
 }
 
 static void test_backfill(const char *id) {
     char path[400];
-    piece_path(id, "meta.json", path, sizeof(path));
+    piece_path(id, "piece.json", path, sizeof(path));
     cJSON *meta = test_read_json(path);
-    cJSON_DeleteItemFromObjectCaseSensitive(meta, "ursatz_commit");
+    cJSON_DeleteItemFromObjectCaseSensitive(meta, "producer_key");
     write_json(path, meta);
     cJSON_Delete(meta);
     add_marker(id);
 
     WorkshopPieceDetail *detail = NULL;
-    check_quiet(workshop_analysis_get_piece("pieces", id, &detail) == URSATZ_OK, "open an old meta.json");
+    check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK, "open an old piece.json");
     workshop_piece_detail_destroy(detail);
     meta = test_read_json(path);
-    check_quiet(strcmp(str(meta, "ursatz_commit"), analyzer_producer_key()) == 0,
+    check_quiet(strcmp(str(meta, "producer_key"), analyzer_producer_key()) == 0,
           "ursatz_commit comes from the document");
     cJSON_Delete(meta);
     check_quiet(has_marker(id), "filling ursatz_commit does not analyze again");
@@ -259,12 +261,12 @@ int main(void) {
 #else
     system("rm -rf pieces styles collections data links materials_* subjects_*");
 #endif
-    MKDIR("pieces");
+    common_dir_make(WORKSHOP_DIR_PIECES, NULL);
     MKDIR("data");
-    check_quiet(ursatz_gui_collection_service_init("collections"), "init collections");
-    check_quiet(workshop_material_service_init(g_materials), "init materials");
-    check_quiet(workshop_subject_service_init(g_subjects), "init subjects");
-    check_quiet(workshop_link_service_init("links"), "init links");
+    check_quiet(ursatz_gui_collection_service_init(), "init collections");
+    check_quiet(workshop_material_service_init(), "init materials");
+    check_quiet(workshop_subject_service_init(), "init subjects");
+    check_quiet(workshop_link_service_init(), "init links");
 
     char a[64], b[64], c[64];
     if (import_piece("a.musicxml", a, sizeof(a)) && import_piece("b.musicxml", b, sizeof(b)) &&

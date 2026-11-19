@@ -10,7 +10,7 @@
 
 /*
  * The render of a motif (R-275): its degrees through the Composer into MusicXML and MIDI, and the cache of the render of a stored
- * version. items/<id>/v<n>/render/ holds score.musicxml and motif.mid, and render.json {api_version, composer_version, ursatz_commit,
+ * version. cache/renders/<item>/v<n>/ holds score.musicxml and motif.mid, and render.json {api_version, composer_version, composition_key,
  * render_key, tempo} names what they were made with; a version never changes, so the files stand for the same key, tempo and Composer
  * build. On a failure every call returns its status, *http_status is the status to answer and error holds the message (and the request
  * member a Composer refusal names as its path).

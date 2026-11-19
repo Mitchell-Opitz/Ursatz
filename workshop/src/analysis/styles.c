@@ -1,4 +1,6 @@
 #include "styles.h"
+#include "items/formats.h"
+#include "items/layout.h"
 #include "base/last_error.h"
 #include "items/lock.h"
 
@@ -31,8 +33,8 @@
 #include "items/ids.h"
 #include "items/library_metadata.h"
 
-static const char *kPiecesDir = "pieces";
-static const char *kStylesDir = "styles";
+static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
+static const char *kStylesDir = WORKSHOP_DIR_STYLES;
 
 #define PATH_BYTES 400
 #define NAME_MAX_BYTES WORKSHOP_META_MAX_VALUE_BYTES
@@ -717,7 +719,7 @@ static char *meta_text(const char *id, const char *name, const char *created_at,
         used = skipped = NULL;
         ok = cJSON_AddNumberToObject(meta, "piece_count", (double)collected->used.count) != NULL;
     }
-    if (ok) {
+    if (ok && workshop_format_stamp(meta, WORKSHOP_FORMAT_STYLE)) {
         text = cJSON_Print(meta);
     }
     cJSON_Delete(source_object);
@@ -735,7 +737,7 @@ static bool write_style_files(const char *dir, const char *id, const char *name,
     char meta_path[PATH_BYTES];
     if (snprintf(model_path, sizeof(model_path), "%s/style-model.json", dir) >= (int)sizeof(model_path) ||
         snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", model_path) >= (int)sizeof(tmp_path) ||
-        snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir) >= (int)sizeof(meta_path)) {
+        snprintf(meta_path, sizeof(meta_path), "%s/" WORKSHOP_FILE_STYLE, dir) >= (int)sizeof(meta_path)) {
         return false;
     }
     char *text = meta_text(id, name, created_at, updated_at, source, collected);
@@ -844,7 +846,7 @@ UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *s
                 result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
                 break;
             }
-            if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
+            if (workshop_layout_style_dir(id, style_dir, sizeof(style_dir))) {
                 dir_made = (common_dir_create(style_dir, NULL) == URSATZ_OK);
             }
             if (!dir_made) {
@@ -931,7 +933,7 @@ static void free_strings(char **items, size_t count) {
 }
 
 static bool style_dir_path(const char *id, char *out, size_t out_size) {
-    return workshop_collection_is_valid_id(id) && snprintf(out, out_size, "%s/%s", kStylesDir, id) < (int)out_size;
+    return workshop_collection_is_valid_id(id) && workshop_layout_style_dir(id, out, out_size);
 }
 
 /* A copy of a string member, "" when it is absent or not a string. */
@@ -1121,9 +1123,9 @@ static UrsatzStatus load_meta(const char *id, cJSON **out) {
     if (!style_dir_path(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
-    snprintf(path, sizeof(path), "%s/meta.json", dir);
+    snprintf(path, sizeof(path), "%s/" WORKSHOP_FILE_STYLE, dir);
     cJSON *meta = NULL;
-    common_json_read_object(path, &meta, NULL);
+    workshop_format_read(path, WORKSHOP_FORMAT_STYLE, true, &meta, NULL);
     if (!meta) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }

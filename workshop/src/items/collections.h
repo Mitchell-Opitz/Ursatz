@@ -45,7 +45,7 @@ typedef struct {
  * Prepares the store in dir (created if absent). Called once at server
  * startup. Returns false when the store cannot be used.
  */
-bool ursatz_gui_collection_service_init(const char *dir);
+bool ursatz_gui_collection_service_init(void);
 
 /* Forgets the store's directory. Nothing persistent is freed or deleted. */
 void workshop_collection_service_shutdown(void);

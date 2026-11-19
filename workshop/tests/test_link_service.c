@@ -29,6 +29,8 @@
 #include "items/store.h"
 #include "items/library_metadata.h"
 #include "items/subjects.h"
+#include <common/files.h>
+#include "items/layout.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 #include "test_http.h"
@@ -57,7 +59,7 @@ static bool import_piece(const char *name, char *out_id, size_t out_size) {
     size_t size = 0;
     char *data = test_read_file(path, &size);
     char *id = NULL;
-    bool ok = data && workshop_analysis_import_and_save("pieces", (const unsigned char *)data, size, name, &id) == URSATZ_OK;
+    bool ok = data && workshop_analysis_import_and_save(WORKSHOP_DIR_PIECES, (const unsigned char *)data, size, name, &id) == URSATZ_OK;
     free(data);
     if (ok) {
         snprintf(out_id, out_size, "%s", id);
@@ -105,7 +107,7 @@ static void tag_piece(const char *id, const char *composer, const char *tag) {
     update.add_tags = tag ? tags : NULL;
     update.add_tag_count = tag ? 1 : 0;
     UrsatzError message = {{0}};
-    check_quiet(workshop_analysis_update_piece("pieces", id, &update, &message) ==
+    check_quiet(workshop_analysis_update_piece(WORKSHOP_DIR_PIECES, id, &update, &message) ==
               URSATZ_OK,
           "update metadata");
 }
@@ -298,7 +300,7 @@ static void test_runs(void) {
     all.collection_id = five_collection;
 
     char gone_dir[128];
-    snprintf(gone_dir, sizeof(gone_dir), "pieces/%s", g_ids[4]);
+    snprintf(gone_dir, sizeof(gone_dir), WORKSHOP_DIR_PIECES "/%s", g_ids[4]);
 #ifdef _WIN32
     char command[256];
     snprintf(command, sizeof(command), "rmdir /s /q %s", gone_dir);
@@ -351,7 +353,7 @@ static void test_runs(void) {
 
     /* A document without features is analyzed again. */
     char path[256];
-    snprintf(path, sizeof(path), "pieces/%s/analysis.json", g_ids[0]);
+    snprintf(path, sizeof(path), WORKSHOP_DIR_PIECES "/%s/analysis.json", g_ids[0]);
     size_t size = 0;
     char *text = test_read_file(path, &size);
     cJSON *document = text ? cJSON_Parse((const char *)text) : NULL;
@@ -428,16 +430,16 @@ static void test_titles(void) {
 
 static void test_interrupted(void) {
     workshop_link_service_shutdown();
-    check_quiet(MKDIR("links/runs/lnk-interrupted") == 0, "make a run directory");
-    FILE *file = fopen("links/runs/lnk-interrupted/run.json", "wb");
+    check_quiet(MKDIR(WORKSHOP_DIR_LINKS "/lnk-interrupted") == 0, "make a run directory");
+    FILE *file = fopen(WORKSHOP_DIR_LINKS "/lnk-interrupted/run.json", "wb");
     check_quiet(file != NULL, "write a run left running");
     if (file) {
-        fputs("{\"id\":\"lnk-interrupted\",\"scope\":{\"kind\":\"all\"},\"created_at\":\"2020-01-01T00:00:00.000Z\","
+        fputs("{\"format\":\"ursatz-link-run\",\"format_version\":1,\"id\":\"lnk-interrupted\",\"scope\":{\"kind\":\"all\"},\"created_at\":\"2020-01-01T00:00:00.000Z\","
               "\"finished_at\":null,\"status\":\"running\",\"message\":\"\",\"done\":3,\"total\":9,\"skipped\":[]}",
               file);
         fclose(file);
     }
-    check_quiet(workshop_link_service_init("links"), "init again");
+    check_quiet(workshop_link_service_init(), "init again");
     cJSON *run = NULL;
     check_quiet(workshop_link_run_get("lnk-interrupted", &run) == URSATZ_OK, "the run is still there");
     check_quiet(strcmp(str(run, "status"), "failed") == 0 && strcmp(str(run, "message"), "interrupted") == 0,
@@ -454,17 +456,17 @@ int main(void) {
 
     /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-    system("rmdir /s /q pieces collections data links materials_* subjects_* 2> nul");
+    system("rmdir /s /q library settings cache projects data materials_* subjects_* 2> nul");
 #else
-    system("rm -rf pieces collections data links materials_* subjects_*");
+    system("rm -rf library settings cache projects data materials_* subjects_*");
 #endif
-    MKDIR("pieces");
+    common_dir_make(WORKSHOP_DIR_PIECES, NULL);
     MKDIR("data");
 
-    check_quiet(ursatz_gui_collection_service_init("collections"), "init collections");
-    check_quiet(workshop_material_service_init(g_materials), "init materials");
-    check_quiet(workshop_subject_service_init(g_subjects), "init subjects");
-    check_quiet(workshop_link_service_init("links"), "init links");
+    check_quiet(ursatz_gui_collection_service_init(), "init collections");
+    check_quiet(workshop_material_service_init(), "init materials");
+    check_quiet(workshop_subject_service_init(), "init subjects");
+    check_quiet(workshop_link_service_init(), "init links");
 
     const char *files[] = {"a.musicxml", "b.musicxml", "c.musicxml", "d.musicxml", "c.musicxml"};
     bool imported = true;
@@ -484,9 +486,9 @@ int main(void) {
     workshop_material_service_shutdown();
     workshop_collection_service_shutdown();
 #ifdef _WIN32
-    system("rmdir /s /q pieces collections data links materials_* subjects_* 2> nul");
+    system("rmdir /s /q library settings cache projects data materials_* subjects_* 2> nul");
 #else
-    system("rm -rf pieces collections data links materials_* subjects_*");
+    system("rm -rf library settings cache projects data materials_* subjects_*");
 #endif
     return test_finish("link_service");
 }
