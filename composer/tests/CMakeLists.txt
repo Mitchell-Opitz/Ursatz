@@ -642,6 +642,8 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
+                     -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json
+                     -DREADING_SCHEMA=${CMAKE_SOURCE_DIR}/library/reading/schema/reading.v1.schema.json
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED api_responses_written)

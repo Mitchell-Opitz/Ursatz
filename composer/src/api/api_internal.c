@@ -1,13 +1,20 @@
 #include "api_internal.h"
 
 #include <stdarg.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 
 #include <ursatz_composer/preferences.h>
 
+#include <realization/realization_json.h>
+#include <reading/reading_json.h>
+
 #include "api_vocabulary.h"
+#include "check/hearing.h"
+#include "check/hearing_result.h"
+#include "render/movement_build.h"
 #include "util/request_parse.h"
 #include "util/util.h"
 
@@ -302,6 +309,7 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
         !api_member_bool(request, "musicxml", &out->musicxml, &present, error) ||
         !api_member_bool(request, "plain_midi", &plain, &present, error) ||
         !api_member_bool(request, "plans", &out->plans, &present, error) ||
+        !api_member_bool(request, "layers", &out->layers, &present, error) ||
         !api_member_string(request, "explain", &explain, &present, error)) {
         return COMPOSER_ERR_REQUEST;
     }
@@ -319,6 +327,47 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
         out->export_options.section_markers = false;
     }
     return COMPOSER_OK;
+}
+
+/* Adds the text (one JSON document) parsed as member `name` of document; the text is freed. */
+static bool add_parsed(cJSON *document, const char *name, char *text) {
+    cJSON *item = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    if (!item || !api_add(document, name, item)) {
+        cJSON_Delete(item);
+        return false;
+    }
+    return true;
+}
+
+ComposerStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *plan, const PlanExportOptions *options, cJSON *document,
+                               ComposerError *error) {
+    ComposerHearing *hearing = NULL;
+    HearingResult heard = hearing_create(plan, knowledge, &hearing);
+    if (heard != HEARING_OK) {
+        return heard == HEARING_ERR_ALLOC ? api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory")
+                                          : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/layers", "cannot render the plan");
+    }
+    ComposerStatus status = COMPOSER_OK;
+    Work *work = NULL;
+    PlanExportError detail;
+    char digest[17];
+    const Reading *reading = NULL;
+    RealizationJsonError realization_error;
+    ReadingJsonError reading_error;
+    if (rendered_plan_work(hearing_rendered(hearing), options, knowledge, &work, &detail) != PLAN_EXPORT_OK) {
+        status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/layers", "cannot write the realization: %s", detail.message);
+    } else if (!realization_digest(work, digest)) {
+        status = api_fail(error, COMPOSER_ERR_INTERNAL, "/layers", "cannot name the realization");
+    } else if (hearing_piece_reading_of(hearing, digest, &reading) != HEARING_OK) {
+        status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/layers", "cannot read the piece");
+    } else if (!add_parsed(document, "realization", realization_work_to_json(work, &realization_error)) ||
+               !add_parsed(document, "reading", reading_to_json(reading, &reading_error))) {
+        status = api_fail_alloc(error);
+    }
+    work_destroy(work);
+    hearing_destroy(hearing);
+    return status;
 }
 
 bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *present, ComposerError *error) {

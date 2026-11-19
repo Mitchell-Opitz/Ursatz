@@ -905,7 +905,7 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
         cJSON *document = plan_document(state, plan);
         ApiOutputs outputs;
         memset(&outputs, 0, sizeof outputs);
-        status = document ? api_render_outputs(context->knowledge, plan, &outputs, out) : api_fail_alloc(&out->error);
+        status = document ? api_render_outputs(context->knowledge, plan, &outputs, document, out) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
         } else {

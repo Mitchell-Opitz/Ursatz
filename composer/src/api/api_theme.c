@@ -487,12 +487,19 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, cJSON *document,
+                                   ComposerResponse *out) {
     PlanJsonError json_error;
     PlanProducer producer = composer_plan_producer(knowledge);
     out->plan_json = plan_to_json(theme->plan, &producer, &json_error);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", json_error.message);
+    }
+    if (outputs->layers) {
+        ComposerStatus layered = api_layers_json(knowledge, theme->plan, &outputs->export_options, document, &out->error);
+        if (layered != COMPOSER_OK) {
+            return layered;
+        }
     }
     if (!outputs->midi && !outputs->musicxml) {
         return COMPOSER_OK;
@@ -689,7 +696,7 @@ ComposerStatus composer_api_theme(const ComposerContext *context, const char *re
             status = api_fail_alloc(&out->error);
         }
         if (status == COMPOSER_OK) {
-            status = render_first(context->knowledge, &state.run.themes[0], &outputs, out);
+            status = render_first(context->knowledge, &state.run.themes[0], &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

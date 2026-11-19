@@ -166,11 +166,20 @@ typedef struct {
     bool midi;
     bool musicxml;
     bool plans;
+    bool layers; /* the realization and the reading of the first plan, in "realization" and "reading" */
     int explain; /* 0 none, 1 text, 2 json */
     PlanExportOptions export_options;
 } ApiOutputOptions;
 
-/* "midi", "musicxml", "plain_midi", "plans" and "explain" ("text" or "json"). */
+/*
+ * Adds "realization" (the work of the plan as the MIDI and MusicXML are written from it, realization.v1) and "reading" (the Composer's
+ * hearing of the plan over that work, reading.v1, its target the realization's digest) to document. COMPOSER_ERR_UNSATISFIABLE when the plan
+ * cannot be rendered or heard, COMPOSER_ERR_ALLOC when out of memory.
+ */
+ComposerStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *plan, const PlanExportOptions *options, cJSON *document,
+                               ComposerError *error);
+
+/* "midi", "musicxml", "plain_midi", "plans", "layers" and "explain" ("text" or "json"). */
 ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error);
 
 /* --- reading a request without running it (composer_api_validate) --------------------------------------- */

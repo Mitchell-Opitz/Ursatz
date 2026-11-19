@@ -65,14 +65,17 @@ typedef struct {
     bool musicxml;
     bool plain_midi;
     bool record;     /* the text of the --record file, in "record" of the document */
+    bool layers;     /* the realization and the reading of the plan, in "realization" and "reading" of the document */
     int explain;     /* 0 none, 1 text, 2 json: the explanation in "explanation" of the document */
     PlanExportOptions export_options;
 } ApiOutputs;
 
-/* "midi", "musicxml", "plain_midi", "tempo" and, with workflow, "record" and "explain" ("text" or "json"). */
+/* "midi", "musicxml", "plain_midi", "tempo", "layers" and, with workflow, "record" and "explain" ("text" or "json"). */
 ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs *out, ComposerError *error);
-/* Fills plan_json, and midi and musicxml when asked, from the plan as it is in memory. */
-ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, ComposerResponse *out);
+/* Fills plan_json, and midi and musicxml when asked, from the plan as it is in memory; with layers, adds the realization and the
+   reading to document (not NULL then). */
+ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, cJSON *document,
+                                  ComposerResponse *out);
 /* Fills record and the "explanation" member of document (a string) when asked; outcome may be NULL. */
 ComposerStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
                                   cJSON *document, ComposerResponse *out);

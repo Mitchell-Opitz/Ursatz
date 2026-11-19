@@ -801,7 +801,7 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
         status = build_document(context->knowledge, &options, built, made, seed, &outputs, &document, &out->error);
         if (status == COMPOSER_OK) {
             /* The first progression's own files. */
-            status = api_render_outputs(context->knowledge, built[0].plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, built[0].plan, &outputs, document, out);
             if (status != COMPOSER_OK) {
                 cJSON_Delete(document);
             } else {

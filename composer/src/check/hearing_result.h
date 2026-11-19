@@ -36,6 +36,13 @@ HearingResult hearing_section_reading(ComposerHearing *hearing, PlanSpan span, c
 HearingResult hearing_piece_reading(ComposerHearing *hearing, const Reading **out);
 
 /*
+ * hearing_piece_reading, with the reading's target naming the version of the work it is about (`digest`, 16 lowercase hexadecimal
+ * digits: realization_digest of rendered_plan_work's work for hearing_rendered). The reading is the hearing's own, so the digest is set
+ * on it; HEARING_ERR_ANALYSIS for a digest the reading refuses.
+ */
+HearingResult hearing_piece_reading_of(ComposerHearing *hearing, const char *digest, const Reading **out);
+
+/*
  * The rendered event (an index among hearing_rendered's events) of a performer note id of the work: the inverse of rendered_plan_note_id.
  * (size_t)-1 for an id the work does not have.
  */

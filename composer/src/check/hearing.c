@@ -352,3 +352,22 @@ size_t hearing_event_of_note(const ComposerHearing *hearing, const char *note_id
     const NoteEntry *found = bsearch(&key, self->note_index, count, sizeof(*self->note_index), compare_notes);
     return found ? found->event : (size_t)-1;
 }
+
+HearingResult hearing_piece_reading_of(ComposerHearing *hearing, const char *digest, const Reading **out) {
+    HearingResult status = hearing_piece_reading(hearing, out);
+    if (status != HEARING_OK) {
+        return status;
+    }
+    for (size_t i = 0; i < hearing->span_count; i++) {
+        if (hearing->spans[i].reading == *out) {
+            /* the reading is the hearing's own: it names the version of the work it is about once that is known */
+            if (reading_set_target_digest(hearing->spans[i].reading, digest) != REALIZATION_OK) {
+                *out = NULL;
+                return HEARING_ERR_ANALYSIS;
+            }
+            return HEARING_OK;
+        }
+    }
+    *out = NULL;
+    return HEARING_ERR_ANALYSIS;
+}

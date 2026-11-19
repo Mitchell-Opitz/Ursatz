@@ -198,6 +198,14 @@
         "type": "string"
       },
       "description": "The MusicXML of every version after the first, by name; {} for a form with one version."
+    },
+    "realization": {
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/realization/schema/realization.v1.schema.json",
+      "description": "The work of the result as its MIDI and MusicXML are written from it, with layers: true."
+    },
+    "reading": {
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/reading/schema/reading.v1.schema.json",
+      "description": "The Composer's hearing of the result over that realization, with layers: true."
     }
   },
   "$defs": {

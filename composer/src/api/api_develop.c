@@ -500,12 +500,12 @@ static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggest
 
 /* The files of the best candidate: the source and that candidate applied to the plan. */
 static ComposerStatus render_best(const KnowledgeSnapshot *knowledge, Scene *scene, const FillSuggestions *suggestions,
-                                  const ApiOutputs *outputs, ComposerResponse *out) {
+                                  const ApiOutputs *outputs, cJSON *document, ComposerResponse *out) {
     FillResult applied = fill_apply_suggestion(scene->plan, suggestions, 0);
     if (applied != FILL_OK) {
         return api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot build the plan to write (fill result %d)", (int)applied);
     }
-    return api_render_outputs(knowledge, scene->plan, outputs, out);
+    return api_render_outputs(knowledge, scene->plan, outputs, document, out);
 }
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
@@ -649,8 +649,8 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
                     status = api_fail_alloc(&out->error);
                 }
             }
-            if (status == COMPOSER_OK && (outputs.midi || outputs.musicxml)) {
-                status = render_best(context->knowledge, &scene, suggestions, &outputs, out);
+            if (status == COMPOSER_OK && (outputs.midi || outputs.musicxml || outputs.layers)) {
+                status = render_best(context->knowledge, &scene, suggestions, &outputs, document, out);
             }
             if (status == COMPOSER_OK) {
                 status = api_respond_json(out, document);

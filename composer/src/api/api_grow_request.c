@@ -410,13 +410,15 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, cJSON *document,
+                                   ComposerResponse *out) {
     ApiOutputs files;
     memset(&files, 0, sizeof(files));
     files.midi = outputs->midi;
     files.musicxml = outputs->musicxml;
+    files.layers = outputs->layers;
     files.export_options = outputs->export_options;
-    return api_render_outputs(knowledge, theme->plan, &files, out);
+    return api_render_outputs(knowledge, theme->plan, &files, document, out);
 }
 
 static ComposerStatus add_notices(cJSON *document, const State *state, const ApiOutputOptions *outputs, ComposerError *error) {
@@ -468,7 +470,7 @@ ComposerStatus composer_api_grow(const ComposerContext *context, const char *req
             status = add_notices(document, &state, &outputs, &out->error);
         }
         if (status == COMPOSER_OK) {
-            status = render_first(context->knowledge, &state.run.themes[0], &outputs, out);
+            status = render_first(context->knowledge, &state.run.themes[0], &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

@@ -103,6 +103,9 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     }
     if (status == COMPOSER_OK) {
         status = api_read_outputs(root, false, &outputs, &out->error);
+        if (status == COMPOSER_OK && outputs.layers) {
+            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/layers", "variations have no layers: ask for them from the request that made the plan");
+        }
     }
     if (status == COMPOSER_OK) {
         if (!api_member_whole(root, "count", 1, PLAN_VARIATIONS_MAX, &count, &present, &out->error) ||

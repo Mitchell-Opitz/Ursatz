@@ -1337,6 +1337,7 @@ typedef struct {
     bool musicxml;
     bool ending_musicxml;
     bool musicxml_versions;
+    bool layers; /* the realization and the reading of version 0's plan */
     int explain; /* 0 none, 1 text, 2 json */
 } PieceOutputs;
 
@@ -1497,7 +1498,7 @@ ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const Piec
 }
 
 /*
- * Adds "plans": {<name>: ...} for each version, with an explanation "explanation", with ending_musicxml the ending version's
+ * With layers, the realization and the reading of version 0's plan are added as well. Adds "plans": {<name>: ...} for each version, with an explanation "explanation", with ending_musicxml the ending version's
  * MusicXML as "ending_musicxml", and with musicxml_versions the MusicXML of every version after the first as
  * "musicxml_versions": {<name>: ...} to the document.
  */
@@ -1552,6 +1553,13 @@ static ComposerStatus add_outputs(const KnowledgeSnapshot *knowledge, cJSON *doc
             return api_fail_alloc(&out->error);
         }
     }
+    if (outputs->layers) {
+        ComposerStatus layered = api_layers_json(knowledge, api_piece_version_output_plan(&piece->versions[0]), &request->export_options,
+                                                 document, &out->error);
+        if (layered != COMPOSER_OK) {
+            return layered;
+        }
+    }
     PlanJsonError detail;
     PlanProducer producer = composer_plan_producer(knowledge);
     out->plan_json = plan_to_json(api_piece_version_output_plan(&piece->versions[0]), &producer, &detail);
@@ -1573,6 +1581,7 @@ static ComposerStatus read_outputs(const cJSON *request, PieceOutputs *outputs, 
         !api_member_bool(request, "musicxml", &outputs->musicxml, &present, error) ||
         !api_member_bool(request, "ending_musicxml", &outputs->ending_musicxml, &present, error) ||
         !api_member_bool(request, "musicxml_versions", &outputs->musicxml_versions, &present, error) ||
+        !api_member_bool(request, "layers", &outputs->layers, &present, error) ||
         !api_member_bool(request, "plain_midi", plain_midi, &present, error) ||
         !api_member_string(request, "explain", &explain, &present, error)) {
         return COMPOSER_ERR_REQUEST;

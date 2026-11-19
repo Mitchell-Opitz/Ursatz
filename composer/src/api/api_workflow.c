@@ -201,7 +201,8 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
     const char *explain = NULL;
     if (!api_member_bool(request, "midi", &out->midi, &present, error) ||
         !api_member_bool(request, "musicxml", &out->musicxml, &present, error) ||
-        !api_member_bool(request, "plain_midi", &out->plain_midi, &present, error)) {
+        !api_member_bool(request, "plain_midi", &out->plain_midi, &present, error) ||
+        !api_member_bool(request, "layers", &out->layers, &present, error)) {
         return COMPOSER_ERR_REQUEST;
     }
     if (workflow && (!api_member_bool(request, "record", &out->record, &present, error) ||
@@ -224,12 +225,19 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
     return api_read_tempo(request, &out->export_options, error);
 }
 
-ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, ComposerResponse *out) {
+ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, cJSON *document,
+                                  ComposerResponse *out) {
     PlanJsonError plan_error;
     PlanProducer producer = composer_plan_producer(knowledge);
     out->plan_json = plan_to_json(plan, &producer, &plan_error);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "cannot write the plan: %s", plan_error.message);
+    }
+    if (outputs->layers && document) {
+        ComposerStatus layered = api_layers_json(knowledge, plan, &outputs->export_options, document, &out->error);
+        if (layered != COMPOSER_OK) {
+            return layered;
+        }
     }
     if (!outputs->midi && !outputs->musicxml) {
         return COMPOSER_OK;

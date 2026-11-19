@@ -462,7 +462,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         }
         if (status == COMPOSER_OK) {
             /* The first counter-melody's own files. */
-            status = api_render_outputs(context->knowledge, results[0].plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, results[0].plan, &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
