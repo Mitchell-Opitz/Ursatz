@@ -58,7 +58,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz_io ursatz_analysis ursatz_chain
+    PUBLIC ursatz_io ursatz_analysis ursatz_chain ursatz_realization ursatz_reading
     PRIVATE cjson
 )
 

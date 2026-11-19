@@ -6,6 +6,8 @@
 
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
+#include <reading/reading.h>
+#include <realization/work.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
@@ -53,6 +55,12 @@ AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOption
 
 /* NULL is a no-op. */
 void analyzer_result_destroy(AnalyzerResult *result);
+
+/* The realization of the notes (R-628) and the Analyzer's reading of it (R-630): the reading's target names the work, the movement and
+   the realization's digest, its evidence the performer notes of the realization, its detail the chain of the result. Never NULL for a
+   result; both are owned by it. */
+const Work *analyzer_result_realization(const AnalyzerResult *result);
+const Reading *analyzer_result_reading(const AnalyzerResult *result);
 
 /* The report view the document is exported from (R-252). Never NULL for a result. */
 const ChainResult *analyzer_result_report(const AnalyzerResult *result);

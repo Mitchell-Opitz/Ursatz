@@ -22,6 +22,7 @@ ursatz_public_headers(ursatz_realization
         realization/performer_part.h
         realization/piano_reduction.h
         realization/realization.h
+        realization/realization_json.h
         realization/scoring.h
         realization/work.h
 )

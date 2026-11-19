@@ -21,6 +21,7 @@ ursatz_public_headers(ursatz_io
     SOURCE_DIRS ${PROJECT_SOURCE_DIR}
     HEADERS
         io/imported_score.h
+        io/imported_realization.h
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h
