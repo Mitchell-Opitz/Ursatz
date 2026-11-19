@@ -119,8 +119,8 @@ typedef struct {
     int first_measure;
     int last_measure;
     size_t phrase_count;
-    CadenceType part_cadences[2];
-    size_t part_cadence_count;
+    CadenceType part_cadences[2];   /* a theme: its two parts' cadences in order, CADENCE_TYPE_UNKNOWN for a part with none */
+    size_t part_cadence_count;      /* 2 for a theme from a builder, 0 for any other group */
     bool archetypal;
     bool fragmentation;
 } ReadingGroup;

@@ -45,6 +45,9 @@ bool standard_form_commonality_valid(StandardFormCommonality commonality);
 /* "very-common" "slightly-less-common" "occasional" "rare"; NULL for an invalid value. */
 const char *standard_form_commonality_name(StandardFormCommonality commonality);
 
+/* The inverse of standard_form_commonality_name: false, leaving *out untouched, for a NULL argument or a name that is none of the four. */
+bool standard_form_commonality_from_name(const char *name, StandardFormCommonality *out);
+
 /* PAIRING_FORM: the form of a pairing: PHRASE_LEVEL_FORM_SENTENCE, PHRASE_LEVEL_FORM_PERIOD, or
    PHRASE_LEVEL_FORM_HYBRID. False, leaving *out untouched, for an invalid beginning or ending. */
 bool standard_form_pairing_form(PhraseBeginning beginning, PhraseEnding ending, PhraseLevelForm *out);

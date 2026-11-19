@@ -283,13 +283,13 @@ static bool build_groups(Builder *b) {
         claim.first_measure = theme->first_measure;
         claim.last_measure = theme->last_measure;
         claim.phrase_count = theme->phrase_count;
+        /* A theme always names its two parts' cadences, in order; CADENCE_TYPE_UNKNOWN is a part with none (a presentation has no cadence). */
         for (size_t p = 0; p < 2; p++) {
+            CadenceType type = CADENCE_TYPE_UNKNOWN;
             if (theme->parts[p].has_cadence && theme->parts[p].cadence < result->cadence_count) {
-                CadenceType type;
-                if (cadence_type_from_name(result->cadences[theme->parts[p].cadence].type, &type)) {
-                    claim.part_cadences[claim.part_cadence_count++] = type;
-                }
+                (void)cadence_type_from_name(result->cadences[theme->parts[p].cadence].type, &type);
             }
+            claim.part_cadences[claim.part_cadence_count++] = type;
         }
         claim.archetypal = theme->archetypal;
         claim.fragmentation = has_trait(theme, "fragmentation");

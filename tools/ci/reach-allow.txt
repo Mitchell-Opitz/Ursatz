@@ -110,8 +110,7 @@ library/model/structure/motif_occurrence.c motif_occurrence_id  # no app reads a
 library/model/structure/structure.c structure_entity  # no app reads a shell's entity since P62 B11 (the claims that named it are gone); its tests call it
 library/theory/framework/framework.c framework_id  # no app reads a framework's id since P62 B11 (the framework references of the claims are gone); its tests call it
 library/theory/tonality/framework.c standard_tonality_framework  # no app reads the standard-tonality framework since P62 B11 (the claims that carried it are gone); its tests call it
-composer/src/render/movement_build.c rendered_plan_note_id  # no app calls it until P62 B12 (the hearing names the notes of a reading by it)
-composer/src/check/hearing.c hearing_section_reading  # no app calls it until P62 B12 commit 3 (the form hearing reads the section reading)
 composer/src/check/hearing.c hearing_event_of_note  # no app calls it until P62 B12 commit 4 (the critic maps a fault's notes to events)
 composer/src/check/hearing.c compare_notes  # no app calls it until P62 B12 commit 4 (the sort of hearing_event_of_note)
 composer/src/check/hearing.c hearing_piece_reading  # no app calls it until P62 B12 commit 4 (the critic reads the piece reading)
+library/analysis/harmony/key_regions.c common_practice_key_region_analysis_key  # no app calls it since P62 B12 (the form hearing reads the reading's region claims); its tests call it
