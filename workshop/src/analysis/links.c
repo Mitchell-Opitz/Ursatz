@@ -18,7 +18,7 @@
 #include <common/json.h>
 #include <common/strings.h>
 
-#include "analysis_service.h"
+#include "analysis.h"
 #include "items/collections.h"
 #include "items/ids.h"
 #include "base/knowledge.h"
@@ -76,7 +76,7 @@ static void free_summaries(WorkshopPieceSummary *pieces, size_t count) {
 static UrsatzStatus add_library_pieces(CommonNames *ids, const WorkshopMetaFilter *filter) {
     WorkshopPieceSummary *pieces = NULL;
     size_t count = 0;
-    if (workshop_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+    if (workshop_library_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     }
     UrsatzStatus result = URSATZ_OK;
@@ -944,7 +944,7 @@ UrsatzStatus workshop_link_piece_links(const char *piece_id, cJSON **out_links) 
 char *workshop_link_piece_title(const char *piece_id) {
     char *filename = NULL;
     if (!piece_id || !workshop_collection_is_valid_id(piece_id) ||
-        workshop_analysis_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_OK) {
+        workshop_library_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_OK) {
         filename = NULL;
     }
     char *title = common_strdup(filename && filename[0] ? filename : (piece_id ? piece_id : ""));

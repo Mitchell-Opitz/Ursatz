@@ -213,8 +213,6 @@ uses workshop-composition workshop-base workshop-items workshop-analysis worksho
 uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
 uses workshop-coordinator workshop-api workshop-base composer-api analyzer-api common cjson
 uses workshop-internal workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering
-allow workshop/src/items/collections.c analysis/analysis_service.h -- until P63 B5 commit 3 splits the Library piece store out of the analysis service
-allow workshop/src/items/library_metadata.h analysis/analysis_service.h -- until P63 B5 commit 3 (WorkshopPieceSummary moves to items/library_pieces.h)
 allow workshop/src/items/store.c composition/motifs.h -- until P63 B5 commit 4 (the include is unused)
 allow workshop/src/items/body_rules.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
 allow workshop/src/items/body_migrate.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer

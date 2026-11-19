@@ -23,7 +23,7 @@
 
 #include <ursatz_analyzer/analyzer_api.h>
 
-#include "analysis/analysis_service.h"
+#include "analysis/analysis.h"
 #include "items/collections.h"
 #include "analysis/links.h"
 #include "items/library_metadata.h"
@@ -119,7 +119,7 @@ static const char *listed_status(const char *id, char *out, size_t size) {
     WorkshopPieceSummary *pieces = NULL;
     size_t count = 0;
     out[0] = '\0';
-    check_quiet(workshop_analysis_list("pieces", &pieces, &count) == URSATZ_OK, "list the pieces");
+    check_quiet(workshop_library_list("pieces", &pieces, &count) == URSATZ_OK, "list the pieces");
     for (size_t i = 0; i < count; i++) {
         if (strcmp(pieces[i].id, id) == 0 && pieces[i].analysis_status) {
             snprintf(out, size, "%s", pieces[i].analysis_status);

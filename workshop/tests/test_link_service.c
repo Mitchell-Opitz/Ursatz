@@ -22,7 +22,7 @@
 
 #include <cJSON.h>
 
-#include "analysis/analysis_service.h"
+#include "analysis/analysis.h"
 #include "items/collections.h"
 #include "items/ids.h"
 #include "analysis/links.h"

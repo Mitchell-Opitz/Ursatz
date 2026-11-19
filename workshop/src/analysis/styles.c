@@ -26,7 +26,7 @@
 #include <common/json.h>
 #include <common/strings.h>
 
-#include "analysis_service.h"
+#include "analysis.h"
 #include "items/collections.h"
 #include "items/ids.h"
 #include "items/library_metadata.h"
@@ -411,7 +411,7 @@ static UrsatzStatus resolve_piece_ids(const NormalizedSource *source, CommonName
 
         WorkshopPieceSummary *pieces = NULL;
         size_t count = 0;
-        if (workshop_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+        if (workshop_library_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
             return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
         }
         for (size_t i = 0; i < count; i++) {

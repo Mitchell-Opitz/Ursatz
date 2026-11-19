@@ -1,11 +1,12 @@
-#include "base/last_error.h"
-#ifndef WORKSHOP_ANALYSIS_SERVICE_H
-#define WORKSHOP_ANALYSIS_SERVICE_H
+#ifndef WORKSHOP_ANALYSIS_ANALYSIS_H
+#define WORKSHOP_ANALYSIS_ANALYSIS_H
 
 #include <common/status.h>
 
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "items/library_pieces.h"
 
 
 /*
@@ -28,18 +29,6 @@
  * pieces_dir is created if it does not already exist.
  */
 
-/*
- * A piece's notation override (R-110): how its notes are to be read as notation.
- * Each member is the text the Analyzer's imported_reading_parse_* reads, or ""
- * for "not set": meter "3/4", value_scale "2" (1/4, 1/2, 1, 2 or 4), pickup
- * "1/4" (whole notes, after scaling).
- */
-typedef struct {
-    char meter[16];
-    char value_scale[8];
-    char pickup[16];
-} WorkshopNotation;
-
 typedef struct {
     char *id;
     char *filename;    /* upload name, or "" if none was given */
@@ -52,22 +41,6 @@ typedef struct {
     char **note_xml_ids; /* note_xml_ids[i]: the <note xml:id> the score export writes for note i */
     size_t note_count;
 } WorkshopPieceDetail;
-
-/* One entry in workshop_analysis_list's result. */
-typedef struct {
-    char *id;
-    char *filename;
-    char *format;
-    char *uploaded_at;
-    char *composer;    /* "" when unset */
-    char *source;      /* "" when unset */
-    char **tags;       /* tag_count normalized tags in insertion order; NULL when none */
-    size_t tag_count;
-    bool has_notation; /* true when the piece has a notation override */
-    WorkshopNotation notation;
-    const char *analysis_status; /* from meta.json alone: "current", "stale_schema", "stale_analyzer",
-                                    "stale_ursatz" or "unreadable"; static text */
-} WorkshopPieceSummary;
 
 /*
  * Stores data[0..size) (a MIDI or MusicXML file) unchanged as the source of
@@ -84,17 +57,6 @@ typedef struct {
 UrsatzStatus workshop_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
                                                               size_t size, const char *original_filename,
                                                               char **out_id);
-
-/*
- * Lists the pieces in pieces_dir: every pieces_dir/<id>/ directory with a
- * readable meta.json, newest upload first, then by id. Anything else in
- * pieces_dir (old "<id>.db" pieces, stray files) is ignored. On
- * URSATZ_OK, *out_pieces is a newly allocated array of
- * *out_count entries (caller frees each entry's strings, then the array).
- * A missing or empty pieces_dir yields *out_count == 0, *out_pieces == NULL.
- */
-UrsatzStatus workshop_analysis_list(const char *pieces_dir, WorkshopPieceSummary **out_pieces,
-                                                  size_t *out_count);
 
 /*
  * Loads one piece: its meta.json fields, its stored analysis document, and
@@ -128,55 +90,10 @@ UrsatzStatus workshop_analysis_get_document(const char *pieces_dir, const char *
                                                           const char *const *names, size_t count, char **out_json);
 
 /*
- * True when id names a piece of pieces_dir that has its stored metadata (the piece exists as list shows it).
- */
-bool workshop_analysis_piece_exists(const char *pieces_dir, const char *id);
-
-/*
- * The display name (filename) of a piece, under the piece lock: *out_filename is caller-owned (free()), "" when the
- * piece has none. URSATZ_ERR_NOT_FOUND if no piece with this id exists or its metadata is unreadable.
- */
-UrsatzStatus workshop_analysis_get_filename(const char *pieces_dir, const char *id, char **out_filename);
-
-/*
  * Deletes a piece's directory and every file in it.
  * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
  */
 UrsatzStatus workshop_analysis_delete_piece(const char *pieces_dir, const char *id);
-
-/*
- * A change of a piece's metadata in its meta.json (workshop_analysis_update_piece), written once. The source and
- * the analysis are untouched. NULL string fields are left unchanged.
- *
- *   filename            display name, stored as given (the caller rejects an empty one)
- *   composer, source    normalized (workshop_meta_normalize_value); "" clears
- *   has_tags, tags      replace all tags (each normalized with workshop_meta_normalize_tag)
- *   add_tags            then added (a duplicate is skipped)
- *   remove_tags         then removed (absent is not an error)
- *   has_notation        replace the notation override with *notation, or clear it
- *                       when notation is NULL
- *
- * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
- * URSATZ_ERR_REQUEST if a value is too long, a tag is
- * invalid, the piece would hold more than 32 tags or a notation member is not
- * one the Analyzer reads; nothing is written and message (may be NULL)
- * receives "composer is too long", "source is too long", "invalid tag",
- * "too many tags" or "invalid notation".
- */
-typedef struct {
-    const char *filename;
-    const char *composer;
-    const char *source;
-    bool has_tags;
-    const char *const *tags;
-    size_t tag_count;
-    const char *const *add_tags;
-    size_t add_tag_count;
-    const char *const *remove_tags;
-    size_t remove_tag_count;
-    bool has_notation;
-    const WorkshopNotation *notation;
-} WorkshopMetaUpdate;
 
 /*
  * The PATCH of a piece as one hold of its lock: the metadata change above, then, when the update changes
@@ -185,14 +102,6 @@ typedef struct {
  */
 UrsatzStatus workshop_analysis_update_piece(const char *pieces_dir, const char *id,
                                                           const WorkshopMetaUpdate *update, UrsatzError *error);
-
-/*
- * Reads the piece's notation override from its meta.json: *out_has is false
- * (and *out is zeroed) when it has none.
- * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
- */
-UrsatzStatus workshop_analysis_get_notation(const char *pieces_dir, const char *id, bool *out_has,
-                                                          WorkshopNotation *out);
 
 /*
  * Runs the Analyzer again on the piece's stored source and rewrites
@@ -285,4 +194,4 @@ UrsatzStatus workshop_analysis_get_piece_playback(const char *pieces_dir, const 
 UrsatzStatus workshop_analysis_get_piece_export(const char *pieces_dir, const char *id,
                                                               int first_measure, int last_measure, char **out_text);
 
-#endif /* WORKSHOP_ANALYSIS_SERVICE_H */
+#endif /* WORKSHOP_ANALYSIS_ANALYSIS_H */

@@ -42,7 +42,7 @@ static void thread_join(thread_t thread) {
 
 #include <cJSON.h>
 
-#include "analysis/analysis_service.h"
+#include "analysis/analysis.h"
 #include "analysis/links.h"
 #include "items/piece_lock.h"
 #include "ursatz_check.h"
@@ -253,7 +253,7 @@ static void test_concurrent_writers(void) {
 
   WorkshopNotation final_notation;
   bool has_final = true;
-  workshop_analysis_get_notation(kPiecesDir, id, &has_final, &final_notation);
+  workshop_library_get_notation(kPiecesDir, id, &has_final, &final_notation);
   check(!has_final, "the last PATCH left the piece without an override");
   workshop_analysis_delete_piece(kPiecesDir, id);
   free(id);
@@ -355,7 +355,7 @@ static thread_result_t THREAD_CALL read_like_services(void *arg) {
   }
   free(document);
   char *filename = NULL;
-  read->filename_ok = workshop_analysis_get_filename(kPiecesDir, read->id, &filename) == URSATZ_OK &&
+  read->filename_ok = workshop_library_get_filename(kPiecesDir, read->id, &filename) == URSATZ_OK &&
                       filename && strcmp(filename, "services.musicxml") == 0;
   free(filename);
   char *title = workshop_link_piece_title(read->id);
@@ -400,9 +400,9 @@ static void test_service_reads(void) {
   char *missing = NULL;
   check(workshop_analysis_get_document(kPiecesDir, "no-such-piece", NULL, 0, &missing) ==
                 URSATZ_ERR_NOT_FOUND &&
-            workshop_analysis_get_filename(kPiecesDir, "no-such-piece", &missing) == URSATZ_ERR_NOT_FOUND &&
-            !workshop_analysis_piece_exists(kPiecesDir, "no-such-piece") &&
-            workshop_analysis_piece_exists(kPiecesDir, id),
+            workshop_library_get_filename(kPiecesDir, "no-such-piece", &missing) == URSATZ_ERR_NOT_FOUND &&
+            !workshop_library_piece_exists(kPiecesDir, "no-such-piece") &&
+            workshop_library_piece_exists(kPiecesDir, id),
         "a missing piece is not found by the reads and exists only once uploaded");
   workshop_analysis_delete_piece(kPiecesDir, id);
   free(id);

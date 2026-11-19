@@ -6,13 +6,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "analysis/analysis_service.h"
+#include "library_pieces.h"
 #include "base/last_error.h"
 
 /*
  * Piece metadata rules: normalizing composer, source and tag text, the tag
  * list helpers, grouping pieces for the Tags panel and filtering them.
- * Pure functions: no I/O. analysis_service.c stores the values, routes/analyzer.c
+ * Pure functions: no I/O. analysis.c stores the values, routes/analyzer.c
  * serves them (R-103).
  */
 

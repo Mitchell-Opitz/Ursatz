@@ -10,7 +10,7 @@
  *   undo as one hold), re-analyze (also the style build's and the link
  *   worker's), delete (the directory removal), and the reads of analysis.json
  *   plus the source (detail, musicxml, playback).
- * All of these are in analysis_service.c and take the lock themselves, so a
+ * All of these are in analysis.c and take the lock themselves, so a
  * caller never holds it.
  *
  * Lock order:
@@ -20,7 +20,7 @@
  *   the collection and subject cleanups of a delete run after the piece lock
  *   is released), and never two piece locks.
  * The piece lock is not recursive: code under it calls only the unlocked
- * helpers of analysis_service.c.
+ * helpers of analysis.c.
  *
  * The table keeps one mutex per id that is locked or waited for, with a
  * reference count; an entry is freed when its count reaches 0.

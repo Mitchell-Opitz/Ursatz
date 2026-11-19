@@ -68,9 +68,8 @@ not listed and cannot be opened, so upload those files again.
 
 ### Concurrency
 
-One lock per piece directory (`items/piece_lock.c`, a table of per-id mutexes with a reference count; an entry
-is freed when its count reaches 0) is held around every writer of `pieces/<id>/` and every read that must not see
-half a write. All of them are in `analysis/analysis_service.c` and take the lock themselves, so no caller holds it:
+One lock per piece directory (`items/piece_lock.c`: per-id mutexes, freed at count 0) is held around every writer of `pieces/<id>/` and every read that must not see
+half a write. All of them are in `analysis/analysis.c` (the folder and meta.json: `items/library_pieces.c`) and take the lock themselves, so no caller holds it:
 
 - upload (`workshop_analysis_import_and_save`, from the moment the directory exists until it is complete);
 - PATCH (`workshop_analysis_update_piece`: the metadata, the re-analysis a changed notation needs and, if that

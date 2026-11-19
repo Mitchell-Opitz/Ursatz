@@ -44,7 +44,7 @@ and answers.
 `routes/composer.c` answers the status route with `composer_api_versions` itself and the vocabulary route from
 `composer_client.c`; `routes/materials.c`, `routes/links.c` and the other routes call no `composer_api_*` entry.
 
-Piece documents are read only through `workshop/src/analysis/analysis_service.c`, under the piece lock: `workshop_analysis_get_document`
+Piece documents are read only through `workshop/src/analysis/analysis.c`, under the piece lock: `workshop_analysis_get_document`
 (with no names, the whole stored document), `_get_filename` and `_piece_exists`. The link, style and collection services
 use these, and no other file names a piece's `meta.json` or `analysis.json`.
 

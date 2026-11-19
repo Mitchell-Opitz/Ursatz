@@ -18,7 +18,7 @@
 #include <common/json.h>
 #include <common/status.h>
 
-#include "analysis/analysis_service.h"
+#include "library_pieces.h"
 #include "ids.h"
 #include "library_metadata.h"
 
@@ -36,7 +36,7 @@ static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
 #define LOCK() workshop_lock_acquire(&g_lock)
 #define UNLOCK() workshop_lock_release(&g_lock)
 
-/* The helpers below mirror analysis_service.c's file helpers; each store
+/* The helpers below mirror analysis.c's file helpers; each store
  * keeps its own copy so neither depends on the other's internals. */
 
 
@@ -53,7 +53,7 @@ bool workshop_collection_is_valid_id(const char *id) {
 }
 
 bool workshop_collection_piece_exists(const char *piece_id) {
-    return workshop_collection_is_valid_id(piece_id) && workshop_analysis_piece_exists(kPiecesDir, piece_id);
+    return workshop_collection_is_valid_id(piece_id) && workshop_library_piece_exists(kPiecesDir, piece_id);
 }
 
 static bool collection_path(const char *id, char *out, size_t out_size) {

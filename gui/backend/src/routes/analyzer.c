@@ -346,7 +346,7 @@ static void read_filter(const struct mg_request_info *info, WorkshopMetaFilter *
 static int handle_get(struct mg_connection *conn) {
   WorkshopPieceSummary *pieces = NULL;
   size_t count = 0;
-  UrsatzStatus result = workshop_analysis_list(kPiecesDir, &pieces, &count);
+  UrsatzStatus result = workshop_library_list(kPiecesDir, &pieces, &count);
 
   if (result != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
@@ -406,7 +406,7 @@ static void append_group_array(JsonBuffer *buf, const char *name, const Workshop
 static int handle_get_groups(struct mg_connection *conn) {
   WorkshopPieceSummary *pieces = NULL;
   size_t count = 0;
-  if (workshop_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+  if (workshop_library_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
@@ -615,7 +615,7 @@ static int send_invalid_member(struct mg_connection *conn, const char *member) {
 static int send_updated_piece(struct mg_connection *conn, const char *id) {
   WorkshopPieceSummary *pieces = NULL;
   size_t count = 0;
-  if (workshop_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+  if (workshop_library_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }

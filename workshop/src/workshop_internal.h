@@ -21,7 +21,7 @@
 #include "items/piece_lock.h"
 #include "items/subjects.h"
 
-#include "analysis/analysis_service.h"
+#include "analysis/analysis.h"
 #include "analysis/import_cache.h"
 #include "analysis/links.h"
 #include "analysis/styles.h"
