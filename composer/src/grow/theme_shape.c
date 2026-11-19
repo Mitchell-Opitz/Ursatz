@@ -61,15 +61,6 @@ const ThemeShapeHalf *theme_shape_ending(SectionEnding ending) {
     return ending >= 0 && ending <= SECTION_ENDING_CADENTIAL ? &HALVES[3 + (int)ending] : NULL;
 }
 
-const ThemeShapeHalf *theme_shape_half_find(bool beginning, const char *plan_name) {
-    for (size_t i = 0; plan_name && i < COUNT_OF(HALVES); i++) {
-        if (HALVES[i].beginning == beginning && strcmp(HALVES[i].plan_name, plan_name) == 0) {
-            return &HALVES[i];
-        }
-    }
-    return NULL;
-}
-
 size_t theme_shape_idea_count(void) {
     return COUNT_OF(IDEAS);
 }

@@ -113,8 +113,6 @@ typedef struct {
 /* The halves: the three beginnings, then the three endings, in enum order. */
 const ThemeShapeHalf *theme_shape_beginning(SectionBeginning beginning);
 const ThemeShapeHalf *theme_shape_ending(SectionEnding ending);
-/* The half of that kind with that plan name; NULL for an unknown name or NULL. */
-const ThemeShapeHalf *theme_shape_half_find(bool beginning, const char *plan_name);
 
 /* The idea rows, one per idea of each half (13 rows for 10 ideas: the basic idea is in every beginning). NULL past the end. */
 size_t theme_shape_idea_count(void);
