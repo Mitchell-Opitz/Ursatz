@@ -31,6 +31,7 @@ ursatz_test(test_plan_clone LIBS ursatz_composer composer_test_support
 
 ursatz_test(test_plan_json LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    PLAN_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/library/plan/tests/fixtures"
     COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     PROPERTIES FIXTURES_SETUP plan_files_written RESOURCE_LOCK plan_json_files)
 

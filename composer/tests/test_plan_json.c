@@ -1369,6 +1369,40 @@ static void test_section_cadence_read(void) {
     plan_destroy(plan);
 }
 
+/* A plan of format 5 (the fixtures of the plan group, written before format 6) through the Composer's hooks. */
+static void test_format_five_reads(void) {
+    char *five = test_must_read_file(PLAN_FIXTURE_DIR "/plan-format5-fill-given.json", NULL);
+    assert(strstr(five, "\"format\": \"ursatz-composer-plan\"") != NULL && strstr(five, "\"format_version\": 5") != NULL);
+    Plan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_from_json(test_knowledge(), five, composer_plan_read_hooks(), &plan, &error) == PLAN_OK);
+    /* The form record is read from the text, not migrated: the form the plan was built from. */
+    assert(plan_form_record(plan) != NULL && strcmp(plan_form_record(plan)->name, "binary") == 0);
+    /* It writes format 6, and that reads back as the same plan. */
+    char *six = plan_to_json(plan, test_plan_producer(), &error);
+    assert(six != NULL && strstr(six, "\"format\": \"ursatz-plan\"") != NULL && strstr(six, "\"format_version\": 6") != NULL);
+    assert(strstr(six, "\"regions\": [") != NULL && strstr(six, "\"keys\": [") == NULL && strstr(six, "\"kind\": \"key\"") == NULL);
+    Plan *again = NULL;
+    assert(plan_from_json(test_knowledge(), six, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
+    assert(plans_equal(plan, again));
+    char *rewritten = plan_to_json(again, test_plan_producer(), &error);
+    assert(rewritten != NULL && strcmp(six, rewritten) == 0);
+    free(rewritten);
+    plan_destroy(again);
+    plan_destroy(plan);
+
+    /* The Composer composes in major and natural minor keys only: the hook refuses a key of another material, as it did in format 5. */
+    char *other = replace_all(five, "\"material\": \"omt.material.major\"", "\"material\": \"omt.material.harmonic-minor\"");
+    Plan *refused = NULL;
+    assert(plan_from_json(test_knowledge(), other, composer_plan_read_hooks(), &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strstr(error.message, "major and natural minor keys only") != NULL && strstr(error.path, "material") != NULL);
+    assert(plan_from_json(test_knowledge(), other, NULL, &refused, &error) == PLAN_OK);
+    plan_destroy(refused);
+    free(other);
+    free(six);
+    free(five);
+}
+
 int main(void) {
     test_round_trip();
     test_old_transforms();
@@ -1386,5 +1420,6 @@ int main(void) {
     test_format_four_reads_into_descriptions();
     test_section_description_stored();
     test_section_cadence_read();
+    test_format_five_reads();
     return 0;
 }

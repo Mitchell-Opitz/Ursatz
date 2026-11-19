@@ -1,5 +1,9 @@
 ursatz_test_includes()
 
+# Plan format 6: three plans of format 5 (tests/fixtures) read and written, regions, derivation, the stamp.
+ursatz_test(plan_format SOURCES test_plan_format.c LIBS ursatz_plan VALGRIND
+    DEFINITIONS PLAN_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 # Resizing a lane span.
 ursatz_test(plan_lane_resize SOURCES test_plan_lane_resize.c LIBS ursatz_plan VALGRIND)
 
