@@ -13,7 +13,7 @@
 #include "grow.h"
 #include "listen.h"
 #include "motive.h"
-#include "plan.h"
+#include "plan_cmd.h"
 #include "progression.h"
 #include "random_motive.h"
 #include "recognize.h"

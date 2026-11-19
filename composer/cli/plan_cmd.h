@@ -1,5 +1,5 @@
-#ifndef URSATZ_COMPOSER_CLI_PLAN_H
-#define URSATZ_COMPOSER_CLI_PLAN_H
+#ifndef URSATZ_COMPOSER_CLI_PLAN_CMD_H
+#define URSATZ_COMPOSER_CLI_PLAN_CMD_H
 
 #define PLAN_USAGE_LINE                                                                                                \
     "Usage: ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <m> [--bars N] [--count N] "     \
