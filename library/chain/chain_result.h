@@ -1042,7 +1042,7 @@ typedef struct {
 } AnalysisHypermeter;
 
 /* A run of tuplet notes: consecutive attacks of the piece that divide the meter's steps the way it does not. The
-   Analyzer finds them from the notes' times alone (the importers carry no notated tuplets, R-056): times are rounded
+   chain finds them from the notes' times alone (the importers carry no notated tuplets, R-056): times are rounded
    to a 1/96 grid (a time further than a quarter of a step from it is not read), and a note whose attack or length is
    not a whole step of the library's 1/32 grid is a triplet note (3:2, which includes sextuplets); in a compound meter
    two notes that halve a beat are a duplet (2:3). Other ratios are not looked for. Naming the ratio borrowed, and

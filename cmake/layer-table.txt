@@ -131,7 +131,7 @@ target ursatz_io io
 target ursatz_realization realization
 target ursatz_plan plan
 staged model theory analysis chain io realization plan analyzer-api analyzer composer
-generated analyzer version.h ursatz_analyzer_producer_key.h
+generated analyzer ursatz_analyzer/version.h ursatz_analyzer/producer_key.h
 generated chain producer_key.h chain/producer_key.h
 
 uses analyzer-api  model theory analysis chain io

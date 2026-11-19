@@ -65,7 +65,7 @@ read by Ursatz's MusicXMLImporter.
   MusicXML), `score-timewise`, grace notes, wedges (crescendo and diminuendo), additive meters
   (read as beat groups, analyzed as the summed meter) and senza-misura. Repeats and endings are not unfolded: the score is analyzed once, in
   written order.
-- **Schema.** The analysis document is schema version 9 (see
+- **Schema.** The analysis document is schema version 13 (see
   [analysis-document.md](analysis-document.md)).
 
 

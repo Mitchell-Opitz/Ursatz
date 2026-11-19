@@ -19,7 +19,7 @@ it is not a rule.
 ## Categories
 
 Every category is a `StyleStatistic` category string. Labels come from `theory/style/style_labels.c`, so the Composer labels its own
-material the same way. Only analysis documents of schema version 9 are read.
+material the same way. Only analysis documents of schema version 13 are read.
 
 | Dimension | Category | One label per | Label | Source in the document |
 | --- | --- | --- | --- | --- |

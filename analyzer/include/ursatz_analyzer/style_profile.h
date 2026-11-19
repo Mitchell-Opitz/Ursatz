@@ -17,7 +17,7 @@
  * (R-079).
  */
 
-/* Counts one analysis document (the text of an "analysis-document" with schema_version 9). */
+/* Counts one analysis document (the text of an "analysis-document" with schema_version 13). */
 StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const char *json);
 
 /*

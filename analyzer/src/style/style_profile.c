@@ -10,7 +10,7 @@
 #include "store/corpus_walk.h"
 #include "style/style_profile_internal.h"
 
-/* Counts one document tree (schema version 9) into the profile. */
+/* Counts one document tree (schema version 13) into the profile. */
 static StyleProfileResult add_document_tree(StyleProfile *profile, const cJSON *document) {
     StylePiece piece = {0};
     StyleProfileResult result = style_piece_from_document(document, &piece);
