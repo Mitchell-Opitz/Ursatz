@@ -1,0 +1,306 @@
+{
+  "format": "ursatz-reading",
+  "format_version": 1,
+  "source": {
+    "kind": "person",
+    "name": "michelle",
+    "producer_key": "",
+    "stages": 0,
+    "knowledge_hash": ""
+  },
+  "target": {
+    "work": "w1",
+    "movement": "m1",
+    "digest": "e8c0e66e5eeed3e1"
+  },
+  "regions": [
+    {
+      "id": "region-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 0,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "C major"
+    },
+    {
+      "id": "region-2",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 28,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 7,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "G major"
+    },
+    {
+      "id": "region-3",
+      "start": {
+        "num": 28,
+        "den": 1
+      },
+      "end": {
+        "num": 40,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 0,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "C major"
+    },
+    {
+      "id": "region-4",
+      "start": {
+        "num": 40,
+        "den": 1
+      },
+      "end": {
+        "num": 56,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 7,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "G major"
+    },
+    {
+      "id": "region-5",
+      "start": {
+        "num": 56,
+        "den": 1
+      },
+      "end": {
+        "num": 69,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 7,
+      "material": "omt.material.natural-minor",
+      "strength": "established",
+      "label": "G minor"
+    },
+    {
+      "id": "region-6",
+      "start": {
+        "num": 69,
+        "den": 1
+      },
+      "end": {
+        "num": 78,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 5,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "F major"
+    },
+    {
+      "id": "region-7",
+      "start": {
+        "num": 78,
+        "den": 1
+      },
+      "end": {
+        "num": 101,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 0,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "C major"
+    },
+    {
+      "id": "region-8",
+      "start": {
+        "num": 101,
+        "den": 1
+      },
+      "end": {
+        "num": 114,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 7,
+      "material": "omt.material.natural-minor",
+      "strength": "established",
+      "label": "G minor"
+    },
+    {
+      "id": "region-9",
+      "start": {
+        "num": 114,
+        "den": 1
+      },
+      "end": {
+        "num": 123,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 5,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "F major"
+    },
+    {
+      "id": "region-10",
+      "start": {
+        "num": 123,
+        "den": 1
+      },
+      "end": {
+        "num": 146,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "center": 0,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "C major"
+    }
+  ],
+  "chords": [],
+  "cadences": [
+    {
+      "id": "cadence-1",
+      "start": {
+        "num": 11,
+        "den": 1
+      },
+      "end": {
+        "num": 45,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": [],
+      "type": "half",
+      "arrival": {
+        "num": 11,
+        "den": 1
+      },
+      "alternatives": []
+    },
+    {
+      "id": "cadence-2",
+      "start": {
+        "num": 25,
+        "den": 1
+      },
+      "end": {
+        "num": 101,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 2
+      },
+      "evidence": [],
+      "type": "perfect-authentic",
+      "arrival": {
+        "num": 25,
+        "den": 1
+      },
+      "alternatives": []
+    },
+    {
+      "id": "cadence-3",
+      "start": {
+        "num": 26,
+        "den": 1
+      },
+      "end": {
+        "num": 105,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 2
+      },
+      "evidence": [],
+      "type": "perfect-authentic",
+      "arrival": {
+        "num": 26,
+        "den": 1
+      },
+      "alternatives": []
+    },
+    {
+      "id": "cadence-4",
+      "start": {
+        "num": 27,
+        "den": 1
+      },
+      "end": {
+        "num": 109,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": [],
+      "type": "perfect-authentic",
+      "arrival": {
+        "num": 27,
+        "den": 1
+      },
+      "alternatives": []
+    },
+    {
+      "id": "cadence-5",
+      "start": {
+        "num": 3,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 2
+      },
+      "evidence": [],
+      "type": "subverted",
+      "arrival": {
+        "num": 3,
+        "den": 1
+      },
+      "alternatives": []
+    }
+  ],
+  "groups": [],
+  "motive_occurrences": [],
+  "meters": [],
+  "lines": [],
+  "voice_faults": []
+}
