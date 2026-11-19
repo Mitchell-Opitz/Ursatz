@@ -17,3 +17,11 @@ if(URSATZ_JSONSCHEMA_PYTHON)
 endif()
 
 ursatz_test(reading SOURCES test_reading.c LIBS ursatz_reading VALGRIND)
+
+# The builder: Bach 114 and Mozart 545 through the chain with every stage; the valgrind run reads Bach 114 only (a run of the chain under
+# valgrind on a whole piece is slow).
+ursatz_test(reading_build SOURCES test_reading_build.c LIBS ursatz_reading ursatz_io ursatz_chain ursatz_test_support)
+if(URSATZ_VALGRIND)
+    ursatz_test(reading_build_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS} $<TARGET_FILE:test_reading_build> bach
+        LABELS slow valgrind)
+endif()
