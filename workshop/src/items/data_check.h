@@ -20,4 +20,7 @@
  */
 bool workshop_data_check(const char *data_dir, char *message, size_t size);
 
+/* The same check, writing nothing: the migration (migrate.h) asks it before it changes anything, and a dry run must leave the folder as it was. */
+bool workshop_data_check_only(const char *data_dir, char *message, size_t size);
+
 #endif

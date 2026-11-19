@@ -1,6 +1,7 @@
 #ifndef URSATZ_WORKSHOP_WORKSHOP_API_H
 #define URSATZ_WORKSHOP_WORKSHOP_API_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include <cJSON.h>
@@ -71,6 +72,26 @@ UrsatzStatus workshop_settings_resolve(const WorkshopConfig *flags, WorkshopConf
  * URSATZ_OK and NULL otherwise.
  */
 UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, UrsatzError *error);
+
+/*
+ * Migrates a data folder of the GUI before the workshop (layout 0: pieces/, materials/, subjects/, collections/, styles/, links/) to
+ * layout 1 (R-642). The folder must not be open by a workshop. It first asks the data check (items/data_check.h) and refuses a folder the
+ * GUI's one-time migrations never ran on, with the check's message. A dry run writes nothing and reports every planned move and
+ * rewrite. A real run copies the whole folder to backup_dir (NULL: "<data_dir>-backup-<YYYYMMDDTHHMMSSZ>" beside it), compares file
+ * count and sizes and stops on a difference, builds layout 1 in <data_dir>/.migrate-1/, rewrites every body as format 1 (the mode, motif
+ * key and progression-fill members written new), renames a Library piece's ursatz_commit to producer_key (R-554), moves the motif
+ * render caches to cache/renders, moves the old top-level entries into <data_dir>/.pre-1/ and the new ones into place, and writes
+ * data-folder.json last. A run that stopped before the last moves leaves .migrate-1/ without its .complete marker: it is deleted and the
+ * migration runs again; one that stopped during the last moves is finished from where it stopped. A layout 1 folder is a no-op, and an
+ * empty or absent folder is made layout 1. *report (caller deletes; may be NULL) is {dry_run, data_dir, from_layout, to_layout, changed,
+ * backup, counts {...}, moves [{from, to}]}.
+ */
+typedef struct {
+    bool dry_run;
+    const char *backup_dir;
+} WorkshopMigrateOptions;
+
+UrsatzStatus workshop_migrate(const char *data_dir, const WorkshopMigrateOptions *options, cJSON **report, UrsatzError *error);
 
 /* Stops what the workshop holds, releases the data folder and frees the workshop. NULL is a no-op. */
 void workshop_close(Workshop *workshop);

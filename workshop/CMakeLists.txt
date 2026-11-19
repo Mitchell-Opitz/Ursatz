@@ -9,6 +9,7 @@ add_library(ursatz_workshop STATIC
     src/items/formats.c
     src/items/ids.c
     src/items/layout.c
+    src/items/migrate.c
     src/items/library_pieces.c
     src/items/library_metadata.c
     src/items/store.c
