@@ -76,6 +76,25 @@ static PlanExportResult realization_failed(RealizationResult result, const char 
 
 static const char *const OPERATION_NAMES[] = {"", "copy", "motive", "return"};
 
+/* The id of the line note made from rendered event `event`: `n<plan note id>`, or `e<event + 1>` for a note with no plan note. */
+static void line_note_id(const RenderedPlan *rendered, size_t event, char *out, size_t size) {
+    if (rendered->note_ids[event] != PLAN_NOTE_NONE) {
+        snprintf(out, size, "n%zu", (size_t)rendered->note_ids[event]);
+    } else {
+        snprintf(out, size, "e%zu", event + 1);
+    }
+}
+
+bool rendered_plan_note_id(const RenderedPlan *rendered, size_t event, char out[REALIZATION_ID_MAX]) {
+    if (!rendered || event >= rendered->count) {
+        return false;
+    }
+    char line_note[32]; /* "n" or "e" and a number */
+    line_note_id(rendered, event, line_note, sizeof(line_note));
+    snprintf(out, REALIZATION_ID_MAX, "piano-%s", line_note);
+    return true;
+}
+
 static void part_line_id(const RenderedPart *part, char *out, size_t size) {
     if (part->lane == PLAN_LANE_INNER_VOICE) {
         snprintf(out, size, "inner-%d", part->voice);
@@ -107,11 +126,7 @@ static PlanExportResult build_line(const RenderedPlan *rendered, size_t part, Li
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
         LineNote note;
         memset(&note, 0, sizeof(note));
-        if (rendered->note_ids[i] != PLAN_NOTE_NONE) {
-            snprintf(note.id, sizeof(note.id), "n%zu", (size_t)rendered->note_ids[i]);
-        } else {
-            snprintf(note.id, sizeof(note.id), "e%zu", i + 1);
-        }
+        line_note_id(rendered, i, note.id, sizeof(note.id));
         note.onset = *onset;
         note.duration = *note_event_duration(event);
         note.midi = (int)pitch_numeric_value_position_numerator(rendered->pitch_values[i]);
