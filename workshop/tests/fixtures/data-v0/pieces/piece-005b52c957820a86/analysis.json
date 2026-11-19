@@ -1,0 +1,4097 @@
+{
+  "schema_version": 13,
+  "metadata": {
+    "source_file": "source.musicxml",
+    "analyzer_version": "0.7.0",
+    "producer_key": "6b8de68143ec257b",
+    "note_count": 18,
+    "ticks_per_quarter": null,
+    "input": {
+      "format": "musicxml",
+      "source_type": "score",
+      "meter": "notated",
+      "key": "notated",
+      "spelling": "notated",
+      "parts": [
+        {
+          "id": "P1",
+          "name": "Piano",
+          "staff_count": 1,
+          "note_count": 18
+        }
+      ],
+      "tempo": {
+        "declared": false,
+        "quarters_per_minute": null,
+        "marking_count": 0
+      },
+      "dynamics_count": 0,
+      "warning_count": 0
+    },
+    "key_found": true,
+    "key_signatures": [
+      {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "location": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "sharps_flats": 0,
+        "mode_hint": "major",
+        "major_key": "C major",
+        "minor_key": "A minor"
+      }
+    ]
+  },
+  "meter": {
+    "framework": "musicxml-time-signature",
+    "span": {
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 5,
+        "den": 1
+      }
+    },
+    "location": {
+      "start": {
+        "measure": 1,
+        "beat": 1,
+        "subdivision": {
+          "num": 0,
+          "den": 1
+        }
+      },
+      "end": {
+        "measure": 6,
+        "beat": 1,
+        "subdivision": {
+          "num": 0,
+          "den": 1
+        }
+      }
+    },
+    "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+    "label": "4/4",
+    "uncertainty": null,
+    "source": "notated",
+    "time_signature": {
+      "numerator": 4,
+      "denominator": 4
+    },
+    "measure_count": 5,
+    "last_measure": 5,
+    "pickup": null,
+    "changes": [],
+    "reading": null
+  },
+  "keys": {
+    "regions": [
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 0,
+            "den": 1
+          },
+          "end": {
+            "num": 5,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 6,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        "label": "C major",
+        "uncertainty": 0.87728481588149276,
+        "index": 0,
+        "tonic": "C",
+        "material": "omt.material.major",
+        "measures": {
+          "first": 1,
+          "last": 5
+        },
+        "source": "key_signature"
+      }
+    ],
+    "home_key": {
+      "rule": "longest_total_duration",
+      "label": "C major",
+      "region_indices": [0],
+      "duration": {
+        "num": 5,
+        "den": 1
+      }
+    },
+    "opening_region": 0,
+    "closing_region": 0
+  },
+  "tonicizations": [],
+  "modulations": [],
+  "pivot_chords": [],
+  "chords": [
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 1,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 2,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [1, 0, 2, 3, 4, 5],
+      "label": "I",
+      "uncertainty": 0.172932,
+      "key_label": "C major",
+      "root": "C",
+      "quality": "major",
+      "bass": "C",
+      "inversion": 0,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "score": 0.95,
+      "runner_up": {
+        "label": "IV",
+        "root": "F",
+        "quality": "major",
+        "score": 0.7857142857142857,
+        "uncertainty": 0.827068
+      },
+      "context": "none",
+      "outer": {
+        "soprano": {
+          "status": "present",
+          "note_id": 0,
+          "pitch": "C5",
+          "degree": "1",
+          "uncertainty": 0.87728481588149276
+        },
+        "bass": {
+          "status": "present",
+          "note_id": 1,
+          "pitch": "C3",
+          "degree": "1",
+          "uncertainty": 0.87728481588149276
+        }
+      },
+      "roman_numeral": {
+        "label": "I",
+        "base_numeral": "I",
+        "key_region": 0,
+        "key": "C major",
+        "degree": 1,
+        "uncertainty": 0.97877861778001829,
+        "unlabelled_reason": null,
+        "applied": null
+      },
+      "function": {
+        "name": "tonic",
+        "applied_to": null,
+        "predominant": null,
+        "framework": "standard-harmony-v1",
+        "uncertainty": 0.97877861778001829
+      }
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 2,
+          "den": 1
+        },
+        "end": {
+          "num": 3,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 4,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [7, 6, 8, 9, 10, 11],
+      "label": "IV",
+      "uncertainty": 0.337201,
+      "key_label": "C major",
+      "root": "F",
+      "quality": "major",
+      "bass": "F",
+      "inversion": 0,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "score": 0.785222381635581,
+      "runner_up": {
+        "label": "dominant7",
+        "root": "G",
+        "quality": "dominant7",
+        "score": 0.520444763271162,
+        "uncertainty": 0.662799
+      },
+      "context": "none",
+      "outer": {
+        "soprano": {
+          "status": "present",
+          "note_id": 6,
+          "pitch": "C5",
+          "degree": "1",
+          "uncertainty": 0.87728481588149276
+        },
+        "bass": {
+          "status": "present",
+          "note_id": 7,
+          "pitch": "F3",
+          "degree": "4",
+          "uncertainty": 0.87728481588149276
+        }
+      },
+      "roman_numeral": {
+        "label": "IV",
+        "base_numeral": "IV",
+        "key_region": 0,
+        "key": "C major",
+        "degree": 4,
+        "uncertainty": 0.95862031720005525,
+        "unlabelled_reason": null,
+        "applied": null
+      },
+      "function": {
+        "name": "predominant",
+        "applied_to": null,
+        "predominant": "strong",
+        "framework": "standard-harmony-v1",
+        "uncertainty": 0.95862031720005525
+      }
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 4,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 5,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [13, 12, 14, 15, 16, 17],
+      "label": "I",
+      "uncertainty": 0.1523,
+      "key_label": "C major",
+      "root": "C",
+      "quality": "major",
+      "bass": "G",
+      "inversion": 2,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "score": 0.948843930635838,
+      "runner_up": {
+        "label": "iii",
+        "root": "E",
+        "quality": "minor",
+        "score": 0.804335260115607,
+        "uncertainty": 0.8477
+      },
+      "context": "none",
+      "outer": {
+        "soprano": {
+          "status": "present",
+          "note_id": 12,
+          "pitch": "C5",
+          "degree": "1",
+          "uncertainty": 0.87728481588149276
+        },
+        "bass": {
+          "status": "present",
+          "note_id": 13,
+          "pitch": "G3",
+          "degree": "5",
+          "uncertainty": 0.87728481588149276
+        }
+      },
+      "roman_numeral": {
+        "label": "I6/4",
+        "base_numeral": "I",
+        "key_region": 0,
+        "key": "C major",
+        "degree": 1,
+        "uncertainty": 0.98131047745875133,
+        "unlabelled_reason": null,
+        "applied": null
+      },
+      "function": {
+        "name": "tonic",
+        "applied_to": null,
+        "predominant": null,
+        "framework": "standard-harmony-v1",
+        "uncertainty": 0.98131047745875133
+      }
+    }
+  ],
+  "chord_vocabulary": [
+    {
+      "scope": "overall",
+      "key_region": null,
+      "key": null,
+      "group": "diatonic",
+      "level": "numeral",
+      "numeral": "I",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 0,
+        "position": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "overall",
+      "key_region": null,
+      "key": null,
+      "group": "diatonic",
+      "level": "numeral",
+      "numeral": "IV",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 1,
+        "position": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "overall",
+      "key_region": null,
+      "key": null,
+      "group": "diatonic",
+      "level": "numeral",
+      "numeral": "I6/4",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 2,
+        "position": {
+          "measure": 5,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "overall",
+      "key_region": null,
+      "key": null,
+      "group": "diatonic",
+      "level": "base_numeral",
+      "numeral": "I",
+      "count": 2,
+      "runs": 2,
+      "duration": {
+        "whole_notes": {
+          "num": 2,
+          "den": 1
+        },
+        "beats": {
+          "num": 8,
+          "den": 1
+        }
+      },
+      "share": 0.66666666666666663,
+      "first": {
+        "chord_index": 0,
+        "position": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "overall",
+      "key_region": null,
+      "key": null,
+      "group": "diatonic",
+      "level": "base_numeral",
+      "numeral": "IV",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 1,
+        "position": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "region",
+      "key_region": 0,
+      "key": "C major",
+      "group": "diatonic",
+      "level": "numeral",
+      "numeral": "I",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 0,
+        "position": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "region",
+      "key_region": 0,
+      "key": "C major",
+      "group": "diatonic",
+      "level": "numeral",
+      "numeral": "IV",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 1,
+        "position": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "region",
+      "key_region": 0,
+      "key": "C major",
+      "group": "diatonic",
+      "level": "numeral",
+      "numeral": "I6/4",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 2,
+        "position": {
+          "measure": 5,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "region",
+      "key_region": 0,
+      "key": "C major",
+      "group": "diatonic",
+      "level": "base_numeral",
+      "numeral": "I",
+      "count": 2,
+      "runs": 2,
+      "duration": {
+        "whole_notes": {
+          "num": 2,
+          "den": 1
+        },
+        "beats": {
+          "num": 8,
+          "den": 1
+        }
+      },
+      "share": 0.66666666666666663,
+      "first": {
+        "chord_index": 0,
+        "position": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    },
+    {
+      "scope": "region",
+      "key_region": 0,
+      "key": "C major",
+      "group": "diatonic",
+      "level": "base_numeral",
+      "numeral": "IV",
+      "count": 1,
+      "runs": 1,
+      "duration": {
+        "whole_notes": {
+          "num": 1,
+          "den": 1
+        },
+        "beats": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "share": 0.33333333333333331,
+      "first": {
+        "chord_index": 1,
+        "position": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      }
+    }
+  ],
+  "prolongations": [],
+  "non_chord_tones": [
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 1,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 2,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [4],
+      "label": "passing",
+      "uncertainty": null,
+      "type": "passing",
+      "classified": true,
+      "chord_index": 0,
+      "chord_label": "I"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 2,
+          "den": 1
+        },
+        "end": {
+          "num": 3,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 4,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [8],
+      "label": "unclassified",
+      "uncertainty": null,
+      "type": null,
+      "classified": false,
+      "chord_index": 1,
+      "chord_label": "IV"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 2,
+          "den": 1
+        },
+        "end": {
+          "num": 3,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 4,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [9],
+      "label": "appoggiatura",
+      "uncertainty": null,
+      "type": "appoggiatura",
+      "classified": true,
+      "chord_index": 1,
+      "chord_label": "IV"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 2,
+          "den": 1
+        },
+        "end": {
+          "num": 3,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 3,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 4,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [11],
+      "label": "unclassified",
+      "uncertainty": null,
+      "type": null,
+      "classified": false,
+      "chord_index": 1,
+      "chord_label": "IV"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": {
+        "start": {
+          "num": 4,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 5,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [16],
+      "label": "passing",
+      "uncertainty": null,
+      "type": "passing",
+      "classified": true,
+      "chord_index": 2,
+      "chord_label": "I"
+    }
+  ],
+  "outer_voices": {
+    "soprano": [
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 0,
+            "den": 1
+          },
+          "end": {
+            "num": 1,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [0],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 0,
+        "pitch": {
+          "name": "C5",
+          "midi": 72
+        },
+        "degree": "1",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 0,
+            "den": 1
+          },
+          "location": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 1,
+            "den": 4
+          },
+          "end": {
+            "num": 1,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [3],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 3,
+        "pitch": {
+          "name": "G5",
+          "midi": 79
+        },
+        "degree": "5",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 3,
+            "den": 8
+          },
+          "location": {
+            "measure": 1,
+            "beat": 2,
+            "subdivision": {
+              "num": 1,
+              "den": 2
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 8
+          },
+          "beats": {
+            "num": 1,
+            "den": 2
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 1,
+            "den": 2
+          },
+          "end": {
+            "num": 3,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [4],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 4,
+        "pitch": {
+          "name": "F5",
+          "midi": 77
+        },
+        "degree": "4",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 1,
+            "den": 2
+          },
+          "location": {
+            "measure": 1,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 3,
+            "den": 4
+          },
+          "end": {
+            "num": 1,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 2,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [5],
+        "label": "3",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 5,
+        "pitch": {
+          "name": "E5",
+          "midi": 76
+        },
+        "degree": "3",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 3,
+            "den": 4
+          },
+          "location": {
+            "measure": 1,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 2,
+            "den": 1
+          },
+          "end": {
+            "num": 9,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 3,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [6],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 6,
+        "pitch": {
+          "name": "C5",
+          "midi": 72
+        },
+        "degree": "1",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 2,
+            "den": 1
+          },
+          "location": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 9,
+            "den": 4
+          },
+          "end": {
+            "num": 5,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 3,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [9],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 9,
+        "pitch": {
+          "name": "G5",
+          "midi": 79
+        },
+        "degree": "5",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 19,
+            "den": 8
+          },
+          "location": {
+            "measure": 3,
+            "beat": 2,
+            "subdivision": {
+              "num": 1,
+              "den": 2
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 8
+          },
+          "beats": {
+            "num": 1,
+            "den": 2
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 5,
+            "den": 2
+          },
+          "end": {
+            "num": 11,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 3,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [10],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 10,
+        "pitch": {
+          "name": "F5",
+          "midi": 77
+        },
+        "degree": "4",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 5,
+            "den": 2
+          },
+          "location": {
+            "measure": 3,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 11,
+            "den": 4
+          },
+          "end": {
+            "num": 3,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 4,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [11],
+        "label": "3",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 11,
+        "pitch": {
+          "name": "E5",
+          "midi": 76
+        },
+        "degree": "3",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 11,
+            "den": 4
+          },
+          "location": {
+            "measure": 3,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 4,
+            "den": 1
+          },
+          "end": {
+            "num": 17,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 5,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [12],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 12,
+        "pitch": {
+          "name": "C5",
+          "midi": 72
+        },
+        "degree": "1",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 4,
+            "den": 1
+          },
+          "location": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 17,
+            "den": 4
+          },
+          "end": {
+            "num": 9,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 5,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [15],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 15,
+        "pitch": {
+          "name": "G5",
+          "midi": 79
+        },
+        "degree": "5",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 35,
+            "den": 8
+          },
+          "location": {
+            "measure": 5,
+            "beat": 2,
+            "subdivision": {
+              "num": 1,
+              "den": 2
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 8
+          },
+          "beats": {
+            "num": 1,
+            "den": 2
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 9,
+            "den": 2
+          },
+          "end": {
+            "num": 19,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 5,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [16],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 16,
+        "pitch": {
+          "name": "F5",
+          "midi": 77
+        },
+        "degree": "4",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 9,
+            "den": 2
+          },
+          "location": {
+            "measure": 5,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 19,
+            "den": 4
+          },
+          "end": {
+            "num": 5,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 6,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [17],
+        "label": "3",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 17,
+        "pitch": {
+          "name": "E5",
+          "midi": 76
+        },
+        "degree": "3",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 19,
+            "den": 4
+          },
+          "location": {
+            "measure": 5,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 4
+          },
+          "beats": {
+            "num": 1,
+            "den": 1
+          }
+        }
+      }
+    ],
+    "bass": [
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 0,
+            "den": 1
+          },
+          "end": {
+            "num": 1,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [1],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 1,
+        "pitch": {
+          "name": "C3",
+          "midi": 48
+        },
+        "degree": "1",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 0,
+            "den": 1
+          },
+          "location": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 1,
+            "den": 4
+          },
+          "end": {
+            "num": 1,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [1],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 1,
+        "pitch": {
+          "name": "C3",
+          "midi": 48
+        },
+        "degree": "1",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 0,
+            "den": 1
+          },
+          "location": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 1,
+            "den": 2
+          },
+          "end": {
+            "num": 3,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [1],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 1,
+        "pitch": {
+          "name": "C3",
+          "midi": 48
+        },
+        "degree": "1",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 0,
+            "den": 1
+          },
+          "location": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 3,
+            "den": 4
+          },
+          "end": {
+            "num": 1,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 2,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [1],
+        "label": "1",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 0,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 1,
+        "pitch": {
+          "name": "C3",
+          "midi": 48
+        },
+        "degree": "1",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 0,
+            "den": 1
+          },
+          "location": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 2,
+            "den": 1
+          },
+          "end": {
+            "num": 9,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 3,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [7],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 7,
+        "pitch": {
+          "name": "F3",
+          "midi": 53
+        },
+        "degree": "4",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 2,
+            "den": 1
+          },
+          "location": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 9,
+            "den": 4
+          },
+          "end": {
+            "num": 5,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 3,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [7],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 7,
+        "pitch": {
+          "name": "F3",
+          "midi": 53
+        },
+        "degree": "4",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 2,
+            "den": 1
+          },
+          "location": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 5,
+            "den": 2
+          },
+          "end": {
+            "num": 11,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 3,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [7],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 7,
+        "pitch": {
+          "name": "F3",
+          "midi": 53
+        },
+        "degree": "4",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 2,
+            "den": 1
+          },
+          "location": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 11,
+            "den": 4
+          },
+          "end": {
+            "num": 3,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 3,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 4,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [7],
+        "label": "4",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 1,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 7,
+        "pitch": {
+          "name": "F3",
+          "midi": 53
+        },
+        "degree": "4",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 2,
+            "den": 1
+          },
+          "location": {
+            "measure": 3,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 4,
+            "den": 1
+          },
+          "end": {
+            "num": 17,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 5,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [13],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 13,
+        "pitch": {
+          "name": "G3",
+          "midi": 55
+        },
+        "degree": "5",
+        "held": false,
+        "onset": {
+          "time": {
+            "num": 4,
+            "den": 1
+          },
+          "location": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 17,
+            "den": 4
+          },
+          "end": {
+            "num": 9,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 2,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 5,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [13],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 13,
+        "pitch": {
+          "name": "G3",
+          "midi": 55
+        },
+        "degree": "5",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 4,
+            "den": 1
+          },
+          "location": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 9,
+            "den": 2
+          },
+          "end": {
+            "num": 19,
+            "den": 4
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 5,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [13],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 13,
+        "pitch": {
+          "name": "G3",
+          "midi": 55
+        },
+        "degree": "5",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 4,
+            "den": 1
+          },
+          "location": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "framework": "common-practice-minimal-v1",
+        "span": {
+          "start": {
+            "num": 19,
+            "den": 4
+          },
+          "end": {
+            "num": 5,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 5,
+            "beat": 4,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 6,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [13],
+        "label": "5",
+        "uncertainty": 0.87728481588149276,
+        "chord_index": 2,
+        "status": "present",
+        "key_label": "C major",
+        "note_id": 13,
+        "pitch": {
+          "name": "G3",
+          "midi": 55
+        },
+        "degree": "5",
+        "held": true,
+        "onset": {
+          "time": {
+            "num": 4,
+            "den": 1
+          },
+          "location": {
+            "measure": 5,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "duration": {
+          "whole_notes": {
+            "num": 1,
+            "den": 1
+          },
+          "beats": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      }
+    ]
+  },
+  "cadences": [],
+  "phrases": [
+    {
+      "framework": "standard-form-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      "label": "phrase",
+      "uncertainty": 0.25,
+      "index": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "length": 5,
+      "extension_measures": 0,
+      "cadence": null,
+      "signal": "discontinuity",
+      "role": "beginning",
+      "phrase_model": [],
+      "subphrases": [],
+      "ideas": [
+        {
+          "framework": "standard-form-v1",
+          "span": {
+            "start": {
+              "num": 0,
+              "den": 1
+            },
+            "end": {
+              "num": 2,
+              "den": 1
+            }
+          },
+          "location": {
+            "start": {
+              "measure": 1,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            },
+            "end": {
+              "measure": 3,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            }
+          },
+          "note_ids": [0, 3, 4, 5],
+          "label": "basic-idea",
+          "uncertainty": 0.39999999999999991,
+          "index": 0,
+          "measures": {
+            "first": 1,
+            "last": 2
+          },
+          "length": 2,
+          "similarity": null
+        },
+        {
+          "framework": "standard-form-v1",
+          "span": {
+            "start": {
+              "num": 2,
+              "den": 1
+            },
+            "end": {
+              "num": 5,
+              "den": 1
+            }
+          },
+          "location": {
+            "start": {
+              "measure": 3,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            },
+            "end": {
+              "measure": 6,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            }
+          },
+          "note_ids": [6, 9, 10, 11, 12, 15, 16, 17],
+          "label": "contrasting-idea",
+          "uncertainty": 0.5714285714285714,
+          "index": 1,
+          "measures": {
+            "first": 3,
+            "last": 5
+          },
+          "length": 3,
+          "similarity": 0.42857142857142855
+        }
+      ]
+    }
+  ],
+  "themes": [],
+  "form": {
+    "level": "form",
+    "measures": {
+      "first": 1,
+      "last": 5
+    },
+    "sections": [
+      {
+        "framework": "standard-form-v1",
+        "span": {
+          "start": {
+            "num": 0,
+            "den": 1
+          },
+          "end": {
+            "num": 5,
+            "den": 1
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          },
+          "end": {
+            "measure": 6,
+            "beat": 1,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        "label": "A",
+        "uncertainty": 0.25,
+        "level": "section",
+        "index": 0,
+        "measures": {
+          "first": 1,
+          "last": 5
+        },
+        "key": "C major",
+        "region": 0,
+        "closed": false,
+        "cadence": null,
+        "returns_from": null,
+        "return": null,
+        "phrases": [
+          {
+            "level": "phrase",
+            "phrase": 0,
+            "measures": {
+              "first": 1,
+              "last": 5
+            },
+            "length": 5,
+            "cadence": null,
+            "subphrases": [],
+            "ideas": [
+              {
+                "level": "idea",
+                "phrase": 0,
+                "index": 0,
+                "label": "basic-idea",
+                "measures": {
+                  "first": 1,
+                  "last": 2
+                }
+              },
+              {
+                "level": "idea",
+                "phrase": 0,
+                "index": 1,
+                "label": "contrasting-idea",
+                "measures": {
+                  "first": 3,
+                  "last": 5
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "returns": []
+  },
+  "repeats": [],
+  "motives": [
+    {
+      "framework": "standard-form-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 1,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 2,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 2, 3, 4, 5],
+      "label": "motive",
+      "uncertainty": 0,
+      "index": 0,
+      "note_count": 5,
+      "generic": true,
+      "occurrences": [
+        {
+          "framework": "standard-form-v1",
+          "span": {
+            "start": {
+              "num": 0,
+              "den": 1
+            },
+            "end": {
+              "num": 1,
+              "den": 1
+            }
+          },
+          "location": {
+            "start": {
+              "measure": 1,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            },
+            "end": {
+              "measure": 2,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            }
+          },
+          "note_ids": [0, 2, 3, 4, 5],
+          "label": "exact",
+          "uncertainty": 0,
+          "index": 0,
+          "measures": {
+            "first": 1,
+            "last": 1
+          },
+          "beat": 1,
+          "score": 1,
+          "mismatches": 0,
+          "intervals": 4,
+          "fragment": null,
+          "in_continuation": false,
+          "phrase": 0,
+          "idea": 0,
+          "degrees": ["1", "3", "5", "4", "3"]
+        },
+        {
+          "framework": "standard-form-v1",
+          "span": {
+            "start": {
+              "num": 2,
+              "den": 1
+            },
+            "end": {
+              "num": 3,
+              "den": 1
+            }
+          },
+          "location": {
+            "start": {
+              "measure": 3,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            },
+            "end": {
+              "measure": 4,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            }
+          },
+          "note_ids": [6, 8, 9, 10, 11],
+          "label": "exact",
+          "uncertainty": 0,
+          "index": 1,
+          "measures": {
+            "first": 3,
+            "last": 3
+          },
+          "beat": 1,
+          "score": 1,
+          "mismatches": 0,
+          "intervals": 4,
+          "fragment": null,
+          "in_continuation": false,
+          "phrase": 0,
+          "idea": 1,
+          "degrees": ["1", "3", "5", "4", "3"]
+        },
+        {
+          "framework": "standard-form-v1",
+          "span": {
+            "start": {
+              "num": 4,
+              "den": 1
+            },
+            "end": {
+              "num": 5,
+              "den": 1
+            }
+          },
+          "location": {
+            "start": {
+              "measure": 5,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            },
+            "end": {
+              "measure": 6,
+              "beat": 1,
+              "subdivision": {
+                "num": 0,
+                "den": 1
+              }
+            }
+          },
+          "note_ids": [12, 14, 15, 16, 17],
+          "label": "exact",
+          "uncertainty": 0,
+          "index": 2,
+          "measures": {
+            "first": 5,
+            "last": 5
+          },
+          "beat": 1,
+          "score": 1,
+          "mismatches": 0,
+          "intervals": 4,
+          "fragment": null,
+          "in_continuation": false,
+          "phrase": 0,
+          "idea": 1,
+          "degrees": ["1", "3", "5", "4", "3"]
+        }
+      ],
+      "development": [
+        {
+          "occurrence": 0,
+          "measure": 1,
+          "beat": 1,
+          "transformation": null,
+          "from": null
+        },
+        {
+          "occurrence": 1,
+          "measure": 3,
+          "beat": 1,
+          "transformation": "exact",
+          "from": 0
+        },
+        {
+          "occurrence": 2,
+          "measure": 5,
+          "beat": 1,
+          "transformation": "exact",
+          "from": 1
+        }
+      ],
+      "features": {
+        "notes": [
+          {
+            "note_id": 0,
+            "pitch": 72,
+            "onset": "0/1",
+            "duration": "1/4"
+          },
+          {
+            "note_id": 2,
+            "pitch": 76,
+            "onset": "1/4",
+            "duration": "1/8"
+          },
+          {
+            "note_id": 3,
+            "pitch": 79,
+            "onset": "3/8",
+            "duration": "1/8"
+          },
+          {
+            "note_id": 4,
+            "pitch": 77,
+            "onset": "1/2",
+            "duration": "1/4"
+          },
+          {
+            "note_id": 5,
+            "pitch": 76,
+            "onset": "3/4",
+            "duration": "1/4"
+          }
+        ],
+        "tonic_pc": 0,
+        "material": "omt.material.major",
+        "bar": "1/1",
+        "beat": "1/4",
+        "pickup": "0/1",
+        "degrees": ["1", "3", "5", "4", "3"],
+        "intervals": [4, 3, -2, -1],
+        "steps": [2, 2, -1, -1],
+        "rhythm": ["1/4", "1/8", "1/8", "1/4", "1/4"],
+        "ncts": ["chord-tone", "chord-tone", "chord-tone", "passing", "chord-tone"],
+        "fingerprint": "24d8579a3cec516b"
+      }
+    }
+  ],
+  "melody": [
+    {
+      "framework": "standard-counterpoint-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 3, 4, 5, 6, 9, 10, 11, 12, 15, 16, 17],
+      "label": "melody",
+      "uncertainty": 0,
+      "index": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "note_count": 12,
+      "range": {
+        "lowest": {
+          "pitch": 72,
+          "name": "C5",
+          "note_id": 0
+        },
+        "highest": {
+          "pitch": 79,
+          "name": "G5",
+          "note_id": 3
+        },
+        "semitones": 7
+      },
+      "climax": {
+        "framework": "standard-counterpoint-v1",
+        "span": {
+          "start": {
+            "num": 3,
+            "den": 8
+          },
+          "end": {
+            "num": 1,
+            "den": 2
+          }
+        },
+        "location": {
+          "start": {
+            "measure": 1,
+            "beat": 2,
+            "subdivision": {
+              "num": 1,
+              "den": 2
+            }
+          },
+          "end": {
+            "measure": 1,
+            "beat": 3,
+            "subdivision": {
+              "num": 0,
+              "den": 1
+            }
+          }
+        },
+        "note_ids": [3],
+        "label": "climax",
+        "uncertainty": 0,
+        "pitch": 79,
+        "occurrences": 3,
+        "unique": false,
+        "relative_position": 0.0909090909090909,
+        "strength": "weak",
+        "by_leap": true,
+        "final_note": false
+      },
+      "contour": {
+        "up": 3,
+        "down": 8,
+        "same": 0,
+        "steps": 6,
+        "leaps": 5,
+        "net_direction": "up",
+        "net_semitones": 4,
+        "directions": ["up", "down", "down", "down", "up", "down", "down", "down", "up", "down", "down"]
+      },
+      "leaps": {
+        "recovered": 3,
+        "unrecovered": 0,
+        "not_required": 2,
+        "not_judged": 0,
+        "items": [
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 0,
+                "den": 1
+              },
+              "end": {
+                "num": 1,
+                "den": 2
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 1,
+                "beat": 1,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 1,
+                "beat": 3,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [0, 3],
+            "label": "leap",
+            "uncertainty": 0,
+            "semitones": 7,
+            "direction": "up",
+            "generic_size": 5,
+            "approximate": false,
+            "status": "recovered"
+          },
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 3,
+                "den": 4
+              },
+              "end": {
+                "num": 9,
+                "den": 4
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 1,
+                "beat": 4,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 3,
+                "beat": 2,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [5, 6],
+            "label": "leap",
+            "uncertainty": 0,
+            "semitones": -4,
+            "direction": "down",
+            "generic_size": 3,
+            "approximate": false,
+            "status": "not-required"
+          },
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 2,
+                "den": 1
+              },
+              "end": {
+                "num": 5,
+                "den": 2
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 3,
+                "beat": 1,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 3,
+                "beat": 3,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [6, 9],
+            "label": "leap",
+            "uncertainty": 0,
+            "semitones": 7,
+            "direction": "up",
+            "generic_size": 5,
+            "approximate": false,
+            "status": "recovered"
+          },
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 11,
+                "den": 4
+              },
+              "end": {
+                "num": 17,
+                "den": 4
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 3,
+                "beat": 4,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 5,
+                "beat": 2,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [11, 12],
+            "label": "leap",
+            "uncertainty": 0,
+            "semitones": -4,
+            "direction": "down",
+            "generic_size": 3,
+            "approximate": false,
+            "status": "not-required"
+          },
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 4,
+                "den": 1
+              },
+              "end": {
+                "num": 9,
+                "den": 2
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 5,
+                "beat": 1,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 5,
+                "beat": 3,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [12, 15],
+            "label": "leap",
+            "uncertainty": 0,
+            "semitones": 7,
+            "direction": "up",
+            "generic_size": 5,
+            "approximate": false,
+            "status": "recovered"
+          }
+        ]
+      },
+      "consecutive_leaps": [],
+      "non_chord_tones": {
+        "chord_tones": 8,
+        "non_chord_tones": 3,
+        "unclassified": 1,
+        "by_type": [
+          {
+            "type": "passing",
+            "count": 2
+          },
+          {
+            "type": "appoggiatura",
+            "count": 1
+          }
+        ],
+        "items": [
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 1,
+                "den": 2
+              },
+              "end": {
+                "num": 3,
+                "den": 4
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 1,
+                "beat": 3,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 1,
+                "beat": 4,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [4],
+            "label": "passing",
+            "uncertainty": 0
+          },
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 19,
+                "den": 8
+              },
+              "end": {
+                "num": 5,
+                "den": 2
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 3,
+                "beat": 2,
+                "subdivision": {
+                  "num": 1,
+                  "den": 2
+                }
+              },
+              "end": {
+                "measure": 3,
+                "beat": 3,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [9],
+            "label": "appoggiatura",
+            "uncertainty": 0
+          },
+          {
+            "framework": "standard-counterpoint-v1",
+            "span": {
+              "start": {
+                "num": 9,
+                "den": 2
+              },
+              "end": {
+                "num": 19,
+                "den": 4
+              }
+            },
+            "location": {
+              "start": {
+                "measure": 5,
+                "beat": 3,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              },
+              "end": {
+                "measure": 5,
+                "beat": 4,
+                "subdivision": {
+                  "num": 0,
+                  "den": 1
+                }
+              }
+            },
+            "note_ids": [16],
+            "label": "passing",
+            "uncertainty": 0
+          }
+        ]
+      },
+      "tendencies": {
+        "line": [
+          {
+            "tendency": "pitch-proximity",
+            "holds": false
+          },
+          {
+            "tendency": "step-declination",
+            "holds": true
+          },
+          {
+            "tendency": "step-inertia",
+            "holds": true
+          },
+          {
+            "tendency": "melodic-regression",
+            "holds": true
+          },
+          {
+            "tendency": "melodic-arch",
+            "holds": false
+          }
+        ],
+        "seventh_degree": {
+          "rule": "leading-tone",
+          "followed": 0,
+          "broken": 0,
+          "breaks": []
+        }
+      }
+    }
+  ],
+  "rhythm": [
+    {
+      "framework": "standard-meter-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [],
+      "label": "meter-fit",
+      "uncertainty": 0.83333333333333337,
+      "declared": {
+        "meter": {
+          "numerator": 4,
+          "denominator": 4
+        },
+        "scale": {
+          "num": 1,
+          "den": 1
+        },
+        "pickup": {
+          "num": 0,
+          "den": 1
+        },
+        "score": 0.83333333333333337
+      },
+      "alternative": {
+        "meter": {
+          "numerator": 4,
+          "denominator": 4
+        },
+        "scale": {
+          "num": 1,
+          "den": 2
+        },
+        "pickup": {
+          "num": 0,
+          "den": 1
+        },
+        "score": 1
+      }
+    },
+    {
+      "framework": "standard-meter-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      "label": "density",
+      "uncertainty": 0,
+      "phrase": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "line": "all",
+      "notes": 18,
+      "attacks": 15,
+      "measure_count": 5,
+      "attacks_per_beat": {
+        "mean": 0.75,
+        "max": 1.25
+      },
+      "mean_inter_onset": 0.3392857142857143,
+      "on_beat_share": 0.8,
+      "off_beat_share": 0.19999999999999996,
+      "durations": [
+        {
+          "duration": {
+            "num": 1,
+            "den": 8
+          },
+          "count": 6
+        },
+        {
+          "duration": {
+            "num": 1,
+            "den": 4
+          },
+          "count": 9
+        },
+        {
+          "duration": {
+            "num": 1,
+            "den": 1
+          },
+          "count": 3
+        }
+      ],
+      "durations_truncated": false
+    },
+    {
+      "framework": "standard-meter-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 3, 4, 5, 6, 9, 10, 11, 12, 15, 16, 17],
+      "label": "density",
+      "uncertainty": 0,
+      "phrase": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "line": "soprano",
+      "notes": 12,
+      "attacks": 12,
+      "measure_count": 5,
+      "attacks_per_beat": {
+        "mean": 0.6,
+        "max": 1
+      },
+      "mean_inter_onset": 0.43181818181818182,
+      "on_beat_share": 0.75,
+      "off_beat_share": 0.25,
+      "durations": [
+        {
+          "duration": {
+            "num": 1,
+            "den": 8
+          },
+          "count": 3
+        },
+        {
+          "duration": {
+            "num": 1,
+            "den": 4
+          },
+          "count": 9
+        }
+      ],
+      "durations_truncated": false
+    },
+    {
+      "framework": "standard-meter-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [1, 7, 13],
+      "label": "density",
+      "uncertainty": 0,
+      "phrase": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "line": "bass",
+      "notes": 3,
+      "attacks": 3,
+      "measure_count": 5,
+      "attacks_per_beat": {
+        "mean": 0.15,
+        "max": 0.25
+      },
+      "mean_inter_onset": 2,
+      "on_beat_share": 1,
+      "off_beat_share": 0,
+      "durations": [
+        {
+          "duration": {
+            "num": 1,
+            "den": 1
+          },
+          "count": 3
+        }
+      ],
+      "durations_truncated": false
+    },
+    {
+      "framework": "standard-meter-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [2, 8, 14],
+      "label": "density",
+      "uncertainty": 0,
+      "phrase": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "line": "other",
+      "notes": 3,
+      "attacks": 3,
+      "measure_count": 5,
+      "attacks_per_beat": {
+        "mean": 0.15,
+        "max": 0.25
+      },
+      "mean_inter_onset": 2,
+      "on_beat_share": 1,
+      "off_beat_share": 0,
+      "durations": [
+        {
+          "duration": {
+            "num": 1,
+            "den": 8
+          },
+          "count": 3
+        }
+      ],
+      "durations_truncated": false
+    },
+    {
+      "framework": "standard-meter-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      "label": "hypermeter",
+      "uncertainty": 0.19999999999999996,
+      "phrase": 0,
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "length": 4,
+      "score": 0.8,
+      "arrival_measure": null,
+      "hyperdownbeats": [1, 5],
+      "hypermeasures": [
+        {
+          "index": 0,
+          "measures": {
+            "first": 1,
+            "last": 4
+          },
+          "kind": "regular",
+          "extra_hyperbeats": 0,
+          "contains_cadence": false,
+          "score": 0.8,
+          "uncertainty": 0.19999999999999996
+        },
+        {
+          "index": 1,
+          "measures": {
+            "first": 5,
+            "last": 5
+          },
+          "kind": "short",
+          "extra_hyperbeats": -3,
+          "contains_cadence": false,
+          "score": 0.8,
+          "uncertainty": 0.19999999999999996
+        }
+      ]
+    }
+  ],
+  "texture": [
+    {
+      "framework": "standard-texture-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      "label": "passage",
+      "uncertainty": 0,
+      "texture": "melody and accompaniment",
+      "category": "homophony",
+      "measures": {
+        "first": 1,
+        "last": 5
+      },
+      "windows": 5,
+      "unclassified_windows": 2,
+      "confidence": {
+        "texture": 1,
+        "voices": 1,
+        "overall": 1
+      },
+      "features": {
+        "voices_max": 2,
+        "voices_mean": 2,
+        "synchrony": 0.2,
+        "independence": 0.8,
+        "prominence": 5,
+        "top_gap": 24,
+        "register_span": 27,
+        "spacing": 24,
+        "density": 1.25,
+        "pattern": 0
+      }
+    }
+  ],
+  "voice_leading": [
+    {
+      "framework": "standard-counterpoint-v1",
+      "span": {
+        "start": {
+          "num": 0,
+          "den": 1
+        },
+        "end": {
+          "num": 5,
+          "den": 1
+        }
+      },
+      "location": {
+        "start": {
+          "measure": 1,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        },
+        "end": {
+          "measure": 6,
+          "beat": 1,
+          "subdivision": {
+            "num": 0,
+            "den": 1
+          }
+        }
+      },
+      "note_ids": [],
+      "label": "motions",
+      "uncertainty": 0,
+      "voices": 2,
+      "segments": 3,
+      "motion_count": 2,
+      "totals": {
+        "contrary": 0,
+        "similar": 0,
+        "parallel": 0,
+        "oblique": 2,
+        "static": 0
+      },
+      "pairs": [
+        {
+          "upper_voice": 0,
+          "lower_voice": 1,
+          "total": 2,
+          "counts": {
+            "contrary": 0,
+            "similar": 0,
+            "parallel": 0,
+            "oblique": 2,
+            "static": 0
+          }
+        }
+      ]
+    }
+  ],
+  "schemas": [],
+  "progressions": [],
+  "harmonic_rhythm": {
+    "per_measure": [
+      {
+        "measure": 1,
+        "changes": 1
+      },
+      {
+        "measure": 2,
+        "changes": 0
+      },
+      {
+        "measure": 3,
+        "changes": 1
+      },
+      {
+        "measure": 4,
+        "changes": 0
+      },
+      {
+        "measure": 5,
+        "changes": 1
+      }
+    ],
+    "mean_per_measure": {
+      "num": 3,
+      "den": 5
+    },
+    "per_window": [
+      {
+        "first_measure": 1,
+        "last_measure": 4,
+        "mean_per_measure": {
+          "num": 1,
+          "den": 2
+        }
+      },
+      {
+        "first_measure": 5,
+        "last_measure": 5,
+        "mean_per_measure": {
+          "num": 1,
+          "den": 1
+        }
+      }
+    ],
+    "cadence_approaches": []
+  },
+  "markings": {
+    "source": "notated",
+    "tempo": [],
+    "dynamics": [],
+    "articulations": null,
+    "articulations_imported": false
+  },
+  "notes": []
+}

@@ -1,0 +1,13 @@
+{
+  "filename": "a.musicxml",
+  "format": "musicxml",
+  "uploaded_at": "2026-11-19T20:55:12Z",
+  "analyzer_version": "0.7.0",
+  "document_schema_version": 13,
+  "composer": "Test Composer",
+  "source": "Link fixtures",
+  "tags": [
+    "motive",
+    "short"
+  ]
+}

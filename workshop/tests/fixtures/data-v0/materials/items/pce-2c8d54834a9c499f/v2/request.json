@@ -1,0 +1,50 @@
+{
+	"schema":	"ursatz-piece-request",
+	"schema_version":	2,
+	"form":	"game-loop",
+	"key":	"D",
+	"material":	"omt.material.natural-minor",
+	"meter":	"4/4",
+	"motive":	null,
+	"sections":	[{
+			"id":	"s0",
+			"part":	"body",
+			"beats":	32,
+			"pickup":	"0",
+			"cadence":	null,
+			"fill":	{
+				"kind":	"motif",
+				"motive":	{
+					"form":	"full",
+					"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+					"pickup":	"0",
+					"harmony":	null,
+					"features":	[{
+							"label":	"a",
+							"first":	0,
+							"last":	7
+						}],
+					"role":	"melodic"
+				},
+				"forms":	[{
+						"item":	"mot-2de29202481e780d",
+						"form":	"full",
+						"degrees":	"1:s 3:s 5:s 3:e 4:s 5:s 1':s",
+						"pickup":	"0",
+						"harmony":	null,
+						"features":	[{
+								"label":	"a",
+								"first":	0,
+								"last":	6
+							}],
+						"role":	"melodic",
+						"chain":	"diminish ratio=1:2 + omit-interval interval=4",
+						"functions":	["continuation"],
+						"flag":	"unflagged"
+					}]
+			}
+		}],
+	"accompaniment":	null,
+	"voicing":	null,
+	"tempo":	null
+}

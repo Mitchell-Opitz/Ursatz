@@ -1,0 +1,11 @@
+{
+	"name":	"The castle",
+	"kind":	"place",
+	"note":	"",
+	"items":	["thm-b15d03ee8478605b"],
+	"pieces":	[],
+	"related":	["sub-d2aa54a4f77c88c4"],
+	"created_at":	"2026-11-19T20:55:17Z",
+	"id":	"sub-fc5f77927aaaa9b5",
+	"updated_at":	"2026-11-19T20:55:17Z"
+}
