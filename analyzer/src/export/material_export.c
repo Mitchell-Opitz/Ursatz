@@ -9,7 +9,8 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/score_export.h>
 
-#include "export/score_text_reader.h"
+#include "export/analysis_document_internal.h"
+#include "export/score_export_internal.h"
 #include "export/text_export_internal.h"
 
 /* A fact on one line: line breaks in the name or value become spaces. */
@@ -43,7 +44,7 @@ typedef struct {
 static int note_ref_compare(const void *left, const void *right) {
     const ScoreTextEvent *a = ((const NoteRef *)left)->event;
     const ScoreTextEvent *b = ((const NoteRef *)right)->event;
-    int by_onset = text_rational_compare(a->onset, b->onset);
+    int by_onset = rational_cmp(a->onset, b->onset);
     if (by_onset != 0) {
         return by_onset;
     }
@@ -135,26 +136,24 @@ static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *
     options.knowledge = knowledge;
     AnalyzerResult *result = NULL;
     AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
-    char *document_json = NULL;
-    char *musicxml = NULL;
-    cJSON *document = NULL;
+    AnalysisDocument *built = NULL;
+    ScoreLayout layout;
+    memset(&layout, 0, sizeof(layout));
     ScoreTextScore *score = NULL;
     TextExportMark *marks = NULL;
     size_t mark_count = 0;
 
+    /* The document tree and the score layout are made once, from the result and the import: nothing is rendered and read back. */
     if (status == ANALYZER_OK) {
-        document_json = analysis_document_render_result(section->label, result);
-        status = document_json ? ANALYZER_OK : ANALYZER_ERR_ALLOC;
+        built = analysis_document_build_from_result(section->label, result);
+        status = built ? ANALYZER_OK : ANALYZER_ERR_ALLOC;
     }
     if (status == ANALYZER_OK) {
-        status = analyzer_score_export_musicxml(&notes, &musicxml);
+        status = analyzer_score_layout(&notes, &layout);
     }
     if (status == ANALYZER_OK) {
-        document = cJSON_Parse(document_json);
-        char *error = NULL;
-        score = score_text_read(musicxml, &error);
-        free(error);
-        if (!document || !score || score->measure_count == 0) {
+        score = score_text_from_layout(&layout);
+        if (!score) {
             status = ANALYZER_ERR_LIBRARY;
         }
     }
@@ -164,16 +163,15 @@ static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *
     if (status == ANALYZER_OK) {
         size_t first = 0;
         size_t last = score->measure_count - 1;
-        text_export_write_summary(out, document, score, first, last, true);
+        text_export_write_summary(out, built->root, score, first, last, true);
         TextExportMarks mark_list = {marks, mark_count};
-        text_export_write_measures(out, document, score, first, last, &mark_list);
+        text_export_write_measures(out, built->root, score, first, last, &mark_list);
     }
 
     free(marks);
     score_text_destroy(score);
-    cJSON_Delete(document);
-    free(musicxml);
-    free(document_json);
+    score_layout_destroy(&layout);
+    analysis_document_destroy(built);
     analyzer_result_destroy(result);
     imported_score_destroy(&notes);
     return status;

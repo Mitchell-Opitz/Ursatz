@@ -1,5 +1,7 @@
 #include <ursatz_analyzer/score_export.h>
 
+#include "export/score_export_internal.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -37,15 +39,9 @@ static AnalyzerStatus status_of(MusicXmlExportResult result) {
     }
 }
 
-AnalyzerStatus analyzer_score_export_musicxml(const ImportedScore *notes, char **xml) {
-    if (!xml) {
-        return ANALYZER_ERR_ARGUMENT;
-    }
-    *xml = NULL;
-    if (!notes || (notes->count > 0 && (!notes->events || !notes->pitch_values))) {
-        return ANALYZER_ERR_ARGUMENT;
-    }
-
+/* The export score of an import: its parts and key signatures are the caller's to free (*parts and *keys). */
+static AnalyzerStatus build_export_score(const ImportedScore *notes, const ScoreQuantizeOptions *quantize, MusicXmlExportScore *score,
+                                         MusicXmlExportPart **parts_out, MusicXmlExportKeySignature **keys_out) {
     /* The parts, with their programs, and the key signatures of part 0, as the importer read them. */
     size_t part_count = notes->source.part_count;
     size_t key_count = notes->key_signature_events.count;
@@ -69,24 +65,45 @@ AnalyzerStatus analyzer_score_export_musicxml(const ImportedScore *notes, char *
         keys[i].position = event->position;
         keys[i].part_index = 0;
     }
+    memset(score, 0, sizeof(*score));
+    score->events = notes->events;
+    score->pitch_values = notes->pitch_values;
+    score->count = notes->count;
+    score->part_index = notes->source.part_index;
+    score->staff = notes->source.staff;
+    score->parts = parts;
+    score->part_count = part_count;
+    score->meter_map = notes->meter.meter_map;
+    score->key_signatures = keys;
+    score->key_signature_count = key_count;
+    score->quantize = quantize;
+    *parts_out = parts;
+    *keys_out = keys;
+    return ANALYZER_OK;
+}
 
+static bool export_arguments_ok(const ImportedScore *notes) {
+    return notes && (notes->count == 0 || (notes->events && notes->pitch_values));
+}
+
+AnalyzerStatus analyzer_score_export_musicxml(const ImportedScore *notes, char **xml) {
+    if (!xml) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *xml = NULL;
+    if (!export_arguments_ok(notes)) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
     const ScoreQuantizeOptions quantize = score_quantize_options_default();
     MusicXmlExportScore score;
-    memset(&score, 0, sizeof(score));
-    score.events = notes->events;
-    score.pitch_values = notes->pitch_values;
-    score.count = notes->count;
-    score.part_index = notes->source.part_index;
-    score.staff = notes->source.staff;
-    score.parts = parts;
-    score.part_count = part_count;
-    score.meter_map = notes->meter.meter_map;
-    score.key_signatures = keys;
-    score.key_signature_count = key_count;
-    score.quantize = &quantize;
-
+    MusicXmlExportPart *parts = NULL;
+    MusicXmlExportKeySignature *keys = NULL;
+    AnalyzerStatus status = build_export_score(notes, &quantize, &score, &parts, &keys);
+    if (status != ANALYZER_OK) {
+        return status;
+    }
     char *text = NULL;
-    AnalyzerStatus status = status_of(musicxml_export_write_score(&score, &text));
+    status = status_of(musicxml_export_write_score(&score, &text));
     free(parts);
     free(keys);
     if (status != ANALYZER_OK) {
@@ -94,6 +111,28 @@ AnalyzerStatus analyzer_score_export_musicxml(const ImportedScore *notes, char *
     }
     *xml = text;
     return ANALYZER_OK;
+}
+
+AnalyzerStatus analyzer_score_layout(const ImportedScore *notes, ScoreLayout *out) {
+    if (!out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    memset(out, 0, sizeof(*out));
+    if (!export_arguments_ok(notes)) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    const ScoreQuantizeOptions quantize = score_quantize_options_default();
+    MusicXmlExportScore score;
+    MusicXmlExportPart *parts = NULL;
+    MusicXmlExportKeySignature *keys = NULL;
+    AnalyzerStatus status = build_export_score(notes, &quantize, &score, &parts, &keys);
+    if (status != ANALYZER_OK) {
+        return status;
+    }
+    status = status_of(score_layout_build(&score, out));
+    free(parts);
+    free(keys);
+    return status;
 }
 
 AnalyzerStatus analyzer_score_note_xml_ids(const ImportedScore *notes, char ***ids, size_t *count) {

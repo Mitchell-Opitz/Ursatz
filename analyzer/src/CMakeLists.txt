@@ -21,7 +21,7 @@ add_library(ursatz_analyzer STATIC
     util/json_util.c
     util/file_util.c
     util/misc_util.c
-    export/score_text_reader.c
+    export/score_text.c
     export/text_export.c
     export/material_export.c
 )

@@ -12,7 +12,7 @@
 #include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/version.h>
 
-#include "export/score_text_reader.h"
+#include "export/score_export_internal.h"
 #include "export/text_export_internal.h"
 
 /* ---- a growing string ---- */
@@ -76,12 +76,12 @@ AnalyzerTextExportOptions analyzer_text_export_options_default(void) {
 /* ---- positions in the score ---- */
 
 /* The index of the last measure that starts at or before t (0 when t is before the first measure). */
-static size_t measure_at(const ScoreTextScore *score, TextRational t) {
+static size_t measure_at(const ScoreTextScore *score, Rational t) {
     size_t low = 0;
     size_t high = score->measure_count;
     while (high - low > 1) {
         size_t middle = low + (high - low) / 2;
-        if (text_rational_compare(score->measures[middle].start, t) <= 0) {
+        if (rational_cmp(score->measures[middle].start, t) <= 0) {
             low = middle;
         } else {
             high = middle;
@@ -91,40 +91,52 @@ static size_t measure_at(const ScoreTextScore *score, TextRational t) {
 }
 
 /* The index of the measure that holds the instant just before t: the measure a claim ending at t last touches. */
-static size_t measure_before(const ScoreTextScore *score, TextRational t) {
+static size_t measure_before(const ScoreTextScore *score, Rational t) {
     size_t at = measure_at(score, t);
-    if (at > 0 && text_rational_compare(score->measures[at].start, t) == 0) {
+    if (at > 0 && rational_cmp(score->measures[at].start, t) == 0) {
         return at - 1;
     }
     return at;
 }
 
-/* The 1-based beat of time t counted in measure m, a pickup aligned to the end of its bar. */
-static TextRational beat_at(const ScoreTextScore *score, size_t m, TextRational t) {
+/* The 1-based beat of time t counted in measure m, a pickup aligned to the end of its bar. false when it does not fit a Rational. */
+static bool beat_at(const ScoreTextScore *score, size_t m, Rational t, Rational *out) {
     const ScoreTextMeasure *measure = &score->measures[m];
-    TextRational inside = text_rational_sub(t, measure->start);
-    if (measure->pickup) {
-        inside = text_rational_add(inside, text_rational_sub(text_rational(measure->beats, measure->beat_type), measure->length));
+    Rational inside;
+    if (rational_sub(t, measure->start, &inside) != RATIONAL_OK) {
+        return false;
     }
-    return text_rational_add(text_rational(1, 1), text_rational_mul(inside, text_rational(measure->beat_type, 1)));
+    if (measure->pickup) {
+        Rational gap;
+        if (rational_sub(rational_ratio(measure->beats, measure->beat_type), measure->length, &gap) != RATIONAL_OK ||
+            rational_add(inside, gap, &inside) != RATIONAL_OK) {
+            return false;
+        }
+    }
+    Rational beats;
+    return rational_mul(inside, rational_ratio(measure->beat_type, 1), &beats) == RATIONAL_OK &&
+           rational_add(rational_ratio(1, 1), beats, out) == RATIONAL_OK;
 }
 
+/* The beat of time t in measure m as text; an overflow is an export error (the text is marked failed). */
+static void add_beat_at(Text *text, const ScoreTextScore *score, size_t m, Rational t);
+
 /* A beat as exact text: an integer, a terminating decimal ("2.5"), or whole plus fraction ("1+1/3"). */
-static void add_beat(Text *text, TextRational beat) {
+static void add_beat(Text *text, Rational beat) {
     if (beat.den == 1) {
         export_text_addf(text, "%lld", (long long)beat.num);
         return;
     }
-    int64_t scale = 1;
-    int64_t digits = 0;
+    long long scale = 1;
+    long long digits = 0;
     while (scale % beat.den != 0 && digits < 9) {
         scale *= 10;
         digits++;
     }
     if (scale % beat.den == 0) {
-        int64_t scaled = beat.num * (scale / beat.den);
-        int64_t whole = scaled / scale;
-        int64_t fraction = scaled % scale;
+        long long scaled = beat.num * (scale / beat.den);
+        long long whole = scaled / scale;
+        long long fraction = scaled % scale;
         char buffer[16];
         snprintf(buffer, sizeof(buffer), "%0*lld", (int)digits, (long long)fraction);
         size_t length = strlen(buffer);
@@ -134,8 +146,17 @@ static void add_beat(Text *text, TextRational beat) {
         export_text_addf(text, "%lld.%s", (long long)whole, buffer);
         return;
     }
-    int64_t whole = beat.num / beat.den;
+    long long whole = beat.num / beat.den;
     export_text_addf(text, "%lld+%lld/%lld", (long long)whole, (long long)(beat.num - whole * beat.den), (long long)beat.den);
+}
+
+static void add_beat_at(Text *text, const ScoreTextScore *score, size_t m, Rational t) {
+    Rational beat;
+    if (!beat_at(score, m, t, &beat)) {
+        text->failed = true;
+        return;
+    }
+    add_beat(text, beat);
 }
 
 /* "m12", or "m9-m12" for a range of measures. */
@@ -228,7 +249,7 @@ typedef enum {
 
 typedef struct {
     size_t measure; /* where the claim starts */
-    TextRational start;
+    Rational start;
     int rank;
     size_t order; /* position in the document, to keep ties stable */
     char *line;
@@ -251,18 +272,17 @@ static const char *string_of(const cJSON *object, const char *key) {
     return cJSON_IsString(item) && item->valuestring[0] ? item->valuestring : NULL;
 }
 
-static bool rational_of(const cJSON *rational, TextRational *out) {
+static bool rational_of(const cJSON *rational, Rational *out) {
     const cJSON *num = member(rational, "num");
     const cJSON *den = member(rational, "den");
     if (!cJSON_IsNumber(num) || !cJSON_IsNumber(den) || den->valuedouble == 0) {
         return false;
     }
-    *out = text_rational((int64_t)num->valuedouble, (int64_t)den->valuedouble);
-    return true;
+    return rational_make((long long)num->valuedouble, (long long)den->valuedouble, out) == RATIONAL_OK;
 }
 
 /* The claim's span: start, and end (the start when the span has none). */
-static bool span_of(const cJSON *claim, TextRational *start, TextRational *end) {
+static bool span_of(const cJSON *claim, Rational *start, Rational *end) {
     const cJSON *span = member(claim, "span");
     if (!rational_of(member(span, "start"), start)) {
         return false;
@@ -289,7 +309,7 @@ static void add_confidence(Text *text, const cJSON *claim) {
     export_text_addf(text, " c=%.2f", confidence);
 }
 
-static bool claims_add(Claims *claims, const ScoreTextScore *score, TextRational start, ClaimRank rank, Text *line) {
+static bool claims_add(Claims *claims, const ScoreTextScore *score, Rational start, ClaimRank rank, Text *line) {
     if (line->failed) {
         free(line->data);
         claims->failed = true;
@@ -323,7 +343,7 @@ static Text line_begin(const char *words) {
     return line;
 }
 
-static void add_span_range(Text *line, const ScoreTextScore *score, TextRational start, TextRational end) {
+static void add_span_range(Text *line, const ScoreTextScore *score, Rational start, Rational end) {
     size_t first = measure_at(score, start);
     size_t last = measure_before(score, end);
     if (last < first) {
@@ -336,7 +356,7 @@ static void collect_keys(Claims *claims, const ScoreTextScore *score, const cJSO
     const cJSON *regions = member(member(document, "keys"), "regions");
     const cJSON *region;
     cJSON_ArrayForEach(region, regions) {
-        TextRational start, end;
+        Rational start, end;
         const char *label = string_of(region, "label");
         if (!label || !span_of(region, &start, &end)) {
             continue;
@@ -355,7 +375,7 @@ static void collect_key_changes(Claims *claims, const ScoreTextScore *score, con
                                 const char *word, ClaimRank rank) {
     const cJSON *entry;
     cJSON_ArrayForEach(entry, member(document, section)) {
-        TextRational start, end;
+        Rational start, end;
         const char *to_key = string_of(entry, "to_key");
         const char *from_key = string_of(entry, "from_key");
         if (!span_of(entry, &start, &end)) {
@@ -396,7 +416,7 @@ static const char *quality_suffix(const char *quality) {
 static void collect_chords(Claims *claims, const ScoreTextScore *score, const cJSON *document) {
     const cJSON *chord;
     cJSON_ArrayForEach(chord, member(document, "chords")) {
-        TextRational start, end;
+        Rational start, end;
         const char *root = string_of(chord, "root");
         const char *quality = string_of(chord, "quality");
         if (!root || !quality || !span_of(chord, &start, &end)) {
@@ -414,7 +434,7 @@ static void collect_chords(Claims *claims, const ScoreTextScore *score, const cJ
             export_text_addf(&line, " %s", numeral);
         }
         export_text_add(&line, " @");
-        add_beat(&line, beat_at(score, m, start));
+        add_beat_at(&line, score, m, start);
         add_confidence(&line, chord);
         claims_add(claims, score, start, RANK_CHORD, &line);
     }
@@ -437,7 +457,7 @@ static const char *cadence_name(const char *type) {
 static void collect_cadences(Claims *claims, const ScoreTextScore *score, const cJSON *document) {
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, member(document, "cadences")) {
-        TextRational start, end;
+        Rational start, end;
         const char *type = string_of(cadence, "type");
         if (!type) {
             type = string_of(cadence, "label");
@@ -446,13 +466,13 @@ static void collect_cadences(Claims *claims, const ScoreTextScore *score, const 
             continue;
         }
         /* The cadence starts at its dominant; the line names the measure and beat where it arrives. */
-        TextRational arrival = start;
-        TextRational ignored;
+        Rational arrival = start;
+        Rational ignored;
         span_of(member(cadence, "arrival"), &arrival, &ignored);
         size_t m = measure_at(score, arrival);
         Text line = line_begin("cadence ");
         export_text_addf(&line, "%s m%s @", cadence_name(type), score->measures[m].number);
-        add_beat(&line, beat_at(score, m, arrival));
+        add_beat_at(&line, score, m, arrival);
         add_confidence(&line, cadence);
         claims_add(claims, score, start, RANK_CADENCE, &line);
     }
@@ -476,7 +496,7 @@ static const char *form_section_of_phrase(const cJSON *document, int index) {
 static void collect_phrases(Claims *claims, const ScoreTextScore *score, const cJSON *document) {
     const cJSON *phrase;
     cJSON_ArrayForEach(phrase, member(document, "phrases")) {
-        TextRational start, end;
+        Rational start, end;
         const cJSON *index = member(phrase, "index");
         if (!cJSON_IsNumber(index) || !span_of(phrase, &start, &end)) {
             continue;
@@ -497,7 +517,7 @@ static void collect_labelled(Claims *claims, const ScoreTextScore *score, const 
                              ClaimRank rank) {
     const cJSON *entry;
     cJSON_ArrayForEach(entry, entries) {
-        TextRational start, end;
+        Rational start, end;
         const char *label = string_of(entry, "label");
         if (!label || !span_of(entry, &start, &end)) {
             continue;
@@ -524,7 +544,7 @@ static void add_library_measures(Text *text, int first, int last) {
 static void collect_repeats(Claims *claims, const ScoreTextScore *score, const cJSON *document) {
     const cJSON *repeat;
     cJSON_ArrayForEach(repeat, member(document, "repeats")) {
-        TextRational start, end;
+        Rational start, end;
         const char *kind = string_of(repeat, "kind");
         const cJSON *earlier = member(repeat, "earlier");
         const cJSON *later = member(repeat, "later");
@@ -580,7 +600,7 @@ static void collect_motives(Claims *claims, const ScoreTextScore *score, const c
             continue;
         }
         cJSON_ArrayForEach(occurrence, member(motive, "occurrences")) {
-            TextRational start, end;
+            Rational start, end;
             if (!span_of(occurrence, &start, &end)) {
                 continue;
             }
@@ -592,13 +612,13 @@ static void collect_motives(Claims *claims, const ScoreTextScore *score, const c
             Text line = line_begin("motive ");
             add_motive_letter(&line, (int)index->valuedouble);
             export_text_addf(&line, " m%s @", score->measures[first].number);
-            add_beat(&line, beat_at(score, first, start));
+            add_beat_at(&line, score, first, start);
             export_text_add(&line, "-");
             if (last != first) {
                 export_text_addf(&line, "m%s", score->measures[last].number);
             }
             export_text_add(&line, "@");
-            add_beat(&line, beat_at(score, last, end));
+            add_beat_at(&line, score, last, end);
             claims_add(claims, score, start, RANK_MOTIVE, &line);
         }
     }
@@ -610,7 +630,7 @@ static int claim_compare(const void *left, const void *right) {
     if (a->measure != b->measure) {
         return a->measure < b->measure ? -1 : 1;
     }
-    int by_start = text_rational_compare(a->start, b->start);
+    int by_start = rational_cmp(a->start, b->start);
     if (by_start != 0) {
         return by_start;
     }
@@ -821,12 +841,12 @@ bool text_export_write_measures(Text *out, const cJSON *document, const ScoreTex
     return !out->failed;
 }
 
-AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
-                                          const AnalyzerTextExportOptions *options, char **text) {
+AnalyzerStatus analyzer_text_export_piece_tree(const ImportedScore *notes, const cJSON *document,
+                                               const AnalyzerTextExportOptions *options, char **text) {
     if (text) {
         *text = NULL;
     }
-    if (!notes || !document_json || !options || !text) {
+    if (!notes || !document || !options || !text) {
         return ANALYZER_ERR_ARGUMENT;
     }
     bool whole_piece = options->first_measure == 0 && options->last_measure == 0;
@@ -835,26 +855,14 @@ AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char
         return ANALYZER_ERR_ARGUMENT;
     }
 
-    cJSON *document = cJSON_Parse(document_json);
-    const cJSON *version = member(document, "schema_version");
-    if (!document || !cJSON_IsNumber(version) ||
-        (int)version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
-        cJSON_Delete(document);
-        return ANALYZER_ERR_ARGUMENT;
-    }
-
-    char *musicxml = NULL;
-    AnalyzerStatus status = analyzer_score_export_musicxml(notes, &musicxml);
+    ScoreLayout layout;
+    AnalyzerStatus status = analyzer_score_layout(notes, &layout);
     if (status != ANALYZER_OK) {
-        cJSON_Delete(document);
         return status;
     }
-    char *error = NULL;
-    ScoreTextScore *score = score_text_read(musicxml, &error);
-    free(musicxml);
-    free(error);
+    ScoreTextScore *score = score_text_from_layout(&layout);
+    score_layout_destroy(&layout);
     if (!score) {
-        cJSON_Delete(document);
         return ANALYZER_ERR_LIBRARY;
     }
 
@@ -862,7 +870,6 @@ AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char
     size_t last = 0;
     if (!text_export_find_range(score, options->first_measure, options->last_measure, &first, &last)) {
         score_text_destroy(score);
-        cJSON_Delete(document);
         return ANALYZER_ERR_ARGUMENT;
     }
     bool whole = first == 0 && last == score->measure_count - 1;
@@ -876,11 +883,30 @@ AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char
     text_export_write_measures(&out, document, score, first, last, NULL);
 
     score_text_destroy(score);
-    cJSON_Delete(document);
     if (out.failed) {
         free(out.data);
         return ANALYZER_ERR_ALLOC;
     }
     *text = out.data;
     return ANALYZER_OK;
+}
+
+AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
+                                          const AnalyzerTextExportOptions *options, char **text) {
+    if (text) {
+        *text = NULL;
+    }
+    if (!notes || !document_json || !options || !text) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    cJSON *document = cJSON_Parse(document_json);
+    const cJSON *version = member(document, "schema_version");
+    if (!document || !cJSON_IsNumber(version) ||
+        (int)version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        cJSON_Delete(document);
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    AnalyzerStatus status = analyzer_text_export_piece_tree(notes, document, options, text);
+    cJSON_Delete(document);
+    return status;
 }

@@ -63,3 +63,4 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app 
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 
 library/chain/chain_collect.c chain_result_take  # only analyzer_result_take_report calls it, which the Analyzer's tests use (P61 B9); its tests call it
+analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it

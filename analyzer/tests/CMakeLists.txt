@@ -420,7 +420,6 @@ target_link_libraries(analyzer_consumer_leak_chain PRIVATE ursatz_analyzer)
 ursatz_test(test_consumer_isolation COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
 
-ursatz_test(test_score_text_reader LIBS ursatz_test_support ursatz_analyzer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test(test_text_export LIBS ursatz_test_support ursatz_analyzer
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")

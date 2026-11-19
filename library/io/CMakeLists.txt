@@ -26,6 +26,7 @@ ursatz_public_headers(ursatz_io
         io/movement_export.h
         io/musicxml_export.h
         io/musicxml_importer.h
+        io/score_layout.h
         io/score_quantize.h
 )
 # The XML parser used by io/musicxml_importer.c only (third_party/ezxml); PRIVATE so no consumer sees it.
