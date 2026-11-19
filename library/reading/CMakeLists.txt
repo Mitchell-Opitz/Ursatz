@@ -4,6 +4,7 @@
 # group includes one (the include closure, R-578).
 add_library(ursatz_reading
     reading.c
+    reading_json.c
 )
 ursatz_public_headers(ursatz_reading
     BASE ${PROJECT_SOURCE_DIR}

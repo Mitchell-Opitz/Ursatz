@@ -24,6 +24,16 @@ static void test_names(void) {
     assert(cadence_type_name(CADENCE_TYPE_COUNT) == NULL);
 }
 
+static void test_from_name(void) {
+    for (int i = 0; i < CADENCE_TYPE_COUNT; i++) {
+        CadenceType type = CADENCE_TYPE_COUNT;
+        assert(cadence_type_from_name(cadence_type_name((CadenceType)i), &type) && type == (CadenceType)i);
+    }
+    CadenceType untouched = CADENCE_TYPE_HALF;
+    assert(!cadence_type_from_name("PAC", &untouched) && !cadence_type_from_name("", &untouched) && !cadence_type_from_name(NULL, &untouched));
+    assert(!cadence_type_from_name("half", NULL) && untouched == CADENCE_TYPE_HALF);
+}
+
 static void test_is_authentic(void) {
     assert(cadence_type_is_authentic(CADENCE_TYPE_PERFECT_AUTHENTIC));
     assert(cadence_type_is_authentic(CADENCE_TYPE_IMPERFECT_AUTHENTIC));
@@ -39,6 +49,7 @@ static void test_is_authentic(void) {
 int main(void) {
     test_validity();
     test_names();
+    test_from_name();
     test_is_authentic();
     printf("test_cadence_type: ok\n");
     return 0;
