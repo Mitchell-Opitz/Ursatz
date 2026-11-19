@@ -134,7 +134,7 @@ PieceResult piece_connective_write(Plan *plan, NodeId section) {
     Rational last = tick_before(end);
     NodeId next = next_section(plan, section);
     LaneSpanId meter_span = span_at(plan, PLAN_LANE_METER, last);
-    LaneSpanId key_span = span_at(plan, PLAN_LANE_KEY, last);
+    LaneSpanId key_span = span_at(plan, PLAN_LANE_REGION, last);
     int target;
     if (next == PLAN_NODE_NONE || meter_span == PLAN_LANE_SPAN_NONE || key_span == PLAN_LANE_SPAN_NONE ||
         !first_note(plan, next, &target)) {
@@ -189,7 +189,7 @@ PieceResult piece_connective_write(Plan *plan, NodeId section) {
     }
     int from = old->notes[downbeat].midi;
     /* The line, written backwards from its last note: one scale step from the target, on the side of the downbeat note. */
-    SpelledKey key = plan_lane_span_payload(plan, key_span)->key;
+    SpelledKey key = plan_lane_span_payload(plan, key_span)->region;
     int tonic = spelled_key_tonic_pitch_class(&key);
     const PitchMaterial *material = key.material;
     int side = from > target ? 1 : -1;

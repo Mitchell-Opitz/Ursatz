@@ -107,12 +107,12 @@ static GivenResult check_room(const Plan *plan, const Placement *placement, Plan
     if (!plan_span_contains(placement->section, span)) {
         return GIVEN_ERR_PAST_END;
     }
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys, 2) != 1 ||
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, keys, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, keys[0]), span)) {
         return GIVEN_ERR_KEY;
     }
     if (key) {
-        *key = plan_lane_span_payload(plan, keys[0])->key;
+        *key = plan_lane_span_payload(plan, keys[0])->region;
     }
     if (plan_lane_find(plan, lane, voice, span, NULL, 0) != 0) {
         return GIVEN_ERR_OVERLAP;

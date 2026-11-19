@@ -22,7 +22,7 @@ typedef size_t LaneSpanId;
 
 typedef enum {
     PLAN_LANE_METER,
-    PLAN_LANE_KEY,
+    PLAN_LANE_REGION,
     PLAN_LANE_HARMONY,
     PLAN_LANE_BASS,
     PLAN_LANE_MELODY,
@@ -31,7 +31,7 @@ typedef enum {
 
 /* The lanes are the section description's (plan/section.h): the same values in the same order. */
 _Static_assert((int)PLAN_LANE_METER == (int)SECTION_LANE_METER, "PlanLaneKind follows SectionLane");
-_Static_assert((int)PLAN_LANE_KEY == (int)SECTION_LANE_KEY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_REGION == (int)SECTION_LANE_KEY, "PlanLaneKind follows SectionLane");
 _Static_assert((int)PLAN_LANE_HARMONY == (int)SECTION_LANE_HARMONY, "PlanLaneKind follows SectionLane");
 _Static_assert((int)PLAN_LANE_BASS == (int)SECTION_LANE_BASS, "PlanLaneKind follows SectionLane");
 _Static_assert((int)PLAN_LANE_MELODY == (int)SECTION_LANE_MELODY, "PlanLaneKind follows SectionLane");
@@ -131,7 +131,7 @@ typedef struct {
 /* Which member is used follows the lane: meter, key, harmony, or notes for bass, melody and inner voice. */
 typedef union {
     PlanMeter meter;
-    SpelledKey key;
+    SpelledKey region;
     PlanHarmony harmony;
     PlanNotes notes;
 } PlanLanePayload;

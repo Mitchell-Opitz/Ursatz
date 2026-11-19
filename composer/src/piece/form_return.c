@@ -229,8 +229,8 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
             return false;
         }
         for (size_t c = 0; c < node->constraint_count; c++) {
-            if (node->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
-                SpelledKey *key = &node->constraints[c].params.key;
+            if (node->constraints[c].kind == PLAN_CONSTRAINT_REGION) {
+                SpelledKey *key = &node->constraints[c].params.region;
                 *key = plan_key_of_pitch_class(util_pitch_class(spelled_key_tonic_pitch_class(key) + transpose), key->material);
             }
         }
@@ -244,8 +244,8 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
             span->notes[n].midi += transpose;
         }
         for (size_t c = 0; c < span->constraint_count; c++) {
-            if (span->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
-                SpelledKey *key = &span->constraints[c].params.key;
+            if (span->constraints[c].kind == PLAN_CONSTRAINT_REGION) {
+                SpelledKey *key = &span->constraints[c].params.region;
                 *key = plan_key_of_pitch_class(util_pitch_class(spelled_key_tonic_pitch_class(key) + transpose), key->material);
             }
         }
@@ -263,8 +263,8 @@ int return_map_pitch(int tonic, const PitchMaterial *to, int pitch) {
 }
 
 static void map_key(PlanConstraint *constraint, const PitchMaterial *to) {
-    if (constraint->kind == PLAN_CONSTRAINT_KEY) {
-        SpelledKey *key = &constraint->params.key;
+    if (constraint->kind == PLAN_CONSTRAINT_REGION) {
+        SpelledKey *key = &constraint->params.region;
         *key = plan_key_of_pitch_class(spelled_key_tonic_pitch_class(key), to);
     }
 }
@@ -403,7 +403,7 @@ typedef struct {
 static bool key_pieces(const Plan *plan, PlanSpan span, KeyPiece *out, size_t *count) {
     LaneSpanId ids[MAX_KEY_PIECES];
     Rational end;
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, MAX_KEY_PIECES);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, span, ids, MAX_KEY_PIECES);
     if (found == 0 || found > MAX_KEY_PIECES || plan_span_end(span, &end) != PLAN_OK) {
         return false;
     }
@@ -420,7 +420,7 @@ static bool key_pieces(const Plan *plan, PlanSpan span, KeyPiece *out, size_t *c
         if (rational_sub(from, span.start, &out[i].from) != RATIONAL_OK || rational_sub(to, span.start, &out[i].to) != RATIONAL_OK) {
             return false;
         }
-        out[i].key = plan_lane_span_payload(plan, ids[i])->key;
+        out[i].key = plan_lane_span_payload(plan, ids[i])->region;
     }
     *count = found;
     return true;

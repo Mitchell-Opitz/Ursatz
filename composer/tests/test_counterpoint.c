@@ -82,8 +82,8 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_of(cantus->key);
-    assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
+    payload.region = test_key_of(cantus->key);
+    assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_REGION, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t b = 0; b < cantus->bars; b++) {
         PlanSpan span = {fraction((long)b, 1), fraction(1, 1)};

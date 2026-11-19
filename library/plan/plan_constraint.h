@@ -23,7 +23,7 @@ typedef enum {
     PLAN_CONSTRAINT_LENGTH_BARS,
     PLAN_CONSTRAINT_CADENCE,
     PLAN_CONSTRAINT_MOTIVE_REF,
-    PLAN_CONSTRAINT_KEY,
+    PLAN_CONSTRAINT_REGION,
     PLAN_CONSTRAINT_EMBELLISH, /* no parameters: a harmony span reopened for the embellishment pass */
     PLAN_CONSTRAINT_SCHEMA,    /* the galant schema a span was made from, and which stage of it */
     PLAN_CONSTRAINT_HARMONY_SHAPE, /* the shape a harmony span is to take (R-050) */
@@ -257,7 +257,7 @@ typedef struct {
         int bars;
         CadenceType cadence;
         PlanMotiveRef motive;
-        SpelledKey key;
+        SpelledKey region;
         PlanSchemaRef schema;
         PlanHarmonyShape harmony_shape;
         PlanAccompaniment accompaniment;

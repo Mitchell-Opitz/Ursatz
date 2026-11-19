@@ -245,8 +245,8 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     ok = ok && plan_add_lane_span(scene->plan, idea, PLAN_LANE_METER, 0, all, &payload, &lane) == PLAN_OK &&
          plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
     if (ok && source->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
-        payload.key = motive_key(source);
-        ok = plan_add_lane_span(scene->plan, idea, PLAN_LANE_KEY, 0, all, &payload, &lane) == PLAN_OK &&
+        payload.region = motive_key(source);
+        ok = plan_add_lane_span(scene->plan, idea, PLAN_LANE_REGION, 0, all, &payload, &lane) == PLAN_OK &&
              plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
     }
     PlanConstraint constraint;

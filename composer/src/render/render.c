@@ -161,7 +161,7 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
         return true;
     }
     Rational end;
-    if (lane == PLAN_LANE_KEY || lane == PLAN_LANE_METER) {
+    if (lane == PLAN_LANE_REGION || lane == PLAN_LANE_METER) {
         return plan_span_end(span, &end) == PLAN_OK && rational_cmp(end, range->start) > 0 &&
                rational_cmp(span.start, range_end(range)) < 0;
     }
@@ -525,7 +525,7 @@ static PlanRenderResult render_into(const Plan *plan, const PlanSpan *range, Ren
             }
         } else if (lane == PLAN_LANE_METER) {
             meter_spans[meter_count++] = id;
-        } else if (lane == PLAN_LANE_KEY) {
+        } else if (lane == PLAN_LANE_REGION) {
             key_spans[key_count++] = id;
         } else if (plan_is_note_lane(lane)) {
             note_spans[note_span_count++] = id;
@@ -545,7 +545,7 @@ static PlanRenderResult render_into(const Plan *plan, const PlanSpan *range, Ren
     for (size_t i = 0; result == PLAN_RENDER_OK && i < key_count; i++) {
         PlanSpan span = plan_lane_span_span(plan, key_spans[i]);
         Rational key_start = span_start_in_range(span, range);
-        const SpelledKey *key = &plan_lane_span_payload(plan, key_spans[i])->key;
+        const SpelledKey *key = &plan_lane_span_payload(plan, key_spans[i])->region;
         keys[i].span = key_spans[i];
         keys[i].plan_span = span;
         keys[i].key = *key;

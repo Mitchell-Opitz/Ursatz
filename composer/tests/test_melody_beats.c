@@ -101,8 +101,8 @@ static Piece build(const Chord *chords, size_t count, bool with_melody) {
     assert(plan_add_lane_span(piece.plan, piece.form, PLAN_LANE_METER, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = c_major();
-    assert(plan_add_lane_span(piece.plan, piece.form, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
+    payload.region = c_major();
+    assert(plan_add_lane_span(piece.plan, piece.form, PLAN_LANE_REGION, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = {beats(chords[i].start), beats(chords[i].length)};

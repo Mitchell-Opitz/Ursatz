@@ -918,10 +918,10 @@ typedef struct {
 /* The keys of the key lane under a section; every one must be the home key. */
 static size_t keys_under(const Plan *plan, NodeId section, SpelledKey *out, size_t capacity) {
     LaneSpanId ids[32];
-    size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 32);
+    size_t count = plan_lane_find(plan, PLAN_LANE_REGION, 0, plan_node_span(plan, section), ids, 32);
     assert(count >= 1 && count <= capacity);
     for (size_t i = 0; i < count; i++) {
-        out[i] = plan_lane_span_payload(plan, ids[i])->key;
+        out[i] = plan_lane_span_payload(plan, ids[i])->region;
     }
     return count;
 }

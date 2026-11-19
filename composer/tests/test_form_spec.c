@@ -2852,8 +2852,8 @@ static int test_leads(void) {
 static SpelledKey key_at_start(const Plan *plan, NodeId section) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     PlanSpan range = {plan_node_span(plan, section).start, {1, 4096}};
-    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &id, 1) == 1);
-    return plan_lane_span_payload(plan, id)->key;
+    assert(plan_lane_find(plan, PLAN_LANE_REGION, 0, range, &id, 1) == 1);
+    return plan_lane_span_payload(plan, id)->region;
 }
 
 static int test_modulates(void) {

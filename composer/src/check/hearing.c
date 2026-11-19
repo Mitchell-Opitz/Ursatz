@@ -115,11 +115,11 @@ const RenderedPlan *hearing_rendered(const ComposerHearing *hearing) {
 /* The key lane's key under the span's start. */
 static bool key_under(const Plan *plan, PlanSpan span, SpelledKey *out) {
     LaneSpanId first;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &first, 1) == 0 ||
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &first, 1) == 0 ||
         rational_cmp(plan_lane_span_span(plan, first).start, span.start) > 0) {
         return false;
     }
-    *out = plan_lane_span_payload(plan, first)->key;
+    *out = plan_lane_span_payload(plan, first)->region;
     return true;
 }
 

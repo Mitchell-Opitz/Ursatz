@@ -1033,7 +1033,7 @@ static PieceResult run_once(Plan *plan, const ComposeConfig *config, unsigned ch
 /* Whether the plan changes key: its key lane has more than one span. */
 static bool has_key_changes(const Plan *plan) {
     PlanSpan everything = {{0, 1}, {1000000, 1}};
-    return plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, NULL, 0) > 1;
+    return plan_lane_find(plan, PLAN_LANE_REGION, 0, everything, NULL, 0) > 1;
 }
 
 /* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */

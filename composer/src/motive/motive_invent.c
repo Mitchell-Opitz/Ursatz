@@ -82,8 +82,8 @@ static bool read_invent_request(const Plan *plan, FillTarget target, const Motiv
         out->meter = plan_lane_span_payload(plan, lane)->meter;
     }
     out->key = plan_key_of_pitch_class(0, context->materials != NULL ? context->materials->major : NULL);
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &lane, 1) > 0) {
-        out->key = plan_lane_span_payload(plan, lane)->key;
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &lane, 1) > 0) {
+        out->key = plan_lane_span_payload(plan, lane)->region;
     } else if (context->has_key) {
         out->key = context->key;
     }

@@ -98,7 +98,7 @@ static void test_period(void) {
 static void test_modulating_sentence(void) {
     Plan *plan = load("sentence_c_to_g.json");
     LaneSpanId keys[3];
-    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, bars(0, 8), keys, 3) == 2);
+    assert(plan_lane_find(plan, PLAN_LANE_REGION, 0, bars(0, 8), keys, 3) == 2);
     FormHeard heard;
     assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 1);

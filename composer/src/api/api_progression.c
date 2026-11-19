@@ -219,8 +219,8 @@ static bool build_plan(const Options *options, Built *built) {
     ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_METER, 0, built->span, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.key = options->key;
-    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_KEY, 0, built->span, &payload, &id) == PLAN_OK &&
+    payload.region = options->key;
+    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_REGION, 0, built->span, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
 
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */

@@ -236,7 +236,7 @@ static void test_plan(void) {
         const SectionDescription *described = plan_node_section(plan, sections[i]);
         assert(described->has_role && described->role == (SectionRole)(SECTION_ROLE_INTRO + PARTS[i]) && strcmp(described->id, IDS[i]) == 0);
         assert(described->has_cadence && described->cadence == CADENCES[i]);
-        assert(node_constraint(plan, sections[i], PLAN_CONSTRAINT_KEY));
+        assert(node_constraint(plan, sections[i], PLAN_CONSTRAINT_REGION));
         assert(described->letter[0] != '\0');
         /* Only the second body section has a pickup. */
         const PlanConstraint *constraint = node_constraint(plan, sections[i], PLAN_CONSTRAINT_PICKUP);
@@ -296,11 +296,11 @@ static bool section_written(const Plan *plan, NodeId section) {
 /* Whether the cadence the section was planned to end in is the one heard at the end of its chords. */
 static bool cadence_heard(const Plan *plan, NodeId section) {
     const SectionDescription *cadence = plan_node_section(plan, section)->has_cadence ? plan_node_section(plan, section) : NULL;
-    const PlanConstraint *key = node_constraint(plan, section, PLAN_CONSTRAINT_KEY);
+    const PlanConstraint *key = node_constraint(plan, section, PLAN_CONSTRAINT_REGION);
     CadenceType heard;
     bool at_end;
     return cadence && key &&
-           harmony_hear_cadence(plan, plan_node_span(plan, section), harmony_key_mode(&key->params.key), cadence->cadence,
+           harmony_hear_cadence(plan, plan_node_span(plan, section), harmony_key_mode(&key->params.region), cadence->cadence,
                                 &heard, &at_end) &&
            at_end && heard == cadence->cadence;
 }

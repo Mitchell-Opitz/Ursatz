@@ -398,7 +398,7 @@ static void test_built_plan(void) {
     assert(plan_node_state(plan, theme) == PLAN_STATE_CONSTRAINED && plan_node_child_count(plan, theme) == 0);
     bool key = false;
     for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        key = key || plan_node_constraint_at(plan, theme, i)->kind == PLAN_CONSTRAINT_KEY;
+        key = key || plan_node_constraint_at(plan, theme, i)->kind == PLAN_CONSTRAINT_REGION;
     }
     assert(plan_node_section(plan, theme)->has_pairing && plan_node_section(plan, theme)->has_cadence && key);
     assert(plan_node_constraint_count(plan, material) == 0 && plan_section_has_role(plan, material, SECTION_ROLE_MATERIAL));

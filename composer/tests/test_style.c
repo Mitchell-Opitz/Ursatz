@@ -122,8 +122,8 @@ static void add_meter_and_key(Plan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key(0, "major");
-    assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
+    key.region = test_key(0, "major");
+    assert(plan_add_lane_span(plan, owner, PLAN_LANE_REGION, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
 

@@ -244,13 +244,13 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
     /* The key lane follows the parts, a span over each performed section: C major, A minor, C major. */
     LaneSpanId ids[8];
     PlanSpan all = {whole(0), whole(48)};
-    size_t found = plan_lane_find(performance.plan, PLAN_LANE_KEY, 0, all, ids, 8);
+    size_t found = plan_lane_find(performance.plan, PLAN_LANE_REGION, 0, all, ids, 8);
     assert(found == 6);
     static const int TONIC[3] = {0, 9, 0};
     static const HarmonyMode MODE[3] = {HARMONY_MODE_MAJOR, HARMONY_MODE_MINOR, HARMONY_MODE_MAJOR};
     for (size_t k = 0; k < 6; k++) {
         PlanSpan span = plan_lane_span_span(performance.plan, ids[k]);
-        const SpelledKey *key = &plan_lane_span_payload(performance.plan, ids[k])->key;
+        const SpelledKey *key = &plan_lane_span_payload(performance.plan, ids[k])->region;
         assert(rational_cmp(span.start, whole((long long)k * 8)) == 0 && rational_cmp(span.length, whole(8)) == 0);
         assert(spelled_key_tonic_pitch_class(key) == TONIC[k / 2] && harmony_key_mode(key) == MODE[k / 2]);
     }

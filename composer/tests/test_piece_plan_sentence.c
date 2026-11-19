@@ -115,8 +115,8 @@ int main(void) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key(0, "major");
-    LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
+    key.region = test_key(0, "major");
+    LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_REGION, 0, bars(0, 8), &key);
 
     PlanLanePayload tonic = harmony_payload("I", HARMONIC_FUNCTION_TONIC);
     PlanLanePayload dominant = harmony_payload("V", HARMONIC_FUNCTION_DOMINANT);
@@ -231,9 +231,9 @@ int main(void) {
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload bad_key;
     memset(&bad_key, 0, sizeof(bad_key));
-    bad_key.key = test_key(7, "major");
+    bad_key.region = test_key(7, "major");
     assert(plan_lane_span_write(plan, key_span, &bad_key) == PLAN_ERR_GIVEN_LOCKED);
-    assert(spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->key) == 0);
+    assert(spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->region) == 0);
 
     plan_destroy(plan);
     return 0;

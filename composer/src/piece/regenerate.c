@@ -91,7 +91,7 @@ static bool span_is_reopened(const Plan *plan, LaneSpanId id) {
                plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_VOICING) != NULL ||
                plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT) != NULL;
     case PLAN_LANE_METER:
-    case PLAN_LANE_KEY:
+    case PLAN_LANE_REGION:
         break;
     }
     return false;

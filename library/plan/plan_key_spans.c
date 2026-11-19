@@ -26,7 +26,7 @@
 static size_t key_array_index(const Plan *plan, LaneSpanId id) {
     size_t index = 0;
     for (LaneSpanId other = 1; other < id; other++) {
-        if (plan_has_lane_span(plan, other) && plan_lane_span_lane(plan, other) == PLAN_LANE_KEY) {
+        if (plan_has_lane_span(plan, other) && plan_lane_span_lane(plan, other) == PLAN_LANE_REGION) {
             index++;
         }
     }
@@ -57,7 +57,7 @@ PlanResult plan_resolve_key_spans(Plan *plan, const KnowledgeSnapshot *knowledge
         return PLAN_ERR_NULL;
     }
     PlanSpan everything = {{0, 1}, {1000000000, 1}};
-    size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, NULL, 0);
+    size_t count = plan_lane_find(plan, PLAN_LANE_REGION, 0, everything, NULL, 0);
     size_t unresolved = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         const PlanKeyRelation *named = plan_has_lane_span(plan, id) ? plan_lane_span_key_relation(plan, id) : NULL;
@@ -74,11 +74,11 @@ PlanResult plan_resolve_key_spans(Plan *plan, const KnowledgeSnapshot *knowledge
         json_set_error(error, -1, "keys", "out of memory");
         return PLAN_ERR_ALLOC;
     }
-    plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, count);
+    plan_lane_find(plan, PLAN_LANE_REGION, 0, everything, ids, count);
 
     PlanResult result = PLAN_OK;
     for (size_t i = 0; result == PLAN_OK && i < count; i++) {
-        keys[i] = plan_lane_span_payload(plan, ids[i])->key;
+        keys[i] = plan_lane_span_payload(plan, ids[i])->region;
         const PlanKeyRelation *named = plan_lane_span_key_relation(plan, ids[i]);
         if (!named || named->resolved) {
             continue;
@@ -133,7 +133,7 @@ PlanResult plan_resolve_key_spans(Plan *plan, const KnowledgeSnapshot *knowledge
         const PlanKeyRelation *named = plan_lane_span_key_relation(plan, ids[i]);
         if (named && !named->resolved) {
             LaneSpan *entry = plan_lane_span_at(plan, ids[i]);
-            entry->payload.key = keys[i];
+            entry->payload.region = keys[i];
             entry->key_relation.resolved = true;
         }
     }

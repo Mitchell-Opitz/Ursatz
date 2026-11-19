@@ -93,8 +93,8 @@ bool motive_develop_read_node(const Plan *plan, NodeId node, const MotiveDevelop
     if (motive_check_notes(&motive, &motive.length, NULL) != MOTIVE_OK) {
         return false;
     }
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &lane, 1) > 0) {
-        motive_set_key(&motive, &plan_lane_span_payload(plan, lane)->key, MOTIVE_SKETCH_KEY_GIVEN);
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, range, &lane, 1) > 0) {
+        motive_set_key(&motive, &plan_lane_span_payload(plan, lane)->region, MOTIVE_SKETCH_KEY_GIVEN);
     } else if (context->has_key) {
         motive_set_key(&motive, &context->key, MOTIVE_SKETCH_KEY_GIVEN);
     }

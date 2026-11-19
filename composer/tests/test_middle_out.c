@@ -321,7 +321,7 @@ static void test_key_change(void) {
             if (name && strcmp(name, "material") == 0) {
                 continue;
             }
-            if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, NULL, 0) == 2) {
+            if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, NULL, 0) == 2) {
                 /* A melody from the second bar to the end crosses the half. */
                 Line melody = notes_of("C5:w C5:w C5:w C5:w C5:w C5:w C5:w");
                 assert(plan_give_melody(plan, section, 1, melody.notes, melody.note_count) == GIVEN_ERR_KEY);

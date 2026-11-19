@@ -147,8 +147,8 @@ bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational
     payload.meter = *meter;
     ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, span, &payload, &lane) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.key = *key;
-    ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, span, &payload, &lane) == PLAN_OK;
+    payload.region = *key;
+    ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, span, &payload, &lane) == PLAN_OK;
     PieceResult result = ok ? piece_give_harmony(plan, section, harmony, meter, key, message, message_size) : PIECE_ERR_ALLOC;
     plan_destroy(plan);
     return result == PIECE_OK;

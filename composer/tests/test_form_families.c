@@ -203,11 +203,11 @@ static KeyLane read_lane(const Plan *plan) {
     KeyLane lane;
     LaneSpanId ids[32];
     PlanSpan all = {{0, 1}, {100000, 1}};
-    lane.count = plan_lane_find(plan, PLAN_LANE_KEY, 0, all, ids, 32);
+    lane.count = plan_lane_find(plan, PLAN_LANE_REGION, 0, all, ids, 32);
     assert(lane.count >= 1 && lane.count <= 32);
     for (size_t i = 0; i < lane.count; i++) {
         lane.span[i] = plan_lane_span_span(plan, ids[i]);
-        lane.key[i] = plan_lane_span_payload(plan, ids[i])->key;
+        lane.key[i] = plan_lane_span_payload(plan, ids[i])->region;
     }
     return lane;
 }

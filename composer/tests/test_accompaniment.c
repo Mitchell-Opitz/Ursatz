@@ -122,8 +122,8 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
     assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = c_major();
-    assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
+    payload.region = c_major();
+    assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_REGION, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     bool compound = unit == 8 && beats % 3 == 0;

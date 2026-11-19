@@ -370,19 +370,19 @@ static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *p
 
 static bool valid_key(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
-    return spelled_key_tonic_pitch_class(&constraint->params.key) >= 0 && spelled_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
-           plan_key_valid(&constraint->params.key);
+    return spelled_key_tonic_pitch_class(&constraint->params.region) >= 0 && spelled_key_tonic_pitch_class(&constraint->params.region) <= 11 &&
+           plan_key_valid(&constraint->params.region);
 }
 
 static bool write_key(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
-    ok = ok && json_key_members(object, &constraint->params.key);
+    ok = ok && json_key_members(object, &constraint->params.region);
     return ok;
 }
 
 static bool read_key(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
-    return json_read_key_members(reader, item, path, &out->params.key);
+    return json_read_key_members(reader, item, path, &out->params.region);
 }
 
 static bool valid_embellish(const Plan *plan, const PlanConstraint *constraint) {
@@ -944,7 +944,7 @@ static const ConstraintKindRow ROWS[] = {
     {PLAN_CONSTRAINT_LENGTH_BARS, "length_bars", write_length_bars, read_length_bars, valid_length_bars},
     {PLAN_CONSTRAINT_CADENCE, "cadence", write_cadence, read_cadence, valid_cadence},
     {PLAN_CONSTRAINT_MOTIVE_REF, "motive_ref", write_motive_ref, read_motive_ref, valid_motive_ref},
-    {PLAN_CONSTRAINT_KEY, "key", write_key, read_key, valid_key},
+    {PLAN_CONSTRAINT_REGION, "key", write_key, read_key, valid_key},
     {PLAN_CONSTRAINT_EMBELLISH, "embellish", write_embellish, read_embellish, valid_embellish},
     {PLAN_CONSTRAINT_SCHEMA, "schema", write_schema, read_schema, valid_schema},
     {PLAN_CONSTRAINT_HARMONY_SHAPE, "harmony_shape", write_harmony_shape, read_harmony_shape, valid_harmony_shape},

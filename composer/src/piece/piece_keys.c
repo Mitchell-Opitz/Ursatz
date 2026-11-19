@@ -200,11 +200,11 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
 /* The KEY constraint of the section, replaced by the key it ends in. */
 static PieceResult set_section_key(Plan *plan, NodeId section, SpelledKey key) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_KEY) {
+        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_REGION) {
             PlanConstraint constraint;
             memset(&constraint, 0, sizeof(constraint));
-            constraint.kind = PLAN_CONSTRAINT_KEY;
-            constraint.params.key = key;
+            constraint.kind = PLAN_CONSTRAINT_REGION;
+            constraint.params.region = key;
             PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i));
             return result == PIECE_OK ? piece_result_of_plan(plan_node_add_constraint(plan, section, &constraint)) : result;
         }
@@ -237,11 +237,11 @@ PieceResult piece_plan_keys(Plan *plan, const KnowledgeSnapshot *knowledge, cons
             return PIECE_ERR_BAD_REQUEST;
         }
     }
-    const PlanConstraint *home_key = count > 0 ? plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_KEY) : NULL;
+    const PlanConstraint *home_key = count > 0 ? plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_REGION) : NULL;
     if (!home_key || material == PLAN_NODE_NONE || count != size->section_count) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    SpelledKey home = home_key->params.key;
+    SpelledKey home = home_key->params.region;
     out->count = count;
     if (!draw_keys(knowledge, spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
@@ -273,8 +273,8 @@ PieceResult piece_plan_keys(Plan *plan, const KnowledgeSnapshot *knowledge, cons
         PlanLanePayload payload;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
-        payload.key = segments[i].key;
-        result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
+        payload.region = segments[i].key;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, segments[i].span, &payload, &id));
         if (result == PIECE_OK && segments[i].relation) {
             result = piece_result_of_plan(
                 plan_lane_span_set_key_relation(plan, id, segments[i].relation, segments[i].anchor,
@@ -459,13 +459,13 @@ typedef struct {
 static bool read_key_lane(const Plan *plan, KeyLane *lane) {
     LaneSpanId ids[MAX_SEGMENTS];
     PlanSpan everything = {{0, 1}, {1000000, 1}};
-    lane->count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, MAX_SEGMENTS);
+    lane->count = plan_lane_find(plan, PLAN_LANE_REGION, 0, everything, ids, MAX_SEGMENTS);
     if (lane->count == 0 || lane->count > MAX_SEGMENTS) {
         return false;
     }
     for (size_t i = 0; i < lane->count; i++) {
         lane->span[i] = plan_lane_span_span(plan, ids[i]);
-        lane->key[i] = plan_lane_span_payload(plan, ids[i])->key;
+        lane->key[i] = plan_lane_span_payload(plan, ids[i])->region;
     }
     return true;
 }
@@ -539,9 +539,9 @@ static bool authentic_arrivals(ComposerHearing *hearing, const Plan *plan, const
 }
 
 static bool constraint_key(const Plan *plan, NodeId section, SpelledKey *out) {
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
+    const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_REGION);
     if (constraint) {
-        *out = constraint->params.key;
+        *out = constraint->params.region;
     }
     return constraint != NULL;
 }

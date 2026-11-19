@@ -180,7 +180,7 @@ static void span_dependents(DependentList *list, const Plan *plan, LaneSpanId id
         break;
     case PLAN_LANE_INNER_VOICE:
     case PLAN_LANE_METER:
-    case PLAN_LANE_KEY:
+    case PLAN_LANE_REGION:
         break;
     }
 }

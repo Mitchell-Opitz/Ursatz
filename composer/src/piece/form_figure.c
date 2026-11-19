@@ -69,10 +69,10 @@ FigureSourceNote *form_figure_read_melody(const Plan *plan, NodeId source, int s
 /* The key of the section: its key lane holds one span over it. */
 static bool section_key(const Plan *plan, PlanSpan span, SpelledKey *key) {
     LaneSpanId ids[2];
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, ids, 2) != 1) {
         return false;
     }
-    *key = plan_lane_span_payload(plan, ids[0])->key;
+    *key = plan_lane_span_payload(plan, ids[0])->region;
     return true;
 }
 

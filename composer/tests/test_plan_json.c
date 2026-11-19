@@ -78,8 +78,8 @@ static Plan *build_sentence_plan_with_tones(size_t tone_labels) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key(3, "minor");
-    add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
+    key.region = test_key(3, "minor");
+    add_lane(plan, section, PLAN_LANE_REGION, 0, bars(0, 8), &key);
 
     PlanLanePayload tonic = harmony("i", HARMONIC_FUNCTION_TONIC);
     PlanLanePayload dominant = harmony("V", HARMONIC_FUNCTION_DOMINANT);
@@ -115,8 +115,8 @@ static Plan *build_sentence_plan_with_tones(size_t tone_labels) {
     motive_ref.params.motive.motive = m1;
     motive_ref.params.motive.has_step = true;
     motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {0, -2}};
-    PlanConstraint key_constraint = {PLAN_CONSTRAINT_KEY, {0}};
-    key_constraint.params.key = test_key(7, "major");
+    PlanConstraint key_constraint = {PLAN_CONSTRAINT_REGION, {0}};
+    key_constraint.params.region = test_key(7, "major");
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, fragment, &motive_ref) == PLAN_OK);
@@ -236,10 +236,10 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.motive.has_step == b->params.motive.has_step &&
                memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0 &&
                strcmp(a->params.motive.segment, b->params.motive.segment) == 0 && a->params.motive.steps == b->params.motive.steps;
-    case PLAN_CONSTRAINT_KEY:
-        return a->params.key.tonic_letter == b->params.key.tonic_letter &&
-               a->params.key.tonic_accidental == b->params.key.tonic_accidental && a->params.key.material == b->params.key.material &&
-               harmony_key_mode(&a->params.key) == harmony_key_mode(&b->params.key);
+    case PLAN_CONSTRAINT_REGION:
+        return a->params.region.tonic_letter == b->params.region.tonic_letter &&
+               a->params.region.tonic_accidental == b->params.region.tonic_accidental && a->params.region.material == b->params.region.material &&
+               harmony_key_mode(&a->params.region) == harmony_key_mode(&b->params.region);
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
     case PLAN_CONSTRAINT_SCHEMA:
@@ -321,9 +321,9 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
     case PLAN_LANE_METER:
         return a->meter.beats_per_bar == b->meter.beats_per_bar && a->meter.beat_unit == b->meter.beat_unit &&
                a->meter.bars_per_hyperbar == b->meter.bars_per_hyperbar;
-    case PLAN_LANE_KEY:
-        return a->key.tonic_letter == b->key.tonic_letter && a->key.tonic_accidental == b->key.tonic_accidental && a->key.material == b->key.material &&
-               harmony_key_mode(&a->key) == harmony_key_mode(&b->key);
+    case PLAN_LANE_REGION:
+        return a->region.tonic_letter == b->region.tonic_letter && a->region.tonic_accidental == b->region.tonic_accidental && a->region.material == b->region.material &&
+               harmony_key_mode(&a->region) == harmony_key_mode(&b->region);
     case PLAN_LANE_HARMONY:
         return strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0 &&
                a->harmony.has_function == b->harmony.has_function &&
@@ -907,10 +907,10 @@ static void test_spelling_round_trip(void) {
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 1), "form");
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_letter = PITCH_LETTER_F;
-    key.key.tonic_accidental = 1;
-    key.key.material = test_materials()->major;
-    add_lane(plan, form, PLAN_LANE_KEY, 0, bars(0, 1), &key);
+    key.region.tonic_letter = PITCH_LETTER_F;
+    key.region.tonic_accidental = 1;
+    key.region.material = test_materials()->major;
+    add_lane(plan, form, PLAN_LANE_REGION, 0, bars(0, 1), &key);
     Rational quarter;
     assert(rational_make(1, 4, &quarter) == RATIONAL_OK);
     PlanNote notes[2] = {plan_note(66, (Rational){0, 1}, quarter), plan_note(65, quarter, quarter)};
@@ -930,7 +930,7 @@ static void test_spelling_round_trip(void) {
     Plan *parsed = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error) == PLAN_OK);
     const PlanLanePayload *read_key = plan_lane_span_payload(parsed, 1);
-    assert(read_key->key.tonic_letter == PITCH_LETTER_F && read_key->key.tonic_accidental == 1);
+    assert(read_key->region.tonic_letter == PITCH_LETTER_F && read_key->region.tonic_accidental == 1);
     const PlanLanePayload *read_melody = plan_lane_span_payload(parsed, 2);
     assert(!read_melody->notes.notes[0].spelled && read_melody->notes.notes[1].spelled);
     assert(read_melody->notes.notes[1].letter == PITCH_LETTER_E && read_melody->notes.notes[1].accidental == 1);
@@ -1004,8 +1004,8 @@ static void test_older_formats_read_into_materials(void) {
     Plan *read = NULL;
     assert(plan_from_json(test_knowledge(), minor_text, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     LaneSpanId key_span;
-    assert(plan_lane_find(read, PLAN_LANE_KEY, 0, plan_node_span(read, plan_root(read)), &key_span, 1) == 1);
-    assert(plan_lane_span_payload(read, key_span)->key.material == minor);
+    assert(plan_lane_find(read, PLAN_LANE_REGION, 0, plan_node_span(read, plan_root(read)), &key_span, 1) == 1);
+    assert(plan_lane_span_payload(read, key_span)->region.material == minor);
     plan_destroy(read);
     free(minor_text);
     char *dorian = replace_all(v2, "\"mode\": \"major\"", "\"mode\": \"dorian\"");
@@ -1035,9 +1035,9 @@ static Plan *key_spans_plan(const KeySpanCase *cases, size_t count) {
         PlanLanePayload payload;
         memset(&payload, 0, sizeof(payload));
         if (cases[i].material) {
-            payload.key = test_key(cases[i].tonic, cases[i].material);
+            payload.region = test_key(cases[i].tonic, cases[i].material);
         }
-        LaneSpanId id = add_lane(plan, form, PLAN_LANE_KEY, 0, bars((long)(4 * i), 4), &payload);
+        LaneSpanId id = add_lane(plan, form, PLAN_LANE_REGION, 0, bars((long)(4 * i), 4), &payload);
         if (cases[i].relation) {
             assert(plan_lane_span_set_key_relation(plan, id, cases[i].relation, cases[i].anchor, NULL, cases[i].resolved) == PLAN_OK);
         }
@@ -1049,8 +1049,8 @@ static Plan *key_spans_plan(const KeySpanCase *cases, size_t count) {
 static SpelledKey key_span_at(const Plan *plan, size_t index) {
     LaneSpanId ids[8];
     PlanSpan everything = bars(0, 1000);
-    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, 8) > index);
-    return plan_lane_span_payload(plan, ids[index])->key;
+    assert(plan_lane_find(plan, PLAN_LANE_REGION, 0, everything, ids, 8) > index);
+    return plan_lane_span_payload(plan, ids[index])->region;
 }
 
 /* Reads the text and resolves it, returning the result; *out is the plan read. */

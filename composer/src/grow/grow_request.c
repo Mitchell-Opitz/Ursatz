@@ -799,8 +799,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
     }
     if (result == GROW_OK) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = request->key;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
+        payload.region = request->key;
+        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_REGION, 0, form, &payload, &lane));
         result = result == GROW_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     if (result == GROW_OK) {
@@ -831,8 +831,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
     }
     if (result == GROW_OK) {
         memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = request->key;
+        constraint.kind = PLAN_CONSTRAINT_REGION;
+        constraint.params.region = request->key;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 

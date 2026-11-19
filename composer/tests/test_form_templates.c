@@ -514,7 +514,7 @@ static void check_structure(const Plan *plan, const Scenario *scenario, const ch
         at += (long)expected[i].bars;
 
         const SectionDescription *described = plan_node_section(plan, section);
-        const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_KEY, 0);
+        const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_REGION, 0);
         const bool liquidation = described->has_role && described->role == SECTION_ROLE_LIQUIDATION;
         assert(described->letter[0] != '\0' && strcmp(described->letter, expected[i].letter) == 0);
         /* The part of a larger form a section is, and only that (R-503). */
@@ -547,25 +547,25 @@ static void check_structure(const Plan *plan, const Scenario *scenario, const ch
         const int offset = expected[i].region ? region_offset : expected[i].key_offset;
         if (expected[i].tonic_major) {
             /* The home tonic's major key: the home key in a major piece, the parallel major in a minor one (R-517). */
-            assert(key && spelled_key_tonic_pitch_class(&key->params.key) == scenario->tonic &&
-                   harmony_key_mode(&key->params.key) == HARMONY_MODE_MAJOR);
+            assert(key && spelled_key_tonic_pitch_class(&key->params.region) == scenario->tonic &&
+                   harmony_key_mode(&key->params.region) == HARMONY_MODE_MAJOR);
         } else if (expected[i].second) {
             /* One of the second region's keys: vi or IV in major, VI or iv in minor (R-520). */
-            const int pc = spelled_key_tonic_pitch_class(&key->params.key);
+            const int pc = spelled_key_tonic_pitch_class(&key->params.region);
             const bool major = scenario->mode == HARMONY_MODE_MAJOR;
-            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && harmony_key_mode(&key->params.key) == (major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR)) ||
-                           (pc == (scenario->tonic + 5) % 12 && harmony_key_mode(&key->params.key) == scenario->mode)));
+            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && harmony_key_mode(&key->params.region) == (major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR)) ||
+                           (pc == (scenario->tonic + 5) % 12 && harmony_key_mode(&key->params.region) == scenario->mode)));
         } else if (expected[i].region_key >= 0) {
             /* The development is vi in major and iv in minor; the sequence is ii in major and v in minor; all minor keys (R-520). The
                elaboration is IV in major and VI in minor, both major keys (R-523). */
             const bool major = scenario->mode == HARMONY_MODE_MAJOR;
             const bool elaboration = expected[i].region_key == ELABORATION;
             const int up = elaboration ? (major ? 5 : 8) : expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
-            assert(key && spelled_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
-                   harmony_key_mode(&key->params.key) == (elaboration ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR));
+            assert(key && spelled_key_tonic_pitch_class(&key->params.region) == (scenario->tonic + up) % 12 &&
+                   harmony_key_mode(&key->params.region) == (elaboration ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR));
         } else {
-            assert(key && spelled_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
-                   harmony_key_mode(&key->params.key) == mode);
+            assert(key && spelled_key_tonic_pitch_class(&key->params.region) == (scenario->tonic + offset) % 12 &&
+                   harmony_key_mode(&key->params.region) == mode);
         }
         /* A figure rides on a figurate return and only there (R-497). */
         const SectionFigure *figure = described->has_figure ? &described->figure : NULL;

@@ -178,8 +178,8 @@ static Plan *build_plan(const Options *options, const Motive *motive, LaneSpanId
     ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.key = options->key;
-    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK &&
+    payload.region = options->key;
+    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_REGION, 0, all, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
     PlanNote lane_notes[MOTIVE_MAX_NOTES];

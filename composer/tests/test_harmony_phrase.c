@@ -80,8 +80,8 @@ static Fixture build(const Scenario *scenario, CadencePlace place) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
@@ -510,8 +510,8 @@ static void test_pivot_into_the_dominant(void) {
         assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
         for (int k = 0; k < 2; k++) {
             memset(&payload, 0, sizeof(payload));
-            payload.key = test_key(k == 0 ? 0 : 7, "major");
-            assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, k == 0 ? first : second, &payload, &id) == PLAN_OK);
+            payload.region = test_key(k == 0 ? 0 : 7, "major");
+            assert(plan_add_lane_span(plan, owner, PLAN_LANE_REGION, 0, k == 0 ? first : second, &payload, &id) == PLAN_OK);
             assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
         }
         memset(&payload, 0, sizeof(payload));

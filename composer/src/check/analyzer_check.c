@@ -286,11 +286,11 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
     }
     LaneSpanId meter_span;
     LaneSpanId key_span;
-    if (!lane_at_start(plan, PLAN_LANE_METER, span, &meter_span) || !lane_at_start(plan, PLAN_LANE_KEY, span, &key_span)) {
+    if (!lane_at_start(plan, PLAN_LANE_METER, span, &meter_span) || !lane_at_start(plan, PLAN_LANE_REGION, span, &key_span)) {
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
-    SpelledKey key = plan_lane_span_payload(plan, key_span)->key;
+    SpelledKey key = plan_lane_span_payload(plan, key_span)->region;
     unsigned long bar_units = (unsigned long)meter.beats_per_bar;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0 || span.length.num <= 0 ||
         ((unsigned long)span.length.num * (unsigned long)meter.beat_unit) % (span.length.den * bar_units) != 0) {
@@ -456,11 +456,11 @@ AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCh
     }
     LaneSpanId meter_span;
     LaneSpanId key_span;
-    if (!lane_at_start(plan, PLAN_LANE_METER, whole, &meter_span) || !lane_at_start(plan, PLAN_LANE_KEY, whole, &key_span)) {
+    if (!lane_at_start(plan, PLAN_LANE_METER, whole, &meter_span) || !lane_at_start(plan, PLAN_LANE_REGION, whole, &key_span)) {
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
-    SpelledKey key = plan_lane_span_payload(plan, key_span)->key;
+    SpelledKey key = plan_lane_span_payload(plan, key_span)->region;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
         return ANALYZER_CHECK_ERR_PLAN;
     }

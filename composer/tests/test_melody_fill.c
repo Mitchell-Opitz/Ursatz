@@ -129,8 +129,8 @@ static Fixture build(const Scenario *scenario, bool with_development) {
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(scenario->tonic, scenario->mode);
-    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.form_span, &payload, &id) ==
+    payload.region = test_key_mode(scenario->tonic, scenario->mode);
+    assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_REGION, 0, fixture.form_span, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -687,8 +687,8 @@ static IdeaFixture build_ideas(int beats, int unit, HarmonyMode mode, int tonic)
     assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(tonic, mode);
-    assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
+    payload.region = test_key_mode(tonic, mode);
+    assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_REGION, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
@@ -889,8 +889,8 @@ static ToneScene build_tone_scene(bool keyed) {
     assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key(0, "major");
-    assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
+    payload.region = test_key(0, "major");
+    assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_REGION, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     static const char *const CHORDS[2] = {"I", "IV"};
     static const int BASS[2] = {48, 41};

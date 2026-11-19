@@ -51,7 +51,7 @@ bool grow_read_keys(const Plan *plan, GrowThemeRequest *request) {
         rational_add(request->span.start, half, &half) != RATIONAL_OK) {
         return false;
     }
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, spans, MAX_KEY_SPANS);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, up_to, spans, MAX_KEY_SPANS);
     if (found == 0 || found > MAX_KEY_SPANS) {
         return false;
     }
@@ -72,13 +72,13 @@ bool grow_read_keys(const Plan *plan, GrowThemeRequest *request) {
     if (plan_span_end(first, &first_end) != PLAN_OK) {
         return false;
     }
-    request->key = plan_lane_span_payload(plan, spans[at])->key;
+    request->key = plan_lane_span_payload(plan, spans[at])->region;
     /* A change of mode on one tonic is not a modulation: no pivot (R-499). */
     if (at > 0 && rational_cmp(first.start, request->span.start) == 0 &&
-        spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, spans[at - 1])->key) !=
+        spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, spans[at - 1])->region) !=
             spelled_key_tonic_pitch_class(&request->key)) {
         request->has_start_change = true;
-        request->from_key = plan_lane_span_payload(plan, spans[at - 1])->key;
+        request->from_key = plan_lane_span_payload(plan, spans[at - 1])->region;
     }
     if (rational_cmp(first_end, end) >= 0) {
         return at + 1 == found || rational_cmp(plan_lane_span_span(plan, spans[at + 1]).start, end) >= 0;
@@ -94,7 +94,7 @@ bool grow_read_keys(const Plan *plan, GrowThemeRequest *request) {
         return false;
     }
     request->has_end_change = true;
-    request->end_key = plan_lane_span_payload(plan, spans[at + 1])->key;
+    request->end_key = plan_lane_span_payload(plan, spans[at + 1])->region;
     return true;
 }
 
@@ -104,10 +104,10 @@ static bool starts_in_home_key(const Plan *plan, const GrowThemeRequest *request
     Rational end;
     PlanSpan whole = {{0, 1}, {0, 1}};
     if (plan_span_end(request->span, &end) != PLAN_OK || rational_make(end.num, end.den, &whole.length) != RATIONAL_OK ||
-        plan_lane_find(plan, PLAN_LANE_KEY, 0, whole, spans, MAX_KEY_SPANS) == 0) {
+        plan_lane_find(plan, PLAN_LANE_REGION, 0, whole, spans, MAX_KEY_SPANS) == 0) {
         return false;
     }
-    const SpelledKey *home = &plan_lane_span_payload(plan, spans[0])->key;
+    const SpelledKey *home = &plan_lane_span_payload(plan, spans[0])->region;
     return spelled_key_tonic_pitch_class(home) == spelled_key_tonic_pitch_class(&request->key) &&
            composer_key_is_minor(home) == composer_key_is_minor(&request->key);
 }

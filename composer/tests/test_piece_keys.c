@@ -109,11 +109,11 @@ static KeyLane read_lane(const Plan *plan) {
     KeyLane lane;
     LaneSpanId ids[32];
     PlanSpan all = {{0, 1}, {100000, 1}};
-    lane.count = plan_lane_find(plan, PLAN_LANE_KEY, 0, all, ids, 32);
+    lane.count = plan_lane_find(plan, PLAN_LANE_REGION, 0, all, ids, 32);
     assert(lane.count >= 1 && lane.count <= 32);
     for (size_t i = 0; i < lane.count; i++) {
         lane.span[i] = plan_lane_span_span(plan, ids[i]);
-        lane.key[i] = plan_lane_span_payload(plan, ids[i])->key;
+        lane.key[i] = plan_lane_span_payload(plan, ids[i])->region;
         assert(plan_lane_span_state(plan, ids[i]) == PLAN_STATE_GIVEN);
     }
     return lane;
@@ -196,8 +196,8 @@ static void check_plan(const Plan *plan, const Scenario *scenario, const char *k
         assert(plan_span_end(span, &end) == PLAN_OK);
         assert(rational_make(-1, 1, &last_bar) == RATIONAL_OK);
         assert(rational_add(end, last_bar, &last_bar) == RATIONAL_OK);
-        const PlanConstraint *key = find(plan, sections[s], PLAN_CONSTRAINT_KEY);
-        assert(key && same_key(key->params.key, key_at(&lane, last_bar)));
+        const PlanConstraint *key = find(plan, sections[s], PLAN_CONSTRAINT_REGION);
+        assert(key && same_key(key->params.region, key_at(&lane, last_bar)));
     }
     PieceCadenceCheck cadences;
     assert(piece_check_cadences(plan, &cadences) && cadences.ok);

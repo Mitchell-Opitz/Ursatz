@@ -227,14 +227,14 @@ static void check_transition(const Plan *plan, const Row *row, unsigned long see
     /* The second half is in the region's key: a key span starts at the half. */
     LaneSpanId keys[8];
     PlanSpan second = {middle, half};
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, second, keys, 8);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, second, keys, 8);
     assert(found > 0);
     bool starts_at_half = false;
     for (size_t i = 0; i < found && i < 8; i++) {
         PlanSpan k = plan_lane_span_span(plan, keys[i]);
         if (rational_cmp(k.start, middle) == 0) {
             starts_at_half = true;
-            if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, keys[i])->key) != region_tonic(row)) {
+            if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, keys[i])->region) != region_tonic(row)) {
                 fprintf(stderr, "%s seed %lu: T's second half is not in the region\n", row->name, seed);
                 assert(false);
             }
@@ -382,10 +382,10 @@ static void check_retransition(const Plan *plan, const Row *row, unsigned long s
 
     /* In the home key, from its first bar: every key span that touches R is the home key's. */
     LaneSpanId ids[32];
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 32);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, span, ids, 32);
     assert(found > 0 && found <= 32);
     for (size_t i = 0; i < found; i++) {
-        if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->key) != row->tonic) {
+        if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->region) != row->tonic) {
             fprintf(stderr, "%s seed %lu: R is not in the home key\n", row->name, seed);
             assert(false);
         }

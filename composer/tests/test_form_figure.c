@@ -174,8 +174,8 @@ static void check_plan(Plan *plan, const ComposeOutcome *outcome, Counts *counts
 /* The key of the section: its one key lane span. */
 static SpelledKey key_of(const Plan *plan, NodeId section) {
     LaneSpanId ids[2];
-    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 2) == 1);
-    return plan_lane_span_payload(plan, ids[0])->key;
+    assert(plan_lane_find(plan, PLAN_LANE_REGION, 0, plan_node_span(plan, section), ids, 2) == 1);
+    return plan_lane_span_payload(plan, ids[0])->region;
 }
 
 /* Every melody note of the section is in the scale of the key: in minor the natural minor's and the harmonic minor's (the figures use the raised seventh over V and vii only). */

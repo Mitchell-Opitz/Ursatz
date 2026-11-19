@@ -103,8 +103,8 @@ static SeamHeard hear_case(const SeamCase *c) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key(0, "major");
-    assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
+    payload.region = test_key(0, "major");
+    assert(plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     add_chord(plan, body, 0, c->before);
     add_chord(plan, seam, 1, c->after);
@@ -210,8 +210,8 @@ static void test_rules(void) {
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, (PlanSpan){whole(1, 1), whole(1, 1)}, "seam", &seam) == PLAN_OK);
     assert(plan_node_set_section(plan, seam, &mark) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.material = test_materials()->major;
-    assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
+    payload.region.material = test_materials()->major;
+    assert(plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
            PLAN_OK);
     assert(seam_hear(plan, seam, &heard) == SEAM_HEAR_ERR_NOT_WRITTEN);
     assert(seam_hear(NULL, seam, &heard) == SEAM_HEAR_ERR_NULL);

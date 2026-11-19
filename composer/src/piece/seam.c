@@ -160,7 +160,7 @@ static Plan *make_slice(const Plan *plan, PlanSpan bar, NodeId *section) {
               plan_add_node(slice, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, "slice", &form) == PLAN_OK &&
               plan_add_node(slice, form, PLAN_NODE_SECTION, bar, "slice", section) == PLAN_OK;
     size_t meter_count = plan_lane_find(plan, PLAN_LANE_METER, 0, bar, meters, 2);
-    size_t key_count = plan_lane_find(plan, PLAN_LANE_KEY, 0, bar, keys, 4);
+    size_t key_count = plan_lane_find(plan, PLAN_LANE_REGION, 0, bar, keys, 4);
     ok = ok && meter_count == 1 && key_count >= 1 && key_count <= 4;
     if (ok) {
         memset(&payload, 0, sizeof(payload));
@@ -172,8 +172,8 @@ static Plan *make_slice(const Plan *plan, PlanSpan bar, NodeId *section) {
         PlanSpan span;
         ok = clip_span(plan_lane_span_span(plan, keys[i]), bar, &span);
         memset(&payload, 0, sizeof(payload));
-        payload.key = plan_lane_span_payload(plan, keys[i])->key;
-        ok = ok && plan_add_lane_span(slice, form, PLAN_LANE_KEY, 0, span, &payload, &added) == PLAN_OK &&
+        payload.region = plan_lane_span_payload(plan, keys[i])->region;
+        ok = ok && plan_add_lane_span(slice, form, PLAN_LANE_REGION, 0, span, &payload, &added) == PLAN_OK &&
              plan_lane_span_set_state(slice, added, PLAN_STATE_GIVEN) == PLAN_OK;
     }
     ok = ok && add_lane(plan, slice, *section, PLAN_LANE_HARMONY, 0, bar) && add_lane(plan, slice, *section, PLAN_LANE_BASS, 0, bar) &&

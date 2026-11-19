@@ -655,12 +655,12 @@ static void planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t
         rational_make(end_of_section.num, end_of_section.den, &up_to.length) != RATIONAL_OK) {
         return;
     }
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, NULL, 0);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, up_to, NULL, 0);
     LaneSpanId *ids = found ? calloc(found, sizeof(*ids)) : NULL;
     if (!ids) {
         return;
     }
-    plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, ids, found);
+    plan_lane_find(plan, PLAN_LANE_REGION, 0, up_to, ids, found);
     const PlanLanePayload *at = NULL;
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
@@ -670,8 +670,8 @@ static void planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t
         }
     }
     if (at) {
-        util_key_name(spelled_key_tonic_pitch_class(&at->key), at->key.material, out, size);
-        *flats = util_key_prefers_flats(spelled_key_tonic_pitch_class(&at->key), at->key.material);
+        util_key_name(spelled_key_tonic_pitch_class(&at->region), at->region.material, out, size);
+        *flats = util_key_prefers_flats(spelled_key_tonic_pitch_class(&at->region), at->region.material);
     }
     free(ids);
 }

@@ -105,9 +105,9 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
     case PLAN_LANE_METER:
         return payload->meter.beats_per_bar > 0 && payload->meter.beat_unit > 0 &&
                payload->meter.bars_per_hyperbar >= 0;
-    case PLAN_LANE_KEY:
-        return spelled_key_tonic_pitch_class(&payload->key) >= 0 && spelled_key_tonic_pitch_class(&payload->key) <= 11 &&
-               plan_key_valid(&payload->key);
+    case PLAN_LANE_REGION:
+        return spelled_key_tonic_pitch_class(&payload->region) >= 0 && spelled_key_tonic_pitch_class(&payload->region) <= 11 &&
+               plan_key_valid(&payload->region);
     case PLAN_LANE_HARMONY: {
         size_t length = strnlen(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
         return length > 0 && length < PLAN_ROMAN_NUMERAL_MAX;
@@ -331,7 +331,7 @@ PlanResult plan_lane_span_set_key_relation(Plan *plan, LaneSpanId id, const char
     }
     size_t length = strlen(relation);
     size_t section_length = anchor_section ? strlen(anchor_section) : 0;
-    if (entry->lane != PLAN_LANE_KEY || length == 0 || length >= PLAN_KEY_RELATION_MAX ||
+    if (entry->lane != PLAN_LANE_REGION || length == 0 || length >= PLAN_KEY_RELATION_MAX ||
         (anchor != PLAN_KEY_ANCHOR_HOME && anchor != PLAN_KEY_ANCHOR_PREVIOUS && anchor != PLAN_KEY_ANCHOR_SECTION) ||
         (anchor == PLAN_KEY_ANCHOR_SECTION) != (section_length > 0) || section_length >= PLAN_KEY_ANCHOR_SECTION_MAX) {
         return PLAN_ERR_BAD_PAYLOAD;

@@ -180,8 +180,8 @@ static PieceResult add_section(Plan *plan, const PieceRequest *request, const Fo
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = request->key;
+        constraint.kind = PLAN_CONSTRAINT_REGION;
+        constraint.params.region = request->key;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && accompaniment) {
@@ -631,12 +631,12 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         }
         PlanSpan span = plan_node_span(plan, sections[i]);
         LaneSpanId keys_over[3];
-        size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys_over, 3);
+        size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, span, keys_over, 3);
         if (found == 0 || (found > 1 && overlay->description.harmony.kind == SECTION_HARMONY_SCHEMA)) {
             result = PIECE_ERR_BAD_REQUEST;
             break;
         }
-        const SpelledKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->key;
+        const SpelledKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->region;
         result = piece_give_harmony(plan, sections[i], &overlay->description.harmony, &request->meter, section_key, NULL, 0);
     }
     /* A composed theme given to a section (R-610): its pairing and cadences, then its realized lanes moved and transposed to the section. */

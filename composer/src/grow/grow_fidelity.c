@@ -64,10 +64,10 @@ static bool read_meter_key(const Plan *plan, PlanSpan span, PlanMeter *meter, Sp
         return false;
     }
     *meter = plan_lane_span_payload(plan, id)->meter;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &id, 1) < 1) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &id, 1) < 1) {
         return false;
     }
-    *key = plan_lane_span_payload(plan, id)->key;
+    *key = plan_lane_span_payload(plan, id)->region;
     return true;
 }
 

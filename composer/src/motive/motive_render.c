@@ -55,8 +55,8 @@ Plan *motive_render_plan(const Motive *motive) {
     }
     if (ok && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = motive_key(motive);
-        ok = add_given_span(plan, idea, PLAN_LANE_KEY, all, &payload);
+        payload.region = motive_key(motive);
+        ok = add_given_span(plan, idea, PLAN_LANE_REGION, all, &payload);
     }
     if (!ok) {
         plan_destroy(plan);

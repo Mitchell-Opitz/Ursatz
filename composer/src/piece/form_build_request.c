@@ -297,11 +297,11 @@ static bool section_construction(const PieceRequest *request, const PieceSection
 /* The key over the start of a span, when one key span holds it. */
 static bool key_over(const Plan *plan, PlanSpan span, SpelledKey *out) {
     LaneSpanId ids[2];
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1 ||
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
         return false;
     }
-    *out = plan_lane_span_payload(plan, ids[0])->key;
+    *out = plan_lane_span_payload(plan, ids[0])->region;
     return true;
 }
 
@@ -512,8 +512,8 @@ static PieceResult add_request_section(Plan *plan, const PieceRequest *request, 
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = *key; /* the section's own region, else the home key */
+        constraint.kind = PLAN_CONSTRAINT_REGION;
+        constraint.params.region = *key; /* the section's own region, else the home key */
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && request->has_accompaniment) {
@@ -569,8 +569,8 @@ static PieceResult add_key_lane(Plan *plan, const FormSpec *form, NodeId form_id
     LaneSpanId lane;
     memset(&payload, 0, sizeof(payload));
     if (!regional) {
-        payload.key = request->key;
-        PieceResult result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, span_form, &payload, &lane));
+        payload.region = request->key;
+        PieceResult result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_REGION, 0, span_form, &payload, &lane));
         return result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     KeyRun runs[PIECE_STRUCTURE_MAX_SECTIONS + 2];
@@ -622,8 +622,8 @@ static PieceResult add_key_lane(Plan *plan, const FormSpec *form, NodeId form_id
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = keys[i];
-        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, runs[i].span, &payload, &lane));
+        payload.region = keys[i];
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_REGION, 0, runs[i].span, &payload, &lane));
         if (result == PIECE_OK && runs[i].region && runs[i].region->relation[0] != '\0') {
             const PieceRegion *region = runs[i].region;
             result = piece_result_of_plan(plan_lane_span_set_key_relation(
@@ -825,8 +825,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         if (result == PIECE_OK) {
             PlanConstraint key;
             memset(&key, 0, sizeof(key));
-            key.kind = PLAN_CONSTRAINT_KEY;
-            key.params.key = regions[first_body_index(form, &copy)].key; /* the seam is the first body section's key */
+            key.kind = PLAN_CONSTRAINT_REGION;
+            key.params.region = regions[first_body_index(form, &copy)].key; /* the seam is the first body section's key */
             result = piece_add_constraint(plan, seam, &key);
         }
     }

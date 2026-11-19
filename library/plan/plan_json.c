@@ -227,8 +227,8 @@ static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *
     case PLAN_LANE_METER:
         snprintf(out, size, "%d/%d", payload->meter.beats_per_bar, payload->meter.beat_unit);
         return true;
-    case PLAN_LANE_KEY:
-        plan_key_label(&payload->key, out, size);
+    case PLAN_LANE_REGION:
+        plan_key_label(&payload->region, out, size);
         return true;
     case PLAN_LANE_HARMONY:
         snprintf(out, size, "%s", payload->harmony.roman_numeral);
@@ -284,8 +284,8 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload, co
              plan_json_add(object, "beat_unit", json_number(payload->meter.beat_unit)) &&
              plan_json_add(object, "bars_per_hyperbar", json_number(payload->meter.bars_per_hyperbar));
         break;
-    case PLAN_LANE_KEY:
-        ok = key_payload_json(object, &payload->key, relation);
+    case PLAN_LANE_REGION:
+        ok = key_payload_json(object, &payload->region, relation);
         break;
     case PLAN_LANE_HARMONY:
         ok = plan_json_add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral));
@@ -313,14 +313,14 @@ static void key_span_label(const Plan *plan, LaneSpanId id, char *out, size_t si
     if (relation && !relation->resolved) {
         snprintf(out, size, "%s from %s", relation->relation, KEY_ANCHOR_NAMES[relation->anchor]);
     } else {
-        plan_key_label(&plan_lane_span_payload(plan, id)->key, out, size);
+        plan_key_label(&plan_lane_span_payload(plan, id)->region, out, size);
     }
 }
 
 /* The label of the key span that covers the start of span, or "no match". */
 static void enclosing_plan_key_label(const Plan *plan, PlanSpan span, char *out, size_t size) {
     LaneSpanId found = PLAN_LANE_SPAN_NONE;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &found, 1) > 0) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &found, 1) > 0) {
         key_span_label(plan, found, out, size);
     } else {
         snprintf(out, size, "no match");
@@ -334,7 +334,7 @@ static cJSON *lane_entry_json(const Plan *plan, LaneSpanId id) {
     char label[64];
     char context_key[64];
     lane_label(payload, lane, label, sizeof(label));
-    if (lane == PLAN_LANE_KEY) {
+    if (lane == PLAN_LANE_REGION) {
         key_span_label(plan, id, label, sizeof(label));
     }
 
@@ -351,7 +351,7 @@ static cJSON *lane_entry_json(const Plan *plan, LaneSpanId id) {
     ok = ok && plan_json_add(object, "framework", cJSON_CreateString(COMPOSER_FRAMEWORK)) &&
          plan_json_add(object, "span", span_json(span)) && plan_json_add(object, "note_ids", cJSON_CreateArray()) &&
          plan_json_add(object, "label", cJSON_CreateString(label)) && plan_json_add(object, "uncertainty", cJSON_CreateNull());
-    if (ok && lane == PLAN_LANE_KEY) {
+    if (ok && lane == PLAN_LANE_REGION) {
         ok = plan_json_add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
     }
     if (ok && lane == PLAN_LANE_HARMONY) {
@@ -424,7 +424,7 @@ static cJSON *document_json(const Plan *plan, const PlanProducer *producer) {
               plan_json_add(document, "format_version", json_number(URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) &&
               plan_json_add(document, "next_note_id", json_number((double)plan_next_note_id(plan))) &&
               plan_json_add(document, "metadata", metadata_json(plan, producer)) && plan_json_add(document, "meter", meter_json(plan)) &&
-              plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
+              plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_REGION)) &&
               plan_json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
               plan_json_add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
               plan_json_add(document, "melody", lane_array_json(plan, 1u << PLAN_LANE_MELODY)) &&
@@ -1795,8 +1795,8 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
         payload->meter.beat_unit = (int)second;
         payload->meter.bars_per_hyperbar = (int)third;
         return true;
-    case PLAN_LANE_KEY:
-        return read_key_span(reader, object, path, &payload->key, relation);
+    case PLAN_LANE_REGION:
+        return read_key_span(reader, object, path, &payload->region, relation);
     case PLAN_LANE_HARMONY: {
         const cJSON *numeral = plan_json_member(reader, object, path, "roman_numeral", true);
         if (!numeral) {
@@ -1926,7 +1926,7 @@ static bool build_lane_spans(JsonReader *reader, Plan *plan, const cJSON *docume
         unsigned lanes;
     } sections[] = {
         {"meter", 1u << PLAN_LANE_METER},
-        {"keys", 1u << PLAN_LANE_KEY},
+        {"keys", 1u << PLAN_LANE_REGION},
         {"chords", 1u << PLAN_LANE_HARMONY},
         {"melody", 1u << PLAN_LANE_MELODY},
         {"texture", (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE)},

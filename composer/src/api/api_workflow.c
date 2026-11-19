@@ -63,9 +63,9 @@ size_t api_plan_sections(const Plan *plan, ApiSection *out, size_t capacity) {
             }
             for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
                 const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
-                if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+                if (constraint->kind == PLAN_CONSTRAINT_REGION) {
                     section->has_key = true;
-                    section->key = constraint->params.key;
+                    section->key = constraint->params.region;
                 }
             }
             if (described->has_cadence) {

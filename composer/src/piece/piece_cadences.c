@@ -68,8 +68,8 @@ static size_t section_cadences(const Plan *plan, NodeId section, CadenceType *ou
 static bool section_key(const Plan *plan, NodeId section, SpelledKey *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_KEY) {
-            *out = constraint->params.key;
+        if (constraint->kind == PLAN_CONSTRAINT_REGION) {
+            *out = constraint->params.region;
             return true;
         }
     }
@@ -179,10 +179,10 @@ bool piece_check_cadences(const Plan *plan, PieceCadenceCheck *out) {
         return false;
     }
     LaneSpanId first_key;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, sections[0]), &first_key, 1) == 0) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, plan_node_span(plan, sections[0]), &first_key, 1) == 0) {
         return false;
     }
-    SpelledKey home = plan_lane_span_payload(plan, first_key)->key;
+    SpelledKey home = plan_lane_span_payload(plan, first_key)->region;
     int last_strength = -1;
     for (size_t i = 0; i < count; i++) {
         CadenceType cadences[MAX_CADENCES];

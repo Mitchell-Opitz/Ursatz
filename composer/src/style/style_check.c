@@ -164,10 +164,10 @@ static bool melody_labels(const ComposerStyle *style, const MelodyCandidate *mel
 static int plan_tonic(const Plan *plan) {
     PlanSpan everything = {{0, 1}, {1000000, 1}};
     LaneSpanId first;
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1) == 0) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, everything, &first, 1) == 0) {
         return 0;
     }
-    return spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, first)->key);
+    return spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, first)->region);
 }
 
 /* The motive labels of a motive-form or development candidate the motives stage offers. */

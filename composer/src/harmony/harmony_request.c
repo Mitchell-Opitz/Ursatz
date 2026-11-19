@@ -40,17 +40,17 @@ bool harmony_find_constraint(const Plan *plan, LaneSpanId id, NodeId owner, Plan
 
 bool harmony_find_key(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out) {
     LaneSpanId keys[2];
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys, 2);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, span, keys, 2);
     if (found == 1) {
         if (!plan_span_contains(plan_lane_span_span(plan, keys[0]), span)) {
             return false;
         }
-        *out = plan_lane_span_payload(plan, keys[0])->key;
+        *out = plan_lane_span_payload(plan, keys[0])->region;
         return true;
     }
     PlanConstraint constraint;
-    if (found == 0 && harmony_find_constraint(plan, id, owner, PLAN_CONSTRAINT_KEY, &constraint)) {
-        *out = constraint.params.key;
+    if (found == 0 && harmony_find_constraint(plan, id, owner, PLAN_CONSTRAINT_REGION, &constraint)) {
+        *out = constraint.params.region;
         return true;
     }
     return false;
@@ -65,7 +65,7 @@ bool harmony_key_before(const Plan *plan, Rational start, SpelledKey *out) {
     if (start.num <= 0 || rational_make(start.num, start.den, &before.length) != RATIONAL_OK) {
         return false;
     }
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, before, spans, MAX_KEY_SPANS);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, before, spans, MAX_KEY_SPANS);
     if (found == 0 || found > MAX_KEY_SPANS) {
         return false;
     }
@@ -74,7 +74,7 @@ bool harmony_key_before(const Plan *plan, Rational start, SpelledKey *out) {
         rational_cmp(end, start) != 0) {
         return false;
     }
-    *out = plan_lane_span_payload(plan, spans[found - 1])->key;
+    *out = plan_lane_span_payload(plan, spans[found - 1])->region;
     return true;
 }
 

@@ -52,7 +52,7 @@ static bool plan_meter(const Plan *plan, PlanMeter *meter) {
 /* The key lane over the source section, cut to it and moved to start, added to the performed plan under its form. */
 static PieceResult copy_keys(Plan *performed, NodeId form, const Plan *plan, PlanSpan source, Rational start) {
     LaneSpanId ids[PERFORM_MAX_KEY_SPANS];
-    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, source, ids, PERFORM_MAX_KEY_SPANS);
+    size_t found = plan_lane_find(plan, PLAN_LANE_REGION, 0, source, ids, PERFORM_MAX_KEY_SPANS);
     Rational source_end;
     if (found == 0 || found > PERFORM_MAX_KEY_SPANS || plan_span_end(source, &source_end) != PLAN_OK) {
         return PIECE_ERR_BAD_REQUEST;
@@ -76,8 +76,8 @@ static PieceResult copy_keys(Plan *performed, NodeId form, const Plan *plan, Pla
             return PIECE_ERR_BAD_REQUEST;
         }
         memset(&payload, 0, sizeof(payload));
-        payload.key = plan_lane_span_payload(plan, ids[i])->key;
-        PieceResult result = piece_result_of_plan(plan_add_lane_span(performed, form, PLAN_LANE_KEY, 0, moved, &payload, &id));
+        payload.region = plan_lane_span_payload(plan, ids[i])->region;
+        PieceResult result = piece_result_of_plan(plan_add_lane_span(performed, form, PLAN_LANE_REGION, 0, moved, &payload, &id));
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(performed, id, PLAN_STATE_GIVEN)) : result;
         if (result != PIECE_OK) {
             return result;
@@ -98,7 +98,7 @@ static PieceResult copy_constraints(Plan *performed, NodeId node, const Plan *pl
     PieceResult result = piece_result_of_plan(plan_node_set_section(performed, node, &description));
     for (size_t i = 0; result == PIECE_OK && i < plan_node_constraint_count(plan, source); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, source, i);
-        if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+        if (constraint->kind == PLAN_CONSTRAINT_REGION) {
             result = piece_add_constraint(performed, node, constraint);
         }
     }

@@ -235,10 +235,10 @@ SeamHearResult seam_hear(const Plan *plan, NodeId seam, SeamHeard *out) {
     notes.bass_before = notes.bass_after = notes.melody_previous = notes.melody_before = notes.melody_after =
         notes.melody_next = -1;
     PlanSpan key_range = {start, {1, 4096}};
-    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, key_range, keys, 2) < 1) {
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, key_range, keys, 2) < 1) {
         return SEAM_HEAR_ERR_NOT_WRITTEN;
     }
-    notes.key = plan_lane_span_payload(plan, keys[0])->key;
+    notes.key = plan_lane_span_payload(plan, keys[0])->region;
     notes.has_chords =
         copy_roman(plan, span_at(plan, PLAN_LANE_HARMONY, 0, before), notes.before_roman, &notes.before_function,
                    &notes.before_has_function) &&
