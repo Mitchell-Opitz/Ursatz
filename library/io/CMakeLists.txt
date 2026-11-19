@@ -2,6 +2,7 @@
 # Sources include headers by their path from library/ (io/<file>.h).
 add_library(ursatz_io
     general_midi.c
+    imported_realization.c
     imported_score.c
     midi_importer.c
     midi_event_decoder.c

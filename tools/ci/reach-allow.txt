@@ -119,3 +119,11 @@ library/realization/realization_json.c tempo_item  # no app calls it until P62 B
 library/realization/realization_json.c text_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
 library/realization/realization_json.c write_fail  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
 library/realization/realization_json.c write_work  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/io/imported_realization.c copy_tempo_map  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c destroy_plans  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c id_taken  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c imported_score_realization  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c instrument_of  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c map_error  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c plan_parts  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/io/imported_realization.c voice_of  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
