@@ -2,6 +2,7 @@
 # two apps and below the GUI. Sources include <ursatz_workshop/...> and the headers beside them.
 add_library(ursatz_workshop STATIC
     src/coordinator/workshop.c
+    src/coordinator/settings.c
 )
 ursatz_public_headers(ursatz_workshop
     BASE ${CMAKE_CURRENT_SOURCE_DIR}/include
