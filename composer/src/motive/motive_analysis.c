@@ -108,7 +108,9 @@ static bool power_of_two(unsigned long value) {
 }
 
 static void analyze_rhythm(const Motive *motive, MotiveAnalysis *out) {
-    Rational bar = motive_time(motive_meter(motive).beats_per_bar, (unsigned long)motive_meter(motive).beat_unit);
+    Rational bar;
+    PlanMeter bar_meter = motive_meter(motive);
+    plan_meter_bar_length(&bar_meter, &bar);
     Rational previous_end = motive_time(0, 1);
     Rational pickup = motive_pickup(motive);
     for (size_t i = 0; i < motive->note_count; i++) {
@@ -286,7 +288,9 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     if (result.rhythm_known) {
         analyze_rhythm(motive, &result);
     } else {
-        Rational bar = motive_time(motive_meter(motive).beats_per_bar, (unsigned long)motive_meter(motive).beat_unit);
+        Rational bar;
+        PlanMeter bar_meter = motive_meter(motive);
+        plan_meter_bar_length(&bar_meter, &bar);
         result.bars = motive_time(motive->length.num * (long)bar.den, motive->length.den * (unsigned long)bar.num);
     }
     if (result.harmony_known) {

@@ -8,6 +8,7 @@
 
 #include "grow/grow_internal.h"
 #include "util/util.h"
+#include "plan/plan_common.h"
 
 _Static_assert(SECTION_CONSTRUCTION_IDEAS == GROW_IDEA_COUNT, "a construction holds the bars of every idea");
 
@@ -554,7 +555,9 @@ bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size
     }
     memset(out, 0, sizeof(*out));
     /* No motive is a motive still to be invented: one bar. */
-    size_t motif_bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 1;
+    Rational bar;
+    plan_meter_bar_length(meter, &bar);
+    size_t motif_bars = motive ? grow_motive_layout_bars(motive, bar) : 1;
     if ((bars == 4 || bars == 8) && motif_bars <= 2) {
         return false;
     }

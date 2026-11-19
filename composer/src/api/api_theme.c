@@ -236,7 +236,9 @@ static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, cons
     } else if (setup->bars != 4 && setup->bars != 8) {
         return COMPOSER_OK; /* a construction chosen at the build (R-469): grow_build_plan_checked checks the idea then */
     }
-    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), part_bars, basic_bars,
+    Rational theme_bar;
+    plan_meter_bar_length(&setup->meter, &theme_bar);
+    if (!grow_part_basic_idea(&material->basic, theme_bar, part_bars, basic_bars,
                               setup->pairing.beginning, &basic, &step)) {
         return COMPOSER_OK;
     }

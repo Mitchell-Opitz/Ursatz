@@ -59,6 +59,12 @@ const char *plan_cadence_name(CadenceType type);
 /* PLAN_OK for RATIONAL_OK, PLAN_ERR_NULL for a NULL result, else PLAN_ERR_BAD_TIME (a zero denominator or overflow). */
 PlanResult plan_result_of_rational(RationalResult result);
 
+/*
+ * The length of a bar of the meter in whole notes: beats_per_bar times one note of beat_unit, through the library Rational (R-587), in
+ * lowest terms. PLAN_ERR_BAD_TIME for a meter with no beat unit or an overflow, with *out 0/1; PLAN_ERR_NULL for a NULL argument.
+ */
+PlanResult plan_meter_bar_length(const PlanMeter *meter, Rational *out);
+
 /* True when the key's material is one the plan holds: none (the zero key reads as C major) or a major or a minor third (common_practice_key_mode_of). */
 bool plan_key_valid(const SpelledKey *key);
 

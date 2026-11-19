@@ -161,7 +161,7 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
         return false;
     }
-    theme->bar = grow_bar_length(&theme->meter);
+    plan_meter_bar_length(&theme->meter, &theme->bar);
     theme->source = grow_find_source(plan);
     if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
         theme->bar.num == 0 || !lay_ideas(theme, meter_start, &request)) {

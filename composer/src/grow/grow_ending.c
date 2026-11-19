@@ -190,7 +190,9 @@ static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings,
         length = cut > 0 ? GROW_FRAGMENT_SEGMENT : GROW_FRAGMENT_HALF_BAR;
     }
     if (length == GROW_FRAGMENT_HALF_BAR) {
-        cut = cut_notes(&spec->fragment_motive[k], position_div(grow_bar_length(&spec->meter), 2));
+        Rational bar;
+        plan_meter_bar_length(&spec->meter, &bar);
+        cut = cut_notes(&spec->fragment_motive[k], position_div(bar, 2));
     }
     spec->fragment_cut[k] = cut;
     spec->fragment_diminished[k] = cut == 0 && settings->diminish;
@@ -635,7 +637,8 @@ static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, 
 /* The room the idea at a place has in the material: its own length, or the bars of a derived motive if shorter. */
 static Rational idea_room(const GrowThemeSpec *spec, GrowPlace place) {
     Rational idea = spec->layout.length[place];
-    Rational bar = grow_bar_length(&spec->meter);
+    Rational bar;
+    plan_meter_bar_length(&spec->meter, &bar);
     Rational node = grow_scaled(bar, grow_motive_layout_bars(&spec->source, bar));
     return rational_cmp(idea, node) < 0 ? idea : node;
 }

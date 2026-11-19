@@ -16,6 +16,7 @@
 #include "util/request_parse.h"
 #include "util/util.h"
 #include "motive/motive_internal.h"
+#include "plan/plan_common.h"
 
 /* The beats of a passage's places are compared as doubles; two are the same place within this. */
 #define BEAT_EPSILON 1e-6
@@ -249,7 +250,7 @@ static bool plan_time_fits(Rational time) {
 static bool motive_from_passage(const CorpusPassage *passage, const PlanMeter *meter, const SpelledKey *key, int shift,
                                 Motive *out) {
     Rational bar;
-    if (rational_make((long long)meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
+    if (plan_meter_bar_length(meter, &bar) != PLAN_OK) {
         return false;
     }
     motive_init(out, *meter);

@@ -488,9 +488,6 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
 /* The cells in a bar the harmony operators place chords on; false for a meter they do not support. */
 bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
 
-/* The length of a bar of the meter. */
-Rational grow_bar_length(const PlanMeter *meter);
-
 /* How a motif compares with the idea it fills: shorter (grown to the idea), as long (placed as written), longer. */
 typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit;
 /*

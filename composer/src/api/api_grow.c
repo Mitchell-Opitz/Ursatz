@@ -637,7 +637,7 @@ static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const
                                                     : PLAN_LANE_MELODY;
     if (material->chord_count == 0 || theme_node == PLAN_NODE_NONE ||
         (stage != GROW_STAGE_HARMONY && stage != GROW_STAGE_BASS && stage != GROW_STAGE_MELODY) ||
-        rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
+        plan_meter_bar_length(meter, &bar) != PLAN_OK) {
         return -1;
     }
     theme = plan_node_span(plan, theme_node);
@@ -810,7 +810,9 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
 
 ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const Motive *motive, const PlanMeter *meter,
                                    size_t theme_bars, size_t idea_bars) {
-    size_t bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 0;
+    Rational bar;
+    plan_meter_bar_length(meter, &bar);
+    size_t bars = motive ? grow_motive_layout_bars(motive, bar) : 0;
     return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "the motif is %zu bars; the basic idea of a %zu-bar theme is %zu",
                     bars, theme_bars, idea_bars);
 }
@@ -1011,7 +1013,7 @@ static cJSON *chords_json(const PiecePlan *plan, NodeId theme_node, const PlanMe
     cJSON *list = cJSON_CreateArray();
     PlanSpan span = plan_node_span(plan, theme_node);
     Rational bar;
-    rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar);
+    plan_meter_bar_length(meter, &bar);
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, MAX_CHORDS);
     if (count > MAX_CHORDS) {
@@ -1671,7 +1673,7 @@ cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const Gr
     char meter[16];
     snprintf(meter, sizeof meter, "%d/%d", setup->meter.beats_per_bar, setup->meter.beat_unit);
     Rational bar;
-    rational_make(setup->meter.beats_per_bar, (long long)setup->meter.beat_unit, &bar);
+    plan_meter_bar_length(&setup->meter, &bar);
     cJSON *root = cJSON_CreateObject();
     bool ok = root && cJSON_AddStringToObject(root, "key", key) && cJSON_AddStringToObject(root, "meter", meter) &&
               cJSON_AddNumberToObject(root, "bars", (double)setup->bars) &&

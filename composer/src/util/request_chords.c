@@ -33,7 +33,7 @@ ComposerStatus request_read_chords(const cJSON *list, const char *base, const ch
                         "\"chords\" must be a list of {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
     }
     Rational bar_length;
-    if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar_length) != RATIONAL_OK) {
+    if (plan_meter_bar_length(meter, &bar_length) != PLAN_OK) {
         return fail(error, "/meter", "the meter has no bar length");
     }
     Rational beat;

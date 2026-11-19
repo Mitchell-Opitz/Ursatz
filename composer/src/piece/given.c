@@ -85,7 +85,7 @@ static GivenResult read_placement(const PiecePlan *plan, NodeId section, size_t 
     }
     out->meter = plan_lane_span_payload(plan, meters[0])->meter;
     size_t cells;
-    if (rational_make(out->meter.beats_per_bar, (long long)out->meter.beat_unit, &out->bar_length) != RATIONAL_OK ||
+    if (plan_meter_bar_length(&out->meter, &out->bar_length) != PLAN_OK ||
         !harmony_rhythm_cells_per_bar(&out->meter, &cells)) {
         return GIVEN_ERR_METER;
     }

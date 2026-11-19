@@ -804,7 +804,7 @@ static ComposerStatus check_harmony(PieceSpec *request, const char *base, Compos
         (void)piece_resolve_overlay_regions(piece, size, request->knowledge, regions, &regional, &refused, why, sizeof why);
     }
     Rational bar = {0, 1};
-    if (rational_make(piece->meter.beats_per_bar, piece->meter.beat_unit, &bar) != RATIONAL_OK) {
+    if (plan_meter_bar_length(&piece->meter, &bar) != PLAN_OK) {
         return COMPOSER_OK;
     }
     for (size_t i = 0; i < count; i++) {

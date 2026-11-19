@@ -763,7 +763,8 @@ bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar
     }
     Rational from;
     Rational to;
-    Rational length = grow_bar_length(&meter);
+    Rational length;
+    plan_meter_bar_length(&meter, &length);
     if (rational_mul_int(length, (long long)bar - 1, &from) != RATIONAL_OK || rational_add(from, length, &to) != RATIONAL_OK) {
         return false;
     }

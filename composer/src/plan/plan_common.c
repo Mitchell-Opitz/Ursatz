@@ -125,6 +125,18 @@ const char *plan_lane_name(PlanLaneKind lane) {
     return (int)lane >= 0 && (int)lane < PLAN_LANE_NAME_COUNT ? plan_lane_names[lane] : "";
 }
 
+PlanResult plan_meter_bar_length(const PlanMeter *meter, Rational *out) {
+    if (!meter || !out) {
+        return PLAN_ERR_NULL;
+    }
+    RationalResult made = rational_make(meter->beats_per_bar, (long long)meter->beat_unit, out);
+    if (made != RATIONAL_OK) {
+        out->num = 0;
+        out->den = 1;
+    }
+    return plan_result_of_rational(made);
+}
+
 bool plan_key_valid(const SpelledKey *key) {
     CommonPracticeKeyMode mode;
     return key && (key->material == NULL || common_practice_key_mode_of(key->material, &mode));

@@ -185,7 +185,7 @@ static bool bar_length(const PiecePlan *plan, PlanSpan span, Rational *bar) {
         return false;
     }
     const PlanMeter *meter = &plan_lane_span_payload(plan, id)->meter;
-    return meter->beat_unit > 0 && rational_make(meter->beats_per_bar, (long long)meter->beat_unit, bar) == RATIONAL_OK;
+    return meter->beat_unit > 0 && plan_meter_bar_length(meter, bar) == PLAN_OK;
 }
 
 /* Adds the themes heard in a section to themes; form_hear_in counts bars from the start of the plan. */

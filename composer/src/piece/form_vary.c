@@ -4,6 +4,7 @@
 #include "grow/grow_internal.h"
 #include "piece/form_return_internal.h"
 #include "util/util.h"
+#include "plan/plan_common.h"
 
 #include <theory/counterpoint/melodic_rules.h>
 
@@ -43,7 +44,8 @@ static bool is_step(int move) {
 /* The ticks of a cell of the meter (a strong beat); 0 for a meter the harmony operators do not place on. */
 static long cell_ticks(const PlanMeter *meter) {
     size_t cells;
-    Rational bar = grow_bar_length(meter);
+    Rational bar;
+    plan_meter_bar_length(meter, &bar);
     long bar_ticks;
     if (!grow_cells_per_bar(meter, &cells) || cells == 0 || !to_ticks(bar, &bar_ticks) ||
         bar_ticks % (long)cells != 0) {
@@ -142,7 +144,9 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng, size_t per_bar
     Ornament *found = capacity ? calloc(capacity, sizeof(Ornament)) : NULL;
     size_t count = 0;
     long bar_ticks = 0;
-    if (per_bar > 0 && !to_ticks(grow_bar_length(&payload->meter), &bar_ticks)) {
+    Rational bar_length;
+    plan_meter_bar_length(&payload->meter, &bar_length);
+    if (per_bar > 0 && !to_ticks(bar_length, &bar_ticks)) {
         bar_ticks = 0;
     }
     if (cell == 0 || !found || (per_bar > 0 && bar_ticks <= 0)) {
@@ -774,7 +778,9 @@ static void check_varied(const ReturnPayload *payload, FillCheck *out) {
     long last_bar = -1;
     size_t added_total = 0;
     size_t next_melody = 0;
-    if (cell == 0 || !to_ticks(grow_bar_length(&payload->meter), &bar_ticks) || bar_ticks <= 0) {
+    Rational bar_length;
+    plan_meter_bar_length(&payload->meter, &bar_length);
+    if (cell == 0 || !to_ticks(bar_length, &bar_ticks) || bar_ticks <= 0) {
         reject(out, "varied return has a meter it cannot place notes in");
         return;
     }

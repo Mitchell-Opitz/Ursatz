@@ -215,7 +215,8 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     }
     /* The development begins on the barline after the source, and has room for a long augmentation. */
     Rational bar;
-    rational_make(motive_meter(source).beats_per_bar, (long long)motive_meter(source).beat_unit, &bar);
+    PlanMeter source_meter = motive_meter(source);
+    plan_meter_bar_length(&source_meter, &bar);
     long bars = (source->length.num * (long)bar.den + (long)source->length.den * bar.num - 1) /
                 ((long)source->length.den * bar.num);
     Rational start;

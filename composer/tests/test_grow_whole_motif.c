@@ -10,6 +10,7 @@
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "plan/plan_common.h"
 
 /*
  * A motif as long as the idea it fills is that idea (B1 of P33): grow_motive_fit for motives of 1, 1.5, 2 and 3 bars with
@@ -48,7 +49,8 @@ static void test_fit(void) {
         PlanMeter meter_of = {0};
         meter_of.beats_per_bar = beats;
         meter_of.beat_unit = 4;
-        Rational bar = grow_bar_length(&meter_of);
+        Rational bar;
+        plan_meter_bar_length(&meter_of, &bar);
         for (size_t t = 0; t < 4; t++) {
             Motive motive = make_motive(texts[t], beats, 4, false, 0, none);
             for (size_t idea = 1; idea <= 4; idea++) {

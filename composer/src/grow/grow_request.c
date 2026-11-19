@@ -139,15 +139,6 @@ bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells) {
     return harmony_rhythm_cells_per_bar(meter, cells);
 }
 
-Rational grow_bar_length(const PlanMeter *meter) {
-    Rational bar = {0, 1};
-    if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
-        bar.num = 0;
-        bar.den = 1;
-    }
-    return bar;
-}
-
 GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars) {
     Rational span = {0, 1};
     long long bars = 0;
@@ -597,7 +588,8 @@ static GrowResult check_cadence_bar(const GrowRequest *request, Rational bar_len
 }
 
 GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType first, GrowRefusal *refusal) {
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     if (request->chord_count == 0 || !request->chords) {
         return GROW_OK;
     }
@@ -668,7 +660,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     if (spelled_key_tonic_pitch_class(&request->key) < 0 || spelled_key_tonic_pitch_class(&request->key) > 11) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/key", "the key has no tonic");
     }
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     size_t basic_units = 0;
     /* The basic motive fills the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. */
     if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units)) {

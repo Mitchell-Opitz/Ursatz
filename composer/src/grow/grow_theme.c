@@ -173,7 +173,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
     if (!grow_read_keys(plan, &request)) {
         return false;
     }
-    request.bar = grow_bar_length(&request.meter);
+    plan_meter_bar_length(&request.meter, &request.bar);
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
         request.slot_node[slot] = grow_find_slot_node(plan, slot);
     }

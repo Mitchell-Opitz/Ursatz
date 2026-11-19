@@ -635,8 +635,7 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
     PlanSpan meter_span = plan_lane_span_span(plan, meters[0]);
     PhraseMetre *metre = &context->metre;
     metre->meter = plan_lane_span_payload(plan, meters[0])->meter;
-    if (rational_make(metre->meter.beats_per_bar, (long long)metre->meter.beat_unit, &metre->bar_length) !=
-            RATIONAL_OK ||
+    if (plan_meter_bar_length(&metre->meter, &metre->bar_length) != PLAN_OK ||
         !harmony_rhythm_cells_per_bar(&metre->meter, &metre->cells_per_bar) ||
         rational_div_int(metre->bar_length, metre->cells_per_bar, &metre->cell_length) !=
             RATIONAL_OK ||

@@ -484,7 +484,8 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         !size_buildable(size, &request->meter, request->motive, constructions, has_construction)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     /* The motive fills the basic idea of every section: its construction's, else 2 bars of an 8-bar theme section, 1 of a 4-bar one. */
     size_t basic_bars = 2;
     size_t extension_bars = 0;

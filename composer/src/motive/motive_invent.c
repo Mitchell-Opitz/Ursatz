@@ -88,7 +88,7 @@ static bool read_invent_request(const PiecePlan *plan, FillTarget target, const 
         out->key = context->key;
     }
     if (out->meter.beats_per_bar <= 0 || out->meter.beat_unit <= 0 ||
-        rational_make(out->meter.beats_per_bar, (long long)out->meter.beat_unit, &out->bar) != RATIONAL_OK ||
+        plan_meter_bar_length(&out->meter, &out->bar) != PLAN_OK ||
         rational_cmp(span.length, out->bar) != 0) {
         return false;
     }

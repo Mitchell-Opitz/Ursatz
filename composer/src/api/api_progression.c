@@ -194,7 +194,7 @@ static bool build_plan(const Options *options, Built *built) {
     if (!built->plan) {
         return false;
     }
-    built->bar_length = time_of(options->meter.beats_per_bar, (unsigned long)options->meter.beat_unit);
+    plan_meter_bar_length(&options->meter, &built->bar_length);
     built->span.start = time_of(0, 1);
     built->span.length = time_of(options->bars * (long)built->bar_length.num, built->bar_length.den);
 

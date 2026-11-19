@@ -119,7 +119,8 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
         request->section_count > PIECE_STRUCTURE_MAX_SECTIONS || (request->has_accompaniment && request->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     size_t beats = 0;
     bool body = false;
     int last_part = PIECE_PART_INTRO;
@@ -649,7 +650,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         return result;
     }
     size_t cells;
-    Rational bar = grow_bar_length(&request->meter);
+    Rational bar;
+    plan_meter_bar_length(&request->meter, &bar);
     Motive theme_storage;
     const Motive *motive = basic_motive(request, &theme_storage);
     if (loop_plan) {

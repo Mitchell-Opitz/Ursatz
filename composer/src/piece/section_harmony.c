@@ -97,7 +97,8 @@ PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHar
             return PIECE_ERR_ALLOC;
         }
         PlanSpan span = plan_node_span(plan, section);
-        Rational bar_length = grow_bar_length(meter);
+        Rational bar_length;
+        plan_meter_bar_length(meter, &bar_length);
         Rational bars;
         long length = rational_div(span.length, bar_length, &bars) == RATIONAL_OK && bars.den == 1 ? (long)bars.num : 0;
         ComposerError error;
