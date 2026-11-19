@@ -99,4 +99,104 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
    the plan never fits, whatever the seed. */
 bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences, const PlanMeter *meter);
 
+
+/* --- the SEGMENTS strategy, shared by its files (motive_random_segments.c draws the motive, _rhythm.c the cells, _layout.c the layout, _pitch.c the pitches) --- */
+
+#define SEGMENT_MIN_CELL_BEATS 2 /* a cell must hold a feature: the shortest cell is two beats */
+#define TICKS_PER_UNIT 12        /* ticks in the meter's beat unit: halves, thirds and quarters of it are whole */
+#define SEGMENT_MAX 3
+#define CHORD_MAX MOTIVE_RANDOM_PLAN_MAX /* the chords of a motive: one per segment, or a given plan's */
+#define SEGMENT_TRIES_PER_SETUP 8 /* notes drawn within one bars, shape and plan before another is drawn (a candidate) */
+#define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
+#define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */
+#define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
+#define LEAP_SEMITONES 5 /* an interval this large or larger is a leap (leaps_per_motif, leap_recovery) */
+#define SKIP_SEMITONES 3 /* an interval of 3 or 4 semitones is a skip (skips_per_motif) */
+
+/* Syncopation figures (R-454): the two inside a cell, then the two across a segment boundary. */
+typedef enum { SYNC_OFF_BEAT = 0, SYNC_TIE_BEAT, SYNC_TIE_BAR, SYNC_ANTICIPATION, SYNC_TYPES } Sync;
+#define SYNC_LEVELS 2 /* eighth, sixteenth */
+
+/* Shapes: a a' (a cell and its repeat), a b (a cell and a new one), a a' b (two half-bar cells, then a bar). */
+typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KINDS } Shape;
+
+/* Harmony plans, one chord (a degree) per segment, and how often each is drawn (ch. V). */
+typedef struct {
+    size_t count;
+    int degrees[SEGMENT_MAX];
+} SegmentPlan;
+extern const SegmentPlan PLANS_TWO[3];
+extern const SegmentPlan PLANS_THREE[2];
+#define PLAN_KINDS_TWO 3
+#define PLAN_KINDS_THREE 2
+
+/* The distinctive feature of segment a. */
+typedef enum { FEATURE_DOTTED = 0, FEATURE_LEAP, FEATURE_REPEAT, FEATURE_KINDS } Feature;
+
+/* How the last segment ends (the endings list, R-440). */
+typedef enum { ENDING_FREE = 0, ENDING_CLOSED, ENDING_OPEN, ENDING_LEAD_IN, ENDING_KINDS } Ending;
+
+/*
+ * The tick grid of a meter: the bar's beats, the ticks in a beat and in half of it, and whether the beat is a dotted unit.
+ * Simple meters beat once per beat unit (12 ticks); a compound meter with compound_beats beats once per three. It also
+ * carries the ending drawn for the motive and `last_offset`, the ticks from its barline to where the last segment's cell
+ * starts (draw_setup sets both).
+ */
+typedef struct {
+    long beats;
+    long beat;
+    long half;
+    bool compound;
+    Ending ending;
+    long last_offset;
+} Grid;
+
+
+typedef struct {
+    long ticks[MAX_NOTES];
+    size_t count;
+} Cell;
+
+typedef struct {
+    Rhythm rhythm;
+    size_t segment_count;
+    size_t first[SEGMENT_MAX];
+    size_t last[SEGMENT_MAX];
+    bool repeats[SEGMENT_MAX]; /* the segment repeats segment a's rhythm */
+    SegmentPlan plan;
+    size_t cell_start; /* the first note of segment a's cell: after the pickup note, if any */
+    Grid grid;
+    long start[SEGMENT_MAX];     /* ticks from the motive's start, the pickup included, to where each segment's cell starts */
+    Sync boundary[SEGMENT_MAX];  /* SYNC_TIE_BAR or SYNC_ANTICIPATION at the start of segment s >= 1, else SYNC_TYPES */
+    size_t chord_count;
+    int chord_degree[CHORD_MAX];
+    long chord_onset[CHORD_MAX]; /* ticks from the motive's start, the pickup included, to where each chord starts */
+    int degree[MAX_NOTES];       /* the chord at each note's onset (set_note_chords) */
+    bool chord_first[MAX_NOTES]; /* the first note on a chord after the first */
+} Layout;
+
+typedef struct {
+    Grid grid;
+    long bars;
+    long pickup;
+    Shape shape;
+    SegmentPlan plan;
+    bool placed; /* a given plan whose chords are at a bar and beat, not one to a segment */
+} Setup;
+
+Grid motive_random_grid_of(const MotiveRandomPreferences *preferences, const PlanMeter *meter);
+bool motive_random_simple_meter(const Grid *grid);
+long motive_random_sync_unit(const Grid *grid, size_t level);
+size_t motive_random_pick_weighted(FillRng *rng, const unsigned long *weights, size_t count);
+long motive_random_chord_shift(int degree);
+long motive_random_step_of(long position);
+int motive_random_chord_alteration(const SpelledKey *key, int degree, long position);
+bool motive_random_draw_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell);
+bool motive_random_draw_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, Cell *cell);
+void motive_random_draw_setup(const MotiveRandomPreferences *preferences, const PlanMeter *meter, FillRng *rng, Setup *setup);
+bool motive_random_draw_layout(const MotiveRandomPreferences *preferences, const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out);
+bool motive_random_has_halves(const Grid *grid);
+bool motive_random_plan_bars_fit(const MotiveRandomPreferences *preferences, bool halves, long bars);
+bool motive_random_draw_melody(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody);
+
 #endif
