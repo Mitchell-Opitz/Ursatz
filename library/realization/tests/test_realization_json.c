@@ -9,9 +9,10 @@
 #include "test_knowledge.h"
 
 /*
- * The realization codec (R-627): a work with what the group holds (lines with relations, a doubling and a span assignment, a piano
- * part of two staves with an edited and a detached note, a pedal, a local meter map, a compound part, a played span, markers, key
- * signatures, a home region, ensembles and work material) round-trips to equal text, and the files it writes are the schema's.
+ * The realization codec (R-627): a work with two movements' worth of what the group holds (lines with relations, a doubling and a span
+ * assignment, a piano part of two staves with an edited and a detached note, a pedal, a local meter map, a compound part, a played
+ * span, markers, key signatures, a home region, ensembles and work material) round-trips to equal text; the digest is stable and
+ * follows the notes; the refusals name their paths.
  */
 
 static MusicalTime at(long long n, long long d) {
@@ -246,6 +247,18 @@ static Work *build_work(long long first_duration) {
     return work;
 }
 
+static char *replace_once(const char *text, const char *from, const char *to) {
+    const char *found = strstr(text, from);
+    assert(found != NULL);
+    size_t head = (size_t)(found - text);
+    char *out = malloc(strlen(text) + strlen(to) + 1);
+    assert(out != NULL);
+    memcpy(out, text, head);
+    strcpy(out + head, to);
+    strcat(out, found + strlen(from));
+    return out;
+}
+
 /* The schema test validates what the codec wrote: the documents go to files in the working directory. */
 static void write_document(const char *name, const char *text) {
     char path[128];
@@ -299,8 +312,97 @@ static void test_round_trip(void) {
     work_destroy(minimal);
 }
 
+static void test_digest(void) {
+    Work *work = build_work(1);
+    char first[17];
+    char second[17];
+    assert(realization_digest(work, first) && realization_digest(work, second) && strcmp(first, second) == 0 && strlen(first) == 16);
+    /* The digest of the compact text, and of what was read. */
+    RealizationJsonError error;
+    char *compact = realization_work_to_compact_json(work, &error);
+    assert(compact != NULL && strchr(compact, '\n') == NULL && strstr(compact, "  ") == NULL);
+    Work *read = NULL;
+    assert(realization_work_from_json(test_knowledge(), compact, &read, &error) == REALIZATION_OK);
+    char third[17];
+    assert(realization_digest(read, third) && strcmp(first, third) == 0);
+    work_destroy(read);
+    free(compact);
+    /* One note's duration changes the digest. */
+    Work *longer = build_work(2);
+    char other[17];
+    assert(realization_digest(longer, other) && strcmp(first, other) != 0);
+    assert(!realization_digest(NULL, other));
+    work_destroy(longer);
+    work_destroy(work);
+}
+
+static void expect_refused(const char *text, RealizationResult result, const char *path, const char *message_part) {
+    Work *read = (Work *)1;
+    RealizationJsonError error;
+    memset(&error, 0, sizeof(error));
+    RealizationResult got = realization_work_from_json(test_knowledge(), text, &read, &error);
+    if (got != result) {
+        fprintf(stderr, "expected result %d for '%s', got %d: %s at '%s'\n", (int)result, path, (int)got, error.message, error.path);
+    }
+    assert(got == result);
+    assert(read == NULL);
+    if (strcmp(error.path, path) != 0 || (message_part && strstr(error.message, message_part) == NULL)) {
+        fprintf(stderr, "expected '%s' (%s), got '%s': %s\n", path, message_part ? message_part : "", error.path, error.message);
+    }
+    assert(strcmp(error.path, path) == 0);
+    assert(message_part == NULL || strstr(error.message, message_part) != NULL);
+}
+
+static void test_refusals(void) {
+    Work *work = build_work(1);
+    char *text = realization_work_to_json(work, NULL);
+    assert(text != NULL);
+    work_destroy(work);
+    char *edited = replace_once(text, "\"ursatz-realization\"", "\"ursatz-plan\"");
+    expect_refused(edited, REALIZATION_ERR_BAD_VALUE, "format", "expected");
+    free(edited);
+    edited = replace_once(text, "\"format_version\": 1", "\"format_version\": 2");
+    expect_refused(edited, REALIZATION_ERR_BAD_VALUE, "format_version", "version 1");
+    free(edited);
+    edited = replace_once(text, "\"id\": \"soprano\"", "\"id\": \"1soprano\"");
+    expect_refused(edited, REALIZATION_ERR_BAD_ID, "work.movements[0].lines[0].id", "not a valid id");
+    free(edited);
+    edited = replace_once(text, "\"id\": \"violin\"", "\"id\": \"piano\"");
+    expect_refused(edited, REALIZATION_ERR_DUPLICATE_ID, "work.movements[0].parts[1].id", "twice");
+    free(edited);
+    edited = replace_once(text, "\"id\": \"n2\"", "\"id\": \"n1\"");
+    expect_refused(edited, REALIZATION_ERR_DUPLICATE_ID, "work.movements[0].lines[0].notes[1].id", "twice");
+    free(edited);
+    edited = replace_once(text, "\"line\": \"soprano\"", "\"line\": \"tenor\"");
+    expect_refused(edited, REALIZATION_ERR_UNKNOWN_REFERENCE, "work.movements[0].assignments[0].line", "tenor");
+    free(edited);
+    edited = replace_once(text, "\"part\": \"piano\"", "\"part\": \"harp\"");
+    expect_refused(edited, REALIZATION_ERR_UNKNOWN_REFERENCE, "work.movements[0].assignments[0].part", "harp");
+    free(edited);
+    edited = replace_once(text, "\"material\": \"omt.material.major\"", "\"material\": \"omt.material.nope\"");
+    expect_refused(edited, REALIZATION_ERR_UNKNOWN_REFERENCE, "work.movements[0].home.material", "no material");
+    free(edited);
+    edited = replace_once(text, "\"kind\": \"tonal\"", "\"kind\": \"pitch-field\"");
+    expect_refused(edited, REALIZATION_ERR_BAD_VALUE, "work.movements[0].home.kind", "not built");
+    free(edited);
+    edited = replace_once(text, "\"midi\": 66,\n                \"spelling\": \"F#\"", "\"midi\": 200,\n                \"spelling\": \"F#\"");
+    expect_refused(edited, REALIZATION_ERR_BAD_VALUE, "work.movements[0].lines[0].notes[0].midi", "from 0 to 127");
+    free(edited);
+    edited = replace_once(text, "\"time_signature\": \"3/4\"", "\"time_signature\": \"3/5\"");
+    expect_refused(edited, REALIZATION_ERR_BAD_VALUE, "work.movements[0].meter[0].time_signature", "time signature");
+    free(edited);
+    expect_refused("{\"format\": \"ursatz-realization\", \"format_version\": 1}", REALIZATION_ERR_BAD_VALUE, "work", "missing");
+    expect_refused("[1]", REALIZATION_ERR_BAD_VALUE, "", "object");
+    expect_refused("not json", REALIZATION_ERR_BAD_VALUE, "", "JSON");
+    Work *none = NULL;
+    assert(realization_work_from_json(NULL, text, &none, NULL) == REALIZATION_ERR_NULL && realization_work_from_json(test_knowledge(), NULL, &none, NULL) == REALIZATION_ERR_NULL);
+    free(text);
+}
+
 int main(void) {
     test_round_trip();
+    test_digest();
+    test_refusals();
     printf("test_realization_json: ok\n");
     return 0;
 }
