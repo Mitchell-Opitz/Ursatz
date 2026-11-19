@@ -123,6 +123,10 @@ ursatz_test(test_motif_preferences LIBS ursatz_composer composer_test_support cj
 ursatz_test(test_form_hear LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+# The readings a hearing makes of a span (R-633).
+ursatz_test(test_hearing_reading LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 ursatz_test(test_harmony_prolong LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 # Measured 12.0 s of CPU, over the 10 s fast-set limit.
