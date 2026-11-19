@@ -4,11 +4,10 @@ A piece plan is written as JSON text by `plan_to_json` and read from text by `pl
 (`<plan/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the plan's own: it has a
 name, a version and a JSON Schema ([`plan.v6.schema.json`](../../plan/schema/plan.v6.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
-name, a note may carry its spelling and always has an id. Writing always gives format version 5 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
-Reading takes versions 5 to 1, every plan saved before, and maps them to materials, note ids and section descriptions ([Format versions](#format-versions)). Back to the [docs index](../README.md).
+name, a note may carry its spelling and always has an id. Writing always gives format version 6 (`URSATZ_PLAN_FORMAT_VERSION`).
+Reading takes versions 6 to 1, every plan saved before, and maps them to materials, note ids and section descriptions ([Format versions](#format-versions)). Back to the [docs index](../README.md).
 
-The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
-newline. The same plan always gives the same bytes.
+The output has a 2-space indent, the key order shown below and a final newline. The same plan always gives the same bytes.
 
 The constraints and the motive relation steps are in [plan-constraints.md](../../../composer/docs/plan-constraints.md); the motive documents and their analysis are in [motive-format.md](../../../composer/docs/motive-format.md).
 
@@ -20,8 +19,7 @@ These are the library's.
   `{"num": 3, "den": 2}`, in lowest terms. `den` is at least 1.
 - **Span** is `{"start": <time>, "end": <time>}`. In memory a span is a start and a length; `end`
   is start plus length, and a span must be longer than zero.
-- **Claim** is a lane span written as an entry of its lane's section: `framework`, `span`, `note_ids`, `label`,
-  `uncertainty`, and the `composer` object that holds the plan's own data.
+- **Lane span** is written as an entry of its lane's section: `span`, `label` and the `composer` object that holds the plan's data.
 - **Tonic** is a note name without an octave as the library spells it (`pitch_spelling_name`): a letter and `bb`, `b`,
   nothing, `#` or `x` (`C`, `F#`, `Bb`, `Cx`). A key with a tonic outside these is not written.
 
@@ -37,16 +35,17 @@ number with an optional spelling (the file writes `spelling` for a spelled note 
 
 | Key | Content |
 | --- | --- |
-| `format` | Always `"ursatz-composer-plan"`. |
-| `format_version` | Always `5`. |
+| `format` | Always `"ursatz-plan"`. |
+| `format_version` | Always `6`. |
 | `next_note_id` | The id the next new note gets: an integer from 1, above every note id of the file. |
-| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the library chain's producer key, R-620; format 6 names it `producer_key`) and, only for a plan that has one, `analyzer_version` (kept; none is written). |
-| `meter` | `null`, or `{"spans": [<claim>, ...]}` for meter spans. |
-| `keys` | Key lane claims. |
-| `chords` | Harmony lane claims. |
+| `metadata` | The caller's stamp (`PlanProducer`): `producer`, `producer_version`, `producer_key` (the library chain's key, R-620), `composition_key` (the composing code's key, R-626) and `knowledge_hash`, each "" when unknown; `analyzer_version` for a plan that has one, the only member read. |
+| `derived_from` | For a plan made from a reading: `{"reading": <name>, "realization": <16 hex digits>}` (R-635); kept. |
+| `meter` | `null`, or `{"spans": [<span>, ...]}` for meter spans. |
+| `regions` | Region lane spans. |
+| `chords` | Harmony lane spans. |
 | `form` | The node tree, or `null` for an empty plan. |
-| `melody` | Melody lane claims. |
-| `texture` | Bass and inner voice lane claims. |
+| `melody` | Melody lane spans. |
+| `texture` | Bass and inner voice lane spans. |
 
 Reading needs `format` and `format_version` (or `schema_version` for version 1) and `form`. A lane section that is absent counts as empty.
 
@@ -87,25 +86,21 @@ A `motive_ref` constraint may carry two members that record how a developed idea
 
 The form node holds `"form"` in its `composer` object (R-608): `{"name", "version", "hash", "checks", "closing"}`, the form the plan was built from. `hash` is the FNV-1a 64 hash (16 hex digits) of the built-in document it was built from, empty for a form that is not built in; `checks` lists the checks the form runs (`sections`, `returns`, `keys`, `cadences`, `seam`); `closing` says it ends with a cadence. A plan composes with its recorded `checks` and checks its cadences from `closing` and each section's `closed` (`plan_form_record`); a plan with no record runs every check and has no cadences to check. The reader gives a file of a format before 5 the record and `closed` flags of the built-in form its form node is named for, once.
 
-## Lane claims
+## Lane spans
 
-Each lane span is a claim in the section for its lane:
+Each lane span is an entry in the section for its lane:
 
 | Lane | Section |
 | --- | --- |
 | `meter` | `meter.spans` |
-| `key` | `keys` |
+| `key` (the region lane) | `regions` |
 | `harmony` | `chords` |
 | `melody` | `melody` |
 | `bass`, `inner_voice` | `texture` |
 
-Claim fields the Composer has no data for are fixed: `framework` is `"ursatz-composer"`,
-`note_ids` is `[]` and `uncertainty` is `null`. `label` is for people: the meter (`4/4`), the key
-(`C major`), the Roman numeral, or the lane name. A key claim also has `method`, which is
-`"composer_plan"`, and a chord claim has `key_label`, the label of the key span at its start or
-`"no match"`.
+`label` is for people: the meter (`4/4`), the region (`C major`), the Roman numeral, or the lane name.
 
-`composer` on a claim:
+`composer` on a lane span:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -125,7 +120,7 @@ Spans in the same lane and voice do not overlap; a span may start where another 
 | Lane | Payload |
 | --- | --- |
 | `meter` | `beats_per_bar`, `beat_unit` (4 is a quarter), `bars_per_hyperbar` (0 for none). |
-| `key` | `tonic` (spelled) and `material` (the id of a K1 material, `omt.material.major` or `omt.material.natural-minor`: the Composer writes keys in those two), or `relation` (a K6 id such as `omt.relation.dominant`) and `anchor` (`home` or `previous`), see [Key spans named by a relation](#key-spans-named-by-a-relation). A key may also carry `relation` and `anchor` beside its `tonic` and `material`: the span was reached by that relation, and the key is what it resolved to. |
+| `key` | `kind` (`"tonal"`, the only kind built: a region of another kind is refused with "region kind '<k>' is not built until P69"), `tonic` (spelled) and `material` (the id of a K1 material, `omt.material.major` or `omt.material.natural-minor`: the Composer writes keys in those two), or `relation` (a K6 id such as `omt.relation.dominant`) and `anchor` (`home` or `previous`), see [Key spans named by a relation](#key-spans-named-by-a-relation). A key may also carry `relation` and `anchor` beside its `tonic` and `material`: the span was reached by that relation, and the key is what it resolved to. |
 | `harmony` | `roman_numeral` (1 to 15 characters), `function` (`tonic`, `predominant` or `dominant`; left out when the chord has none). |
 | `bass`, `melody`, `inner_voice` | `notes`: a non-empty array of `{"midi_pitch": 0 to 127, "spelling": <tonic>, "offset": <time>, "duration": <time>, "id": <integer from 1>, "source": <integer from 1>, "operation": "copy" \| "motive" \| "return"}`; `spelling` is only there for a spelled note (read from MusicXML), `source` and `operation` only for a note made from another (see [Note ids](#note-ids)). `offset` is measured from the start of the span, and a note ends inside the span. An `inner_voice` span may have an empty array: the voice is silent over the span. |
 
@@ -163,7 +158,7 @@ gaps, so the ids of a plan written after `regenerate` can differ from the ids of
   not a valid plan, or `PLAN_ERR_ALLOC`. The
   `PlanJsonError` gives a `path` such as `form.children[1].span.end.den`, a `message`, and the byte
   `offset` for a syntax error.
-- A lane claim without a `composer` object is an error.
+- A lane span without a `composer` object is an error.
 
 ## Key spans named by a relation
 
@@ -173,29 +168,29 @@ span unresolved; a plan that is composed from (`fill`, `lock`, `regenerate`, `va
 `plan_from_json_resolved`) is resolved first by `plan_resolve_key_spans`, which asks the knowledge snapshot's relation (`region_resolve`) for the
 key and fills the span's `tonic` and `material`, leaving `relation` and `anchor` beside them. A span that cannot be resolved (an unknown relation, a
 relation with no key from that anchor, a material the Composer does not compose in) is refused with the relation's message, at
-`keys[<n>].composer.payload.relation`, and nothing is composed. The piece planner writes `relation` and `anchor` `home` on a span whose key came from a
+`regions[<n>].composer.payload.relation`, and nothing is composed. The piece planner writes `relation` and `anchor` `home` on a span whose key came from a
 form region (`parallel`, `supertonic`, `mediant`, `subdominant`, `dominant`, `submediant`, `subtonic`), so a plan says why a span is in its key. The
-section's `key` constraint is always a key: `tonic` and `material`.
+section's `region` constraint is always a key: `tonic` and `material`.
 
 ## Format versions
 
-`format_version` 5 is the format this document describes. Version 4 wrote a section's attributes as the constraint kinds `archetype`, `material`, `theme_pairing`, `return`, `layers`, `section_letter`, `piece_part`, `free_phrase`, `hold`, `seam`, `pedal`, `construction`, `connective`, `liquidation`, `figure` and `section_function` and `cadence` (two on a section whose first half has its own). A version 1 to 4 file reads each into the section's description (an `archetype` is the pairing's and is dropped, the second `cadence` is `first_cadence`, `piece_part` is the role and `id`, `hold` is `leads_in`, a `return` names its section by name) and writes version 5; version 5 refuses one of those kinds. Version 3 had no note ids and no `next_note_id`: a version 3 file reads with the notes' ids from 1 in file order (the
+`format_version` 6 is the format this document describes. Version 5 (`format` `"ursatz-composer-plan"`) wrote `keys`, the constraint kind `key`, lane span members `framework`, `note_ids`, `uncertainty`, `method` and `key_label` (ignored), and `composer_version` and `ursatz_commit` as metadata. Version 4 wrote a section's attributes as the constraint kinds `archetype`, `material`, `theme_pairing`, `return`, `layers`, `section_letter`, `piece_part`, `free_phrase`, `hold`, `seam`, `pedal`, `construction`, `connective`, `liquidation`, `figure` and `section_function` and `cadence` (two on a section whose first half has its own). A version 1 to 4 file reads each into the section's description (an `archetype` is the pairing's and is dropped, the second `cadence` is `first_cadence`, `piece_part` is the role and `id`, `hold` is `leads_in`, a `return` names its section by name) and writes version 5; version 5 refuses one of those kinds. Version 3 had no note ids and no `next_note_id`: a version 3 file reads with the notes' ids from 1 in file order (the
 sections in the order of their lane span ids), no source and no operation, and `next_note_id` one above the last. Version 2 named a key's material by `mode` (`major` or `minor`) in a key span and in the
 `key` constraint; the reader maps `major` to `omt.material.major` and `minor` to `omt.material.natural-minor`. `schema_version` 1 is the format the Composer wrote
 before version 2, in the shape of an Ursatz-Analyzer analysis document; `plan_from_json` still reads it (a file with `format` and `format_version` is
-version 2 to 5, a file with `schema_version` is version 1) and nothing writes it. A plan of any version reads to the same plan, writes as version 5
-and renders the same MIDI. The schema's lane enum named the inner voice `inner-voice` while the writer wrote `inner_voice`; the schema now says what the writer writes. What version 1 had that version 5 does not:
+version 2 to 6, a file with `schema_version` is version 1) and nothing writes it. A plan of any version reads to the same plan, writes as version 6
+and renders the same MIDI. The schema's lane enum named the inner voice `inner-voice` while the writer wrote `inner_voice`; the schema now says what the writer writes. What version 1 had that version 6 does not:
 
 | Version 1 | Read as |
 | --- | --- |
-| `schema_version` 1 | `format_version` 5 once written. |
+| `schema_version` 1 | `format_version` 6 once written. |
 | `metadata`: `source_file`, `analyzer_version`, `ursatz_commit` `"unknown"`, `note_count`, `ticks_per_quarter`, `key_found` | Ignored. `analyzer_version` was the Composer's own version, not an Analyzer's (B-A-10), so the plan has no Analyzer version after reading it. |
 | `cadences`, `phrases`, `motives`, `rhythm`, `voice_leading`, `schemas`, always `[]` | Ignored; version 2 does not write them. |
 | A key's `tonic_pitch_class` (0 to 11) and `mode` | The tonic the library spells for that pitch class and mode (`standard_tonality_key_tonic_of_pitch_class`: fewest accidentals in the signature, sharps on a tie): 3 minor is `D#`, 6 major is `F#`; the mode is read as in version 2. |
 | A chord's `function` of `unknown` | No function (the member is left out in version 2). |
 | A motive ref's `transform` and its members | The relation step ([Motive relation steps](../../../composer/docs/plan-constraints.md#motive-relation-steps)). |
 
-Writing the plan again gives version 5: `plan_from_json` then `plan_to_json` turns any version 1 to 4 plan into its version 5
+Writing the plan again gives version 6: `plan_from_json` then `plan_to_json` turns any version 1 to 5 plan into its version 6
 file, and the two render the same MIDI.
 
 ## Analyzer version
@@ -211,16 +206,18 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
 
 ```json
 {
-  "format": "ursatz-composer-plan",
-  "format_version": 5,
+  "format": "ursatz-plan",
+  "format_version": 6,
   "next_note_id": 1,
   "metadata": {
-    "composer_version": "0.1.0",
-    "ursatz_commit": "528d5ccae6f72661"
+    "producer": "ursatz-composer",
+    "producer_version": "0.4.1",
+    "producer_key": "528d5ccae6f72661",
+    "composition_key": "0f1e2d3c4b5a6978",
+    "knowledge_hash": "4e5764f2fc6e2592"
   },
   "meter": {
     "spans": [{
-        "framework": "ursatz-composer",
         "span": {
           "start": {
             "num": 0,
@@ -231,9 +228,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
             "den": 1
           }
         },
-        "note_ids": [],
         "label": "4/4",
-        "uncertainty": null,
         "composer": {
           "id": 1,
           "owner": 1,
@@ -249,8 +244,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
         }
       }]
   },
-  "keys": [{
-      "framework": "ursatz-composer",
+  "regions": [{
       "span": {
         "start": {
           "num": 0,
@@ -261,10 +255,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "C major",
-      "uncertainty": null,
-      "method": "composer_plan",
       "composer": {
         "id": 2,
         "owner": 2,
@@ -273,13 +264,13 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
         "state": "realized",
         "constraints": [],
         "payload": {
+          "kind": "tonal",
           "tonic": "C",
           "material": "omt.material.major"
         }
       }
     }],
   "chords": [{
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 0,
@@ -290,10 +281,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "I",
-      "uncertainty": null,
-      "key_label": "C major",
       "composer": {
         "id": 3,
         "owner": 2,

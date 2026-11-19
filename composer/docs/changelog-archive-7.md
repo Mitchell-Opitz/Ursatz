@@ -1,6 +1,10 @@
 # Changelog archive 7
 
-The Composer changelog entries of phases P53 and P52. Back to the [changelog](changelog.md).
+The Composer changelog entries of phases P55, P53 and P52. Back to the [changelog](changelog.md).
+
+## Unreleased (phase P55)
+
+The Composer deletes what no application reaches (R-548, B4). The Analyzer result loader (`plan_from_analyzer_result`, `analysis_load.h`), the harmony octave operator (`harmony_octave.h`) with the non-Given prolongation path (`harmony_prolong_register`) and the file layer (`plan_write_json_file`, `plan_read_json_file`, `plan_export_midi`, `plan_export_musicxml`, `motive_load_file`, `PLAN_ERR_IO`, `PLAN_EXPORT_ERR_IO`, `MOTIVE_ERR_IO`) are gone: the library reads and writes text, and the caller reads and writes the file. The check oracles (`harmony_check_lane`, `harmony_check_lane_without_cadence`, `harmony_hear_lane_cadences`, `harmony_shape_keeps`, `melody_check_lane`, `form_figure_check`) and the voice-leading hearing (`voice_hear`) moved to `tests/support`. The wrappers only tests called are deleted (`grow_build_plan`, `form_hear`, `form_hear_with_sections`, `composer_style_load`, `composer_style_measure`, `plan_regenerate`, `plan_regenerate_scope`, `piece_check_keys`, `return_hear`, `analyzer_check_piece`, `grow_fidelity_minimum`, `piece_material_bars`, `harmony_roman_parse_applied`, `variant_recognize`, `motive_connection`, `motive_connection_score`, `composer_status_name`, `hearing_analyzer_calls`, `motive_to_json`) with the functions nothing calls (`fill_relatives`, `form_check_name`, `motive_format_name`, `motive_analysis_print`, `composer_preferences_is_default`, `plan_walk`, `theme_shape_half_count`, `theme_shape_half_at`, `grow_slot_function`, `fill_suggestion_operator`, `motive_duration_name`). The 27 stray test outputs at the Composer root are removed. Composed output does not change; the API version stays 1.25.
 
 ## Unreleased (phase P53)
 

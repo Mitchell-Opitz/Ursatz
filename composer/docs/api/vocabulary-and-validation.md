@@ -4,7 +4,7 @@ Core versions, vocabulary and validation entries of the Composer API. Back to th
 
 ## `composer_api_versions(out)`
 
-`json`: `{"composer_version", "api_version", "ursatz_commit", "plan_format_version"}`, the versions the
+`json`: `{"composer_version", "api_version", "ursatz_commit", "composition_key", "plan_format_version"}` (the plan format is 6, `composition_key` the key of the code that composes, both API 3.1), the versions the
 Composer was built with (the Analyzer's, and its producer key, held in `ursatz_commit` until the next versions rename it, are the ones a plan or
 an analysis is stale against). Schema: `schema/api/versions.schema.json`.
 
