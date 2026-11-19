@@ -7,7 +7,7 @@
 
 #include <cJSON.h>
 
-#include "model/core/content_hash.h"
+#include <common/hash.h>
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/time/meter_map.h"
@@ -445,7 +445,7 @@ bool realization_digest(const Work *work, char out[17]) {
         free(text);
         return false;
     }
-    content_hash_hex16(content_hash_fnv1a64(CONTENT_HASH_FNV1A64_OFFSET, text, strlen(text)), out);
+    common_fnv1a64_hex(common_fnv1a64(text, strlen(text), COMMON_FNV1A64_OFFSET), out);
     free(text);
     return true;
 }

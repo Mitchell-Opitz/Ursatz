@@ -8,6 +8,10 @@ module ezxml     third_party/ezxml     prefix ezxml.h
 module civetweb  third_party/civetweb  prefix civetweb.h
 free cjson ezxml civetweb
 
+# The common part (R-638): the helpers every part shares, on libc and cJSON only.
+module common    common    prefix common/
+uses common cjson
+
 # Library kernel, layers L0 to L9 (library/docs/layers-and-dependency-rules.md).
 module identity        library/model/identity        prefix model/identity/
 module core            library/model/core            prefix model/core/
@@ -45,12 +49,12 @@ uses pitch           L0-L1
 uses events          L0-L2
 uses containers      L0-L2 events
 uses structure       L0-L2 events containers
-uses io              model realization ezxml
+uses io              model realization ezxml common
 uses theory-framework    model
-uses theory-style        model theory-tonality cjson
+uses theory-style        model theory-tonality cjson common
 uses theory-rules        model theory-framework
 uses theory-vocabulary   model
-uses theory-knowledge    model cjson
+uses theory-knowledge    model cjson common
 uses theory-tonality     model theory-framework theory-knowledge
 uses theory-harmony      model theory-framework theory-rules theory-tonality theory-vocabulary
 uses theory-voicing      model theory-framework theory-vocabulary
@@ -73,7 +77,7 @@ module analysis-galant       library/analysis/galant       prefix analysis/galan
 module analysis-similarity   library/analysis/similarity   prefix analysis/similarity/
 group analysis analysis-notes analysis-motive analysis-voices analysis-harmony analysis-form analysis-meter analysis-texture analysis-counterpoint analysis-galant analysis-similarity
 uses analysis-notes        model theory
-uses analysis-motive       model theory analysis-notes
+uses analysis-motive       model theory analysis-notes common
 uses analysis-voices       model analysis-notes analysis-meter
 uses analysis-harmony      model theory analysis-notes
 uses analysis-form         model theory analysis-notes analysis-motive
@@ -85,11 +89,11 @@ uses analysis-similarity   model analysis-notes
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
 module realization     library/realization        prefix realization/
 group realization realization
-uses realization model theory cjson
+uses realization model theory cjson common
 # The reading group (library/reading, P62, R-629): what one reader says about one realization, as claims over it.
 module reading         library/reading            prefix reading/
 group reading reading
-uses reading model theory realization plan analysis chain cjson
+uses reading model theory realization plan analysis chain cjson common
 # The plan group (library/plan, P60, R-605): the section description, shared by forms, plans and piece requests.
 module plan            library/plan               prefix plan/
 group plan plan
@@ -162,30 +166,30 @@ uses analyzer-result model theory analysis chain io realization reading analyzer
 uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
 uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
 # corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
-uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h
+uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h common
 uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
 uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
 # The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for ComposerJob, ComposerStatus and ComposerError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
 uses composer-util model theory realization plan reading analysis chain io cjson composer-api
-uses composer-structure model theory realization plan reading analysis chain io cjson composer-util
+uses composer-structure model theory realization plan reading analysis chain io cjson composer-util common
 uses composer-fill model theory realization plan reading analysis chain io cjson composer-api composer-structure composer-util
 uses composer-render model theory realization plan reading analysis chain io cjson composer-structure composer-util
-uses composer-style model theory realization plan reading analysis chain io cjson composer-fill composer-structure composer-util
+uses composer-style model theory realization plan reading analysis chain io cjson composer-fill composer-structure composer-util common
 uses composer-harmony model theory realization plan reading analysis chain io cjson composer-core
 uses composer-motive model theory realization plan reading analysis chain io cjson composer-harmony composer-core
 uses composer-melody model theory realization plan reading analysis chain io cjson composer-harmony composer-motive composer-core
 uses composer-texture model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core
 uses composer-counterpoint model theory realization plan reading analysis chain io cjson composer-harmony composer-texture composer-core
 uses composer-material model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core
-uses composer-grow model theory realization plan reading analysis chain io cjson composer-api composer-harmony composer-motive composer-melody composer-material composer-core
+uses composer-grow model theory realization plan reading analysis chain io cjson composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
 uses composer-check model theory realization plan reading analysis chain io cjson composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
 uses composer-piece model theory realization plan reading analysis chain io cjson composer-api composer-check composer-operators composer-grow composer-core
-uses composer-candidates model theory realization plan reading analysis chain io cjson composer-piece composer-core
+uses composer-candidates model theory realization plan reading analysis chain io cjson composer-piece composer-core common
 uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core
 uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson
-uses gui           analyzer-api composer-api cjson civetweb
+uses gui           analyzer-api composer-api cjson civetweb common
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
@@ -329,6 +333,8 @@ uses tests-export io tests-io core -- export tests round-trip through the import
 uses tests-io tests-export -- the note id test writes a score with the export helpers and reads it back
 uses tests-chain io tests-io tests-integration -- chain tests import the corpus
 
+module tests-common       common/tests
+like tests-common common
 module analyzer-tests     analyzer/tests            root analyzer/tests analyzer/tests/support analyzer/src analyzer/include
 module analyzer-consumer  analyzer/tests/consumer
 module composer-tests     composer/tests            root composer/tests composer/tests/support composer/src composer/src/include composer/include

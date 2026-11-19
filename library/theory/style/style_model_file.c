@@ -7,7 +7,7 @@
 
 #include <cJSON.h>
 
-#include "model/core/content_hash.h"
+#include <common/hash.h>
 #include "model/identity/entity_id.h"
 #include "theory/style/style_labels.h"
 #include "theory/style/style_model_build.h"
@@ -70,7 +70,7 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
         return STYLE_MODEL_FILE_ERR_IO;
     }
     cJSON *root = cJSON_Parse(text);
-    uint64_t hash = content_hash_fnv1a64(CONTENT_HASH_FNV1A64_OFFSET, text, strlen(text));
+    uint64_t hash = common_fnv1a64(text, strlen(text), COMMON_FNV1A64_OFFSET);
     free(text);
 
     StyleModelFileResult result = STYLE_MODEL_FILE_ERR_FORMAT;

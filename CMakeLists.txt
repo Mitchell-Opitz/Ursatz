@@ -21,6 +21,9 @@ include(cmake/UrsatzTest.cmake)
 
 # Dependencies first; each later part reuses the targets the earlier ones define.
 add_subdirectory(third_party)
+# common/ stages its headers with the library's ursatz_public_headers helper, so the helper is defined first.
+include(library/cmake/UrsatzPublicHeaders.cmake)
+add_subdirectory(common)
 add_subdirectory(library)
 add_subdirectory(analyzer)
 add_subdirectory(composer)

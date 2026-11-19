@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/core/content_hash.h"
+#include <common/hash.h>
 
 /* A growing array of one kind of claim. */
 typedef struct {
@@ -95,7 +95,7 @@ void reading_destroy(Reading *reading) {
 }
 
 static size_t id_hash(const char *id) {
-    return (size_t)content_hash_fnv1a64(CONTENT_HASH_FNV1A64_OFFSET, id, strlen(id));
+    return (size_t)common_fnv1a64(id, strlen(id), COMMON_FNV1A64_OFFSET);
 }
 
 /* Grows the set when it is half full. */

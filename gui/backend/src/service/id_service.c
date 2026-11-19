@@ -6,6 +6,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <common/hash.h>
+
 #ifdef _WIN32
 #include <process.h>
 #define URSATZ_GUI_GETPID() ((unsigned long)_getpid())
@@ -17,16 +19,16 @@
 #define ID_RANDOM_BYTES 8
 
 static uint64_t fnv1a_update(uint64_t hash, uint64_t value) {
+    unsigned char bytes[8];
     for (int i = 0; i < 8; i++) {
-        hash ^= (value >> (i * 8)) & 0xffu;
-        hash *= 1099511628211ULL;
+        bytes[i] = (unsigned char)((value >> (i * 8)) & 0xffu);
     }
-    return hash;
+    return common_fnv1a64(bytes, sizeof(bytes), hash);
 }
 
 static uint64_t fallback_random(void) {
     static unsigned long counter = 0;
-    uint64_t hash = 14695981039346656037ULL;
+    uint64_t hash = COMMON_FNV1A64_OFFSET;
     hash = fnv1a_update(hash, (uint64_t)time(NULL));
     hash = fnv1a_update(hash, (uint64_t)clock());
     hash = fnv1a_update(hash, (uint64_t)URSATZ_GUI_GETPID());

@@ -1,5 +1,5 @@
 #include <ursatz_composer/variations.h>
-#include <model/core/content_hash.h>
+#include <common/hash.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@
 static uint64_t hash_value(uint64_t hash, uint64_t value) {
     for (int i = 0; i < 8; i++) {
         unsigned char byte = (unsigned char)((value >> (8 * i)) & 0xFFu);
-        hash = content_hash_fnv1a64(hash, &byte, 1);
+        hash = common_fnv1a64(&byte, 1, hash);
     }
     return hash;
 }
@@ -79,13 +79,13 @@ static uint64_t hash_harmony(uint64_t hash, const Plan *plan) {
 
 static uint64_t signature_of(const Plan *plan, bool harmony_only) {
     if (plan && harmony_only) {
-        return hash_harmony(CONTENT_HASH_FNV1A64_OFFSET, plan);
+        return hash_harmony(COMMON_FNV1A64_OFFSET, plan);
     }
     RenderedPlan rendered;
     if (!plan || plan_render(plan, &rendered) != PLAN_RENDER_OK) {
         return 0;
     }
-    uint64_t hash = CONTENT_HASH_FNV1A64_OFFSET;
+    uint64_t hash = COMMON_FNV1A64_OFFSET;
     for (size_t i = 0; i < rendered.count; i++) {
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
         const Duration *duration = note_event_duration(rendered.events[i]);
