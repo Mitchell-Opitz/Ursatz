@@ -2,7 +2,7 @@
 
 #include "theme_service.h"
 #include "last_error.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -562,7 +562,7 @@ static UrsatzStatus run_theme(const UrsatzGuiComposeRun *run, cJSON **out_summar
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    UrsatzStatus status = composer_api_theme(ursatz_gui_composer_context(), text, run->job, &response);
+    UrsatzStatus status = composer_api_theme(workshop_composer_context(NULL), text, run->job, &response);
     free(text);
     UrsatzStatus result = URSATZ_OK;
     cJSON *document = NULL;

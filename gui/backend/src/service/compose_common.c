@@ -2,7 +2,7 @@
 
 #include "compose_common.h"
 #include "last_error.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -38,7 +38,7 @@ UrsatzStatus ursatz_gui_compose_write_plan(const cJSON *plan, const char *path, 
     cJSON_Delete(request);
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    UrsatzStatus status = text ? composer_api_export(ursatz_gui_composer_context(), text, NULL, &response) : URSATZ_ERR_ALLOC;
+    UrsatzStatus status = text ? composer_api_export(workshop_composer_context(NULL), text, NULL, &response) : URSATZ_ERR_ALLOC;
     free(text);
     UrsatzStatus result = URSATZ_OK;
     if (status != URSATZ_OK || !response.plan_json) {
@@ -82,7 +82,7 @@ UrsatzStatus ursatz_gui_compose_export(const cJSON *plan, double qpm, bool plain
         return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
     }
     memset(response, 0, sizeof(*response));
-    UrsatzStatus status = composer_api_export(ursatz_gui_composer_context(), printed, job, response);
+    UrsatzStatus status = composer_api_export(workshop_composer_context(NULL), printed, job, response);
     free(printed);
     if (status != URSATZ_OK) {
         UrsatzStatus result = ursatz_gui_compose_failure(status, response, error);

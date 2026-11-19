@@ -20,6 +20,7 @@
 #define MKDIR(path) mkdir(path, 0755)
 #endif
 
+#include "support/server_support.h"
 #include "gui_check.h"
 #include "server.h"
 #include "test_http.h"
@@ -91,7 +92,7 @@ int main(void) {
   make_piece("piece-2");
   make_piece("piece-3");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -246,8 +247,8 @@ int main(void) {
         "the deleted piece left the second collection");
 
   /* Collections survive a restart. */
-  ursatz_gui_server_stop(ctx);
-  ctx = ursatz_gui_server_start(PORT, ".");
+  test_gui_server_stop(ctx);
+  ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server restarts");
   if (!ctx) {
     return 1;
@@ -271,7 +272,7 @@ int main(void) {
   check(!has(response, "\"id\":\"test-corpus\""), "the deleted collection is not listed");
   check(test_file_exists("pieces/piece-3/meta.json"), "deleting a collection leaves its pieces");
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   check(true, "server stops cleanly");
 
   reset_directories();

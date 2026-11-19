@@ -1,17 +1,17 @@
-#include "knowledge_service.h"
+#include "knowledge.h"
 
 #include <stdio.h>
 
 static KnowledgeSnapshot *g_snapshot = NULL;
 static ComposerContext g_composer_context = {NULL};
 
-bool ursatz_gui_knowledge_init(void) {
+bool workshop_knowledge_init(void) {
   if (g_snapshot) {
     return true;
   }
   char message[256];
   if (knowledge_snapshot_build(NULL, 0, &g_snapshot, message, sizeof(message)) != KNOWLEDGE_OK) {
-    fprintf(stderr, "ursatz-gui-backend: cannot read the knowledge: %s\n", message);
+    fprintf(stderr, "ursatz-workshop: cannot read the knowledge: %s\n", message);
     g_snapshot = NULL;
     return false;
   }
@@ -19,16 +19,16 @@ bool ursatz_gui_knowledge_init(void) {
   return true;
 }
 
-void ursatz_gui_knowledge_shutdown(void) {
+void workshop_knowledge_shutdown(void) {
   g_composer_context.knowledge = NULL;
   knowledge_snapshot_destroy(g_snapshot);
   g_snapshot = NULL;
 }
 
-const KnowledgeSnapshot *ursatz_gui_knowledge(void) {
+const KnowledgeSnapshot *workshop_knowledge_snapshot(void) {
   return g_snapshot;
 }
 
-const ComposerContext *ursatz_gui_composer_context(void) {
+const ComposerContext *workshop_composer_context_global(void) {
   return &g_composer_context;
 }

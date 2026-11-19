@@ -173,10 +173,7 @@ static void *worker_main(void *arg) {
 
 static size_t worker_count(size_t workers) {
   if (workers == 0) {
-    const char *text = getenv("URSATZ_GUI_JOB_WORKERS");
-    char *end = NULL;
-    long value = text && text[0] ? strtol(text, &end, 10) : 0;
-    workers = (end && *end == '\0' && value >= 1 && value <= MAX_WORKERS) ? (size_t)value : DEFAULT_WORKERS;
+    workers = DEFAULT_WORKERS;
   }
   return workers > MAX_WORKERS ? MAX_WORKERS : workers;
 }

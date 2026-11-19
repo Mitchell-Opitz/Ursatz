@@ -1,5 +1,5 @@
 #include "motif_service.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 #include "last_error.h"
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ static bool motif_call(MotifEntry entry, const cJSON *request, UrsatzGuiComposer
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  UrsatzStatus status = entry(ursatz_gui_composer_context(), text, NULL, &response);
+  UrsatzStatus status = entry(workshop_composer_context(NULL), text, NULL, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -67,7 +67,7 @@ bool ursatz_gui_motif_motive_from_midi(const unsigned char *bytes, size_t size, 
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  UrsatzStatus status = composer_api_motive_from_midi(ursatz_gui_composer_context(), bytes, size, text, NULL, &response);
+  UrsatzStatus status = composer_api_motive_from_midi(workshop_composer_context(NULL), bytes, size, text, NULL, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -89,7 +89,7 @@ bool ursatz_gui_motif_validate(const char *kind, const cJSON *request, UrsatzGui
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  UrsatzStatus status = composer_api_validate(ursatz_gui_composer_context(), kind, text, &response);
+  UrsatzStatus status = composer_api_validate(workshop_composer_context(NULL), kind, text, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -308,7 +308,7 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  UrsatzStatus composer_status = composer_api_variants(ursatz_gui_composer_context(), text, job, &response);
+  UrsatzStatus composer_status = composer_api_variants(workshop_composer_context(NULL), text, job, &response);
   free(text);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(composer_status, &response, &reply);

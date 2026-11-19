@@ -4,7 +4,7 @@
 #include "piece_metadata.h"
 #include "piece_lock.h"
 #include "import_cache.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -259,7 +259,7 @@ static UrsatzStatus analyze_source_file(const char *dir_path, ImportedFormat for
     }
 
     AnalyzerOptions options = analyzer_options_default();
-    options.knowledge = ursatz_gui_knowledge();
+    options.knowledge = workshop_knowledge(NULL);
     AnalyzerResult *result = NULL;
     if (analyzer_analyze(&notes, &options, &result) != URSATZ_OK) {
         imported_score_destroy(&notes);

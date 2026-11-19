@@ -14,7 +14,7 @@
 
 #include <cJSON.h>
 
-#include "service/knowledge_service.h"
+#include "workshop_internal.h"
 #include "service/material_service.h"
 #include "service/motif_service.h"
 #include "service/piece_service.h"
@@ -221,7 +221,7 @@ static bool theme_reference(const cJSON *request, ComposerResponse *out) {
   char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
   cJSON_Delete(api);
   memset(out, 0, sizeof(*out));
-  UrsatzStatus status = text ? composer_api_theme(ursatz_gui_composer_context(), text, NULL, out) : URSATZ_ERR_ALLOC;
+  UrsatzStatus status = text ? composer_api_theme(workshop_composer_context(NULL), text, NULL, out) : URSATZ_ERR_ALLOC;
   free(text);
   return status == URSATZ_OK && out->midi && out->musicxml;
 }
@@ -308,7 +308,7 @@ static bool piece_reference(const cJSON *request, ComposerResponse *out) {
   char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
   cJSON_Delete(api);
   memset(out, 0, sizeof(*out));
-  UrsatzStatus status = text ? composer_api_piece(ursatz_gui_composer_context(), text, NULL, out) : URSATZ_ERR_ALLOC;
+  UrsatzStatus status = text ? composer_api_piece(workshop_composer_context(NULL), text, NULL, out) : URSATZ_ERR_ALLOC;
   free(text);
   return status == URSATZ_OK && out->midi && out->musicxml;
 }

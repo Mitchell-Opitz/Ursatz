@@ -12,7 +12,6 @@ add_library(ursatz_gui_core STATIC
   src/service/style_service.c
   src/service/composer_client.c
   src/service/job_queue.c
-  src/service/knowledge_service.c
   src/service/compose_jobs.c
   src/service/material_service.c
   src/service/motif_service.c
@@ -38,6 +37,7 @@ target_include_directories(ursatz_gui_core PUBLIC
 )
 
 target_link_libraries(ursatz_gui_core PUBLIC
+  ursatz_workshop
   ursatz_common
   ursatz_composer
   ursatz_analyzer

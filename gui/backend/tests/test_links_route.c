@@ -22,6 +22,7 @@
 
 #include <cJSON.h>
 
+#include "support/server_support.h"
 #include "gui_check.h"
 #include "server.h"
 #include "test_http.h"
@@ -101,7 +102,7 @@ int main(void) {
 #endif
   MKDIR("pieces");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -125,7 +126,7 @@ int main(void) {
   }
   check(uploaded, "the fixtures upload");
   if (!uploaded) {
-    ursatz_gui_server_stop(ctx);
+    test_gui_server_stop(ctx);
     return 1;
   }
 
@@ -317,7 +318,7 @@ int main(void) {
   for (int i = 0; i < 12; i++) {
     free(ids[i]);
   }
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
 #ifdef _WIN32
   system("rmdir /s /q pieces collections materials subjects links data 2> nul");
 #else

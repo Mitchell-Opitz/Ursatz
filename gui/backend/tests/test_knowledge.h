@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "service/knowledge_service.h"
+#include "workshop_internal.h"
 
 /*
  * The knowledge snapshot a test that calls the analysis services without starting the server needs (the server builds it itself):
@@ -14,14 +14,14 @@
 static inline const KnowledgeSnapshot *test_knowledge(void) {
     static bool registered = false;
     if (!registered) {
-        if (!ursatz_gui_knowledge_init()) {
+        if (!workshop_knowledge_init()) {
             fprintf(stderr, "test_knowledge: the knowledge snapshot cannot be built\n");
             abort();
         }
-        atexit(ursatz_gui_knowledge_shutdown);
+        atexit(workshop_knowledge_shutdown);
         registered = true;
     }
-    return ursatz_gui_knowledge();
+    return workshop_knowledge(NULL);
 }
 
 #endif

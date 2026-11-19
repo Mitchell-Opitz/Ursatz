@@ -3,6 +3,8 @@
 
 #include <ursatz_workshop/workshop_api.h>
 
+#include "knowledge.h"
+
 /*
  * What the coordinator shares with the workshop's own files. The GUI includes it until B11 gives it the query and command API.
  */
@@ -14,6 +16,13 @@ struct Workshop {
     int job_workers;
     int lock_descriptor; /* the data folder's lock, held until close */
 };
+
+/*
+ * The workshop's knowledge snapshot and the Composer's call context over it (knowledge.h). One workshop is open per process, so a
+ * service that has no Workshop in hand passes NULL for the one that is open.
+ */
+const KnowledgeSnapshot *workshop_knowledge(const Workshop *workshop);
+const ComposerContext *workshop_composer_context(const Workshop *workshop);
 
 /*
  * Locks the data folder (data_lock.c): flock(LOCK_EX | LOCK_NB) on "<data>/.ursatz.lock", which then holds this process's pid. A folder

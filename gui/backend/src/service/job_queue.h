@@ -46,7 +46,7 @@ typedef struct {
   char *result;
 } UrsatzGuiJobInfo;
 
-/* Starts the workers: workers is 1 to 8, 0 for the default (URSATZ_GUI_JOB_WORKERS when set, else 2). A running queue is
+/* Starts the workers: workers is 1 to 8 (the workshop's job_workers setting, URSATZ_JOB_WORKERS), 0 for the default of 2. A running queue is
  * left as it is. false when a thread could not be made. */
 bool ursatz_gui_jobs_start(size_t workers);
 

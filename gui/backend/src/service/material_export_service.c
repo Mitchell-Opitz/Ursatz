@@ -13,7 +13,7 @@
 #include <common/json.h>
 
 #include "composer_client.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 #include "material_service.h"
 #include "motif_service.h"
 
@@ -616,7 +616,7 @@ static UrsatzStatus write_text(Build *build, const char *kind, const char *id, c
       .fact_count = build->material_facts.count,
       .sections = sections,
       .section_count = build->draft_count,
-      .knowledge = ursatz_gui_knowledge(),
+      .knowledge = workshop_knowledge(NULL),
   };
   UrsatzError analyzer_error = {{0}};
   UrsatzStatus status = analyzer_text_export_material(&material, text, &analyzer_error);

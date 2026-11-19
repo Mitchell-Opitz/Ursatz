@@ -11,6 +11,7 @@
 
 #include <cJSON.h>
 
+#include "support/server_support.h"
 #include "server.h"
 #include "gui_check.h"
 #include "test_http.h"
@@ -19,7 +20,7 @@
 #define PORT "18768"
 
 int main(void) {
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -101,6 +102,6 @@ int main(void) {
   check(status == 404, "the plan route is gone");
   cJSON_Delete(json);
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return test_finish("composer_route");
 }

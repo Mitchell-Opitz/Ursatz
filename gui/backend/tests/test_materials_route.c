@@ -42,6 +42,7 @@ static bool ok_true(const cJSON *json) {
   return cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "ok"));
 }
 
+#include "support/server_support.h"
 #include "routes/materials.h"
 #include "service/material_service.h"
 #include "gui_check.h"
@@ -2420,7 +2421,7 @@ int main(void) {
 #endif
   MKDIR("pieces");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -2468,7 +2469,7 @@ int main(void) {
 #endif
   test_body_limit();
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
 
   return test_finish("materials_route");
 }

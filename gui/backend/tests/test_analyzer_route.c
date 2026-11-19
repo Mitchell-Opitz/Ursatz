@@ -27,6 +27,7 @@
 #include <cJSON.h>
 #include <ursatz_analyzer/analyzer_api.h>
 
+#include "support/server_support.h"
 #include "gui_check.h"
 #include "server.h"
 #include "service/import_cache.h"
@@ -885,7 +886,7 @@ int main(int argc, char **argv) {
   snprintf(score_path, sizeof(score_path), URSATZ_FIXTURES_DIR "/accuracy-corpus/%s/score.musicxml",
            folder);
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -905,7 +906,7 @@ int main(int argc, char **argv) {
       check_piece_export(smoke_id, "Bach 114");
     }
     free(smoke_id);
-    ursatz_gui_server_stop(ctx);
+    test_gui_server_stop(ctx);
     return test_finish("analyzer_route smoke");
   }
 
@@ -1174,6 +1175,6 @@ int main(int argc, char **argv) {
   free(score_id);
   free(bach_id);
   free(no_meter_id);
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return test_finish("analyzer_route");
 }

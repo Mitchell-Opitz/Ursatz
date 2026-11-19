@@ -62,6 +62,7 @@ UrsatzStatus workshop_status(Workshop *workshop, cJSON **out, UrsatzError *error
 /* The settings the workshop opened with. Valid until workshop_close. */
 const char *workshop_data_dir(const Workshop *workshop);
 int workshop_http_threads(const Workshop *workshop);
+int workshop_job_workers(const Workshop *workshop);
 int workshop_port(const Workshop *workshop);
 
 #endif

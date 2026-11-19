@@ -2,7 +2,7 @@
 
 #include "piece_service.h"
 #include "last_error.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -428,7 +428,7 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    UrsatzStatus status = composer_api_piece(ursatz_gui_composer_context(), text, job, &response);
+    UrsatzStatus status = composer_api_piece(workshop_composer_context(NULL), text, job, &response);
     free(text);
     cJSON *document = NULL;
     ComposerResponse extra;
@@ -1120,7 +1120,7 @@ static UrsatzStatus run_variations(const Source *source, const char *name, const
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    UrsatzStatus status = composer_api_piece_variations(ursatz_gui_composer_context(), text, job, &response);
+    UrsatzStatus status = composer_api_piece_variations(workshop_composer_context(NULL), text, job, &response);
     free(text);
     cJSON *document = NULL;
     if (status != URSATZ_OK) {

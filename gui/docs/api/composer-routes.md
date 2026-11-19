@@ -24,7 +24,7 @@ too small for entries such as the random motive. The job workers get the same 32
 
 ### Jobs
 
-`service/job_queue.c` keeps worker threads (`URSATZ_GUI_JOB_WORKERS`, 1 to 8, default 2) and a list of jobs in memory;
+`service/job_queue.c` keeps worker threads (`URSATZ_JOB_WORKERS`, 1 to 8, default 2) and a list of jobs in memory;
 it is started in `server.c` before the routes and stopped on shutdown (every job is cancelled, the workers are joined).
 A job has a kind, a state (`queued`, `running`, `done`, `failed`, `cancelled`), the `stage`, `done` and `total` the Composer's progress callback reports (the stages are in the Composer's [Jobs](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/api.md#jobs) and [Job rules](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/api.md#job-rules)) and, once it ends, the status and body its route used to send.
 Cancel is asked for the Composer's `cancelled` callback, so a running job stops at its next report and a queued job at
@@ -33,7 +33,7 @@ once. Finished jobs are kept 10 minutes or the newest 64 and are lost on restart
 A route that runs long work validates the request, queues the job and answers `202 {"ok": true, "job": {"id", "kind",
 "state"}}`. The kinds are `theme`, `piece`, `regenerate`, `variations`, `choose`, `variants`, `each-op` and `reroll`.
 
-- `URSATZ_GUI_JOB_WORKERS`: the number of workers (1 to 8, default 2).
+- `URSATZ_JOB_WORKERS`: the number of workers (1 to 8, default 2), read by the workshop settings.
 
 The routes check the shape of a request before it reaches the Composer: types, counts in range, form letters
 (`^[A-Z]'*$`), lanes, node ids and the length of text. The words of music (keys, meters, pickups, note lists, harmony)

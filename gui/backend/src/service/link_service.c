@@ -21,7 +21,7 @@
 #include "analysis_service.h"
 #include "collection_service.h"
 #include "id_service.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 #include "material_service.h"
 #include "piece_metadata.h"
 #include "subject_service.h"
@@ -500,7 +500,7 @@ static void job_fail(Job *job, const char *message) {
 /* The run itself, on the worker thread. */
 static void job_run(Job *job) {
     cJSON *skipped = cJSON_GetObjectItemCaseSensitive(job->run, "skipped");
-    MotiveLinkScope *scope = analyzer_links_scope_create(ursatz_gui_knowledge());
+    MotiveLinkScope *scope = analyzer_links_scope_create(workshop_knowledge(NULL));
     if (!scope) {
         job_fail(job, "out of memory");
         return;

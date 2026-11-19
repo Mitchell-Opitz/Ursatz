@@ -146,7 +146,7 @@ module composer-request composer/src/api composer/src/preferences composer/src/i
 group composer-core composer-util composer-structure composer-fill composer-render composer-style
 group composer-operators composer-harmony composer-motive composer-melody composer-texture composer-counterpoint composer-material
 module composer-cli  composer/cli
-module gui           gui/backend/src   root gui/backend/src
+module gui           gui/backend/src   root gui/backend/src workshop/src/coordinator
 # The workshop (R-641): the API header and the coordinator, the first of the workshop's folders (P63 B4).
 module workshop-api         workshop/include           prefix ursatz_workshop/workshop_api.h
 module workshop-coordinator workshop/src/coordinator   root workshop/src/coordinator workshop/include
@@ -198,7 +198,7 @@ uses composer-request model theory realization plan reading analysis chain io cj
 uses composer-cli  composer-api analyzer-api cjson common
 uses workshop-api common cjson
 uses workshop-coordinator workshop-api composer-api analyzer-api theory common cjson
-uses gui           analyzer-api composer-api cjson civetweb common theory-style -- B5 moves the style service into the workshop
+uses gui           analyzer-api composer-api cjson civetweb common theory-style workshop-api workshop-coordinator -- B5 moves the style service and B11 the coordinator calls into the workshop
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
@@ -348,7 +348,7 @@ module analyzer-tests     analyzer/tests            root analyzer/tests analyzer
 module analyzer-consumer  analyzer/tests/consumer
 module composer-tests     composer/tests            root composer/tests composer/tests/support composer/src composer/src/include composer/include
 module composer-consumer  composer/tests/consumer
-module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src
+module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src workshop/src/coordinator
 module workshop-tests     workshop/tests            root workshop/tests workshop/src/coordinator workshop/include
 uses analyzer-tests test-support
 like analyzer-tests analyzer

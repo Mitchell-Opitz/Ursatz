@@ -12,7 +12,7 @@
 #include <cJSON.h>
 
 #include "service/job_queue.h"
-#include "service/knowledge_service.h"
+#include "workshop_internal.h"
 #include "ursatz_composer/composer_api.h"
 #include "gui_check.h"
 #include "test_http.h"
@@ -111,7 +111,7 @@ static void theme_job(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out
   const char *request = input;
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  UrsatzStatus status = composer_api_theme(ursatz_gui_composer_context(), request, job, &response);
+  UrsatzStatus status = composer_api_theme(workshop_composer_context(NULL), request, job, &response);
   out->http_status = status == URSATZ_OK ? 200 : status == URSATZ_ERR_CANCELLED ? 499 : 500;
   out->json = strdup("{}");
   composer_response_destroy(&response);

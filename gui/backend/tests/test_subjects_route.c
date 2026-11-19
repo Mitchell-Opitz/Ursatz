@@ -38,6 +38,7 @@ static bool ok_true(const cJSON *json) {
 }
 
 
+#include "support/server_support.h"
 #include "gui_check.h"
 #include "server.h"
 #include "test_http.h"
@@ -278,7 +279,7 @@ int main(void) {
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid",
            URSATZ_FIXTURES_DIR "/framework-v1-corpus");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -296,7 +297,7 @@ int main(void) {
 
   free(anna);
   free(piece);
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
 
   return test_finish("subjects_route");
 }

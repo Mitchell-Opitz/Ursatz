@@ -21,6 +21,7 @@
 
 #include <cJSON.h>
 
+#include "support/server_support.h"
 #include "server.h"
 #include "gui_check.h"
 #include "test_http.h"
@@ -143,7 +144,7 @@ int main(void) {
     MKDIR(URSATZ_GUI_TEST_PIECE_FIXTURES);
   }
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -164,6 +165,6 @@ int main(void) {
   snapshot_piece("chords-backup", URSATZ_FIXTURES_DIR "/musicxml/chords_backup.musicxml",
                  "chords_backup.musicxml", NULL);
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return capture ? test_goldens_updated("piece_snapshot") : test_finish("piece_snapshot");
 }

@@ -11,6 +11,7 @@
 #include <ursatz_analyzer/analyzer_api.h>
 
 #include "route_util.h"
+#include "../server.h"
 #include "../service/composer_client.h"
 
 static const char *kComposerPrefix = "/api/composer";
@@ -24,37 +25,33 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
   return ursatz_gui_send_object(conn, status, object);
 }
 
-/* GET /api/composer/status: the versions the Composer was built with (composer_api_versions). "version" keeps the
- * text the command printed; api_version, analyzer_version (the Analyzer's, the GUI links both apps) and producer_key are additive. */
+/* GET /api/composer/status: the versions this build holds, from the workshop (workshop_status). "version" keeps the text the command
+ * printed; api_version, analyzer_version (the Analyzer's, the workshop holds both apps) and producer_key are additive. */
 static int handle_status(struct mg_connection *conn) {
-  ComposerResponse response;
-  memset(&response, 0, sizeof(response));
-  UrsatzStatus composer_status = composer_api_versions(&response);
-  UrsatzGuiComposerReply reply;
-  ursatz_gui_composer_reply_take(composer_status, &response, &reply);
-  cJSON *versions = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
-  if (!versions) {
+  cJSON *versions = NULL;
+  UrsatzError failure = {{0}};
+  Workshop *workshop = ursatz_gui_workshop();
+  if (!workshop || workshop_status(workshop, &versions, &failure) != URSATZ_OK) {
     cJSON *object = cJSON_CreateObject();
     if (object) {
       cJSON_AddStringToObject(object, "error", "composer failed");
-      cJSON_AddStringToObject(object, "stderr", reply.message);
+      cJSON_AddStringToObject(object, "stderr", failure.message);
     }
-    ursatz_gui_composer_reply_destroy(&reply);
     return ursatz_gui_send_object(conn, 500, object);
   }
-  ursatz_gui_composer_reply_destroy(&reply);
   const cJSON *composer_version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
   const cJSON *api_version = cJSON_GetObjectItemCaseSensitive(versions, "api_version");
   const cJSON *producer_key = cJSON_GetObjectItemCaseSensitive(versions, "producer_key");
+  const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(versions, "analyzer_version");
   char version[128];
   snprintf(version, sizeof(version), "ursatz-composer %s", cJSON_IsString(composer_version) ? composer_version->valuestring : "");
   cJSON *object = cJSON_CreateObject();
   bool built = object && cJSON_IsString(composer_version) && cJSON_IsString(api_version) &&
-               cJSON_IsString(producer_key) &&
+               cJSON_IsString(producer_key) && cJSON_IsString(analyzer) &&
                cJSON_AddTrueToObject(object, "ok") && cJSON_AddTrueToObject(object, "available") &&
                cJSON_AddStringToObject(object, "version", version) &&
                cJSON_AddStringToObject(object, "api_version", api_version->valuestring) &&
-               cJSON_AddStringToObject(object, "analyzer_version", analyzer_version()) &&
+               cJSON_AddStringToObject(object, "analyzer_version", analyzer->valuestring) &&
                cJSON_AddStringToObject(object, "producer_key", producer_key->valuestring);
   cJSON_Delete(versions);
   if (!built) {

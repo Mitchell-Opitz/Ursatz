@@ -1,6 +1,6 @@
 #include "composer_client.h"
 #include "../routes/route_util.h"
-#include "knowledge_service.h"
+#include "workshop_internal.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -50,7 +50,7 @@ static cJSON *g_vocabulary_tree = NULL;
 static void vocabulary_build(void) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  UrsatzStatus status = composer_api_vocabulary(ursatz_gui_composer_context(), &response);
+  UrsatzStatus status = composer_api_vocabulary(workshop_composer_context(NULL), &response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(status, &response, &reply);
   if (reply.status == URSATZ_OK && reply.json) {

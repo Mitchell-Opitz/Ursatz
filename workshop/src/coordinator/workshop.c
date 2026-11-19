@@ -11,6 +11,8 @@
 
 #include "workshop_internal.h"
 
+#include <limits.h>
+
 UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, UrsatzError *error) {
     *out = NULL;
     if (!resolved || !resolved->data_dir || resolved->data_dir[0] == '\0' || resolved->port <= 0 || resolved->http_threads <= 0 ||
@@ -29,13 +31,27 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     if (locked != URSATZ_OK) {
         return locked;
     }
+    if (!workshop_knowledge_init()) {
+        workshop_data_lock_release(lock);
+        return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the knowledge cannot be read");
+    }
     Workshop *workshop = calloc(1, sizeof(*workshop));
     if (!workshop) {
+        workshop_knowledge_shutdown();
         workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     workshop->lock_descriptor = lock;
-    snprintf(workshop->data_dir, sizeof(workshop->data_dir), "%s", resolved->data_dir);
+    /* The folder as an absolute path: a service that changes its working directory still finds it. */
+    char absolute[PATH_MAX];
+    const char *folder = realpath(resolved->data_dir, absolute) ? absolute : resolved->data_dir;
+    if (strlen(folder) >= sizeof(workshop->data_dir)) {
+        free(workshop);
+        workshop_knowledge_shutdown();
+        workshop_data_lock_release(lock);
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "the data folder path is too long");
+    }
+    memcpy(workshop->data_dir, folder, strlen(folder) + 1);
     workshop->port = resolved->port;
     workshop->http_threads = resolved->http_threads;
     workshop->job_workers = resolved->job_workers;
@@ -45,9 +61,20 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
 
 void workshop_close(Workshop *workshop) {
     if (workshop) {
+        workshop_knowledge_shutdown();
         workshop_data_lock_release(workshop->lock_descriptor);
     }
     free(workshop);
+}
+
+const KnowledgeSnapshot *workshop_knowledge(const Workshop *workshop) {
+    (void)workshop;
+    return workshop_knowledge_snapshot();
+}
+
+const ComposerContext *workshop_composer_context(const Workshop *workshop) {
+    (void)workshop;
+    return workshop_composer_context_global();
 }
 
 UrsatzStatus workshop_status(Workshop *workshop, cJSON **out, UrsatzError *error) {
@@ -85,6 +112,10 @@ const char *workshop_data_dir(const Workshop *workshop) {
 
 int workshop_http_threads(const Workshop *workshop) {
     return workshop->http_threads;
+}
+
+int workshop_job_workers(const Workshop *workshop) {
+    return workshop->job_workers;
 }
 
 int workshop_port(const Workshop *workshop) {

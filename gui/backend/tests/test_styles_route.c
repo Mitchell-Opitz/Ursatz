@@ -27,6 +27,7 @@
 #include <theory/style/style_model.h>
 #include <theory/style/style_model_file.h>
 
+#include "support/server_support.h"
 #include "gui_check.h"
 #include "server.h"
 #include "test_http.h"
@@ -97,7 +98,7 @@ static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
 
 /* The smoke run: Clementi 36 alone, a style built from its tag, listed and read back. */
 static int smoke_run(const char *clementi_path) {
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -167,7 +168,7 @@ int main(int argc, char **argv) {
     return smoke_run(clementi_path);
   }
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;

@@ -16,6 +16,7 @@
 
 #include <cJSON.h>
 
+#include "support/server_support.h"
 #include "gui_check.h"
 #include "server.h"
 #include "test_http.h"
@@ -1825,7 +1826,7 @@ int main(int argc, char **argv) {
   }
   system("rm -rf materials subjects pieces collections styles");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -1840,7 +1841,7 @@ int main(int argc, char **argv) {
   if (smoke) {
     /* The smoke run composes one piece with the real Composer and nothing else: it needs only the project. */
     test_real_composer();
-    ursatz_gui_server_stop(ctx);
+    test_gui_server_stop(ctx);
     return test_finish("piece_route smoke");
   }
 
@@ -1864,6 +1865,6 @@ int main(int argc, char **argv) {
     test_real_composer();
   }
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return test_finish("piece_route");
 }
