@@ -12,8 +12,8 @@ explicit, named Theory Framework.
   counterpoint, form, meter, and more), target `ursatz_theory`. See [theory/README.md](theory/README.md).
 - `analysis/`: the analyses and the frameworks' adapters, target `ursatz_analysis`. See
   [analysis/README.md](analysis/README.md).
-- `chain/`: the analysis chain, target `ursatz_chain`. See [chain/README.md](chain/README.md).
-- `io/`: MIDI and MusicXML import and export, target `ursatz_io`.
+- `chain/`: the analysis chain, target `ursatz_chain`: the run on an imported score, its collected result, the voice faults, the style distance of a heard piece and the library's producer key (P61; both apps hear through it). See [chain/README.md](chain/README.md).
+- `io/`: MIDI and MusicXML import and export, target `ursatz_io`: the imported score and its import (`imported_score.h`) and the score layout the MusicXML writer prints (`score_layout.h`), both P61 moves from the Analyzer and the writer. See [docs/modules/io.md](docs/modules/io.md).
 
 ## Build and test
 
