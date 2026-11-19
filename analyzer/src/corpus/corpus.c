@@ -17,9 +17,10 @@
 #include "export/analysis_document_internal.h"
 #include "corpus/corpus_internal.h"
 #include "result/run_file.h"
-#include "util/file_util.h"
-#include "util/misc_util.h"
+#include <common/files.h>
 #include <common/hash.h>
+#include <common/strings.h>
+#include "util/misc_util.h"
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define INDEX_NAME "corpus-index.json"
@@ -58,30 +59,7 @@ char *corpus_join(const char *dir, const char *name) {
 }
 
 bool corpus_make_dirs(const char *path) {
-    char *copy = strdup(path);
-    if (!copy) {
-        return false;
-    }
-    bool ok = true;
-    for (char *p = copy + 1; ok; p++) {
-        if (*p == '/' || *p == '\0') {
-            char saved = *p;
-            *p = '\0';
-            if (mkdir(copy, 0777) != 0 && errno != EEXIST) {
-                ok = false;
-            }
-            *p = saved;
-            if (saved == '\0') {
-                break;
-            }
-        }
-    }
-    if (ok) {
-        struct stat info;
-        ok = stat(path, &info) == 0 && S_ISDIR(info.st_mode);
-    }
-    free(copy);
-    return ok;
+    return common_dir_make(path, NULL) == URSATZ_OK;
 }
 
 bool corpus_make_parent_dirs(const char *file_path) {
@@ -206,7 +184,7 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
     if (!path) {
         return false;
     }
-    bool ok = corpus_make_parent_dirs(path) && file_write_atomic(path, text);
+    bool ok = corpus_make_parent_dirs(path) && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     if (!ok) {
         fprintf(stderr, "Error: cannot write '%s'\n", path);
     }
@@ -301,92 +279,54 @@ static CorpusRunResult analyze_piece(const char *output_dir, const char *relativ
 
 /* ---- Corpus index ---- */
 
-static bool append_text(char **buffer, size_t *length, size_t *capacity, const char *text) {
-    size_t add = strlen(text);
-    if (*length + add + 1 > *capacity) {
-        size_t grown = *capacity ? *capacity : 1024;
-        while (*length + add + 1 > grown) {
-            grown *= 2;
-        }
-        char *data = realloc(*buffer, grown);
-        if (!data) {
-            return false;
-        }
-        *buffer = data;
-        *capacity = grown;
+/* A JSON string literal for text, or the literal null for NULL; the escaping is cJSON's. */
+static void append_json_or_null(CommonText *out, const char *text) {
+    if (text) {
+        common_text_append_json_string(out, text);
+    } else {
+        common_text_append(out, "null");
     }
-    memcpy(*buffer + *length, text, add + 1);
-    *length += add;
-    return true;
-}
-
-/* A JSON string literal for text (or the literal null for NULL), escaped by cJSON. */
-static bool append_json_string(char **buffer, size_t *length, size_t *capacity, const char *text) {
-    if (!text) {
-        return append_text(buffer, length, capacity, "null");
-    }
-    cJSON *item = cJSON_CreateString(text);
-    char *printed = item ? cJSON_PrintUnformatted(item) : NULL;
-    cJSON_Delete(item);
-    if (!printed) {
-        return false;
-    }
-    bool ok = append_text(buffer, length, capacity, printed);
-    cJSON_free(printed);
-    return ok;
 }
 
 /* The index for the first count pieces: 2-space indent, fixed key order, one piece member per line. */
 static char *render_index(const char *input_dir, const char *const *paths, const PieceRecord *records, size_t count) {
-    char *out = NULL;
-    size_t length = 0;
-    size_t capacity = 0;
-    char number[64];
-    bool ok = append_text(&out, &length, &capacity,
-                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 2,\n"
-                          "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
-                          "  \"producer_key\": \"") &&
-              append_text(&out, &length, &capacity, ursatz_analyzer_producer_key()) &&
-              append_text(&out, &length, &capacity, "\",\n") &&
-              (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
-                        URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION),
-               append_text(&out, &length, &capacity, number)) &&
-              append_text(&out, &length, &capacity, "  \"input_dir\": ") &&
-              append_json_string(&out, &length, &capacity, input_dir) &&
-              append_text(&out, &length, &capacity, count ? ",\n  \"pieces\": [\n" : ",\n  \"pieces\": []\n");
-    for (size_t i = 0; ok && i < count; i++) {
+    CommonText out;
+    common_text_init(&out);
+    common_text_append(&out,
+                       "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 2,\n"
+                       "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
+                       "  \"producer_key\": \"");
+    common_text_append(&out, ursatz_analyzer_producer_key());
+    common_text_append(&out, "\",\n");
+    common_text_appendf(&out, "  \"document_schema_version\": %d,\n", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    common_text_append(&out, "  \"input_dir\": ");
+    append_json_or_null(&out, input_dir);
+    common_text_append(&out, count ? ",\n  \"pieces\": [\n" : ",\n  \"pieces\": []\n");
+    for (size_t i = 0; i < count; i++) {
         const PieceRecord *record = &records[i];
-        ok = append_text(&out, &length, &capacity, "    {\n      \"path\": ") &&
-             append_json_string(&out, &length, &capacity, paths[i]) &&
-             append_text(&out, &length, &capacity, ",\n      \"document\": ") &&
-             append_json_string(&out, &length, &capacity, record->document) &&
-             append_text(&out, &length, &capacity, ",\n      \"status\": ") &&
-             append_text(&out, &length, &capacity,
-                         record->status == CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"") &&
-             append_text(&out, &length, &capacity, ",\n      \"error\": ") &&
-             append_json_string(&out, &length, &capacity, record->error) &&
-             (snprintf(number, sizeof(number), ",\n      \"content_hash\": \"%016llx\",\n      \"measures\": ",
-                       record->content_hash),
-              append_text(&out, &length, &capacity, number));
-        if (ok && record->measures >= 0) {
-            snprintf(number, sizeof(number), "%ld", record->measures);
-            ok = append_text(&out, &length, &capacity, number);
-        } else if (ok) {
-            ok = append_text(&out, &length, &capacity, "null");
+        common_text_append(&out, "    {\n      \"path\": ");
+        append_json_or_null(&out, paths[i]);
+        common_text_append(&out, ",\n      \"document\": ");
+        append_json_or_null(&out, record->document);
+        common_text_append(&out, ",\n      \"status\": ");
+        common_text_append(&out, record->status == CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"");
+        common_text_append(&out, ",\n      \"error\": ");
+        append_json_or_null(&out, record->error);
+        common_text_appendf(&out, ",\n      \"content_hash\": \"%016llx\",\n      \"measures\": ", record->content_hash);
+        if (record->measures >= 0) {
+            common_text_appendf(&out, "%ld", record->measures);
+        } else {
+            common_text_append(&out, "null");
         }
-        ok = ok && append_text(&out, &length, &capacity, ",\n      \"home_key\": ") &&
-             append_json_string(&out, &length, &capacity, record->home_key[0] ? record->home_key : NULL) &&
-             append_text(&out, &length, &capacity, i + 1 < count ? "\n    },\n" : "\n    }\n");
+        common_text_append(&out, ",\n      \"home_key\": ");
+        append_json_or_null(&out, record->home_key[0] ? record->home_key : NULL);
+        common_text_append(&out, i + 1 < count ? "\n    },\n" : "\n    }\n");
     }
-    if (ok && count) {
-        ok = append_text(&out, &length, &capacity, "  ]\n");
+    if (count) {
+        common_text_append(&out, "  ]\n");
     }
-    ok = ok && append_text(&out, &length, &capacity, "}\n");
-    if (!ok) {
-        free(out);
-        return NULL;
-    }
-    return out;
+    common_text_append(&out, "}\n");
+    return common_text_take(&out);
 }
 
 /* ---- Resume ---- */
@@ -403,7 +343,7 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
         return CORPUS_RUN_ERR_INDEX;
     }
     char *text = NULL;
-    if (!file_read_all(path, &text, NULL)) {
+    if (common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
         free(path);
         return CORPUS_RUN_OK;
     }
@@ -494,7 +434,7 @@ static bool write_index(const char *output_dir, const char *input_dir, const cha
                         const PieceRecord *records, size_t count) {
     char *text = render_index(input_dir, paths, records, count);
     char *final_path = corpus_join(output_dir, INDEX_NAME);
-    bool ok = text && final_path && file_write_atomic(final_path, text);
+    bool ok = text && final_path && (common_file_write_atomic(final_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     free(final_path);
     return ok;

@@ -12,7 +12,7 @@
 #include "analysis/motive/motive_link.h"
 #include "links_internal.h"
 #include "chain/chain_motive_sketch.h"
-#include "util/json_util.h"
+#include <common/json.h>
 #include "store/corpus_walk.h"
 #include "util/misc_util.h"
 
@@ -29,7 +29,7 @@ static bool number_value(const cJSON *item, double *out) {
 
 static bool int_member(const cJSON *object, const char *name, int *out) {
     double value;
-    if (!number_value(json_member(object, name), &value) || value < -2147483647.0 || value > 2147483647.0 ||
+    if (!number_value(common_json_member(object, name), &value) || value < -2147483647.0 || value > 2147483647.0 ||
         value != (double)(int)value) {
         return false;
     }
@@ -39,30 +39,25 @@ static bool int_member(const cJSON *object, const char *name, int *out) {
 
 /* "n/d" with d above zero. */
 static bool fraction_value(const cJSON *item, unsigned long long *numerator, unsigned long long *denominator) {
-    if (!cJSON_IsString(item)) {
+    long long n, d;
+    if (!common_json_rational_read(item, COMMON_RATIONAL_TEXT, &n, &d) || n < 0) {
         return false;
     }
-    unsigned long long n;
-    unsigned long long d;
-    char tail;
-    if (sscanf(item->valuestring, "%llu/%llu%c", &n, &d, &tail) != 2 || d == 0) {
-        return false;
-    }
-    *numerator = n;
-    *denominator = d;
+    *numerator = (unsigned long long)n;
+    *denominator = (unsigned long long)d;
     return true;
 }
 
 static bool fraction_member(const cJSON *object, const char *name, Rational *out) {
     unsigned long long numerator;
     unsigned long long denominator;
-    return fraction_value(json_member(object, name), &numerator, &denominator) && numerator <= LLONG_MAX &&
+    return fraction_value(common_json_member(object, name), &numerator, &denominator) && numerator <= LLONG_MAX &&
            denominator <= LLONG_MAX && rational_make((long long)numerator, (long long)denominator, out) == RATIONAL_OK;
 }
 
 /* The prototype's sketch from a family's "features": the document side of motive_features_to_sketch. */
 static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, const cJSON *features, MotiveSketch *sketch) {
-    const cJSON *notes = json_member(features, "notes");
+    const cJSON *notes = common_json_member(features, "notes");
     int count = cJSON_IsArray(notes) ? cJSON_GetArraySize(notes) : 0;
     if (count <= 0 || count > MOTIVE_SKETCH_MAX_NOTES) {
         return MOTIVE_LINKS_ERR_FORMAT;
@@ -83,12 +78,12 @@ static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, con
     }
     int tonic;
     ok = ok && int_member(features, "tonic_pc", &tonic) && tonic >= 0 && tonic < 12 &&
-         cJSON_IsString(json_member(features, "material")) &&
+         cJSON_IsString(common_json_member(features, "material")) &&
          fraction_member(features, "bar", &read.bar) && fraction_member(features, "beat", &read.beat) &&
          fraction_member(features, "pickup", &read.pickup);
     if (ok) {
         read.tonic_pc = tonic;
-        read.material = knowledge_snapshot_material(knowledge, json_member(features, "material")->valuestring);
+        read.material = knowledge_snapshot_material(knowledge, common_json_member(features, "material")->valuestring);
         ok = read.material != NULL;
     }
     ok = ok && motive_features_to_sketch(&read, sketch);
@@ -150,18 +145,18 @@ static void family_clear(Family *family) {
 /* The family of one motive claim: where its prototype sits and its sketch. */
 static MotiveLinksResult read_family(const KnowledgeSnapshot *knowledge, const cJSON *motive, size_t piece, Family *family) {
     memset(family, 0, sizeof *family);
-    const cJSON *features = json_member(motive, "features");
+    const cJSON *features = common_json_member(motive, "features");
     if (!cJSON_IsObject(features)) {
         return MOTIVE_LINKS_ERR_NO_FEATURES;
     }
     family->piece = piece;
-    const cJSON *index = json_member(motive, "index");
-    const cJSON *occurrences = json_member(motive, "occurrences");
+    const cJSON *index = common_json_member(motive, "index");
+    const cJSON *occurrences = common_json_member(motive, "occurrences");
     const cJSON *prototype = cJSON_IsArray(occurrences) ? cJSON_GetArrayItem(occurrences, 0) : NULL;
-    const cJSON *measures = json_member(prototype, "measures");
+    const cJSON *measures = common_json_member(prototype, "measures");
     double beat;
     if (!cJSON_IsNumber(index) || index->valuedouble < 0 || !int_member(measures, "first", &family->first_measure) ||
-        !int_member(measures, "last", &family->last_measure) || !number_value(json_member(prototype, "beat"), &beat)) {
+        !int_member(measures, "last", &family->last_measure) || !number_value(common_json_member(prototype, "beat"), &beat)) {
         return MOTIVE_LINKS_ERR_FORMAT;
     }
     family->family = (size_t)index->valuedouble;
@@ -173,7 +168,7 @@ static MotiveLinksResult read_family(const KnowledgeSnapshot *knowledge, const c
     if (!normalize_key(&family->sketch)) {
         return MOTIVE_LINKS_ERR_FORMAT;
     }
-    family->degrees = join_degrees(json_member(features, "degrees"));
+    family->degrees = join_degrees(common_json_member(features, "degrees"));
     if (!family->degrees) {
         return MOTIVE_LINKS_ERR_FORMAT;
     }
@@ -245,8 +240,8 @@ static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_
         }
     }
     cJSON *document = cJSON_Parse(json);
-    const cJSON *version = json_member(document, "schema_version");
-    const cJSON *motives = json_member(document, "motives");
+    const cJSON *version = common_json_member(document, "schema_version");
+    const cJSON *motives = common_json_member(document, "motives");
     if (!cJSON_IsNumber(version) || version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
         cJSON_Delete(document);
         return MOTIVE_LINKS_ERR_FORMAT;

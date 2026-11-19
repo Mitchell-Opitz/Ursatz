@@ -48,8 +48,7 @@ Private helper modules, each the one home of what several files used to copy:
 
 | Module | Holds |
 | --- | --- |
-| `src/util/json_util.h` | `json_member`, `json_string_member`, `json_number_member`, `json_add`, `json_append`. |
-| `src/util/file_util.h` | `file_read_all`, `file_write_atomic` (temporary name, then rename). |
+| `common/` (`<common/json.h>`, `files.h`, `strings.h`) | The JSON member readers, `common_json_add` and `_append`, the rational reader, whole-file read and atomic write, folder creation and the `CommonText` builder; the Analyzer keeps no copy. |
 | `src/util/misc_util.h` | `text_copy`, `size_compare`, `fraction_compare`, `entity_id_copy`, `notes_last_end`, `fnv1a_bytes`. |
 | `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece with its `AnalyzerDocumentStatus`; `corpus_walk_stale_count`. |
 | `src/pipeline/run_file.h` | `analyzer_run_file` (import, optional reading, `analyzer_analyze`) and `analyzer_run_file_document`. |

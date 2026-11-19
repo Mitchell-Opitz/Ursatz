@@ -20,14 +20,13 @@
 #include "analysis/similarity/similarity_model.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
-#include "util/json_util.h"
+#include <common/json.h>
 
 /* ---- reading the document ---- */
 
 static bool fraction_member(const cJSON *object, const char *name, unsigned long *numerator, unsigned long *denominator) {
-    const cJSON *fraction = json_member(object, name);
-    long n, d;
-    if (!json_number_member(fraction, "num", &n) || !json_number_member(fraction, "den", &d) || d <= 0 || n < 0) {
+    long long n, d;
+    if (!common_json_rational_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d) || n < 0) {
         return false;
     }
     *numerator = (unsigned long)n;
@@ -37,11 +36,10 @@ static bool fraction_member(const cJSON *object, const char *name, unsigned long
 
 /* A position as a measure and a beat (the beat plus the fraction of it). */
 static bool location_member(const cJSON *entry, const char *edge, int *measure, double *beat) {
-    const cJSON *position = json_member(json_member(entry, "location"), edge);
-    long m, b, n, d;
-    if (!json_number_member(position, "measure", &m) || !json_number_member(position, "beat", &b) ||
-        !json_number_member(json_member(position, "subdivision"), "num", &n) ||
-        !json_number_member(json_member(position, "subdivision"), "den", &d) || d <= 0) {
+    const cJSON *position = common_json_member(common_json_member(entry, "location"), edge);
+    long long m, b, n, d;
+    if (!common_json_long(position, "measure", &m) || !common_json_long(position, "beat", &b) ||
+        !common_json_rational_read(common_json_member(position, "subdivision"), COMMON_RATIONAL_OBJECT, &n, &d)) {
         return false;
     }
     *measure = (int)m;
@@ -79,7 +77,7 @@ typedef struct {
  * *out is NULL when *count is 0. false on allocation failure or an entry that cannot be read.
  */
 static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
-    const cJSON *soprano = json_member(json_member(document, "outer_voices"), "soprano");
+    const cJSON *soprano = common_json_member(common_json_member(document, "outer_voices"), "soprano");
     size_t capacity = cJSON_IsArray(soprano) ? (size_t)cJSON_GetArraySize(soprano) : 0;
     *out = NULL;
     *count = 0;
@@ -95,10 +93,10 @@ static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
     long previous_id = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, soprano) {
-        const cJSON *status = json_member(entry, "status");
-        long id, pitch;
-        if (!cJSON_IsString(status) || strcmp(status->valuestring, "present") != 0 || !json_number_member(entry, "note_id", &id) ||
-            !json_number_member(json_member(entry, "pitch"), "midi", &pitch)) {
+        const cJSON *status = common_json_member(entry, "status");
+        long long id, pitch;
+        if (!cJSON_IsString(status) || strcmp(status->valuestring, "present") != 0 || !common_json_long(entry, "note_id", &id) ||
+            !common_json_long(common_json_member(entry, "pitch"), "midi", &pitch)) {
             continue;
         }
         if (have_previous && id == previous_id) {
@@ -109,9 +107,9 @@ static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
             continue;
         }
         DocNote *note = &notes[n];
-        const cJSON *onset = json_member(entry, "onset");
+        const cJSON *onset = common_json_member(entry, "onset");
         if (!fraction_member(onset, "time", &note->onset_n, &note->onset_d) ||
-            !fraction_member(json_member(entry, "duration"), "whole_notes", &note->duration_n, &note->duration_d) ||
+            !fraction_member(common_json_member(entry, "duration"), "whole_notes", &note->duration_n, &note->duration_d) ||
             note->duration_n == 0 || !location_member(entry, "start", &note->start_measure, &note->start_beat) ||
             !location_member(entry, "end", &note->end_measure, &note->end_beat)) {
             free(notes);
@@ -189,8 +187,8 @@ SimilarResult similar_query_from_file(const char *path, const KnowledgeSnapshot 
     }
     cJSON *document = cJSON_Parse(json);
     free(json);
-    long version;
-    if (!document || !json_number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+    long long version;
+    if (!document || !common_json_long(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return SIMILAR_ERR_FORMAT;
     }
@@ -310,7 +308,7 @@ static bool read_chords(const KnowledgeSnapshot *knowledge, const cJSON *documen
         analyzer_chord_sequence_free(sequence, sequence_count);
         return false;
     }
-    const cJSON *entries = json_member(document, "chords");
+    const cJSON *entries = common_json_member(document, "chords");
     const cJSON *first_cursor = NULL, *last_cursor = NULL;
     size_t first_index = 0, last_index = 0;
     long run = 0;
@@ -323,7 +321,7 @@ static bool read_chords(const KnowledgeSnapshot *knowledge, const cJSON *documen
         }
         const cJSON *first = entry_at(entries, &first_cursor, &first_index, chord->first_entry);
         const cJSON *last = entry_at(entries, &last_cursor, &last_index, chord->last_entry);
-        const cJSON *key = json_member(first, "key_label");
+        const cJSON *key = common_json_member(first, "key_label");
         int start_measure, end_measure;
         double start_beat, end_beat;
         if (!location_member(first, "start", &start_measure, &start_beat) ||
@@ -742,8 +740,8 @@ static bool search_walk_document(const char *piece_path, const char *document, c
     (void)status;
     SearchWalk *walk = context;
     cJSON *parsed = cJSON_Parse(json);
-    long version;
-    if (!parsed || !json_number_member(parsed, "schema_version", &version) ||
+    long long version;
+    if (!parsed || !common_json_long(parsed, "schema_version", &version) ||
         version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(parsed);
         walk->result = SIMILAR_ERR_FORMAT;

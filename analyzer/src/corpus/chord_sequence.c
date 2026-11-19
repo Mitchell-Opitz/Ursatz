@@ -11,7 +11,7 @@
 
 #include "corpus/chord_sequence_internal.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "util/json_util.h"
+#include <common/json.h>
 
 /* ---- the join rule ---- */
 
@@ -104,9 +104,8 @@ static void joiner_finish(Joiner *joiner, AnalyzerChord **out, size_t *count) {
 /* ---- from a document ---- */
 
 static bool fraction_member(const cJSON *object, const char *name, Rational *out) {
-    const cJSON *fraction = json_member(object, name);
-    long n, d;
-    return json_number_member(fraction, "num", &n) && json_number_member(fraction, "den", &d) && d > 0 && n >= 0 &&
+    long long n, d;
+    return common_json_rational_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d) && n >= 0 &&
            rational_make(n, d, out) == RATIONAL_OK;
 }
 
@@ -120,8 +119,8 @@ AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, 
         return ANALYZER_ERR_ARGUMENT;
     }
     cJSON *document = cJSON_Parse(document_json);
-    long version;
-    if (!document || !json_number_member(document, "schema_version", &version) ||
+    long long version;
+    if (!document || !common_json_long(document, "schema_version", &version) ||
         version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return ANALYZER_ERR_ARGUMENT;
@@ -134,7 +133,7 @@ AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, 
 AnalyzerStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **out, size_t *count) {
     *out = NULL;
     *count = 0;
-    const cJSON *entries = json_member(document, "chords");
+    const cJSON *entries = common_json_member(document, "chords");
     Joiner joiner;
     joiner_init(&joiner, cJSON_IsArray(entries) ? (size_t)cJSON_GetArraySize(entries) : 0);
     if (joiner.capacity > 0) {
@@ -146,18 +145,18 @@ AnalyzerStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **o
     size_t index = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, entries) {
-        const cJSON *roman = json_member(entry, "roman_numeral");
-        const cJSON *base = json_member(roman, "base_numeral");
-        const cJSON *root_name = json_member(entry, "root");
-        long region;
-        if (!cJSON_IsString(base) || !cJSON_IsString(root_name) || !json_number_member(roman, "key_region", &region)) {
+        const cJSON *roman = common_json_member(entry, "roman_numeral");
+        const cJSON *base = common_json_member(roman, "base_numeral");
+        const cJSON *root_name = common_json_member(entry, "root");
+        long long region;
+        if (!cJSON_IsString(base) || !cJSON_IsString(root_name) || !common_json_long(roman, "key_region", &region)) {
             joiner_skip(&joiner);
             index++;
             continue;
         }
         Rational start, end;
-        if (!fraction_member(json_member(entry, "span"), "start", &start) ||
-            !fraction_member(json_member(entry, "span"), "end", &end)) {
+        if (!fraction_member(common_json_member(entry, "span"), "start", &start) ||
+            !fraction_member(common_json_member(entry, "span"), "end", &end)) {
             joiner_fail(&joiner);
             return ANALYZER_ERR_ARGUMENT;
         }

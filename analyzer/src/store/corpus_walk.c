@@ -6,8 +6,8 @@
 
 #include <cJSON.h>
 
-#include "util/file_util.h"
-#include "util/json_util.h"
+#include <common/files.h>
+#include <common/json.h>
 #include "util/misc_util.h"
 
 CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVisitor visit, void *context,
@@ -16,15 +16,15 @@ CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVis
         *input_dir = NULL;
     }
     char *index_text = NULL;
-    file_read_all(index_path, &index_text, NULL);
+    common_file_read(index_path, &index_text, NULL, NULL);
     if (!index_text) {
         return CORPUS_WALK_ERR_IO;
     }
     cJSON *index = cJSON_Parse(index_text);
     free(index_text);
-    const char *schema = json_string_member(index, "schema");
-    const char *input = json_string_member(index, "input_dir");
-    const cJSON *pieces = json_member(index, "pieces");
+    const char *schema = common_json_string_or_null(index, "schema");
+    const char *input = common_json_string_or_null(index, "input_dir");
+    const cJSON *pieces = common_json_member(index, "pieces");
     if (!schema || strcmp(schema, "ursatz-corpus-index") != 0 || (input_dir && !input) || !cJSON_IsArray(pieces)) {
         cJSON_Delete(index);
         return CORPUS_WALK_ERR_FORMAT;
@@ -35,9 +35,9 @@ CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVis
     CorpusWalkResult result = CORPUS_WALK_OK;
     const cJSON *piece;
     cJSON_ArrayForEach(piece, pieces) {
-        const char *status = json_string_member(piece, "status");
-        const char *document = json_string_member(piece, "document");
-        const char *path = json_string_member(piece, "path");
+        const char *status = common_json_string_or_null(piece, "status");
+        const char *document = common_json_string_or_null(piece, "document");
+        const char *path = common_json_string_or_null(piece, "path");
         if (!status || strcmp(status, "analyzed") != 0 || !document || !path) {
             continue;
         }
@@ -52,7 +52,7 @@ CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVis
             strcpy(file, document);
         }
         char *json = NULL;
-        file_read_all(file, &json, NULL);
+        common_file_read(file, &json, NULL, NULL);
         free(file);
         if (!json) {
             result = CORPUS_WALK_ERR_IO;

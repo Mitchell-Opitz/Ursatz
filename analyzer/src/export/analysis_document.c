@@ -6,28 +6,28 @@
 static cJSON *document_json(DocBuild *build, const char *input_path, const ImportedScore *notes, const ChainResult *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
-        !(json_add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
-          json_add(document, "metadata", doc_metadata_json(build, input_path, notes, report)) &&
-          json_add(document, "meter", doc_meter_json(build, notes)) && json_add(document, "keys", doc_keys_json(build, notes, report)) &&
-          json_add(document, "tonicizations", doc_tonicizations_json(build, notes, report)) &&
-          json_add(document, "modulations", doc_modulations_json(build, notes, report)) &&
-          json_add(document, "pivot_chords", doc_pivot_chords_json(build, notes, report)) &&
-          json_add(document, "chords", doc_chords_json(build, notes, report)) &&
-          json_add(document, "chord_vocabulary",
+        !(common_json_add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
+          common_json_add(document, "metadata", doc_metadata_json(build, input_path, notes, report)) &&
+          common_json_add(document, "meter", doc_meter_json(build, notes)) && common_json_add(document, "keys", doc_keys_json(build, notes, report)) &&
+          common_json_add(document, "tonicizations", doc_tonicizations_json(build, notes, report)) &&
+          common_json_add(document, "modulations", doc_modulations_json(build, notes, report)) &&
+          common_json_add(document, "pivot_chords", doc_pivot_chords_json(build, notes, report)) &&
+          common_json_add(document, "chords", doc_chords_json(build, notes, report)) &&
+          common_json_add(document, "chord_vocabulary",
               doc_chord_vocabulary_json(build, report, cJSON_GetObjectItemCaseSensitive(document, "chords"))) &&
-          json_add(document, "prolongations", doc_prolongations_json(build, notes, report)) &&
-          json_add(document, "non_chord_tones", doc_non_chord_tones_json(build, notes, report)) &&
-          json_add(document, "outer_voices", doc_outer_voices_json(build, notes, report)) &&
-          json_add(document, "cadences", doc_cadences_json(build, notes, report)) &&
-          json_add(document, "phrases", doc_phrases_json(build, notes, report)) &&
-          json_add(document, "themes", doc_themes_json(build, notes, report)) && json_add(document, "form", doc_form_json(build, notes, report)) &&
-          json_add(document, "repeats", doc_repeats_json(build, notes, report)) &&
-          json_add(document, "motives", doc_motives_json(build, notes, report)) && json_add(document, "melody", doc_melody_json(build, notes, report)) &&
-          json_add(document, "rhythm", doc_rhythm_json(build, notes, report)) && json_add(document, "texture", doc_texture_json(build, notes, report)) &&
-          json_add(document, "voice_leading", doc_voice_leading_json(build, notes, report)) && json_add(document, "schemas", doc_schemas_json(build, notes, report)) &&
-          json_add(document, "progressions", doc_progressions_json(build, notes, report)) && json_add(document, "harmonic_rhythm", doc_harmonic_rhythm_json(build, report)) &&
-          json_add(document, "markings", doc_markings_json(build, notes, report))  &&
-          json_add(document, "notes", doc_notes_json(build, notes, report)))) {
+          common_json_add(document, "prolongations", doc_prolongations_json(build, notes, report)) &&
+          common_json_add(document, "non_chord_tones", doc_non_chord_tones_json(build, notes, report)) &&
+          common_json_add(document, "outer_voices", doc_outer_voices_json(build, notes, report)) &&
+          common_json_add(document, "cadences", doc_cadences_json(build, notes, report)) &&
+          common_json_add(document, "phrases", doc_phrases_json(build, notes, report)) &&
+          common_json_add(document, "themes", doc_themes_json(build, notes, report)) && common_json_add(document, "form", doc_form_json(build, notes, report)) &&
+          common_json_add(document, "repeats", doc_repeats_json(build, notes, report)) &&
+          common_json_add(document, "motives", doc_motives_json(build, notes, report)) && common_json_add(document, "melody", doc_melody_json(build, notes, report)) &&
+          common_json_add(document, "rhythm", doc_rhythm_json(build, notes, report)) && common_json_add(document, "texture", doc_texture_json(build, notes, report)) &&
+          common_json_add(document, "voice_leading", doc_voice_leading_json(build, notes, report)) && common_json_add(document, "schemas", doc_schemas_json(build, notes, report)) &&
+          common_json_add(document, "progressions", doc_progressions_json(build, notes, report)) && common_json_add(document, "harmonic_rhythm", doc_harmonic_rhythm_json(build, report)) &&
+          common_json_add(document, "markings", doc_markings_json(build, notes, report))  &&
+          common_json_add(document, "notes", doc_notes_json(build, notes, report)))) {
         cJSON_Delete(document);
         return NULL;
     }
@@ -88,12 +88,13 @@ char *analysis_document_render_result(const char *input_path, const AnalyzerResu
 }
 
 char *analysis_document_to_json(const AnalysisDocument *document) {
-    Buffer buffer = {NULL, 0, 0};
-    if (!doc_print_value(&buffer, document->root, 0) || !doc_buffer_append(&buffer, "\n")) {
-        free(buffer.data);
+    CommonText buffer;
+    common_text_init(&buffer);
+    if (!doc_print_value(&buffer, document->root, 0) || !common_text_append(&buffer, "\n")) {
+        common_text_free(&buffer);
         return NULL;
     }
-    return buffer.data;
+    return common_text_take(&buffer);
 }
 
 void analysis_document_destroy(AnalysisDocument *document) {

@@ -11,8 +11,8 @@
 #include <ursatz_analyzer/staleness.h>
 
 #include "corpus/chord_sequence_internal.h"
-#include "util/file_util.h"
-#include "util/json_util.h"
+#include <common/files.h>
+#include <common/json.h>
 
 /* The passage's minimum similarity, the same as the Composer's seeding has always asked for. */
 #define MINIMUM_NUMERATOR 1UL
@@ -42,17 +42,16 @@ void analyzer_corpus_passages_destroy(AnalyzerCorpusPassages *passages) {
 
 /* A location edge of a chord entry as a measure and a beat plus the fraction of it. */
 static bool location_of(const cJSON *entry, const char *edge, int *measure, double *beat) {
-    const cJSON *position = json_member(json_member(entry, "location"), edge);
-    const cJSON *m = json_member(position, "measure");
-    const cJSON *b = json_member(position, "beat");
-    const cJSON *subdivision = json_member(position, "subdivision");
-    const cJSON *n = json_member(subdivision, "num");
-    const cJSON *d = json_member(subdivision, "den");
-    if (!cJSON_IsNumber(m) || !cJSON_IsNumber(b) || !cJSON_IsNumber(n) || !cJSON_IsNumber(d) || d->valuedouble <= 0) {
+    const cJSON *position = common_json_member(common_json_member(entry, "location"), edge);
+    const cJSON *m = common_json_member(position, "measure");
+    const cJSON *b = common_json_member(position, "beat");
+    long long n, d;
+    if (!cJSON_IsNumber(m) || !cJSON_IsNumber(b) ||
+        !common_json_rational_read(common_json_member(position, "subdivision"), COMMON_RATIONAL_OBJECT, &n, &d)) {
         return false;
     }
     *measure = (int)m->valuedouble;
-    *beat = b->valuedouble + n->valuedouble / d->valuedouble;
+    *beat = b->valuedouble + (double)n / (double)d;
     return true;
 }
 
@@ -73,13 +72,13 @@ static bool read_chords(const cJSON *document, AnalyzerPassageChord **out, size_
     if (sequence_count == 0) {
         return true;
     }
-    const cJSON *entries = json_member(document, "chords");
+    const cJSON *entries = common_json_member(document, "chords");
     AnalyzerPassageChord *chords = calloc(sequence_count, sizeof(*chords));
     bool ok = chords != NULL;
     size_t n = 0;
     for (size_t i = 0; ok && i < sequence_count; i++) {
         const cJSON *entry = cJSON_GetArrayItem(entries, (int)sequence[i].first_entry);
-        const char *key = json_string_member(entry, "key_label");
+        const char *key = common_json_string_or_null(entry, "key_label");
         AnalyzerPassageChord *chord = &chords[n];
         if (!location_of(entry, "start", &chord->measure, &chord->beat)) {
             continue;
@@ -147,7 +146,7 @@ static bool passage_from_match(const char *corpus_dir, const SimilarMatch *match
     }
     char path[2048];
     char *text = NULL;
-    if (snprintf(path, sizeof path, "%s/%s", corpus_dir, match->document) >= (int)sizeof path || !file_read_all(path, &text, NULL)) {
+    if (snprintf(path, sizeof path, "%s/%s", corpus_dir, match->document) >= (int)sizeof path || common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
         return true;
     }
     cJSON *document = cJSON_Parse(text);
@@ -267,19 +266,19 @@ static cJSON *passage_json(const AnalyzerCorpusPassage *passage) {
     cJSON *notes = cJSON_CreateArray();
     cJSON *chords = cJSON_CreateArray();
     bool ok = object && notes && chords && cJSON_AddStringToObject(object, "piece", passage->piece) &&
-              json_add(object, "start", place_json(passage->start_measure, passage->start_beat)) &&
-              json_add(object, "end", place_json(passage->end_measure, passage->end_beat)) &&
-              json_add(object, "similarity", fraction_json(passage->similarity)) &&
+              common_json_add(object, "start", place_json(passage->start_measure, passage->start_beat)) &&
+              common_json_add(object, "end", place_json(passage->end_measure, passage->end_beat)) &&
+              common_json_add(object, "similarity", fraction_json(passage->similarity)) &&
               cJSON_AddBoolToObject(object, "stale", passage->stale);
     for (size_t i = 0; ok && i < passage->note_count; i++) {
         cJSON *note = cJSON_CreateObject();
         if (!(note && cJSON_AddNumberToObject(note, "midi", passage->notes[i].pitch) &&
-              json_add(note, "onset", fraction_json(passage->notes[i].onset)) &&
-              json_add(note, "duration", fraction_json(passage->notes[i].duration)))) {
+              common_json_add(note, "onset", fraction_json(passage->notes[i].onset)) &&
+              common_json_add(note, "duration", fraction_json(passage->notes[i].duration)))) {
             cJSON_Delete(note);
             ok = false;
         } else {
-            ok = json_append(notes, note);
+            ok = common_json_append(notes, note);
         }
     }
     for (size_t i = 0; ok && i < passage->chord_count; i++) {
@@ -291,10 +290,10 @@ static cJSON *passage_json(const AnalyzerCorpusPassage *passage) {
             cJSON_Delete(chord);
             ok = false;
         } else {
-            ok = json_append(chords, chord);
+            ok = common_json_append(chords, chord);
         }
     }
-    ok = ok && json_add(object, "notes", notes) && json_add(object, "chords", chords);
+    ok = ok && common_json_add(object, "notes", notes) && common_json_add(object, "chords", chords);
     if (!ok) {
         if (object && !cJSON_GetObjectItemCaseSensitive(object, "notes")) {
             cJSON_Delete(notes);
@@ -314,7 +313,7 @@ char *analyzer_corpus_passages_to_json(const AnalyzerCorpusPassages *passages) {
     }
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < passages->count; i++) {
-        if (!json_append(array, passage_json(&passages->passages[i]))) {
+        if (!common_json_append(array, passage_json(&passages->passages[i]))) {
             cJSON_Delete(array);
             return NULL;
         }

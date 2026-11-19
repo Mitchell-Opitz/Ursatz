@@ -23,7 +23,7 @@
 #include "corpus/corpus_internal.h"
 #include "store/corpus_walk.h"
 #include "result/run_file.h"
-#include "util/file_util.h"
+#include <common/files.h>
 
 typedef char *(*RenderOutput)(const AnalysisDocument *document);
 typedef char *(*DeriveOutputPath)(const char *input_path);
@@ -44,7 +44,7 @@ static bool write_output(const char *path, const char *what, const char *written
         return false;
     }
 
-    bool wrote = file_write_atomic(output_path, text);
+    bool wrote = (common_file_write_atomic(output_path, text, strlen(text), NULL) == URSATZ_OK);
     if (wrote) {
         printf("%s written to %s\n", written, output_path);
     } else {
@@ -74,7 +74,7 @@ static void print_usage(const char *program) {
 /* Writes <dir>/<relative> (making the folders), false with a message on stderr when it cannot. */
 static bool write_layer_file(const char *dir, const char *relative, const char *text) {
     char *path = corpus_join(dir, relative);
-    bool ok = path && corpus_make_parent_dirs(path) && file_write_atomic(path, text);
+    bool ok = path && corpus_make_parent_dirs(path) && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     if (!ok) {
         fprintf(stderr, "Error: cannot write '%s'\n", path ? path : relative);
     }
@@ -115,7 +115,7 @@ static bool write_model_plan(const char *path, const AnalyzerResult *result, con
     PlanJsonError json_error;
     char *text = plan_to_json(plan, &producer, &json_error);
     plan_destroy(plan);
-    bool ok = text && file_write_atomic(path, text);
+    bool ok = text && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     if (!ok) {
         fprintf(stderr, "Error: cannot write the plan of the analysis to '%s'\n", path);
     }

@@ -6,6 +6,8 @@
 
 #include "cJSON.h"
 
+#include <common/strings.h>
+
 #include <ursatz_analyzer/text_export.h>
 
 #include "io/score_layout.h"
@@ -78,18 +80,8 @@ void score_text_destroy(ScoreTextScore *score);
 
 /*
  * Private. The pieces of the text export that the piece export (text_export.c) and the material export
- * (material_export.c) share: a growing string, the measure formatter and the header lines.
+ * (material_export.c) share: the measure formatter and the header lines.
  */
-
-typedef struct {
-    char *data;
-    size_t length;
-    size_t capacity;
-    bool failed; /* an allocation failed; the data is not to be used */
-} Text;
-
-void export_text_add(Text *text, const char *piece);
-void export_text_addf(Text *text, const char *format, ...);
 
 /* A segment mark printed after an event: "[label]" where the segment starts, "[/label]" where it ends. */
 typedef struct {
@@ -109,15 +101,15 @@ bool text_export_find_range(const ScoreTextScore *score, int first_measure, int 
                             size_t *last);
 
 /* "key: .. | meter: .. | tempo: .. | measures: a-b" line, from the analysis document and the score. */
-void text_export_write_summary(Text *text, const cJSON *document, const ScoreTextScore *score, size_t first,
+void text_export_write_summary(CommonText *text, const cJSON *document, const ScoreTextScore *score, size_t first,
                                size_t last, bool whole);
 
 /* The "analyzer:" and "notes:" legend lines. */
-void text_export_write_legend(Text *text);
+void text_export_write_legend(CommonText *text);
 
 /* Measures first to last: measure line, notes (with the marks), then the claims that start in the measure. marks may
    be NULL. false on allocation failure. */
-bool text_export_write_measures(Text *out, const cJSON *document, const ScoreTextScore *score, size_t first,
+bool text_export_write_measures(CommonText *out, const cJSON *document, const ScoreTextScore *score, size_t first,
                                 size_t last, const TextExportMarks *marks);
 
 /* The text export of a piece from its analysis document tree (analyzer_text_export_piece parses the text and calls it; the material

@@ -14,23 +14,23 @@
 #include "export/text_export_internal.h"
 
 /* A fact on one line: line breaks in the name or value become spaces. */
-static void add_fact(Text *out, const AnalyzerTextExportFact *fact) {
-    export_text_add(out, fact->name ? fact->name : "");
-    export_text_add(out, ": ");
+static void add_fact(CommonText *out, const AnalyzerTextExportFact *fact) {
+    common_text_append(out, fact->name ? fact->name : "");
+    common_text_append(out, ": ");
     for (const char *c = fact->value ? fact->value : ""; *c; c++) {
         char one[2] = {(*c == '\n' || *c == '\r') ? ' ' : *c, '\0'};
-        export_text_add(out, one);
+        common_text_append(out, one);
     }
-    export_text_add(out, "\n");
+    common_text_append(out, "\n");
 }
 
-static void add_facts(Text *out, const AnalyzerTextExportFact *facts, size_t count) {
+static void add_facts(CommonText *out, const AnalyzerTextExportFact *facts, size_t count) {
     for (size_t i = 0; i < count; i++) {
         add_fact(out, &facts[i]);
     }
 }
 
-static void add_line(Text *out, const char *name, const char *value) {
+static void add_line(CommonText *out, const char *name, const char *value) {
     AnalyzerTextExportFact fact = {name, value};
     add_fact(out, &fact);
 }
@@ -119,11 +119,11 @@ static AnalyzerStatus build_marks(const ScoreTextScore *score, const AnalyzerTex
 
 /* ---- one section ---- */
 
-static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *section, const KnowledgeSnapshot *knowledge) {
-    export_text_addf(out, "\n## %s\n", section->label);
+static AnalyzerStatus write_section(CommonText *out, const AnalyzerTextExportSection *section, const KnowledgeSnapshot *knowledge) {
+    common_text_appendf(out, "\n## %s\n", section->label);
     add_facts(out, section->facts, section->fact_count);
     if (!section->musicxml) {
-        export_text_add(out, "not composed\n");
+        common_text_append(out, "not composed\n");
         return ANALYZER_OK;
     }
 
@@ -190,15 +190,15 @@ AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *m
         }
     }
 
-    Text out = {NULL, 0, 0, false};
-    export_text_addf(&out, "# Ursatz export v%d: %s\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION, material->kind);
+    CommonText out = {NULL, 0, 0, false};
+    common_text_appendf(&out, "# Ursatz export v%d: %s\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION, material->kind);
     if (material->name) {
         add_line(&out, "name", material->name);
     }
     if (material->id) {
         add_line(&out, "id", material->id);
     }
-    export_text_addf(&out, "version: %d\n", material->version);
+    common_text_appendf(&out, "version: %d\n", material->version);
     add_facts(&out, material->facts, material->fact_count);
     text_export_write_legend(&out);
 

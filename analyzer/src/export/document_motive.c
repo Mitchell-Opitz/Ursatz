@@ -3,7 +3,7 @@
 #include "export/analysis_document_internal.h"
 
 static bool add_owned(cJSON *object, const char *key, cJSON **item) {
-    bool ok = json_add(object, key, *item);
+    bool ok = common_json_add(object, key, *item);
     *item = NULL;
     return ok;
 }
@@ -18,7 +18,7 @@ static cJSON *fraction_string_json(unsigned long long numerator, unsigned long l
 static cJSON *strings_json(const char *const *labels, size_t count) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < count; i++) {
-        if (!json_append(list, labels[i] ? cJSON_CreateString(labels[i]) : cJSON_CreateNull())) {
+        if (!common_json_append(list, labels[i] ? cJSON_CreateString(labels[i]) : cJSON_CreateNull())) {
             return NULL;
         }
     }
@@ -28,7 +28,7 @@ static cJSON *strings_json(const char *const *labels, size_t count) {
 static cJSON *numbers_json(const long *values, size_t count) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < count; i++) {
-        if (!json_append(list, cJSON_CreateNumber((double)values[i]))) {
+        if (!common_json_append(list, cJSON_CreateNumber((double)values[i]))) {
             return NULL;
         }
     }
@@ -51,19 +51,19 @@ static cJSON *motive_occurrence_json(DocBuild *build, const ImportedScore *notes
     Rational end = doc_rational(build, occurrence->end.num, occurrence->end.den);
     cJSON *claim = doc_claim_json_with(build, framework, notes, occurrence->note_ids, occurrence->note_id_count, start, end,
                                    occurrence->kind, cJSON_CreateNumber(occurrence->uncertainty));
-    if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)occurrence->index)) &&
-          json_add(claim, "measures", doc_measures_json(occurrence->first_measure, occurrence->last_measure)) &&
-          json_add(claim, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
-          json_add(claim, "score", cJSON_CreateNumber(occurrence->score)) &&
-          json_add(claim, "mismatches", cJSON_CreateNumber(occurrence->mismatches)) &&
-          json_add(claim, "intervals", cJSON_CreateNumber(occurrence->intervals)) &&
-          json_add(claim, "fragment", doc_string_or_null_json(occurrence->fragment)) &&
-          json_add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)) &&
-          json_add(claim, "phrase", occurrence->has_phrase ? cJSON_CreateNumber((double)occurrence->phrase) : cJSON_CreateNull()) &&
-          json_add(claim, "idea",
+    if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber((double)occurrence->index)) &&
+          common_json_add(claim, "measures", doc_measures_json(occurrence->first_measure, occurrence->last_measure)) &&
+          common_json_add(claim, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
+          common_json_add(claim, "score", cJSON_CreateNumber(occurrence->score)) &&
+          common_json_add(claim, "mismatches", cJSON_CreateNumber(occurrence->mismatches)) &&
+          common_json_add(claim, "intervals", cJSON_CreateNumber(occurrence->intervals)) &&
+          common_json_add(claim, "fragment", doc_string_or_null_json(occurrence->fragment)) &&
+          common_json_add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)) &&
+          common_json_add(claim, "phrase", occurrence->has_phrase ? cJSON_CreateNumber((double)occurrence->phrase) : cJSON_CreateNull()) &&
+          common_json_add(claim, "idea",
               occurrence->has_idea ? cJSON_CreateNumber(report->ideas[occurrence->idea].index) : cJSON_CreateNull()) &&
           (!occurrence->degrees ||
-           json_add(claim, "degrees", strings_json(occurrence->degrees, occurrence->note_id_count))))) {
+           common_json_add(claim, "degrees", strings_json(occurrence->degrees, occurrence->note_id_count))))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -85,29 +85,29 @@ static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     for (size_t k = 0; ok && k < features->note_count; k++) {
         const AnalysisMotiveNote *note = &features->notes[k];
         cJSON *entry = cJSON_CreateObject();
-        ok = entry && json_add(entry, "note_id", cJSON_CreateNumber((double)note->note_id)) &&
-             json_add(entry, "pitch", cJSON_CreateNumber(note->pitch)) &&
-             json_add(entry, "onset", fraction_string_json(note->onset.num, note->onset.den)) &&
-             json_add(entry, "duration", fraction_string_json(note->duration.num, note->duration.den));
-        ok = ok ? json_append(notes, entry) : (cJSON_Delete(entry), false);
-        ok = ok && json_append(rhythm, fraction_string_json(note->duration.num, note->duration.den));
+        ok = entry && common_json_add(entry, "note_id", cJSON_CreateNumber((double)note->note_id)) &&
+             common_json_add(entry, "pitch", cJSON_CreateNumber(note->pitch)) &&
+             common_json_add(entry, "onset", fraction_string_json(note->onset.num, note->onset.den)) &&
+             common_json_add(entry, "duration", fraction_string_json(note->duration.num, note->duration.den));
+        ok = ok ? common_json_append(notes, entry) : (cJSON_Delete(entry), false);
+        ok = ok && common_json_append(rhythm, fraction_string_json(note->duration.num, note->duration.den));
         if (ok && k > 0) {
-            ok = json_append(intervals, cJSON_CreateNumber(features->intervals[k - 1]));
+            ok = common_json_append(intervals, cJSON_CreateNumber(features->intervals[k - 1]));
         }
     }
     size_t gaps = features->note_count > 0 ? features->note_count - 1 : 0;
-    /* json_add() takes an item over, and frees it itself when it fails, so each is cleared once handed over */
+    /* common_json_add() takes an item over, and frees it itself when it fails, so each is cleared once handed over */
     ok = ok && add_owned(object, "notes", &notes) &&
-         json_add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
-         json_add(object, "material", cJSON_CreateString(features->material->id)) &&
-         json_add(object, "bar", fraction_string_json(features->bar.num, features->bar.den)) &&
-         json_add(object, "beat", fraction_string_json(features->beat.num, features->beat.den)) &&
-         json_add(object, "pickup", fraction_string_json(features->pickup.num, features->pickup.den)) &&
-         json_add(object, "degrees", strings_json(features->degrees, features->note_count)) &&
-         add_owned(object, "intervals", &intervals) && json_add(object, "steps", numbers_json(features->steps, gaps)) &&
+         common_json_add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
+         common_json_add(object, "material", cJSON_CreateString(features->material->id)) &&
+         common_json_add(object, "bar", fraction_string_json(features->bar.num, features->bar.den)) &&
+         common_json_add(object, "beat", fraction_string_json(features->beat.num, features->beat.den)) &&
+         common_json_add(object, "pickup", fraction_string_json(features->pickup.num, features->pickup.den)) &&
+         common_json_add(object, "degrees", strings_json(features->degrees, features->note_count)) &&
+         add_owned(object, "intervals", &intervals) && common_json_add(object, "steps", numbers_json(features->steps, gaps)) &&
          add_owned(object, "rhythm", &rhythm) &&
-         json_add(object, "ncts", strings_json((const char *const *)features->ncts, features->note_count)) &&
-         json_add(object, "fingerprint", cJSON_CreateString(features->fingerprint));
+         common_json_add(object, "ncts", strings_json((const char *const *)features->ncts, features->note_count)) &&
+         common_json_add(object, "fingerprint", cJSON_CreateString(features->fingerprint));
     cJSON_Delete(notes);
     cJSON_Delete(rhythm);
     cJSON_Delete(intervals);
@@ -131,16 +131,16 @@ static cJSON *motive_development_json(const AnalysisMotive *motive) {
         size_t index = motive->development[k];
         const AnalysisMotiveOccurrence *occurrence = &motive->occurrences[index];
         cJSON *step = cJSON_CreateObject();
-        if (!(step && json_add(step, "occurrence", cJSON_CreateNumber((double)index)) &&
-              json_add(step, "measure", cJSON_CreateNumber(occurrence->first_measure)) &&
-              json_add(step, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
-              json_add(step, "transformation", index == 0 ? cJSON_CreateNull() : cJSON_CreateString(occurrence->kind)) &&
-              json_add(step, "from", k == 0 ? cJSON_CreateNull() : cJSON_CreateNumber((double)motive->development[k - 1])))) {
+        if (!(step && common_json_add(step, "occurrence", cJSON_CreateNumber((double)index)) &&
+              common_json_add(step, "measure", cJSON_CreateNumber(occurrence->first_measure)) &&
+              common_json_add(step, "beat", cJSON_CreateNumber(occurrence->first_beat)) &&
+              common_json_add(step, "transformation", index == 0 ? cJSON_CreateNull() : cJSON_CreateString(occurrence->kind)) &&
+              common_json_add(step, "from", k == 0 ? cJSON_CreateNull() : cJSON_CreateNumber((double)motive->development[k - 1])))) {
             cJSON_Delete(step);
             cJSON_Delete(steps);
             return NULL;
         }
-        if (!json_append(steps, step)) {
+        if (!common_json_append(steps, step)) {
             cJSON_Delete(steps);
             return NULL;
         }
@@ -179,15 +179,15 @@ cJSON *doc_motives_json(DocBuild *build, const ImportedScore *notes, const Chain
         cJSON *occurrences = cJSON_CreateArray();
         bool ok = claim && occurrences;
         for (size_t o = 0; ok && o < motive->occurrence_count; o++) {
-            ok = json_append(occurrences, motive_occurrence_json(build, notes, report, framework, &motive->occurrences[o]));
+            ok = common_json_append(occurrences, motive_occurrence_json(build, notes, report, framework, &motive->occurrences[o]));
         }
-        bool taken = false; /* json_add() takes the occurrences over, and frees them itself when it fails */
-        if (!(ok && json_add(claim, "index", cJSON_CreateNumber((double)motive->index)) &&
-              json_add(claim, "note_count", cJSON_CreateNumber(motive->note_count)) &&
-              json_add(claim, "generic", cJSON_CreateBool(motive->generic)) &&
-              (taken = true, json_add(claim, "occurrences", occurrences)) &&
-              json_add(claim, "development", motive_development_json(motive)) &&
-              (!motive->has_features || json_add(claim, "features", motive_features_json(&motive->features))))) {
+        bool taken = false; /* common_json_add() takes the occurrences over, and frees them itself when it fails */
+        if (!(ok && common_json_add(claim, "index", cJSON_CreateNumber((double)motive->index)) &&
+              common_json_add(claim, "note_count", cJSON_CreateNumber(motive->note_count)) &&
+              common_json_add(claim, "generic", cJSON_CreateBool(motive->generic)) &&
+              (taken = true, common_json_add(claim, "occurrences", occurrences)) &&
+              common_json_add(claim, "development", motive_development_json(motive)) &&
+              (!motive->has_features || common_json_add(claim, "features", motive_features_json(&motive->features))))) {
             if (!taken) {
                 cJSON_Delete(occurrences);
             }
@@ -195,7 +195,7 @@ cJSON *doc_motives_json(DocBuild *build, const ImportedScore *notes, const Chain
             cJSON_Delete(list);
             return NULL;
         }
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }
@@ -207,9 +207,9 @@ cJSON *doc_motives_json(DocBuild *build, const ImportedScore *notes, const Chain
    index }. */
 static cJSON *melody_pitch_json(long pitch, const char *name, size_t note) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "pitch", cJSON_CreateNumber((double)pitch)) &&
-                    json_add(object, "name", cJSON_CreateString(name)) &&
-                    json_add(object, "note_id", cJSON_CreateNumber((double)note)))) {
+    if (object && !(common_json_add(object, "pitch", cJSON_CreateNumber((double)pitch)) &&
+                    common_json_add(object, "name", cJSON_CreateString(name)) &&
+                    common_json_add(object, "note_id", cJSON_CreateNumber((double)note)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -218,9 +218,9 @@ static cJSON *melody_pitch_json(long pitch, const char *name, size_t note) {
 
 static cJSON *melody_range_json(const AnalysisMelody *melody) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "lowest", melody_pitch_json(melody->lowest_pitch, melody->lowest_name, melody->lowest_note)) &&
-                    json_add(object, "highest", melody_pitch_json(melody->highest_pitch, melody->highest_name, melody->highest_note)) &&
-                    json_add(object, "semitones", cJSON_CreateNumber((double)melody->range_semitones)))) {
+    if (object && !(common_json_add(object, "lowest", melody_pitch_json(melody->lowest_pitch, melody->lowest_name, melody->lowest_note)) &&
+                    common_json_add(object, "highest", melody_pitch_json(melody->highest_pitch, melody->highest_name, melody->highest_note)) &&
+                    common_json_add(object, "semitones", cJSON_CreateNumber((double)melody->range_semitones)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -235,14 +235,14 @@ static cJSON *melody_climax_json(DocBuild *build, const ImportedScore *notes, co
     doc_notes_span(build, notes, &melody->climax_note, 1, &start, &end);
     cJSON *claim = doc_claim_json_with(build, melody->framework, notes, &melody->climax_note, 1, start, end, "climax",
                                    cJSON_CreateNumber(melody->uncertainty));
-    if (!(claim && json_add(claim, "pitch", cJSON_CreateNumber((double)melody->highest_pitch)) &&
-          json_add(claim, "occurrences", cJSON_CreateNumber(melody->climax_occurrences)) &&
-          json_add(claim, "unique", cJSON_CreateBool(melody->climax_unique)) &&
-          json_add(claim, "relative_position", cJSON_CreateNumber(melody->climax_relative_position)) &&
-          json_add(claim, "strength",
+    if (!(claim && common_json_add(claim, "pitch", cJSON_CreateNumber((double)melody->highest_pitch)) &&
+          common_json_add(claim, "occurrences", cJSON_CreateNumber(melody->climax_occurrences)) &&
+          common_json_add(claim, "unique", cJSON_CreateBool(melody->climax_unique)) &&
+          common_json_add(claim, "relative_position", cJSON_CreateNumber(melody->climax_relative_position)) &&
+          common_json_add(claim, "strength",
               melody->climax_has_strength ? cJSON_CreateString(melody->climax_strength) : cJSON_CreateNull()) &&
-          json_add(claim, "by_leap", cJSON_CreateBool(melody->climax_by_leap)) &&
-          json_add(claim, "final_note", cJSON_CreateBool(melody->climax_final)))) {
+          common_json_add(claim, "by_leap", cJSON_CreateBool(melody->climax_by_leap)) &&
+          common_json_add(claim, "final_note", cJSON_CreateBool(melody->climax_final)))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -256,17 +256,17 @@ static cJSON *melody_contour_json(const AnalysisMelody *melody) {
     cJSON *directions = cJSON_CreateArray();
     bool ok = object && directions;
     for (size_t k = 0; ok && k < melody->direction_count; k++) {
-        ok = json_append(directions, cJSON_CreateString(melody->directions[k]));
+        ok = common_json_append(directions, cJSON_CreateString(melody->directions[k]));
     }
-    bool taken = false; /* json_add() takes the directions over, and frees them itself when it fails */
-    if (!(ok && json_add(object, "up", cJSON_CreateNumber(melody->up)) &&
-          json_add(object, "down", cJSON_CreateNumber(melody->down)) &&
-          json_add(object, "same", cJSON_CreateNumber(melody->same)) &&
-          json_add(object, "steps", cJSON_CreateNumber(melody->step_count)) &&
-          json_add(object, "leaps", cJSON_CreateNumber(melody->leap_count)) &&
-          json_add(object, "net_direction", cJSON_CreateString(melody->net_direction)) &&
-          json_add(object, "net_semitones", cJSON_CreateNumber((double)melody->net_semitones)) &&
-          (taken = true, json_add(object, "directions", directions)))) {
+    bool taken = false; /* common_json_add() takes the directions over, and frees them itself when it fails */
+    if (!(ok && common_json_add(object, "up", cJSON_CreateNumber(melody->up)) &&
+          common_json_add(object, "down", cJSON_CreateNumber(melody->down)) &&
+          common_json_add(object, "same", cJSON_CreateNumber(melody->same)) &&
+          common_json_add(object, "steps", cJSON_CreateNumber(melody->step_count)) &&
+          common_json_add(object, "leaps", cJSON_CreateNumber(melody->leap_count)) &&
+          common_json_add(object, "net_direction", cJSON_CreateString(melody->net_direction)) &&
+          common_json_add(object, "net_semitones", cJSON_CreateNumber((double)melody->net_semitones)) &&
+          (taken = true, common_json_add(object, "directions", directions)))) {
         if (!taken) {
             cJSON_Delete(directions);
         }
@@ -284,11 +284,11 @@ static cJSON *melody_leap_json(DocBuild *build, const ImportedScore *notes, cons
     Rational end;
     doc_notes_span(build, notes, ids, 2, &start, &end);
     cJSON *claim = doc_claim_json_with(build, framework, notes, ids, 2, start, end, "leap", cJSON_CreateNumber(leap->uncertainty));
-    if (!(claim && json_add(claim, "semitones", cJSON_CreateNumber((double)leap->semitones)) &&
-          json_add(claim, "direction", cJSON_CreateString(leap->direction)) &&
-          json_add(claim, "generic_size", leap->generic_size > 0 ? cJSON_CreateNumber(leap->generic_size) : cJSON_CreateNull()) &&
-          json_add(claim, "approximate", cJSON_CreateBool(leap->approximate)) &&
-          json_add(claim, "status", cJSON_CreateString(leap->status)))) {
+    if (!(claim && common_json_add(claim, "semitones", cJSON_CreateNumber((double)leap->semitones)) &&
+          common_json_add(claim, "direction", cJSON_CreateString(leap->direction)) &&
+          common_json_add(claim, "generic_size", leap->generic_size > 0 ? cJSON_CreateNumber(leap->generic_size) : cJSON_CreateNull()) &&
+          common_json_add(claim, "approximate", cJSON_CreateBool(leap->approximate)) &&
+          common_json_add(claim, "status", cJSON_CreateString(leap->status)))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -308,13 +308,13 @@ static cJSON *melody_leaps_json(DocBuild *build, const ImportedScore *notes, con
         for (size_t i = 0; i < melody->leap_total; i++) {
             count += strcmp(melody->leaps[i].status, STATUSES[k]) == 0 ? 1 : 0;
         }
-        ok = json_add(object, KEYS[k], cJSON_CreateNumber((double)count));
+        ok = common_json_add(object, KEYS[k], cJSON_CreateNumber((double)count));
     }
     for (size_t i = 0; ok && i < melody->leap_total; i++) {
-        ok = json_append(items, melody_leap_json(build, notes, melody->framework, &melody->leaps[i]));
+        ok = common_json_append(items, melody_leap_json(build, notes, melody->framework, &melody->leaps[i]));
     }
-    bool taken = false; /* json_add() takes the items over, and frees them itself when it fails */
-    if (!(ok && (taken = true, json_add(object, "items", items)))) {
+    bool taken = false; /* common_json_add() takes the items over, and frees them itself when it fails */
+    if (!(ok && (taken = true, common_json_add(object, "items", items)))) {
         if (!taken) {
             cJSON_Delete(items);
         }
@@ -335,8 +335,8 @@ static cJSON *melody_consecutive_leaps_json(DocBuild *build, const ImportedScore
         doc_notes_span(build, notes, ids, 3, &start, &end);
         cJSON *claim = doc_claim_json_with(build, melody->framework, notes, ids, 3, start, end, "consecutive-leaps",
                                        cJSON_CreateNumber(pair->uncertainty));
-        if (!(claim && json_add(claim, "same_direction", cJSON_CreateBool(pair->same_direction)) &&
-              json_add(claim, "three_in_a_row", cJSON_CreateBool(pair->three_in_a_row)) && json_append(list, claim))) {
+        if (!(claim && common_json_add(claim, "same_direction", cJSON_CreateBool(pair->same_direction)) &&
+              common_json_add(claim, "three_in_a_row", cJSON_CreateBool(pair->three_in_a_row)) && common_json_append(list, claim))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
@@ -356,8 +356,8 @@ static cJSON *melody_non_chord_tones_json(DocBuild *build, const ImportedScore *
     for (int type = 0; ok && type < ANALYSIS_MELODY_NCT_TYPES; type++) {
         if (melody->nct_by_type[type] > 0) {
             cJSON *entry = cJSON_CreateObject();
-            ok = entry && json_add(entry, "type", cJSON_CreateString(melody->nct_type_names[type])) &&
-                 json_add(entry, "count", cJSON_CreateNumber(melody->nct_by_type[type])) && json_append(by_type, entry);
+            ok = entry && common_json_add(entry, "type", cJSON_CreateString(melody->nct_type_names[type])) &&
+                 common_json_add(entry, "count", cJSON_CreateNumber(melody->nct_by_type[type])) && common_json_append(by_type, entry);
             if (!ok) {
                 cJSON_Delete(entry);
             }
@@ -370,18 +370,18 @@ static cJSON *melody_non_chord_tones_json(DocBuild *build, const ImportedScore *
         doc_notes_span(build, notes, &nct->note, 1, &start, &end);
         cJSON *claim = doc_claim_json_with(build, melody->framework, notes, &nct->note, 1, start, end, nct->type,
                                        cJSON_CreateNumber(nct->uncertainty));
-        ok = claim && json_append(items, claim);
+        ok = claim && common_json_append(items, claim);
         if (!ok) {
             cJSON_Delete(claim);
         }
     }
-    bool by_type_taken = false; /* json_add() takes each array over, and frees it itself when it fails */
+    bool by_type_taken = false; /* common_json_add() takes each array over, and frees it itself when it fails */
     bool items_taken = false;
-    if (!(ok && json_add(object, "chord_tones", cJSON_CreateNumber(melody->chord_tone_count)) &&
-          json_add(object, "non_chord_tones", cJSON_CreateNumber(melody->non_chord_tone_count)) &&
-          json_add(object, "unclassified", cJSON_CreateNumber(melody->unclassified_count)) &&
-          (by_type_taken = true, json_add(object, "by_type", by_type)) &&
-          (items_taken = true, json_add(object, "items", items)))) {
+    if (!(ok && common_json_add(object, "chord_tones", cJSON_CreateNumber(melody->chord_tone_count)) &&
+          common_json_add(object, "non_chord_tones", cJSON_CreateNumber(melody->non_chord_tone_count)) &&
+          common_json_add(object, "unclassified", cJSON_CreateNumber(melody->unclassified_count)) &&
+          (by_type_taken = true, common_json_add(object, "by_type", by_type)) &&
+          (items_taken = true, common_json_add(object, "items", items)))) {
         if (!by_type_taken) {
             cJSON_Delete(by_type);
         }
@@ -400,8 +400,8 @@ static cJSON *melody_line_tendencies_json(const AnalysisMelody *melody) {
     cJSON *list = cJSON_CreateArray();
     for (int t = 0; list && t < ANALYSIS_MELODY_TENDENCIES && melody->tendency_names[t]; t++) {
         cJSON *entry = cJSON_CreateObject();
-        if (!(entry && json_add(entry, "tendency", cJSON_CreateString(melody->tendency_names[t])) &&
-              json_add(entry, "holds", cJSON_CreateBool(melody->tendency_holds[t])) && json_append(list, entry))) {
+        if (!(entry && common_json_add(entry, "tendency", cJSON_CreateString(melody->tendency_names[t])) &&
+              common_json_add(entry, "holds", cJSON_CreateBool(melody->tendency_holds[t])) && common_json_append(list, entry))) {
             cJSON_Delete(entry);
             cJSON_Delete(list);
             return NULL;
@@ -428,16 +428,16 @@ static cJSON *melody_seventh_degree_json(DocBuild *build, const ImportedScore *n
         doc_notes_span(build, notes, ids, 2, &start, &end);
         cJSON *claim = doc_claim_json_with(build, melody->framework, notes, ids, 2, start, end, melody->seventh_rule,
                                        cJSON_CreateNumber(broken->uncertainty));
-        ok = claim && json_append(breaks, claim);
+        ok = claim && common_json_append(breaks, claim);
         if (!ok) {
             cJSON_Delete(claim);
         }
     }
-    bool taken = false; /* json_add() takes the breaks over, and frees them itself when it fails */
-    if (!(ok && json_add(object, "rule", cJSON_CreateString(melody->seventh_rule)) &&
-          json_add(object, "followed", cJSON_CreateNumber(melody->seventh_followed)) &&
-          json_add(object, "broken", cJSON_CreateNumber(melody->seventh_broken)) &&
-          (taken = true, json_add(object, "breaks", breaks)))) {
+    bool taken = false; /* common_json_add() takes the breaks over, and frees them itself when it fails */
+    if (!(ok && common_json_add(object, "rule", cJSON_CreateString(melody->seventh_rule)) &&
+          common_json_add(object, "followed", cJSON_CreateNumber(melody->seventh_followed)) &&
+          common_json_add(object, "broken", cJSON_CreateNumber(melody->seventh_broken)) &&
+          (taken = true, common_json_add(object, "breaks", breaks)))) {
         if (!taken) {
             cJSON_Delete(breaks);
         }
@@ -449,8 +449,8 @@ static cJSON *melody_seventh_degree_json(DocBuild *build, const ImportedScore *n
 
 static cJSON *melody_tendencies_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "line", melody_line_tendencies_json(melody)) &&
-                    json_add(object, "seventh_degree", melody_seventh_degree_json(build, notes, melody)))) {
+    if (object && !(common_json_add(object, "line", melody_line_tendencies_json(melody)) &&
+                    common_json_add(object, "seventh_degree", melody_seventh_degree_json(build, notes, melody)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -471,20 +471,20 @@ cJSON *doc_melody_json(DocBuild *build, const ImportedScore *notes, const ChainR
         Rational end = doc_rational(build, melody->end.num, melody->end.den);
         cJSON *claim = doc_claim_json_with(build, melody->framework, notes, melody->note_ids, melody->note_id_count, start, end,
                                        "melody", cJSON_CreateNumber(melody->uncertainty));
-        if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)melody->phrase)) &&
-              json_add(claim, "measures", doc_measures_json(melody->first_measure, melody->last_measure)) &&
-              json_add(claim, "note_count", cJSON_CreateNumber((double)melody->note_id_count)) &&
-              json_add(claim, "range", melody_range_json(melody)) && json_add(claim, "climax", melody_climax_json(build, notes, melody)) &&
-              json_add(claim, "contour", melody_contour_json(melody)) &&
-              json_add(claim, "leaps", melody_leaps_json(build, notes, melody)) &&
-              json_add(claim, "consecutive_leaps", melody_consecutive_leaps_json(build, notes, melody)) &&
-              json_add(claim, "non_chord_tones", melody_non_chord_tones_json(build, notes, melody)) &&
-              json_add(claim, "tendencies", melody_tendencies_json(build, notes, melody)))) {
+        if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber((double)melody->phrase)) &&
+              common_json_add(claim, "measures", doc_measures_json(melody->first_measure, melody->last_measure)) &&
+              common_json_add(claim, "note_count", cJSON_CreateNumber((double)melody->note_id_count)) &&
+              common_json_add(claim, "range", melody_range_json(melody)) && common_json_add(claim, "climax", melody_climax_json(build, notes, melody)) &&
+              common_json_add(claim, "contour", melody_contour_json(melody)) &&
+              common_json_add(claim, "leaps", melody_leaps_json(build, notes, melody)) &&
+              common_json_add(claim, "consecutive_leaps", melody_consecutive_leaps_json(build, notes, melody)) &&
+              common_json_add(claim, "non_chord_tones", melody_non_chord_tones_json(build, notes, melody)) &&
+              common_json_add(claim, "tendencies", melody_tendencies_json(build, notes, melody)))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
         }
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }

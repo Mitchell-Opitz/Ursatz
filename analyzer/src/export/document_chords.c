@@ -8,11 +8,11 @@ static cJSON *runner_up_json(const AnalysisChordReading *reading) {
         return cJSON_CreateNull();
     }
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "label", cJSON_CreateString(reading->label)) &&
-                    json_add(object, "root", cJSON_CreateString(reading->root)) &&
-                    json_add(object, "quality", cJSON_CreateString(reading->quality)) &&
-                    json_add(object, "score", cJSON_CreateNumber(reading->score)) &&
-                    json_add(object, "uncertainty", doc_uncertainty_json(reading->confidence)))) {
+    if (object && !(common_json_add(object, "label", cJSON_CreateString(reading->label)) &&
+                    common_json_add(object, "root", cJSON_CreateString(reading->root)) &&
+                    common_json_add(object, "quality", cJSON_CreateString(reading->quality)) &&
+                    common_json_add(object, "score", cJSON_CreateNumber(reading->score)) &&
+                    common_json_add(object, "uncertainty", doc_uncertainty_json(reading->confidence)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -39,20 +39,20 @@ static bool add_chord_fields(DocBuild *build, cJSON *claim, const ImportedScore 
     const AnalysisChordReading *chord = &entry->chord;
     bool matched = chord->label != NULL;
     cJSON *duration = cJSON_CreateObject();
-    if (duration && !(json_add(duration, "whole_notes", doc_rational_json(doc_sub(build, end, start))) &&
-                      json_add(duration, "beats", doc_span_beats_json(build, notes->meter.meter_map, start, end)))) {
+    if (duration && !(common_json_add(duration, "whole_notes", doc_rational_json(doc_sub(build, end, start))) &&
+                      common_json_add(duration, "beats", doc_span_beats_json(build, notes->meter.meter_map, start, end)))) {
         cJSON_Delete(duration);
         duration = NULL;
     }
-    return json_add(claim, "root", doc_optional_string_json(chord->root)) &&
-           json_add(claim, "quality", doc_optional_string_json(chord->quality)) &&
-           json_add(claim, "bass", doc_optional_string_json(chord->bass)) &&
-           json_add(claim, "inversion", matched && chord->inversion >= 0 ? cJSON_CreateNumber(chord->inversion)
+    return common_json_add(claim, "root", doc_optional_string_json(chord->root)) &&
+           common_json_add(claim, "quality", doc_optional_string_json(chord->quality)) &&
+           common_json_add(claim, "bass", doc_optional_string_json(chord->bass)) &&
+           common_json_add(claim, "inversion", matched && chord->inversion >= 0 ? cJSON_CreateNumber(chord->inversion)
                                                                     : cJSON_CreateNull()) &&
-           json_add(claim, "duration", duration) &&
-           json_add(claim, "score", matched ? cJSON_CreateNumber(chord->score) : cJSON_CreateNull()) &&
-           json_add(claim, "runner_up", runner_up_json(&entry->runner_up)) &&
-           json_add(claim, "context", matched ? cJSON_CreateString(chord_context_name(entry->chord_context))
+           common_json_add(claim, "duration", duration) &&
+           common_json_add(claim, "score", matched ? cJSON_CreateNumber(chord->score) : cJSON_CreateNull()) &&
+           common_json_add(claim, "runner_up", runner_up_json(&entry->runner_up)) &&
+           common_json_add(claim, "context", matched ? cJSON_CreateString(chord_context_name(entry->chord_context))
                                          : cJSON_CreateNull());
 }
 
@@ -63,11 +63,11 @@ static cJSON *outer_voice_summary_json(const ChainResult *report, const ChainEnt
     bool present = note->status == ANALYSIS_OUTER_PRESENT;
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "status", cJSON_CreateString(doc_outer_status_name(note->status))) &&
-          json_add(object, "note_id", present ? cJSON_CreateNumber((double)note->note_id) : cJSON_CreateNull()) &&
-          json_add(object, "pitch", doc_optional_string_json(note->pitch_name)) &&
-          json_add(object, "degree", doc_optional_string_json(note->degree)) &&
-          json_add(object, "uncertainty", doc_outer_uncertainty_json(report, entry, note)))) {
+        !(common_json_add(object, "status", cJSON_CreateString(doc_outer_status_name(note->status))) &&
+          common_json_add(object, "note_id", present ? cJSON_CreateNumber((double)note->note_id) : cJSON_CreateNull()) &&
+          common_json_add(object, "pitch", doc_optional_string_json(note->pitch_name)) &&
+          common_json_add(object, "degree", doc_optional_string_json(note->degree)) &&
+          common_json_add(object, "uncertainty", doc_outer_uncertainty_json(report, entry, note)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -78,8 +78,8 @@ static cJSON *outer_voice_summary_json(const ChainResult *report, const ChainEnt
    the pitch class the chord is read over.) */
 static cJSON *chord_outer_json(const ChainResult *report, const ChainEntry *entry) {
     cJSON *outer = cJSON_CreateObject();
-    if (outer && !(json_add(outer, "soprano", outer_voice_summary_json(report, entry, &entry->soprano)) &&
-                   json_add(outer, "bass", outer_voice_summary_json(report, entry, &entry->bass)))) {
+    if (outer && !(common_json_add(outer, "soprano", outer_voice_summary_json(report, entry, &entry->soprano)) &&
+                   common_json_add(outer, "bass", outer_voice_summary_json(report, entry, &entry->bass)))) {
         cJSON_Delete(outer);
         return NULL;
     }
@@ -137,21 +137,21 @@ static cJSON *applied_json(DocBuild *build, const ChainResult *report, const Cha
     const char *agreement = agrees ? "agrees" : (touching ? "target_differs" : "no_tonicization");
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "numeral", cJSON_CreateString(roman->applied_numeral)) &&
-          json_add(object, "target_numeral", cJSON_CreateString(roman->target_numeral)) &&
-          json_add(object, "target_degree", cJSON_CreateNumber(roman->target_degree)) &&
-          json_add(object, "target_tonic", target_tonic >= 0 ? cJSON_CreateString(pitch_class_name(
+        !(common_json_add(object, "numeral", cJSON_CreateString(roman->applied_numeral)) &&
+          common_json_add(object, "target_numeral", cJSON_CreateString(roman->target_numeral)) &&
+          common_json_add(object, "target_degree", cJSON_CreateNumber(roman->target_degree)) &&
+          common_json_add(object, "target_tonic", target_tonic >= 0 ? cJSON_CreateString(pitch_class_name(
                                           target_tonic, report->key_regions[entry->region].prefer_flats))
                                                          : cJSON_CreateNull()) &&
-          json_add(object, "kind", cJSON_CreateString(roman->applied_kind)) &&
-          json_add(object, "resolves_to", roman->resolution_entry == SIZE_MAX
+          common_json_add(object, "kind", cJSON_CreateString(roman->applied_kind)) &&
+          common_json_add(object, "resolves_to", roman->resolution_entry == SIZE_MAX
                                           ? cJSON_CreateNull()
                                           : cJSON_CreateNumber((double)roman->resolution_entry)) &&
-          json_add(object, "deceptive", cJSON_CreateBool(roman->deceptive)) &&
-          json_add(object, "tonicization_agreement", cJSON_CreateString(agreement)) &&
-          json_add(object, "tonicization_index", touching ? cJSON_CreateNumber((double)touching_index) : cJSON_CreateNull()) &&
-          json_add(object, "target_region", touching ? cJSON_CreateNumber((double)touching_region) : cJSON_CreateNull()) &&
-          json_add(object, "tonicization_key", touching ? cJSON_CreateString(report->key_regions[touching_region].label)
+          common_json_add(object, "deceptive", cJSON_CreateBool(roman->deceptive)) &&
+          common_json_add(object, "tonicization_agreement", cJSON_CreateString(agreement)) &&
+          common_json_add(object, "tonicization_index", touching ? cJSON_CreateNumber((double)touching_index) : cJSON_CreateNull()) &&
+          common_json_add(object, "target_region", touching ? cJSON_CreateNumber((double)touching_region) : cJSON_CreateNull()) &&
+          common_json_add(object, "tonicization_key", touching ? cJSON_CreateString(report->key_regions[touching_region].label)
                                                    : cJSON_CreateNull()))) {
         cJSON_Delete(object);
         return NULL;
@@ -167,15 +167,15 @@ static cJSON *roman_numeral_json(DocBuild *build, const ChainResult *report, con
     bool in_region = entry->in_region && entry->region < report->key_region_count;
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "label", doc_optional_string_json(roman->numeral)) &&
-          json_add(object, "base_numeral", doc_optional_string_json(roman->base_numeral)) &&
-          json_add(object, "key_region", in_region ? cJSON_CreateNumber((double)entry->region) : cJSON_CreateNull()) &&
-          json_add(object, "key", in_region ? cJSON_CreateString(report->key_regions[entry->region].label)
+        !(common_json_add(object, "label", doc_optional_string_json(roman->numeral)) &&
+          common_json_add(object, "base_numeral", doc_optional_string_json(roman->base_numeral)) &&
+          common_json_add(object, "key_region", in_region ? cJSON_CreateNumber((double)entry->region) : cJSON_CreateNull()) &&
+          common_json_add(object, "key", in_region ? cJSON_CreateString(report->key_regions[entry->region].label)
                                        : cJSON_CreateNull()) &&
-          json_add(object, "degree", roman->labelled ? cJSON_CreateNumber(roman->degree) : cJSON_CreateNull()) &&
-          json_add(object, "uncertainty", roman->labelled ? cJSON_CreateNumber(roman->uncertainty) : cJSON_CreateNull()) &&
-          json_add(object, "unlabelled_reason", doc_optional_string_json(roman->reason)) &&
-          json_add(object, "applied", applied_json(build, report, entry)))) {
+          common_json_add(object, "degree", roman->labelled ? cJSON_CreateNumber(roman->degree) : cJSON_CreateNull()) &&
+          common_json_add(object, "uncertainty", roman->labelled ? cJSON_CreateNumber(roman->uncertainty) : cJSON_CreateNull()) &&
+          common_json_add(object, "unlabelled_reason", doc_optional_string_json(roman->reason)) &&
+          common_json_add(object, "applied", applied_json(build, report, entry)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -187,8 +187,8 @@ static cJSON *roman_numeral_json(DocBuild *build, const ChainResult *report, con
 static bool add_function(cJSON *claim, const ChainEntry *entry) {
     if (entry->six_four) {
         cJSON *six_four = cJSON_CreateObject();
-        if (!(six_four && json_add(six_four, "type", cJSON_CreateString(entry->six_four)) &&
-              json_add(claim, "six_four", six_four))) {
+        if (!(six_four && common_json_add(six_four, "type", cJSON_CreateString(entry->six_four)) &&
+              common_json_add(claim, "six_four", six_four))) {
             cJSON_Delete(six_four);
             return false;
         }
@@ -197,16 +197,16 @@ static bool add_function(cJSON *claim, const ChainEntry *entry) {
         return true;
     }
     cJSON *object = cJSON_CreateObject();
-    if (!(object && json_add(object, "name", cJSON_CreateString(entry->function)) &&
-          json_add(object, "applied_to",
+    if (!(object && common_json_add(object, "name", cJSON_CreateString(entry->function)) &&
+          common_json_add(object, "applied_to",
               entry->function_applied ? cJSON_CreateNumber(entry->function_applied_to) : cJSON_CreateNull()) &&
-          json_add(object, "predominant", doc_optional_string_json(entry->predominant_strength)) &&
-          json_add(object, "framework", cJSON_CreateString(framework_name(standard_harmony_framework()))) &&
-          json_add(object, "uncertainty", cJSON_CreateNumber(entry->function_uncertainty)))) {
+          common_json_add(object, "predominant", doc_optional_string_json(entry->predominant_strength)) &&
+          common_json_add(object, "framework", cJSON_CreateString(framework_name(standard_harmony_framework()))) &&
+          common_json_add(object, "uncertainty", cJSON_CreateNumber(entry->function_uncertainty)))) {
         cJSON_Delete(object);
         return false;
     }
-    return json_add(claim, "function", object);
+    return common_json_add(claim, "function", object);
 }
 
 /* One chord claim per report entry, in time order. */
@@ -222,16 +222,16 @@ cJSON *doc_chords_json(DocBuild *build, const ImportedScore *notes, const ChainR
         Rational end = doc_rational(build, entry->end.num, entry->end.den);
         cJSON *claim = doc_claim_json_at(build, framework, notes, entry->note_ids, entry->note_id_count, start, end,
                                      entry->chord_label, entry->chord_confidence);
-        if (!(claim && json_add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
+        if (!(claim && common_json_add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
               add_chord_fields(build, claim, notes, entry, start, end) &&
-              json_add(claim, "outer", chord_outer_json(report, entry)) &&
-              json_add(claim, "roman_numeral", roman_numeral_json(build, report, entry)) && add_function(claim, entry) &&
-              (!entry->phrase_model || json_add(claim, "phrase_model", cJSON_CreateString(entry->phrase_model))))) {
+              common_json_add(claim, "outer", chord_outer_json(report, entry)) &&
+              common_json_add(claim, "roman_numeral", roman_numeral_json(build, report, entry)) && add_function(claim, entry) &&
+              (!entry->phrase_model || common_json_add(claim, "phrase_model", cJSON_CreateString(entry->phrase_model))))) {
             cJSON_Delete(claim);
             cJSON_Delete(chords);
             return NULL;
         }
-        if (!json_append(chords, claim)) {
+        if (!common_json_append(chords, claim)) {
             cJSON_Delete(chords);
             return NULL;
         }
@@ -254,15 +254,15 @@ cJSON *doc_non_chord_tones_json(DocBuild *build, const ImportedScore *notes, con
         cJSON *claim = doc_claim_json_at(build, 
             framework, notes, &tone->note_id, 1, doc_rational(build, chord->time.num, chord->time.den),
             doc_rational(build, chord->end.num, chord->end.den), tone->type ? tone->type : "unclassified", none);
-        if (!(claim && json_add(claim, "type", doc_optional_string_json(tone->type)) &&
-              json_add(claim, "classified", cJSON_CreateBool(tone->type != NULL)) &&
-              json_add(claim, "chord_index", cJSON_CreateNumber((double)tone->chord_index)) &&
-              json_add(claim, "chord_label", cJSON_CreateString(chord->chord_label)))) {
+        if (!(claim && common_json_add(claim, "type", doc_optional_string_json(tone->type)) &&
+              common_json_add(claim, "classified", cJSON_CreateBool(tone->type != NULL)) &&
+              common_json_add(claim, "chord_index", cJSON_CreateNumber((double)tone->chord_index)) &&
+              common_json_add(claim, "chord_label", cJSON_CreateString(chord->chord_label)))) {
             cJSON_Delete(claim);
             cJSON_Delete(tones);
             return NULL;
         }
-        if (!json_append(tones, claim)) {
+        if (!common_json_append(tones, claim)) {
             cJSON_Delete(tones);
             return NULL;
         }
@@ -306,11 +306,13 @@ typedef struct {
 } VocabularyTally;
 
 static Rational rational_read(DocBuild *build, const cJSON *object) {
-    const cJSON *num = cJSON_GetObjectItemCaseSensitive(object, "num");
-    const cJSON *den = cJSON_GetObjectItemCaseSensitive(object, "den");
-    long long denominator = cJSON_IsNumber(den) ? (long long)den->valuedouble : 1;
-    return doc_rational(build, cJSON_IsNumber(num) ? (long long)num->valuedouble : 0,
-                        denominator > 0 ? (unsigned long long)denominator : 1);
+    long long num = 0;
+    long long den = 1;
+    if (!common_json_rational_read(object, COMMON_RATIONAL_OBJECT, &num, &den)) {
+        num = 0;
+        den = 1;
+    }
+    return doc_rational(build, num, (unsigned long long)den);
 }
 
 /* The labelled chords of the chords section, in time order. *count is how many. NULL on allocation failure. */
@@ -326,8 +328,8 @@ static VocabularyChord *vocabulary_chords(DocBuild *build, const cJSON *chords, 
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
         const cJSON *roman = cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral");
-        const char *label = json_string_member(roman, "label");
-        const char *base = json_string_member(roman, "base_numeral");
+        const char *label = common_json_string_or_null(roman, "label");
+        const char *base = common_json_string_or_null(roman, "base_numeral");
         if (label && base) {
             const cJSON *region = cJSON_GetObjectItemCaseSensitive(roman, "key_region");
             const cJSON *duration = cJSON_GetObjectItemCaseSensitive(chord, "duration");
@@ -373,8 +375,8 @@ static int compare_tallies(const void *a, const void *b) {
 
 static cJSON *vocabulary_duration_json(const VocabularyTally *tally) {
     cJSON *duration = cJSON_CreateObject();
-    if (duration && !(json_add(duration, "whole_notes", doc_rational_json(tally->whole)) &&
-                      json_add(duration, "beats", tally->beats_known ? doc_rational_json(tally->beats) : cJSON_CreateNull()))) {
+    if (duration && !(common_json_add(duration, "whole_notes", doc_rational_json(tally->whole)) &&
+                      common_json_add(duration, "beats", tally->beats_known ? doc_rational_json(tally->beats) : cJSON_CreateNull()))) {
         cJSON_Delete(duration);
         return NULL;
     }
@@ -383,8 +385,8 @@ static cJSON *vocabulary_duration_json(const VocabularyTally *tally) {
 
 static cJSON *vocabulary_first_json(const VocabularyTally *tally) {
     cJSON *first = cJSON_CreateObject();
-    if (first && !(json_add(first, "chord_index", cJSON_CreateNumber((double)tally->first)) &&
-                   json_add(first, "position", cJSON_Duplicate(tally->position, true)))) {
+    if (first && !(common_json_add(first, "chord_index", cJSON_CreateNumber((double)tally->first)) &&
+                   common_json_add(first, "position", cJSON_Duplicate(tally->position, true)))) {
         cJSON_Delete(first);
         return NULL;
     }
@@ -399,16 +401,16 @@ static cJSON *vocabulary_entry_json(const ChainResult *report, long scope, int g
                                  : 0.0;
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "scope", cJSON_CreateString(scope == SCOPE_OVERALL ? "overall" : "region")) &&
-          json_add(object, "key_region", in_region ? cJSON_CreateNumber((double)scope) : cJSON_CreateNull()) &&
-          json_add(object, "key", in_region ? cJSON_CreateString(report->key_regions[scope].label) : cJSON_CreateNull()) &&
-          json_add(object, "group", cJSON_CreateString(GROUP_NAMES[group])) &&
-          json_add(object, "level", cJSON_CreateString(LEVEL_NAMES[level])) &&
-          json_add(object, "numeral", cJSON_CreateString(tally->name)) &&
-          json_add(object, "count", cJSON_CreateNumber((double)tally->count)) &&
-          json_add(object, "runs", cJSON_CreateNumber((double)tally->runs)) &&
-          json_add(object, "duration", vocabulary_duration_json(tally)) &&
-          json_add(object, "share", cJSON_CreateNumber(share)) && json_add(object, "first", vocabulary_first_json(tally)))) {
+        !(common_json_add(object, "scope", cJSON_CreateString(scope == SCOPE_OVERALL ? "overall" : "region")) &&
+          common_json_add(object, "key_region", in_region ? cJSON_CreateNumber((double)scope) : cJSON_CreateNull()) &&
+          common_json_add(object, "key", in_region ? cJSON_CreateString(report->key_regions[scope].label) : cJSON_CreateNull()) &&
+          common_json_add(object, "group", cJSON_CreateString(GROUP_NAMES[group])) &&
+          common_json_add(object, "level", cJSON_CreateString(LEVEL_NAMES[level])) &&
+          common_json_add(object, "numeral", cJSON_CreateString(tally->name)) &&
+          common_json_add(object, "count", cJSON_CreateNumber((double)tally->count)) &&
+          common_json_add(object, "runs", cJSON_CreateNumber((double)tally->runs)) &&
+          common_json_add(object, "duration", vocabulary_duration_json(tally)) &&
+          common_json_add(object, "share", cJSON_CreateNumber(share)) && common_json_add(object, "first", vocabulary_first_json(tally)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -451,7 +453,7 @@ static bool append_tallies(DocBuild *build, cJSON *list, const ChainResult *repo
     bool ok = true;
     for (size_t t = 0; ok && t < distinct; t++) {
         cJSON *entry = vocabulary_entry_json(report, scope, group, level, &tallies[t], total);
-        ok = entry && json_append(list, entry);
+        ok = entry && common_json_append(list, entry);
     }
     free(tallies);
     return ok;

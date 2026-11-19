@@ -159,16 +159,16 @@ generated chain producer_key.h chain/producer_key.h
 generated composer-util composer/composition_key.h
 
 uses analyzer-api  model theory analysis chain io realization reading
-uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml
-uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml
-uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util
-uses analyzer-result model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store
-uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
-uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml common
+uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml common
+uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util common
+uses analyzer-result model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store common
+uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
+uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
 # corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
 uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h common
-uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
-uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
+uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
+uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links common
 # The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for ComposerJob, ComposerStatus and ComposerError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
 uses composer-util model theory realization plan reading analysis chain io cjson composer-api
 uses composer-structure model theory realization plan reading analysis chain io cjson composer-util common

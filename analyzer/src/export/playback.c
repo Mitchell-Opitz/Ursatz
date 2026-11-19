@@ -10,7 +10,7 @@
 
 #include "model/events/note_event.h"
 #include "model/time/temporal_anchor.h"
-#include "util/json_util.h"
+#include <common/json.h>
 
 #define DEFAULT_QUARTERS_PER_MINUTE 120.0
 #define MICROSECONDS_PER_MINUTE 60000000.0
@@ -201,8 +201,8 @@ void analyzer_playback_destroy(AnalyzerPlayback *playback) {
 
 static cJSON *rational_json(Rational value) {
     cJSON *array = cJSON_CreateArray();
-    if (!array || !json_append(array, cJSON_CreateNumber((double)value.num)) ||
-        !json_append(array, cJSON_CreateNumber((double)value.den))) {
+    if (!array || !common_json_append(array, cJSON_CreateNumber((double)value.num)) ||
+        !common_json_append(array, cJSON_CreateNumber((double)value.den))) {
         cJSON_Delete(array);
         return NULL;
     }
@@ -222,13 +222,13 @@ static bool add_tempo(cJSON *root, const AnalyzerPlayback *playback) {
     }
     for (size_t i = 0; i < playback->tempo_count; i++) {
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !json_append(array, entry) || !json_add(entry, "at", rational_json(playback->tempo[i].at)) ||
-            !json_add(entry, "qpm", cJSON_CreateNumber(playback->tempo[i].quarters_per_minute))) {
+        if (!entry || !common_json_append(array, entry) || !common_json_add(entry, "at", rational_json(playback->tempo[i].at)) ||
+            !common_json_add(entry, "qpm", cJSON_CreateNumber(playback->tempo[i].quarters_per_minute))) {
             cJSON_Delete(array);
             return false;
         }
     }
-    return json_add(root, "tempo", array);
+    return common_json_add(root, "tempo", array);
 }
 
 static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const ImportedScore *imported) {
@@ -256,15 +256,15 @@ static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const Impor
             name = imported->source.parts[index].name;
         }
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !json_append(array, entry) || !json_add(entry, "index", cJSON_CreateNumber((double)index)) ||
-            !json_add(entry, "name", cJSON_CreateString(name)) || !json_add(entry, "program", cJSON_CreateNumber(0))) {
+        if (!entry || !common_json_append(array, entry) || !common_json_add(entry, "index", cJSON_CreateNumber((double)index)) ||
+            !common_json_add(entry, "name", cJSON_CreateString(name)) || !common_json_add(entry, "program", cJSON_CreateNumber(0))) {
             cJSON_Delete(array);
             free(ids);
             return false;
         }
     }
     free(ids);
-    return json_add(root, "parts", array);
+    return common_json_add(root, "parts", array);
 }
 
 static bool add_notes(cJSON *root, const AnalyzerPlayback *playback) {
@@ -275,15 +275,15 @@ static bool add_notes(cJSON *root, const AnalyzerPlayback *playback) {
     for (size_t i = 0; i < playback->note_count; i++) {
         const AnalyzerPlaybackNote *note = &playback->notes[i];
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !json_append(array, entry) || !json_add(entry, "i", cJSON_CreateNumber((double)note->index)) ||
-            !json_add(entry, "on", rational_json(note->onset)) || !json_add(entry, "len", rational_json(note->length)) ||
-            !json_add(entry, "pitch", cJSON_CreateNumber(note->midi)) ||
-            !json_add(entry, "part", cJSON_CreateNumber((double)note->part))) {
+        if (!entry || !common_json_append(array, entry) || !common_json_add(entry, "i", cJSON_CreateNumber((double)note->index)) ||
+            !common_json_add(entry, "on", rational_json(note->onset)) || !common_json_add(entry, "len", rational_json(note->length)) ||
+            !common_json_add(entry, "pitch", cJSON_CreateNumber(note->midi)) ||
+            !common_json_add(entry, "part", cJSON_CreateNumber((double)note->part))) {
             cJSON_Delete(array);
             return false;
         }
     }
-    return json_add(root, "notes", array);
+    return common_json_add(root, "notes", array);
 }
 
 AnalyzerStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedScore *notes, char **out) {
@@ -295,11 +295,11 @@ AnalyzerStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const
         return ANALYZER_ERR_ARGUMENT;
     }
     cJSON *root = cJSON_CreateObject();
-    bool ok = root && json_add(root, "ok", cJSON_CreateTrue()) &&
-              json_add(root, "tempo_source", cJSON_CreateString(playback->tempo_source)) && add_tempo(root, playback) &&
+    bool ok = root && common_json_add(root, "ok", cJSON_CreateTrue()) &&
+              common_json_add(root, "tempo_source", cJSON_CreateString(playback->tempo_source)) && add_tempo(root, playback) &&
               add_parts(root, playback, notes);
     if (ok) {
-        ok = json_add(root, "end", rational_json(playback->end)) && add_notes(root, playback);
+        ok = common_json_add(root, "end", rational_json(playback->end)) && add_notes(root, playback);
     }
     char *text = ok ? cJSON_PrintUnformatted(root) : NULL;
     cJSON_Delete(root);

@@ -27,8 +27,6 @@ add_library(ursatz_analyzer STATIC
     links/motive_links.c
     links/motive_link_cache.c
     links/motive_links_render.c
-    util/json_util.c
-    util/file_util.c
     util/misc_util.c
     export/score_text.c
     export/text_export.c
@@ -67,7 +65,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz_io ursatz_analysis ursatz_chain ursatz_realization ursatz_reading ursatz_plan
+    PUBLIC ursatz_io ursatz_analysis ursatz_chain ursatz_realization ursatz_reading ursatz_plan ursatz_common
     PRIVATE cjson
 )
 
