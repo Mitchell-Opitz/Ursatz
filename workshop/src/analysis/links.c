@@ -316,6 +316,176 @@ static bool run_file_path(const char *id, char *out, size_t out_size) {
     return workshop_collection_is_valid_id(id) && workshop_layout_link_file(id, out, out_size);
 }
 
+
+/* --- the run index (A20261109-57) ------------------------------------------------------------------------------------------
+ * A summary of every run held in memory: built when the service opens and kept up to date when a run starts, writes its progress,
+ * finishes or is deleted, so the run list and the links of a piece read it and parse only the runs they need. */
+
+typedef struct {
+    char id[64];
+    cJSON *scope;
+    char *scope_text;
+    char status[16];
+    char created_at[40];
+    char finished_at[40];
+    bool has_finished;
+    double done;
+    double total;
+    char **pieces; /* the Library pieces a finished run linked, sorted and without repeats */
+    size_t piece_count;
+} RunSummary;
+
+static WorkshopLock g_index_lock = WORKSHOP_LOCK_INIT;
+static RunSummary *g_index = NULL;
+static size_t g_index_count = 0;
+
+static void summary_clear(RunSummary *summary) {
+    cJSON_Delete(summary->scope);
+    free(summary->scope_text);
+    for (size_t i = 0; i < summary->piece_count; i++) {
+        free(summary->pieces[i]);
+    }
+    free(summary->pieces);
+    memset(summary, 0, sizeof(*summary));
+}
+
+static int compare_text(const void *a, const void *b) {
+    return strcmp(*(char *const *)a, *(char *const *)b);
+}
+
+/* Fills a summary from a run record. false on allocation failure. */
+static bool summary_fill(RunSummary *summary, const cJSON *run) {
+    memset(summary, 0, sizeof(*summary));
+    snprintf(summary->id, sizeof(summary->id), "%s", common_json_string(run, "id"));
+    snprintf(summary->status, sizeof(summary->status), "%s", common_json_string(run, "status"));
+    snprintf(summary->created_at, sizeof(summary->created_at), "%s", common_json_string(run, "created_at"));
+    const cJSON *finished = cJSON_GetObjectItemCaseSensitive(run, "finished_at");
+    summary->has_finished = cJSON_IsString(finished);
+    if (summary->has_finished) {
+        snprintf(summary->finished_at, sizeof(summary->finished_at), "%s", finished->valuestring);
+    }
+    const cJSON *done = cJSON_GetObjectItemCaseSensitive(run, "done");
+    const cJSON *total = cJSON_GetObjectItemCaseSensitive(run, "total");
+    summary->done = cJSON_IsNumber(done) ? done->valuedouble : 0;
+    summary->total = cJSON_IsNumber(total) ? total->valuedouble : 0;
+    const cJSON *scope = cJSON_GetObjectItemCaseSensitive(run, "scope");
+    summary->scope = scope ? cJSON_Duplicate(scope, 1) : NULL;
+    summary->scope_text = scope ? cJSON_PrintUnformatted(scope) : NULL;
+    if (scope && (!summary->scope || !summary->scope_text)) {
+        summary_clear(summary);
+        return false;
+    }
+    CommonNames pieces = {0};
+    const cJSON *link = NULL;
+    cJSON_ArrayForEach(link, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links")) {
+        const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
+        const char *b = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
+        if ((a[0] && !common_names_contains(&pieces, a) && !common_names_add(&pieces, a)) ||
+            (b[0] && !common_names_contains(&pieces, b) && !common_names_add(&pieces, b))) {
+            common_names_free(&pieces);
+            summary_clear(summary);
+            return false;
+        }
+    }
+    summary->pieces = pieces.items;
+    summary->piece_count = pieces.count;
+    if (summary->piece_count > 1) {
+        qsort(summary->pieces, summary->piece_count, sizeof(char *), compare_text);
+    }
+    return true;
+}
+
+static void index_clear_locked(void) {
+    for (size_t i = 0; i < g_index_count; i++) {
+        summary_clear(&g_index[i]);
+    }
+    free(g_index);
+    g_index = NULL;
+    g_index_count = 0;
+}
+
+/* Puts the summary of run in the index (replacing the one with its id). */
+static void index_update(const cJSON *run) {
+    RunSummary summary;
+    if (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(run, "id")) || !summary_fill(&summary, run)) {
+        return;
+    }
+    workshop_lock_acquire(&g_index_lock);
+    for (size_t i = 0; i < g_index_count; i++) {
+        if (strcmp(g_index[i].id, summary.id) == 0) {
+            summary_clear(&g_index[i]);
+            g_index[i] = summary;
+            workshop_lock_release(&g_index_lock);
+            return;
+        }
+    }
+    RunSummary *grown = realloc(g_index, (g_index_count + 1) * sizeof(*g_index));
+    if (grown) {
+        g_index = grown;
+        g_index[g_index_count++] = summary;
+    } else {
+        summary_clear(&summary);
+    }
+    workshop_lock_release(&g_index_lock);
+}
+
+static void index_remove(const char *id) {
+    workshop_lock_acquire(&g_index_lock);
+    for (size_t i = 0; i < g_index_count; i++) {
+        if (strcmp(g_index[i].id, id) == 0) {
+            summary_clear(&g_index[i]);
+            memmove(&g_index[i], &g_index[i + 1], (g_index_count - i - 1) * sizeof(*g_index));
+            g_index_count--;
+            break;
+        }
+    }
+    workshop_lock_release(&g_index_lock);
+}
+
+/* Newest first: by created_at, then id, both descending. */
+static int compare_summaries(const void *left, const void *right) {
+    const RunSummary *a = left;
+    const RunSummary *b = right;
+    int by_time = strcmp(b->created_at, a->created_at);
+    return by_time != 0 ? by_time : strcmp(b->id, a->id);
+}
+
+/* A copy of the index, newest first, for a reader that works after the lock is released. NULL with count 0 when it is empty. */
+static RunSummary *index_snapshot(size_t *count) {
+    workshop_lock_acquire(&g_index_lock);
+    RunSummary *copy = g_index_count ? calloc(g_index_count, sizeof(*copy)) : NULL;
+    size_t made = 0;
+    for (size_t i = 0; copy && i < g_index_count; i++) {
+        /* a shallow copy of what the readers use: the strings are copied, the scope and the pieces are not needed after */
+        copy[made] = g_index[i];
+        copy[made].scope = g_index[i].scope ? cJSON_Duplicate(g_index[i].scope, 1) : NULL;
+        copy[made].scope_text = g_index[i].scope_text ? common_strdup(g_index[i].scope_text) : NULL;
+        copy[made].pieces = NULL;
+        copy[made].piece_count = 0;
+        if (g_index[i].piece_count) {
+            copy[made].pieces = calloc(g_index[i].piece_count, sizeof(char *));
+            for (size_t p = 0; copy[made].pieces && p < g_index[i].piece_count; p++) {
+                copy[made].pieces[p] = common_strdup(g_index[i].pieces[p]);
+                copy[made].piece_count++;
+            }
+        }
+        made++;
+    }
+    workshop_lock_release(&g_index_lock);
+    if (made > 1) {
+        qsort(copy, made, sizeof(*copy), compare_summaries);
+    }
+    *count = made;
+    return copy;
+}
+
+static void snapshot_free(RunSummary *summaries, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        summary_clear(&summaries[i]);
+    }
+    free(summaries);
+}
+
 /* The names in the runs directory. false only when memory ran out. */
 static bool list_run_dirs(CommonNames *names) {
     char runs[PATH_BYTES];
@@ -413,6 +583,9 @@ static bool job_write(const Job *job) {
     cJSON *copy = run_file_path(job->id, path, sizeof(path)) ? cJSON_Duplicate(job->run, 1) : NULL;
     bool ok = copy && workshop_format_write(path, WORKSHOP_FORMAT_LINK_RUN, copy, NULL) == URSATZ_OK;
     cJSON_Delete(copy);
+    if (ok) {
+        index_update(job->run);
+    }
     return ok;
 }
 
@@ -622,12 +795,18 @@ static void mark_interrupted(void) {
             set_member(run, "finished_at", cJSON_CreateString(now));
             (void)workshop_format_write(path, WORKSHOP_FORMAT_LINK_RUN, run, NULL);
         }
+        if (run) {
+            index_update(run); /* the index holds every run the folder holds, as of this open */
+        }
         cJSON_Delete(run);
     }
     common_names_free(&names);
 }
 
 bool workshop_link_service_init(void) {
+    workshop_lock_acquire(&g_index_lock);
+    index_clear_locked();
+    workshop_lock_release(&g_index_lock);
     LOCK();
     bool ok = (common_dir_make(WORKSHOP_DIR_LINKS, NULL) == URSATZ_OK) && (common_dir_make(WORKSHOP_DIR_CACHE, NULL) == URSATZ_OK);
     g_state.ready = ok;
@@ -647,6 +826,9 @@ void workshop_link_service_shutdown(void) {
         }
         UNLOCK();
         if (!active) {
+            workshop_lock_acquire(&g_index_lock);
+            index_clear_locked();
+            workshop_lock_release(&g_index_lock);
             return;
         }
         sleep_ms(10);
@@ -738,83 +920,27 @@ UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_
 /* --- reading runs --------------------------------------------------------- */
 
 
-/* Newest first: by created_at, then id, both descending. */
-static int compare_runs(const void *left, const void *right) {
-    const cJSON *a = *(const cJSON *const *)left;
-    const cJSON *b = *(const cJSON *const *)right;
-    int by_time = strcmp(common_json_string(b, "created_at"), common_json_string(a, "created_at"));
-    return by_time != 0 ? by_time : strcmp(common_json_string(b, "id"), common_json_string(a, "id"));
-}
-
-static void runs_free(cJSON **runs, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        cJSON_Delete(runs[i]);
-    }
-    free(runs);
-}
-
-/* Every readable run.json, newest first. The caller frees with runs_free. */
-static UrsatzStatus load_runs(cJSON ***out_runs, size_t *out_count) {
-    *out_runs = NULL;
-    *out_count = 0;
-    CommonNames names = {0};
-    if (!list_run_dirs(&names)) {
-        common_names_free(&names);
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
-    cJSON **runs = names.count ? calloc(names.count, sizeof(*runs)) : NULL;
-    if (names.count && !runs) {
-        common_names_free(&names);
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
-    size_t count = 0;
-    for (size_t i = 0; i < names.count; i++) {
-        char path[PATH_BYTES];
-        if (!run_file_path(names.items[i], path, sizeof(path))) {
-            continue;
-        }
-        cJSON *run = NULL;
-        workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL);
-        if (run && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(run, "id"))) {
-            runs[count++] = run;
-        } else {
-            cJSON_Delete(run);
-        }
-    }
-    common_names_free(&names);
-    qsort(runs, count, sizeof(*runs), compare_runs);
-    *out_runs = runs;
-    *out_count = count;
-    return URSATZ_OK;
-}
-
-static bool copy_member(cJSON *to, const cJSON *from, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(from, key);
-    return item && cJSON_AddItemToObject(to, key, cJSON_Duplicate(item, 1));
-}
-
 UrsatzStatus workshop_link_run_list(cJSON **out_runs) {
     *out_runs = NULL;
-    cJSON **runs = NULL;
     size_t count = 0;
-    UrsatzStatus result = load_runs(&runs, &count);
-    if (result != URSATZ_OK) {
-        return result;
-    }
+    RunSummary *runs = index_snapshot(&count);
     cJSON *list = cJSON_CreateArray();
-    static const char *kKeys[] = {"id", "scope", "status", "created_at", "finished_at", "done", "total"};
     LOCK();
     for (size_t i = 0; list && i < count; i++) {
+        const RunSummary *run = &runs[i];
         cJSON *entry = cJSON_CreateObject();
-        bool ok = entry != NULL;
-        for (size_t k = 0; ok && k < sizeof(kKeys) / sizeof(kKeys[0]); k++) {
-            ok = copy_member(entry, runs[i], kKeys[k]);
-        }
+        double done = run->done;
+        double total = run->total;
         /* A running run reports what the worker has now, not what it last wrote. */
-        if (ok && g_state.active && strcmp(common_json_string(runs[i], "id"), g_state.id) == 0) {
-            ok = set_member(entry, "done", cJSON_CreateNumber((double)g_state.done)) &&
-                 set_member(entry, "total", cJSON_CreateNumber((double)g_state.total));
+        if (g_state.active && strcmp(run->id, g_state.id) == 0) {
+            done = (double)g_state.done;
+            total = (double)g_state.total;
         }
+        bool ok = entry && cJSON_AddStringToObject(entry, "id", run->id) &&
+                  cJSON_AddItemToObject(entry, "scope", run->scope ? cJSON_Duplicate(run->scope, 1) : cJSON_CreateObject()) &&
+                  cJSON_AddStringToObject(entry, "status", run->status) && cJSON_AddStringToObject(entry, "created_at", run->created_at) &&
+                  cJSON_AddItemToObject(entry, "finished_at", run->has_finished ? cJSON_CreateString(run->finished_at) : cJSON_CreateNull()) &&
+                  cJSON_AddNumberToObject(entry, "done", done) && cJSON_AddNumberToObject(entry, "total", total);
         if (ok) {
             cJSON_AddItemToArray(list, entry);
         } else {
@@ -824,7 +950,7 @@ UrsatzStatus workshop_link_run_list(cJSON **out_runs) {
         }
     }
     UNLOCK();
-    runs_free(runs, count);
+    snapshot_free(runs, count);
     if (!list) {
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
@@ -870,6 +996,7 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else {
         common_dir_remove(dir, NULL);
+        index_remove(id);
     }
     UNLOCK();
     return result;
@@ -877,42 +1004,46 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
 
 UrsatzStatus workshop_link_piece_links(const char *piece_id, cJSON **out_links) {
     *out_links = NULL;
-    cJSON **runs = NULL;
     size_t count = 0;
-    UrsatzStatus result = load_runs(&runs, &count);
-    if (result != URSATZ_OK) {
-        return result;
-    }
+    RunSummary *runs = index_snapshot(&count);
     cJSON *list = cJSON_CreateArray();
+    UrsatzStatus result = list ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     CommonNames seen = {0}; /* the scopes whose newest done run was taken */
-    for (size_t i = 0; list && result == URSATZ_OK && i < count; i++) {
-        const cJSON *run = runs[i];
-        const cJSON *scope = cJSON_GetObjectItemCaseSensitive(run, "scope");
-        const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
-        if (strcmp(common_json_string(run, "status"), "done") != 0 || !scope) {
+    for (size_t i = 0; result == URSATZ_OK && i < count; i++) {
+        const RunSummary *summary = &runs[i];
+        if (strcmp(summary->status, "done") != 0 || !summary->scope || !summary->scope_text) {
             continue;
         }
-        char *scope_text = cJSON_PrintUnformatted(scope);
-        if (!scope_text) {
+        bool newest = !common_names_contains(&seen, summary->scope_text);
+        if (newest && !id_list_add(&seen, summary->scope_text)) {
             result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
-        bool newest = !common_names_contains(&seen, scope_text);
-        if (newest && !id_list_add(&seen, scope_text)) {
-            result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        /* only a run that linked the piece is read: the index says which */
+        bool linked = false;
+        for (size_t p = 0; newest && !linked && p < summary->piece_count; p++) {
+            linked = strcmp(summary->pieces[p], piece_id) == 0;
         }
-        free(scope_text);
+        if (!linked) {
+            continue;
+        }
+        char path[PATH_BYTES];
+        cJSON *run = NULL;
+        if (!run_file_path(summary->id, path, sizeof(path)) ||
+            workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL) != URSATZ_OK) {
+            continue;
+        }
+        const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
         const cJSON *link = NULL;
-        const cJSON *taken = newest && result == URSATZ_OK ? links : NULL;
-        cJSON_ArrayForEach(link, taken) {
+        cJSON_ArrayForEach(link, links) {
             const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
             const char *b = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
             if (strcmp(a, piece_id) != 0 && strcmp(b, piece_id) != 0) {
                 continue;
             }
             cJSON *entry = cJSON_CreateObject();
-            if (!entry || !cJSON_AddStringToObject(entry, "run", common_json_string(run, "id")) ||
-                !cJSON_AddItemToObject(entry, "scope", cJSON_Duplicate(scope, 1)) ||
+            if (!entry || !cJSON_AddStringToObject(entry, "run", summary->id) ||
+                !cJSON_AddItemToObject(entry, "scope", cJSON_Duplicate(summary->scope, 1)) ||
                 !cJSON_AddItemToObject(entry, "link", cJSON_Duplicate(link, 1))) {
                 cJSON_Delete(entry);
                 result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
@@ -920,9 +1051,10 @@ UrsatzStatus workshop_link_piece_links(const char *piece_id, cJSON **out_links) 
             }
             cJSON_AddItemToArray(list, entry);
         }
+        cJSON_Delete(run);
     }
     common_names_free(&seen);
-    runs_free(runs, count);
+    snapshot_free(runs, count);
     if (!list || result != URSATZ_OK) {
         cJSON_Delete(list);
         return result == URSATZ_OK ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : result;
