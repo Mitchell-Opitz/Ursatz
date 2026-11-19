@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_LINK_SERVICE_H
 #define URSATZ_GUI_LINK_SERVICE_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -20,16 +22,6 @@
  * Pieces are in Library order (id order). Reads pieces from pieces/<id>/, collections, subjects and materials from
  * their services.
  */
-
-typedef enum {
-    URSATZ_GUI_LINK_OK = 0,
-    URSATZ_GUI_LINK_ERR_INVALID_SCOPE, /* an unknown kind, a missing or bad id, or an empty filter */
-    URSATZ_GUI_LINK_ERR_NOT_FOUND,     /* no such collection, subject, project or run */
-    URSATZ_GUI_LINK_ERR_EMPTY,         /* the scope names no piece */
-    URSATZ_GUI_LINK_ERR_BUSY,          /* a run is in progress */
-    URSATZ_GUI_LINK_ERR_FAILED,
-    URSATZ_GUI_LINK_ERR_ALLOC
-} UrsatzGuiLinkResult;
 
 typedef enum {
     URSATZ_GUI_LINK_SCOPE_ALL = 0,
@@ -55,7 +47,7 @@ typedef struct {
  * free with ursatz_gui_link_ids_free. ERR_EMPTY when the scope names no piece. An id a collection or subject keeps
  * for a piece that no longer exists is returned as is: a run skips it with the reason "not found".
  */
-UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scope, char ***out_ids, size_t *out_count);
+UrsatzStatus ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scope, char ***out_ids, size_t *out_count);
 
 void ursatz_gui_link_ids_free(char **ids, size_t count);
 
@@ -81,25 +73,25 @@ void ursatz_gui_link_service_shutdown(void);
  * scope is resolved first: INVALID_SCOPE, NOT_FOUND, EMPTY as ursatz_gui_link_scope_resolve; BUSY while another run
  * is in progress.
  */
-UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, char **out_id);
+UrsatzStatus ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, char **out_id);
 
 /*
  * Lists every run, newest first (then id), as {id, scope, status, created_at, finished_at, done, total} objects.
  * *out_runs is a caller-owned array (free with cJSON_Delete). A directory without a readable run.json is not a run.
  */
-UrsatzGuiLinkResult ursatz_gui_link_run_list(cJSON **out_runs);
+UrsatzStatus ursatz_gui_link_run_list(cJSON **out_runs);
 
 /* The whole run.json, with the live done and total while it runs. NOT_FOUND if absent. Caller-owned. */
-UrsatzGuiLinkResult ursatz_gui_link_run_get(const char *id, cJSON **out_run);
+UrsatzStatus ursatz_gui_link_run_get(const char *id, cJSON **out_run);
 
 /* Deletes the run. NOT_FOUND if absent, BUSY while it runs. */
-UrsatzGuiLinkResult ursatz_gui_link_run_delete(const char *id);
+UrsatzStatus ursatz_gui_link_run_delete(const char *id);
 
 /*
  * The links with this piece on either side, from the newest done run of each scope: an array of {"run": id,
  * "scope": {...}, "link": {...}} objects, newest run first. Caller-owned; an empty array when there are none.
  */
-UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **out_links);
+UrsatzStatus ursatz_gui_link_piece_links(const char *piece_id, cJSON **out_links);
 
 /* The title a piece is shown with: its filename without the extension (as the Library shows it), or the id when the
  * piece is gone. Newly allocated, or NULL when memory ran out. */

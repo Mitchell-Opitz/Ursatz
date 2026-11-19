@@ -1144,19 +1144,19 @@ int main(int argc, char **argv) {
 
     /* Delete. A subject that linked the piece forgets it. */
     cJSON *subject = NULL;
-    check(ursatz_gui_subject_create("Delete test", "idea", "", &subject) == URSATZ_GUI_SUBJECT_OK,
+    check(ursatz_gui_subject_create("Delete test", "idea", "", &subject) == URSATZ_OK,
           "a subject is created");
     char *subject_id = subject ? strdup(cJSON_GetObjectItemCaseSensitive(subject, "id")->valuestring) : NULL;
     cJSON_Delete(subject);
     subject = NULL;
-    check(subject_id && ursatz_gui_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_GUI_SUBJECT_OK,
+    check(subject_id && ursatz_gui_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_OK,
           "the subject links the piece");
     char dir[256];
     snprintf(dir, sizeof(dir), "pieces/%s", mozart_id);
     response = test_http_exchange(PORT, "DELETE", path, NULL, NULL, 0);
     check(test_http_status(response) == 200, "DELETE removes a piece");
     free(response);
-    check(subject_id && ursatz_gui_subject_get(subject_id, &subject) == URSATZ_GUI_SUBJECT_OK &&
+    check(subject_id && ursatz_gui_subject_get(subject_id, &subject) == URSATZ_OK &&
               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(subject, "pieces")) == 0,
           "deleting a piece removes it from the subjects that linked it");
     cJSON_Delete(subject);

@@ -1,4 +1,5 @@
 #include "materials.h"
+#include "../service/last_error.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -106,56 +107,16 @@ static const char *optional_string(const cJSON *body, const char *key, bool *bad
   return item->valuestring;
 }
 
-static int material_status(UrsatzGuiMaterialResult result) {
-  switch (result) {
-    case URSATZ_GUI_MATERIAL_OK:
-      return 200;
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_ID:
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_NAME:
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE:
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_BODY:
-      return 400;
-    case URSATZ_GUI_MATERIAL_ERR_NOT_FOUND:
-      return 404;
-    case URSATZ_GUI_MATERIAL_ERR_NOT_EMPTY:
-    case URSATZ_GUI_MATERIAL_ERR_REFERENCED:
-      return 409;
-    default:
-      return 500;
-  }
-}
-
-static const char *material_message(UrsatzGuiMaterialResult result) {
-  switch (result) {
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_ID:
-      return "invalid id";
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_NAME:
-      return "invalid name, description or note";
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE:
-      return "invalid type";
-    case URSATZ_GUI_MATERIAL_ERR_INVALID_BODY:
-      return "invalid body";
-    case URSATZ_GUI_MATERIAL_ERR_NOT_FOUND:
-      return "not found";
-    case URSATZ_GUI_MATERIAL_ERR_NOT_EMPTY:
-      return "the project still holds items";
-    case URSATZ_GUI_MATERIAL_ERR_REFERENCED:
-      return "the item is used by other items";
-    default:
-      return "material store failure";
-  }
-}
-
-static int send_material_failure(struct mg_connection *conn, UrsatzGuiMaterialResult result) {
-  return send_failure(conn, material_status(result), material_message(result));
+static int send_material_failure(struct mg_connection *conn, UrsatzStatus result) {
+  return ursatz_gui_send_service_failure(conn, result, "material store failure");
 }
 
 /* --- projects ------------------------------------------------------------ */
 
 static int handle_list_projects(struct mg_connection *conn) {
   cJSON *projects = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_project_list(&projects);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_project_list(&projects);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "projects", projects);
@@ -175,9 +136,9 @@ static int handle_create_project(struct mg_connection *conn) {
     return send_failure(conn, 400, "name is required; name and description are strings");
   }
   cJSON *project = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_project_create(name, description, &project);
+  UrsatzStatus result = ursatz_gui_material_project_create(name, description, &project);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "project", project);
@@ -185,8 +146,8 @@ static int handle_create_project(struct mg_connection *conn) {
 
 static int handle_get_project(struct mg_connection *conn, const char *id) {
   cJSON *project = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_project_get(id, &project);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_project_get(id, &project);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "project", project);
@@ -206,17 +167,17 @@ static int handle_patch_project(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "give name and/or description as strings");
   }
   cJSON *project = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_project_update(id, name, description, &project);
+  UrsatzStatus result = ursatz_gui_material_project_update(id, name, description, &project);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "project", project);
 }
 
 static int handle_delete_project(struct mg_connection *conn, const char *id) {
-  UrsatzGuiMaterialResult result = ursatz_gui_material_project_delete(id);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_project_delete(id);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok(conn);
@@ -237,10 +198,10 @@ static int handle_list_items(struct mg_connection *conn) {
   char project[256];
   char type[32];
   cJSON *items = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_list(
+  UrsatzStatus result = ursatz_gui_material_item_list(
       query_value(conn, "project", project, sizeof(project)) ? project : NULL,
       query_value(conn, "type", type, sizeof(type)) ? type : NULL, &items);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "items", items);
@@ -582,8 +543,8 @@ static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_mi
 }
 
 /* The text of a refusal to build a playback; every one is a 500 (the file came from the Composer, not the request). */
-static const char *playback_failure_text(UrsatzGuiPlaybackResult result) {
-  return result == URSATZ_GUI_PLAYBACK_ERR_ALLOC ? "out of memory" : "could not build the playback from the MIDI file";
+static const char *playback_failure_text(UrsatzStatus result) {
+  return result == URSATZ_ERR_ALLOC ? "out of memory" : "could not build the playback from the MIDI file";
 }
 
 /* Sends the playback JSON text the Analyzer built, and frees it. */
@@ -657,11 +618,11 @@ static int handle_render(struct mg_connection *conn) {
   /* An unsaved render has no folder: its MIDI goes to a temporary file for the Analyzer, which imports by path. */
   char tmp_dir[512];
   char *playback_text = NULL;
-  UrsatzGuiPlaybackResult built = ursatz_gui_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
+  UrsatzStatus built = ursatz_gui_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
                                       ? ursatz_gui_playback_of_midi_bytes(midi, midi_size, tmp_dir, &playback_text)
-                                      : URSATZ_GUI_PLAYBACK_ERR_IO;
+                                      : ursatz_gui_fail(URSATZ_ERR_IO, NULL);
   free(midi);
-  cJSON *playback = built == URSATZ_GUI_PLAYBACK_OK ? cJSON_Parse(playback_text) : NULL;
+  cJSON *playback = built == URSATZ_OK ? cJSON_Parse(playback_text) : NULL;
   free(playback_text);
   if (!playback) {
     free(xml);
@@ -730,10 +691,10 @@ static int handle_create_item(struct mg_connection *conn) {
   const char *first_note = has_text(note)                                             ? note
                            : strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0 ? "Created"
                                                                                        : NULL;
-  UrsatzGuiMaterialResult result =
+  UrsatzStatus result =
       ursatz_gui_material_item_create_noted(type, name, project_id, version_body, first_note, &item);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_item_answer(conn, item, analysis_error);
@@ -746,17 +707,17 @@ static int handle_get_item(struct mg_connection *conn, const char *id) {
   cJSON *uses_status = NULL;
   cJSON *used_by = NULL;
   cJSON *subjects = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &body);
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, &meta, &body);
+  if (result == URSATZ_OK) {
     result = ursatz_gui_material_uses_status(id, &uses_status);
   }
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  if (result == URSATZ_OK) {
     result = ursatz_gui_material_used_by(id, &used_by);
   }
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  if (result == URSATZ_OK) {
     subjects = ursatz_gui_materials_subjects_for("items", id);
   }
-  cJSON *object = result == URSATZ_GUI_MATERIAL_OK && subjects ? cJSON_CreateObject() : NULL;
+  cJSON *object = result == URSATZ_OK && subjects ? cJSON_CreateObject() : NULL;
   if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "item", meta)) {
     cJSON_Delete(object);
     cJSON_Delete(meta);
@@ -764,7 +725,7 @@ static int handle_get_item(struct mg_connection *conn, const char *id) {
     cJSON_Delete(uses_status);
     cJSON_Delete(used_by);
     cJSON_Delete(subjects);
-    return result == URSATZ_GUI_MATERIAL_OK ? send_failure(conn, 500, "out of memory")
+    return result == URSATZ_OK ? send_failure(conn, 500, "out of memory")
                                             : send_material_failure(conn, result);
   }
   cJSON_AddItemToObject(object, "body", body);
@@ -789,22 +750,22 @@ static int handle_patch_item(struct mg_connection *conn, const char *id) {
   }
   /* The project is checked up front, so a bad second field cannot leave the rename applied. */
   cJSON *item = NULL;
-  UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+  UrsatzStatus result = URSATZ_OK;
   if (project_id) {
     cJSON *project = NULL;
     result = ursatz_gui_material_project_get(project_id, &project);
     cJSON_Delete(project);
   }
-  if (result == URSATZ_GUI_MATERIAL_OK && name) {
+  if (result == URSATZ_OK && name) {
     result = ursatz_gui_material_item_rename(id, name, &item);
   }
-  if (result == URSATZ_GUI_MATERIAL_OK && project_id) {
+  if (result == URSATZ_OK && project_id) {
     cJSON_Delete(item);
     item = NULL;
     result = ursatz_gui_material_item_move(id, project_id, &item);
   }
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     cJSON_Delete(item);
     return send_material_failure(conn, result);
   }
@@ -814,12 +775,12 @@ static int handle_patch_item(struct mg_connection *conn, const char *id) {
 static int handle_delete_item(struct mg_connection *conn, const char *id) {
   char force[8];
   bool forced = query_value(conn, "force", force, sizeof(force)) && strcmp(force, "1") == 0;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_delete(id, forced);
-  if (result == URSATZ_GUI_MATERIAL_ERR_REFERENCED) {
+  UrsatzStatus result = ursatz_gui_material_item_delete(id, forced);
+  if (result == URSATZ_ERR_CONFLICT) {
     cJSON *used_by = NULL;
     cJSON *object = cJSON_CreateObject();
-    if (ursatz_gui_material_delete_blockers(id, &used_by) != URSATZ_GUI_MATERIAL_OK || !object ||
-        !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", material_message(result))) {
+    if (ursatz_gui_material_delete_blockers(id, &used_by) != URSATZ_OK || !object ||
+        !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", ursatz_gui_failure_message("material store failure"))) {
       cJSON_Delete(used_by);
       cJSON_Delete(object);
       return send_failure(conn, 500, "out of memory");
@@ -834,7 +795,7 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
     free(text);
     return 409;
   }
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok(conn);
@@ -869,7 +830,7 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
   /* The previous version tells whether proposed segments are to be proposed again (R-312). */
   cJSON *previous_meta = NULL;
   cJSON *previous_body = NULL;
-  if (ursatz_gui_material_item_get(id, &previous_meta, &previous_body) != URSATZ_GUI_MATERIAL_OK) {
+  if (ursatz_gui_material_item_get(id, &previous_meta, &previous_body) != URSATZ_OK) {
     previous_body = NULL;
   }
   cJSON_Delete(previous_meta);
@@ -882,9 +843,9 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
                                         : send_failure(conn, 500, "out of memory");
   }
   cJSON *item = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_add_version(id, version_body, note, &item);
+  UrsatzStatus result = ursatz_gui_material_item_add_version(id, version_body, note, &item);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_item_answer(conn, item, analysis_error);
@@ -895,8 +856,8 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
 static int handle_reanalyze(struct mg_connection *conn, const char *id) {
   cJSON *meta = NULL;
   cJSON *version_body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &version_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, &meta, &version_body);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   const cJSON *type = cJSON_GetObjectItemCaseSensitive(meta, "type");
@@ -919,7 +880,7 @@ static int handle_reanalyze(struct mg_connection *conn, const char *id) {
   cJSON *item = NULL;
   result = ursatz_gui_material_item_add_version(id, version_body, "Re-analyzed", &item);
   cJSON_Delete(version_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_item_answer(conn, item, analysis_error);
@@ -932,8 +893,8 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
     return send_failure(conn, 404, "version not found");
   }
   cJSON *version_body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   cJSON *object = cJSON_CreateObject();
@@ -991,8 +952,8 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
   }
   cJSON *meta = NULL;
   cJSON *stored = NULL;
-  UrsatzGuiMaterialResult found = ursatz_gui_material_item_get(id, &meta, &stored);
-  if (found != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus found = ursatz_gui_material_item_get(id, &meta, &stored);
+  if (found != URSATZ_OK) {
     cJSON_Delete(body);
     return send_material_failure(conn, found);
   }
@@ -1105,7 +1066,7 @@ static int handle_piece_variation_file(struct mg_connection *conn, const char *i
   size_t size = 0;
   const char *type = NULL;
   if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set) ||
-      ursatz_gui_piece_variation_file(id, version, set, name, &data, &size, &type) != URSATZ_GUI_THEME_OK) {
+      ursatz_gui_piece_variation_file(id, version, set, name, &data, &size, &type) != URSATZ_OK) {
     return send_failure(conn, 404, "file not found");
   }
   mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n", type, size);
@@ -1155,9 +1116,9 @@ static int handle_version_file(struct mg_connection *conn, const char *id, const
   }
   unsigned char *data = NULL;
   size_t size = 0;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_version_file(id, (int)number, name, &data, &size);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
-    return result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND ? send_failure(conn, 404, "file not found")
+  UrsatzStatus result = ursatz_gui_material_version_file(id, (int)number, name, &data, &size);
+  if (result != URSATZ_OK) {
+    return result == URSATZ_ERR_NOT_FOUND ? send_failure(conn, 404, "file not found")
                                                         : send_material_failure(conn, result);
   }
   mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
@@ -1269,8 +1230,8 @@ static int handle_version_file_playback(struct mg_connection *conn, const char *
     return send_failure(conn, 400, "file must be theme or a version name of a lowercase letter, then up to 30 lowercase letters, digits or hyphens");
   }
   snprintf(name, sizeof(name), "%s.mid", file);
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, number, &version_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get_version(id, number, &version_body);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   cJSON_Delete(version_body);
@@ -1283,8 +1244,8 @@ static int handle_version_file_playback(struct mg_connection *conn, const char *
   }
   fclose(exists);
   char *json = NULL;
-  UrsatzGuiPlaybackResult built = ursatz_gui_playback_of_midi(path, &json);
-  return built == URSATZ_GUI_PLAYBACK_OK ? send_playback_text(conn, json)
+  UrsatzStatus built = ursatz_gui_playback_of_midi(path, &json);
+  return built == URSATZ_OK ? send_playback_text(conn, json)
                                          : send_failure(conn, 500, playback_failure_text(built));
 }
 
@@ -1296,12 +1257,12 @@ static int handle_piece_variation_playback(struct mg_connection *conn, const cha
   int set = 0;
   char path[640];
   if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set) ||
-      ursatz_gui_piece_variation_midi_path(id, version, set, name, path, sizeof(path)) != URSATZ_GUI_THEME_OK) {
+      ursatz_gui_piece_variation_midi_path(id, version, set, name, path, sizeof(path)) != URSATZ_OK) {
     return send_failure(conn, 404, "file not found");
   }
   char *json = NULL;
-  UrsatzGuiPlaybackResult built = ursatz_gui_playback_of_midi(path, &json);
-  return built == URSATZ_GUI_PLAYBACK_OK ? send_playback_text(conn, json)
+  UrsatzStatus built = ursatz_gui_playback_of_midi(path, &json);
+  return built == URSATZ_OK ? send_playback_text(conn, json)
                                          : send_failure(conn, 500, playback_failure_text(built));
 }
 
@@ -1322,8 +1283,8 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   char render_key[32];
   bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
   cJSON *version_body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
@@ -1371,7 +1332,7 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   }
   if (cached && playback_only) {
     char *json = NULL;
-    if (ursatz_gui_playback_of_midi(midi_path, &json) == URSATZ_GUI_PLAYBACK_OK) {
+    if (ursatz_gui_playback_of_midi(midi_path, &json) == URSATZ_OK) {
       cJSON_Delete(version_body);
       return send_playback_text(conn, json);
     }
@@ -1392,10 +1353,10 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   if (playback_only) {
     char tmp_dir[512];
     char *json = NULL;
-    UrsatzGuiPlaybackResult built = ursatz_gui_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
+    UrsatzStatus built = ursatz_gui_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
                                         ? ursatz_gui_playback_of_midi_bytes(midi, midi_size, tmp_dir, &json)
-                                        : URSATZ_GUI_PLAYBACK_ERR_IO;
-    answered = built == URSATZ_GUI_PLAYBACK_OK ? send_playback_text(conn, json)
+                                        : ursatz_gui_fail(URSATZ_ERR_IO, NULL);
+    answered = built == URSATZ_OK ? send_playback_text(conn, json)
                                                : send_failure(conn, 500, playback_failure_text(built));
   } else {
     answered = send_bytes(conn, "application/xml", xml, strlen(xml));
@@ -1439,7 +1400,7 @@ static cJSON *lineage_root(const cJSON *motif) {
   for (int hops = 0; hops < 32 && cJSON_IsObject(derived); hops++) {
     const cJSON *source = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
     cJSON *body = NULL;
-    if (!cJSON_IsString(source) || ursatz_gui_material_item_get(source->valuestring, NULL, &body) != URSATZ_GUI_MATERIAL_OK) {
+    if (!cJSON_IsString(source) || ursatz_gui_material_item_get(source->valuestring, NULL, &body) != URSATZ_OK) {
       break;
     }
     cJSON_Delete(root);
@@ -1516,8 +1477,8 @@ static void job_ok_with(UrsatzGuiJobResult *out, const char *key, cJSON *value) 
   ursatz_gui_job_result_json(out, 200, object);
 }
 
-static void job_material_failure(UrsatzGuiJobResult *out, UrsatzGuiMaterialResult result) {
-  job_failure(out, material_status(result), material_message(result));
+static void job_material_failure(UrsatzGuiJobResult *out, UrsatzStatus result) {
+  job_failure(out, ursatz_gui_http_status(result, ursatz_gui_last_error()), ursatz_gui_failure_message("material store failure"));
 }
 
 /* POST /api/materials/items/<id>/variants {chain?, count?, seed?, functions?, distance?}: candidates from the item's current degrees; nothing is
@@ -1615,8 +1576,8 @@ static int handle_each_op(struct mg_connection *conn, const char *id) {
 /* GET /api/materials/items/<id>/op-checks: the marks of a motif from Try every operation, {"checks": {...}} (R-190). */
 static int handle_op_checks_get(struct mg_connection *conn, const char *id) {
   cJSON *checks = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_get(id, &checks);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_op_checks_get(id, &checks);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   if (!cJSON_AddBoolToObject(checks, "ok", 1)) {
@@ -1633,12 +1594,12 @@ static int handle_op_checks_put(struct mg_connection *conn, const char *id) {
   if (!body) {
     return status;
   }
-  char message[256] = "";
+  UrsatzError failure = {{0}};
   cJSON *stored = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_put(id, body, message, sizeof(message), &stored);
+  UrsatzStatus result = ursatz_gui_material_op_checks_put(id, body, &failure, &stored);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
-    return message[0] != '\0' ? send_failure(conn, material_status(result), message) : send_material_failure(conn, result);
+  if (result != URSATZ_OK) {
+    return failure.message[0] != '\0' ? send_failure(conn, ursatz_gui_http_status(result, &failure), failure.message) : send_material_failure(conn, result);
   }
   if (!cJSON_AddBoolToObject(stored, "ok", 1)) {
     cJSON_Delete(stored);
@@ -1659,9 +1620,9 @@ static const cJSON *motif_by_reference(const cJSON *reference, const char *which
     snprintf(message, message_size, "%s is {item, version}", which);
     return NULL;
   }
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(item->valuestring, version->valueint, body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
-    *status = material_status(result);
+  UrsatzStatus result = ursatz_gui_material_item_get_version(item->valuestring, version->valueint, body);
+  if (result != URSATZ_OK) {
+    *status = ursatz_gui_http_status(result, ursatz_gui_last_error());
     snprintf(message, message_size, "the %s motif or its version was not found", which);
     return NULL;
   }
@@ -1881,8 +1842,8 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
   }
   cJSON *meta = NULL;
   cJSON *source = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &source);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, &meta, &source);
+  if (result != URSATZ_OK) {
     cJSON_Delete(body);
     return send_material_failure(conn, result);
   }
@@ -1948,7 +1909,7 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
   cJSON_Delete(body);
   cJSON_Delete(meta);
   cJSON_Delete(source);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "item", item);
@@ -1985,8 +1946,8 @@ static int handle_flag(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "flag is approved, rejected or unflagged; kind is exact, motive-form or variant");
   }
   cJSON *current = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_OK) {
     cJSON_Delete(body);
     return send_material_failure(conn, result);
   }
@@ -2005,7 +1966,7 @@ static int handle_flag(struct mg_connection *conn, const char *id) {
   result = ursatz_gui_material_item_add_version(id, current, flag, &item);
   cJSON_Delete(body);
   cJSON_Delete(current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "item", item);
@@ -2028,8 +1989,8 @@ static int handle_promote(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "promote needs a name and a project_id; note is a string");
   }
   cJSON *current = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_OK) {
     cJSON_Delete(body);
     return send_material_failure(conn, result);
   }
@@ -2044,25 +2005,25 @@ static int handle_promote(struct mg_connection *conn, const char *id) {
   result = ursatz_gui_material_project_get(project_id, &project);
   cJSON_Delete(project);
   cJSON *item = NULL;
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  if (result == URSATZ_OK) {
     result = ursatz_gui_material_item_rename(id, name, &item);
     cJSON_Delete(item);
     item = NULL;
   }
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  if (result == URSATZ_OK) {
     result = ursatz_gui_material_item_move(id, project_id, &item);
     cJSON_Delete(item);
     item = NULL;
   }
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  if (result == URSATZ_OK) {
     cJSON_DeleteItemFromObjectCaseSensitive(derived, "standalone");
     result = cJSON_AddTrueToObject(derived, "standalone")
                  ? ursatz_gui_material_item_add_version(id, current, note && *note ? note : "Saved as new motif", &item)
-                 : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                 : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
   }
   cJSON_Delete(body);
   cJSON_Delete(current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     cJSON_Delete(item);
     return send_material_failure(conn, result);
   }
@@ -2199,7 +2160,7 @@ static bool item_is_in_lineage(const char *id, const char *source_id) {
       return true;
     }
     cJSON *body = NULL;
-    if (ursatz_gui_material_item_get(current, NULL, &body) != URSATZ_GUI_MATERIAL_OK) {
+    if (ursatz_gui_material_item_get(current, NULL, &body) != URSATZ_OK) {
       return false;
     }
     const cJSON *next = cJSON_GetObjectItemCaseSensitive(derived_of(body), "source_item");
@@ -2278,12 +2239,12 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "link-form needs a source {item, version} and a recognition that found a chain");
   }
   cJSON *current = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  UrsatzStatus result = ursatz_gui_material_item_get(id, NULL, &current);
   cJSON *source = NULL;
-  if (result == URSATZ_GUI_MATERIAL_OK) {
+  if (result == URSATZ_OK) {
     result = ursatz_gui_material_item_get_version(source_item->valuestring, source_version->valueint, &source);
   }
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     cJSON_Delete(body);
     cJSON_Delete(current);
     return send_material_failure(conn, result);
@@ -2314,13 +2275,13 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
   /* A linked motif already exists on its own, so it is a standalone motif (R-192), not a variant of the source. */
   bool linked = cJSON_AddTrueToObject(derived, "standalone") != NULL;
   result = linked && replace_member(motif, "derived", derived) ? ursatz_gui_material_item_add_version(id, current, note, &item)
-                                                              : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                                                              : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
   if (!linked) {
     cJSON_Delete(derived);
   }
   cJSON_Delete(body);
   cJSON_Delete(current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "item", item);
@@ -2330,8 +2291,8 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
    as a new version (the reroll job). */
 static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJobResult *out) {
   cJSON *current = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_OK) {
     {
     job_material_failure(out, result);
     return;
@@ -2351,7 +2312,7 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJ
   const char *form = form_item->valuestring;
   cJSON *source = NULL;
   result = ursatz_gui_material_item_get_version(source_item->valuestring, source_version->valueint, &source);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     cJSON_Delete(current);
     job_failure(out, 404, "the source motif or its version is gone");
     return;
@@ -2360,7 +2321,8 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJ
   cJSON *basic_body = lineage_root(cJSON_GetObjectItemCaseSensitive(source, "motif"));
   const cJSON *shown = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
   int status = 500;
-  char message[512] = "out of memory";
+  UrsatzError failure = {{0}};
+  ursatz_gui_error_text(&failure, "out of memory");
   cJSON *document = NULL;
   const cJSON *variant = NULL;
   double base = cJSON_IsNumber(stored_seed) ? stored_seed->valuedouble : 0;
@@ -2369,7 +2331,7 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJ
     seed = fmod(base + 1000003.0 + attempt, max_variant_seed() + 1);
     cJSON_Delete(document);
     document = ursatz_gui_motif_run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, false, chain, 1, seed, composer_job,
-                            &status, message, sizeof(message));
+                            &status, &failure);
     if (!document) {
       break;
     }
@@ -2377,7 +2339,7 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJ
     const char *degrees = variant_ok(variant) ? variant_text(variant, form, true) : NULL;
     if (!degrees) {
       status = 500;
-      snprintf(message, sizeof(message), "composer returned no variant");
+      ursatz_gui_error_text(&failure, "composer returned no variant");
       cJSON_Delete(document);
       document = NULL;
       break;
@@ -2394,8 +2356,8 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJ
     bool same = document != NULL;
     cJSON_Delete(document);
     cJSON_Delete(current);
-    ursatz_gui_job_result_failure_at(out, same ? 409 : status, same ? "rerolling gives the same motif" : message,
-                                     same ? NULL : ursatz_gui_motif_variants_path());
+    ursatz_gui_job_result_failure_at(out, same ? 409 : status, same ? "rerolling gives the same motif" : failure.message,
+                                     same ? NULL : failure.path);
     return;
   }
   const cJSON *chain_out = cJSON_GetObjectItemCaseSensitive(variant, "chain");
@@ -2418,10 +2380,10 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJ
     bounded_note(note, sizeof(note), "rerolled: ", derivation->valuestring);
   }
   cJSON *item = NULL;
-  result = ok ? ursatz_gui_material_item_add_version(id, current, note, &item) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  result = ok ? ursatz_gui_material_item_add_version(id, current, note, &item) : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
   cJSON_Delete(document);
   cJSON_Delete(current);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     {
     job_material_failure(out, result);
     return;
@@ -2450,25 +2412,26 @@ static void variants_run(const VariantsJob *input, const UrsatzJob *composer_job
   functions = cJSON_IsNull(functions) ? NULL : functions;
   const char *distance = cJSON_IsString(distance_item) ? distance_item->valuestring : NULL;
   cJSON *item_body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(input->id, NULL, &item_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(input->id, NULL, &item_body);
+  if (result != URSATZ_OK) {
     job_material_failure(out, result);
     return;
   }
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
   int status = 400;
-  char message[512] = "only a motif has variants";
+  UrsatzError failure = {{0}};
+  ursatz_gui_error_text(&failure, "only a motif has variants");
   cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
   cJSON *document = cJSON_IsObject(motif)
                         ? (each_op ? ursatz_gui_motif_run_variants(motif, basic_body, NULL, NULL, true, NULL, 0, input->seed, composer_job, &status,
-                                                  message, sizeof(message))
+                                                  &failure)
                                    : ursatz_gui_motif_run_variants(motif, basic_body, functions, distance, false, chain, input->count, input->seed,
-                                                  composer_job, &status, message, sizeof(message)))
+                                                  composer_job, &status, &failure))
                         : NULL;
   cJSON_Delete(basic_body);
   cJSON_Delete(item_body);
   if (!document) {
-    ursatz_gui_job_result_failure_at(out, status, message, ursatz_gui_motif_variants_path());
+    ursatz_gui_job_result_failure_at(out, status, failure.message, failure.path);
     return;
   }
   const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
@@ -2553,8 +2516,8 @@ static cJSON *variant_node(const cJSON *index, const char *id, const char *name,
 static int handle_variant_tree(struct mg_connection *conn, const char *id) {
   cJSON *meta = NULL;
   cJSON *body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_item_get(id, &meta, &body);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   cJSON *index = NULL;
@@ -2567,14 +2530,14 @@ static int handle_variant_tree(struct mg_connection *conn, const char *id) {
   const char *name = optional_string(meta, "name", &(bool){false});
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
   const char *ancestors[33];
-  cJSON *tree = result == URSATZ_GUI_MATERIAL_OK
+  cJSON *tree = result == URSATZ_OK
                     ? variant_node(index, id, name ? name : "", cJSON_IsNumber(version) ? version->valueint : 0,
                                    derived_of(body), ancestors, 0)
                     : NULL;
   cJSON_Delete(meta);
   cJSON_Delete(body);
   cJSON_Delete(index);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "tree", tree);
@@ -2582,8 +2545,8 @@ static int handle_variant_tree(struct mg_connection *conn, const char *id) {
 
 static int handle_update_use(struct mg_connection *conn, const char *id, const char *source_id) {
   cJSON *item = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_update_use(id, source_id, &item);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
+  UrsatzStatus result = ursatz_gui_material_update_use(id, source_id, &item);
+  if (result != URSATZ_OK) {
     return send_material_failure(conn, result);
   }
   return send_ok_with(conn, "item", item);
@@ -2638,7 +2601,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
                         "count 1 to 16 and seed a whole number from 0");
   }
   char style_path[1024] = "";
-  if (style_id && ursatz_gui_style_model_path(style_id, style_path, sizeof(style_path)) != URSATZ_GUI_STYLE_OK) {
+  if (style_id && ursatz_gui_style_model_path(style_id, style_path, sizeof(style_path)) != URSATZ_OK) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "unknown style");
   }
@@ -2707,9 +2670,9 @@ static int handle_validate(struct mg_connection *conn) {
     return send_failure(conn, 400, "type is motif, theme or piece and body an object");
   }
   cJSON *request = NULL;
-  char message[512] = "";
+  UrsatzError failure = {{0}};
   bool complete = false;
-  UrsatzGuiThemeResult built = URSATZ_GUI_THEME_OK;
+  UrsatzStatus built = URSATZ_OK;
   if (is_motif) {
     const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
@@ -2721,36 +2684,36 @@ static int handle_validate(struct mg_connection *conn) {
     request = draft ? NULL : ursatz_gui_motif_request(motif);
     complete = request != NULL;
     if (!draft && !request) {
-      snprintf(message, sizeof(message), "the motif needs notes, meter and pickup");
+      ursatz_gui_error_printf(&failure, "the motif needs notes, meter and pickup");
     }
   } else {
     /* A form not saved yet names its motifs and themes by reference; the uses a save would make are made here. */
     cJSON *filled = NULL;
-    UrsatzGuiMaterialResult uses = ursatz_gui_material_body_with_uses(body, &filled);
-    if (uses == URSATZ_GUI_MATERIAL_ERR_ALLOC) {
-      built = URSATZ_GUI_THEME_ERR_ALLOC;
-    } else if (uses != URSATZ_GUI_MATERIAL_OK) {
-      snprintf(message, sizeof(message), "a motif or theme the body names cannot be used yet");
+    UrsatzStatus uses = ursatz_gui_material_body_with_uses(body, &filled);
+    if (uses == URSATZ_ERR_ALLOC) {
+      built = ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
+    } else if (uses != URSATZ_OK) {
+      ursatz_gui_error_printf(&failure, "a motif or theme the body names cannot be used yet");
     } else if (is_theme) {
-      built = ursatz_gui_theme_validate(filled, &complete, &request, message, sizeof(message));
+      built = ursatz_gui_theme_validate(filled, &complete, &request, &failure);
     } else {
-      built = ursatz_gui_piece_validate(filled, &complete, &request, message, sizeof(message));
+      built = ursatz_gui_piece_validate(filled, &complete, &request, &failure);
     }
     cJSON_Delete(filled);
   }
-  if (built == URSATZ_GUI_THEME_ERR_ALLOC) {
+  if (built == URSATZ_ERR_ALLOC) {
     cJSON_Delete(request);
     cJSON_Delete(input);
     return send_failure(conn, 500, "out of memory");
   }
-  if (built != URSATZ_GUI_THEME_OK) {
+  if (built != URSATZ_OK) {
     cJSON_Delete(request);
     cJSON_Delete(input);
-    return send_failure(conn, built == URSATZ_GUI_THEME_ERR_INVALID ? 400 : 500, message[0] ? message : "the request could not be built");
+    return send_failure(conn, built == URSATZ_ERR_REQUEST ? 400 : 500, failure.message[0] ? failure.message : "the request could not be built");
   }
   if (!complete) {
     cJSON_Delete(input);
-    return send_incomplete(conn, message);
+    return send_incomplete(conn, failure.message);
   }
   UrsatzGuiComposerReply reply;
   bool called = ursatz_gui_motif_validate(is_motif ? "motive" : type->valuestring, request, &reply);
@@ -2794,16 +2757,16 @@ static int handle_get_item_export(struct mg_connection *conn, const char *id) {
     version = (int)parsed;
   }
   char *text = NULL;
-  char message[URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE];
-  UrsatzGuiMaterialExportResult result = ursatz_gui_material_export(id, version, &text, message);
-  if (result == URSATZ_GUI_MATERIAL_EXPORT_NOT_FOUND) {
+  UrsatzError failure = {{0}};
+  UrsatzStatus result = ursatz_gui_material_export(id, version, &text, &failure);
+  if (result == URSATZ_ERR_NOT_FOUND) {
     return send_failure(conn, 404, "item or version not found");
   }
-  if (result == URSATZ_GUI_MATERIAL_EXPORT_REFUSED) {
-    return send_failure(conn, 422, message[0] ? message : "composer could not render the motif");
+  if (result == URSATZ_ERR_REQUEST) {
+    return send_failure(conn, 422, failure.message[0] ? failure.message : "composer could not render the motif");
   }
-  if (result != URSATZ_GUI_MATERIAL_EXPORT_OK) {
-    return send_failure(conn, 500, result == URSATZ_GUI_MATERIAL_EXPORT_ALLOC ? "out of memory" : "failed to export the item");
+  if (result != URSATZ_OK) {
+    return send_failure(conn, 500, result == URSATZ_ERR_ALLOC ? "out of memory" : "failed to export the item");
   }
   size_t length = strlen(text);
   mg_send_http_ok(conn, "text/plain; charset=utf-8", (long)length);
@@ -2971,59 +2934,14 @@ static int route_projects(struct mg_connection *conn, const char *method, char s
 
 /* --- subjects ------------------------------------------------------------ */
 
-static int subject_status(UrsatzGuiSubjectResult result) {
-  switch (result) {
-    case URSATZ_GUI_SUBJECT_OK:
-      return 200;
-    case URSATZ_GUI_SUBJECT_ERR_INVALID_ID:
-    case URSATZ_GUI_SUBJECT_ERR_INVALID_NAME:
-    case URSATZ_GUI_SUBJECT_ERR_INVALID_KIND:
-    case URSATZ_GUI_SUBJECT_ERR_SELF:
-      return 400;
-    case URSATZ_GUI_SUBJECT_ERR_NOT_FOUND:
-    case URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND:
-    case URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND:
-    case URSATZ_GUI_SUBJECT_ERR_NOT_LINKED:
-    case URSATZ_GUI_SUBJECT_ERR_NOT_RELATED:
-      return 404;
-    default:
-      return 500;
-  }
-}
-
-static const char *subject_message(UrsatzGuiSubjectResult result) {
-  switch (result) {
-    case URSATZ_GUI_SUBJECT_ERR_INVALID_ID:
-      return "invalid id";
-    case URSATZ_GUI_SUBJECT_ERR_INVALID_NAME:
-      return "invalid name or note";
-    case URSATZ_GUI_SUBJECT_ERR_INVALID_KIND:
-      return "invalid kind";
-    case URSATZ_GUI_SUBJECT_ERR_SELF:
-      return "a subject cannot relate to itself";
-    case URSATZ_GUI_SUBJECT_ERR_NOT_FOUND:
-      return "subject not found";
-    case URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND:
-      return "item not found";
-    case URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND:
-      return "piece not found";
-    case URSATZ_GUI_SUBJECT_ERR_NOT_LINKED:
-      return "not linked";
-    case URSATZ_GUI_SUBJECT_ERR_NOT_RELATED:
-      return "not related";
-    default:
-      return "subject store failure";
-  }
-}
-
-static int send_subject_failure(struct mg_connection *conn, UrsatzGuiSubjectResult result) {
-  return send_failure(conn, subject_status(result), subject_message(result));
+static int send_subject_failure(struct mg_connection *conn, UrsatzStatus result) {
+  return ursatz_gui_send_service_failure(conn, result, "subject store failure");
 }
 
 cJSON *ursatz_gui_materials_subjects_for(const char *kind, const char *id) {
   cJSON *rows = NULL;
   cJSON *found = cJSON_CreateArray();
-  if (!found || ursatz_gui_subject_list(&rows) != URSATZ_GUI_SUBJECT_OK) {
+  if (!found || ursatz_gui_subject_list(&rows) != URSATZ_OK) {
     cJSON_Delete(found);
     return NULL;
   }
@@ -3031,7 +2949,7 @@ cJSON *ursatz_gui_materials_subjects_for(const char *kind, const char *id) {
   cJSON_ArrayForEach(row, rows) {
     const cJSON *row_id = cJSON_GetObjectItemCaseSensitive(row, "id");
     cJSON *subject = NULL;
-    if (!cJSON_IsString(row_id) || ursatz_gui_subject_get(row_id->valuestring, &subject) != URSATZ_GUI_SUBJECT_OK) {
+    if (!cJSON_IsString(row_id) || ursatz_gui_subject_get(row_id->valuestring, &subject) != URSATZ_OK) {
       continue;
     }
     const cJSON *links = cJSON_GetObjectItemCaseSensitive(subject, kind);
@@ -3066,8 +2984,8 @@ cJSON *ursatz_gui_materials_subjects_for(const char *kind, const char *id) {
 
 static int handle_list_subjects(struct mg_connection *conn) {
   cJSON *subjects = NULL;
-  UrsatzGuiSubjectResult result = ursatz_gui_subject_list(&subjects);
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  UrsatzStatus result = ursatz_gui_subject_list(&subjects);
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_ok_with(conn, "subjects", subjects);
@@ -3075,8 +2993,8 @@ static int handle_list_subjects(struct mg_connection *conn) {
 
 static int handle_subject_groups(struct mg_connection *conn) {
   cJSON *groups = NULL;
-  UrsatzGuiSubjectResult result = ursatz_gui_subject_groups(&groups);
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  UrsatzStatus result = ursatz_gui_subject_groups(&groups);
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_ok_with(conn, "groups", groups);
@@ -3097,9 +3015,9 @@ static int handle_create_subject(struct mg_connection *conn) {
     return send_failure(conn, 400, "name and kind are required; name, kind and note are strings");
   }
   cJSON *subject = NULL;
-  UrsatzGuiSubjectResult result = ursatz_gui_subject_create(name, kind, note, &subject);
+  UrsatzStatus result = ursatz_gui_subject_create(name, kind, note, &subject);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_ok_with(conn, "subject", subject);
@@ -3107,8 +3025,8 @@ static int handle_create_subject(struct mg_connection *conn) {
 
 static int handle_get_subject(struct mg_connection *conn, const char *id) {
   cJSON *subject = NULL;
-  UrsatzGuiSubjectResult result = ursatz_gui_subject_get(id, &subject);
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  UrsatzStatus result = ursatz_gui_subject_get(id, &subject);
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_ok_with(conn, "subject", subject);
@@ -3129,17 +3047,17 @@ static int handle_patch_subject(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "give name, kind and/or note as strings");
   }
   cJSON *subject = NULL;
-  UrsatzGuiSubjectResult result = ursatz_gui_subject_update(id, name, kind, note, &subject);
+  UrsatzStatus result = ursatz_gui_subject_update(id, name, kind, note, &subject);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_ok_with(conn, "subject", subject);
 }
 
 static int handle_delete_subject(struct mg_connection *conn, const char *id) {
-  UrsatzGuiSubjectResult result = ursatz_gui_subject_delete(id);
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  UrsatzStatus result = ursatz_gui_subject_delete(id);
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_ok(conn);
@@ -3167,11 +3085,11 @@ static int handle_subject_link(struct mg_connection *conn, const char *method, c
   }
   bool already = false;
   cJSON *subject = NULL;
-  UrsatzGuiSubjectResult result;
+  UrsatzStatus result;
   if (post && strcmp(kind, "items") == 0) {
     /* A variant belongs to its motif and has no subjects (R-187). An absent item is left to the subject service. */
     cJSON *body = NULL;
-    bool variant = ursatz_gui_material_item_get(other, NULL, &body) == URSATZ_GUI_MATERIAL_OK &&
+    bool variant = ursatz_gui_material_item_get(other, NULL, &body) == URSATZ_OK &&
                    ursatz_gui_material_item_is_variant(body);
     cJSON_Delete(body);
     if (variant) {
@@ -3188,7 +3106,7 @@ static int handle_subject_link(struct mg_connection *conn, const char *method, c
     result = post ? ursatz_gui_subject_relate(id, other, &already, &subject)
                   : ursatz_gui_subject_unrelate(id, other, &subject);
   }
-  if (result != URSATZ_GUI_SUBJECT_OK) {
+  if (result != URSATZ_OK) {
     return send_subject_failure(conn, result);
   }
   return send_subject_after(conn, subject, already, post);

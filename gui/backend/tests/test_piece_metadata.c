@@ -73,28 +73,28 @@ static void test_values_equal(void) {
 static void test_tag_list(void) {
     char **tags = NULL;
     size_t count = 0;
-    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "b") == URSATZ_GUI_META_OK, "add first tag");
-    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "a") == URSATZ_GUI_META_OK, "add second tag");
-    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "B") == URSATZ_GUI_META_OK && count == 2,
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "b") == URSATZ_OK, "add first tag");
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "a") == URSATZ_OK, "add second tag");
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "B") == URSATZ_OK && count == 2,
           "a duplicate is skipped without error");
     check_quiet(count == 2 && strcmp(tags[0], "b") == 0 && strcmp(tags[1], "a") == 0, "insertion order is kept");
-    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "zzz") == URSATZ_GUI_META_OK && count == 2,
+    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "zzz") == URSATZ_OK && count == 2,
           "removing an absent tag is not an error");
-    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "b") == URSATZ_GUI_META_OK && count == 1 &&
+    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "b") == URSATZ_OK && count == 1 &&
               strcmp(tags[0], "a") == 0,
           "remove drops the tag");
-    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "a") == URSATZ_GUI_META_OK && count == 0 && tags == NULL,
+    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "a") == URSATZ_OK && count == 0 && tags == NULL,
           "removing the last tag empties the list");
 
     for (int i = 0; i < URSATZ_GUI_META_MAX_TAGS; i++) {
         char name[16];
         snprintf(name, sizeof(name), "tag%d", i);
-        check_quiet(ursatz_gui_meta_tags_add(&tags, &count, name) == URSATZ_GUI_META_OK, "add up to 32 tags");
+        check_quiet(ursatz_gui_meta_tags_add(&tags, &count, name) == URSATZ_OK, "add up to 32 tags");
     }
-    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "one-too-many") == URSATZ_GUI_META_ERR_TOO_MANY_TAGS &&
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "one-too-many") == URSATZ_ERR_REQUEST &&
               count == 32,
           "the 33rd tag fails");
-    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "tag3") == URSATZ_GUI_META_OK && count == 32,
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "tag3") == URSATZ_OK && count == 32,
           "a duplicate at the limit is still not an error");
     ursatz_gui_meta_tags_free(tags, count);
 }
@@ -146,7 +146,7 @@ static void test_grouping(void) {
     size_t count = sizeof(kSpecs) / sizeof(kSpecs[0]);
     UrsatzGuiPieceSummary *pieces = build_pieces(kSpecs, count);
     UrsatzGuiMetaGroups groups;
-    check_quiet(ursatz_gui_meta_group(pieces, count, &groups) == URSATZ_GUI_META_OK, "grouping succeeds");
+    check_quiet(ursatz_gui_meta_group(pieces, count, &groups) == URSATZ_OK, "grouping succeeds");
 
     check_quiet(groups.total == 8, "total counts every piece");
     check_quiet(groups.composer_count == 5, "composers are distinct case-insensitively");
@@ -176,7 +176,7 @@ static void test_spelling_tie(void) {
     static const Spec specs[] = {{"bach", "", {}, 0}, {"Bach", "", {}, 0}};
     UrsatzGuiPieceSummary *pieces = build_pieces(specs, 2);
     UrsatzGuiMetaGroups groups;
-    check_quiet(ursatz_gui_meta_group(pieces, 2, &groups) == URSATZ_GUI_META_OK, "grouping a tie succeeds");
+    check_quiet(ursatz_gui_meta_group(pieces, 2, &groups) == URSATZ_OK, "grouping a tie succeeds");
     check_quiet(groups.composer_count == 1 && groups.composers[0].count == 2 &&
               strcmp(groups.composers[0].value, "Bach") == 0,
           "a spelling tie is broken by byte order");
@@ -184,7 +184,7 @@ static void test_spelling_tie(void) {
     free_pieces(pieces, 2);
 
     UrsatzGuiMetaGroups empty;
-    check_quiet(ursatz_gui_meta_group(NULL, 0, &empty) == URSATZ_GUI_META_OK && empty.total == 0 &&
+    check_quiet(ursatz_gui_meta_group(NULL, 0, &empty) == URSATZ_OK && empty.total == 0 &&
               empty.composers == NULL,
           "no pieces gives empty groups");
     ursatz_gui_meta_groups_destroy(&empty);

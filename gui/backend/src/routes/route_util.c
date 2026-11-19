@@ -1,4 +1,5 @@
 #include "route_util.h"
+#include "../service/last_error.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -157,4 +158,36 @@ cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_byte
 
 cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null) {
   return ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, status_or_null);
+}
+
+int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
+  switch (status) {
+    case URSATZ_OK:
+      return 200;
+    case URSATZ_ERR_REQUEST:
+      return error && error->path[0] != '\0' ? 422 : 400;
+    case URSATZ_ERR_UNSATISFIABLE:
+      return 422;
+    case URSATZ_ERR_NOT_FOUND:
+      return 404;
+    case URSATZ_ERR_CONFLICT:
+      return 409;
+    case URSATZ_ERR_CANCELLED:
+      return 499;
+    case URSATZ_ERR_FORMAT:
+    case URSATZ_ERR_IO:
+    case URSATZ_ERR_ALLOC:
+    case URSATZ_ERR_INTERNAL:
+    default:
+      return 500;
+  }
+}
+
+const char *ursatz_gui_failure_message(const char *fallback) {
+  const UrsatzError *error = ursatz_gui_last_error();
+  return error->message[0] != '\0' ? error->message : fallback;
+}
+
+int ursatz_gui_send_service_failure(struct mg_connection *conn, UrsatzStatus status, const char *fallback) {
+  return ursatz_gui_send_failure(conn, ursatz_gui_http_status(status, ursatz_gui_last_error()), ursatz_gui_failure_message(fallback));
 }

@@ -1,4 +1,5 @@
 #include "link_service.h"
+#include "last_error.h"
 #include "util/store_lock.h"
 
 #include <stdio.h>
@@ -72,69 +73,54 @@ static void free_summaries(UrsatzGuiPieceSummary *pieces, size_t count) {
 }
 
 /* Every Library piece, or those that match the filter (NULL for all). */
-static UrsatzGuiLinkResult add_library_pieces(CommonNames *ids, const UrsatzGuiMetaFilter *filter) {
+static UrsatzStatus add_library_pieces(CommonNames *ids, const UrsatzGuiMetaFilter *filter) {
     UrsatzGuiPieceSummary *pieces = NULL;
     size_t count = 0;
-    if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
-        return URSATZ_GUI_LINK_ERR_FAILED;
+    if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     }
-    UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
-    for (size_t i = 0; result == URSATZ_GUI_LINK_OK && i < count; i++) {
+    UrsatzStatus result = URSATZ_OK;
+    for (size_t i = 0; result == URSATZ_OK && i < count; i++) {
         if ((!filter || ursatz_gui_meta_matches(&pieces[i], filter)) && !id_list_add(ids, pieces[i].id)) {
-            result = URSATZ_GUI_LINK_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
     free_summaries(pieces, count);
     return result;
 }
 
-static UrsatzGuiLinkResult add_collection_pieces(CommonNames *ids, const char *collection_id) {
+static UrsatzStatus add_collection_pieces(CommonNames *ids, const char *collection_id) {
     if (!text_given(collection_id) || !ursatz_gui_collection_is_valid_id(collection_id)) {
-        return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
     }
     UrsatzGuiCollection *collection = NULL;
-    UrsatzGuiCollectionResult result = ursatz_gui_collection_get(collection_id, &collection);
-    if (result == URSATZ_GUI_COLLECTION_ERR_NOT_FOUND) {
-        return URSATZ_GUI_LINK_ERR_NOT_FOUND;
+    UrsatzStatus result = ursatz_gui_collection_get(collection_id, &collection);
+    if (result == URSATZ_ERR_NOT_FOUND) {
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
-    if (result != URSATZ_GUI_COLLECTION_OK) {
-        return result == URSATZ_GUI_COLLECTION_ERR_ALLOC ? URSATZ_GUI_LINK_ERR_ALLOC : URSATZ_GUI_LINK_ERR_FAILED;
+    if (result != URSATZ_OK) {
+        return result == URSATZ_ERR_ALLOC ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     }
     bool ok = true;
     for (size_t i = 0; ok && i < collection->piece_count; i++) {
         ok = id_list_add(ids, collection->pieces[i]);
     }
     ursatz_gui_collection_destroy(collection);
-    return ok ? URSATZ_GUI_LINK_OK : URSATZ_GUI_LINK_ERR_ALLOC;
+    return ok ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
 }
 
-static UrsatzGuiLinkResult subject_result(UrsatzGuiSubjectResult result) {
-    switch (result) {
-        case URSATZ_GUI_SUBJECT_OK:
-            return URSATZ_GUI_LINK_OK;
-        case URSATZ_GUI_SUBJECT_ERR_INVALID_ID:
-            return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
-        case URSATZ_GUI_SUBJECT_ERR_NOT_FOUND:
-            return URSATZ_GUI_LINK_ERR_NOT_FOUND;
-        case URSATZ_GUI_SUBJECT_ERR_ALLOC:
-            return URSATZ_GUI_LINK_ERR_ALLOC;
-        default:
-            return URSATZ_GUI_LINK_ERR_FAILED;
-    }
-}
-
-static UrsatzGuiLinkResult add_subject_pieces(CommonNames *ids, const char *subject_id) {
+static UrsatzStatus add_subject_pieces(CommonNames *ids, const char *subject_id) {
     if (!text_given(subject_id)) {
-        return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
     }
     cJSON *subject = NULL;
-    UrsatzGuiLinkResult result = subject_result(ursatz_gui_subject_get(subject_id, &subject));
-    if (result != URSATZ_GUI_LINK_OK) {
+    UrsatzStatus result = ursatz_gui_subject_get(subject_id, &subject);
+    if (result != URSATZ_OK) {
         return result;
     }
     bool ok = id_list_add_array(ids, cJSON_GetObjectItemCaseSensitive(subject, "pieces"));
     cJSON_Delete(subject);
-    return ok ? URSATZ_GUI_LINK_OK : URSATZ_GUI_LINK_ERR_ALLOC;
+    return ok ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
 }
 
 /* True when any of the subject's items is one of the project's. */
@@ -149,27 +135,27 @@ static bool subject_links_item_of(const cJSON *subject, const CommonNames *item_
 }
 
 /* The Library pieces linked to every subject that links at least one item of the project. */
-static UrsatzGuiLinkResult add_project_pieces(CommonNames *ids, const char *project_id) {
+static UrsatzStatus add_project_pieces(CommonNames *ids, const char *project_id) {
     if (!text_given(project_id)) {
-        return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
     }
     cJSON *project = NULL;
-    UrsatzGuiMaterialResult found = ursatz_gui_material_project_get(project_id, &project);
-    if (found == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
-        return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+    UrsatzStatus found = ursatz_gui_material_project_get(project_id, &project);
+    if (found == URSATZ_ERR_REQUEST) {
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
     }
-    if (found == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND) {
-        return URSATZ_GUI_LINK_ERR_NOT_FOUND;
+    if (found == URSATZ_ERR_NOT_FOUND) {
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
-    if (found != URSATZ_GUI_MATERIAL_OK) {
-        return found == URSATZ_GUI_MATERIAL_ERR_ALLOC ? URSATZ_GUI_LINK_ERR_ALLOC : URSATZ_GUI_LINK_ERR_FAILED;
+    if (found != URSATZ_OK) {
+        return found == URSATZ_ERR_ALLOC ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     }
     cJSON_Delete(project);
 
     cJSON *items = NULL;
     found = ursatz_gui_material_item_list(project_id, NULL, &items);
-    if (found != URSATZ_GUI_MATERIAL_OK) {
-        return found == URSATZ_GUI_MATERIAL_ERR_ALLOC ? URSATZ_GUI_LINK_ERR_ALLOC : URSATZ_GUI_LINK_ERR_FAILED;
+    if (found != URSATZ_OK) {
+        return found == URSATZ_ERR_ALLOC ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     }
     CommonNames item_ids = {0};
     const cJSON *item = NULL;
@@ -184,30 +170,30 @@ static UrsatzGuiLinkResult add_project_pieces(CommonNames *ids, const char *proj
     cJSON_Delete(items);
     if (!ok) {
         common_names_free(&item_ids);
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
-    UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
+    UrsatzStatus result = URSATZ_OK;
     cJSON *subjects = NULL;
     if (item_ids.count > 0) {
-        result = subject_result(ursatz_gui_subject_list(&subjects));
+        result = ursatz_gui_subject_list(&subjects);
     }
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, subjects) {
         const cJSON *id = cJSON_GetObjectItemCaseSensitive(entry, "id");
-        if (result != URSATZ_GUI_LINK_OK || !cJSON_IsString(id)) {
+        if (result != URSATZ_OK || !cJSON_IsString(id)) {
             break;
         }
         /* The list entries carry counts, not the links: read the subject itself. */
         cJSON *subject = NULL;
-        UrsatzGuiSubjectResult got = ursatz_gui_subject_get(id->valuestring, &subject);
-        if (got == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND) {
+        UrsatzStatus got = ursatz_gui_subject_get(id->valuestring, &subject);
+        if (got == URSATZ_ERR_NOT_FOUND) {
             continue;
         }
-        result = subject_result(got);
-        if (result == URSATZ_GUI_LINK_OK && subject_links_item_of(subject, &item_ids) &&
+        result = got;
+        if (result == URSATZ_OK && subject_links_item_of(subject, &item_ids) &&
             !id_list_add_array(ids, cJSON_GetObjectItemCaseSensitive(subject, "pieces"))) {
-            result = URSATZ_GUI_LINK_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         cJSON_Delete(subject);
     }
@@ -216,16 +202,16 @@ static UrsatzGuiLinkResult add_project_pieces(CommonNames *ids, const char *proj
     return result;
 }
 
-UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scope, char ***out_ids,
+UrsatzStatus ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scope, char ***out_ids,
                                                   size_t *out_count) {
     if (!scope || !out_ids || !out_count) {
-        return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
     }
     *out_ids = NULL;
     *out_count = 0;
 
     CommonNames ids = {0};
-    UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
+    UrsatzStatus result = URSATZ_OK;
     switch (scope->kind) {
         case URSATZ_GUI_LINK_SCOPE_ALL:
             result = add_library_pieces(&ids, NULL);
@@ -239,7 +225,7 @@ UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scop
             filter.source = text_given(scope->source) ? scope->source : NULL;
             filter.tag = text_given(scope->tag) ? scope->tag : NULL;
             result = filter.composer || filter.source || filter.tag ? add_library_pieces(&ids, &filter)
-                                                                     : URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+                                                                     : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
             break;
         }
         case URSATZ_GUI_LINK_SCOPE_SUBJECT:
@@ -249,20 +235,20 @@ UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scop
             result = add_project_pieces(&ids, scope->project_id);
             break;
         default:
-            result = URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid scope");
             break;
     }
-    if (result == URSATZ_GUI_LINK_OK && ids.count == 0) {
-        result = URSATZ_GUI_LINK_ERR_EMPTY;
+    if (result == URSATZ_OK && ids.count == 0) {
+        result = ursatz_gui_fail(URSATZ_ERR_UNSATISFIABLE, "the scope names no pieces");
     }
-    if (result != URSATZ_GUI_LINK_OK) {
+    if (result != URSATZ_OK) {
         common_names_free(&ids);
         return result;
     }
     common_names_sort(&ids);
     *out_ids = ids.items;
     *out_count = ids.count;
-    return URSATZ_GUI_LINK_OK;
+    return URSATZ_OK;
 }
 
 /* --- files ---------------------------------------------------------------- */
@@ -457,14 +443,14 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
     }
     /* Another schema, Analyzer version or Ursatz commit: analyze the piece again before the run. The error-triggered
        re-analysis below stays as a fallback. */
-    UrsatzGuiAnalysisResult ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
-    if (ensured != URSATZ_GUI_ANALYSIS_OK) {
-        return ensured == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
+    UrsatzStatus ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
+    if (ensured != URSATZ_OK) {
+        return ensured == URSATZ_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
     }
 
     for (int attempt = 0; attempt < 2; attempt++) {
         char *document = NULL;
-        if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_GUI_ANALYSIS_OK) {
+        if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_OK) {
             return "unreadable analysis";
         }
         UrsatzStatus result = motive_link_scope_add_document(scope, id, document);
@@ -477,7 +463,7 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
         if (!stale || attempt > 0) {
             return "unreadable analysis";
         }
-        if (ursatz_gui_analysis_reanalyze(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
+        if (ursatz_gui_analysis_reanalyze(kPiecesDir, id) != URSATZ_OK) {
             return "re-analysis failed";
         }
     }
@@ -677,14 +663,14 @@ void ursatz_gui_link_service_shutdown(void) {
     }
 }
 
-UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, char **out_id) {
+UrsatzStatus ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, char **out_id) {
     if (out_id) {
         *out_id = NULL;
     }
     char **ids = NULL;
     size_t count = 0;
-    UrsatzGuiLinkResult result = ursatz_gui_link_scope_resolve(scope, &ids, &count);
-    if (result != URSATZ_GUI_LINK_OK) {
+    UrsatzStatus result = ursatz_gui_link_scope_resolve(scope, &ids, &count);
+    if (result != URSATZ_OK) {
         return result;
     }
 
@@ -694,7 +680,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
         free(id);
         free(job);
         ursatz_gui_link_ids_free(ids, count);
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     snprintf(job->id, sizeof(job->id), "%s", id);
     free(id);
@@ -713,7 +699,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
                  cJSON_AddNumberToObject(job->run, "total", 0) && cJSON_AddArrayToObject(job->run, "skipped");
     if (!built) {
         job_free(job);
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
     /* The worker owns job once it starts and may free it at once: keep the id here. */
@@ -722,14 +708,14 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
 
     LOCK();
     if (!g_state.ready) {
-        result = URSATZ_GUI_LINK_ERR_FAILED;
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     } else if (g_state.active) {
-        result = URSATZ_GUI_LINK_ERR_BUSY;
+        result = ursatz_gui_fail(URSATZ_ERR_CONFLICT, "a run is in progress");
     } else {
         char dir[PATH_BYTES];
-        result = run_dir_path(job->id, dir, sizeof(dir)) && (common_dir_make(dir, NULL) == URSATZ_OK) && job_write(job) ? URSATZ_GUI_LINK_OK
-                                                                                                 : URSATZ_GUI_LINK_ERR_FAILED;
-        if (result == URSATZ_GUI_LINK_OK) {
+        result = run_dir_path(job->id, dir, sizeof(dir)) && (common_dir_make(dir, NULL) == URSATZ_OK) && job_write(job) ? URSATZ_OK
+                                                                                                 : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
+        if (result == URSATZ_OK) {
             g_state.active = true;
             g_state.done = 0;
             g_state.total = 0;
@@ -737,7 +723,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
             if (!job_spawn(job)) {
                 g_state.active = false;
                 g_state.id[0] = '\0';
-                result = URSATZ_GUI_LINK_ERR_FAILED;
+                result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "link operation failed");
                 if (run_dir_path(job->id, dir, sizeof(dir))) {
                     common_dir_remove(dir, NULL);
                 }
@@ -746,17 +732,17 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
     }
     UNLOCK();
 
-    if (result != URSATZ_GUI_LINK_OK) {
+    if (result != URSATZ_OK) {
         job_free(job);
         return result;
     }
     if (out_id) {
         *out_id = common_strdup(run_id);
         if (!*out_id) {
-            return URSATZ_GUI_LINK_ERR_ALLOC;
+            return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
-    return URSATZ_GUI_LINK_OK;
+    return URSATZ_OK;
 }
 
 /* --- reading runs --------------------------------------------------------- */
@@ -778,18 +764,18 @@ static void runs_free(cJSON **runs, size_t count) {
 }
 
 /* Every readable run.json, newest first. The caller frees with runs_free. */
-static UrsatzGuiLinkResult load_runs(cJSON ***out_runs, size_t *out_count) {
+static UrsatzStatus load_runs(cJSON ***out_runs, size_t *out_count) {
     *out_runs = NULL;
     *out_count = 0;
     CommonNames names = {0};
     if (!list_run_dirs(&names)) {
         common_names_free(&names);
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     cJSON **runs = names.count ? calloc(names.count, sizeof(*runs)) : NULL;
     if (names.count && !runs) {
         common_names_free(&names);
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     size_t count = 0;
     for (size_t i = 0; i < names.count; i++) {
@@ -809,7 +795,7 @@ static UrsatzGuiLinkResult load_runs(cJSON ***out_runs, size_t *out_count) {
     qsort(runs, count, sizeof(*runs), compare_runs);
     *out_runs = runs;
     *out_count = count;
-    return URSATZ_GUI_LINK_OK;
+    return URSATZ_OK;
 }
 
 static bool copy_member(cJSON *to, const cJSON *from, const char *key) {
@@ -817,12 +803,12 @@ static bool copy_member(cJSON *to, const cJSON *from, const char *key) {
     return item && cJSON_AddItemToObject(to, key, cJSON_Duplicate(item, 1));
 }
 
-UrsatzGuiLinkResult ursatz_gui_link_run_list(cJSON **out_runs) {
+UrsatzStatus ursatz_gui_link_run_list(cJSON **out_runs) {
     *out_runs = NULL;
     cJSON **runs = NULL;
     size_t count = 0;
-    UrsatzGuiLinkResult result = load_runs(&runs, &count);
-    if (result != URSATZ_GUI_LINK_OK) {
+    UrsatzStatus result = load_runs(&runs, &count);
+    if (result != URSATZ_OK) {
         return result;
     }
     cJSON *list = cJSON_CreateArray();
@@ -850,22 +836,22 @@ UrsatzGuiLinkResult ursatz_gui_link_run_list(cJSON **out_runs) {
     UNLOCK();
     runs_free(runs, count);
     if (!list) {
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     *out_runs = list;
-    return URSATZ_GUI_LINK_OK;
+    return URSATZ_OK;
 }
 
-UrsatzGuiLinkResult ursatz_gui_link_run_get(const char *id, cJSON **out_run) {
+UrsatzStatus ursatz_gui_link_run_get(const char *id, cJSON **out_run) {
     *out_run = NULL;
     char path[PATH_BYTES];
     if (!id || !run_file_path(id, path, sizeof(path))) {
-        return URSATZ_GUI_LINK_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     cJSON *run = NULL;
     common_json_read_object(path, &run, NULL);
     if (!run) {
-        return URSATZ_GUI_LINK_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     LOCK();
     bool live = g_state.active && strcmp(g_state.id, id) == 0;
@@ -875,23 +861,23 @@ UrsatzGuiLinkResult ursatz_gui_link_run_get(const char *id, cJSON **out_run) {
     if (live && (!set_member(run, "done", cJSON_CreateNumber((double)done)) ||
                  !set_member(run, "total", cJSON_CreateNumber((double)total)))) {
         cJSON_Delete(run);
-        return URSATZ_GUI_LINK_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     *out_run = run;
-    return URSATZ_GUI_LINK_OK;
+    return URSATZ_OK;
 }
 
-UrsatzGuiLinkResult ursatz_gui_link_run_delete(const char *id) {
+UrsatzStatus ursatz_gui_link_run_delete(const char *id) {
     char dir[PATH_BYTES];
     if (!id || !run_dir_path(id, dir, sizeof(dir))) {
-        return URSATZ_GUI_LINK_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     LOCK();
-    UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (g_state.active && strcmp(g_state.id, id) == 0) {
-        result = URSATZ_GUI_LINK_ERR_BUSY;
+        result = ursatz_gui_fail(URSATZ_ERR_CONFLICT, "a run is in progress");
     } else if (!common_path_is_dir(dir)) {
-        result = URSATZ_GUI_LINK_ERR_NOT_FOUND;
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else {
         common_dir_remove(dir, NULL);
     }
@@ -899,17 +885,17 @@ UrsatzGuiLinkResult ursatz_gui_link_run_delete(const char *id) {
     return result;
 }
 
-UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **out_links) {
+UrsatzStatus ursatz_gui_link_piece_links(const char *piece_id, cJSON **out_links) {
     *out_links = NULL;
     cJSON **runs = NULL;
     size_t count = 0;
-    UrsatzGuiLinkResult result = load_runs(&runs, &count);
-    if (result != URSATZ_GUI_LINK_OK) {
+    UrsatzStatus result = load_runs(&runs, &count);
+    if (result != URSATZ_OK) {
         return result;
     }
     cJSON *list = cJSON_CreateArray();
     CommonNames seen = {0}; /* the scopes whose newest done run was taken */
-    for (size_t i = 0; list && result == URSATZ_GUI_LINK_OK && i < count; i++) {
+    for (size_t i = 0; list && result == URSATZ_OK && i < count; i++) {
         const cJSON *run = runs[i];
         const cJSON *scope = cJSON_GetObjectItemCaseSensitive(run, "scope");
         const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
@@ -918,16 +904,16 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
         }
         char *scope_text = cJSON_PrintUnformatted(scope);
         if (!scope_text) {
-            result = URSATZ_GUI_LINK_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         bool newest = !common_names_contains(&seen, scope_text);
         if (newest && !id_list_add(&seen, scope_text)) {
-            result = URSATZ_GUI_LINK_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         free(scope_text);
         const cJSON *link = NULL;
-        const cJSON *taken = newest && result == URSATZ_GUI_LINK_OK ? links : NULL;
+        const cJSON *taken = newest && result == URSATZ_OK ? links : NULL;
         cJSON_ArrayForEach(link, taken) {
             const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
             const char *b = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
@@ -939,7 +925,7 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
                 !cJSON_AddItemToObject(entry, "scope", cJSON_Duplicate(scope, 1)) ||
                 !cJSON_AddItemToObject(entry, "link", cJSON_Duplicate(link, 1))) {
                 cJSON_Delete(entry);
-                result = URSATZ_GUI_LINK_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 break;
             }
             cJSON_AddItemToArray(list, entry);
@@ -947,18 +933,18 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
     }
     common_names_free(&seen);
     runs_free(runs, count);
-    if (!list || result != URSATZ_GUI_LINK_OK) {
+    if (!list || result != URSATZ_OK) {
         cJSON_Delete(list);
-        return result == URSATZ_GUI_LINK_OK ? URSATZ_GUI_LINK_ERR_ALLOC : result;
+        return result == URSATZ_OK ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : result;
     }
     *out_links = list;
-    return URSATZ_GUI_LINK_OK;
+    return URSATZ_OK;
 }
 
 char *ursatz_gui_link_piece_title(const char *piece_id) {
     char *filename = NULL;
     if (!piece_id || !ursatz_gui_collection_is_valid_id(piece_id) ||
-        ursatz_gui_analysis_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_GUI_ANALYSIS_OK) {
+        ursatz_gui_analysis_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_OK) {
         filename = NULL;
     }
     char *title = common_strdup(filename && filename[0] ? filename : (piece_id ? piece_id : ""));

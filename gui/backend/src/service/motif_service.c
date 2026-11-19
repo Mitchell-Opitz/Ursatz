@@ -1,5 +1,6 @@
 #include "motif_service.h"
 #include "knowledge_service.h"
+#include "last_error.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -247,22 +248,13 @@ cJSON *ursatz_gui_motif_request(const cJSON *motif) {
 
 /* ---- variants ------------------------------------------------------------ */
 
-/* The request member at fault of the last refused ursatz_gui_motif_run_variants on this thread (a job runs on one
-   thread), "" when none. */
-static _Thread_local char g_variants_path[128];
-
-const char *ursatz_gui_motif_variants_path(void) {
-  return g_variants_path;
-}
-
 /* Runs the Composer API `variants` on the motif member of a version body (its degrees, form, meter, key, pickup, harmony,
    features and role). chain (an object {"steps": [...]}) is optional and means random chains when NULL; seed is optional
    (negative: the clock). job reports progress and asks for cancel. On success returns the Composer's document; otherwise
    NULL with *status (400 when the Composer refuses the input, 499 for a cancel, else 500) and message set. */
 cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const char *distance,
                            bool each_op, const cJSON *chain, int count, double seed, const UrsatzJob *job, int *status,
-                           char *message, size_t message_size) {
-  g_variants_path[0] = '\0';
+                           UrsatzError *error) {
   bool bad = false;
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
@@ -272,7 +264,7 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   const char *pickup = optional_string(motif, "pickup", &bad);
   if (bad || !form || !degrees || degrees[0] == '\0' || !meter) {
     *status = 400;
-    snprintf(message, message_size, "this motif has no degrees to vary");
+    ursatz_gui_error_printf(error, "this motif has no degrees to vary");
     return NULL;
   }
   bool full = strcmp(form, "full") == 0;
@@ -311,7 +303,7 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   cJSON_Delete(request);
   if (!text) {
     *status = 500;
-    snprintf(message, message_size, "out of memory");
+    ursatz_gui_error_printf(error, "out of memory");
     return NULL;
   }
   ComposerResponse response;
@@ -326,8 +318,10 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
     cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
   } else {
     *status = ursatz_gui_composer_reply_failure_status(&reply);
-    snprintf(message, message_size, "%s", reply.message[0] ? reply.message : "composer could not make variants");
-    snprintf(g_variants_path, sizeof(g_variants_path), "%s", reply.path);
+    ursatz_gui_error_printf(error, "%s", reply.message[0] ? reply.message : "composer could not make variants");
+    if (error) {
+      snprintf(error->path, sizeof(error->path), "%s", reply.path);
+    }
   }
   ursatz_gui_composer_reply_destroy(&reply);
   return document;

@@ -235,13 +235,13 @@ int main(int argc, char **argv) {
   /* The model path the Composer will use. */
   {
     char path[1024];
-    check(ursatz_gui_style_model_path(tag_style_id, path, sizeof(path)) == URSATZ_GUI_STYLE_OK,
+    check(ursatz_gui_style_model_path(tag_style_id, path, sizeof(path)) == URSATZ_OK,
           "model_path finds the model");
     check(path[0] == '/' || (path[0] && path[1] == ':'), "the model path is absolute");
     size_t length = strlen(path);
     check(length > 16 && strcmp(path + length - 16, "style-model.json") == 0, "the path ends with style-model.json");
     check(test_file_exists(path), "the path names an existing file");
-    check(ursatz_gui_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_GUI_STYLE_ERR_NOT_FOUND,
+    check(ursatz_gui_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_ERR_NOT_FOUND,
           "model_path of an unknown style is not found");
   }
 

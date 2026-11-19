@@ -1,4 +1,5 @@
 #include "material_service.h"
+#include "last_error.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -79,27 +80,27 @@ static char *trim_text(const char *text, size_t max_chars, bool *alloc_failed) {
     return copy;
 }
 
-static UrsatzGuiMaterialResult normalize_name(const char *text, char **out) {
+static UrsatzStatus normalize_name(const char *text, char **out) {
     bool alloc_failed;
     *out = trim_text(text, NAME_MAX_CHARS, &alloc_failed);
     if (!*out) {
-        return alloc_failed ? URSATZ_GUI_MATERIAL_ERR_ALLOC : URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+        return alloc_failed ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
     }
     if ((*out)[0] == '\0') {
         free(*out);
         *out = NULL;
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiMaterialResult normalize_description(const char *text, char **out) {
+static UrsatzStatus normalize_description(const char *text, char **out) {
     bool alloc_failed;
     *out = trim_text(text, DESCRIPTION_MAX_CHARS, &alloc_failed);
     if (!*out) {
-        return alloc_failed ? URSATZ_GUI_MATERIAL_ERR_ALLOC : URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+        return alloc_failed ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* --- paths --------------------------------------------------------------- */
@@ -136,44 +137,44 @@ static size_t count_items_locked(const char *project_id) {
 }
 
 /* Loads projects/<id>.json; the file name is the id, a copy inside the file is not trusted. */
-static UrsatzGuiMaterialResult load_project_locked(const char *id, cJSON **out) {
+static UrsatzStatus load_project_locked(const char *id, cJSON **out) {
     char path[PATH_BYTES];
     if (!project_path(id, path, sizeof(path))) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     cJSON *project = NULL;
     common_json_read_object(path, &project, NULL);
     if (!project) {
-        return common_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return common_path_exists(path) ? ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure") : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     cJSON_DeleteItemFromObjectCaseSensitive(project, "id");
     cJSON *id_item = cJSON_CreateString(id);
     if (!id_item) {
         cJSON_Delete(project);
-        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     cJSON_AddItemToObject(project, "id", id_item);
     *out = project;
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiMaterialResult save_project_locked(const cJSON *project) {
+static UrsatzStatus save_project_locked(const cJSON *project) {
     char path[PATH_BYTES];
     if (!project_path(common_json_string(project, "id"), path, sizeof(path))) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    return (common_json_write_file(path, project, true, NULL) == URSATZ_OK) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_FAILED;
+    return (common_json_write_file(path, project, true, NULL) == URSATZ_OK) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
 }
 
 
-static UrsatzGuiMaterialResult create_project_locked(const char *name, const char *description, cJSON **out_project) {
+static UrsatzStatus create_project_locked(const char *name, const char *description, cJSON **out_project) {
     char *clean_name = NULL;
     char *clean_description = NULL;
-    UrsatzGuiMaterialResult result = normalize_name(name, &clean_name);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = normalize_name(name, &clean_name);
+    if (result == URSATZ_OK) {
         result = normalize_description(description, &clean_description);
     }
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    if (result != URSATZ_OK) {
         free(clean_name);
         return result;
     }
@@ -184,7 +185,7 @@ static UrsatzGuiMaterialResult create_project_locked(const char *name, const cha
         free(id);
         id = ursatz_gui_new_id("prj");
         if (!id) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         if (project_path(id, path, sizeof(path)) && !common_path_exists(path)) {
@@ -193,12 +194,12 @@ static UrsatzGuiMaterialResult create_project_locked(const char *name, const cha
         free(id);
         id = NULL;
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && !id) {
-        result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+    if (result == URSATZ_OK && !id) {
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
     cJSON *project = NULL;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         char now[32];
         common_utc_now(now);
         project = cJSON_CreateObject();
@@ -207,9 +208,9 @@ static UrsatzGuiMaterialResult create_project_locked(const char *name, const cha
                   cJSON_AddStringToObject(project, "description", clean_description) &&
                   cJSON_AddStringToObject(project, "created_at", now) &&
                   cJSON_AddStringToObject(project, "updated_at", now);
-        result = !ok ? URSATZ_GUI_MATERIAL_ERR_ALLOC : save_project_locked(project);
+        result = !ok ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : save_project_locked(project);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_project) {
+    if (result == URSATZ_OK && out_project) {
         *out_project = project;
     } else {
         cJSON_Delete(project);
@@ -246,7 +247,7 @@ bool ursatz_gui_material_service_init(const char *dir) {
     if (ok) {
         g_ready = true;
         if (!has_project) {
-            ok = create_project_locked("General", "", NULL) == URSATZ_GUI_MATERIAL_OK;
+            ok = create_project_locked("General", "", NULL) == URSATZ_OK;
             g_ready = ok;
         }
     }
@@ -261,14 +262,14 @@ void ursatz_gui_material_service_shutdown(void) {
     UNLOCK();
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_project_create(const char *name, const char *description,
+UrsatzStatus ursatz_gui_material_project_create(const char *name, const char *description,
                                                             cJSON **out_project) {
     if (out_project) {
         *out_project = NULL;
     }
     LOCK();
-    UrsatzGuiMaterialResult result =
-        g_ready ? create_project_locked(name, description, out_project) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UrsatzStatus result =
+        g_ready ? create_project_locked(name, description, out_project) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     UNLOCK();
     return result;
 }
@@ -280,28 +281,28 @@ static int compare_projects(const void *a, const void *b) {
     return by_name != 0 ? by_name : strcmp(common_json_string(left, "id"), common_json_string(right, "id"));
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects) {
+UrsatzStatus ursatz_gui_material_project_list(cJSON **out_projects) {
     *out_projects = NULL;
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
     char dir[PATH_BYTES];
     CommonNames names = {0};
     if (snprintf(dir, sizeof(dir), "%s/projects", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    UrsatzStatus result = URSATZ_OK;
     cJSON **projects = names.count ? calloc(names.count, sizeof(cJSON *)) : NULL;
     size_t loaded = 0;
     if (names.count && !projects) {
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
         if (!has_suffix(names.items[i], ".json")) {
             continue;
         }
@@ -313,12 +314,12 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects) {
         memcpy(id, names.items[i], id_len);
         id[id_len] = '\0';
         cJSON *project = NULL;
-        if (load_project_locked(id, &project) != URSATZ_GUI_MATERIAL_OK) {
+        if (load_project_locked(id, &project) != URSATZ_OK) {
             continue;
         }
         if (!cJSON_AddNumberToObject(project, "item_count", (double)count_items_locked(id))) {
             cJSON_Delete(project);
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         projects[loaded++] = project;
@@ -326,43 +327,43 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects) {
     common_names_free(&names);
     UNLOCK();
 
-    cJSON *array = result == URSATZ_GUI_MATERIAL_OK ? cJSON_CreateArray() : NULL;
-    if (result == URSATZ_GUI_MATERIAL_OK && !array) {
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    cJSON *array = result == URSATZ_OK ? cJSON_CreateArray() : NULL;
+    if (result == URSATZ_OK && !array) {
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     if (loaded > 1) {
         qsort(projects, loaded, sizeof(cJSON *), compare_projects);
     }
     for (size_t i = 0; i < loaded; i++) {
-        if (result == URSATZ_GUI_MATERIAL_OK) {
+        if (result == URSATZ_OK) {
             cJSON_AddItemToArray(array, projects[i]);
         } else {
             cJSON_Delete(projects[i]);
         }
     }
     free(projects);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         *out_projects = array;
     }
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_project_get(const char *id, cJSON **out_project) {
+UrsatzStatus ursatz_gui_material_project_get(const char *id, cJSON **out_project) {
     *out_project = NULL;
     LOCK();
-    UrsatzGuiMaterialResult result = g_ready ? load_project_locked(id, out_project)
-                                             : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
-    if (result == URSATZ_GUI_MATERIAL_OK &&
+    UrsatzStatus result = g_ready ? load_project_locked(id, out_project)
+                                             : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    if (result == URSATZ_OK &&
         !cJSON_AddNumberToObject(*out_project, "item_count", (double)count_items_locked(id))) {
         cJSON_Delete(*out_project);
         *out_project = NULL;
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     UNLOCK();
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const char *name, const char *description,
+UrsatzStatus ursatz_gui_material_project_update(const char *id, const char *name, const char *description,
                                                             cJSON **out_project) {
     if (out_project) {
         *out_project = NULL;
@@ -370,27 +371,27 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *project = NULL;
     char *clean_name = NULL;
     char *clean_description = NULL;
-    UrsatzGuiMaterialResult result = load_project_locked(id, &project);
-    if (result == URSATZ_GUI_MATERIAL_OK && name) {
+    UrsatzStatus result = load_project_locked(id, &project);
+    if (result == URSATZ_OK && name) {
         result = normalize_name(name, &clean_name);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && description) {
+    if (result == URSATZ_OK && description) {
         result = normalize_description(description, &clean_description);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         char now[32];
         common_utc_now(now);
         bool ok = (!clean_name || common_json_set_string(project, "name", clean_name)) &&
                   (!clean_description || common_json_set_string(project, "description", clean_description)) &&
                   common_json_set_string(project, "updated_at", now);
-        result = ok ? save_project_locked(project) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        result = ok ? save_project_locked(project) : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_project) {
+    if (result == URSATZ_OK && out_project) {
         *out_project = project;
     } else {
         cJSON_Delete(project);
@@ -401,22 +402,22 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id) {
+UrsatzStatus ursatz_gui_material_project_delete(const char *id) {
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     char path[PATH_BYTES];
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (!project_path(id, path, sizeof(path))) {
-        result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     } else if (!common_path_exists(path)) {
-        result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else if (count_items_locked(id) > 0) {
-        result = URSATZ_GUI_MATERIAL_ERR_NOT_EMPTY;
+        result = ursatz_gui_fail(URSATZ_ERR_CONFLICT, "the project still holds items");
     } else if (remove(path) != 0) {
-        result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     UNLOCK();
     return result;
@@ -463,11 +464,9 @@ static bool project_exists_locked(const char *project_id) {
 #define NOTES_MAX_CHARS 4000
 #define HARMONY_MAX_CHARS 200
 
-static UrsatzGuiMaterialResult invalid_body(char *error, size_t error_size, const char *message) {
-    if (error && error_size > 0) {
-        snprintf(error, error_size, "%s", message);
-    }
-    return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+static UrsatzStatus invalid_body(UrsatzError *error, const char *message) {
+    ursatz_gui_error_text(error, message);
+    return ursatz_gui_fail(URSATZ_ERR_REQUEST, error ? message : "invalid body");
 }
 
 static bool in_set(const cJSON *value, const char *const *set) {
@@ -528,10 +527,10 @@ static bool is_rational(const char *text, bool meter) {
     return denominator_nonzero;
 }
 
-static UrsatzGuiMaterialResult validate_uses(const cJSON *body, char *error, size_t error_size) {
+static UrsatzStatus validate_uses(const cJSON *body, UrsatzError *error) {
     const cJSON *uses = cJSON_GetObjectItemCaseSensitive(body, "uses");
     if (!cJSON_IsArray(uses)) {
-        return invalid_body(error, error_size, "uses must be an array");
+        return invalid_body(error, "uses must be an array");
     }
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, uses) {
@@ -539,10 +538,10 @@ static UrsatzGuiMaterialResult validate_uses(const cJSON *body, char *error, siz
         const cJSON *copy = cJSON_GetObjectItemCaseSensitive(use, "copy");
         if (!cJSON_IsObject(use) || !cJSON_IsString(item_id) || !is_valid_id(item_id->valuestring) ||
             !is_whole_number(cJSON_GetObjectItemCaseSensitive(use, "version"), 1) || (copy && !cJSON_IsObject(copy))) {
-            return invalid_body(error, error_size, "each use needs item_id, version and, if present, an object copy");
+            return invalid_body(error, "each use needs item_id, version and, if present, an object copy");
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 static bool is_string_list_from(const cJSON *value, const char *const *set) {
@@ -558,7 +557,7 @@ static bool is_string_list_from(const cJSON *value, const char *const *set) {
     return true;
 }
 
-static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *error, size_t error_size) {
+static UrsatzStatus validate_derived(const cJSON *derived, UrsatzError *error) {
     static const char *const kinds[] = {"exact", "motive-form", "variant", NULL};
     static const char *const dimensions[] = {"rhythm", "intervals", "harmony", "contour", NULL};
     static const char *const functions[] = {"beginning", "continuation", "contrast", "cadential", NULL};
@@ -567,45 +566,45 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
     const cJSON *seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
     if (!cJSON_IsObject(derived)) {
-        return invalid_body(error, error_size, "derived must be null or an object");
+        return invalid_body(error, "derived must be null or an object");
     }
     if (!cJSON_IsString(source_item) || !is_valid_id(source_item->valuestring) ||
         !is_whole_number(cJSON_GetObjectItemCaseSensitive(derived, "source_version"), 1)) {
-        return invalid_body(error, error_size, "derived needs source_item and source_version");
+        return invalid_body(error, "derived needs source_item and source_version");
     }
     if (!cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "operations"))) {
-        return invalid_body(error, error_size, "derived operations must be an array");
+        return invalid_body(error, "derived operations must be an array");
     }
     if (seed && !cJSON_IsNull(seed) && !is_whole_number(seed, 0)) {
-        return invalid_body(error, error_size, "derived seed must be null or a whole number");
+        return invalid_body(error, "derived seed must be null or a whole number");
     }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "kind"), kinds)) {
-        return invalid_body(error, error_size, "derived kind must be exact, motive-form or variant");
+        return invalid_body(error, "derived kind must be exact, motive-form or variant");
     }
     if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "kept"), dimensions) ||
         !is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "changed"), dimensions)) {
-        return invalid_body(error, error_size, "derived kept and changed must list rhythm, intervals, harmony or contour");
+        return invalid_body(error, "derived kept and changed must list rhythm, intervals, harmony or contour");
     }
     if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "functions"), functions)) {
-        return invalid_body(error, error_size, "derived functions must list beginning, continuation, contrast or cadential");
+        return invalid_body(error, "derived functions must list beginning, continuation, contrast or cadential");
     }
     const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(derived, "harmony");
     if (harmony && !cJSON_IsNull(harmony) &&
         (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
-        return invalid_body(error, error_size, "derived harmony must be null or a string of at most 200 characters");
+        return invalid_body(error, "derived harmony must be null or a string of at most 200 characters");
     }
     const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(derived, "remoteness");
     if (remoteness && !cJSON_IsNull(remoteness) &&
         (!cJSON_IsNumber(remoteness) || remoteness->valuedouble < 0 || remoteness->valuedouble > 1)) {
-        return invalid_body(error, error_size, "derived remoteness must be null or a number from 0 to 1");
+        return invalid_body(error, "derived remoteness must be null or a number from 0 to 1");
     }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
-        return invalid_body(error, error_size, "derived flag must be approved, rejected or unflagged");
+        return invalid_body(error, "derived flag must be approved, rejected or unflagged");
     }
     if (standalone && !cJSON_IsBool(standalone)) {
-        return invalid_body(error, error_size, "derived standalone must be true or false");
+        return invalid_body(error, "derived standalone must be true or false");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 #define TONE_OVERRIDES_MAX 64
@@ -613,12 +612,12 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
 
 /* motif.tone_overrides is absent, null or an object of "<note>": "<role>" (1-based note); the role is the Composer's
  * word (R-276), so a save keeps its type and size and validate marks a role the Composer does not read. */
-static UrsatzGuiMaterialResult validate_tone_overrides(const cJSON *overrides, char *error, size_t error_size) {
+static UrsatzStatus validate_tone_overrides(const cJSON *overrides, UrsatzError *error) {
     if (!overrides || cJSON_IsNull(overrides)) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsObject(overrides) || cJSON_GetArraySize(overrides) > TONE_OVERRIDES_MAX) {
-        return invalid_body(error, error_size, "motif tone_overrides must be an object of at most 64 notes");
+        return invalid_body(error, "motif tone_overrides must be an object of at most 64 notes");
     }
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, overrides) {
@@ -627,49 +626,49 @@ static UrsatzGuiMaterialResult validate_tone_overrides(const cJSON *overrides, c
         long note = strtol(name, &end, 10);
         if (name[0] == '\0' || *end != '\0' || name[0] == '+' || name[0] == '-' || note < 1 || note > TONE_OVERRIDES_MAX ||
             !cJSON_IsString(entry) || strlen(entry->valuestring) > TONE_ROLE_MAX) {
-            return invalid_body(error, error_size,
+            return invalid_body(error,
                                 "motif tone_overrides must map a note number from 1 to 64 to a tone type");
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, size_t error_size) {
+static UrsatzStatus validate_motif(const cJSON *motif, UrsatzError *error) {
     static const char *const roles[] = {"melodic", "accompaniment", NULL};
     static const char *const forms[] = {"full", "rhythm", "contour", NULL};
     if (!cJSON_IsObject(motif)) {
-        return invalid_body(error, error_size, "a motif body needs a motif object");
+        return invalid_body(error, "a motif body needs a motif object");
     }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(motif, "role"), roles)) {
-        return invalid_body(error, error_size, "motif role must be melodic or accompaniment");
+        return invalid_body(error, "motif role must be melodic or accompaniment");
     }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(motif, "form"), forms)) {
-        return invalid_body(error, error_size, "motif form must be full, rhythm or contour");
+        return invalid_body(error, "motif form must be full, rhythm or contour");
     }
     const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
     if (!cJSON_IsString(notes) || notes->valuestring[0] == '\0' || utf8_length(notes->valuestring) > NOTES_MAX_CHARS) {
-        return invalid_body(error, error_size, "motif notes must be a non-empty string of at most 4000 characters");
+        return invalid_body(error, "motif notes must be a non-empty string of at most 4000 characters");
     }
     const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
     if (!cJSON_IsString(meter) || !is_rational(meter->valuestring, true)) {
-        return invalid_body(error, error_size, "motif meter must look like 4/4");
+        return invalid_body(error, "motif meter must look like 4/4");
     }
     /* A motif is in C: its material, or the old key text. */
     const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
     if (key && !cJSON_IsNull(key) && !cJSON_IsString(key)) {
-        return invalid_body(error, error_size, "motif key must be null or a string");
+        return invalid_body(error, "motif key must be null or a string");
     }
     const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
     if (material && !cJSON_IsNull(material) && !cJSON_IsString(material)) {
-        return invalid_body(error, error_size, "motif material must be null or a string");
+        return invalid_body(error, "motif material must be null or a string");
     }
     const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
     if (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false)) {
-        return invalid_body(error, error_size, "motif pickup must be beats as n or n/d");
+        return invalid_body(error, "motif pickup must be beats as n or n/d");
     }
     const cJSON *features = cJSON_GetObjectItemCaseSensitive(motif, "features");
     if (!cJSON_IsArray(features)) {
-        return invalid_body(error, error_size, "motif features must be an array");
+        return invalid_body(error, "motif features must be an array");
     }
     const cJSON *feature = NULL;
     cJSON_ArrayForEach(feature, features) {
@@ -679,30 +678,30 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
         if (!cJSON_IsObject(feature) || !cJSON_IsString(label) || utf8_length(label->valuestring) < 1 ||
             utf8_length(label->valuestring) > LABEL_MAX_CHARS || !is_whole_number(first, 0) ||
             !is_whole_number(last, 0) || first->valuedouble > last->valuedouble) {
-            return invalid_body(error, error_size, "each feature needs a label of 1 to 8 characters and 0 <= first <= last");
+            return invalid_body(error, "each feature needs a label of 1 to 8 characters and 0 <= first <= last");
         }
     }
     const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(motif, "harmony");
     if (harmony && !cJSON_IsNull(harmony) &&
         (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
-        return invalid_body(error, error_size, "motif harmony must be null or a string of at most 200 characters");
+        return invalid_body(error, "motif harmony must be null or a string of at most 200 characters");
     }
-    UrsatzGuiMaterialResult tones = validate_tone_overrides(cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides"), error, error_size);
-    if (tones != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus tones = validate_tone_overrides(cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides"), error);
+    if (tones != URSATZ_OK) {
         return tones;
     }
     const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
     if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {
-        return invalid_body(error, error_size, "motif analysis must be null or an object");
+        return invalid_body(error, "motif analysis must be null or an object");
     }
     const cJSON *degrees = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
     if (degrees && !cJSON_IsNull(degrees) &&
         (!cJSON_IsString(degrees) || utf8_length(degrees->valuestring) > NOTES_MAX_CHARS)) {
-        return invalid_body(error, error_size, "motif degrees must be null or a string of at most 4000 characters");
+        return invalid_body(error, "motif degrees must be null or a string of at most 4000 characters");
     }
     return is_absent_or_null(motif, "derived")
-               ? URSATZ_GUI_MATERIAL_OK
-               : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error, error_size);
+               ? URSATZ_OK
+               : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error);
 }
 
 static const char *const kThemePools[] = {"approved-and-unflagged", "approved", "none", NULL};
@@ -734,27 +733,27 @@ static bool is_in_set_or_null(const cJSON *object, const char *name, const char 
 
 /* The form words are the Composer's (R-276): a save keeps their type and size, and validate marks a value the Composer
  * does not read, as compose refuses it with its path. */
-static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *error, size_t error_size) {
+static UrsatzStatus validate_theme_form(const cJSON *form, UrsatzError *error) {
     static const char *const words[] = {"into", "hybrid", "material", "mode", "meter", "cadence", "first_cadence", NULL};
     for (const char *const *word = words; *word; word++) {
         const cJSON *value = cJSON_GetObjectItemCaseSensitive(form, *word);
         if (!is_string_or_null(form, *word) || (cJSON_IsString(value) && strlen(value->valuestring) > THEME_FORM_WORD_MAX)) {
-            return invalid_body(error, error_size, "theme form into, hybrid, material, meter, cadence and first_cadence must be text");
+            return invalid_body(error, "theme form into, hybrid, material, meter, cadence and first_cadence must be text");
         }
     }
     if (cJSON_GetObjectItemCaseSensitive(form, "key")) {
-        return invalid_body(error, error_size, "themes are in C; remove key");
+        return invalid_body(error, "themes are in C; remove key");
     }
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(form, "bars");
     if (!is_absent_or_null(form, "bars") && !cJSON_IsNumber(bars)) {
-        return invalid_body(error, error_size, "theme form bars must be a number");
+        return invalid_body(error, "theme form bars must be a number");
     }
     /* The construction (Composer API 1.18) is the Composer's: a save keeps only that it is an object or null. */
     const cJSON *construction = cJSON_GetObjectItemCaseSensitive(form, "construction");
     if (!is_absent_or_null(form, "construction") && !cJSON_IsObject(construction)) {
-        return invalid_body(error, error_size, "theme form construction must be an object or null");
+        return invalid_body(error, "theme form construction must be an object or null");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* {slot, item_id, version}: a reference to a version of another item. */
@@ -764,56 +763,56 @@ static bool theme_reference_ok(const cJSON *reference) {
            is_whole_number(cJSON_GetObjectItemCaseSensitive(reference, "version"), 1);
 }
 
-static UrsatzGuiMaterialResult validate_theme_slots(const cJSON *slots, char *error, size_t error_size) {
+static UrsatzStatus validate_theme_slots(const cJSON *slots, UrsatzError *error) {
     bool seen[THEME_IDEAS_MAX] = {false};
     const cJSON *slot = NULL;
     cJSON_ArrayForEach(slot, slots) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(slot, "slot");
         int index = cJSON_IsString(name) ? ursatz_gui_composer_vocabulary_index("theme_slots", name->valuestring) : -1;
         if (index < 0 || index >= THEME_IDEAS_MAX || !theme_reference_ok(slot)) {
-            return invalid_body(error, error_size, "each theme slot needs slot, item_id and version");
+            return invalid_body(error, "each theme slot needs slot, item_id and version");
         }
         if (seen[index]) {
-            return invalid_body(error, error_size, "each theme slot may be named once");
+            return invalid_body(error, "each theme slot may be named once");
         }
         seen[index] = true;
     }
     int required = ursatz_gui_composer_vocabulary_required_index("theme_slots");
     if (required >= 0 && required < THEME_IDEAS_MAX && seen[required]) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
     const cJSON *required_entry = cJSON_GetArrayItem(ursatz_gui_composer_vocabulary_list("theme_slots"), required);
     char text[96];
     snprintf(text, sizeof(text), "a theme needs a %s slot", common_json_string(required_entry, "value"));
-    return invalid_body(error, error_size, text);
+    return invalid_body(error, text);
 }
 
 /* [{idea, item_id, version}]: a motif version for a single idea, each idea named once. */
-static UrsatzGuiMaterialResult validate_theme_ideas(const cJSON *ideas, char *error, size_t error_size) {
+static UrsatzStatus validate_theme_ideas(const cJSON *ideas, UrsatzError *error) {
     bool seen[THEME_IDEAS_MAX] = {false};
     if (!cJSON_IsArray(ideas) || cJSON_GetArraySize(ideas) > THEME_IDEAS_MAX) {
-        return invalid_body(error, error_size, "theme ideas must be a list of at most 10");
+        return invalid_body(error, "theme ideas must be a list of at most 10");
     }
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, ideas) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, "idea");
         int index = cJSON_IsString(name) ? ursatz_gui_composer_vocabulary_index("theme_ideas", name->valuestring) : -1;
         if (index < 0 || index >= THEME_IDEAS_MAX || !theme_reference_ok(entry)) {
-            return invalid_body(error, error_size, "each theme idea needs idea, item_id and version");
+            return invalid_body(error, "each theme idea needs idea, item_id and version");
         }
         if (seen[index]) {
-            return invalid_body(error, error_size, "each theme idea may be named once");
+            return invalid_body(error, "each theme idea may be named once");
         }
         seen[index] = true;
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* [{bar, text}]: the chords given for a bar, bar 0 to 7, each bar once; the Composer checks the syntax. */
-static UrsatzGuiMaterialResult validate_theme_chords(const cJSON *chords, char *error, size_t error_size) {
+static UrsatzStatus validate_theme_chords(const cJSON *chords, UrsatzError *error) {
     bool seen[THEME_CHORD_BARS] = {false};
     if (!cJSON_IsArray(chords) || cJSON_GetArraySize(chords) > THEME_CHORD_BARS) {
-        return invalid_body(error, error_size, "theme chords must be a list of at most 8 bars");
+        return invalid_body(error, "theme chords must be a list of at most 8 bars");
     }
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, chords) {
@@ -821,28 +820,27 @@ static UrsatzGuiMaterialResult validate_theme_chords(const cJSON *chords, char *
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(entry, "text");
         if (!cJSON_IsObject(entry) || !is_whole_number(bar, 0) || bar->valuedouble >= THEME_CHORD_BARS ||
             !cJSON_IsString(text) || utf8_length(text->valuestring) > THEME_CHORD_TEXT_MAX) {
-            return invalid_body(error, error_size, "each theme chord needs a bar from 0 to 7 and a text of at most 64 characters");
+            return invalid_body(error, "each theme chord needs a bar from 0 to 7 and a text of at most 64 characters");
         }
         if (seen[(int)bar->valuedouble]) {
-            return invalid_body(error, error_size, "each theme chord bar may be named once");
+            return invalid_body(error, "each theme chord bar may be named once");
         }
         seen[(int)bar->valuedouble] = true;
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiMaterialResult validate_theme_accompaniment(const cJSON *accompaniment, char *error,
-                                                            size_t error_size) {
+static UrsatzStatus validate_theme_accompaniment(const cJSON *accompaniment, UrsatzError *error) {
     static const char *const patterns[] = {"block", "arpeggiated", "alberti", "oom-pah", "any", NULL};
     const cJSON *pattern = cJSON_GetObjectItemCaseSensitive(accompaniment, "pattern");
     if (cJSON_IsObject(accompaniment) && cJSON_IsString(pattern) && strcmp(pattern->valuestring, "motive") == 0) {
         return theme_reference_ok(accompaniment)
-                   ? URSATZ_GUI_MATERIAL_OK
-                   : invalid_body(error, error_size, "a motive accompaniment needs item_id and version");
+                   ? URSATZ_OK
+                   : invalid_body(error, "a motive accompaniment needs item_id and version");
     }
     return cJSON_IsObject(accompaniment) && in_set(pattern, patterns)
-               ? URSATZ_GUI_MATERIAL_OK
-               : invalid_body(error, error_size, "theme accompaniment pattern must be block, arpeggiated, alberti, oom-pah, any or motive");
+               ? URSATZ_OK
+               : invalid_body(error, "theme accompaniment pattern must be block, arpeggiated, alberti, oom-pah, any or motive");
 }
 
 static bool theme_id_list_ok(const cJSON *brief, const char *name, size_t max) {
@@ -909,70 +907,70 @@ static bool theme_is_placeholder(const cJSON *theme) {
     return true;
 }
 
-static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, size_t error_size) {
+static UrsatzStatus validate_theme(const cJSON *theme, UrsatzError *error) {
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
     const cJSON *slots = cJSON_GetObjectItemCaseSensitive(theme, "slots");
     if (!cJSON_IsObject(theme) || (form && !cJSON_IsNull(form) && !cJSON_IsString(form) && !cJSON_IsObject(form)) ||
         !cJSON_IsArray(slots)) {
-        return invalid_body(error, error_size, "a theme body needs a theme object with form and slots");
+        return invalid_body(error, "a theme body needs a theme object with form and slots");
     }
     if (cJSON_GetObjectItemCaseSensitive(theme, "pool")) {
-        return invalid_body(error, error_size, "themes have no pool");
+        return invalid_body(error, "themes have no pool");
     }
     if (theme_is_placeholder(theme)) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
-    UrsatzGuiMaterialResult result = cJSON_IsObject(form) ? validate_theme_form(form, error, error_size)
-                                                          : URSATZ_GUI_MATERIAL_OK;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = validate_theme_slots(slots, error, error_size);
+    UrsatzStatus result = cJSON_IsObject(form) ? validate_theme_form(form, error)
+                                                          : URSATZ_OK;
+    if (result == URSATZ_OK) {
+        result = validate_theme_slots(slots, error);
     }
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    if (result != URSATZ_OK) {
         return result;
     }
     const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(theme, "ideas");
-    if (ideas && validate_theme_ideas(ideas, error, error_size) != URSATZ_GUI_MATERIAL_OK) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    if (ideas && validate_theme_ideas(ideas, error) != URSATZ_OK) {
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
     }
     const cJSON *chords = cJSON_GetObjectItemCaseSensitive(theme, "chords");
-    if (chords && validate_theme_chords(chords, error, error_size) != URSATZ_GUI_MATERIAL_OK) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    if (chords && validate_theme_chords(chords, error) != URSATZ_OK) {
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
     }
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
     if (!is_absent_or_null(theme, "accompaniment") &&
-        validate_theme_accompaniment(accompaniment, error, error_size) != URSATZ_GUI_MATERIAL_OK) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+        validate_theme_accompaniment(accompaniment, error) != URSATZ_OK) {
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
     }
     if (!is_absent_or_null(theme, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(theme, "brief"))) {
-        return invalid_body(error, error_size, "theme brief needs scopes, piece_ids or style_ids within the limits");
+        return invalid_body(error, "theme brief needs scopes, piece_ids or style_ids within the limits");
     }
     const cJSON *weight = cJSON_GetObjectItemCaseSensitive(theme, "style_weight");
     if (!is_absent_or_null(theme, "style_weight") &&
         (!cJSON_IsString(weight) || !is_rational(weight->valuestring, false))) {
-        return invalid_body(error, error_size, "theme style_weight must be n or n/d");
+        return invalid_body(error, "theme style_weight must be n or n/d");
     }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(theme, "without");
     if (without && (!is_string_list_from(without, kThemeMotiveCategories) ||
                     cJSON_GetArraySize(without) > THEME_WITHOUT_MAX)) {
-        return invalid_body(error, error_size, "theme without lists up to four motive categories");
+        return invalid_body(error, "theme without lists up to four motive categories");
     }
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(theme, "tempo");
     if (!is_absent_or_null(theme, "tempo") && !is_whole_number(tempo, 0)) {
-        return invalid_body(error, error_size, "theme tempo must be null or a whole number");
+        return invalid_body(error, "theme tempo must be null or a whole number");
     }
     const cJSON *check = cJSON_GetObjectItemCaseSensitive(theme, "check");
     if (check && !cJSON_IsBool(check)) {
-        return invalid_body(error, error_size, "theme check must be true or false");
+        return invalid_body(error, "theme check must be true or false");
     }
     const cJSON *seed = cJSON_GetObjectItemCaseSensitive(theme, "seed");
     if (!is_absent_or_null(theme, "seed") && !is_whole_number(seed, 0)) {
-        return invalid_body(error, error_size, "theme seed must be null or a whole number");
+        return invalid_body(error, "theme seed must be null or a whole number");
     }
     const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(theme, "result");
     if (result_member && !cJSON_IsNull(result_member) && !cJSON_IsObject(result_member)) {
-        return invalid_body(error, error_size, "theme result must be null or an object");
+        return invalid_body(error, "theme result must be null or an object");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* --- piece bodies -------------------------------------------------------- */
@@ -1021,18 +1019,18 @@ static bool piece_section_id_ok(const char *id) {
 }
 
 /* {kind, ...}: null or empty, a motif, a theme version or a progression. */
-static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_fill(const cJSON *fill, UrsatzError *error) {
     static const char *const kinds[] = {"empty", "motif", "theme", "progression", NULL};
     if (!fill || cJSON_IsNull(fill)) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
     const cJSON *kind = cJSON_GetObjectItemCaseSensitive(fill, "kind");
     if (!cJSON_IsObject(fill) || !in_set(kind, kinds)) {
-        return invalid_body(error, error_size, "a section fill must be null or have a kind of empty, motif, theme or progression");
+        return invalid_body(error, "a section fill must be null or have a kind of empty, motif, theme or progression");
     }
     if (strcmp(kind->valuestring, "motif") == 0 || strcmp(kind->valuestring, "theme") == 0) {
         if (!theme_reference_ok(fill)) {
-            return invalid_body(error, error_size, "a motif or theme fill needs item_id and version");
+            return invalid_body(error, "a motif or theme fill needs item_id and version");
         }
     }
     if (strcmp(kind->valuestring, "motif") == 0) {
@@ -1041,33 +1039,33 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
         if (!is_string_or_null(fill, "into") || !is_string_or_null(fill, "hybrid") ||
             (cJSON_IsString(into) && strlen(into->valuestring) > PIECE_WORD_MAX) ||
             (cJSON_IsString(hybrid) && strlen(hybrid->valuestring) > PIECE_WORD_MAX)) {
-            return invalid_body(error, error_size, "a motif fill into and hybrid must be text");
+            return invalid_body(error, "a motif fill into and hybrid must be text");
         }
         /* The construction (Composer API 1.18) is "auto" or the Composer's object; the Composer checks what is in it. */
         const cJSON *construction = cJSON_GetObjectItemCaseSensitive(fill, "construction");
         if (!is_absent_or_null(fill, "construction") && !cJSON_IsObject(construction) &&
             !(cJSON_IsString(construction) && strcmp(construction->valuestring, "auto") == 0)) {
-            return invalid_body(error, error_size, "a motif fill construction must be \"auto\" or an object");
+            return invalid_body(error, "a motif fill construction must be \"auto\" or an object");
         }
     }
     if (strcmp(kind->valuestring, "progression") == 0) {
         const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
         const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
         if (!cJSON_IsString(numerals) || numerals->valuestring[0] == '\0' || strlen(numerals->valuestring) > PIECE_TEXT_MAX) {
-            return invalid_body(error, error_size, "a progression fill needs numerals as text");
+            return invalid_body(error, "a progression fill needs numerals as text");
         }
         if (!is_absent_or_null(fill, "cells") && (!is_whole_number(cells, 1) || cells->valuedouble > PIECE_CELLS_MAX)) {
-            return invalid_body(error, error_size, "a progression fill cells must be 1 to 8");
+            return invalid_body(error, "a progression fill cells must be 1 to 8");
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* A section's region (R-610): null or absent, "home", {tonic, material} or {relation, anchor}, each member text. */
-static UrsatzGuiMaterialResult validate_piece_region(const cJSON *section, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_region(const cJSON *section, UrsatzError *error) {
     const cJSON *region = cJSON_GetObjectItemCaseSensitive(section, "region");
     if (is_absent_or_null(section, "region") || (cJSON_IsString(region) && strcmp(region->valuestring, "home") == 0)) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
     bool key = cJSON_IsObject(region) && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(region, "tonic")) &&
                cJSON_IsString(cJSON_GetObjectItemCaseSensitive(region, "material"));
@@ -1079,32 +1077,32 @@ static UrsatzGuiMaterialResult validate_piece_region(const cJSON *section, char 
         long_text = long_text || !cJSON_IsString(member) || strlen(member->valuestring) > PIECE_WORD_MAX;
     }
     if ((!key && !relation) || long_text) {
-        return invalid_body(error, error_size, "a section region must be home, {tonic, material} or {relation, anchor}");
+        return invalid_body(error, "a section region must be home, {tonic, material} or {relation, anchor}");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* A section's harmony (R-610): null or absent, {progression, cells}, {schema} or {chords: [{bar, text}]}; the Composer checks the text. */
-static UrsatzGuiMaterialResult validate_piece_harmony(const cJSON *section, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_harmony(const cJSON *section, UrsatzError *error) {
     const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(section, "harmony");
     if (is_absent_or_null(section, "harmony")) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
     const cJSON *progression = cJSON_GetObjectItemCaseSensitive(harmony, "progression");
     const cJSON *schema = cJSON_GetObjectItemCaseSensitive(harmony, "schema");
     const cJSON *chords = cJSON_GetObjectItemCaseSensitive(harmony, "chords");
     if (!cJSON_IsObject(harmony) || (cJSON_GetArraySize(harmony) != (cJSON_IsString(progression) && !is_absent_or_null(harmony, "cells") ? 2 : 1))) {
-        return invalid_body(error, error_size, "a section harmony is {progression, cells}, {schema} or {chords}");
+        return invalid_body(error, "a section harmony is {progression, cells}, {schema} or {chords}");
     }
     if (progression) {
         const cJSON *cells = cJSON_GetObjectItemCaseSensitive(harmony, "cells");
         if (!cJSON_IsString(progression) || progression->valuestring[0] == '\0' || strlen(progression->valuestring) > PIECE_TEXT_MAX ||
             (!is_absent_or_null(harmony, "cells") && (!is_whole_number(cells, 1) || cells->valuedouble > PIECE_CELLS_MAX))) {
-            return invalid_body(error, error_size, "a harmony progression needs numerals as text and cells of 1 to 8");
+            return invalid_body(error, "a harmony progression needs numerals as text and cells of 1 to 8");
         }
     } else if (schema) {
         if (!cJSON_IsString(schema) || schema->valuestring[0] == '\0' || strlen(schema->valuestring) > PIECE_WORD_MAX) {
-            return invalid_body(error, error_size, "a harmony schema must be a name");
+            return invalid_body(error, "a harmony schema must be a name");
         }
     } else if (cJSON_IsArray(chords) && cJSON_GetArraySize(chords) >= 1 && cJSON_GetArraySize(chords) <= 16) {
         const cJSON *chord = NULL;
@@ -1112,13 +1110,13 @@ static UrsatzGuiMaterialResult validate_piece_harmony(const cJSON *section, char
             const cJSON *text = cJSON_GetObjectItemCaseSensitive(chord, "text");
             if (!cJSON_IsObject(chord) || !is_whole_number(cJSON_GetObjectItemCaseSensitive(chord, "bar"), 1) || !cJSON_IsString(text) ||
                 text->valuestring[0] == '\0' || strlen(text->valuestring) > PIECE_WORD_MAX) {
-                return invalid_body(error, error_size, "each harmony chord needs a bar from 1 and text");
+                return invalid_body(error, "each harmony chord needs a bar from 1 and text");
             }
         }
     } else {
-        return invalid_body(error, error_size, "a section harmony is {progression, cells}, {schema} or {chords}");
+        return invalid_body(error, "a section harmony is {progression, cells}, {schema} or {chords}");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* The words of a form's list (roles or sizes members) joined by ", ": member (value or label) of each entry. */
@@ -1135,47 +1133,46 @@ static void join_members(const cJSON *list, const char *member, char *out, size_
 }
 
 /* The key, material (or the old mode) and meter of a structure: the Composer's words (R-276), a save keeps their type and size. */
-static UrsatzGuiMaterialResult validate_piece_words(const cJSON *structure, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_words(const cJSON *structure, UrsatzError *error) {
     static const char *const words[] = {"key", "material", "mode", "meter", NULL};
     for (const char *const *word = words; *word; word++) {
         const cJSON *value = cJSON_GetObjectItemCaseSensitive(structure, *word);
         if (!is_string_or_null(structure, *word) || (cJSON_IsString(value) && strlen(value->valuestring) > PIECE_WORD_MAX)) {
-            return invalid_body(error, error_size, "piece key, material and meter must be text");
+            return invalid_body(error, "piece key, material and meter must be text");
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* modulate is a boolean, and true only for a form whose settings allow it. */
-static UrsatzGuiMaterialResult validate_piece_modulate(const cJSON *structure, const cJSON *form, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_modulate(const cJSON *structure, const cJSON *form, UrsatzError *error) {
     const char *label = common_json_string(form, "label");
     const cJSON *modulate = cJSON_GetObjectItemCaseSensitive(structure, "modulate");
     if (!is_absent_or_null(structure, "modulate")) {
         const cJSON *allowed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(form, "settings"), "modulate");
         if (!cJSON_IsBool(modulate)) {
-            return invalid_body(error, error_size, "piece modulate must be true or false");
+            return invalid_body(error, "piece modulate must be true or false");
         }
         if (cJSON_IsTrue(modulate) && !cJSON_IsTrue(allowed)) {
             char message[128];
             snprintf(message, sizeof(message), "a %s piece does not modulate", label);
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* A form whose sections are the request's own (the game loop): each part is one of the form's roles, in their order,
  * with every required role present. */
-static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, const cJSON *form, char *error,
-                                                       size_t error_size) {
+static UrsatzStatus validate_piece_sections(const cJSON *structure, const cJSON *form, UrsatzError *error) {
     const cJSON *sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
     const cJSON *roles = cJSON_GetObjectItemCaseSensitive(form, "roles");
     int role_count = cJSON_GetArraySize(roles);
     if (!cJSON_IsArray(sections)) {
-        return invalid_body(error, error_size, "a piece structure needs key, material, meter and sections");
+        return invalid_body(error, "a piece structure needs key, material, meter and sections");
     }
     if (role_count < 1 || role_count > PIECE_ROLES_MAX) {
-        return invalid_body(error, error_size, "the Composer gave no roles for this form");
+        return invalid_body(error, "the Composer gave no roles for this form");
     }
     const char *form_label = common_json_string(form, "label");
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
@@ -1184,10 +1181,10 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         (!is_absent_or_null(structure, "count") && !(cJSON_IsNumber(count_member) && count_member->valuedouble == 0))) {
         char message[128];
         snprintf(message, sizeof(message), "a %s piece has no size: bars and count are for a form with sizes", form_label);
-        return invalid_body(error, error_size, message);
+        return invalid_body(error, message);
     }
-    UrsatzGuiMaterialResult modulate = validate_piece_modulate(structure, form, error, error_size);
-    if (modulate != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus modulate = validate_piece_modulate(structure, form, error);
+    if (modulate != URSATZ_OK) {
         return modulate;
     }
     char values[160];
@@ -1196,7 +1193,7 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
     join_members(roles, "label", labels, sizeof(labels));
     int count = cJSON_GetArraySize(sections);
     if (count < 1 || count > PIECE_SECTIONS_MAX) {
-        return invalid_body(error, error_size, "a piece has 1 to 32 sections");
+        return invalid_body(error, "a piece has 1 to 32 sections");
     }
     double beats_max = ursatz_gui_composer_limit("piece_beats");
     int last_part = -1;
@@ -1220,48 +1217,48 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         if (!cJSON_IsObject(section) || !cJSON_IsString(id) || !piece_section_id_ok(id->valuestring) || part_index < 0) {
             char message[320];
             snprintf(message, sizeof(message), "each section needs an id like s0 or end and a part of %s", values);
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
         for (const cJSON *earlier = sections->child; earlier != section; earlier = earlier->next) {
             if (strcmp(cJSON_GetObjectItemCaseSensitive(earlier, "id")->valuestring, id->valuestring) == 0) {
-                return invalid_body(error, error_size, "each section id may be used once");
+                return invalid_body(error, "each section id may be used once");
             }
         }
         if (part_index < last_part) {
             char message[320];
             snprintf(message, sizeof(message), "sections must come in the order %s", labels);
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
         last_part = part_index;
         present[part_index] = true;
         if (!is_absent_or_null(section, "letter") &&
             (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' || utf8_length(letter->valuestring) > PIECE_LETTER_MAX)) {
-            return invalid_body(error, error_size, "a section letter must be 1 to 8 characters");
+            return invalid_body(error, "a section letter must be 1 to 8 characters");
         }
         if (!is_whole_number(beats, 1) || (beats_max >= 1 && beats->valuedouble > beats_max)) {
             char message[96];
             snprintf(message, sizeof(message), "a section has 1 to %.0f beats", beats_max);
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
         const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(section, "pickup");
         if (!is_absent_or_null(section, "pickup") && (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false))) {
-            return invalid_body(error, error_size, "a section pickup must be beats as n or n/d");
+            return invalid_body(error, "a section pickup must be beats as n or n/d");
         }
         const cJSON *cadence = cJSON_GetObjectItemCaseSensitive(section, "cadence");
         if (!is_string_or_null(section, "cadence") || (cJSON_IsString(cadence) && strlen(cadence->valuestring) > PIECE_WORD_MAX)) {
-            return invalid_body(error, error_size, "a section cadence must be null or text");
+            return invalid_body(error, "a section cadence must be null or text");
         }
         const cJSON *function = cJSON_GetObjectItemCaseSensitive(section, "function");
         if (!is_string_or_null(section, "function") || (cJSON_IsString(function) && strlen(function->valuestring) > PIECE_WORD_MAX)) {
-            return invalid_body(error, error_size, "a section function must be null or text");
+            return invalid_body(error, "a section function must be null or text");
         }
-        UrsatzGuiMaterialResult filled = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(section, "fill"), error, error_size);
-        if (filled != URSATZ_GUI_MATERIAL_OK) {
+        UrsatzStatus filled = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(section, "fill"), error);
+        if (filled != URSATZ_OK) {
             return filled;
         }
-        UrsatzGuiMaterialResult placed = validate_piece_region(section, error, error_size);
-        placed = placed == URSATZ_GUI_MATERIAL_OK ? validate_piece_harmony(section, error, error_size) : placed;
-        if (placed != URSATZ_GUI_MATERIAL_OK) {
+        UrsatzStatus placed = validate_piece_region(section, error);
+        placed = placed == URSATZ_OK ? validate_piece_harmony(section, error) : placed;
+        if (placed != URSATZ_OK) {
             return placed;
         }
     }
@@ -1272,20 +1269,20 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         if (cJSON_IsTrue(required) && !present[index]) {
             char message[160];
             snprintf(message, sizeof(message), "a piece needs at least one %s section", common_json_string(role, "label"));
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
         index++;
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* The overlays of a sized form (R-610): each names a section of the size the piece picks, once, and has a region, a harmony and a
  * fill; the Composer checks what the region and the harmony say. */
-static UrsatzGuiMaterialResult validate_piece_overlays(const cJSON *structure, const cJSON *form, const cJSON *overlays, double want_bars,
-                                                       double want_count, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_overlays(const cJSON *structure, const cJSON *form, const cJSON *overlays, double want_bars,
+                                                       double want_count, UrsatzError *error) {
     (void)structure;
     if (is_absent_or_null(structure, "sections")) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
     const cJSON *picked = NULL;
     const cJSON *size = NULL;
@@ -1311,39 +1308,38 @@ static UrsatzGuiMaterialResult validate_piece_overlays(const cJSON *structure, c
             char message[256];
             snprintf(message, sizeof(message), "an overlay names a section of the %s form at this size, not '%s'", label ? label : "sized",
                      cJSON_IsString(name) ? name->valuestring : "");
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
         for (const cJSON *earlier = overlays->child; earlier != overlay; earlier = earlier->next) {
             if (strcmp(common_json_string(earlier, "name"), name->valuestring) == 0) {
-                return invalid_body(error, error_size, "each overlay names a section once");
+                return invalid_body(error, "each overlay names a section once");
             }
         }
-        UrsatzGuiMaterialResult result = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(overlay, "fill"), error, error_size);
-        result = result == URSATZ_GUI_MATERIAL_OK ? validate_piece_region(overlay, error, error_size) : result;
-        result = result == URSATZ_GUI_MATERIAL_OK ? validate_piece_harmony(overlay, error, error_size) : result;
-        if (result != URSATZ_GUI_MATERIAL_OK) {
+        UrsatzStatus result = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(overlay, "fill"), error);
+        result = result == URSATZ_OK ? validate_piece_region(overlay, error) : result;
+        result = result == URSATZ_OK ? validate_piece_harmony(overlay, error) : result;
+        if (result != URSATZ_OK) {
             return result;
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* A form with sizes: no sections, bars and count (absent is 0) that pick one of the form's sizes, 0 and 0 being the
  * default, and modulate only where the form allows it. */
-static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const cJSON *form, char *error,
-                                                   size_t error_size) {
+static UrsatzStatus validate_piece_size(const cJSON *structure, const cJSON *form, UrsatzError *error) {
     const char *label = common_json_string(form, "label");
     char message[256];
     const cJSON *overlays = cJSON_GetObjectItemCaseSensitive(structure, "sections");
     if (!is_absent_or_null(structure, "sections") && (!cJSON_IsArray(overlays) || cJSON_GetArraySize(overlays) > PIECE_SECTIONS_MAX)) {
         snprintf(message, sizeof(message), "a %s piece takes its sections from its form: sections lists the overlays", label ? label : "sized");
-        return invalid_body(error, error_size, message);
+        return invalid_body(error, message);
     }
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
     const cJSON *count = cJSON_GetObjectItemCaseSensitive(structure, "count");
     if ((!is_absent_or_null(structure, "bars") && !is_whole_number(bars, 0)) ||
         (!is_absent_or_null(structure, "count") && !is_whole_number(count, 0))) {
-        return invalid_body(error, error_size, "piece bars and count must be whole numbers");
+        return invalid_body(error, "piece bars and count must be whole numbers");
     }
     double want_bars = cJSON_IsNumber(bars) ? bars->valuedouble : 0;
     double want_count = cJSON_IsNumber(count) ? count->valuedouble : 0;
@@ -1361,146 +1357,143 @@ static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const
         if (!found) {
             snprintf(message, sizeof(message), "a %s piece has no size of %.0f bars and %.0f count (0 is not given)",
                      label ? label : "sized", want_bars, want_count);
-            return invalid_body(error, error_size, message);
+            return invalid_body(error, message);
         }
     }
-    UrsatzGuiMaterialResult overlaid = validate_piece_overlays(structure, form, overlays, want_bars, want_count, error, error_size);
-    return overlaid == URSATZ_GUI_MATERIAL_OK ? validate_piece_modulate(structure, form, error, error_size) : overlaid;
+    UrsatzStatus overlaid = validate_piece_overlays(structure, form, overlays, want_bars, want_count, error);
+    return overlaid == URSATZ_OK ? validate_piece_modulate(structure, form, error) : overlaid;
 }
 
 /* structure.form names a form of the Composer (absent is game-loop); the form says whether the structure lists its
  * own sections or is a size. */
-static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, char *error, size_t error_size) {
+static UrsatzStatus validate_piece_structure(const cJSON *structure, UrsatzError *error) {
     if (!cJSON_IsObject(structure)) {
-        return invalid_body(error, error_size, "a piece structure needs key, material, meter and sections");
+        return invalid_body(error, "a piece structure needs key, material, meter and sections");
     }
     const cJSON *form_name = cJSON_GetObjectItemCaseSensitive(structure, "form");
     if (!is_absent_or_null(structure, "form") && !cJSON_IsString(form_name)) {
-        return invalid_body(error, error_size, "a piece form must be text");
+        return invalid_body(error, "a piece form must be text");
     }
     const char *name = cJSON_IsString(form_name) ? form_name->valuestring : "game-loop";
     const cJSON *form = ursatz_gui_composer_form(name);
     if (!form) {
-        return invalid_body(error, error_size, "a piece form must be one the Composer builds");
+        return invalid_body(error, "a piece form must be one the Composer builds");
     }
-    UrsatzGuiMaterialResult words = validate_piece_words(structure, error, error_size);
-    if (words != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus words = validate_piece_words(structure, error);
+    if (words != URSATZ_OK) {
         return words;
     }
     const char *sections = common_json_string(form, "sections");
     if (sections && strcmp(sections, "request") == 0) {
-        return validate_piece_sections(structure, form, error, error_size);
+        return validate_piece_sections(structure, form, error);
     }
-    return validate_piece_size(structure, form, error, error_size);
+    return validate_piece_size(structure, form, error);
 }
 
-static UrsatzGuiMaterialResult validate_piece(const cJSON *piece, char *error, size_t error_size) {
+static UrsatzStatus validate_piece(const cJSON *piece, UrsatzError *error) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
     if (!cJSON_IsObject(piece) || (structure && !cJSON_IsNull(structure) && !cJSON_IsString(structure) &&
                                    !cJSON_IsObject(structure) && !cJSON_IsArray(structure))) {
-        return invalid_body(error, error_size, "a piece body needs a piece object with a structure");
+        return invalid_body(error, "a piece body needs a piece object with a structure");
     }
     if (piece_is_placeholder(piece)) {
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
-    UrsatzGuiMaterialResult result = validate_piece_structure(structure, error, error_size);
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = validate_piece_structure(structure, error);
+    if (result != URSATZ_OK) {
         return result;
     }
     if (!is_absent_or_null(piece, "motive") && !theme_reference_ok(cJSON_GetObjectItemCaseSensitive(piece, "motive"))) {
-        return invalid_body(error, error_size, "a piece motive needs item_id and version");
+        return invalid_body(error, "a piece motive needs item_id and version");
     }
     if (!is_in_set_or_null(piece, "pool", kThemePools)) {
-        return invalid_body(error, error_size, "piece pool must be approved-and-unflagged, approved or none");
+        return invalid_body(error, "piece pool must be approved-and-unflagged, approved or none");
     }
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(piece, "accompaniment");
     const char *pattern = common_json_string(accompaniment, "pattern");
     if (!is_absent_or_null(piece, "accompaniment") &&
         ((pattern && strcmp(pattern, "motive") == 0) ||
-         validate_theme_accompaniment(accompaniment, error, error_size) != URSATZ_GUI_MATERIAL_OK)) {
-        return invalid_body(error, error_size, "piece accompaniment pattern must be block, arpeggiated, alberti, oom-pah or any");
+         validate_theme_accompaniment(accompaniment, error) != URSATZ_OK)) {
+        return invalid_body(error, "piece accompaniment pattern must be block, arpeggiated, alberti, oom-pah or any");
     }
     if (!is_absent_or_null(piece, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(piece, "brief"))) {
-        return invalid_body(error, error_size, "piece brief needs scopes, piece_ids or style_ids within the limits");
+        return invalid_body(error, "piece brief needs scopes, piece_ids or style_ids within the limits");
     }
     const cJSON *weight = cJSON_GetObjectItemCaseSensitive(piece, "style_weight");
     if (!is_absent_or_null(piece, "style_weight") && (!cJSON_IsString(weight) || !is_rational(weight->valuestring, false))) {
-        return invalid_body(error, error_size, "piece style_weight must be n or n/d");
+        return invalid_body(error, "piece style_weight must be n or n/d");
     }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(piece, "without");
     if (without && (!is_string_list_from(without, kThemeMotiveCategories) || cJSON_GetArraySize(without) > THEME_WITHOUT_MAX)) {
-        return invalid_body(error, error_size, "piece without lists up to four motive categories");
+        return invalid_body(error, "piece without lists up to four motive categories");
     }
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(piece, "tempo");
     if (!is_absent_or_null(piece, "tempo") && !is_whole_number(tempo, 0)) {
-        return invalid_body(error, error_size, "piece tempo must be null or a whole number");
+        return invalid_body(error, "piece tempo must be null or a whole number");
     }
     const cJSON *check = cJSON_GetObjectItemCaseSensitive(piece, "check");
     if (check && !cJSON_IsBool(check)) {
-        return invalid_body(error, error_size, "piece check must be true or false");
+        return invalid_body(error, "piece check must be true or false");
     }
     if (!is_absent_or_null(piece, "seed") && !is_whole_number(cJSON_GetObjectItemCaseSensitive(piece, "seed"), 0)) {
-        return invalid_body(error, error_size, "piece seed must be null or a whole number");
+        return invalid_body(error, "piece seed must be null or a whole number");
     }
     const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(piece, "result");
     if (result_member && !cJSON_IsNull(result_member) && !cJSON_IsObject(result_member)) {
-        return invalid_body(error, error_size, "piece result must be null or an object");
+        return invalid_body(error, "piece result must be null or an object");
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
-                                                           size_t error_size) {
-    if (error && error_size > 0) {
-        error[0] = '\0';
-    }
+UrsatzStatus ursatz_gui_material_body_validate(const char *type, const cJSON *body, UrsatzError *error) {
+    ursatz_gui_error_text(error, NULL);
     if (!prefix_for_type(type)) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid type");
     }
     if (!cJSON_IsObject(body)) {
-        return invalid_body(error, error_size, "a version body must be an object");
+        return invalid_body(error, "a version body must be an object");
     }
-    UrsatzGuiMaterialResult result = validate_uses(body, error, error_size);
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = validate_uses(body, error);
+    if (result != URSATZ_OK) {
         return result;
     }
     static const char *const members[] = {"motif", "theme", "piece"};
     for (size_t i = 0; i < sizeof(members) / sizeof(members[0]); i++) {
         if (strcmp(members[i], type) != 0 && cJSON_GetObjectItemCaseSensitive(body, members[i])) {
-            return invalid_body(error, error_size, "a body must not carry another type's member");
+            return invalid_body(error, "a body must not carry another type's member");
         }
     }
     const cJSON *own = cJSON_GetObjectItemCaseSensitive(body, type);
     if (strcmp(type, "motif") == 0) {
-        return validate_motif(own, error, error_size);
+        return validate_motif(own, error);
     }
-    return strcmp(type, "theme") == 0 ? validate_theme(own, error, error_size) : validate_piece(own, error, error_size);
+    return strcmp(type, "theme") == 0 ? validate_theme(own, error) : validate_piece(own, error);
 }
 
-static UrsatzGuiMaterialResult load_item_locked(const char *id, cJSON **out) {
+static UrsatzStatus load_item_locked(const char *id, cJSON **out) {
     char path[PATH_BYTES];
     if (!item_file_path(id, "item.json", path, sizeof(path))) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     cJSON *item = NULL;
     common_json_read_object(path, &item, NULL);
     if (!item) {
-        return common_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return common_path_exists(path) ? ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure") : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     if (!common_json_set_string(item, "id", id)) {
         cJSON_Delete(item);
-        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     *out = item;
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiMaterialResult save_item_locked(const cJSON *item) {
+static UrsatzStatus save_item_locked(const cJSON *item) {
     char path[PATH_BYTES];
     if (!item_file_path(common_json_string(item, "id"), "item.json", path, sizeof(path))) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    return (common_json_write_file(path, item, true, NULL) == URSATZ_OK) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_FAILED;
+    return (common_json_write_file(path, item, true, NULL) == URSATZ_OK) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
 }
 
 static int current_version_of(const cJSON *item) {
@@ -1658,19 +1651,19 @@ static bool append_version_entry(cJSON *item, int number, const char *note) {
     return cJSON_AddNumberToObject(item, "current_version", number) != NULL && touch_item(item);
 }
 
-static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, cJSON **out_body) {
+static UrsatzStatus read_version_locked(const char *id, int number, cJSON **out_body) {
     char path[PATH_BYTES];
     if (!version_path(id, number, path, sizeof(path))) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     cJSON *body = NULL;
     common_json_read_object(path, &body, NULL);
     if (!body) {
-        return common_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return common_path_exists(path) ? ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure") : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     ursatz_gui_material_body_migrate(body);
     *out_body = body;
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /*
@@ -1678,13 +1671,13 @@ static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, c
  * version they name (a client-sent copy is replaced). A use of an item or
  * version that does not exist, or of self_id (may be NULL), is INVALID_BODY.
  */
-static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON *body, cJSON **out) {
+static UrsatzStatus fill_uses_locked(const char *self_id, const cJSON *body, cJSON **out) {
     cJSON *filled = cJSON_Duplicate(body, 1);
     if (!filled) {
-        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     ursatz_gui_material_body_migrate(filled);
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    UrsatzStatus result = URSATZ_OK;
     cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(filled, "uses")) {
         const char *source_id = common_json_string(use, "item_id");
@@ -1692,35 +1685,35 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
         cJSON *source = NULL;
         cJSON *copy = NULL;
         if (self_id && strcmp(source_id, self_id) == 0) {
-            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
         } else {
             result = load_item_locked(source_id, &source);
         }
-        if (result == URSATZ_GUI_MATERIAL_OK) {
+        if (result == URSATZ_OK) {
             result = number <= current_version_of(source) ? read_version_locked(source_id, number, &copy)
-                                                           : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+                                                           : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
         }
         cJSON_Delete(source);
-        if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND || result == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
-            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+        if (result == URSATZ_ERR_NOT_FOUND || result == URSATZ_ERR_REQUEST) {
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
         }
-        if (result == URSATZ_GUI_MATERIAL_OK) {
+        if (result == URSATZ_OK) {
             cJSON_DeleteItemFromObjectCaseSensitive(use, "copy");
             if (!cJSON_AddItemToObject(use, "copy", copy)) {
                 cJSON_Delete(copy);
-                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
-        if (result != URSATZ_GUI_MATERIAL_OK) {
+        if (result != URSATZ_OK) {
             break;
         }
     }
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    if (result != URSATZ_OK) {
         cJSON_Delete(filled);
         return result;
     }
     *out = filled;
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 #define BODY_REFERENCES_MAX 40
@@ -1783,37 +1776,37 @@ static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENC
  * What a reference names must exist at that version: a motif with form full and the role the use needs, or a theme
  * version that was composed (a result and a plan.json beside the version).
  */
-static UrsatzGuiMaterialResult check_reference_locked(const cJSON *reference, ReferenceKind kind) {
+static UrsatzStatus check_reference_locked(const cJSON *reference, ReferenceKind kind) {
     const char *source_id = common_json_string(reference, "item_id");
     int number = cJSON_GetObjectItemCaseSensitive(reference, "version")->valueint;
     bool theme = kind == REF_THEME;
     cJSON *source = NULL;
     cJSON *version = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(source_id, &source);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = load_item_locked(source_id, &source);
+    if (result == URSATZ_OK) {
         result = strcmp(common_json_string(source, "type"), theme ? "theme" : "motif") == 0 && number <= current_version_of(source)
                      ? read_version_locked(source_id, number, &version)
-                     : URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+                     : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && theme) {
+    if (result == URSATZ_OK && theme) {
         char plan[PATH_BYTES];
         const cJSON *composed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version, "theme"), "result");
         if (!cJSON_IsObject(composed) ||
             snprintf(plan, sizeof(plan), "%s/items/%s/v%d/plan.json", g_dir, source_id, number) >= (int)sizeof(plan) ||
             !common_path_exists(plan)) {
-            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
         }
-    } else if (result == URSATZ_GUI_MATERIAL_OK) {
+    } else if (result == URSATZ_OK) {
         const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version, "motif");
         const char *form = common_json_string(motif, "form");
         const char *role = common_json_string(motif, "role");
         if (!form || !role || strcmp(form, "full") != 0 ||
             strcmp(role, kind == REF_ACCOMPANIMENT_MOTIF ? "accompaniment" : "melodic") != 0) {
-            result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND || result == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
-        result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    if (result == URSATZ_ERR_NOT_FOUND || result == URSATZ_ERR_REQUEST) {
+        result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid body");
     }
     cJSON_Delete(source);
     cJSON_Delete(version);
@@ -1843,25 +1836,25 @@ static bool add_use(cJSON *uses, const char *item_id, int version) {
  * are checked, and its uses of those items are replaced by one use for each version named (a client use of them is
  * dropped; its other uses stay). Any other body is copied as it is.
  */
-static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **out) {
+static UrsatzStatus prepare_uses_locked(const cJSON *body, cJSON **out) {
     cJSON *prepared = cJSON_Duplicate(body, 1);
     if (!prepared) {
-        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     const cJSON *refs[BODY_REFERENCES_MAX];
     ReferenceKind kinds[BODY_REFERENCES_MAX];
     size_t count = body_references(prepared, refs, kinds);
     if (count == 0) {
         *out = prepared;
-        return URSATZ_GUI_MATERIAL_OK;
+        return URSATZ_OK;
     }
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+    UrsatzStatus result = URSATZ_OK;
+    for (size_t i = 0; result == URSATZ_OK && i < count; i++) {
         result = check_reference_locked(refs[i], kinds[i]);
     }
     cJSON *uses = cJSON_CreateArray();
-    if (result == URSATZ_GUI_MATERIAL_OK && !uses) {
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    if (result == URSATZ_OK && !uses) {
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(prepared, "uses")) {
@@ -1869,53 +1862,53 @@ static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **ou
         for (size_t i = 0; i < count; i++) {
             replaced = replaced || strcmp(common_json_string(refs[i], "item_id"), common_json_string(use, "item_id")) == 0;
         }
-        if (result == URSATZ_GUI_MATERIAL_OK && !replaced) {
+        if (result == URSATZ_OK && !replaced) {
             cJSON *kept = cJSON_Duplicate(use, 1);
             if (kept) {
                 cJSON_AddItemToArray(uses, kept);
             } else {
-                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
     }
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < count; i++) {
         if (!add_use(uses, common_json_string(refs[i], "item_id"),
                            cJSON_GetObjectItemCaseSensitive(refs[i], "version")->valueint)) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         cJSON_DeleteItemFromObjectCaseSensitive(prepared, "uses");
         if (!cJSON_AddItemToObject(prepared, "uses", uses)) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         } else {
             uses = NULL;
         }
     }
     cJSON_Delete(uses);
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    if (result != URSATZ_OK) {
         cJSON_Delete(prepared);
         return result;
     }
     *out = prepared;
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* prepare_uses_locked, then fill_uses_locked: *out is body with the uses a theme's slots imply and a fresh copy in each. */
-static UrsatzGuiMaterialResult fill_body_uses_locked(const char *self_id, const cJSON *body, cJSON **out) {
+static UrsatzStatus fill_body_uses_locked(const char *self_id, const cJSON *body, cJSON **out) {
     cJSON *prepared = NULL;
-    UrsatzGuiMaterialResult result = prepare_uses_locked(body, &prepared);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = prepare_uses_locked(body, &prepared);
+    if (result == URSATZ_OK) {
         result = fill_uses_locked(self_id, prepared, out);
     }
     cJSON_Delete(prepared);
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out) {
+UrsatzStatus ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out) {
     *out = NULL;
     LOCK();
-    UrsatzGuiMaterialResult result = fill_body_uses_locked(NULL, body, out);
+    UrsatzStatus result = fill_body_uses_locked(NULL, body, out);
     UNLOCK();
     return result;
 }
@@ -1935,42 +1928,42 @@ static bool bump_versions(cJSON *body, const char *source_id, int latest) {
     return ok;
 }
 
-static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *name, const char *project_id,
+static UrsatzStatus create_item_locked(const char *type, const char *name, const char *project_id,
                                                   const cJSON *body, const char *note, cJSON **out_item) {
     const char *prefix = prefix_for_type(type);
     if (!prefix) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid type");
     }
     if (!is_valid_id(project_id)) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     char *clean_name = NULL;
     char *clean_note = NULL;
-    UrsatzGuiMaterialResult result = normalize_name(name, &clean_name);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = normalize_name(name, &clean_name);
+    if (result == URSATZ_OK) {
         bool alloc_failed = false;
         clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
         if (!clean_note) {
-            result = alloc_failed ? URSATZ_GUI_MATERIAL_ERR_ALLOC : URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+            result = alloc_failed ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && !project_exists_locked(project_id)) {
-        result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+    if (result == URSATZ_OK && !project_exists_locked(project_id)) {
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     cJSON *stored = NULL;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = ursatz_gui_material_body_validate(type, body, NULL, 0);
+    if (result == URSATZ_OK) {
+        result = ursatz_gui_material_body_validate(type, body, NULL);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         result = fill_body_uses_locked(NULL, body, &stored);
     }
 
     char *id = NULL;
     char dir[PATH_BYTES];
-    for (int attempt = 0; result == URSATZ_GUI_MATERIAL_OK && attempt < ID_MAX_TRIES; attempt++) {
+    for (int attempt = 0; result == URSATZ_OK && attempt < ID_MAX_TRIES; attempt++) {
         id = ursatz_gui_new_id(prefix);
         if (!id) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         } else if (item_dir_path(id, dir, sizeof(dir)) && !common_path_exists(dir)) {
             break;
         } else {
@@ -1978,13 +1971,13 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
             id = NULL;
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && !id) {
-        result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+    if (result == URSATZ_OK && !id) {
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
     cJSON *item = NULL;
     bool dir_made = false;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         char now[32];
         common_utc_now(now);
         item = cJSON_CreateObject();
@@ -1994,23 +1987,23 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
                   cJSON_AddStringToObject(item, "created_at", now) && cJSON_AddStringToObject(item, "updated_at", now) &&
                   append_version_entry(item, 1, clean_note);
         if (!ok) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         } else if (!(common_dir_create(dir, NULL) == URSATZ_OK)) {
-            result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+            result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
         } else {
             dir_made = true;
             /* item.json goes last: a directory without it is not an item. */
             if (!write_version_locked(id, 1, stored)) {
-                result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+                result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
             } else {
                 result = save_item_locked(item);
             }
         }
     }
-    if (result != URSATZ_GUI_MATERIAL_OK && dir_made) {
+    if (result != URSATZ_OK && dir_made) {
         common_dir_remove(dir, NULL);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
+    if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
@@ -2022,15 +2015,15 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, const char *name,
+UrsatzStatus ursatz_gui_material_item_create_noted(const char *type, const char *name,
                                                                const char *project_id, const cJSON *body,
                                                                const char *note, cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
     }
     LOCK();
-    UrsatzGuiMaterialResult result = g_ready ? create_item_locked(type, name, project_id, body, note, out_item)
-                                             : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UrsatzStatus result = g_ready ? create_item_locked(type, name, project_id, body, note, out_item)
+                                             : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     UNLOCK();
     return result;
 }
@@ -2048,7 +2041,7 @@ static bool annotate_variant_of_locked(cJSON *item, const cJSON *known_body) {
     cJSON *own_body = NULL;
     const cJSON *body = known_body;
     if (!body && strcmp(common_json_string(item, "type"), "motif") == 0 &&
-        read_version_locked(common_json_string(item, "id"), current_version_of(item), &own_body) == URSATZ_GUI_MATERIAL_OK) {
+        read_version_locked(common_json_string(item, "id"), current_version_of(item), &own_body) == URSATZ_OK) {
         body = own_body;
     }
     cJSON_DeleteItemFromObjectCaseSensitive(item, "variant_of");
@@ -2070,36 +2063,36 @@ static int compare_items(const void *a, const void *b) {
     return by_updated != 0 ? by_updated : strcmp(common_json_string(left, "id"), common_json_string(right, "id"));
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items) {
+UrsatzStatus ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items) {
     *out_items = NULL;
     if (project_id && !is_valid_id(project_id)) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     if (type && !prefix_for_type(type)) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid type");
     }
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
     char dir[PATH_BYTES];
     CommonNames names = {0};
     if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
 
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    UrsatzStatus result = URSATZ_OK;
     cJSON **items = names.count ? calloc(names.count, sizeof(cJSON *)) : NULL;
     size_t loaded = 0;
     if (names.count && !items) {
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
         cJSON *item = NULL;
-        if (load_item_locked(names.items[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+        if (load_item_locked(names.items[i], &item) != URSATZ_OK) {
             continue;
         }
         if ((project_id && strcmp(common_json_string(item, "project_id"), project_id) != 0) ||
@@ -2109,7 +2102,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
         }
         if (!annotate_variant_of_locked(item, NULL)) {
             cJSON_Delete(item);
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         items[loaded++] = item;
@@ -2117,28 +2110,28 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
     common_names_free(&names);
     UNLOCK();
 
-    cJSON *array = result == URSATZ_GUI_MATERIAL_OK ? cJSON_CreateArray() : NULL;
-    if (result == URSATZ_GUI_MATERIAL_OK && !array) {
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    cJSON *array = result == URSATZ_OK ? cJSON_CreateArray() : NULL;
+    if (result == URSATZ_OK && !array) {
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     if (loaded > 1) {
         qsort(items, loaded, sizeof(cJSON *), compare_items);
     }
     for (size_t i = 0; i < loaded; i++) {
-        if (result == URSATZ_GUI_MATERIAL_OK) {
+        if (result == URSATZ_OK) {
             cJSON_AddItemToArray(array, items[i]);
         } else {
             cJSON_Delete(items[i]);
         }
     }
     free(items);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         *out_items = array;
     }
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body) {
+UrsatzStatus ursatz_gui_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body) {
     if (out_meta) {
         *out_meta = NULL;
     }
@@ -2148,66 +2141,66 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
     cJSON *body = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
-    if (result == URSATZ_GUI_MATERIAL_OK && out_body) {
+    UrsatzStatus result = load_item_locked(id, &item);
+    if (result == URSATZ_OK && out_body) {
         result = read_version_locked(id, current_version_of(item), &body);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_meta && !annotate_variant_of_locked(item, body)) {
-        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    if (result == URSATZ_OK && out_meta && !annotate_variant_of_locked(item, body)) {
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     UNLOCK();
-    if (result == URSATZ_GUI_MATERIAL_OK && out_meta) {
+    if (result == URSATZ_OK && out_meta) {
         *out_meta = item;
     } else {
         cJSON_Delete(item);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_body) {
+    if (result == URSATZ_OK && out_body) {
         *out_body = body;
     }
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body) {
+UrsatzStatus ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body) {
     *out_body = NULL;
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = load_item_locked(id, &item);
+    if (result == URSATZ_OK) {
         result = number >= 1 && number <= current_version_of(item) ? read_version_locked(id, number, out_body)
-                                                                    : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+                                                                    : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     cJSON_Delete(item);
     UNLOCK();
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status) {
+UrsatzStatus ursatz_gui_material_uses_status(const char *id, cJSON **out_status) {
     *out_status = NULL;
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
     cJSON *body = NULL;
     cJSON *status = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = load_item_locked(id, &item);
+    if (result == URSATZ_OK) {
         result = read_version_locked(id, current_version_of(item), &body);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         status = cJSON_CreateArray();
-        result = status ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        result = status ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    const cJSON *uses = result == URSATZ_GUI_MATERIAL_OK ? cJSON_GetObjectItemCaseSensitive(body, "uses") : NULL;
+    const cJSON *uses = result == URSATZ_OK ? cJSON_GetObjectItemCaseSensitive(body, "uses") : NULL;
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, uses) {
         const char *source_id = common_json_string(use, "item_id");
@@ -2217,7 +2210,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
         cJSON *entry = cJSON_CreateObject();
         bool ok = entry && cJSON_AddStringToObject(entry, "item_id", source_id) &&
                   cJSON_AddNumberToObject(entry, "version", used);
-        if (ok && load_item_locked(source_id, &source) == URSATZ_GUI_MATERIAL_OK) {
+        if (ok && load_item_locked(source_id, &source) == URSATZ_OK) {
             int latest = current_version_of(source);
             ok = cJSON_AddNumberToObject(entry, "current_version", latest) &&
                  cJSON_AddStringToObject(entry, "name", common_json_string(source, "name")) &&
@@ -2230,7 +2223,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
         cJSON_Delete(source);
         if (!ok) {
             cJSON_Delete(entry);
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         cJSON_AddItemToArray(status, entry);
@@ -2238,7 +2231,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
     UNLOCK();
     cJSON_Delete(item);
     cJSON_Delete(body);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         *out_status = status;
     } else {
         cJSON_Delete(status);
@@ -2250,24 +2243,24 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
  * Builds the array of items whose current version uses id: {id, name, type,
  * project_id, version}. The item need not exist (a deleted source still has users).
  */
-static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
+static UrsatzStatus used_by_locked(const char *id, cJSON **out) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
     if (!is_valid_id(id)) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
-        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *users = cJSON_CreateArray();
-    UrsatzGuiMaterialResult result = users ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
+    UrsatzStatus result = users ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
+    for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
         cJSON *item = NULL;
         cJSON *body = NULL;
-        if (strcmp(names.items[i], id) == 0 || load_item_locked(names.items[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+        if (strcmp(names.items[i], id) == 0 || load_item_locked(names.items[i], &item) != URSATZ_OK) {
             continue;
         }
-        if (read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+        if (read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_OK) {
             const cJSON *use = NULL;
             cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
                 const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
@@ -2282,7 +2275,7 @@ static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
                           cJSON_AddNumberToObject(entry, "version", cJSON_IsNumber(version) ? version->valueint : 0);
                 if (!ok) {
                     cJSON_Delete(entry);
-                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                    result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 } else {
                     cJSON_AddItemToArray(users, entry);
                 }
@@ -2293,7 +2286,7 @@ static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
         cJSON_Delete(body);
     }
     common_names_free(&names);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         *out = users;
     } else {
         cJSON_Delete(users);
@@ -2301,22 +2294,22 @@ static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
     return result;
 }
 
-static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
+static UrsatzStatus derived_motifs_locked(cJSON **out) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
     if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
-        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *found = cJSON_CreateArray();
-    UrsatzGuiMaterialResult result = found ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
+    UrsatzStatus result = found ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
+    for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
         cJSON *item = NULL;
         cJSON *body = NULL;
-        if (load_item_locked(names.items[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+        if (load_item_locked(names.items[i], &item) != URSATZ_OK) {
             continue;
         }
         if (strcmp(common_json_string(item, "type"), "motif") == 0 &&
-            read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+            read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_OK) {
             cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
             if (cJSON_IsObject(derived)) {
                 cJSON *entry = cJSON_CreateObject();
@@ -2330,7 +2323,7 @@ static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
                         cJSON_Delete(copy);
                     }
                     cJSON_Delete(entry);
-                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                    result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 } else {
                     cJSON_AddItemToArray(found, entry);
                 }
@@ -2340,7 +2333,7 @@ static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
         cJSON_Delete(body);
     }
     common_names_free(&names);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         *out = found;
     } else {
         cJSON_Delete(found);
@@ -2348,24 +2341,24 @@ static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs) {
+UrsatzStatus ursatz_gui_material_derived_motifs(cJSON **out_motifs) {
     *out_motifs = NULL;
     LOCK();
-    UrsatzGuiMaterialResult result = g_ready ? derived_motifs_locked(out_motifs) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UrsatzStatus result = g_ready ? derived_motifs_locked(out_motifs) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     UNLOCK();
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users) {
+UrsatzStatus ursatz_gui_material_used_by(const char *id, cJSON **out_users) {
     *out_users = NULL;
     LOCK();
-    UrsatzGuiMaterialResult result = g_ready ? used_by_locked(id, out_users) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    UrsatzStatus result = g_ready ? used_by_locked(id, out_users) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     UNLOCK();
     return result;
 }
 
 /* Sets the name and/or project (each NULL = unchanged) on the item and saves it. */
-static UrsatzGuiMaterialResult change_item(const char *id, const char *name, const char *project_id,
+static UrsatzStatus change_item(const char *id, const char *name, const char *project_id,
                                            cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
@@ -2373,27 +2366,27 @@ static UrsatzGuiMaterialResult change_item(const char *id, const char *name, con
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
     char *clean_name = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
-    if (result == URSATZ_GUI_MATERIAL_OK && name) {
+    UrsatzStatus result = load_item_locked(id, &item);
+    if (result == URSATZ_OK && name) {
         result = normalize_name(name, &clean_name);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && project_id) {
+    if (result == URSATZ_OK && project_id) {
         if (!is_valid_id(project_id)) {
-            result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
         } else if (!project_exists_locked(project_id)) {
-            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+            result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         bool ok = (!clean_name || common_json_set_string(item, "name", clean_name)) &&
                   (!project_id || common_json_set_string(item, "project_id", project_id)) && touch_item(item);
-        result = ok ? save_item_locked(item) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        result = ok ? save_item_locked(item) : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
+    if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
@@ -2403,34 +2396,34 @@ static UrsatzGuiMaterialResult change_item(const char *id, const char *name, con
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_rename(const char *id, const char *name, cJSON **out_item) {
+UrsatzStatus ursatz_gui_material_item_rename(const char *id, const char *name, cJSON **out_item) {
     if (!name) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
     }
     return change_item(id, name, NULL, out_item);
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_move(const char *id, const char *project_id, cJSON **out_item) {
+UrsatzStatus ursatz_gui_material_item_move(const char *id, const char *project_id, cJSON **out_item) {
     if (!project_id) {
-        return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     return change_item(id, NULL, project_id, out_item);
 }
 
 /* Writes body as the next version of item and saves item.json with it made current. */
-static UrsatzGuiMaterialResult commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note) {
+static UrsatzStatus commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note) {
     int number = current_version_of(item) + 1;
     /* The body goes first; the version exists once item.json names it. */
     if (!append_version_entry(item, number, note)) {
-        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     if (!write_version_locked(id, number, body)) {
-        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     return save_item_locked(item);
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, const cJSON *body, const char *note,
+UrsatzStatus ursatz_gui_material_item_add_version(const char *id, const cJSON *body, const char *note,
                                                               cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
@@ -2438,29 +2431,29 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
     char *clean_note = NULL;
     bool alloc_failed = false;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = load_item_locked(id, &item);
+    if (result == URSATZ_OK) {
         clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
         if (!clean_note) {
-            result = alloc_failed ? URSATZ_GUI_MATERIAL_ERR_ALLOC : URSATZ_GUI_MATERIAL_ERR_INVALID_NAME;
+            result = alloc_failed ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = ursatz_gui_material_body_validate(common_json_string(item, "type"), body, NULL, 0);
+    if (result == URSATZ_OK) {
+        result = ursatz_gui_material_body_validate(common_json_string(item, "type"), body, NULL);
     }
     cJSON *stored = NULL;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         result = fill_body_uses_locked(id, body, &stored);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         result = commit_version_locked(id, item, stored, clean_note);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
+    if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
@@ -2471,29 +2464,29 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item) {
+UrsatzStatus ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
     }
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
     cJSON *source = NULL;
     cJSON *body = NULL;
     cJSON *stored = NULL;
     char note[NAME_MAX_CHARS + 40];
-    UrsatzGuiMaterialResult result = is_valid_id(source_id) ? load_item_locked(id, &item)
-                                                            : URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = is_valid_id(source_id) ? load_item_locked(id, &item)
+                                                            : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
+    if (result == URSATZ_OK) {
         result = read_version_locked(id, current_version_of(item), &body);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         result = load_item_locked(source_id, &source);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         /* Point every use of the source at its current version; fill_uses_locked refreshes the copies. */
         int latest = current_version_of(source);
         bool found = false;
@@ -2507,18 +2500,18 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
             }
         }
         if (!ok || !bump_versions(body, source_id, latest)) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         } else if (!found) {
-            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+            result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
         } else {
             snprintf(note, sizeof(note), "updated %s to v%d", common_json_string(source, "name"), latest);
             result = fill_body_uses_locked(id, body, &stored);
         }
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         result = commit_version_locked(id, item, stored, note);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
+    if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
@@ -2576,24 +2569,24 @@ static void id_set_free(IdSet *set) {
 
 /* Fills out with the ids of the variants of id, recursively (a variant of a variant too), in one scan of the store.
  * id itself is not in the set. */
-static UrsatzGuiMaterialResult variant_closure_locked(const char *id, IdSet *out) {
+static UrsatzStatus variant_closure_locked(const char *id, IdSet *out) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
     if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
-        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     IdSet children = {0};
     IdSet parents = {0};
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
+    UrsatzStatus result = URSATZ_OK;
+    for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
         cJSON *item = NULL;
         cJSON *body = NULL;
-        if (load_item_locked(names.items[i], &item) == URSATZ_GUI_MATERIAL_OK && strcmp(common_json_string(item, "type"), "motif") == 0 &&
-            read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK &&
+        if (load_item_locked(names.items[i], &item) == URSATZ_OK && strcmp(common_json_string(item, "type"), "motif") == 0 &&
+            read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_OK &&
             ursatz_gui_material_item_is_variant(body)) {
             const cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
             if (!id_set_add(&children, names.items[i]) || !id_set_add(&parents, common_json_string(derived, "source_item"))) {
-                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
         cJSON_Delete(item);
@@ -2601,12 +2594,12 @@ static UrsatzGuiMaterialResult variant_closure_locked(const char *id, IdSet *out
     }
     common_names_free(&names);
     /* Walk down from id: the descendants found so far are also parents to look for. */
-    for (size_t level = 0; result == URSATZ_GUI_MATERIAL_OK && level <= out->count; level++) {
+    for (size_t level = 0; result == URSATZ_OK && level <= out->count; level++) {
         const char *parent = level == 0 ? id : out->ids[level - 1];
-        for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < children.count; i++) {
+        for (size_t i = 0; result == URSATZ_OK && i < children.count; i++) {
             if (strcmp(parents.ids[i], parent) == 0 && strcmp(children.ids[i], id) != 0 && !id_set_has(out, children.ids[i]) &&
                 !id_set_add(out, children.ids[i])) {
-                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
     }
@@ -2616,13 +2609,13 @@ static UrsatzGuiMaterialResult variant_closure_locked(const char *id, IdSet *out
 }
 
 /* The items outside the delete set (id and its variants) that use any member of it, as used_by_locked entries once each. */
-static UrsatzGuiMaterialResult delete_blockers_locked(const char *id, const IdSet *variants, cJSON **out) {
+static UrsatzStatus delete_blockers_locked(const char *id, const IdSet *variants, cJSON **out) {
     cJSON *blockers = cJSON_CreateArray();
     if (!blockers) {
-        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
-    for (size_t member = 0; result == URSATZ_GUI_MATERIAL_OK && member <= variants->count; member++) {
+    UrsatzStatus result = URSATZ_OK;
+    for (size_t member = 0; result == URSATZ_OK && member <= variants->count; member++) {
         cJSON *users = NULL;
         result = used_by_locked(member == 0 ? id : variants->ids[member - 1], &users);
         const cJSON *user = NULL;
@@ -2638,14 +2631,14 @@ static UrsatzGuiMaterialResult delete_blockers_locked(const char *id, const IdSe
             }
             cJSON *copy = cJSON_Duplicate(user, 1);
             if (!copy) {
-                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 break;
             }
             cJSON_AddItemToArray(blockers, copy);
         }
         cJSON_Delete(users);
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         *out = blockers;
     } else {
         cJSON_Delete(blockers);
@@ -2653,16 +2646,16 @@ static UrsatzGuiMaterialResult delete_blockers_locked(const char *id, const IdSe
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users) {
+UrsatzStatus ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users) {
     *out_users = NULL;
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     IdSet variants = {0};
-    UrsatzGuiMaterialResult result = variant_closure_locked(id, &variants);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = variant_closure_locked(id, &variants);
+    if (result == URSATZ_OK) {
         result = delete_blockers_locked(id, &variants, out_users);
     }
     UNLOCK();
@@ -2670,40 +2663,40 @@ UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSO
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force) {
+UrsatzStatus ursatz_gui_material_item_delete(const char *id, bool force) {
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     char dir[PATH_BYTES];
     char meta[PATH_BYTES];
     cJSON *users = NULL;
     IdSet variants = {0};
     IdSet removed = {0};
-    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (!item_dir_path(id, dir, sizeof(dir)) || !item_file_path(id, "item.json", meta, sizeof(meta))) {
-        result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+        result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     } else if (!common_path_exists(meta)) {
-        result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
-    } else if ((result = variant_closure_locked(id, &variants)) != URSATZ_GUI_MATERIAL_OK) {
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    } else if ((result = variant_closure_locked(id, &variants)) != URSATZ_OK) {
         /* nothing is deleted when the variants cannot be found */
-    } else if (!force && (result = delete_blockers_locked(id, &variants, &users)) == URSATZ_GUI_MATERIAL_OK && users->child) {
-        result = URSATZ_GUI_MATERIAL_ERR_REFERENCED;
-    } else if (result == URSATZ_GUI_MATERIAL_OK) {
+    } else if (!force && (result = delete_blockers_locked(id, &variants, &users)) == URSATZ_OK && users->child) {
+        result = ursatz_gui_fail(URSATZ_ERR_CONFLICT, "the item is used by other items");
+    } else if (result == URSATZ_OK) {
         /* The variants go with their motif (R-187), then the motif. item.json first: a half-deleted directory is no
          * longer an item. */
-        for (size_t member = 0; result == URSATZ_GUI_MATERIAL_OK && member <= variants.count; member++) {
+        for (size_t member = 0; result == URSATZ_OK && member <= variants.count; member++) {
             const char *member_id = member < variants.count ? variants.ids[member] : id;
             char member_dir[PATH_BYTES];
             char member_meta[PATH_BYTES];
             if (!item_dir_path(member_id, member_dir, sizeof(member_dir)) ||
                 !item_file_path(member_id, "item.json", member_meta, sizeof(member_meta)) || remove(member_meta) != 0) {
-                result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+                result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
             } else {
                 common_dir_remove(member_dir, NULL);
                 if (!id_set_add(&removed, member_id)) {
-                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                    result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 }
             }
         }
@@ -2754,13 +2747,13 @@ static bool check_date_ok(const char *text) {
     return month >= 1 && month <= 12 && day >= 1 && day <= 31;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_op_checks_validate(const cJSON *body, char *error, size_t error_size) {
+UrsatzStatus ursatz_gui_material_op_checks_validate(const cJSON *body, UrsatzError *error) {
     const cJSON *checks = cJSON_GetObjectItemCaseSensitive(body, "checks");
     if (!cJSON_IsObject(body) || !cJSON_IsObject(checks)) {
-        return invalid_body(error, error_size, "op-checks is {checks: {<operation>: {...}}}");
+        return invalid_body(error, "op-checks is {checks: {<operation>: {...}}}");
     }
     if (cJSON_GetArraySize(checks) > OP_CHECKS_MAX) {
-        return invalid_body(error, error_size, "at most 64 operations can be marked");
+        return invalid_body(error, "at most 64 operations can be marked");
     }
     const cJSON *check = NULL;
     cJSON_ArrayForEach(check, checks) {
@@ -2770,52 +2763,52 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_validate(const cJSON *body
         const cJSON *notes = cJSON_GetObjectItemCaseSensitive(check, "notes_text");
         const cJSON *date = cJSON_GetObjectItemCaseSensitive(check, "date");
         if (!check->string || !op_name_ok(check->string)) {
-            return invalid_body(error, error_size, "an operation name is lowercase letters, digits and hyphens");
+            return invalid_body(error, "an operation name is lowercase letters, digits and hyphens");
         }
         if (!cJSON_IsObject(check) || !cJSON_IsString(verdict) ||
             (strcmp(verdict->valuestring, "works") != 0 && strcmp(verdict->valuestring, "wrong") != 0)) {
-            return invalid_body(error, error_size, "a mark's verdict is works or wrong");
+            return invalid_body(error, "a mark's verdict is works or wrong");
         }
         if (!cJSON_IsString(comment) || strlen(comment->valuestring) > OP_CHECK_COMMENT_MAX) {
-            return invalid_body(error, error_size, "a mark's comment is text of at most 500 characters");
+            return invalid_body(error, "a mark's comment is text of at most 500 characters");
         }
         if (!cJSON_IsNumber(seed) || seed->valuedouble < 0 || seed->valuedouble != (double)(long long)seed->valuedouble) {
-            return invalid_body(error, error_size, "a mark's seed is a whole number from 0");
+            return invalid_body(error, "a mark's seed is a whole number from 0");
         }
         if (!cJSON_IsString(notes) || strlen(notes->valuestring) > OP_CHECK_NOTES_MAX) {
-            return invalid_body(error, error_size, "a mark's notes_text is the result checked, as text");
+            return invalid_body(error, "a mark's notes_text is the result checked, as text");
         }
         if (!cJSON_IsString(date) || !check_date_ok(date->valuestring)) {
-            return invalid_body(error, error_size, "a mark's date is YYYY-MM-DD");
+            return invalid_body(error, "a mark's date is YYYY-MM-DD");
         }
     }
-    return URSATZ_GUI_MATERIAL_OK;
+    return URSATZ_OK;
 }
 
 /* The path of the marks file of motif id; NOT_FOUND unless id is a motif. */
-static UrsatzGuiMaterialResult op_checks_path_locked(const char *id, char *path, size_t path_size) {
+static UrsatzStatus op_checks_path_locked(const char *id, char *path, size_t path_size) {
     cJSON *item = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = load_item_locked(id, &item);
+    if (result == URSATZ_OK) {
         if (strcmp(common_json_string(item, "type"), "motif") != 0) {
-            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+            result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
         } else if (!item_file_path(id, "op-checks.json", path, path_size)) {
-            result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
         }
     }
     cJSON_Delete(item);
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON **out) {
+UrsatzStatus ursatz_gui_material_op_checks_get(const char *id, cJSON **out) {
     *out = NULL;
     LOCK();
     char path[PATH_BYTES];
-    UrsatzGuiMaterialResult result = g_ready ? op_checks_path_locked(id, path, sizeof(path)) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = g_ready ? op_checks_path_locked(id, path, sizeof(path)) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    if (result == URSATZ_OK) {
         cJSON *stored = NULL;
         common_json_read_object(path, &stored, NULL);
-        if (stored && ursatz_gui_material_op_checks_validate(stored, NULL, 0) == URSATZ_GUI_MATERIAL_OK) {
+        if (stored && ursatz_gui_material_op_checks_validate(stored, NULL) == URSATZ_OK) {
             *out = stored;
         } else {
             /* No marks yet, or a file that is not marks: an empty set. */
@@ -2824,7 +2817,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON 
             if (!*out || !cJSON_AddObjectToObject(*out, "checks")) {
                 cJSON_Delete(*out);
                 *out = NULL;
-                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
     }
@@ -2832,17 +2825,16 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON 
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_op_checks_put(const char *id, const cJSON *body, char *error,
-                                                           size_t error_size, cJSON **out) {
+UrsatzStatus ursatz_gui_material_op_checks_put(const char *id, const cJSON *body, UrsatzError *error, cJSON **out) {
     *out = NULL;
-    UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_validate(body, error, error_size);
-    if (result != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus result = ursatz_gui_material_op_checks_validate(body, error);
+    if (result != URSATZ_OK) {
         return result;
     }
     LOCK();
     char path[PATH_BYTES];
-    result = g_ready ? op_checks_path_locked(id, path, sizeof(path)) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = g_ready ? op_checks_path_locked(id, path, sizeof(path)) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    if (result == URSATZ_OK) {
         /* Only the five members are kept, so a stray member never reaches the file. */
         cJSON *stored = cJSON_CreateObject();
         cJSON *checks = stored ? cJSON_AddObjectToObject(stored, "checks") : NULL;
@@ -2865,7 +2857,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_put(const char *id, const 
             *out = stored;
         } else {
             cJSON_Delete(stored);
-            result = ok ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ok ? ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure") : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
     UNLOCK();
@@ -2966,34 +2958,34 @@ bool ursatz_gui_material_render_tmp_dir(char *out, size_t out_size) {
     return ok;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
+UrsatzStatus ursatz_gui_material_version_file(const char *id, int number, const char *name,
                                                           unsigned char **out_data, size_t *out_size) {
     *out_data = NULL;
     *out_size = 0;
     if (!ursatz_gui_material_version_file_type(name)) {
-        return URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
-    UrsatzGuiMaterialResult result = load_item_locked(id, &item);
+    UrsatzStatus result = load_item_locked(id, &item);
     char path[PATH_BYTES];
-    if (result == URSATZ_GUI_MATERIAL_OK &&
+    if (result == URSATZ_OK &&
         (number < 1 || number > current_version_of(item) ||
          snprintf(path, sizeof(path), "%s/items/%s/v%d/%s", g_dir, id, number, name) >= (int)sizeof(path))) {
-        result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
-    if (result == URSATZ_GUI_MATERIAL_OK) {
+    if (result == URSATZ_OK) {
         char *data = NULL;
         size_t length = 0;
         UrsatzStatus read = common_file_read(path, &data, &length, NULL);
         if (read == URSATZ_ERR_ALLOC) {
-            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         } else if (read != URSATZ_OK) {
-            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+            result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not found");
         } else {
             *out_data = (unsigned char *)data;
             *out_size = length;

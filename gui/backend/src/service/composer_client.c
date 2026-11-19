@@ -1,4 +1,5 @@
 #include "composer_client.h"
+#include "../routes/route_util.h"
 #include "knowledge_service.h"
 
 #include <pthread.h>
@@ -259,14 +260,6 @@ bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply) {
 }
 
 int ursatz_gui_composer_reply_failure_status(const UrsatzGuiComposerReply *reply) {
-  switch (reply->status) {
-    case URSATZ_ERR_UNSATISFIABLE:
-      return 422;
-    case URSATZ_ERR_REQUEST:
-      return 400;
-    case URSATZ_ERR_CANCELLED:
-      return 499;
-    default:
-      return 500;
-  }
+  /* The path stays out of the table: a refusal at a request member is 400 as before; its path is sent as the "path" member. */
+  return ursatz_gui_http_status(reply->status, NULL);
 }

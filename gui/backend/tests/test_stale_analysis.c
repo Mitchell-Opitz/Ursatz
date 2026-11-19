@@ -53,7 +53,7 @@ static bool import_piece(const char *name, char *out_id, size_t out_size) {
     char *text = test_read_file(path, NULL);
     char *id = NULL;
     bool ok = text && ursatz_gui_analysis_import_and_save("pieces", (const unsigned char *)text, strlen(text), name,
-                                                          &id) == URSATZ_GUI_ANALYSIS_OK;
+                                                          &id) == URSATZ_OK;
     free(text);
     if (ok) {
         snprintf(out_id, out_size, "%s", id);
@@ -119,7 +119,7 @@ static const char *listed_status(const char *id, char *out, size_t size) {
     UrsatzGuiPieceSummary *pieces = NULL;
     size_t count = 0;
     out[0] = '\0';
-    check_quiet(ursatz_gui_analysis_list("pieces", &pieces, &count) == URSATZ_GUI_ANALYSIS_OK, "list the pieces");
+    check_quiet(ursatz_gui_analysis_list("pieces", &pieces, &count) == URSATZ_OK, "list the pieces");
     for (size_t i = 0; i < count; i++) {
         if (strcmp(pieces[i].id, id) == 0 && pieces[i].analysis_status) {
             snprintf(out, size, "%s", pieces[i].analysis_status);
@@ -171,7 +171,7 @@ static void test_detail(const char *id) {
     check_quiet(strcmp(version, "0.0.1-old") == 0, "the document is stale before the first open");
 
     UrsatzGuiPieceDetail *detail = NULL;
-    check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_GUI_ANALYSIS_OK && detail, "first open");
+    check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_OK && detail, "first open");
     check_quiet(detail && strcmp(detail->analysis_status, "current") == 0, "the first open serves a current analysis");
     ursatz_gui_piece_detail_destroy(detail);
     document_analyzer_version(id, version, sizeof(version));
@@ -179,7 +179,7 @@ static void test_detail(const char *id) {
 
     add_marker(id);
     detail = NULL;
-    check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_GUI_ANALYSIS_OK, "second open");
+    check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_OK, "second open");
     ursatz_gui_piece_detail_destroy(detail);
     check_quiet(has_marker(id), "the second open does not analyze again");
 }
@@ -194,7 +194,7 @@ static void test_backfill(const char *id) {
     add_marker(id);
 
     UrsatzGuiPieceDetail *detail = NULL;
-    check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_GUI_ANALYSIS_OK, "open an old meta.json");
+    check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_OK, "open an old meta.json");
     ursatz_gui_piece_detail_destroy(detail);
     meta = test_read_json(path);
     check_quiet(strcmp(str(meta, "ursatz_commit"), ursatz_analyzer_producer_key()) == 0,
@@ -214,8 +214,8 @@ static void test_style(const char *id) {
     char *style_id = NULL;
     UrsatzGuiStyleSkipped *skipped = NULL;
     size_t skipped_count = 0;
-    UrsatzGuiStyleResult result = ursatz_gui_style_build("Stale", &source, &style_id, &skipped, &skipped_count);
-    check_quiet(result == URSATZ_GUI_STYLE_OK && skipped_count == 0, "the style builds from a stale piece");
+    UrsatzStatus result = ursatz_gui_style_build("Stale", &source, &style_id, &skipped, &skipped_count);
+    check_quiet(result == URSATZ_OK && skipped_count == 0, "the style builds from a stale piece");
     check_quiet(!has_marker(id), "the style build analyzed the stale piece again");
     free(style_id);
     ursatz_gui_style_skipped_free(skipped, skipped_count);
@@ -228,10 +228,10 @@ static void test_link(const char *id, const char *other) {
     UrsatzGuiLinkScope scope = {0};
     scope.kind = URSATZ_GUI_LINK_SCOPE_ALL;
     char *run_id = NULL;
-    check_quiet(ursatz_gui_link_run_start(&scope, &run_id) == URSATZ_GUI_LINK_OK && run_id, "the link run starts");
+    check_quiet(ursatz_gui_link_run_start(&scope, &run_id) == URSATZ_OK && run_id, "the link run starts");
     for (int waited = 0; run_id && waited < 600000; waited += 50) {
         cJSON *run = NULL;
-        if (ursatz_gui_link_run_get(run_id, &run) != URSATZ_GUI_LINK_OK) {
+        if (ursatz_gui_link_run_get(run_id, &run) != URSATZ_OK) {
             break;
         }
         bool running = strcmp(str(run, "status"), "running") == 0;

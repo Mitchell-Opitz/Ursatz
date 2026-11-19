@@ -63,10 +63,10 @@ static unsigned char *read_request_body(struct mg_connection *conn, size_t *out_
   return buffer;
 }
 
-static void send_musicxml_export_error(struct mg_connection *conn, const char *message) {
+static void send_musicxml_export_error(struct mg_connection *conn, UrsatzStatus status) {
   char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
-           message[0] != '\0' ? message : "URSATZ_ERR_INTERNAL");
+           ursatz_status_name(status));
   ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
 }
 
@@ -218,19 +218,19 @@ static int handle_post(struct mg_connection *conn) {
   }
 
   char *id = NULL;
-  UrsatzGuiAnalysisResult result =
+  UrsatzStatus result =
       ursatz_gui_analysis_import_and_save(kPiecesDir, body_data, body_size, filename, &id);
   free(body_data);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT) {
+  if (result == URSATZ_ERR_REQUEST) {
     free(filename);
     return ursatz_gui_send_json_status(conn, 415, "Unsupported Media Type", "{\"error\": \"unsupported format\"}");
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+  if (result == URSATZ_ERR_FORMAT) {
     free(filename);
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     free(filename);
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to save piece\"}");
     return 200;
@@ -349,9 +349,9 @@ static void read_filter(const struct mg_request_info *info, UrsatzGuiMetaFilter 
 static int handle_get(struct mg_connection *conn) {
   UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_list(kPiecesDir, &pieces, &count);
+  UrsatzStatus result = ursatz_gui_analysis_list(kPiecesDir, &pieces, &count);
 
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
@@ -409,14 +409,14 @@ static void append_group_array(JsonBuffer *buf, const char *name, const UrsatzGu
 static int handle_get_groups(struct mg_connection *conn) {
   UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
-  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
+  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
   UrsatzGuiMetaGroups groups;
-  UrsatzGuiMetaResult grouped = ursatz_gui_meta_group(pieces, count, &groups);
+  UrsatzStatus grouped = ursatz_gui_meta_group(pieces, count, &groups);
   free_pieces(pieces, count);
-  if (grouped != URSATZ_GUI_META_OK) {
+  if (grouped != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
@@ -463,13 +463,13 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   bool summary = query_value(mg_get_request_info(conn), "document", 0, document_mode, sizeof(document_mode)) &&
                  strcmp(document_mode, "summary") == 0;
   UrsatzGuiPieceDetail *detail = NULL;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail);
+  UrsatzStatus result = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  if (result == URSATZ_ERR_NOT_FOUND) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 200;
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
     return 200;
   }
@@ -618,7 +618,7 @@ static int send_invalid_member(struct mg_connection *conn, const char *member) {
 static int send_updated_piece(struct mg_connection *conn, const char *id) {
   UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
-  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
+  if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
@@ -774,24 +774,23 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   } else if (!any) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
   } else {
-    char message[96] = "";
-    UrsatzGuiAnalysisResult result =
-        ursatz_gui_analysis_update_piece(kPiecesDir, id, &update, message, sizeof(message));
-    if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    UrsatzError failure = {{0}};
+    UrsatzStatus result = ursatz_gui_analysis_update_piece(kPiecesDir, id, &update, &failure);
+    if (result == URSATZ_ERR_NOT_FOUND) {
       mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
       status = 404;
-    } else if (result == URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA) {
+    } else if (result == URSATZ_ERR_REQUEST) {
       cJSON *answer = cJSON_CreateObject();
       char *text = NULL;
       if (answer) {
         cJSON_AddFalseToObject(answer, "ok");
-        cJSON_AddStringToObject(answer, "message", message);
+        cJSON_AddStringToObject(answer, "message", failure.message);
         text = cJSON_PrintUnformatted(answer);
         cJSON_Delete(answer);
       }
       status = ursatz_gui_send_json_status(conn, 400, "Bad Request", text ? text : "{\"ok\":false,\"message\":\"invalid metadata\"}");
       free(text);
-    } else if (result != URSATZ_GUI_ANALYSIS_OK) {
+    } else if (result != URSATZ_OK) {
       ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to update piece\"}");
     } else {
       status = send_updated_piece(conn, id);
@@ -806,25 +805,25 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_piece(struct mg_connection *conn, const char *id) {
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
+  UrsatzStatus result = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to delete piece\"}");
     return 200;
   }
 
   /* A collection never keeps an id whose piece is gone. The piece itself is
    * already deleted, so a failure here is logged, not answered. */
-  if (ursatz_gui_collection_remove_piece_everywhere(id) != URSATZ_GUI_COLLECTION_OK) {
+  if (ursatz_gui_collection_remove_piece_everywhere(id) != URSATZ_OK) {
     fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every collection\n", id);
   }
 
   /* The same goes for the subjects that linked the piece. */
-  if (ursatz_gui_subject_forget_piece(id) != URSATZ_GUI_SUBJECT_OK) {
+  if (ursatz_gui_subject_forget_piece(id) != URSATZ_OK) {
     fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
   }
 
@@ -835,16 +834,16 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
 static const char *kReanalyzeSuffix = "/reanalyze";
 
 static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_reanalyze(kPiecesDir, id);
+  UrsatzStatus result = ursatz_gui_analysis_reanalyze(kPiecesDir, id);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+  if (result == URSATZ_ERR_FORMAT) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to analyze piece again\"}");
     return 200;
   }
@@ -911,12 +910,12 @@ static int handle_get_piece_document(struct mg_connection *conn, const char *id)
   }
 
   char *sections = NULL;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_document(kPiecesDir, id, names, count, &sections);
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  UrsatzStatus result = ursatz_gui_analysis_get_document(kPiecesDir, id, names, count, &sections);
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error",
                                        "{\"ok\":false,\"message\":\"failed to load the document\"}");
   }
@@ -978,22 +977,20 @@ static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
   }
 
   char *text = NULL;
-  char export_message[256] = "";
-  UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_export(kPiecesDir, id, first, last, &text, export_message);
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  UrsatzStatus result = ursatz_gui_analysis_get_piece_export(kPiecesDir, id, first, last, &text);
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+  if (result == URSATZ_ERR_FORMAT) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED && strcmp(export_message, "URSATZ_ERR_REQUEST") == 0) {
+  if (result == URSATZ_ERR_REQUEST) {
     return ursatz_gui_send_json_status(conn, 400, "Bad Request",
                             "{\"ok\":false,\"message\":\"no measure in that range\"}");
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error",
                             "{\"ok\":false,\"message\":\"failed to export the analysis\"}");
   }
@@ -1008,23 +1005,21 @@ static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
   bool meter_defaulted = false;
-  char export_message[256] = "";
-  UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, export_message);
+  UrsatzStatus result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+  if (result == URSATZ_ERR_FORMAT) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
-    send_musicxml_export_error(conn, export_message);
+  if (result == URSATZ_ERR_REQUEST || result == URSATZ_ERR_INTERNAL) {
+    send_musicxml_export_error(conn, result);
     return 500;
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
 
@@ -1037,17 +1032,17 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
   bool meter_defaulted = false;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
+  UrsatzStatus result = ursatz_gui_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+  if (result == URSATZ_ERR_FORMAT) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
 
@@ -1057,17 +1052,17 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
 
 static int handle_get_piece_playback(struct mg_connection *conn, const char *id) {
   char *json = NULL;
-  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_playback(kPiecesDir, id, &json);
+  UrsatzStatus result = ursatz_gui_analysis_get_piece_playback(kPiecesDir, id, &json);
 
-  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+  if (result == URSATZ_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 404;
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+  if (result == URSATZ_ERR_FORMAT) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result != URSATZ_GUI_ANALYSIS_OK) {
+  if (result != URSATZ_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to build playback\"}");
   }
 

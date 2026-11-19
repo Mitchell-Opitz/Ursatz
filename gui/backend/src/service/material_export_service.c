@@ -1,4 +1,5 @@
 #include "material_export_service.h"
+#include "last_error.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -50,15 +51,15 @@ typedef struct {
   size_t draft_capacity;
   FactList material_facts;
   /* The first failure; later ones are ignored. */
-  UrsatzGuiMaterialExportResult result;
+  UrsatzStatus result;
   char message[URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE];
 } Build;
 
 static bool failed(const Build *build) {
-  return build->result != URSATZ_GUI_MATERIAL_EXPORT_OK;
+  return build->result != URSATZ_OK;
 }
 
-static bool fail(Build *build, UrsatzGuiMaterialExportResult result, const char *message) {
+static bool fail(Build *build, UrsatzStatus result, const char *message) {
   if (!failed(build)) {
     build->result = result;
     snprintf(build->message, sizeof(build->message), "%s", message);
@@ -67,7 +68,7 @@ static bool fail(Build *build, UrsatzGuiMaterialExportResult result, const char 
 }
 
 static bool fail_alloc(Build *build) {
-  return fail(build, URSATZ_GUI_MATERIAL_EXPORT_ALLOC, "");
+  return fail(build, URSATZ_ERR_ALLOC, "");
 }
 
 /* Doubles a pointer array's capacity when it is full. */
@@ -317,7 +318,7 @@ static void add_derived_facts(Build *build, FactList *facts, const cJSON *derive
 static const char *render_motif(Build *build, const cJSON *motif) {
   cJSON *request = ursatz_gui_motif_request(motif);
   if (!request) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the motif cannot be rendered");
+    fail(build, URSATZ_ERR_INTERNAL, "the motif cannot be rendered");
     return NULL;
   }
   if (!cJSON_AddTrueToObject(request, "musicxml")) {
@@ -334,9 +335,9 @@ static const char *render_motif(Build *build, const cJSON *motif) {
   }
   const char *xml = NULL;
   if (ursatz_gui_composer_reply_refused(&reply)) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_REFUSED, reply.message[0] ? reply.message : "composer could not render the motif");
+    fail(build, URSATZ_ERR_REQUEST, reply.message[0] ? reply.message : "composer could not render the motif");
   } else if (reply.status != URSATZ_OK || !reply.musicxml) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "composer could not render the motif");
+    fail(build, URSATZ_ERR_INTERNAL, "composer could not render the motif");
   } else {
     xml = keep_string(build, strdup(reply.musicxml));
   }
@@ -370,12 +371,12 @@ static void read_version_xml(Build *build, const char *id, int version, const ch
   *xml = NULL;
   unsigned char *data = NULL;
   size_t size = 0;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_version_file(id, version, name, &data, &size);
-  if (result == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND) {
+  UrsatzStatus result = ursatz_gui_material_version_file(id, version, name, &data, &size);
+  if (result == URSATZ_ERR_NOT_FOUND) {
     return;
   }
-  if (result != URSATZ_GUI_MATERIAL_OK) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "a version file cannot be read");
+  if (result != URSATZ_OK) {
+    fail(build, URSATZ_ERR_INTERNAL, "a version file cannot be read");
     return;
   }
   char *copy = malloc(size + 1);
@@ -392,7 +393,7 @@ static void read_version_xml(Build *build, const char *id, int version, const ch
 static void build_motif(Build *build, const char *id, const cJSON *body) {
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
   if (!cJSON_IsObject(motif)) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the item has no motif");
+    fail(build, URSATZ_ERR_INTERNAL, "the item has no motif");
     return;
   }
   add_motif_section(build, "motif", motif, true, NULL);
@@ -400,10 +401,10 @@ static void build_motif(Build *build, const char *id, const cJSON *body) {
   if (failed(build)) {
     return;
   }
-  UrsatzGuiMaterialResult listed = ursatz_gui_material_derived_motifs(&derived_list);
-  if (listed != URSATZ_GUI_MATERIAL_OK || !keep_document(build, derived_list)) {
+  UrsatzStatus listed = ursatz_gui_material_derived_motifs(&derived_list);
+  if (listed != URSATZ_OK || !keep_document(build, derived_list)) {
     if (!failed(build)) {
-      fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the variants cannot be listed");
+      fail(build, URSATZ_ERR_INTERNAL, "the variants cannot be listed");
     }
     return;
   }
@@ -417,10 +418,10 @@ static void build_motif(Build *build, const char *id, const cJSON *body) {
     }
     cJSON *variant_body = NULL;
     if (ursatz_gui_material_item_get(common_json_string(entry, "id"), NULL, &variant_body) !=
-            URSATZ_GUI_MATERIAL_OK ||
+            URSATZ_OK ||
         !keep_document(build, variant_body)) {
       if (!failed(build)) {
-        fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "a variant cannot be read");
+        fail(build, URSATZ_ERR_INTERNAL, "a variant cannot be read");
       }
       return;
     }
@@ -447,7 +448,7 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
 static void build_theme(Build *build, const char *id, int version, const cJSON *body) {
   const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
   if (!cJSON_IsObject(theme)) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the item has no theme");
+    fail(build, URSATZ_ERR_INTERNAL, "the item has no theme");
     return;
   }
   const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
@@ -477,7 +478,7 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
     }
     cJSON *meta = NULL;
     const char *motif_name = item->valuestring;
-    if (ursatz_gui_material_item_get(item->valuestring, &meta, NULL) == URSATZ_GUI_MATERIAL_OK && keep_document(build, meta)) {
+    if (ursatz_gui_material_item_get(item->valuestring, &meta, NULL) == URSATZ_OK && keep_document(build, meta)) {
       motif_name = common_json_string(meta, "name");
     }
     add_fact(build, &build->material_facts, format(build, "slot %s", name->valuestring),
@@ -500,10 +501,10 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
     cJSON *slot_body = NULL;
     if (!motif) {
       if (ursatz_gui_material_item_get_version(item->valuestring, number->valueint, &slot_body) !=
-              URSATZ_GUI_MATERIAL_OK ||
+              URSATZ_OK ||
           !keep_document(build, slot_body)) {
         if (!failed(build)) {
-          fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "a slot motif cannot be read");
+          fail(build, URSATZ_ERR_INTERNAL, "a slot motif cannot be read");
         }
         return;
       }
@@ -511,7 +512,7 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
     }
     cJSON *meta = NULL;
     const char *motif_name = item->valuestring;
-    if (ursatz_gui_material_item_get(item->valuestring, &meta, NULL) == URSATZ_GUI_MATERIAL_OK && keep_document(build, meta)) {
+    if (ursatz_gui_material_item_get(item->valuestring, &meta, NULL) == URSATZ_OK && keep_document(build, meta)) {
       motif_name = common_json_string(meta, "name");
     }
     add_motif_section(build, format(build, "slot %s: %s v%d", name->valuestring, motif_name, number->valueint), motif,
@@ -522,7 +523,7 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
 static void build_piece(Build *build, const char *id, int version, const cJSON *body) {
   const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
   if (!cJSON_IsObject(piece)) {
-    fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the item has no piece");
+    fail(build, URSATZ_ERR_INTERNAL, "the item has no piece");
     return;
   }
   const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
@@ -562,7 +563,7 @@ static void build_piece(Build *build, const char *id, int version, const cJSON *
     const char *name = entry ? entry->string : game_loop[i];
     char file[64];
     if (!ursatz_gui_material_version_name_ok(name) || snprintf(file, sizeof(file), "%s.musicxml", name) >= (int)sizeof(file)) {
-      fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the piece names a version that has no file");
+      fail(build, URSATZ_ERR_INTERNAL, "the piece names a version that has no file");
       return;
     }
     const char *xml = NULL;
@@ -591,11 +592,11 @@ static void release(Build *build) {
   free(build->material_facts.items);
 }
 
-static UrsatzGuiMaterialExportResult write_text(Build *build, const char *kind, const char *id, const char *name,
+static UrsatzStatus write_text(Build *build, const char *kind, const char *id, const char *name,
                                                 int version, char **text) {
   AnalyzerTextExportSection *sections = calloc(build->draft_count > 0 ? build->draft_count : 1, sizeof(*sections));
   if (!sections) {
-    return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
+    return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
   }
   for (size_t i = 0; i < build->draft_count; i++) {
     const Draft *draft = &build->drafts[i];
@@ -617,64 +618,64 @@ static UrsatzGuiMaterialExportResult write_text(Build *build, const char *kind, 
       .section_count = build->draft_count,
       .knowledge = ursatz_gui_knowledge(),
   };
-  UrsatzStatus status = analyzer_text_export_material(&material, text, NULL);
+  UrsatzError analyzer_error = {{0}};
+  UrsatzStatus status = analyzer_text_export_material(&material, text, &analyzer_error);
   free(sections);
   if (status == URSATZ_OK) {
-    return URSATZ_GUI_MATERIAL_EXPORT_OK;
+    return URSATZ_OK;
   }
   if (status == URSATZ_ERR_ALLOC) {
-    return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
+    return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
   }
-  snprintf(build->message, sizeof(build->message), "%s",
-           status == URSATZ_ERR_REQUEST ? "URSATZ_ERR_REQUEST" : "URSATZ_ERR_INTERNAL");
+  snprintf(build->message, sizeof(build->message), "%s", analyzer_error.message);
   fprintf(stderr, "ursatz_gui_material_export: analyzer_text_export_material failed for item '%s' with UrsatzStatus=%d\n", id,
           (int)status);
-  return URSATZ_GUI_MATERIAL_EXPORT_FAILED;
+  return ursatz_gui_fail(URSATZ_ERR_INTERNAL, NULL);
 }
 
-UrsatzGuiMaterialExportResult ursatz_gui_material_export(const char *item_id, int version, char **text,
-                                                          char message[URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE]) {
+UrsatzStatus ursatz_gui_material_export(const char *item_id, int version, char **text,
+                                                          UrsatzError *error) {
   *text = NULL;
-  message[0] = '\0';
+  ursatz_gui_error_text(error, NULL);
   if (!item_id || version < 0) {
-    return URSATZ_GUI_MATERIAL_EXPORT_NOT_FOUND;
+    return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, NULL);
   }
   Build build;
   memset(&build, 0, sizeof(build));
   cJSON *meta = NULL;
   cJSON *body = NULL;
-  UrsatzGuiMaterialResult found = ursatz_gui_material_item_get(item_id, &meta, &body);
-  if (found != URSATZ_GUI_MATERIAL_OK) {
-    return found == URSATZ_GUI_MATERIAL_ERR_ALLOC ? URSATZ_GUI_MATERIAL_EXPORT_ALLOC
-           : found == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND || found == URSATZ_GUI_MATERIAL_ERR_INVALID_ID
-               ? URSATZ_GUI_MATERIAL_EXPORT_NOT_FOUND
-               : URSATZ_GUI_MATERIAL_EXPORT_FAILED;
+  UrsatzStatus found = ursatz_gui_material_item_get(item_id, &meta, &body);
+  if (found != URSATZ_OK) {
+    return found == URSATZ_ERR_ALLOC ? ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL)
+           : found == URSATZ_ERR_NOT_FOUND || found == URSATZ_ERR_REQUEST
+               ? ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, NULL)
+               : ursatz_gui_fail(URSATZ_ERR_INTERNAL, NULL);
   }
   if (!keep_document(&build, meta)) {
     cJSON_Delete(body);
     release(&build);
-    return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
+    return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
   }
   if (!keep_document(&build, body)) {
     release(&build);
-    return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
+    return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
   }
   const cJSON *current = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
   if (version == 0 || (cJSON_IsNumber(current) && version == current->valueint)) {
     version = cJSON_IsNumber(current) ? current->valueint : 1;
   } else {
     cJSON *older = NULL;
-    UrsatzGuiMaterialResult read = ursatz_gui_material_item_get_version(item_id, version, &older);
-    if (read != URSATZ_GUI_MATERIAL_OK) {
+    UrsatzStatus read = ursatz_gui_material_item_get_version(item_id, version, &older);
+    if (read != URSATZ_OK) {
       release(&build);
-      return read == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND ? URSATZ_GUI_MATERIAL_EXPORT_NOT_FOUND
-             : read == URSATZ_GUI_MATERIAL_ERR_ALLOC   ? URSATZ_GUI_MATERIAL_EXPORT_ALLOC
-                                                       : URSATZ_GUI_MATERIAL_EXPORT_FAILED;
+      return read == URSATZ_ERR_NOT_FOUND ? ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, NULL)
+             : read == URSATZ_ERR_ALLOC   ? ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL)
+                                                       : ursatz_gui_fail(URSATZ_ERR_INTERNAL, NULL);
     }
     body = keep_document(&build, older);
     if (!body) {
       release(&build);
-      return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
+      return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
     }
   }
   const char *type = common_json_string(meta, "type");
@@ -685,13 +686,13 @@ UrsatzGuiMaterialExportResult ursatz_gui_material_export(const char *item_id, in
   } else if (strcmp(type, "piece") == 0) {
     build_piece(&build, item_id, version, body);
   } else {
-    fail(&build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the item is not a motif, theme or piece");
+    fail(&build, URSATZ_ERR_INTERNAL, "the item is not a motif, theme or piece");
   }
-  UrsatzGuiMaterialExportResult result = build.result;
+  UrsatzStatus result = build.result;
   if (!failed(&build)) {
     result = write_text(&build, type, item_id, common_json_string(meta, "name"), version, text);
   }
-  snprintf(message, URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE, "%s", build.message);
+  ursatz_gui_error_text(error, build.message);
   release(&build);
   return result;
 }

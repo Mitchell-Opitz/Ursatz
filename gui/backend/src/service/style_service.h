@@ -1,12 +1,15 @@
 #ifndef URSATZ_GUI_STYLE_SERVICE_H
 #define URSATZ_GUI_STYLE_SERVICE_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
 #include <cJSON.h>
 
 #include "link_service.h"
+#include "last_error.h"
 
 /*
  * Style service: builds a StyleModel file from a set of pieces through the
@@ -29,17 +32,6 @@
  * Pieces are read from pieces/<id>/ and collections from the collection
  * service. This module reads only analysis documents, never the scores.
  */
-
-typedef enum {
-    URSATZ_GUI_STYLE_OK = 0,
-    URSATZ_GUI_STYLE_ERR_INVALID_NAME,   /* longer than 120 bytes after normalizing */
-    URSATZ_GUI_STYLE_ERR_INVALID_SOURCE, /* no filter value, a bad tag, a bad id, or no ids */
-    URSATZ_GUI_STYLE_ERR_NOT_FOUND,      /* no such style, or no such collection */
-    URSATZ_GUI_STYLE_ERR_NO_PIECES,      /* none of the pieces could be added; nothing is written */
-    URSATZ_GUI_STYLE_ERR_SOURCE_MISSING, /* rebuild: the style's collection no longer exists */
-    URSATZ_GUI_STYLE_ERR_FAILED,
-    URSATZ_GUI_STYLE_ERR_ALLOC
-} UrsatzGuiStyleResult;
 
 typedef enum {
     URSATZ_GUI_STYLE_SOURCE_FILTER = 0,
@@ -107,10 +99,10 @@ void ursatz_gui_style_skipped_free(UrsatzGuiStyleSkipped *skipped, size_t count)
  *
  * On OK, *out_id is newly allocated and caller-owned, and *out_skipped
  * (may be NULL) receives the skipped pieces (free with
- * ursatz_gui_style_skipped_free). URSATZ_GUI_STYLE_ERR_NO_PIECES when no piece
+ * ursatz_gui_style_skipped_free). URSATZ_ERR_UNSATISFIABLE when no piece
  * could be added: nothing is written.
  */
-UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
+UrsatzStatus ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
                                             UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count);
 
 /*
@@ -119,7 +111,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
  * (may be NULL) receives the ids used (free each with free, then the array) and *out_skipped the pieces left out.
  * The errors are those of ursatz_gui_style_build; nothing is written unless it returns OK.
  */
-UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
+UrsatzStatus ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
                                                  char ***out_pieces, size_t *out_piece_count,
                                                  UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count);
 
@@ -173,7 +165,7 @@ typedef struct {
  * ursatz_gui_style_free_list. A directory in styles/ without a readable
  * meta.json is not a style.
  */
-UrsatzGuiStyleResult ursatz_gui_style_list(UrsatzGuiStyle **out_styles, size_t *out_count);
+UrsatzStatus ursatz_gui_style_list(UrsatzGuiStyle **out_styles, size_t *out_count);
 
 void ursatz_gui_style_free_list(UrsatzGuiStyle *styles, size_t count);
 
@@ -182,7 +174,7 @@ void ursatz_gui_style_free_list(UrsatzGuiStyle *styles, size_t count);
  * style_model_statistics). NOT_FOUND if absent; FAILED if the model file
  * cannot be read. Free with ursatz_gui_style_destroy.
  */
-UrsatzGuiStyleResult ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_style);
+UrsatzStatus ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_style);
 
 void ursatz_gui_style_destroy(UrsatzGuiStyle *style);
 
@@ -203,16 +195,16 @@ void ursatz_gui_style_brief_free(UrsatzGuiStyleBrief *brief);
  * absent, SOURCE_MISSING if its collection, subject, project or style is gone, NO_PIECES if no piece
  * could be added (the style is left as it was).
  */
-UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id);
+UrsatzStatus ursatz_gui_style_rebuild(const char *id);
 
 /* Deletes the style's directory. NOT_FOUND if absent. */
-UrsatzGuiStyleResult ursatz_gui_style_delete(const char *id);
+UrsatzStatus ursatz_gui_style_delete(const char *id);
 
 /*
  * Writes the absolute path of the style's style-model.json to buffer (for
  * the Composer's --style). NOT_FOUND if the style or the file is absent;
  * FAILED if the path does not fit.
  */
-UrsatzGuiStyleResult ursatz_gui_style_model_path(const char *id, char *buffer, size_t buffer_size);
+UrsatzStatus ursatz_gui_style_model_path(const char *id, char *buffer, size_t buffer_size);
 
 #endif /* URSATZ_GUI_STYLE_SERVICE_H */

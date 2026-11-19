@@ -417,7 +417,7 @@ static void test_motif_analysis_error(void) {
       "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"meter\":\"4/4\","
       "\"key\":\"C minor\",\"pickup\":\"0\",\"harmony\":\"not a chord\",\"features\":[],\"analysis\":null,\"derived\":null}}");
   cJSON *added = NULL;
-  check(bad && ursatz_gui_material_item_add_version(item, bad, "Bad harmony", &added) == URSATZ_GUI_MATERIAL_OK,
+  check(bad && ursatz_gui_material_item_add_version(item, bad, "Bad harmony", &added) == URSATZ_OK,
         "a version with harmony the Composer refuses is written directly");
   cJSON_Delete(added);
   cJSON_Delete(bad);

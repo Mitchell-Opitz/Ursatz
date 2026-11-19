@@ -10,7 +10,7 @@
 #include "service/subject_service.h"
 #include "gui_check.h"
 
-#define OK URSATZ_GUI_SUBJECT_OK
+#define OK URSATZ_OK
 
 static char g_materials[64];
 static char g_subjects[64];
@@ -62,7 +62,7 @@ static char *new_item(const char *name) {
     cJSON *body = cJSON_Parse(kPieceBody);
     cJSON *item = NULL;
     char *id = NULL;
-    if (ursatz_gui_material_item_create_noted("piece", name, g_project, body, NULL, &item) == URSATZ_GUI_MATERIAL_OK) {
+    if (ursatz_gui_material_item_create_noted("piece", name, g_project, body, NULL, &item) == URSATZ_OK) {
         id = strdup(str(item, "id"));
     }
     cJSON_Delete(body);
@@ -90,35 +90,35 @@ static void test_crud(void) {
     char *id = strdup(str(subject, "id"));
     cJSON_Delete(subject);
 
-    check_quiet(ursatz_gui_subject_create("", "idea", "", NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_NAME, "empty name");
+    check_quiet(ursatz_gui_subject_create("", "idea", "", NULL) == URSATZ_ERR_REQUEST, "empty name");
     char long_name[260];
     memset(long_name, 'a', 201);
     long_name[201] = '\0';
-    check_quiet(ursatz_gui_subject_create(long_name, "idea", "", NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_NAME,
+    check_quiet(ursatz_gui_subject_create(long_name, "idea", "", NULL) == URSATZ_ERR_REQUEST,
           "name over 200");
-    check_quiet(ursatz_gui_subject_create("X", "person", "", NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_KIND, "bad kind");
-    check_quiet(ursatz_gui_subject_create("X", NULL, "", NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_KIND, "null kind");
+    check_quiet(ursatz_gui_subject_create("X", "person", "", NULL) == URSATZ_ERR_REQUEST, "bad kind");
+    check_quiet(ursatz_gui_subject_create("X", NULL, "", NULL) == URSATZ_ERR_REQUEST, "null kind");
     char *long_note = malloc(4002);
     memset(long_note, 'n', 4001);
     long_note[4001] = '\0';
-    check_quiet(ursatz_gui_subject_create("X", "note", long_note, NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_NAME,
+    check_quiet(ursatz_gui_subject_create("X", "note", long_note, NULL) == URSATZ_ERR_REQUEST,
           "note over 4000");
     free(long_note);
 
     subject = get(id);
     check_quiet(subject && strcmp(str(subject, "name"), "Anna") == 0, "get");
     cJSON_Delete(subject);
-    check_quiet(ursatz_gui_subject_get("sub-missing", &subject) == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND, "get missing");
-    check_quiet(ursatz_gui_subject_get("../x", &subject) == URSATZ_GUI_SUBJECT_ERR_INVALID_ID, "get bad id");
+    check_quiet(ursatz_gui_subject_get("sub-missing", &subject) == URSATZ_ERR_NOT_FOUND, "get missing");
+    check_quiet(ursatz_gui_subject_get("../x", &subject) == URSATZ_ERR_REQUEST, "get bad id");
 
     check_quiet(ursatz_gui_subject_update(id, "Anna K", "place", NULL, &subject) == OK, "update");
     check_quiet(strcmp(str(subject, "name"), "Anna K") == 0 && strcmp(str(subject, "kind"), "place") == 0 &&
               strcmp(str(subject, "note"), "the cellist") == 0,
           "update changes only what is given");
     cJSON_Delete(subject);
-    check_quiet(ursatz_gui_subject_update(id, NULL, "robot", NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_KIND,
+    check_quiet(ursatz_gui_subject_update(id, NULL, "robot", NULL, NULL) == URSATZ_ERR_REQUEST,
           "update bad kind");
-    check_quiet(ursatz_gui_subject_update("sub-missing", "A", NULL, NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_subject_update("sub-missing", "A", NULL, NULL, NULL) == URSATZ_ERR_NOT_FOUND,
           "update missing");
 
     char *second = new_subject("anna b", "idea");
@@ -135,7 +135,7 @@ static void test_crud(void) {
     cJSON_Delete(all);
 
     check_quiet(ursatz_gui_subject_delete(id) == OK, "delete");
-    check_quiet(ursatz_gui_subject_delete(id) == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND, "delete twice");
+    check_quiet(ursatz_gui_subject_delete(id) == URSATZ_ERR_NOT_FOUND, "delete twice");
     check_quiet(ursatz_gui_subject_delete(second) == OK && ursatz_gui_subject_delete(third) == OK, "delete others");
     free(id);
     free(second);
@@ -154,20 +154,20 @@ static void test_links(void) {
     check_quiet(ursatz_gui_subject_link_item(id, item, &already, &subject) == OK && already, "link twice reports already");
     check_quiet(length(subject, "items") == 1, "no duplicate item");
     cJSON_Delete(subject);
-    check_quiet(ursatz_gui_subject_link_item(id, "mot-0000000000000000", NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND,
+    check_quiet(ursatz_gui_subject_link_item(id, "mot-0000000000000000", NULL, NULL) == URSATZ_ERR_NOT_FOUND,
           "link missing item");
-    check_quiet(ursatz_gui_subject_link_item(id, "../x", NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_ID,
+    check_quiet(ursatz_gui_subject_link_item(id, "../x", NULL, NULL) == URSATZ_ERR_REQUEST,
           "link bad item id");
-    check_quiet(ursatz_gui_subject_link_item("sub-missing", item, NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_subject_link_item("sub-missing", item, NULL, NULL) == URSATZ_ERR_NOT_FOUND,
           "link on missing subject");
 
     check_quiet(ursatz_gui_subject_link_piece(id, g_piece, &already, &subject) == OK && !already, "link piece");
     check_quiet(lists(subject, "pieces", g_piece), "piece listed");
     cJSON_Delete(subject);
     check_quiet(ursatz_gui_subject_link_piece(id, g_piece, &already, NULL) == OK && already, "link piece twice");
-    check_quiet(ursatz_gui_subject_link_piece(id, "no-such-piece", NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND,
+    check_quiet(ursatz_gui_subject_link_piece(id, "no-such-piece", NULL, NULL) == URSATZ_ERR_NOT_FOUND,
           "link missing piece");
-    check_quiet(ursatz_gui_subject_link_piece(id, "a/b", NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_INVALID_ID,
+    check_quiet(ursatz_gui_subject_link_piece(id, "a/b", NULL, NULL) == URSATZ_ERR_REQUEST,
           "link bad piece id");
 
     subject = get(id);
@@ -177,15 +177,15 @@ static void test_links(void) {
 
     check_quiet(ursatz_gui_subject_unlink_item(id, item, &subject) == OK && length(subject, "items") == 0, "unlink item");
     cJSON_Delete(subject);
-    check_quiet(ursatz_gui_subject_unlink_item(id, item, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_LINKED, "unlink item twice");
+    check_quiet(ursatz_gui_subject_unlink_item(id, item, NULL) == URSATZ_ERR_NOT_FOUND, "unlink item twice");
     check_quiet(ursatz_gui_subject_unlink_piece(id, g_piece, &subject) == OK && length(subject, "pieces") == 0,
           "unlink piece");
     cJSON_Delete(subject);
-    check_quiet(ursatz_gui_subject_unlink_piece(id, g_piece, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_LINKED,
+    check_quiet(ursatz_gui_subject_unlink_piece(id, g_piece, NULL) == URSATZ_ERR_NOT_FOUND,
           "unlink piece twice");
 
     check_quiet(ursatz_gui_subject_delete(id) == OK, "delete subject");
-    check_quiet(ursatz_gui_material_item_delete(item, true) == URSATZ_GUI_MATERIAL_OK, "item survives subject delete");
+    check_quiet(ursatz_gui_material_item_delete(item, true) == URSATZ_OK, "item survives subject delete");
     free(id);
     free(item);
 }
@@ -208,10 +208,10 @@ static void test_relations(void) {
     check_quiet(length(subject, "related") == 1, "no duplicate relation");
     cJSON_Delete(subject);
 
-    check_quiet(ursatz_gui_subject_relate(a, a, NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_SELF, "self refused");
-    check_quiet(ursatz_gui_subject_relate(a, "sub-missing", NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_subject_relate(a, a, NULL, NULL) == URSATZ_ERR_REQUEST, "self refused");
+    check_quiet(ursatz_gui_subject_relate(a, "sub-missing", NULL, NULL) == URSATZ_ERR_NOT_FOUND,
           "relate to missing");
-    check_quiet(ursatz_gui_subject_relate("sub-missing", a, NULL, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_subject_relate("sub-missing", a, NULL, NULL) == URSATZ_ERR_NOT_FOUND,
           "relate from missing");
     subject = get(a);
     check_quiet(length(subject, "related") == 1, "failed relations change nothing");
@@ -225,7 +225,7 @@ static void test_relations(void) {
     subject = get(b);
     check_quiet(length(subject, "related") == 0, "other side cleared");
     cJSON_Delete(subject);
-    check_quiet(ursatz_gui_subject_unrelate(a, b, NULL) == URSATZ_GUI_SUBJECT_ERR_NOT_RELATED, "unrelate twice");
+    check_quiet(ursatz_gui_subject_unrelate(a, b, NULL) == URSATZ_ERR_NOT_FOUND, "unrelate twice");
 
     check_quiet(ursatz_gui_subject_delete(c) == OK, "delete related subject");
     subject = get(a);
@@ -253,9 +253,9 @@ static void test_forget(void) {
     check_quiet(length(subject, "pieces") == 0 && length(subject, "items") == 1, "piece link gone, item link kept");
     cJSON_Delete(subject);
     check_quiet(ursatz_gui_subject_forget_piece(g_piece) == OK, "forget absent piece");
-    check_quiet(ursatz_gui_subject_forget_piece("a/b") == URSATZ_GUI_SUBJECT_ERR_INVALID_ID, "forget bad piece id");
+    check_quiet(ursatz_gui_subject_forget_piece("a/b") == URSATZ_ERR_REQUEST, "forget bad piece id");
 
-    check_quiet(ursatz_gui_material_item_delete(item, false) == URSATZ_GUI_MATERIAL_OK, "delete item");
+    check_quiet(ursatz_gui_material_item_delete(item, false) == URSATZ_OK, "delete item");
     subject = get(a);
     check_quiet(length(subject, "items") == 0, "item delete clears the first subject");
     cJSON_Delete(subject);
@@ -323,7 +323,7 @@ static void remove_stores(void) {
     rmdir(g_subjects);
 
     cJSON *items = NULL;
-    if (ursatz_gui_material_item_list(NULL, NULL, &items) == URSATZ_GUI_MATERIAL_OK) {
+    if (ursatz_gui_material_item_list(NULL, NULL, &items) == URSATZ_OK) {
         const cJSON *item;
         cJSON_ArrayForEach(item, items) {
             ursatz_gui_material_item_delete(str(item, "id"), true);
@@ -331,7 +331,7 @@ static void remove_stores(void) {
         cJSON_Delete(items);
     }
     cJSON *projects = NULL;
-    if (ursatz_gui_material_project_list(&projects) == URSATZ_GUI_MATERIAL_OK) {
+    if (ursatz_gui_material_project_list(&projects) == URSATZ_OK) {
         const cJSON *project;
         cJSON_ArrayForEach(project, projects) {
             ursatz_gui_material_project_delete(str(project, "id"));
@@ -372,7 +372,7 @@ int main(void) {
     }
 
     cJSON *project = NULL;
-    check_quiet(ursatz_gui_material_project_create("Subjects", "", &project) == URSATZ_GUI_MATERIAL_OK, "project");
+    check_quiet(ursatz_gui_material_project_create("Subjects", "", &project) == URSATZ_OK, "project");
     snprintf(g_project, sizeof(g_project), "%s", str(project, "id"));
     cJSON_Delete(project);
 

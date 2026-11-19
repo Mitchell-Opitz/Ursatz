@@ -1,6 +1,8 @@
 #include "compose_jobs.h"
+#include "last_error.h"
 
 #include "compose_common.h"
+#include "../routes/route_util.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,35 +33,31 @@ void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const ch
   ursatz_gui_job_result_failure_at(out, status, message, NULL);
 }
 
-void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
+void ursatz_gui_compose_reply(UrsatzStatus result, cJSON *item, const UrsatzError *error, const char *invalid_text,
                               const char *failed_text, UrsatzGuiJobResult *out) {
-  switch (result) {
-    case URSATZ_GUI_THEME_OK: {
-      cJSON *object = cJSON_CreateObject();
-      if (object && item && cJSON_AddBoolToObject(object, "ok", 1) && cJSON_AddItemToObject(object, "item", item)) {
-        item = NULL;
-        ursatz_gui_job_result_json(out, 200, object);
-      } else {
-        cJSON_Delete(object);
-        ursatz_gui_job_result_failure(out, 500, "out of memory");
-      }
-      break;
+  if (result == URSATZ_OK) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && item && cJSON_AddBoolToObject(object, "ok", 1) && cJSON_AddItemToObject(object, "item", item)) {
+      item = NULL;
+      ursatz_gui_job_result_json(out, 200, object);
+    } else {
+      cJSON_Delete(object);
+      ursatz_gui_job_result_failure(out, 500, "out of memory");
     }
-    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
-      ursatz_gui_job_result_failure(out, 404, message[0] ? message : "not found");
-      break;
-    case URSATZ_GUI_THEME_ERR_INVALID:
-      ursatz_gui_job_result_failure_at(out, 400, message[0] ? message : invalid_text, ursatz_gui_compose_failure_path());
-      break;
-    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
-      ursatz_gui_job_result_failure_at(out, 422, message[0] ? message : "stuck", ursatz_gui_compose_failure_path());
-      break;
-    case URSATZ_GUI_THEME_ERR_CANCELLED:
-      ursatz_gui_job_result_failure(out, 499, "cancelled");
-      break;
-    default:
-      ursatz_gui_job_result_failure_at(out, 500, message[0] ? message : failed_text, ursatz_gui_compose_failure_path());
-      break;
+    cJSON_Delete(item);
+    return;
+  }
+  int status = ursatz_gui_http_status(result, NULL); /* a refusal at a request member is 400; its path is sent beside it */
+  const char *fallback = result == URSATZ_ERR_NOT_FOUND ? "not found"
+                         : result == URSATZ_ERR_REQUEST ? invalid_text
+                         : result == URSATZ_ERR_UNSATISFIABLE ? "stuck"
+                                                              : failed_text;
+  if (result == URSATZ_ERR_CANCELLED) {
+    ursatz_gui_job_result_failure(out, status, "cancelled");
+  } else if (result == URSATZ_ERR_NOT_FOUND) {
+    ursatz_gui_job_result_failure(out, status, error->message[0] ? error->message : fallback);
+  } else {
+    ursatz_gui_job_result_failure_at(out, status, error->message[0] ? error->message : fallback, error->path);
   }
   cJSON_Delete(item);
 }
@@ -107,39 +105,35 @@ void ursatz_gui_compose_job_run(void *input, const UrsatzJob *composer_job, Ursa
   const UrsatzGuiComposeJob *job = input;
   cJSON *item = NULL;
   cJSON *made = NULL;
-  char message[512] = "";
-  UrsatzGuiThemeResult result = URSATZ_GUI_THEME_ERR_FAILED;
+  UrsatzError error = {{0}};
+  UrsatzStatus result = URSATZ_ERR_INTERNAL;
   const char *invalid_text = "invalid piece";
   const char *failed_text = "the piece could not be composed";
-  ursatz_gui_compose_failure_path_clear();
   switch (job->op) {
     case URSATZ_GUI_COMPOSE_THEME:
       invalid_text = "invalid theme";
       failed_text = "the theme could not be composed";
-      result = ursatz_gui_theme_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, message,
-                                        sizeof(message));
+      result = ursatz_gui_theme_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, &error);
       break;
     case URSATZ_GUI_COMPOSE_PIECE:
-      result = ursatz_gui_piece_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, message,
-                                        sizeof(message));
+      result = ursatz_gui_piece_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, &error);
       break;
     case URSATZ_GUI_COMPOSE_PIECE_REGENERATE:
       failed_text = "the section could not be written again";
       result = ursatz_gui_piece_regenerate(job->id, job->version, job->section, job->lane, job->has_seed, job->seed,
-                                           composer_job, &item, message, sizeof(message));
+                                           composer_job, &item, &error);
       break;
     case URSATZ_GUI_COMPOSE_PIECE_VARIATIONS:
       failed_text = "the variations could not be made";
       result = ursatz_gui_piece_variations(job->id, job->version, job->section, job->lane, job->count, job->has_seed, job->seed,
-                                           composer_job, &made, message, sizeof(message));
+                                           composer_job, &made, &error);
       break;
     case URSATZ_GUI_COMPOSE_PIECE_CHOOSE:
       failed_text = "the variation could not be chosen";
-      result = ursatz_gui_piece_choose(job->id, job->version, job->set, job->index, composer_job, &item, message,
-                                       sizeof(message));
+      result = ursatz_gui_piece_choose(job->id, job->version, job->set, job->index, composer_job, &item, &error);
       break;
   }
-  if (job->op == URSATZ_GUI_COMPOSE_PIECE_VARIATIONS && result == URSATZ_GUI_THEME_OK) {
+  if (job->op == URSATZ_GUI_COMPOSE_PIECE_VARIATIONS && result == URSATZ_OK) {
     /* the answer is {"ok": true, "set", "variations": [...]} */
     if (made && cJSON_AddBoolToObject(made, "ok", 1)) {
       ursatz_gui_job_result_json(out, 200, made);
@@ -150,5 +144,5 @@ void ursatz_gui_compose_job_run(void *input, const UrsatzJob *composer_job, Ursa
     return;
   }
   cJSON_Delete(made);
-  ursatz_gui_compose_reply(result, item, message, invalid_text, failed_text, out);
+  ursatz_gui_compose_reply(result, item, &error, invalid_text, failed_text, out);
 }

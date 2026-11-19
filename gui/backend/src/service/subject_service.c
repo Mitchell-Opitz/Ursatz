@@ -1,4 +1,5 @@
 #include "subject_service.h"
+#include "last_error.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -87,54 +88,54 @@ static bool subject_path(const char *id, char *out, size_t out_size) {
 }
 
 
-static UrsatzGuiSubjectResult normalize_name(const char *text, char **out) {
+static UrsatzStatus normalize_name(const char *text, char **out) {
     bool alloc_failed;
     *out = trim_text(text, NAME_MAX_CHARS, &alloc_failed);
     if (!*out) {
-        return alloc_failed ? URSATZ_GUI_SUBJECT_ERR_ALLOC : URSATZ_GUI_SUBJECT_ERR_INVALID_NAME;
+        return alloc_failed ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name or note");
     }
     if ((*out)[0] == '\0') {
         free(*out);
         *out = NULL;
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_NAME;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name or note");
     }
-    return URSATZ_GUI_SUBJECT_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiSubjectResult normalize_note(const char *text, char **out) {
+static UrsatzStatus normalize_note(const char *text, char **out) {
     bool alloc_failed;
     *out = trim_text(text, NOTE_MAX_CHARS, &alloc_failed);
     if (!*out) {
-        return alloc_failed ? URSATZ_GUI_SUBJECT_ERR_ALLOC : URSATZ_GUI_SUBJECT_ERR_INVALID_NAME;
+        return alloc_failed ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name or note");
     }
-    return URSATZ_GUI_SUBJECT_OK;
+    return URSATZ_OK;
 }
 
 /* Loads <id>.json; the file name is the id, a copy inside the file is not trusted. */
-static UrsatzGuiSubjectResult load_subject_locked(const char *id, cJSON **out) {
+static UrsatzStatus load_subject_locked(const char *id, cJSON **out) {
     char path[PATH_BYTES];
     if (!subject_path(id, path, sizeof(path))) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     cJSON *subject = NULL;
     common_json_read_object(path, &subject, NULL);
     if (!subject) {
-        return common_path_exists(path) ? URSATZ_GUI_SUBJECT_ERR_FAILED : URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
+        return common_path_exists(path) ? ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure") : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "subject not found");
     }
     if (!common_json_set_string(subject, "id", id)) {
         cJSON_Delete(subject);
-        return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     *out = subject;
-    return URSATZ_GUI_SUBJECT_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiSubjectResult save_subject_locked(const cJSON *subject) {
+static UrsatzStatus save_subject_locked(const cJSON *subject) {
     char path[PATH_BYTES];
     if (!subject_path(common_json_string(subject, "id"), path, sizeof(path))) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    return (common_json_write_file(path, subject, true, NULL) == URSATZ_OK) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_FAILED;
+    return (common_json_write_file(path, subject, true, NULL) == URSATZ_OK) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
 }
 
 bool ursatz_gui_subject_service_init(const char *dir) {
@@ -155,18 +156,18 @@ void ursatz_gui_subject_service_shutdown(void) {
     UNLOCK();
 }
 
-static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char *kind, const char *note,
+static UrsatzStatus create_subject_locked(const char *name, const char *kind, const char *note,
                                                     cJSON **out_subject) {
     if (!valid_kind(kind)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_KIND;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid kind");
     }
     char *clean_name = NULL;
     char *clean_note = NULL;
-    UrsatzGuiSubjectResult result = normalize_name(name, &clean_name);
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    UrsatzStatus result = normalize_name(name, &clean_name);
+    if (result == URSATZ_OK) {
         result = normalize_note(note, &clean_note);
     }
-    if (result != URSATZ_GUI_SUBJECT_OK) {
+    if (result != URSATZ_OK) {
         free(clean_name);
         return result;
     }
@@ -177,7 +178,7 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
         free(id);
         id = ursatz_gui_new_id("sub");
         if (!id) {
-            result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         if (subject_path(id, path, sizeof(path)) && !common_path_exists(path)) {
@@ -186,12 +187,12 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
         free(id);
         id = NULL;
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && !id) {
-        result = URSATZ_GUI_SUBJECT_ERR_FAILED;
+    if (result == URSATZ_OK && !id) {
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
 
     cJSON *subject = NULL;
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    if (result == URSATZ_OK) {
         char now[32];
         common_utc_now(now);
         subject = cJSON_CreateObject();
@@ -201,9 +202,9 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
                   cJSON_AddArrayToObject(subject, "items") && cJSON_AddArrayToObject(subject, "pieces") &&
                   cJSON_AddArrayToObject(subject, "related") && cJSON_AddStringToObject(subject, "created_at", now) &&
                   cJSON_AddStringToObject(subject, "updated_at", now);
-        result = !ok ? URSATZ_GUI_SUBJECT_ERR_ALLOC : save_subject_locked(subject);
+        result = !ok ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : save_subject_locked(subject);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+    if (result == URSATZ_OK && out_subject) {
         *out_subject = subject;
     } else {
         cJSON_Delete(subject);
@@ -214,14 +215,14 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
     return result;
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_create(const char *name, const char *kind, const char *note,
+UrsatzStatus ursatz_gui_subject_create(const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject) {
     if (out_subject) {
         *out_subject = NULL;
     }
     LOCK();
-    UrsatzGuiSubjectResult result =
-        g_ready ? create_subject_locked(name, kind, note, out_subject) : URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    UrsatzStatus result =
+        g_ready ? create_subject_locked(name, kind, note, out_subject) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     UNLOCK();
     return result;
 }
@@ -240,29 +241,29 @@ static int compare_subjects(const void *a, const void *b) {
     return by_name != 0 ? by_name : strcmp(common_json_string(left, "id"), common_json_string(right, "id"));
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects) {
+UrsatzStatus ursatz_gui_subject_list(cJSON **out_subjects) {
     *out_subjects = NULL;
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
 
     CommonNames listing = {0};
     if (common_dir_list(g_dir, &listing, NULL) != URSATZ_OK) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     char **names = listing.items;
     size_t count = listing.count;
 
-    UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
+    UrsatzStatus result = URSATZ_OK;
     cJSON **subjects = count ? calloc(count, sizeof(cJSON *)) : NULL;
     size_t loaded = 0;
     if (count && !subjects) {
-        result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    for (size_t i = 0; result == URSATZ_GUI_SUBJECT_OK && i < count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < count; i++) {
         if (!has_suffix(names[i], ".json")) {
             continue;
         }
@@ -274,13 +275,13 @@ UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects) {
         memcpy(id, names[i], id_len);
         id[id_len] = '\0';
         cJSON *subject = NULL;
-        if (load_subject_locked(id, &subject) != URSATZ_GUI_SUBJECT_OK) {
+        if (load_subject_locked(id, &subject) != URSATZ_OK) {
             continue;
         }
         if (!add_count(subject, "items", "item_count") || !add_count(subject, "pieces", "piece_count") ||
             !add_count(subject, "related", "related_count")) {
             cJSON_Delete(subject);
-            result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         subjects[loaded++] = subject;
@@ -288,37 +289,37 @@ UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects) {
     common_names_free(&listing);
     UNLOCK();
 
-    cJSON *array = result == URSATZ_GUI_SUBJECT_OK ? cJSON_CreateArray() : NULL;
-    if (result == URSATZ_GUI_SUBJECT_OK && !array) {
-        result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
+    cJSON *array = result == URSATZ_OK ? cJSON_CreateArray() : NULL;
+    if (result == URSATZ_OK && !array) {
+        result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     if (loaded > 1) {
         qsort(subjects, loaded, sizeof(cJSON *), compare_subjects);
     }
     for (size_t i = 0; i < loaded; i++) {
-        if (result == URSATZ_GUI_SUBJECT_OK) {
+        if (result == URSATZ_OK) {
             cJSON_AddItemToArray(array, subjects[i]);
         } else {
             cJSON_Delete(subjects[i]);
         }
     }
     free(subjects);
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    if (result == URSATZ_OK) {
         *out_subjects = array;
     }
     return result;
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_get(const char *id, cJSON **out_subject) {
+UrsatzStatus ursatz_gui_subject_get(const char *id, cJSON **out_subject) {
     *out_subject = NULL;
     LOCK();
-    UrsatzGuiSubjectResult result =
-        g_ready ? load_subject_locked(id, out_subject) : URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    UrsatzStatus result =
+        g_ready ? load_subject_locked(id, out_subject) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     UNLOCK();
     return result;
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *name, const char *kind, const char *note,
+UrsatzStatus ursatz_gui_subject_update(const char *id, const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject) {
     if (out_subject) {
         *out_subject = NULL;
@@ -326,31 +327,31 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     cJSON *subject = NULL;
     char *clean_name = NULL;
     char *clean_note = NULL;
-    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
-    if (result == URSATZ_GUI_SUBJECT_OK && kind && !valid_kind(kind)) {
-        result = URSATZ_GUI_SUBJECT_ERR_INVALID_KIND;
+    UrsatzStatus result = load_subject_locked(id, &subject);
+    if (result == URSATZ_OK && kind && !valid_kind(kind)) {
+        result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid kind");
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && name) {
+    if (result == URSATZ_OK && name) {
         result = normalize_name(name, &clean_name);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && note) {
+    if (result == URSATZ_OK && note) {
         result = normalize_note(note, &clean_note);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    if (result == URSATZ_OK) {
         char now[32];
         common_utc_now(now);
         bool ok = (!clean_name || common_json_set_string(subject, "name", clean_name)) &&
                   (!kind || common_json_set_string(subject, "kind", kind)) &&
                   (!clean_note || common_json_set_string(subject, "note", clean_note)) &&
                   common_json_set_string(subject, "updated_at", now);
-        result = ok ? save_subject_locked(subject) : URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        result = ok ? save_subject_locked(subject) : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+    if (result == URSATZ_OK && out_subject) {
         *out_subject = subject;
     } else {
         cJSON_Delete(subject);
@@ -361,17 +362,17 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
     return result;
 }
 
-static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed);
+static UrsatzStatus edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed);
 
 /* Removes ref from the array member `name` of every subject that holds it. */
-static UrsatzGuiSubjectResult remove_from_all_locked(const char *name, const char *ref) {
+static UrsatzStatus remove_from_all_locked(const char *name, const char *ref) {
     CommonNames listing = {0};
     if (common_dir_list(g_dir, &listing, NULL) != URSATZ_OK) {
-        return URSATZ_GUI_SUBJECT_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     char **names = listing.items;
     size_t count = listing.count;
-    UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
+    UrsatzStatus result = URSATZ_OK;
     for (size_t i = 0; i < count; i++) {
         if (!has_suffix(names[i], ".json")) {
             continue;
@@ -385,9 +386,9 @@ static UrsatzGuiSubjectResult remove_from_all_locked(const char *name, const cha
         other[other_len] = '\0';
         cJSON *subject = NULL;
         bool changed = false;
-        if (load_subject_locked(other, &subject) == URSATZ_GUI_SUBJECT_OK) {
-            UrsatzGuiSubjectResult edited = edit_list(subject, name, ref, false, &changed);
-            if (edited != URSATZ_GUI_SUBJECT_OK && edited != URSATZ_GUI_SUBJECT_ERR_NOT_LINKED) {
+        if (load_subject_locked(other, &subject) == URSATZ_OK) {
+            UrsatzStatus edited = edit_list(subject, name, ref, false, &changed);
+            if (edited != URSATZ_OK && edited != URSATZ_ERR_NOT_FOUND) {
                 result = edited;
             }
         }
@@ -397,39 +398,39 @@ static UrsatzGuiSubjectResult remove_from_all_locked(const char *name, const cha
     return result;
 }
 
-static UrsatzGuiSubjectResult forget(const char *name, const char *ref) {
+static UrsatzStatus forget(const char *name, const char *ref) {
     if (!is_valid_id(ref)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     LOCK();
-    UrsatzGuiSubjectResult result =
-        g_ready ? remove_from_all_locked(name, ref) : URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+    UrsatzStatus result =
+        g_ready ? remove_from_all_locked(name, ref) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     UNLOCK();
     return result;
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_forget_piece(const char *piece_id) {
+UrsatzStatus ursatz_gui_subject_forget_piece(const char *piece_id) {
     return forget("pieces", piece_id);
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_forget_item(const char *item_id) {
+UrsatzStatus ursatz_gui_subject_forget_item(const char *item_id) {
     return forget("items", item_id);
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
+UrsatzStatus ursatz_gui_subject_delete(const char *id) {
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     char path[PATH_BYTES];
-    UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (!subject_path(id, path, sizeof(path))) {
-        result = URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     } else if (!common_path_exists(path)) {
-        result = URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "subject not found");
     } else if (remove(path) != 0) {
-        result = URSATZ_GUI_SUBJECT_ERR_FAILED;
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     } else {
         remove_from_all_locked("related", id);
     }
@@ -459,27 +460,27 @@ static cJSON *list_member(cJSON *subject, const char *name) {
     return cJSON_AddArrayToObject(subject, name);
 }
 
-static UrsatzGuiSubjectResult touch_subject(cJSON *subject) {
+static UrsatzStatus touch_subject(cJSON *subject) {
     char now[32];
     common_utc_now(now);
-    return common_json_set_string(subject, "updated_at", now) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_ALLOC;
+    return common_json_set_string(subject, "updated_at", now) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
 }
 
 /* Adds ref to the array member `name` of subject, or removes it when add is false. */
-static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed) {
+static UrsatzStatus edit_list(cJSON *subject, const char *name, const char *ref, bool add, bool *changed) {
     *changed = false;
     cJSON *list = list_member(subject, name);
     if (!list) {
-        return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     bool present = list_has(list, ref);
     if (add == present) {
-        return add ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_NOT_LINKED;
+        return add ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not linked");
     }
     if (add) {
         cJSON *entry = cJSON_CreateString(ref);
         if (!entry) {
-            return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+            return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         cJSON_AddItemToArray(list, entry);
     } else {
@@ -494,12 +495,12 @@ static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const 
         cJSON_DeleteItemFromArray(list, index);
     }
     *changed = true;
-    UrsatzGuiSubjectResult result = touch_subject(subject);
-    return result == URSATZ_GUI_SUBJECT_OK ? save_subject_locked(subject) : result;
+    UrsatzStatus result = touch_subject(subject);
+    return result == URSATZ_OK ? save_subject_locked(subject) : result;
 }
 
 /* Adds ref to the array member `name`, or removes it when add is false. */
-static UrsatzGuiSubjectResult change_link(const char *id, const char *name, const char *ref, bool add,
+static UrsatzStatus change_link(const char *id, const char *name, const char *ref, bool add,
                                           bool *out_already, cJSON **out_subject) {
     if (out_already) {
         *out_already = false;
@@ -510,18 +511,18 @@ static UrsatzGuiSubjectResult change_link(const char *id, const char *name, cons
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     cJSON *subject = NULL;
     bool changed = false;
-    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    UrsatzStatus result = load_subject_locked(id, &subject);
+    if (result == URSATZ_OK) {
         result = edit_list(subject, name, ref, add, &changed);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && add && !changed && out_already) {
+    if (result == URSATZ_OK && add && !changed && out_already) {
         *out_already = true;
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+    if (result == URSATZ_OK && out_subject) {
         *out_subject = subject;
     } else {
         cJSON_Delete(subject);
@@ -535,49 +536,49 @@ static UrsatzGuiSubjectResult change_link(const char *id, const char *name, cons
  * an item is deleted, so item existence is checked before this service's lock
  * is taken, never while holding it.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_link_item(const char *id, const char *item_id, bool *out_already,
+UrsatzStatus ursatz_gui_subject_link_item(const char *id, const char *item_id, bool *out_already,
                                                     cJSON **out_subject) {
     cJSON *meta = NULL;
-    UrsatzGuiMaterialResult found = ursatz_gui_material_item_get(item_id, &meta, NULL);
+    UrsatzStatus found = ursatz_gui_material_item_get(item_id, &meta, NULL);
     cJSON_Delete(meta);
-    if (found == URSATZ_GUI_MATERIAL_ERR_INVALID_ID) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+    if (found == URSATZ_ERR_REQUEST) {
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    if (found != URSATZ_GUI_MATERIAL_OK) {
-        return found == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND ? URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND
-                                                          : URSATZ_GUI_SUBJECT_ERR_FAILED;
+    if (found != URSATZ_OK) {
+        return found == URSATZ_ERR_NOT_FOUND ? ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "item not found")
+                                                          : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     return change_link(id, "items", item_id, true, out_already, out_subject);
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
+UrsatzStatus ursatz_gui_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
     if (!is_valid_id(item_id)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     return change_link(id, "items", item_id, false, NULL, out_subject);
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
+UrsatzStatus ursatz_gui_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
                                                      cJSON **out_subject) {
     if (!is_valid_id(piece_id)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     if (!ursatz_gui_collection_piece_exists(piece_id)) {
-        return URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "piece not found");
     }
     return change_link(id, "pieces", piece_id, true, out_already, out_subject);
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
+UrsatzStatus ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
     if (!is_valid_id(piece_id)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     return change_link(id, "pieces", piece_id, false, NULL, out_subject);
 }
 
 /* --- relations ----------------------------------------------------------- */
 
-UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *other_id, bool *out_already,
+UrsatzStatus ursatz_gui_subject_relate(const char *id, const char *other_id, bool *out_already,
                                                  cJSON **out_subject) {
     if (out_already) {
         *out_already = false;
@@ -586,34 +587,34 @@ UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *oth
         *out_subject = NULL;
     }
     if (!is_valid_id(id) || !is_valid_id(other_id)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     if (strcmp(id, other_id) == 0) {
-        return URSATZ_GUI_SUBJECT_ERR_SELF;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "a subject cannot relate to itself");
     }
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     cJSON *subject = NULL;
     cJSON *other = NULL;
     bool changed_subject = false;
     bool changed_other = false;
-    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    UrsatzStatus result = load_subject_locked(id, &subject);
+    if (result == URSATZ_OK) {
         result = load_subject_locked(other_id, &other);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    if (result == URSATZ_OK) {
         result = edit_list(other, "related", id, true, &changed_other);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    if (result == URSATZ_OK) {
         result = edit_list(subject, "related", other_id, true, &changed_subject);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && !changed_subject && !changed_other && out_already) {
+    if (result == URSATZ_OK && !changed_subject && !changed_other && out_already) {
         *out_already = true;
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+    if (result == URSATZ_OK && out_subject) {
         *out_subject = subject;
     } else {
         cJSON_Delete(subject);
@@ -623,34 +624,34 @@ UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *oth
     return result;
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
+UrsatzStatus ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
     if (out_subject) {
         *out_subject = NULL;
     }
     if (!is_valid_id(id) || !is_valid_id(other_id)) {
-        return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
     cJSON *subject = NULL;
     cJSON *other = NULL;
     bool changed = false;
-    UrsatzGuiSubjectResult result = load_subject_locked(id, &subject);
-    if (result == URSATZ_GUI_SUBJECT_OK) {
+    UrsatzStatus result = load_subject_locked(id, &subject);
+    if (result == URSATZ_OK) {
         result = edit_list(subject, "related", other_id, false, &changed);
-        if (result == URSATZ_GUI_SUBJECT_ERR_NOT_LINKED) {
-            result = URSATZ_GUI_SUBJECT_ERR_NOT_RELATED;
+        if (result == URSATZ_ERR_NOT_FOUND) {
+            result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "not related");
         }
     }
     /* The other side is cleaned even when it is gone or already clean. */
-    if (result == URSATZ_GUI_SUBJECT_OK && load_subject_locked(other_id, &other) == URSATZ_GUI_SUBJECT_OK) {
+    if (result == URSATZ_OK && load_subject_locked(other_id, &other) == URSATZ_OK) {
         bool other_changed = false;
         edit_list(other, "related", id, false, &other_changed);
     }
-    if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
+    if (result == URSATZ_OK && out_subject) {
         *out_subject = subject;
     } else {
         cJSON_Delete(subject);
@@ -682,11 +683,11 @@ static cJSON *group_row(const cJSON *subject) {
     return row;
 }
 
-UrsatzGuiSubjectResult ursatz_gui_subject_groups(cJSON **out_groups) {
+UrsatzStatus ursatz_gui_subject_groups(cJSON **out_groups) {
     *out_groups = NULL;
     cJSON *subjects = NULL;
-    UrsatzGuiSubjectResult result = ursatz_gui_subject_list(&subjects);
-    if (result != URSATZ_GUI_SUBJECT_OK) {
+    UrsatzStatus result = ursatz_gui_subject_list(&subjects);
+    if (result != URSATZ_OK) {
         return result;
     }
     cJSON *groups = cJSON_CreateArray();
@@ -719,8 +720,8 @@ UrsatzGuiSubjectResult ursatz_gui_subject_groups(cJSON **out_groups) {
     }
     cJSON_Delete(subjects);
     if (!groups) {
-        return URSATZ_GUI_SUBJECT_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     *out_groups = groups;
-    return URSATZ_GUI_SUBJECT_OK;
+    return URSATZ_OK;
 }

@@ -1,5 +1,8 @@
+#include "last_error.h"
 #ifndef URSATZ_GUI_ANALYSIS_SERVICE_H
 #define URSATZ_GUI_ANALYSIS_SERVICE_H
+
+#include <common/status.h>
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -24,16 +27,6 @@
  *                                                            notation (R-110; absent = no override)
  * pieces_dir is created if it does not already exist.
  */
-
-typedef enum {
-    URSATZ_GUI_ANALYSIS_OK = 0,
-    URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED,
-    URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED,
-    URSATZ_GUI_ANALYSIS_ERR_ALLOC,
-    URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND,
-    URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT,
-    URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA
-} UrsatzGuiAnalysisResult;
 
 /*
  * A piece's notation override (R-110): how its notes are to be read as notation.
@@ -83,12 +76,12 @@ typedef struct {
  * original_filename (may be NULL or "") only picks the extension of a
  * stored MusicXML source and is recorded as the piece's display name.
  *
- * On URSATZ_GUI_ANALYSIS_OK, *out_id is a newly allocated, caller-owned id.
- * URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT if the bytes are neither MIDI
- * nor MusicXML; URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the import or the
+ * On URSATZ_OK, *out_id is a newly allocated, caller-owned id.
+ * URSATZ_ERR_REQUEST if the bytes are neither MIDI
+ * nor MusicXML; URSATZ_ERR_FORMAT if the import or the
  * analysis failed. On any error the piece directory is removed.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
+UrsatzStatus ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
                                                               size_t size, const char *original_filename,
                                                               char **out_id);
 
@@ -96,11 +89,11 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
  * Lists the pieces in pieces_dir: every pieces_dir/<id>/ directory with a
  * readable meta.json, newest upload first, then by id. Anything else in
  * pieces_dir (old "<id>.db" pieces, stray files) is ignored. On
- * URSATZ_GUI_ANALYSIS_OK, *out_pieces is a newly allocated array of
+ * URSATZ_OK, *out_pieces is a newly allocated array of
  * *out_count entries (caller frees each entry's strings, then the array).
  * A missing or empty pieces_dir yields *out_count == 0, *out_pieces == NULL.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzGuiPieceSummary **out_pieces,
+UrsatzStatus ursatz_gui_analysis_list(const char *pieces_dir, UrsatzGuiPieceSummary **out_pieces,
                                                   size_t *out_count);
 
 /*
@@ -108,11 +101,11 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
  * the xml:id the score export writes for each note of the source, in the
  * order of the document's note_ids (R-085).
  *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. On
- * URSATZ_GUI_ANALYSIS_OK, *out_detail is newly allocated and caller-owned
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists. On
+ * URSATZ_OK, *out_detail is newly allocated and caller-owned
  * (free with ursatz_gui_piece_detail_destroy).
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
+UrsatzStatus ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
                                                        UrsatzGuiPieceDetail **out_detail);
 
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail);
@@ -129,9 +122,9 @@ bool ursatz_gui_document_subset(const char *document_json, const char *const *na
 /*
  * Reads a piece's stored analysis.json under the piece lock and returns only the named sections
  * (ursatz_gui_document_subset) without importing the source. With names NULL it returns the whole stored document
- * text unchanged (count is ignored). URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * text unchanged (count is ignored). URSATZ_ERR_NOT_FOUND if no piece with this id exists.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_document(const char *pieces_dir, const char *id,
+UrsatzStatus ursatz_gui_analysis_get_document(const char *pieces_dir, const char *id,
                                                           const char *const *names, size_t count, char **out_json);
 
 /*
@@ -141,15 +134,15 @@ bool ursatz_gui_analysis_piece_exists(const char *pieces_dir, const char *id);
 
 /*
  * The display name (filename) of a piece, under the piece lock: *out_filename is caller-owned (free()), "" when the
- * piece has none. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists or its metadata is unreadable.
+ * piece has none. URSATZ_ERR_NOT_FOUND if no piece with this id exists or its metadata is unreadable.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_filename(const char *pieces_dir, const char *id, char **out_filename);
+UrsatzStatus ursatz_gui_analysis_get_filename(const char *pieces_dir, const char *id, char **out_filename);
 
 /*
  * Deletes a piece's directory and every file in it.
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
+UrsatzStatus ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
 
 /*
  * A change of a piece's metadata in its meta.json (ursatz_gui_analysis_update_piece), written once. The source and
@@ -163,8 +156,8 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir,
  *   has_notation        replace the notation override with *notation, or clear it
  *                       when notation is NULL
  *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
- * URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA if a value is too long, a tag is
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_ERR_REQUEST if a value is too long, a tag is
  * invalid, the piece would hold more than 32 tags or a notation member is not
  * one the Analyzer reads; nothing is written and message (may be NULL)
  * receives "composer is too long", "source is too long", "invalid tag",
@@ -188,18 +181,17 @@ typedef struct {
 /*
  * The PATCH of a piece as one hold of its lock: the metadata change above, then, when the update changes
  * the notation override, ursatz_gui_analysis_reanalyze; if that fails the old override is put back, and a source
- * that no longer imports gives URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA with message "invalid notation".
+ * that no longer imports gives URSATZ_ERR_REQUEST with message "invalid notation".
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_update_piece(const char *pieces_dir, const char *id,
-                                                          const UrsatzGuiMetaUpdate *update, char *message,
-                                                          size_t message_size);
+UrsatzStatus ursatz_gui_analysis_update_piece(const char *pieces_dir, const char *id,
+                                                          const UrsatzGuiMetaUpdate *update, UrsatzError *error);
 
 /*
  * Reads the piece's notation override from its meta.json: *out_has is false
  * (and *out is zeroed) when it has none.
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir, const char *id, bool *out_has,
+UrsatzStatus ursatz_gui_analysis_get_notation(const char *pieces_dir, const char *id, bool *out_has,
                                                           UrsatzGuiNotation *out);
 
 /*
@@ -207,48 +199,46 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir,
  * analysis.json, then the analyzer_version and document_schema_version in
  * meta.json (filename, format and uploaded_at stay). The piece is unchanged
  * unless the new analysis succeeded.
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
- * URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no longer
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_ERR_FORMAT if the stored source no longer
  * imports or the analysis fails.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id);
+UrsatzStatus ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id);
 
 /*
  * Makes a piece's stored analysis current, under the piece lock. A meta.json without ursatz_commit gets it from the
  * stored analysis.json's metadata.producer_key (written back). When analyzer_document_status of analysis.json is
  * not CURRENT (another schema, Analyzer version or Ursatz commit, or unreadable), the piece is analyzed again as in
  * ursatz_gui_analysis_reanalyze. OK when the stored analysis is current afterwards; otherwise the failure of the new
- * analysis, with the stored files unchanged. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * analysis, with the stored files unchanged. URSATZ_ERR_NOT_FOUND if no piece with this id exists.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_ensure_current(const char *pieces_dir, const char *id);
+UrsatzStatus ursatz_gui_analysis_ensure_current(const char *pieces_dir, const char *id);
 
 /*
  * Imports the piece's stored source and exports it to MusicXML with Ursatz's
  * analyzer_score_export_musicxml: the source's parts and staves, its meter
  * (the MIDI time signatures or the score's own) and its key signatures in
  * part 0; tempo markings and dynamics are left out. On
- * URSATZ_GUI_ANALYSIS_OK, *out_xml is a newly allocated, caller-owned,
+ * URSATZ_OK, *out_xml is a newly allocated, caller-owned,
  * NUL-terminated MusicXML document (free() it) and *out_meter_defaulted
  * says the source gave no meter, so the barlines come from a default 4/4.
  *
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
- * URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no longer
- * imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export itself
- * fails; message is then the name of the UrsatzStatus it returned and is
- * empty for every other outcome. The title (the filename without its
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists.
+ * URSATZ_ERR_FORMAT if the stored source no longer
+ * imports. URSATZ_ERR_REQUEST if the Analyzer refuses the import,
+ * URSATZ_ERR_INTERNAL if the export itself fails. The title (the filename without its
  * extension) and the composer are added to the score here: the Analyzer
  * leaves both out.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
-                                                                char **out_xml, bool *out_meter_defaulted,
-                                                                char message[256]);
+UrsatzStatus ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
+                                                                char **out_xml, bool *out_meter_defaulted);
 
 /*
  * Whether the piece's source gave no meter, so its score has barlines from a default 4/4: the answer of
  * analyzer_imported_meter_defaulted on the cached import (import_cache.h), without exporting a score. Same errors
  * as ursatz_gui_analysis_get_piece_playback.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char *pieces_dir, const char *id,
+UrsatzStatus ursatz_gui_analysis_get_piece_meter_defaulted(const char *pieces_dir, const char *id,
                                                                        bool *out_meter_defaulted);
 
 /*
@@ -273,12 +263,12 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char
  * when the source gives none. end is the largest on + len, [0, 1] without
  * notes.
  *
- * On URSATZ_GUI_ANALYSIS_OK, *out_json is newly allocated and caller-owned
- * (free() it). URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id
- * exists; URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no
- * longer imports; URSATZ_GUI_ANALYSIS_ERR_ALLOC if the JSON cannot be built.
+ * On URSATZ_OK, *out_json is newly allocated and caller-owned
+ * (free() it). URSATZ_ERR_NOT_FOUND if no piece with this id
+ * exists; URSATZ_ERR_FORMAT if the stored source no
+ * longer imports; URSATZ_ERR_ALLOC if the JSON cannot be built.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
+UrsatzStatus ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
                                                                 char **out_json);
 
 /*
@@ -287,14 +277,12 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
  * from meta.json (the filename without its extension). first_measure and last_measure are an inclusive range of
  * measure numbers as written in the score; 0 and 0 export the whole piece. The GUI builds no line of the text.
  *
- * On URSATZ_GUI_ANALYSIS_OK, *out_text is newly allocated and caller-owned (free() it).
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the
- * stored source no longer imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export failed; message is then
- * "URSATZ_ERR_REQUEST" (an empty range, or a stored document the Analyzer will not read) or
- * "URSATZ_ERR_INTERNAL", and is empty for every other outcome.
+ * On URSATZ_OK, *out_text is newly allocated and caller-owned (free() it).
+ * URSATZ_ERR_NOT_FOUND if no piece with this id exists. URSATZ_ERR_FORMAT if the
+ * stored source no longer imports. URSATZ_ERR_REQUEST if the Analyzer refused the export (an empty range, or a stored
+ * document it will not read); URSATZ_ERR_INTERNAL if the export failed.
  */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_export(const char *pieces_dir, const char *id,
-                                                              int first_measure, int last_measure, char **out_text,
-                                                              char message[256]);
+UrsatzStatus ursatz_gui_analysis_get_piece_export(const char *pieces_dir, const char *id,
+                                                              int first_measure, int last_measure, char **out_text);
 
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */

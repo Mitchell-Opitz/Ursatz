@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_MATERIAL_SERVICE_H
 #define URSATZ_GUI_MATERIAL_SERVICE_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -30,20 +32,6 @@
  * caller passes in is only read, never freed or kept.
  */
 
-typedef enum {
-    URSATZ_GUI_MATERIAL_OK = 0,
-    URSATZ_GUI_MATERIAL_ERR_INVALID_ID,
-    URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
-    URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE,
-    URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
-    URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
-    URSATZ_GUI_MATERIAL_ERR_NOT_EMPTY,
-    URSATZ_GUI_MATERIAL_ERR_REFERENCED,
-    URSATZ_GUI_MATERIAL_ERR_FAILED,
-    URSATZ_GUI_MATERIAL_ERR_ALLOC,
-    URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED
-} UrsatzGuiMaterialResult;
-
 /*
  * Prepares the store in dir (created if absent, with projects/ inside it).
  * Called once at server startup. When projects/ holds no project, a project
@@ -62,7 +50,7 @@ void ursatz_gui_material_service_shutdown(void);
  * most 2000 characters (INVALID_NAME), NULL or "" for none. On OK,
  * *out_project (may be NULL) is the new project object, caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_project_create(const char *name, const char *description,
+UrsatzStatus ursatz_gui_material_project_create(const char *name, const char *description,
                                                             cJSON **out_project);
 
 /*
@@ -70,21 +58,21 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_create(const char *name, con
  * OK, *out_projects is a caller-owned array of project objects, each with an
  * "item_count" member.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects);
+UrsatzStatus ursatz_gui_material_project_list(cJSON **out_projects);
 
 /* One project object with "item_count". NOT_FOUND if absent. Caller-owned. */
-UrsatzGuiMaterialResult ursatz_gui_material_project_get(const char *id, cJSON **out_project);
+UrsatzStatus ursatz_gui_material_project_get(const char *id, cJSON **out_project);
 
 /*
  * Changes the name and/or the description (NULL = unchanged), with the same
  * limits as create. *out_project (may be NULL) is the updated project,
  * caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const char *name, const char *description,
+UrsatzStatus ursatz_gui_material_project_update(const char *id, const char *name, const char *description,
                                                             cJSON **out_project);
 
 /* Deletes the project. NOT_EMPTY while it holds items. NOT_FOUND if absent. */
-UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
+UrsatzStatus ursatz_gui_material_project_delete(const char *id);
 
 /* --- version bodies ------------------------------------------------------ */
 
@@ -120,15 +108,14 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  *   The old members are read: a motif's key "C major" or "C minor", a theme form's or a piece structure's mode (major, minor,
  *   style). ursatz_gui_material_body_migrate gives the new ones, and every body read from the store or saved has them.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
-                                                           size_t error_size);
+UrsatzStatus ursatz_gui_material_body_validate(const char *type, const cJSON *body, UrsatzError *error);
 
 /*
  * *out is a copy of body (a theme or piece form not saved yet) with the uses its references imply and a fresh copy of
  * each used version in them, as a save makes them; nothing is written. Not OK when a reference names no usable motif
  * or version. Caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out);
+UrsatzStatus ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out);
 
 /*
  * Writes the members of a body as the store keeps them: a motif's `material` (the id) for its key text "C major" or
@@ -146,7 +133,7 @@ void ursatz_gui_material_body_migrate(cJSON *body);
  * (INVALID_BODY when ursatz_gui_material_body_validate refuses it), with note (trimmed, at most 500 characters, NULL
  * or "" for none) on version 1. On OK, *out_item (may be NULL) is the item object (item.json), caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, const char *name,
+UrsatzStatus ursatz_gui_material_item_create_noted(const char *type, const char *name,
                                                                const char *project_id, const cJSON *body,
                                                                const char *note, cJSON **out_item);
 
@@ -155,7 +142,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, 
  * (each may be NULL for any) filter the list. On OK, *out_items is a
  * caller-owned array of item objects.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items);
+UrsatzStatus ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items);
 
 /*
  * Whether a motif version body is a variant: it has a derived record and standalone is not true (R-187). Any other
@@ -171,24 +158,24 @@ bool ursatz_gui_material_item_is_variant(const cJSON *body);
  * NULL) the body of its current version. Both caller-owned. NOT_FOUND if
  * absent.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body);
+UrsatzStatus ursatz_gui_material_item_get(const char *id, cJSON **out_meta, cJSON **out_body);
 
 /* Renames the item. *out_item (may be NULL) is the updated item.json, caller-owned. */
-UrsatzGuiMaterialResult ursatz_gui_material_item_rename(const char *id, const char *name, cJSON **out_item);
+UrsatzStatus ursatz_gui_material_item_rename(const char *id, const char *name, cJSON **out_item);
 
 /* Moves the item to another project (NOT_FOUND if the project is absent). */
-UrsatzGuiMaterialResult ursatz_gui_material_item_move(const char *id, const char *project_id, cJSON **out_item);
+UrsatzStatus ursatz_gui_material_item_move(const char *id, const char *project_id, cJSON **out_item);
 
 /*
  * Writes body as version current_version + 1 and makes it current. note is
  * trimmed and at most 500 characters (INVALID_NAME), NULL or "" for none.
  * *out_item (may be NULL) is the updated item.json, caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, const cJSON *body, const char *note,
+UrsatzStatus ursatz_gui_material_item_add_version(const char *id, const cJSON *body, const char *note,
                                                               cJSON **out_item);
 
 /* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
-UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body);
+UrsatzStatus ursatz_gui_material_item_get_version(const char *id, int number, cJSON **out_body);
 
 /*
  * Reports, for every use in the item's current version, how its source stands.
@@ -198,20 +185,20 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get_version(const char *id, int
  * current_version is newer than the used version; "missing" is true when the
  * source was deleted (the copy stays in the body). NOT_FOUND if the item is absent.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **out_status);
+UrsatzStatus ursatz_gui_material_uses_status(const char *id, cJSON **out_status);
 
 /*
  * Lists the items whose current version uses any version of id, in id order.
  * *out_users is a caller-owned array of {id, name, type, project_id, version
  * (the used one)}. id need not exist: a deleted source can still have users.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_used_by(const char *id, cJSON **out_users);
+UrsatzStatus ursatz_gui_material_used_by(const char *id, cJSON **out_users);
 
 /*
  * Lists, in one scan of the store, every motif whose current version has a derived record: *out_motifs is a
  * caller-owned array of {id, name, current_version, derived}, in id order.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs);
+UrsatzStatus ursatz_gui_material_derived_motifs(cJSON **out_motifs);
 
 /*
  * Writes a new version of item id identical to its current one, except that
@@ -220,7 +207,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs);
  * or the source is absent or the current version does not use the source.
  * *out_item (may be NULL) is the updated item.json, caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item);
+UrsatzStatus ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item);
 
 /*
  * Deletes the item directory with every version, and with it the variants of the item, recursively (R-187: a variant
@@ -228,14 +215,14 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
  * force is true. A forced delete leaves the users' copies untouched; their uses then report missing. Nothing is
  * deleted on REFERENCED.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force);
+UrsatzStatus ursatz_gui_material_item_delete(const char *id, bool force);
 
 /*
  * The items that keep ursatz_gui_material_item_delete from deleting id: those outside id and its variants that use any
  * of them, *out_users a caller-owned array of {id, name, type, project_id, version} (each item once). Empty when
  * the delete would go through.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users);
+UrsatzStatus ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users);
 
 /* --- operation marks ----------------------------------------------------- */
 
@@ -248,14 +235,13 @@ UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSO
  */
 
 /* Checks body against that shape; INVALID_BODY with the reason in error. */
-UrsatzGuiMaterialResult ursatz_gui_material_op_checks_validate(const cJSON *body, char *error, size_t error_size);
+UrsatzStatus ursatz_gui_material_op_checks_validate(const cJSON *body, UrsatzError *error);
 
 /* *out is the marks of the motif id, {"checks": {}} when it has none. NOT_FOUND for an item that is not a motif. */
-UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON **out);
+UrsatzStatus ursatz_gui_material_op_checks_get(const char *id, cJSON **out);
 
 /* Replaces the marks of the motif id with body (validated first); *out is what is stored. */
-UrsatzGuiMaterialResult ursatz_gui_material_op_checks_put(const char *id, const cJSON *body, char *error,
-                                                           size_t error_size, cJSON **out);
+UrsatzStatus ursatz_gui_material_op_checks_put(const char *id, const cJSON *body, UrsatzError *error, cJSON **out);
 
 /* --- version files ------------------------------------------------------- */
 
@@ -287,7 +273,7 @@ bool ursatz_gui_material_render_tmp_dir(char *out, size_t out_size);
  * The bytes of one of the five files of version number (1 to current_version). NOT_FOUND for any other name, an
  * absent item, version or file. *out_data is caller-owned (free).
  */
-UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
+UrsatzStatus ursatz_gui_material_version_file(const char *id, int number, const char *name,
                                                           unsigned char **out_data, size_t *out_size);
 
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */

@@ -129,9 +129,9 @@ static thread_result_t THREAD_CALL patch_notation(void *arg) {
     UrsatzGuiMetaUpdate update = {0};
     update.has_notation = true;
     update.notation = (i % 2 == 0) ? &notation : NULL;
-    char message[96] = "";
-    if (ursatz_gui_analysis_update_piece(kPiecesDir, writer->id, &update, message, sizeof(message)) !=
-        URSATZ_GUI_ANALYSIS_OK) {
+    UrsatzError message = {{0}};
+    if (ursatz_gui_analysis_update_piece(kPiecesDir, writer->id, &update, &message) !=
+        URSATZ_OK) {
       writer->failed++;
     }
   }
@@ -141,7 +141,7 @@ static thread_result_t THREAD_CALL patch_notation(void *arg) {
 static thread_result_t THREAD_CALL reanalyze_piece(void *arg) {
   Writer *writer = arg;
   for (int i = 0; i < ROUNDS; i++) {
-    if (ursatz_gui_analysis_reanalyze(kPiecesDir, writer->id) != URSATZ_GUI_ANALYSIS_OK) {
+    if (ursatz_gui_analysis_reanalyze(kPiecesDir, writer->id) != URSATZ_OK) {
       writer->failed++;
     }
   }
@@ -161,9 +161,9 @@ static thread_result_t THREAD_CALL read_detail(void *arg) {
   Reader *reader = arg;
   while (!stop_readers) {
     UrsatzGuiPieceDetail *detail = NULL;
-    UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece(kPiecesDir, reader->id, &detail);
+    UrsatzStatus result = ursatz_gui_analysis_get_piece(kPiecesDir, reader->id, &detail);
     reader->reads++;
-    if (result != URSATZ_GUI_ANALYSIS_OK) {
+    if (result != URSATZ_OK) {
       reader->bad_result++;
       continue;
     }
@@ -181,15 +181,14 @@ static thread_result_t THREAD_CALL read_detail(void *arg) {
 
     char *xml = NULL;
     bool defaulted = false;
-    char message[256];
-    if (ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, reader->id, &xml, &defaulted, message) !=
-        URSATZ_GUI_ANALYSIS_OK) {
+    if (ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, reader->id, &xml, &defaulted) !=
+        URSATZ_OK) {
       reader->bad_result++;
     }
     free(xml);
 
     char *playback = NULL;
-    if (ursatz_gui_analysis_get_piece_playback(kPiecesDir, reader->id, &playback) != URSATZ_GUI_ANALYSIS_OK) {
+    if (ursatz_gui_analysis_get_piece_playback(kPiecesDir, reader->id, &playback) != URSATZ_OK) {
       reader->bad_result++;
     }
     free(playback);
@@ -204,10 +203,10 @@ static char *upload_piece(const char *source, const char *name) {
     return NULL;
   }
   char *id = NULL;
-  UrsatzGuiAnalysisResult result =
+  UrsatzStatus result =
       ursatz_gui_analysis_import_and_save(kPiecesDir, (const unsigned char *)data, size, name, &id);
   free(data);
-  return result == URSATZ_GUI_ANALYSIS_OK ? id : NULL;
+  return result == URSATZ_OK ? id : NULL;
 }
 
 static void test_concurrent_writers(void) {
@@ -219,7 +218,7 @@ static void test_concurrent_writers(void) {
 
   UrsatzGuiPieceDetail *detail = NULL;
   char original[32] = "";
-  bool have_original = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail) == URSATZ_GUI_ANALYSIS_OK &&
+  bool have_original = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail) == URSATZ_OK &&
                        document_meter_label(detail->document_json, original, sizeof(original));
   ursatz_gui_piece_detail_destroy(detail);
   check(have_original, "the stored document has a meter");
@@ -267,15 +266,13 @@ static thread_result_t THREAD_CALL read_until_gone(void *arg) {
   for (;;) {
     char *xml = NULL;
     bool defaulted = false;
-    char message[256];
-    UrsatzGuiAnalysisResult result =
-        ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, reader->id, &xml, &defaulted, message);
+    UrsatzStatus result = ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, reader->id, &xml, &defaulted);
     reader->reads++;
     free(xml);
-    if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    if (result == URSATZ_ERR_NOT_FOUND) {
       return THREAD_RETURN;
     }
-    if (result != URSATZ_GUI_ANALYSIS_OK) {
+    if (result != URSATZ_OK) {
       reader->bad_result++;
       return THREAD_RETURN;
     }
@@ -283,13 +280,13 @@ static thread_result_t THREAD_CALL read_until_gone(void *arg) {
     UrsatzGuiPieceDetail *detail = NULL;
     result = ursatz_gui_analysis_get_piece(kPiecesDir, reader->id, &detail);
     reader->reads++;
-    if (result == URSATZ_GUI_ANALYSIS_OK) {
+    if (result == URSATZ_OK) {
       char label[32];
       if (!document_meter_label(detail->document_json, label, sizeof(label))) {
         reader->bad_document++;
       }
       ursatz_gui_piece_detail_destroy(detail);
-    } else if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    } else if (result == URSATZ_ERR_NOT_FOUND) {
       return THREAD_RETURN;
     } else {
       reader->bad_result++;
@@ -317,8 +314,8 @@ static void test_delete_during_reads(void) {
     /* Let the readers get going, then delete. */
     for (volatile int spin = 0; spin < 2000000 * (round % 3 + 1); spin++) {
     }
-    UrsatzGuiAnalysisResult deleted = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
-    if (deleted != URSATZ_GUI_ANALYSIS_OK) {
+    UrsatzStatus deleted = ursatz_gui_analysis_delete_piece(kPiecesDir, id);
+    if (deleted != URSATZ_OK) {
       bad++;
     }
     for (int i = 0; i < 2; i++) {
@@ -351,14 +348,14 @@ static thread_result_t THREAD_CALL read_like_services(void *arg) {
   ServiceRead *read = arg;
   char *document = NULL;
   read->document_ok = false;
-  if (ursatz_gui_analysis_get_document(kPiecesDir, read->id, NULL, 0, &document) == URSATZ_GUI_ANALYSIS_OK && document) {
+  if (ursatz_gui_analysis_get_document(kPiecesDir, read->id, NULL, 0, &document) == URSATZ_OK && document) {
     cJSON *parsed = cJSON_Parse(document);
     read->document_ok = cJSON_IsObject(parsed);
     cJSON_Delete(parsed);
   }
   free(document);
   char *filename = NULL;
-  read->filename_ok = ursatz_gui_analysis_get_filename(kPiecesDir, read->id, &filename) == URSATZ_GUI_ANALYSIS_OK &&
+  read->filename_ok = ursatz_gui_analysis_get_filename(kPiecesDir, read->id, &filename) == URSATZ_OK &&
                       filename && strcmp(filename, "services.musicxml") == 0;
   free(filename);
   char *title = ursatz_gui_link_piece_title(read->id);
@@ -381,7 +378,7 @@ static void test_service_reads(void) {
     stored = test_read_file(path, &size);
   }
   char *whole = NULL;
-  check(stored != NULL && ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &whole) == URSATZ_GUI_ANALYSIS_OK &&
+  check(stored != NULL && ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &whole) == URSATZ_OK &&
             whole && strcmp(whole, stored) == 0,
         "a document read without names is the stored analysis.json, unchanged");
   free(whole);
@@ -402,8 +399,8 @@ static void test_service_reads(void) {
 
   char *missing = NULL;
   check(ursatz_gui_analysis_get_document(kPiecesDir, "no-such-piece", NULL, 0, &missing) ==
-                URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND &&
-            ursatz_gui_analysis_get_filename(kPiecesDir, "no-such-piece", &missing) == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND &&
+                URSATZ_ERR_NOT_FOUND &&
+            ursatz_gui_analysis_get_filename(kPiecesDir, "no-such-piece", &missing) == URSATZ_ERR_NOT_FOUND &&
             !ursatz_gui_analysis_piece_exists(kPiecesDir, "no-such-piece") &&
             ursatz_gui_analysis_piece_exists(kPiecesDir, id),
         "a missing piece is not found by the reads and exists only once uploaded");

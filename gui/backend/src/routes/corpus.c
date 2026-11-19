@@ -19,34 +19,11 @@ static void send_ok_false(struct mg_connection *conn, const char *message) {
   ursatz_gui_send_failure(conn, 200, message);
 }
 
-static const char *collection_message(UrsatzGuiCollectionResult result) {
-  switch (result) {
-    case URSATZ_GUI_COLLECTION_ERR_INVALID_ID:
-      return "invalid id";
-    case URSATZ_GUI_COLLECTION_ERR_INVALID_NAME:
-      return "invalid name";
-    case URSATZ_GUI_COLLECTION_ERR_INVALID_DESCRIPTION:
-      return "invalid description";
-    case URSATZ_GUI_COLLECTION_ERR_ALREADY_EXISTS:
-      return "collection already exists";
-    case URSATZ_GUI_COLLECTION_ERR_NOT_FOUND:
-      return "collection not found";
-    case URSATZ_GUI_COLLECTION_ERR_NOT_MEMBER:
-      return "piece is not in this collection";
-    case URSATZ_GUI_COLLECTION_ERR_ALLOC:
-      return "out of memory";
-    case URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED:
-      return "collection store is not available";
-    case URSATZ_GUI_COLLECTION_ERR_FAILED:
-    default:
-      return "collection operation failed";
-  }
-}
-
 /* A missing collection is a 404; every other failure keeps the route's
  * 200 with {"ok":false,...}. */
-static int send_collection_failure(struct mg_connection *conn, UrsatzGuiCollectionResult result) {
-  return ursatz_gui_send_failure(conn, result == URSATZ_GUI_COLLECTION_ERR_NOT_FOUND ? 404 : 200, collection_message(result));
+static int send_collection_failure(struct mg_connection *conn, UrsatzStatus result) {
+  return ursatz_gui_send_failure(conn, result == URSATZ_ERR_NOT_FOUND ? 404 : 200,
+                                 ursatz_gui_failure_message("collection operation failed"));
 }
 
 /* The members every collection answer carries. */
@@ -62,8 +39,8 @@ static bool add_summary_members(cJSON *object, const char *id, const char *name,
  * stored collection id, so an answer shows the normalized values. */
 static int send_collection_summary(struct mg_connection *conn, const char *id) {
   UrsatzGuiCollection *collection = NULL;
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_get(id, &collection);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  UrsatzStatus result = ursatz_gui_collection_get(id, &collection);
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
   cJSON *object = cJSON_CreateObject();
@@ -102,7 +79,7 @@ static int handle_create_corpus(struct mg_connection *conn) {
 
   const char *description = description_item ? description_item->valuestring : "";
   char *id = NULL;
-  UrsatzGuiCollectionResult result;
+  UrsatzStatus result;
   if (id_item) {
     /* R-098: a client may still name the id, when it is valid and unused. */
     id = malloc(strlen(id_item->valuestring) + 1);
@@ -117,7 +94,7 @@ static int handle_create_corpus(struct mg_connection *conn) {
   }
   cJSON_Delete(body);
 
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  if (result != URSATZ_OK) {
     free(id);
     return send_collection_failure(conn, result);
   }
@@ -129,8 +106,8 @@ static int handle_create_corpus(struct mg_connection *conn) {
 static int handle_list_corpora(struct mg_connection *conn) {
   UrsatzGuiCollectionEntry *entries = NULL;
   size_t count = 0;
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_list(&entries, &count);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  UrsatzStatus result = ursatz_gui_collection_list(&entries, &count);
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
 
@@ -157,8 +134,8 @@ static int handle_list_corpora(struct mg_connection *conn) {
 
 static int handle_get_corpus(struct mg_connection *conn, const char *id) {
   UrsatzGuiCollection *collection = NULL;
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_get(id, &collection);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  UrsatzStatus result = ursatz_gui_collection_get(id, &collection);
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
 
@@ -204,18 +181,18 @@ static int handle_patch_corpus(struct mg_connection *conn, const char *id) {
     return ursatz_gui_send_failure(conn, 200, "invalid description");
   }
 
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_update(
+  UrsatzStatus result = ursatz_gui_collection_update(
       id, name_item ? name_item->valuestring : NULL, description_item ? description_item->valuestring : NULL);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
   return send_collection_summary(conn, id);
 }
 
 static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_delete(id);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  UrsatzStatus result = ursatz_gui_collection_delete(id);
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
   ursatz_gui_send_json(conn, "{\"ok\":true}");
@@ -295,10 +272,10 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
 
   size_t added = 0;
   size_t already = 0;
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_add_pieces(corpus_id, ids, count, &added, &already);
+  UrsatzStatus result = ursatz_gui_collection_add_pieces(corpus_id, ids, count, &added, &already);
   free(ids);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
 
@@ -312,8 +289,8 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
 }
 
 static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id, const char *piece_id) {
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_remove_piece(corpus_id, piece_id);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  UrsatzStatus result = ursatz_gui_collection_remove_piece(corpus_id, piece_id);
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
   ursatz_gui_send_json(conn, "{\"ok\":true}");
@@ -322,8 +299,8 @@ static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id
 
 static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id) {
   UrsatzGuiCollection *collection = NULL;
-  UrsatzGuiCollectionResult result = ursatz_gui_collection_get(corpus_id, &collection);
-  if (result != URSATZ_GUI_COLLECTION_OK) {
+  UrsatzStatus result = ursatz_gui_collection_get(corpus_id, &collection);
+  if (result != URSATZ_OK) {
     return send_collection_failure(conn, result);
   }
 

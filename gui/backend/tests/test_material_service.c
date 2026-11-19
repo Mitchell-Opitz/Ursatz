@@ -10,7 +10,7 @@
 #include "gui_check.h"
 #include "test_knowledge.h"
 
-#define OK URSATZ_GUI_MATERIAL_OK
+#define OK URSATZ_OK
 
 static char g_dir[512];
 
@@ -116,33 +116,33 @@ static void test_project_crud(void) {
           "description cleared");
     cJSON_Delete(project);
 
-    check_quiet(ursatz_gui_material_project_create("", NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME, "empty name");
-    check_quiet(ursatz_gui_material_project_create("   ", NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
+    check_quiet(ursatz_gui_material_project_create("", NULL, NULL) == URSATZ_ERR_REQUEST, "empty name");
+    check_quiet(ursatz_gui_material_project_create("   ", NULL, NULL) == URSATZ_ERR_REQUEST,
           "blank name");
     char long_name[260];
     memset(long_name, 'n', 201);
     long_name[201] = '\0';
-    check_quiet(ursatz_gui_material_project_create(long_name, NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
+    check_quiet(ursatz_gui_material_project_create(long_name, NULL, NULL) == URSATZ_ERR_REQUEST,
           "name of 201 characters");
     long_name[200] = '\0';
     check_quiet(ursatz_gui_material_project_create(long_name, NULL, NULL) == OK, "name of 200 characters");
     char *long_description = calloc(1, 2002);
     memset(long_description, 'd', 2001);
-    check_quiet(ursatz_gui_material_project_create("x", long_description, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
+    check_quiet(ursatz_gui_material_project_create("x", long_description, NULL) == URSATZ_ERR_REQUEST,
           "description of 2001 characters");
     long_description[2000] = '\0';
     check_quiet(ursatz_gui_material_project_create("Described", long_description, NULL) == OK,
           "description of 2000 characters");
     free(long_description);
-    check_quiet(ursatz_gui_material_project_update(beta, "", NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
+    check_quiet(ursatz_gui_material_project_update(beta, "", NULL, NULL) == URSATZ_ERR_REQUEST,
           "update to an empty name");
-    check_quiet(ursatz_gui_material_project_get("../x", &project) == URSATZ_GUI_MATERIAL_ERR_INVALID_ID, "bad id");
-    check_quiet(ursatz_gui_material_project_get("prj-0000000000000000", &project) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_project_get("../x", &project) == URSATZ_ERR_REQUEST, "bad id");
+    check_quiet(ursatz_gui_material_project_get("prj-0000000000000000", &project) == URSATZ_ERR_NOT_FOUND,
           "unknown id");
 
     check_quiet(ursatz_gui_material_project_delete(zed) == OK, "delete");
-    check_quiet(ursatz_gui_material_project_get(zed, &project) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "gone after delete");
-    check_quiet(ursatz_gui_material_project_delete(zed) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
+    check_quiet(ursatz_gui_material_project_get(zed, &project) == URSATZ_ERR_NOT_FOUND, "gone after delete");
+    check_quiet(ursatz_gui_material_project_delete(zed) == URSATZ_ERR_NOT_FOUND, "delete twice");
     free(beta);
     free(alpha);
     free(zed);
@@ -167,16 +167,16 @@ static void test_items_and_versions(void) {
     check_quiet(piece && strncmp(piece, "pce-", 4) == 0, "piece ids start with pce-");
 
     check_quiet(ursatz_gui_material_item_create_noted("chord", "x", home, body, NULL, NULL) ==
-              URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE,
+              URSATZ_ERR_REQUEST,
           "unknown type");
     check_quiet(ursatz_gui_material_item_create_noted("motif", " ", home, body, NULL, NULL) ==
-              URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
+              URSATZ_ERR_REQUEST,
           "blank item name");
     check_quiet(ursatz_gui_material_item_create_noted("motif", "x", "prj-0000000000000000", body, NULL, NULL) ==
-              URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+              URSATZ_ERR_NOT_FOUND,
           "unknown project");
     check_quiet(ursatz_gui_material_item_create_noted("motif", "x", "a/b", body, NULL, NULL) ==
-              URSATZ_GUI_MATERIAL_ERR_INVALID_ID,
+              URSATZ_ERR_REQUEST,
           "bad project id");
 
     cJSON *meta = NULL;
@@ -214,9 +214,9 @@ static void test_items_and_versions(void) {
               strcmp(str(cJSON_GetObjectItemCaseSensitive(old_body, "motif"), "notes"), "D4:q E4:q") == 0,
           "version 2 has the new notes");
     cJSON_Delete(old_body);
-    check_quiet(ursatz_gui_material_item_get_version(motif, 3, &old_body) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_item_get_version(motif, 3, &old_body) == URSATZ_ERR_NOT_FOUND,
           "version 3 does not exist");
-    check_quiet(ursatz_gui_material_item_get_version(motif, 0, &old_body) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_item_get_version(motif, 0, &old_body) == URSATZ_ERR_NOT_FOUND,
           "version 0 does not exist");
     check_quiet(ursatz_gui_material_item_get(motif, NULL, &current) == OK &&
               strcmp(str(cJSON_GetObjectItemCaseSensitive(current, "motif"), "notes"), "D4:q E4:q") == 0,
@@ -227,12 +227,12 @@ static void test_items_and_versions(void) {
     check_quiet(ursatz_gui_material_item_rename(motif, "  Renamed ", &item) == OK && strcmp(str(item, "name"), "Renamed") == 0,
           "rename");
     cJSON_Delete(item);
-    check_quiet(ursatz_gui_material_item_rename(motif, "", NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME, "rename to empty");
+    check_quiet(ursatz_gui_material_item_rename(motif, "", NULL) == URSATZ_ERR_REQUEST, "rename to empty");
     check_quiet(ursatz_gui_material_item_move(motif, other, &item) == OK && strcmp(str(item, "project_id"), other) == 0,
           "move");
     check_quiet(num(item, "current_version") == 2, "move adds no version");
     cJSON_Delete(item);
-    check_quiet(ursatz_gui_material_item_move(motif, "prj-0000000000000000", NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_item_move(motif, "prj-0000000000000000", NULL) == URSATZ_ERR_NOT_FOUND,
           "move to an unknown project");
 
     /* Filters and order. */
@@ -264,29 +264,29 @@ static void test_items_and_versions(void) {
     check_quiet(ursatz_gui_material_item_list(other, "theme", &list) == OK && cJSON_GetArraySize(list) == 0,
           "both filters");
     cJSON_Delete(list);
-    check_quiet(ursatz_gui_material_item_list(NULL, "chord", &list) == URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE,
+    check_quiet(ursatz_gui_material_item_list(NULL, "chord", &list) == URSATZ_ERR_REQUEST,
           "list with an unknown type");
 
     /* A project that holds items cannot be deleted. */
-    check_quiet(ursatz_gui_material_project_delete(home) == URSATZ_GUI_MATERIAL_ERR_NOT_EMPTY, "delete a project with items");
+    check_quiet(ursatz_gui_material_project_delete(home) == URSATZ_ERR_CONFLICT, "delete a project with items");
     cJSON *project = NULL;
     check_quiet(ursatz_gui_material_project_get(home, &project) == OK && num(project, "item_count") == 1, "item count");
     cJSON_Delete(project);
 
     /* Items survive a restart. */
     ursatz_gui_material_service_shutdown();
-    check_quiet(ursatz_gui_material_item_list(NULL, NULL, &list) == URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED,
+    check_quiet(ursatz_gui_material_item_list(NULL, NULL, &list) == URSATZ_ERR_INTERNAL,
           "not initialized after shutdown");
     check_quiet(ursatz_gui_material_service_init(g_dir), "init after shutdown");
     check_quiet(ursatz_gui_material_item_list(NULL, NULL, &list) == OK && cJSON_GetArraySize(list) == 3, "items persist");
     cJSON_Delete(list);
 
     check_quiet(ursatz_gui_material_item_delete(theme, false) == OK, "delete the theme");
-    check_quiet(ursatz_gui_material_item_get(theme, &meta, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "theme is gone");
+    check_quiet(ursatz_gui_material_item_get(theme, &meta, NULL) == URSATZ_ERR_NOT_FOUND, "theme is gone");
     char theme_dir[700];
     snprintf(theme_dir, sizeof(theme_dir), "%s/items/%s/v1.json", g_dir, theme);
     check_quiet(access(theme_dir, F_OK) != 0, "theme versions are gone");
-    check_quiet(ursatz_gui_material_item_delete(theme, false) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
+    check_quiet(ursatz_gui_material_item_delete(theme, false) == URSATZ_ERR_NOT_FOUND, "delete twice");
     check_quiet(ursatz_gui_material_project_delete(home) == OK, "delete the emptied project");
     check_quiet(ursatz_gui_material_item_delete(motif, false) == OK && ursatz_gui_material_item_delete(piece, false) == OK,
           "delete the rest");
@@ -301,10 +301,10 @@ static void test_items_and_versions(void) {
     free(piece);
 }
 
-#define INVALID URSATZ_GUI_MATERIAL_ERR_INVALID_BODY
+#define INVALID URSATZ_ERR_REQUEST
 
-static UrsatzGuiMaterialResult validate(const char *type, const cJSON *body) {
-    return ursatz_gui_material_body_validate(type, body, NULL, 0);
+static UrsatzStatus validate(const char *type, const cJSON *body) {
+    return ursatz_gui_material_body_validate(type, body, NULL);
 }
 
 /* A valid motif body with one member of its motif object replaced by the JSON text. */
@@ -321,7 +321,7 @@ static cJSON *motif_with(const char *member, const char *json) {
 }
 
 /* Expects the motif body with this member replaced to give result. */
-static void expect_motif(const char *member, const char *json, UrsatzGuiMaterialResult result) {
+static void expect_motif(const char *member, const char *json, UrsatzStatus result) {
     cJSON *body = motif_with(member, json);
     char label[160];
     snprintf(label, sizeof(label), "motif %s = %s", member, json);
@@ -336,8 +336,8 @@ static const char *kDerived =
 
 static void test_body_validation(void) {
     cJSON *body = cJSON_Parse(kMotifBody);
-    char error[200];
-    check_quiet(ursatz_gui_material_body_validate("motif", body, error, sizeof(error)) == OK && error[0] == '\0',
+    UrsatzError error = {{0}};
+    check_quiet(ursatz_gui_material_body_validate("motif", body, &error) == OK && error.message[0] == '\0',
           "a valid motif body");
     cJSON_Delete(body);
     body = cJSON_Parse(kThemeBody);
@@ -348,7 +348,7 @@ static void test_body_validation(void) {
     /* the piece's words are the Composer's: a save keeps the type and size, validate marks the value (R-276) */
     static const struct {
         const char *structure;
-        UrsatzGuiMaterialResult result;
+        UrsatzStatus result;
         const char *label;
     } pieces[] = {
         {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a plain structure"},
@@ -376,7 +376,7 @@ static void test_body_validation(void) {
         "\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]";
     static const struct {
         const char *structure;
-        UrsatzGuiMaterialResult result;
+        UrsatzStatus result;
         const char *label;
     } forms[] = {
         {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "the game loop by name"},
@@ -417,18 +417,18 @@ static void test_body_validation(void) {
         check_quiet(validate("piece", form_body) == forms[i].result, forms[i].label);
         cJSON_Delete(form_body);
     }
-    char order_error[200];
+    UrsatzError order_error = {{0}};
     cJSON *order_body = cJSON_Parse(
         "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":["
         "{\"id\":\"s0\",\"part\":\"turnaround\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null},"
         "{\"id\":\"s1\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}");
-    check_quiet(ursatz_gui_material_body_validate("piece", order_body, order_error, sizeof(order_error)) == INVALID &&
-              strstr(order_error, "Intro, Loop body, Turnaround, Ending") != NULL,
+    check_quiet(ursatz_gui_material_body_validate("piece", order_body, &order_error) == INVALID &&
+              strstr(order_error.message, "Intro, Loop body, Turnaround, Ending") != NULL,
           "the order refusal names the roles by label");
     cJSON_Delete(order_body);
     static const struct {
         const char *section;
-        UrsatzGuiMaterialResult result;
+        UrsatzStatus result;
         const char *label;
     } sections[] = {
         {"\"pickup\":\"5\",\"cadence\":\"XX\",\"fill\":null", OK, "a pickup longer than a bar and a cadence the Composer does not read"},
@@ -456,8 +456,8 @@ static void test_body_validation(void) {
     check_quiet(validate("motif", body) == INVALID, "a body must be an object");
     cJSON_Delete(body);
     body = cJSON_Parse(kMotifBody);
-    check_quiet(validate("chord", body) == URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE, "an unknown type");
-    check_quiet(validate(NULL, body) == URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE, "no type");
+    check_quiet(validate("chord", body) == URSATZ_ERR_REQUEST, "an unknown type");
+    check_quiet(validate(NULL, body) == URSATZ_ERR_REQUEST, "no type");
     check_quiet(validate("motif", NULL) == INVALID, "no body");
     cJSON_Delete(body);
 
@@ -499,7 +499,7 @@ static void test_body_validation(void) {
     static const char *const kRef = "\"item_id\":\"mot-0123456789abcdef\",\"version\":1";
     struct {
         const char *theme;
-        UrsatzGuiMaterialResult result;
+        UrsatzStatus result;
         const char *label;
     } v2[] = {
         {"\"form\":{\"into\":\"sentence\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with no key"},
@@ -769,7 +769,7 @@ static void test_references(void) {
     check_quiet(num(entry, "version") == 1 && num(entry, "current_version") == 1, "status versions");
     check_quiet(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(entry, "updated")), "not updated yet");
     cJSON_Delete(status);
-    check_quiet(ursatz_gui_material_uses_status("thm-0000000000000000", &status) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_uses_status("thm-0000000000000000", &status) == URSATZ_ERR_NOT_FOUND,
           "status of an unknown item");
 
     /* The source moves on: the use reports it and used_by lists the user. */
@@ -795,7 +795,7 @@ static void test_references(void) {
     cJSON_Delete(users);
 
     /* update_use writes a new version that points at the source's latest. */
-    check_quiet(ursatz_gui_material_update_use(user, "mot-0000000000000000", NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_update_use(user, "mot-0000000000000000", NULL) == URSATZ_ERR_NOT_FOUND,
           "update_use of a source the theme does not use");
     check_quiet(ursatz_gui_material_update_use(user, source, &meta) == OK, "update_use");
     check_quiet(num(meta, "current_version") == 2, "update_use advances the version");
@@ -816,7 +816,7 @@ static void test_references(void) {
     cJSON_Delete(status);
 
     /* A used item is refused a plain delete. */
-    check_quiet(ursatz_gui_material_item_delete(source, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED, "used item is protected");
+    check_quiet(ursatz_gui_material_item_delete(source, false) == URSATZ_ERR_CONFLICT, "used item is protected");
     check_quiet(ursatz_gui_material_item_get(source, NULL, NULL) == OK, "the used item is still there");
 
     check_quiet(ursatz_gui_material_item_delete(user, false) == OK, "delete the user");
@@ -835,9 +835,9 @@ static void test_forced_delete(void) {
     char *user = new_theme_using("Forced user", home, source);
     check_quiet(source && user, "create the source and its user");
 
-    check_quiet(ursatz_gui_material_item_delete(source, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED, "refused without force");
+    check_quiet(ursatz_gui_material_item_delete(source, false) == URSATZ_ERR_CONFLICT, "refused without force");
     check_quiet(ursatz_gui_material_item_delete(source, true) == OK, "forced delete");
-    check_quiet(ursatz_gui_material_item_get(source, NULL, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "the source is gone");
+    check_quiet(ursatz_gui_material_item_get(source, NULL, NULL) == URSATZ_ERR_NOT_FOUND, "the source is gone");
 
     cJSON *body = NULL;
     check_quiet(ursatz_gui_material_item_get(user, NULL, &body) == OK, "the user still loads");
@@ -851,12 +851,12 @@ static void test_forced_delete(void) {
               strcmp(str(entry, "item_id"), source) == 0 && num(entry, "version") == 1,
           "the use reports a missing source");
     cJSON_Delete(status);
-    check_quiet(ursatz_gui_material_update_use(user, source, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_update_use(user, source, NULL) == URSATZ_ERR_NOT_FOUND,
           "a missing source cannot be updated to");
 
     /* The copy keeps being copied into later versions of the user. */
     check_quiet(ursatz_gui_material_item_get(user, NULL, &body) == OK, "get the user's body");
-    check_quiet(ursatz_gui_material_item_add_version(user, body, "again", NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+    check_quiet(ursatz_gui_material_item_add_version(user, body, "again", NULL) == URSATZ_ERR_REQUEST,
           "a new version cannot name a deleted source");
     cJSON_Delete(body);
 
@@ -907,7 +907,7 @@ static void test_variant_ownership(void) {
     snprintf(with_flag, sizeof(with_flag), "%s,\"standalone\":false}", text);
     expect_motif("derived", with_flag, OK);
     snprintf(with_flag, sizeof(with_flag), "%s,\"standalone\":\"yes\"}", text);
-    expect_motif("derived", with_flag, URSATZ_GUI_MATERIAL_ERR_INVALID_BODY);
+    expect_motif("derived", with_flag, URSATZ_ERR_REQUEST);
     cJSON *plain = cJSON_Parse(kMotifBody);
     cJSON *derived_body = motif_with("derived", kDerived);
     snprintf(with_flag, sizeof(with_flag), "%s,\"standalone\":true}", text);
@@ -947,7 +947,7 @@ static void test_variant_ownership(void) {
     /* A theme using a variant blocks the delete of the motif until forced; nothing is deleted meanwhile. */
     char *user = new_theme_using("Variant user", home, grandchild);
     check_quiet(user != NULL, "create a theme using the variant of a variant");
-    check_quiet(ursatz_gui_material_item_delete(parent, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED,
+    check_quiet(ursatz_gui_material_item_delete(parent, false) == URSATZ_ERR_CONFLICT,
           "a use of a variant blocks the delete of its motif");
     check_quiet(exists(parent) && exists(variant) && exists(grandchild), "nothing was deleted");
     cJSON *blockers = NULL;
@@ -968,7 +968,7 @@ static void test_variant_ownership(void) {
     cJSON_Delete(blockers);
     check_quiet(ursatz_gui_material_item_delete(motif2, false) == OK && !exists(motif2) && !exists(kid),
           "deleting a motif deletes its variants");
-    check_quiet(ursatz_gui_material_item_delete(kid, false) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "the variant is gone");
+    check_quiet(ursatz_gui_material_item_delete(kid, false) == URSATZ_ERR_NOT_FOUND, "the variant is gone");
 
     /* A variant deleted on its own leaves its motif. */
     char *motif3 = new_item("motif", "Third", home, kMotifBody);
@@ -1007,16 +1007,16 @@ static void test_op_checks(void) {
     check_quiet(motif && theme, "create a motif and a theme for the marks");
     char path[700];
     snprintf(path, sizeof(path), "%s/items/%s/op-checks.json", g_dir, motif);
-    char error[200] = "";
+    UrsatzError error = {{0}};
 
     cJSON *checks = NULL;
     check_quiet(ursatz_gui_material_op_checks_get(motif, &checks) == OK &&
               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(checks, "checks")) == 0,
           "a motif without marks has an empty set");
     cJSON_Delete(checks);
-    check_quiet(ursatz_gui_material_op_checks_get(theme, &checks) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_op_checks_get(theme, &checks) == URSATZ_ERR_NOT_FOUND,
           "only a motif has marks");
-    check_quiet(ursatz_gui_material_op_checks_get("mot-0000000000000000", &checks) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_op_checks_get("mot-0000000000000000", &checks) == URSATZ_ERR_NOT_FOUND,
           "an item that is not there has none");
 
     const char *good =
@@ -1025,7 +1025,7 @@ static void test_op_checks(void) {
         "\"comment\":\"\",\"seed\":0,\"notes_text\":\"C4:h\",\"date\":\"2026-10-23\"}}}";
     cJSON *body = cJSON_Parse(good);
     cJSON *stored = NULL;
-    check_quiet(ursatz_gui_material_op_checks_put(motif, body, error, sizeof(error), &stored) == OK &&
+    check_quiet(ursatz_gui_material_op_checks_put(motif, body, &error, &stored) == OK &&
               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(stored, "checks")) == 2,
           "valid marks are stored");
     check_quiet(!cJSON_GetObjectItemCaseSensitive(
@@ -1060,8 +1060,8 @@ static void test_op_checks(void) {
     };
     for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
         cJSON *bad_body = cJSON_Parse(bad[i]);
-        check_quiet(ursatz_gui_material_op_checks_put(motif, bad_body, error, sizeof(error), &stored) ==
-                  URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+        check_quiet(ursatz_gui_material_op_checks_put(motif, bad_body, &error, &stored) ==
+                  URSATZ_ERR_REQUEST,
               "a malformed mark is refused");
         cJSON_Delete(bad_body);
     }
@@ -1073,13 +1073,13 @@ static void test_op_checks(void) {
              "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"%s\",\"seed\":1,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
              comment);
     cJSON *long_body = cJSON_Parse(long_text);
-    check_quiet(ursatz_gui_material_op_checks_put(motif, long_body, error, sizeof(error), &stored) ==
-              URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+    check_quiet(ursatz_gui_material_op_checks_put(motif, long_body, &error, &stored) ==
+              URSATZ_ERR_REQUEST,
           "a comment over 500 characters is refused");
     cJSON_Delete(long_body);
     cJSON *good_body = cJSON_Parse(good);
-    check_quiet(ursatz_gui_material_op_checks_put(theme, good_body, error, sizeof(error), &stored) ==
-              URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+    check_quiet(ursatz_gui_material_op_checks_put(theme, good_body, &error, &stored) ==
+              URSATZ_ERR_NOT_FOUND,
           "marks cannot be put on a theme");
     cJSON_Delete(good_body);
     check_quiet(ursatz_gui_material_op_checks_get(motif, &checks) == OK &&

@@ -22,7 +22,7 @@
 #include "gui_check.h"
 #include "test_knowledge.h"
 
-#define OK URSATZ_GUI_MATERIAL_OK
+#define OK URSATZ_OK
 #define MINOR "omt.material.natural-minor"
 #define MAJOR "omt.material.major"
 
@@ -258,11 +258,11 @@ static void test_theme(const char *project, const char *motif) {
   bool complete = false;
   cJSON *old_request = NULL;
   cJSON *new_request = NULL;
-  char message[256];
-  check_quiet(ursatz_gui_theme_validate(saved, &complete, &old_request, message, sizeof(message)) == URSATZ_GUI_THEME_OK && complete,
+  UrsatzError message = {{0}};
+  check_quiet(ursatz_gui_theme_validate(saved, &complete, &old_request, &message) == URSATZ_OK && complete,
               "the old theme makes a request");
   complete = false;
-  check_quiet(read && ursatz_gui_theme_validate(read, &complete, &new_request, message, sizeof(message)) == URSATZ_GUI_THEME_OK && complete,
+  check_quiet(read && ursatz_gui_theme_validate(read, &complete, &new_request, &message) == URSATZ_OK && complete,
               "the read theme makes a request");
   check_quiet(old_request && !member_of(old_request, "material") && strcmp(str(old_request, "mode"), "minor") == 0 &&
                   new_request && strcmp(str(new_request, "material"), MINOR) == 0 && !member_of(new_request, "mode"),
@@ -276,8 +276,8 @@ static void test_theme(const char *project, const char *motif) {
 
   /* The service composes the read body: the same score, and the new version holds the material. */
   cJSON *item = NULL;
-  UrsatzGuiThemeResult composed = ursatz_gui_theme_compose(theme, true, 1, false, NULL, &item, message, sizeof(message));
-  check_quiet(composed == URSATZ_GUI_THEME_OK && both, "the old theme is composed by the service");
+  UrsatzStatus composed = ursatz_gui_theme_compose(theme, true, 1, false, NULL, &item, &message);
+  check_quiet(composed == URSATZ_OK && both, "the old theme is composed by the service");
   check_quiet(both && file_equals(theme, 2, "theme.mid", before.midi, before.midi_size) &&
                   file_equals(theme, 2, "theme.musicxml", before.musicxml, strlen(before.musicxml)),
               "the composed version holds the score the old members made");
@@ -341,11 +341,11 @@ static void test_piece(const char *project, const char *motif) {
   bool complete = false;
   cJSON *old_request = NULL;
   cJSON *new_request = NULL;
-  char message[256];
-  check_quiet(ursatz_gui_piece_validate(saved, &complete, &old_request, message, sizeof(message)) == URSATZ_GUI_THEME_OK && complete,
+  UrsatzError message = {{0}};
+  check_quiet(ursatz_gui_piece_validate(saved, &complete, &old_request, &message) == URSATZ_OK && complete,
               "the old piece makes a request");
   complete = false;
-  check_quiet(read && ursatz_gui_piece_validate(read, &complete, &new_request, message, sizeof(message)) == URSATZ_GUI_THEME_OK && complete,
+  check_quiet(read && ursatz_gui_piece_validate(read, &complete, &new_request, &message) == URSATZ_OK && complete,
               "the read piece makes a request");
   check_quiet(old_request && strcmp(str(old_request, "mode"), "major") == 0 && !member_of(old_request, "material") && new_request &&
                   strcmp(str(new_request, "material"), MAJOR) == 0 && !member_of(new_request, "mode"),
@@ -358,8 +358,8 @@ static void test_piece(const char *project, const char *motif) {
               "the old piece and the read piece compose the same MIDI and MusicXML");
 
   cJSON *item = NULL;
-  UrsatzGuiThemeResult composed = ursatz_gui_piece_compose(piece, true, 1, false, NULL, &item, message, sizeof(message));
-  check_quiet(composed == URSATZ_GUI_THEME_OK && both, "the old piece is composed by the service");
+  UrsatzStatus composed = ursatz_gui_piece_compose(piece, true, 1, false, NULL, &item, &message);
+  check_quiet(composed == URSATZ_OK && both, "the old piece is composed by the service");
   check_quiet(both && file_equals(piece, 2, "piece.mid", before.midi, before.midi_size) &&
                   file_equals(piece, 2, "piece.musicxml", before.musicxml, strlen(before.musicxml)),
               "the composed version holds the score the old members made");

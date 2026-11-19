@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_SUBJECT_SERVICE_H
 #define URSATZ_GUI_SUBJECT_SERVICE_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -25,22 +27,6 @@
  * caller ownership: free it with cJSON_Delete.
  */
 
-typedef enum {
-    URSATZ_GUI_SUBJECT_OK = 0,
-    URSATZ_GUI_SUBJECT_ERR_INVALID_ID,
-    URSATZ_GUI_SUBJECT_ERR_INVALID_NAME,
-    URSATZ_GUI_SUBJECT_ERR_INVALID_KIND,
-    URSATZ_GUI_SUBJECT_ERR_NOT_FOUND,
-    URSATZ_GUI_SUBJECT_ERR_ITEM_NOT_FOUND,
-    URSATZ_GUI_SUBJECT_ERR_PIECE_NOT_FOUND,
-    URSATZ_GUI_SUBJECT_ERR_NOT_LINKED,
-    URSATZ_GUI_SUBJECT_ERR_SELF,
-    URSATZ_GUI_SUBJECT_ERR_NOT_RELATED,
-    URSATZ_GUI_SUBJECT_ERR_FAILED,
-    URSATZ_GUI_SUBJECT_ERR_ALLOC,
-    URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED
-} UrsatzGuiSubjectResult;
-
 /* Prepares the store in dir (created if absent). Returns false when it cannot be used. */
 bool ursatz_gui_subject_service_init(const char *dir);
 
@@ -54,7 +40,7 @@ void ursatz_gui_subject_service_shutdown(void);
  * characters (INVALID_NAME), NULL or "" for none. On OK, *out_subject (may be
  * NULL) is the new subject, caller-owned.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_create(const char *name, const char *kind, const char *note,
+UrsatzStatus ursatz_gui_subject_create(const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject);
 
 /*
@@ -62,24 +48,24 @@ UrsatzGuiSubjectResult ursatz_gui_subject_create(const char *name, const char *k
  * OK, *out_subjects is a caller-owned array of subject objects, each with
  * "item_count", "piece_count" and "related_count" members.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects);
+UrsatzStatus ursatz_gui_subject_list(cJSON **out_subjects);
 
 /* One subject object. NOT_FOUND if absent. Caller-owned. */
-UrsatzGuiSubjectResult ursatz_gui_subject_get(const char *id, cJSON **out_subject);
+UrsatzStatus ursatz_gui_subject_get(const char *id, cJSON **out_subject);
 
 /*
  * Changes the name, the kind and/or the note (NULL = unchanged), with the same
  * limits as create. *out_subject (may be NULL) is the updated subject,
  * caller-owned.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *name, const char *kind, const char *note,
+UrsatzStatus ursatz_gui_subject_update(const char *id, const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject);
 
 /*
  * Deletes the subject and removes it from every other subject's related
  * list. NOT_FOUND if absent. Items and pieces it linked are not touched.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id);
+UrsatzStatus ursatz_gui_subject_delete(const char *id);
 
 /*
  * Links the subject to a material item (INVALID_ID for a bad item id,
@@ -88,18 +74,18 @@ UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id);
  * and nothing changes. *out_subject (may be NULL) is the subject after the
  * call, caller-owned.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_link_item(const char *id, const char *item_id, bool *out_already,
+UrsatzStatus ursatz_gui_subject_link_item(const char *id, const char *item_id, bool *out_already,
                                                     cJSON **out_subject);
 
 /* Removes an item link. NOT_LINKED when the subject does not link the item. */
-UrsatzGuiSubjectResult ursatz_gui_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject);
+UrsatzStatus ursatz_gui_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject);
 
 /* As link_item, for a Library piece (PIECE_NOT_FOUND when pieces/<id>/meta.json is absent). */
-UrsatzGuiSubjectResult ursatz_gui_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
+UrsatzStatus ursatz_gui_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
                                                      cJSON **out_subject);
 
 /* Removes a piece link. NOT_LINKED when the subject does not link the piece. */
-UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject);
+UrsatzStatus ursatz_gui_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject);
 
 /*
  * Relates two subjects. The relation is stored on both sides. A subject
@@ -108,25 +94,25 @@ UrsatzGuiSubjectResult ursatz_gui_subject_unlink_piece(const char *id, const cha
  * changes. *out_subject (may be NULL) is the first subject after the call,
  * caller-owned.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_relate(const char *id, const char *other_id, bool *out_already,
+UrsatzStatus ursatz_gui_subject_relate(const char *id, const char *other_id, bool *out_already,
                                                  cJSON **out_subject);
 
 /* Removes the relation from both sides. NOT_RELATED when the two are not related. */
-UrsatzGuiSubjectResult ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject);
+UrsatzStatus ursatz_gui_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject);
 
 /*
  * Removes the id from the pieces list of every subject that holds it. Called
  * by the analyzer route after a Library piece is deleted. Absent everywhere is
  * fine.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_forget_piece(const char *piece_id);
+UrsatzStatus ursatz_gui_subject_forget_piece(const char *piece_id);
 
 /*
  * Removes the id from the items list of every subject that holds it. Called
  * by the material service after an item is deleted, with no material lock
  * held. Absent everywhere is fine.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_forget_item(const char *item_id);
+UrsatzStatus ursatz_gui_subject_forget_item(const char *item_id);
 
 /*
  * The panel's view: *out_groups is a caller-owned array of four objects, one
@@ -135,6 +121,6 @@ UrsatzGuiSubjectResult ursatz_gui_subject_forget_item(const char *item_id);
  * plus the piece count. Subjects are in name order; a kind with none has an
  * empty array.
  */
-UrsatzGuiSubjectResult ursatz_gui_subject_groups(cJSON **out_groups);
+UrsatzStatus ursatz_gui_subject_groups(cJSON **out_groups);
 
 #endif /* URSATZ_GUI_SUBJECT_SERVICE_H */

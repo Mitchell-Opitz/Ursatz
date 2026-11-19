@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_COMPOSER_CLIENT_H
 #define URSATZ_GUI_COMPOSER_CLIENT_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -31,8 +33,8 @@ void ursatz_gui_composer_reply_take(UrsatzStatus status, ComposerResponse *respo
 /* The CLI's exit 1 and 2: the Composer read the request and refused it. */
 bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply);
 
-/* The status a Composer refusal is sent with: 422 when nothing satisfies a valid request, 400 for a malformed one, 499
- * for a cancelled job, else 500 (ALLOC, INTERNAL). */
+/* The status a Composer refusal is sent with: ursatz_gui_http_status of the reply's status, without its path (a refusal at a
+ * request member is 400, and the path travels as the "path" member of the answer). */
 int ursatz_gui_composer_reply_failure_status(const UrsatzGuiComposerReply *reply);
 
 /* Frees the members and zeroes the reply. Safe on a zeroed reply and when called twice. */

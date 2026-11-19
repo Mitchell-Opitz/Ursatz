@@ -7,6 +7,7 @@ add_library(ursatz_gui_core STATIC
   src/service/import_cache.c
   src/service/piece_metadata.c
   src/service/id_service.c
+  src/service/last_error.c
   src/service/collection_service.c
   src/service/style_service.c
   src/service/composer_client.c

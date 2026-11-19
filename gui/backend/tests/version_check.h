@@ -53,7 +53,7 @@ static void check_playback_of(VersionCheckExchange exchange, const char *url, co
   int status = 0;
   char *json = NULL;
   cJSON *want = NULL;
-  if (ursatz_gui_playback_of_midi(midi_path, &json) == URSATZ_GUI_PLAYBACK_OK && json) {
+  if (ursatz_gui_playback_of_midi(midi_path, &json) == URSATZ_OK && json) {
     want = cJSON_Parse(json);
   }
   free(json);

@@ -57,7 +57,7 @@ static bool import_piece(const char *name, char *out_id, size_t out_size) {
     size_t size = 0;
     char *data = test_read_file(path, &size);
     char *id = NULL;
-    bool ok = data && ursatz_gui_analysis_import_and_save("pieces", (const unsigned char *)data, size, name, &id) == URSATZ_GUI_ANALYSIS_OK;
+    bool ok = data && ursatz_gui_analysis_import_and_save("pieces", (const unsigned char *)data, size, name, &id) == URSATZ_OK;
     free(data);
     if (ok) {
         snprintf(out_id, out_size, "%s", id);
@@ -74,9 +74,9 @@ static int compare_text(const void *left, const void *right) {
 static void expect_scope(const UrsatzGuiLinkScope *scope, const char *const *expected, size_t count, const char *what) {
     char **ids = NULL;
     size_t found = 0;
-    UrsatzGuiLinkResult result = ursatz_gui_link_scope_resolve(scope, &ids, &found);
-    check_quiet(result == URSATZ_GUI_LINK_OK, what);
-    if (result != URSATZ_GUI_LINK_OK) {
+    UrsatzStatus result = ursatz_gui_link_scope_resolve(scope, &ids, &found);
+    check_quiet(result == URSATZ_OK, what);
+    if (result != URSATZ_OK) {
         return;
     }
     check_quiet(found == count, what);
@@ -91,7 +91,7 @@ static void expect_scope(const UrsatzGuiLinkScope *scope, const char *const *exp
     ursatz_gui_link_ids_free(ids, found);
 }
 
-static void expect_error(const UrsatzGuiLinkScope *scope, UrsatzGuiLinkResult error, const char *what) {
+static void expect_error(const UrsatzGuiLinkScope *scope, UrsatzStatus error, const char *what) {
     char **ids = NULL;
     size_t found = 0;
     check_quiet(ursatz_gui_link_scope_resolve(scope, &ids, &found) == error && ids == NULL && found == 0, what);
@@ -104,9 +104,9 @@ static void tag_piece(const char *id, const char *composer, const char *tag) {
     update.composer = composer;
     update.add_tags = tag ? tags : NULL;
     update.add_tag_count = tag ? 1 : 0;
-    char message[128];
-    check_quiet(ursatz_gui_analysis_update_piece("pieces", id, &update, message, sizeof(message)) ==
-              URSATZ_GUI_ANALYSIS_OK,
+    UrsatzError message = {{0}};
+    check_quiet(ursatz_gui_analysis_update_piece("pieces", id, &update, &message) ==
+              URSATZ_OK,
           "update metadata");
 }
 
@@ -122,11 +122,11 @@ static void test_scopes(void) {
 
     /* A collection. */
     char *collection = NULL;
-    check_quiet(ursatz_gui_collection_create("Pair", "", &collection) == URSATZ_GUI_COLLECTION_OK, "create collection");
+    check_quiet(ursatz_gui_collection_create("Pair", "", &collection) == URSATZ_OK, "create collection");
     const char *members[] = {g_ids[1], g_ids[0]};
     size_t added = 0;
     size_t already = 0;
-    check_quiet(ursatz_gui_collection_add_pieces(collection, members, 2, &added, &already) == URSATZ_GUI_COLLECTION_OK &&
+    check_quiet(ursatz_gui_collection_add_pieces(collection, members, 2, &added, &already) == URSATZ_OK &&
               added == 2,
           "fill collection");
     memset(&scope, 0, sizeof(scope));
@@ -134,13 +134,13 @@ static void test_scopes(void) {
     scope.collection_id = collection;
     expect_scope(&scope, members, 2, "collection pieces");
     scope.collection_id = "col-missing";
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_NOT_FOUND, "unknown collection");
+    expect_error(&scope, URSATZ_ERR_NOT_FOUND, "unknown collection");
     scope.collection_id = NULL;
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_INVALID_SCOPE, "collection without an id");
+    expect_error(&scope, URSATZ_ERR_REQUEST, "collection without an id");
     char *empty_collection = NULL;
-    check_quiet(ursatz_gui_collection_create("Nothing", "", &empty_collection) == URSATZ_GUI_COLLECTION_OK, "empty one");
+    check_quiet(ursatz_gui_collection_create("Nothing", "", &empty_collection) == URSATZ_OK, "empty one");
     scope.collection_id = empty_collection;
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_EMPTY, "empty collection");
+    expect_error(&scope, URSATZ_ERR_UNSATISFIABLE, "empty collection");
     free(empty_collection);
     free(collection);
 
@@ -153,25 +153,25 @@ static void test_scopes(void) {
     scope.tag = "minor";
     expect_scope(&scope, (const char *const[]){g_ids[2]}, 1, "filter by tag");
     scope.tag = "";
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_INVALID_SCOPE, "filter without a value");
+    expect_error(&scope, URSATZ_ERR_REQUEST, "filter without a value");
     scope.composer = "Nobody";
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_EMPTY, "filter that matches nothing");
+    expect_error(&scope, URSATZ_ERR_UNSATISFIABLE, "filter that matches nothing");
 
     /* A subject, and a project through its subjects. */
     cJSON *anna = NULL;
     cJSON *zed = NULL;
     cJSON *other = NULL;
-    check_quiet(ursatz_gui_subject_create("Anna", "character", "", &anna) == URSATZ_GUI_SUBJECT_OK, "subject anna");
-    check_quiet(ursatz_gui_subject_create("Zed", "place", "", &zed) == URSATZ_GUI_SUBJECT_OK, "subject zed");
-    check_quiet(ursatz_gui_subject_create("Other", "idea", "", &other) == URSATZ_GUI_SUBJECT_OK, "subject other");
+    check_quiet(ursatz_gui_subject_create("Anna", "character", "", &anna) == URSATZ_OK, "subject anna");
+    check_quiet(ursatz_gui_subject_create("Zed", "place", "", &zed) == URSATZ_OK, "subject zed");
+    check_quiet(ursatz_gui_subject_create("Other", "idea", "", &other) == URSATZ_OK, "subject other");
     const char *anna_id = str(anna, "id");
     const char *zed_id = str(zed, "id");
     const char *other_id = str(other, "id");
-    check_quiet(ursatz_gui_subject_link_piece(anna_id, g_ids[0], NULL, NULL) == URSATZ_GUI_SUBJECT_OK &&
-              ursatz_gui_subject_link_piece(anna_id, g_ids[3], NULL, NULL) == URSATZ_GUI_SUBJECT_OK &&
-              ursatz_gui_subject_link_piece(zed_id, g_ids[1], NULL, NULL) == URSATZ_GUI_SUBJECT_OK &&
-              ursatz_gui_subject_link_piece(zed_id, g_ids[3], NULL, NULL) == URSATZ_GUI_SUBJECT_OK &&
-              ursatz_gui_subject_link_piece(other_id, g_ids[2], NULL, NULL) == URSATZ_GUI_SUBJECT_OK,
+    check_quiet(ursatz_gui_subject_link_piece(anna_id, g_ids[0], NULL, NULL) == URSATZ_OK &&
+              ursatz_gui_subject_link_piece(anna_id, g_ids[3], NULL, NULL) == URSATZ_OK &&
+              ursatz_gui_subject_link_piece(zed_id, g_ids[1], NULL, NULL) == URSATZ_OK &&
+              ursatz_gui_subject_link_piece(zed_id, g_ids[3], NULL, NULL) == URSATZ_OK &&
+              ursatz_gui_subject_link_piece(other_id, g_ids[2], NULL, NULL) == URSATZ_OK,
           "link pieces to subjects");
 
     memset(&scope, 0, sizeof(scope));
@@ -179,26 +179,26 @@ static void test_scopes(void) {
     scope.subject_id = anna_id;
     expect_scope(&scope, (const char *const[]){g_ids[0], g_ids[3]}, 2, "subject pieces");
     scope.subject_id = "sub-missing";
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_NOT_FOUND, "unknown subject");
+    expect_error(&scope, URSATZ_ERR_NOT_FOUND, "unknown subject");
     scope.subject_id = NULL;
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_INVALID_SCOPE, "subject without an id");
+    expect_error(&scope, URSATZ_ERR_REQUEST, "subject without an id");
 
     cJSON *project = NULL;
     cJSON *quiet = NULL;
-    check_quiet(ursatz_gui_material_project_create("Score", "", &project) == URSATZ_GUI_MATERIAL_OK, "project");
-    check_quiet(ursatz_gui_material_project_create("Quiet", "", &quiet) == URSATZ_GUI_MATERIAL_OK, "quiet project");
+    check_quiet(ursatz_gui_material_project_create("Score", "", &project) == URSATZ_OK, "project");
+    check_quiet(ursatz_gui_material_project_create("Quiet", "", &quiet) == URSATZ_OK, "quiet project");
     const char *project_id = str(project, "id");
     cJSON *body_a = cJSON_Parse("{\"uses\":[],\"piece\":{\"structure\":null}}");
     cJSON *body_b = cJSON_Parse("{\"uses\":[],\"piece\":{\"structure\":null}}");
     cJSON *item_a = NULL;
     cJSON *item_b = NULL;
     check_quiet(ursatz_gui_material_item_create_noted("piece", "First", project_id, body_a, NULL, &item_a) ==
-                  URSATZ_GUI_MATERIAL_OK &&
+                  URSATZ_OK &&
               ursatz_gui_material_item_create_noted("piece", "Second", project_id, body_b, NULL, &item_b) ==
-                  URSATZ_GUI_MATERIAL_OK,
+                  URSATZ_OK,
           "items");
-    check_quiet(ursatz_gui_subject_link_item(anna_id, str(item_a, "id"), NULL, NULL) == URSATZ_GUI_SUBJECT_OK &&
-              ursatz_gui_subject_link_item(zed_id, str(item_b, "id"), NULL, NULL) == URSATZ_GUI_SUBJECT_OK,
+    check_quiet(ursatz_gui_subject_link_item(anna_id, str(item_a, "id"), NULL, NULL) == URSATZ_OK &&
+              ursatz_gui_subject_link_item(zed_id, str(item_b, "id"), NULL, NULL) == URSATZ_OK,
           "link items to subjects");
 
     /* Anna and Zed link items of the project; Other does not, so its piece stays out. */
@@ -207,11 +207,11 @@ static void test_scopes(void) {
     scope.project_id = project_id;
     expect_scope(&scope, (const char *const[]){g_ids[0], g_ids[1], g_ids[3]}, 3, "project pieces through subjects");
     scope.project_id = str(quiet, "id");
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_EMPTY, "project without linked items");
+    expect_error(&scope, URSATZ_ERR_UNSATISFIABLE, "project without linked items");
     scope.project_id = "prj-missing";
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_NOT_FOUND, "unknown project");
+    expect_error(&scope, URSATZ_ERR_NOT_FOUND, "unknown project");
     scope.project_id = NULL;
-    expect_error(&scope, URSATZ_GUI_LINK_ERR_INVALID_SCOPE, "project without an id");
+    expect_error(&scope, URSATZ_ERR_REQUEST, "project without an id");
 
     cJSON_Delete(body_a);
     cJSON_Delete(body_b);
@@ -227,15 +227,15 @@ static void test_scopes(void) {
 /* Starts a run and waits for it to end. Returns the run (caller frees), or NULL. */
 static cJSON *run_and_wait(const UrsatzGuiLinkScope *scope, char *out_id, size_t out_size) {
     char *id = NULL;
-    UrsatzGuiLinkResult started = ursatz_gui_link_run_start(scope, &id);
+    UrsatzStatus started = ursatz_gui_link_run_start(scope, &id);
     /* A run reports "done" a moment before its worker frees the slot, so on a busy machine the next start can
        still see the slot taken. Start again until it is free. */
-    for (int tries = 0; started == URSATZ_GUI_LINK_ERR_BUSY && tries < 200; tries++) {
+    for (int tries = 0; started == URSATZ_ERR_CONFLICT && tries < 200; tries++) {
         test_sleep_ms(50);
         started = ursatz_gui_link_run_start(scope, &id);
     }
-    check_quiet(started == URSATZ_GUI_LINK_OK && id, "run starts");
-    if (started != URSATZ_GUI_LINK_OK || !id) {
+    check_quiet(started == URSATZ_OK && id, "run starts");
+    if (started != URSATZ_OK || !id) {
         return NULL;
     }
     snprintf(out_id, out_size, "%s", id);
@@ -243,7 +243,7 @@ static cJSON *run_and_wait(const UrsatzGuiLinkScope *scope, char *out_id, size_t
     for (int waited = 0; waited < 600000; waited += 50) {
         cJSON_Delete(run);
         run = NULL;
-        if (ursatz_gui_link_run_get(id, &run) != URSATZ_GUI_LINK_OK) {
+        if (ursatz_gui_link_run_get(id, &run) != URSATZ_OK) {
             break;
         }
         if (strcmp(str(run, "status"), "running") != 0) {
@@ -285,11 +285,11 @@ static void strip_features(cJSON *value) {
 static void test_runs(void) {
     /* The fifth piece is gone but a collection still names it: a run skips it. */
     char *five_collection = NULL;
-    check_quiet(ursatz_gui_collection_create("Five", "", &five_collection) == URSATZ_GUI_COLLECTION_OK, "five collection");
+    check_quiet(ursatz_gui_collection_create("Five", "", &five_collection) == URSATZ_OK, "five collection");
     size_t added = 0;
     size_t already = 0;
     check_quiet(ursatz_gui_collection_add_pieces(five_collection, (const char *const[]){g_ids[0], g_ids[1], g_ids[2], g_ids[3], g_ids[4]}, 5,
-                                           &added, &already) == URSATZ_GUI_COLLECTION_OK &&
+                                           &added, &already) == URSATZ_OK &&
               added == 5,
           "fill the five collection");
     UrsatzGuiLinkScope all;
@@ -382,7 +382,7 @@ static void test_runs(void) {
 
     /* Listing, the links of a piece, and deleting. */
     cJSON *runs = NULL;
-    check_quiet(ursatz_gui_link_run_list(&runs) == URSATZ_GUI_LINK_OK && cJSON_GetArraySize(runs) == 4, "four runs are listed");
+    check_quiet(ursatz_gui_link_run_list(&runs) == URSATZ_OK && cJSON_GetArraySize(runs) == 4, "four runs are listed");
     check_quiet(strcmp(str(cJSON_GetArrayItem(runs, 0), "id"), fourth_id) == 0 &&
               strcmp(str(cJSON_GetArrayItem(runs, 3), "id"), first_id) == 0,
           "runs are listed newest first");
@@ -392,7 +392,7 @@ static void test_runs(void) {
     cJSON_Delete(runs);
 
     cJSON *links = NULL;
-    check_quiet(ursatz_gui_link_piece_links(g_ids[0], &links) == URSATZ_GUI_LINK_OK, "links of a");
+    check_quiet(ursatz_gui_link_piece_links(g_ids[0], &links) == URSATZ_OK, "links of a");
     bool from_second = false;
     bool from_fourth = false;
     bool from_first = false;
@@ -405,14 +405,14 @@ static void test_runs(void) {
     check_quiet(from_second && from_fourth && !from_first, "links come from the newest done run of each scope");
     check_quiet(cJSON_GetArraySize(links) >= 3, "a has links to b and d, and to b again in the other scope");
     cJSON_Delete(links);
-    check_quiet(ursatz_gui_link_piece_links(g_ids[2], &links) == URSATZ_GUI_LINK_OK && cJSON_GetArraySize(links) == 0,
+    check_quiet(ursatz_gui_link_piece_links(g_ids[2], &links) == URSATZ_OK && cJSON_GetArraySize(links) == 0,
           "c has no links");
     cJSON_Delete(links);
 
-    check_quiet(ursatz_gui_link_run_delete(first_id) == URSATZ_GUI_LINK_OK, "delete a run");
-    check_quiet(ursatz_gui_link_run_delete(first_id) == URSATZ_GUI_LINK_ERR_NOT_FOUND, "delete it again");
-    check_quiet(ursatz_gui_link_run_get(first_id, &links) == URSATZ_GUI_LINK_ERR_NOT_FOUND, "a deleted run is gone");
-    check_quiet(ursatz_gui_link_run_get("../x", &links) == URSATZ_GUI_LINK_ERR_NOT_FOUND, "a bad run id is not found");
+    check_quiet(ursatz_gui_link_run_delete(first_id) == URSATZ_OK, "delete a run");
+    check_quiet(ursatz_gui_link_run_delete(first_id) == URSATZ_ERR_NOT_FOUND, "delete it again");
+    check_quiet(ursatz_gui_link_run_get(first_id, &links) == URSATZ_ERR_NOT_FOUND, "a deleted run is gone");
+    check_quiet(ursatz_gui_link_run_get("../x", &links) == URSATZ_ERR_NOT_FOUND, "a bad run id is not found");
 
     free(five_collection);
 }
@@ -439,7 +439,7 @@ static void test_interrupted(void) {
     }
     check_quiet(ursatz_gui_link_service_init("links"), "init again");
     cJSON *run = NULL;
-    check_quiet(ursatz_gui_link_run_get("lnk-interrupted", &run) == URSATZ_GUI_LINK_OK, "the run is still there");
+    check_quiet(ursatz_gui_link_run_get("lnk-interrupted", &run) == URSATZ_OK, "the run is still there");
     check_quiet(strcmp(str(run, "status"), "failed") == 0 && strcmp(str(run, "message"), "interrupted") == 0,
           "an interrupted run reads failed");
     check_quiet(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(run, "finished_at")), "it has an end time");

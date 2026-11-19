@@ -1,4 +1,5 @@
 #include "collection_service.h"
+#include "last_error.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -83,21 +84,21 @@ void ursatz_gui_collection_destroy(UrsatzGuiCollection *collection) {
 
 
 /* Loads <dir>/<id>.json into collection (zeroed by the caller). */
-static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollection *collection) {
+static UrsatzStatus load_collection(const char *id, UrsatzGuiCollection *collection) {
     char path[PATH_BYTES];
     if (!collection_path(id, path, sizeof(path))) {
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     char *text = NULL;
     common_file_read(path, &text, NULL, NULL);
     if (!text) {
-        return common_path_exists(path) ? URSATZ_GUI_COLLECTION_ERR_FAILED : URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
+        return common_path_exists(path) ? ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed") : ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "collection not found");
     }
     cJSON *root = cJSON_Parse(text);
     free(text);
     if (!cJSON_IsObject(root)) {
         cJSON_Delete(root);
-        return URSATZ_GUI_COLLECTION_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
 
     /* The file name is the id; a copy of it inside the file is not trusted. */
@@ -133,15 +134,15 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
 
     if (!ok) {
         collection_destroy_contents(collection);
-        return URSATZ_GUI_COLLECTION_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    return URSATZ_GUI_COLLECTION_OK;
+    return URSATZ_OK;
 }
 
-static UrsatzGuiCollectionResult save_collection(const UrsatzGuiCollection *collection) {
+static UrsatzStatus save_collection(const UrsatzGuiCollection *collection) {
     char path[PATH_BYTES];
     if (!collection_path(collection->id, path, sizeof(path))) {
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
 
     cJSON *root = cJSON_CreateObject();
@@ -161,11 +162,11 @@ static UrsatzGuiCollectionResult save_collection(const UrsatzGuiCollection *coll
     char *text = ok ? cJSON_Print(root) : NULL;
     cJSON_Delete(root);
     if (!text) {
-        return URSATZ_GUI_COLLECTION_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     ok = (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
-    return ok ? URSATZ_GUI_COLLECTION_OK : URSATZ_GUI_COLLECTION_ERR_FAILED;
+    return ok ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
 }
 
 static int piece_index(const UrsatzGuiCollection *collection, const char *piece_id) {
@@ -203,27 +204,27 @@ static void touch(UrsatzGuiCollection *collection) {
 /* --- names and descriptions ---------------------------------------------- */
 
 /* A collection name: normalized like a piece metadata value, never empty. */
-static UrsatzGuiCollectionResult normalize_name(const char *text, char **out) {
+static UrsatzStatus normalize_name(const char *text, char **out) {
     bool too_long = false;
     char *name = ursatz_gui_meta_normalize_value(text ? text : "", &too_long);
     if (!name) {
-        return too_long ? URSATZ_GUI_COLLECTION_ERR_INVALID_NAME : URSATZ_GUI_COLLECTION_ERR_ALLOC;
+        return too_long ? ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name") : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     if (name[0] == '\0') {
         free(name);
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_NAME;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name");
     }
     *out = name;
-    return URSATZ_GUI_COLLECTION_OK;
+    return URSATZ_OK;
 }
 
 /* A description: trimmed, whitespace collapsed to one space, control
  * characters dropped, at most DESCRIPTION_MAX_BYTES; "" means none. */
-static UrsatzGuiCollectionResult normalize_description(const char *text, char **out) {
+static UrsatzStatus normalize_description(const char *text, char **out) {
     size_t length = text ? strlen(text) : 0;
     char *description = malloc(length + 1);
     if (!description) {
-        return URSATZ_GUI_COLLECTION_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     size_t used = 0;
     bool pending_space = false;
@@ -242,10 +243,10 @@ static UrsatzGuiCollectionResult normalize_description(const char *text, char **
     description[used] = '\0';
     if (used > DESCRIPTION_MAX_BYTES) {
         free(description);
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_DESCRIPTION;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid description");
     }
     *out = description;
-    return URSATZ_GUI_COLLECTION_OK;
+    return URSATZ_OK;
 }
 
 /* --- directory listing --------------------------------------------------- */
@@ -307,22 +308,22 @@ void ursatz_gui_collection_service_shutdown(void) {
 /* --- operations ---------------------------------------------------------- */
 
 /* Builds and stores a new collection; the lock is held. */
-static UrsatzGuiCollectionResult create_locked(const char *id, const char *name, const char *description) {
+static UrsatzStatus create_locked(const char *id, const char *name, const char *description) {
     char path[PATH_BYTES];
     if (!collection_path(id, path, sizeof(path))) {
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     if (common_path_exists(path)) {
-        return URSATZ_GUI_COLLECTION_ERR_ALREADY_EXISTS;
+        return ursatz_gui_fail(URSATZ_ERR_CONFLICT, "collection already exists");
     }
 
     UrsatzGuiCollection collection;
     memset(&collection, 0, sizeof(collection));
-    UrsatzGuiCollectionResult result = normalize_name(name, &collection.name);
-    if (result == URSATZ_GUI_COLLECTION_OK) {
+    UrsatzStatus result = normalize_name(name, &collection.name);
+    if (result == URSATZ_OK) {
         result = normalize_description(description, &collection.description);
     }
-    if (result != URSATZ_GUI_COLLECTION_OK) {
+    if (result != URSATZ_OK) {
         collection_destroy_contents(&collection);
         return result;
     }
@@ -334,39 +335,39 @@ static UrsatzGuiCollectionResult create_locked(const char *id, const char *name,
     collection.updated_at = common_strdup(now);
     if (!collection.id || !collection.created_at || !collection.updated_at) {
         collection_destroy_contents(&collection);
-        return URSATZ_GUI_COLLECTION_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     result = save_collection(&collection);
     collection_destroy_contents(&collection);
     return result;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_create_with_id(const char *id, const char *name,
+UrsatzStatus ursatz_gui_collection_create_with_id(const char *id, const char *name,
                                                                 const char *description) {
     if (!ursatz_gui_collection_is_valid_id(id)) {
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     LOCK();
-    UrsatzGuiCollectionResult result =
-        g_ready ? create_locked(id, name, description) : URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
+    UrsatzStatus result =
+        g_ready ? create_locked(id, name, description) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     UNLOCK();
     return result;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_create(const char *name, const char *description, char **out_id) {
+UrsatzStatus ursatz_gui_collection_create(const char *name, const char *description, char **out_id) {
     LOCK();
-    UrsatzGuiCollectionResult result = URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
+    UrsatzStatus result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     if (g_ready) {
-        result = URSATZ_GUI_COLLECTION_ERR_ALREADY_EXISTS;
-        for (int attempt = 0; attempt < ID_MAX_TRIES && result == URSATZ_GUI_COLLECTION_ERR_ALREADY_EXISTS;
+        result = ursatz_gui_fail(URSATZ_ERR_CONFLICT, "collection already exists");
+        for (int attempt = 0; attempt < ID_MAX_TRIES && result == URSATZ_ERR_CONFLICT;
              attempt++) {
             char *id = ursatz_gui_new_id("col");
             if (!id) {
-                result = URSATZ_GUI_COLLECTION_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 break;
             }
             result = create_locked(id, name, description);
-            if (result == URSATZ_GUI_COLLECTION_OK) {
+            if (result == URSATZ_OK) {
                 *out_id = id;
             } else {
                 free(id);
@@ -403,32 +404,32 @@ void ursatz_gui_collection_free_entries(UrsatzGuiCollectionEntry *entries, size_
     free(entries);
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_list(UrsatzGuiCollectionEntry **out_entries, size_t *out_count) {
+UrsatzStatus ursatz_gui_collection_list(UrsatzGuiCollectionEntry **out_entries, size_t *out_count) {
     *out_entries = NULL;
     *out_count = 0;
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     }
 
     CommonNames ids = {0};
     if (!list_collection_ids(&ids)) {
         UNLOCK();
-        return URSATZ_GUI_COLLECTION_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
 
     UrsatzGuiCollectionEntry *entries = ids.count > 0 ? calloc(ids.count, sizeof(*entries)) : NULL;
-    UrsatzGuiCollectionResult result = (ids.count > 0 && !entries) ? URSATZ_GUI_COLLECTION_ERR_ALLOC
-                                                                   : URSATZ_GUI_COLLECTION_OK;
+    UrsatzStatus result = (ids.count > 0 && !entries) ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory")
+                                                                   : URSATZ_OK;
     size_t count = 0;
-    for (size_t i = 0; result == URSATZ_GUI_COLLECTION_OK && i < ids.count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < ids.count; i++) {
         UrsatzGuiCollection collection;
         memset(&collection, 0, sizeof(collection));
-        UrsatzGuiCollectionResult loaded = load_collection(ids.items[i], &collection);
-        if (loaded == URSATZ_GUI_COLLECTION_ERR_ALLOC) {
+        UrsatzStatus loaded = load_collection(ids.items[i], &collection);
+        if (loaded == URSATZ_ERR_ALLOC) {
             result = loaded;
-        } else if (loaded == URSATZ_GUI_COLLECTION_OK) {
+        } else if (loaded == URSATZ_OK) {
             /* The entry takes over the loaded strings. */
             entries[count].id = collection.id;
             entries[count].name = collection.name;
@@ -443,18 +444,18 @@ UrsatzGuiCollectionResult ursatz_gui_collection_list(UrsatzGuiCollectionEntry **
     UNLOCK();
     common_names_free(&ids);
 
-    if (result != URSATZ_GUI_COLLECTION_OK) {
+    if (result != URSATZ_OK) {
         ursatz_gui_collection_free_entries(entries, count);
         return result;
     }
     if (count == 0) {
         free(entries);
-        return URSATZ_GUI_COLLECTION_OK;
+        return URSATZ_OK;
     }
     qsort(entries, count, sizeof(*entries), compare_entries);
     *out_entries = entries;
     *out_count = count;
-    return URSATZ_GUI_COLLECTION_OK;
+    return URSATZ_OK;
 }
 
 bool ursatz_gui_collection_exists(const char *id) {
@@ -465,34 +466,34 @@ bool ursatz_gui_collection_exists(const char *id) {
     return exists;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_get(const char *id, UrsatzGuiCollection **out_collection) {
+UrsatzStatus ursatz_gui_collection_get(const char *id, UrsatzGuiCollection **out_collection) {
     UrsatzGuiCollection *collection = calloc(1, sizeof(*collection));
     if (!collection) {
-        return URSATZ_GUI_COLLECTION_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     LOCK();
-    UrsatzGuiCollectionResult result =
-        g_ready ? load_collection(id, collection) : URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
+    UrsatzStatus result =
+        g_ready ? load_collection(id, collection) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     UNLOCK();
-    if (result != URSATZ_GUI_COLLECTION_OK) {
+    if (result != URSATZ_OK) {
         free(collection);
         return result;
     }
     *out_collection = collection;
-    return URSATZ_GUI_COLLECTION_OK;
+    return URSATZ_OK;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_update(const char *id, const char *name, const char *description) {
+UrsatzStatus ursatz_gui_collection_update(const char *id, const char *name, const char *description) {
     char *new_name = NULL;
     char *new_description = NULL;
-    UrsatzGuiCollectionResult result = URSATZ_GUI_COLLECTION_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (name) {
         result = normalize_name(name, &new_name);
     }
-    if (result == URSATZ_GUI_COLLECTION_OK && description) {
+    if (result == URSATZ_OK && description) {
         result = normalize_description(description, &new_description);
     }
-    if (result != URSATZ_GUI_COLLECTION_OK) {
+    if (result != URSATZ_OK) {
         free(new_name);
         free(new_description);
         return result;
@@ -501,8 +502,8 @@ UrsatzGuiCollectionResult ursatz_gui_collection_update(const char *id, const cha
     LOCK();
     UrsatzGuiCollection collection;
     memset(&collection, 0, sizeof(collection));
-    result = g_ready ? load_collection(id, &collection) : URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
-    if (result == URSATZ_GUI_COLLECTION_OK) {
+    result = g_ready ? load_collection(id, &collection) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
+    if (result == URSATZ_OK) {
         if (new_name) {
             free(collection.name);
             collection.name = new_name;
@@ -523,53 +524,53 @@ UrsatzGuiCollectionResult ursatz_gui_collection_update(const char *id, const cha
     return result;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_delete(const char *id) {
+UrsatzStatus ursatz_gui_collection_delete(const char *id) {
     char path[PATH_BYTES];
     LOCK();
-    UrsatzGuiCollectionResult result;
+    UrsatzStatus result;
     if (!g_ready) {
-        result = URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     } else if (!collection_path(id, path, sizeof(path))) {
-        result = URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     } else if (!common_path_exists(path)) {
-        result = URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "collection not found");
     } else {
-        result = remove(path) == 0 ? URSATZ_GUI_COLLECTION_OK : URSATZ_GUI_COLLECTION_ERR_FAILED;
+        result = remove(path) == 0 ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
     UNLOCK();
     return result;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_add_pieces(const char *id, const char *const *piece_ids, size_t count,
+UrsatzStatus ursatz_gui_collection_add_pieces(const char *id, const char *const *piece_ids, size_t count,
                                                             size_t *added, size_t *already) {
     for (size_t i = 0; i < count; i++) {
         if (!ursatz_gui_collection_is_valid_id(piece_ids[i])) {
-            return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+            return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
         }
     }
 
     LOCK();
     UrsatzGuiCollection collection;
     memset(&collection, 0, sizeof(collection));
-    UrsatzGuiCollectionResult result =
-        g_ready ? load_collection(id, &collection) : URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
-    if (result == URSATZ_GUI_COLLECTION_OK) {
+    UrsatzStatus result =
+        g_ready ? load_collection(id, &collection) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
+    if (result == URSATZ_OK) {
         size_t added_count = 0;
         size_t already_count = 0;
-        for (size_t i = 0; i < count && result == URSATZ_GUI_COLLECTION_OK; i++) {
+        for (size_t i = 0; i < count && result == URSATZ_OK; i++) {
             if (piece_index(&collection, piece_ids[i]) >= 0) {
                 already_count++;
             } else if (append_piece(&collection, piece_ids[i])) {
                 added_count++;
             } else {
-                result = URSATZ_GUI_COLLECTION_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
-        if (result == URSATZ_GUI_COLLECTION_OK && added_count > 0) {
+        if (result == URSATZ_OK && added_count > 0) {
             touch(&collection);
             result = save_collection(&collection);
         }
-        if (result == URSATZ_GUI_COLLECTION_OK) {
+        if (result == URSATZ_OK) {
             *added = added_count;
             *already = already_count;
         }
@@ -592,21 +593,21 @@ static bool drop_piece(UrsatzGuiCollection *collection, const char *piece_id) {
     return true;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_remove_piece(const char *id, const char *piece_id) {
+UrsatzStatus ursatz_gui_collection_remove_piece(const char *id, const char *piece_id) {
     if (!ursatz_gui_collection_is_valid_id(piece_id)) {
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     LOCK();
     UrsatzGuiCollection collection;
     memset(&collection, 0, sizeof(collection));
-    UrsatzGuiCollectionResult result =
-        g_ready ? load_collection(id, &collection) : URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
-    if (result == URSATZ_GUI_COLLECTION_OK) {
+    UrsatzStatus result =
+        g_ready ? load_collection(id, &collection) : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
+    if (result == URSATZ_OK) {
         if (drop_piece(&collection, piece_id)) {
             touch(&collection);
             result = save_collection(&collection);
         } else {
-            result = URSATZ_GUI_COLLECTION_ERR_NOT_MEMBER;
+            result = ursatz_gui_fail(URSATZ_ERR_REQUEST, "piece is not in this collection");
         }
         collection_destroy_contents(&collection);
     }
@@ -614,36 +615,36 @@ UrsatzGuiCollectionResult ursatz_gui_collection_remove_piece(const char *id, con
     return result;
 }
 
-UrsatzGuiCollectionResult ursatz_gui_collection_remove_piece_everywhere(const char *piece_id) {
+UrsatzStatus ursatz_gui_collection_remove_piece_everywhere(const char *piece_id) {
     if (!ursatz_gui_collection_is_valid_id(piece_id)) {
-        return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     LOCK();
     if (!g_ready) {
         UNLOCK();
-        return URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     }
     CommonNames ids = {0};
     if (!list_collection_ids(&ids)) {
         UNLOCK();
-        return URSATZ_GUI_COLLECTION_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
 
     /* Keep going after a failure so one bad file does not leave the piece
      * in every collection after it. */
-    UrsatzGuiCollectionResult result = URSATZ_GUI_COLLECTION_OK;
+    UrsatzStatus result = URSATZ_OK;
     for (size_t i = 0; i < ids.count; i++) {
         UrsatzGuiCollection collection;
         memset(&collection, 0, sizeof(collection));
-        UrsatzGuiCollectionResult loaded = load_collection(ids.items[i], &collection);
-        if (loaded != URSATZ_GUI_COLLECTION_OK) {
-            result = URSATZ_GUI_COLLECTION_ERR_FAILED;
+        UrsatzStatus loaded = load_collection(ids.items[i], &collection);
+        if (loaded != URSATZ_OK) {
+            result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
             continue;
         }
         if (drop_piece(&collection, piece_id)) {
             touch(&collection);
-            if (save_collection(&collection) != URSATZ_GUI_COLLECTION_OK) {
-                result = URSATZ_GUI_COLLECTION_ERR_FAILED;
+            if (save_collection(&collection) != URSATZ_OK) {
+                result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
             }
         }
         collection_destroy_contents(&collection);

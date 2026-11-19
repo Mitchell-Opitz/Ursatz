@@ -186,12 +186,6 @@ size_t common_trim(char *text) {
     return end - start;
 }
 
-void common_copy_text(char *out, size_t size, const char *text) {
-    if (out && size > 0) {
-        snprintf(out, size, "%s", text);
-    }
-}
-
 int common_compare_ci(const char *left, const char *right) {
     while (*left && *right) {
         int a = tolower((unsigned char)*left);

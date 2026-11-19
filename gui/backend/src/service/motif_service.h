@@ -39,13 +39,10 @@ bool ursatz_gui_motif_validate(const char *kind, const cJSON *request, UrsatzGui
  * features and role); basic_body is the version body of the lineage root or NULL. chain (an object {"steps": [...]}) is
  * optional (random chains when NULL); seed negative means the clock. job reports progress and asks for cancel. On
  * success returns the Composer's document (caller-owned); otherwise NULL with *status (400 when the Composer refuses
- * the input, 499 for a cancel, else 500) and message set. */
+ * the input, 499 for a cancel, else 500) and error set (its path names the request member at fault). */
 cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions,
                                      const char *distance, bool each_op, const cJSON *chain, int count, double seed,
-                                     const UrsatzJob *job, int *status, char *message, size_t message_size);
-
-/* The request member at fault of the last refused ursatz_gui_motif_run_variants on this thread, "" when none. */
-const char *ursatz_gui_motif_variants_path(void);
+                                     const UrsatzJob *job, int *status, UrsatzError *error);
 
 /* Request building. */
 

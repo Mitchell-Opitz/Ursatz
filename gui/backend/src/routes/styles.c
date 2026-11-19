@@ -229,32 +229,15 @@ static cJSON *style_json(const UrsatzGuiStyle *style) {
   return object;
 }
 
-static int send_style_failure(struct mg_connection *conn, UrsatzGuiStyleResult result) {
-  switch (result) {
-    case URSATZ_GUI_STYLE_ERR_INVALID_NAME:
-      return ursatz_gui_send_failure(conn, 400, "invalid name");
-    case URSATZ_GUI_STYLE_ERR_INVALID_SOURCE:
-      return ursatz_gui_send_failure(conn, 400, "invalid source");
-    case URSATZ_GUI_STYLE_ERR_NOT_FOUND:
-      return ursatz_gui_send_failure(conn, 404, "style not found");
-    case URSATZ_GUI_STYLE_ERR_NO_PIECES:
-      return ursatz_gui_send_failure(conn, 422, "no analyzable pieces");
-    case URSATZ_GUI_STYLE_ERR_SOURCE_MISSING:
-      return ursatz_gui_send_failure(conn, 422, "source not found");
-    case URSATZ_GUI_STYLE_ERR_ALLOC:
-      return ursatz_gui_send_failure(conn, 500, "out of memory");
-    case URSATZ_GUI_STYLE_ERR_FAILED:
-    case URSATZ_GUI_STYLE_OK:
-    default:
-      return ursatz_gui_send_failure(conn, 500, "style operation failed");
-  }
+static int send_style_failure(struct mg_connection *conn, UrsatzStatus result) {
+  return ursatz_gui_send_service_failure(conn, result, "style operation failed");
 }
 
 /* {"ok":true,"style":{list entry},"skipped":[...]} for the stored style id. */
 static int send_built_style(struct mg_connection *conn, const char *id) {
   UrsatzGuiStyle *style = NULL;
-  UrsatzGuiStyleResult result = ursatz_gui_style_get(id, &style);
-  if (result != URSATZ_GUI_STYLE_OK) {
+  UrsatzStatus result = ursatz_gui_style_get(id, &style);
+  if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   cJSON *object = cJSON_CreateObject();
@@ -358,18 +341,18 @@ static int handle_build_style(struct mg_connection *conn) {
   }
 
   char *id = NULL;
-  UrsatzGuiStyleResult result =
+  UrsatzStatus result =
       ursatz_gui_style_build(name_item ? name_item->valuestring : NULL, &source, &id, NULL, NULL);
   free(ids);
   ursatz_gui_style_brief_free(&brief);
   cJSON_Delete(body);
-  if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
+  if (result == URSATZ_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
     return ursatz_gui_send_failure(conn, 404, "collection not found");
   }
-  if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
+  if (result == URSATZ_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
     return ursatz_gui_send_failure(conn, 404, "brief source not found");
   }
-  if (result != URSATZ_GUI_STYLE_OK) {
+  if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   int status = send_built_style(conn, id);
@@ -380,8 +363,8 @@ static int handle_build_style(struct mg_connection *conn) {
 static int handle_list_styles(struct mg_connection *conn) {
   UrsatzGuiStyle *styles = NULL;
   size_t count = 0;
-  UrsatzGuiStyleResult result = ursatz_gui_style_list(&styles, &count);
-  if (result != URSATZ_GUI_STYLE_OK) {
+  UrsatzStatus result = ursatz_gui_style_list(&styles, &count);
+  if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
 
@@ -405,8 +388,8 @@ static int handle_list_styles(struct mg_connection *conn) {
 
 static int handle_get_style(struct mg_connection *conn, const char *id) {
   UrsatzGuiStyle *style = NULL;
-  UrsatzGuiStyleResult result = ursatz_gui_style_get(id, &style);
-  if (result != URSATZ_GUI_STYLE_OK) {
+  UrsatzStatus result = ursatz_gui_style_get(id, &style);
+  if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   cJSON *object = cJSON_CreateObject();
@@ -422,16 +405,16 @@ static int handle_get_style(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
-  UrsatzGuiStyleResult result = ursatz_gui_style_rebuild(id);
-  if (result != URSATZ_GUI_STYLE_OK) {
+  UrsatzStatus result = ursatz_gui_style_rebuild(id);
+  if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   return send_built_style(conn, id);
 }
 
 static int handle_delete_style(struct mg_connection *conn, const char *id) {
-  UrsatzGuiStyleResult result = ursatz_gui_style_delete(id);
-  if (result != URSATZ_GUI_STYLE_OK) {
+  UrsatzStatus result = ursatz_gui_style_delete(id);
+  if (result != URSATZ_OK) {
     return send_style_failure(conn, result);
   }
   ursatz_gui_send_json(conn, "{\"ok\":true}");

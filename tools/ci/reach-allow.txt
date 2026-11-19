@@ -113,5 +113,4 @@ library/analysis/harmony/key_regions.c common_practice_key_region_analysis_key  
 common/files.c common_file_append_sync  # no app calls it until the journal of P63 B8; its test calls it
 common/json.c common_json_bool  # no app reads a boolean member through it until the formats of P63 B7; its test calls it
 common/json.c common_json_rational_text  # no app writes an "n/d" text through it until P63 B15 (request bodies); its test calls it
-common/status.c ursatz_status_name  # no app names a status until the envelope's code of P63 B12; its test calls it
 common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure

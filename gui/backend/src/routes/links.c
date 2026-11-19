@@ -110,23 +110,8 @@ static bool add_run_titles(cJSON *run) {
 
 /* --- handlers ------------------------------------------------------------- */
 
-static int send_link_failure(struct mg_connection *conn, UrsatzGuiLinkResult result) {
-  switch (result) {
-    case URSATZ_GUI_LINK_ERR_INVALID_SCOPE:
-      return ursatz_gui_send_failure(conn, 400, "invalid scope");
-    case URSATZ_GUI_LINK_ERR_NOT_FOUND:
-      return ursatz_gui_send_failure(conn, 404, "not found");
-    case URSATZ_GUI_LINK_ERR_EMPTY:
-      return ursatz_gui_send_failure(conn, 422, "the scope names no pieces");
-    case URSATZ_GUI_LINK_ERR_BUSY:
-      return ursatz_gui_send_failure(conn, 409, "a run is in progress");
-    case URSATZ_GUI_LINK_ERR_ALLOC:
-      return ursatz_gui_send_failure(conn, 500, "out of memory");
-    case URSATZ_GUI_LINK_ERR_FAILED:
-    case URSATZ_GUI_LINK_OK:
-    default:
-      return ursatz_gui_send_failure(conn, 500, "link operation failed");
-  }
+static int send_link_failure(struct mg_connection *conn, UrsatzStatus result) {
+  return ursatz_gui_send_service_failure(conn, result, "link operation failed");
 }
 
 /* {"ok":true,<key>:value}; takes value. */
@@ -151,15 +136,15 @@ static int handle_start_run(struct mg_connection *conn) {
     return ursatz_gui_send_failure(conn, 400, "invalid scope");
   }
   char *id = NULL;
-  UrsatzGuiLinkResult result = ursatz_gui_link_run_start(&scope, &id);
+  UrsatzStatus result = ursatz_gui_link_run_start(&scope, &id);
   cJSON_Delete(body);
-  if (result != URSATZ_GUI_LINK_OK) {
+  if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
   cJSON *run = NULL;
   result = ursatz_gui_link_run_get(id, &run);
   free(id);
-  if (result != URSATZ_GUI_LINK_OK) {
+  if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
   return send_ok_with(conn, 202, "run", run);
@@ -167,8 +152,8 @@ static int handle_start_run(struct mg_connection *conn) {
 
 static int handle_list_runs(struct mg_connection *conn) {
   cJSON *runs = NULL;
-  UrsatzGuiLinkResult result = ursatz_gui_link_run_list(&runs);
-  if (result != URSATZ_GUI_LINK_OK) {
+  UrsatzStatus result = ursatz_gui_link_run_list(&runs);
+  if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
   return send_ok_with(conn, 200, "runs", runs);
@@ -176,9 +161,9 @@ static int handle_list_runs(struct mg_connection *conn) {
 
 static int handle_get_run(struct mg_connection *conn, const char *id) {
   cJSON *run = NULL;
-  UrsatzGuiLinkResult result = ursatz_gui_link_run_get(id, &run);
-  if (result != URSATZ_GUI_LINK_OK) {
-    return result == URSATZ_GUI_LINK_ERR_NOT_FOUND ? ursatz_gui_send_failure(conn, 404, "run not found")
+  UrsatzStatus result = ursatz_gui_link_run_get(id, &run);
+  if (result != URSATZ_OK) {
+    return result == URSATZ_ERR_NOT_FOUND ? ursatz_gui_send_failure(conn, 404, "run not found")
                                                     : send_link_failure(conn, result);
   }
   if (!add_run_titles(run)) {
@@ -189,11 +174,11 @@ static int handle_get_run(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_run(struct mg_connection *conn, const char *id) {
-  UrsatzGuiLinkResult result = ursatz_gui_link_run_delete(id);
-  if (result == URSATZ_GUI_LINK_ERR_NOT_FOUND) {
+  UrsatzStatus result = ursatz_gui_link_run_delete(id);
+  if (result == URSATZ_ERR_NOT_FOUND) {
     return ursatz_gui_send_failure(conn, 404, "run not found");
   }
-  if (result != URSATZ_GUI_LINK_OK) {
+  if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
   ursatz_gui_send_json(conn, "{\"ok\":true}");
@@ -202,8 +187,8 @@ static int handle_delete_run(struct mg_connection *conn, const char *id) {
 
 static int handle_piece_links(struct mg_connection *conn, const char *piece_id) {
   cJSON *links = NULL;
-  UrsatzGuiLinkResult result = ursatz_gui_link_piece_links(piece_id, &links);
-  if (result != URSATZ_GUI_LINK_OK) {
+  UrsatzStatus result = ursatz_gui_link_piece_links(piece_id, &links);
+  if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
   cJSON *entry = NULL;

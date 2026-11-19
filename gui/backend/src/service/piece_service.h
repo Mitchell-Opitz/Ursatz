@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_PIECE_SERVICE_H
 #define URSATZ_GUI_PIECE_SERVICE_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -17,7 +19,7 @@
  * of the plan of each theme version a section uses, so the version keeps its own. The Composer runs in process through the
  * Composer API (composer_api_piece, composer_api_piece_variations), on a job worker.
  *
- * The results are the theme service's (UrsatzGuiThemeResult).
+ * The results are the theme service's (UrsatzStatus).
  */
 
 /*
@@ -35,9 +37,8 @@
  * note "composed seed <n>". On any other result no version is written and no folder is left; message (when not NULL)
  * receives a one-line reason.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                                  const UrsatzJob *job, cJSON **out_item, char *message,
-                                                  size_t message_size);
+UrsatzStatus ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
+                                                  const UrsatzJob *job, cJSON **out_item, UrsatzError *error);
 
 /*
  * The piece request of the Composer for the body of a piece version, to be checked with composer_api_validate and not
@@ -45,8 +46,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, lon
  * (and *out_request NULL) when the body cannot be composed yet; message then says why ("" when the brief's style is all
  * that is missing). On OK with *complete, *out_request is caller-owned.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete, cJSON **out_request, char *message,
-                                               size_t message_size);
+UrsatzStatus ursatz_gui_piece_validate(const cJSON *body, bool *complete, cJSON **out_request, UrsatzError *error);
 
 /*
  * Writes section section_id of version number of piece item id again (R-173): `piece --from <version>/plan.json
@@ -61,9 +61,9 @@ UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete
  * version's body is the source's with result replaced, the note "regenerated <section id> <lane> seed <n>" (lane "all"
  * without one). On any other result no version is written and no folder is left; message receives a one-line reason.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
+UrsatzStatus ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
                                                  bool has_seed, long long seed, const UrsatzJob *job, cJSON **out_item,
-                                                 char *message, size_t message_size);
+                                                 UrsatzError *error);
 
 /*
  * Makes count (1 to 8) variations of a section of version number: `piece --from ... --variations <section id> --lane
@@ -74,9 +74,9 @@ UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, co
  * On OK, *out_result is {set, variations: [{index, seed, score, seam, heard}]} (heard is the cadence heard at the end
  * of the section), caller-owned.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
+UrsatzStatus ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
                                                  int count, bool has_seed, long long seed, const UrsatzJob *job,
-                                                 cJSON **out_result, char *message, size_t message_size);
+                                                 cJSON **out_result, UrsatzError *error);
 
 /*
  * Makes variation index of set `set` (made from version number) the next version: its loop plan is the new version's,
@@ -84,21 +84,21 @@ UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, co
  * is the source's with result replaced, the note "chose variation <index> seed <n>". NOT_FOUND when the set or the
  * variation is not there; otherwise as ursatz_gui_piece_regenerate.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, const UrsatzJob *job,
-                                             cJSON **out_item, char *message, size_t message_size);
+UrsatzStatus ursatz_gui_piece_choose(const char *id, int version, int set, int index, const UrsatzJob *job,
+                                             cJSON **out_item, UrsatzError *error);
 
 /*
  * One file of a variations set: result.json or variation-<i>.json, .mid, .musicxml. NOT_FOUND for any other name or a
  * file that is not there. *out_data is caller-owned (free); *out_type is a static content type.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
+UrsatzStatus ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
                                                      unsigned char **out_data, size_t *out_size, const char **out_type);
 
 /*
  * The path of variation-<i>.mid of a variations set, after the checks ursatz_gui_piece_variation_file makes. NOT_FOUND
  * for any other name, an absent item, version, set or file.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_variation_midi_path(const char *id, int version, int set, const char *name,
+UrsatzStatus ursatz_gui_piece_variation_midi_path(const char *id, int version, int set, const char *name,
                                                           char *out, size_t out_size);
 
 #endif /* URSATZ_GUI_PIECE_SERVICE_H */

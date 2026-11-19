@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_COMPOSE_COMMON_H
 #define URSATZ_GUI_COMPOSE_COMMON_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -30,12 +32,12 @@ typedef struct {
     const char *member;         /* the body's member and the item type: "theme" or "piece" */
     const char *not_kind_text;  /* the reason when the item has another type */
     /* True when the member can be composed; else it says why in message. */
-    bool (*composable)(const cJSON *member, bool has_brief, char *message, size_t message_size);
+    bool (*composable)(const cJSON *member, bool has_brief, UrsatzError *error);
     /* Builds the Composer request from the body; style_path is the brief's style file or NULL. */
-    UrsatzGuiThemeResult (*build_request)(const cJSON *body, const char *dir, const char *style_path, cJSON **out_request,
-                                          char *message, size_t message_size);
+    UrsatzStatus (*build_request)(const cJSON *body, const char *dir, const char *style_path, cJSON **out_request,
+                                          UrsatzError *error);
     /* Runs the Composer API on run->request and writes the version's files into run->stage. */
-    UrsatzGuiThemeResult (*run)(const UrsatzGuiComposeRun *run, cJSON **out_summary, char *message, size_t message_size);
+    UrsatzStatus (*run)(const UrsatzGuiComposeRun *run, cJSON **out_summary, UrsatzError *error);
     /* The note of the new version. */
     void (*note)(const cJSON *summary, char *note, size_t note_size);
     /* The body of the new version; takes ownership of summary and brief_summary. */
@@ -49,9 +51,9 @@ typedef struct {
  * added a version meanwhile, so composes of one item may run at once). On OK *out_item is the new item.json (caller
  * frees); otherwise no folder is left.
  */
-UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, const char *id, bool has_seed,
+UrsatzStatus ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, const char *id, bool has_seed,
                                              long long seed, bool update_uses, const UrsatzJob *job,
-                                             cJSON **out_item, char *message, size_t message_size);
+                                             cJSON **out_item, UrsatzError *error);
 
 #define URSATZ_GUI_COMPOSE_PATH_BYTES 800
 
@@ -64,8 +66,7 @@ typedef struct {
 } UrsatzGuiComposeStage;
 
 /* Makes the staging folder for version number of item id. */
-UrsatzGuiThemeResult ursatz_gui_compose_stage_make(const char *id, int number, UrsatzGuiComposeStage *stage, char *message,
-                                                   size_t message_size);
+UrsatzStatus ursatz_gui_compose_stage_make(const char *id, int number, UrsatzGuiComposeStage *stage, UrsatzError *error);
 
 /* Moves the staging folder to the folder of the version item (an item.json) was written with. */
 void ursatz_gui_compose_stage_finish(const char *id, const cJSON *item, const UrsatzGuiComposeStage *stage);
@@ -73,27 +74,18 @@ void ursatz_gui_compose_stage_finish(const char *id, const cJSON *item, const Ur
 /* Removes the staging folder and what it holds. */
 void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage);
 
-/* Maps a Composer API status to the result of the services: the request refused is INVALID, nothing satisfies it
- * UNPROCESSABLE, a cancel CANCELLED, the rest FAILED (ALLOC for memory). The refusal text goes to message. */
-UrsatzGuiThemeResult ursatz_gui_compose_failure(UrsatzStatus status, const ComposerResponse *response, char *message,
-                                                size_t message_size);
-
-/* The request member at fault (UrsatzError.path) of the last ursatz_gui_compose_failure on this thread, "" when it had
- * none. A job reads it after its service call, to answer with "path" as the synchronous routes do. */
-const char *ursatz_gui_compose_failure_path(void);
-
-/* Forgets that path; a job calls it before its service call. */
-void ursatz_gui_compose_failure_path_clear(void);
+/* The Composer's refusal as the service's: the error (message and the request member at fault in path) is copied to *error, and
+ * the status is the Composer's (REQUEST, UNSATISFIABLE, CANCELLED, ALLOC), any other being INTERNAL. */
+UrsatzStatus ursatz_gui_compose_failure(UrsatzStatus status, const ComposerResponse *response, UrsatzError *error);
 
 /* Writes the plan object as the library writes plan files (composer_api_export with plan_file) to path. */
-UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char *path, char *message,
-                                                   size_t message_size);
+UrsatzStatus ursatz_gui_compose_write_plan(const cJSON *plan, const char *path, UrsatzError *error);
 
 /* Renders plan once through composer_api_export: midi and/or musicxml, tempo qpm (0 for none), loop markers (or NULL).
  * On OK response holds the files; the caller destroys it. */
-UrsatzGuiThemeResult ursatz_gui_compose_export(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml,
+UrsatzStatus ursatz_gui_compose_export(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml,
                                                const cJSON *loop, const UrsatzJob *job, ComposerResponse *response,
-                                               char *message, size_t message_size);
+                                               UrsatzError *error);
 
 /* Replaces the prefix from by to in every string of tree that starts with it. */
 void ursatz_gui_compose_rebase(cJSON *tree, const char *from, const char *to);

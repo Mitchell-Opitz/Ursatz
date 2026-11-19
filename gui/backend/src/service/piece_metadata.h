@@ -1,10 +1,13 @@
 #ifndef URSATZ_GUI_PIECE_METADATA_H
 #define URSATZ_GUI_PIECE_METADATA_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
 #include "analysis_service.h"
+#include "last_error.h"
 
 /*
  * Piece metadata rules: normalizing composer, source and tag text, the tag
@@ -16,12 +19,6 @@
 #define URSATZ_GUI_META_MAX_VALUE_BYTES 120
 #define URSATZ_GUI_META_MAX_TAG_BYTES 48
 #define URSATZ_GUI_META_MAX_TAGS 32
-
-typedef enum {
-    URSATZ_GUI_META_OK = 0,
-    URSATZ_GUI_META_ERR_ALLOC,
-    URSATZ_GUI_META_ERR_TOO_MANY_TAGS
-} UrsatzGuiMetaResult;
 
 /*
  * Trims the text, collapses every run of whitespace to one space and drops
@@ -49,13 +46,13 @@ bool ursatz_gui_meta_values_equal(const char *a, const char *b);
  * (NULL and 0 when empty). The tag given is expected to be normalized;
  * duplicates are found with ursatz_gui_meta_values_equal.
  *
- * add copies the tag and appends it; a duplicate is skipped (URSATZ_GUI_META_OK).
+ * add copies the tag and appends it; a duplicate is skipped (URSATZ_OK).
  * Adding when URSATZ_GUI_META_MAX_TAGS are already held and the tag is new:
- * URSATZ_GUI_META_ERR_TOO_MANY_TAGS. remove drops the tag when present and is
+ * URSATZ_ERR_REQUEST. remove drops the tag when present and is
  * not an error when absent.
  */
-UrsatzGuiMetaResult ursatz_gui_meta_tags_add(char ***tags, size_t *count, const char *tag);
-UrsatzGuiMetaResult ursatz_gui_meta_tags_remove(char ***tags, size_t *count, const char *tag);
+UrsatzStatus ursatz_gui_meta_tags_add(char ***tags, size_t *count, const char *tag);
+UrsatzStatus ursatz_gui_meta_tags_remove(char ***tags, size_t *count, const char *tag);
 void ursatz_gui_meta_tags_free(char **tags, size_t count);
 
 /* One distinct value with the number of pieces that have it. */
@@ -84,7 +81,7 @@ typedef struct {
  * composers and sources and pieces without tags are counted in the
  * unassigned and untagged fields instead of a group.
  */
-UrsatzGuiMetaResult ursatz_gui_meta_group(const UrsatzGuiPieceSummary *pieces, size_t count,
+UrsatzStatus ursatz_gui_meta_group(const UrsatzGuiPieceSummary *pieces, size_t count,
                                           UrsatzGuiMetaGroups *out);
 void ursatz_gui_meta_groups_destroy(UrsatzGuiMetaGroups *groups);
 

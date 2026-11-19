@@ -95,12 +95,6 @@ static void test_strings(void) {
     assert(common_compare_ci("apple", "Banana") < 0 && common_compare_ci("b", "A") > 0);
     assert(common_compare_ci("ab", "abc") < 0 && common_compare_ci("abc", "ab") > 0 && common_compare_ci("", "") == 0);
 
-    char small[6];
-    common_copy_text(small, sizeof(small), "truncated");
-    assert(strcmp(small, "trunc") == 0);
-    common_copy_text(NULL, 4, "x");
-    common_copy_text(small, 0, "x");
-
     char now[32];
     common_utc_now(now);
     assert(strlen(now) == 20 && now[4] == '-' && now[10] == 'T' && now[13] == ':' && now[19] == 'Z');

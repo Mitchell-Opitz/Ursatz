@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_MATERIAL_EXPORT_SERVICE_H
 #define URSATZ_GUI_MATERIAL_EXPORT_SERVICE_H
 
+#include <common/status.h>
+
 #include <stddef.h>
 
 /*
@@ -21,14 +23,6 @@
  * role when the label has no type), and `base harmony` is the base_harmony text of the stored analysis.
  */
 
-typedef enum {
-  URSATZ_GUI_MATERIAL_EXPORT_OK = 0,
-  URSATZ_GUI_MATERIAL_EXPORT_NOT_FOUND,
-  URSATZ_GUI_MATERIAL_EXPORT_REFUSED,
-  URSATZ_GUI_MATERIAL_EXPORT_FAILED,
-  URSATZ_GUI_MATERIAL_EXPORT_ALLOC
-} UrsatzGuiMaterialExportResult;
-
 #define URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE 512
 
 /*
@@ -38,7 +32,7 @@ typedef enum {
  * "URSATZ_ERR_REQUEST", "URSATZ_ERR_INTERNAL" or a short reason. ALLOC: out of memory. message is empty for NOT_FOUND
  * and OK.
  */
-UrsatzGuiMaterialExportResult ursatz_gui_material_export(const char *item_id, int version, char **text,
-                                                          char message[URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE]);
+UrsatzStatus ursatz_gui_material_export(const char *item_id, int version, char **text,
+                                                          UrsatzError *error);
 
 #endif /* URSATZ_GUI_MATERIAL_EXPORT_SERVICE_H */

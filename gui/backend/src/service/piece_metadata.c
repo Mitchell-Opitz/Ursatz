@@ -1,4 +1,5 @@
 #include "piece_metadata.h"
+#include "last_error.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -99,29 +100,29 @@ static size_t find_tag(char *const *tags, size_t count, const char *tag) {
     return count;
 }
 
-UrsatzGuiMetaResult ursatz_gui_meta_tags_add(char ***tags, size_t *count, const char *tag) {
+UrsatzStatus ursatz_gui_meta_tags_add(char ***tags, size_t *count, const char *tag) {
     if (find_tag(*tags, *count, tag) < *count) {
-        return URSATZ_GUI_META_OK;
+        return URSATZ_OK;
     }
     if (*count >= URSATZ_GUI_META_MAX_TAGS) {
-        return URSATZ_GUI_META_ERR_TOO_MANY_TAGS;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, NULL);
     }
     char *copy = common_strdup(tag);
     char **grown = copy ? realloc(*tags, (*count + 1) * sizeof(char *)) : NULL;
     if (!grown) {
         free(copy);
-        return URSATZ_GUI_META_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
     }
     grown[*count] = copy;
     *tags = grown;
     (*count)++;
-    return URSATZ_GUI_META_OK;
+    return URSATZ_OK;
 }
 
-UrsatzGuiMetaResult ursatz_gui_meta_tags_remove(char ***tags, size_t *count, const char *tag) {
+UrsatzStatus ursatz_gui_meta_tags_remove(char ***tags, size_t *count, const char *tag) {
     size_t at = find_tag(*tags, *count, tag);
     if (at == *count) {
-        return URSATZ_GUI_META_OK;
+        return URSATZ_OK;
     }
     free((*tags)[at]);
     memmove(&(*tags)[at], &(*tags)[at + 1], (*count - at - 1) * sizeof(char *));
@@ -130,7 +131,7 @@ UrsatzGuiMetaResult ursatz_gui_meta_tags_remove(char ***tags, size_t *count, con
         free(*tags);
         *tags = NULL;
     }
-    return URSATZ_GUI_META_OK;
+    return URSATZ_OK;
 }
 
 /* One distinct value (case-insensitive) while grouping, with the spellings
@@ -271,7 +272,7 @@ static bool count_single(BucketList *list, size_t *unassigned, const char *text)
     return ok;
 }
 
-UrsatzGuiMetaResult ursatz_gui_meta_group(const UrsatzGuiPieceSummary *pieces, size_t count,
+UrsatzStatus ursatz_gui_meta_group(const UrsatzGuiPieceSummary *pieces, size_t count,
                                           UrsatzGuiMetaGroups *out) {
     memset(out, 0, sizeof(*out));
     BucketList composers = {0};
@@ -315,9 +316,9 @@ UrsatzGuiMetaResult ursatz_gui_meta_group(const UrsatzGuiPieceSummary *pieces, s
     bucket_list_destroy(&tags);
     if (!ok) {
         ursatz_gui_meta_groups_destroy(out);
-        return URSATZ_GUI_META_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
     }
-    return URSATZ_GUI_META_OK;
+    return URSATZ_OK;
 }
 
 static void groups_free(UrsatzGuiMetaGroup *groups, size_t count) {

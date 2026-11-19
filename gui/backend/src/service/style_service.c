@@ -1,4 +1,5 @@
 #include "style_service.h"
+#include "last_error.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -238,7 +239,7 @@ static void normalized_source_free(NormalizedSource *source) {
 }
 
 /* Normalizes the filter values of a request; INVALID_SOURCE when none is given or a tag is invalid. */
-static UrsatzGuiStyleResult normalized_source_make(const UrsatzGuiStyleSource *input, NormalizedSource *out) {
+static UrsatzStatus normalized_source_make(const UrsatzGuiStyleSource *input, NormalizedSource *out) {
     memset(out, 0, sizeof(*out));
     out->kind = input->kind;
 
@@ -249,32 +250,32 @@ static UrsatzGuiStyleResult normalized_source_make(const UrsatzGuiStyleSource *i
         out->source = out->composer ? ursatz_gui_meta_normalize_value(input->source, &too_long) : NULL;
         if (!out->composer || !out->source) {
             normalized_source_free(out);
-            return too_long ? URSATZ_GUI_STYLE_ERR_INVALID_SOURCE : URSATZ_GUI_STYLE_ERR_ALLOC;
+            return too_long ? ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source") : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         char *tag_text = ursatz_gui_meta_normalize_value(input->tag, &too_long);
         if (!tag_text) {
             normalized_source_free(out);
-            return too_long ? URSATZ_GUI_STYLE_ERR_INVALID_SOURCE : URSATZ_GUI_STYLE_ERR_ALLOC;
+            return too_long ? ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source") : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         out->tag = tag_text[0] != '\0' ? ursatz_gui_meta_normalize_tag(tag_text, &invalid) : common_strdup("");
         free(tag_text);
         if (!out->tag) {
             normalized_source_free(out);
-            return invalid ? URSATZ_GUI_STYLE_ERR_INVALID_SOURCE : URSATZ_GUI_STYLE_ERR_ALLOC;
+            return invalid ? ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source") : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         if (out->composer[0] == '\0' && out->source[0] == '\0' && out->tag[0] == '\0') {
             normalized_source_free(out);
-            return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
         }
-        return URSATZ_GUI_STYLE_OK;
+        return URSATZ_OK;
     }
 
     if (input->kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
         if (!ursatz_gui_collection_is_valid_id(input->collection_id)) {
-            return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
         }
         out->collection_id = common_strdup(input->collection_id);
-        return out->collection_id ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        return out->collection_id ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
     if (input->kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
@@ -285,42 +286,42 @@ static UrsatzGuiStyleResult normalized_source_make(const UrsatzGuiStyleSource *i
             brief->scope_count + brief->piece_count + brief->style_count == 0 ||
             (brief->scope_count > 0 && !brief->scopes) || (brief->piece_count > 0 && !brief->piece_ids) ||
             (brief->style_count > 0 && !brief->style_ids)) {
-            return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
         }
         for (size_t i = 0; i < brief->scope_count; i++) {
             if ((int)brief->scopes[i].kind < 0 ||
                 (size_t)brief->scopes[i].kind >= sizeof(kScopeKinds) / sizeof(kScopeKinds[0])) {
-                return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+                return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
             }
         }
         for (size_t i = 0; i < brief->piece_count; i++) {
             if (!ursatz_gui_collection_is_valid_id(brief->piece_ids[i])) {
-                return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+                return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
             }
         }
         for (size_t i = 0; i < brief->style_count; i++) {
             if (!ursatz_gui_collection_is_valid_id(brief->style_ids[i])) {
-                return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+                return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
             }
         }
-        return brief_copy(brief, &out->brief) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        return brief_copy(brief, &out->brief) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
     if (input->piece_count == 0 || !input->piece_ids) {
-        return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
     }
     for (size_t i = 0; i < input->piece_count; i++) {
         if (!ursatz_gui_collection_is_valid_id(input->piece_ids[i])) {
             normalized_source_free(out);
-            return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+            return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
         }
         if (!common_names_contains(&out->piece_ids, input->piece_ids[i]) &&
             !common_names_add(&out->piece_ids, input->piece_ids[i])) {
             normalized_source_free(out);
-            return URSATZ_GUI_STYLE_ERR_ALLOC;
+            return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }
 
 static void free_summaries(UrsatzGuiPieceSummary *pieces, size_t count) {
@@ -336,54 +337,54 @@ static void free_summaries(UrsatzGuiPieceSummary *pieces, size_t count) {
     free(pieces);
 }
 
-static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style);
+static UrsatzStatus load_style(const char *id, UrsatzGuiStyle *style);
 static void style_destroy_contents(UrsatzGuiStyle *style);
 
 /* The pieces of a brief: scopes, ids and styles' last builds, in id order without repeats. */
-static UrsatzGuiStyleResult resolve_brief(const UrsatzGuiStyleBrief *brief, CommonNames *ids) {
+static UrsatzStatus resolve_brief(const UrsatzGuiStyleBrief *brief, CommonNames *ids) {
     CommonNames all = {0};
-    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
+    UrsatzStatus result = URSATZ_OK;
 
-    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < brief->scope_count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < brief->scope_count; i++) {
         char **scope_ids = NULL;
         size_t scope_count = 0;
-        UrsatzGuiLinkResult resolved = ursatz_gui_link_scope_resolve(&brief->scopes[i], &scope_ids, &scope_count);
-        if (resolved == URSATZ_GUI_LINK_ERR_EMPTY) {
+        UrsatzStatus resolved = ursatz_gui_link_scope_resolve(&brief->scopes[i], &scope_ids, &scope_count);
+        if (resolved == URSATZ_ERR_UNSATISFIABLE) {
             continue;
         }
-        if (resolved != URSATZ_GUI_LINK_OK) {
-            result = resolved == URSATZ_GUI_LINK_ERR_INVALID_SCOPE ? URSATZ_GUI_STYLE_ERR_INVALID_SOURCE
-                     : resolved == URSATZ_GUI_LINK_ERR_NOT_FOUND   ? URSATZ_GUI_STYLE_ERR_NOT_FOUND
-                     : resolved == URSATZ_GUI_LINK_ERR_ALLOC       ? URSATZ_GUI_STYLE_ERR_ALLOC
-                                                                   : URSATZ_GUI_STYLE_ERR_FAILED;
+        if (resolved != URSATZ_OK) {
+            result = resolved == URSATZ_ERR_REQUEST ? ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source")
+                     : resolved == URSATZ_ERR_NOT_FOUND   ? ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found")
+                     : resolved == URSATZ_ERR_ALLOC       ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory")
+                                                                   : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
             continue;
         }
-        for (size_t j = 0; result == URSATZ_GUI_STYLE_OK && j < scope_count; j++) {
-            result = common_names_add(&all, scope_ids[j]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        for (size_t j = 0; result == URSATZ_OK && j < scope_count; j++) {
+            result = common_names_add(&all, scope_ids[j]) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         ursatz_gui_link_ids_free(scope_ids, scope_count);
     }
-    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < brief->piece_count; i++) {
-        result = common_names_add(&all, brief->piece_ids[i]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+    for (size_t i = 0; result == URSATZ_OK && i < brief->piece_count; i++) {
+        result = common_names_add(&all, brief->piece_ids[i]) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < brief->style_count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < brief->style_count; i++) {
         UrsatzGuiStyle style;
         memset(&style, 0, sizeof(style));
         result = load_style(brief->style_ids[i], &style);
-        for (size_t j = 0; result == URSATZ_GUI_STYLE_OK && j < style.piece_count; j++) {
-            result = common_names_add(&all, style.pieces[j]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        for (size_t j = 0; result == URSATZ_OK && j < style.piece_count; j++) {
+            result = common_names_add(&all, style.pieces[j]) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
         style_destroy_contents(&style);
     }
 
-    if (result == URSATZ_GUI_STYLE_OK && all.count > 1) {
+    if (result == URSATZ_OK && all.count > 1) {
         common_names_sort(&all);
     }
-    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < all.count; i++) {
+    for (size_t i = 0; result == URSATZ_OK && i < all.count; i++) {
         if (i > 0 && strcmp(all.items[i], all.items[i - 1]) == 0) {
             continue;
         }
-        result = common_names_add(ids, all.items[i]) ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        result = common_names_add(ids, all.items[i]) ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     common_names_free(&all);
     return result;
@@ -395,7 +396,7 @@ static UrsatzGuiStyleResult resolve_brief(const UrsatzGuiStyleBrief *brief, Comm
  * dropped here: collect_pieces skips them with the reason "not found".
  * default_name receives the style's default name.
  */
-static UrsatzGuiStyleResult resolve_piece_ids(const NormalizedSource *source, CommonNames *ids, char *default_name,
+static UrsatzStatus resolve_piece_ids(const NormalizedSource *source, CommonNames *ids, char *default_name,
                                               size_t default_name_size) {
     if (source->kind == URSATZ_GUI_STYLE_SOURCE_FILTER) {
         UrsatzGuiMetaFilter filter = {0};
@@ -405,13 +406,13 @@ static UrsatzGuiStyleResult resolve_piece_ids(const NormalizedSource *source, Co
 
         UrsatzGuiPieceSummary *pieces = NULL;
         size_t count = 0;
-        if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
-            return URSATZ_GUI_STYLE_ERR_FAILED;
+        if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_OK) {
+            return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
         }
         for (size_t i = 0; i < count; i++) {
             if (ursatz_gui_meta_matches(&pieces[i], &filter) && !common_names_add(ids, pieces[i].id)) {
                 free_summaries(pieces, count);
-                return URSATZ_GUI_STYLE_ERR_ALLOC;
+                return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
         free_summaries(pieces, count);
@@ -427,23 +428,23 @@ static UrsatzGuiStyleResult resolve_piece_ids(const NormalizedSource *source, Co
             int n = snprintf(name + used, sizeof(name) - used, "%s%s%s", used > 0 ? " \xC2\xB7 " : "", labels[i],
                              values[i]);
             if (n < 0 || (size_t)n >= sizeof(name) - used) {
-                return URSATZ_GUI_STYLE_ERR_FAILED;
+                return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
             }
             used += (size_t)n;
         }
         clip_utf8(name, NAME_MAX_BYTES);
         snprintf(default_name, default_name_size, "%s", name);
-        return URSATZ_GUI_STYLE_OK;
+        return URSATZ_OK;
     }
 
     if (source->kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
         UrsatzGuiCollection *collection = NULL;
-        UrsatzGuiCollectionResult result = ursatz_gui_collection_get(source->collection_id, &collection);
-        if (result == URSATZ_GUI_COLLECTION_ERR_NOT_FOUND) {
-            return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        UrsatzStatus result = ursatz_gui_collection_get(source->collection_id, &collection);
+        if (result == URSATZ_ERR_NOT_FOUND) {
+            return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
         }
-        if (result != URSATZ_GUI_COLLECTION_OK) {
-            return result == URSATZ_GUI_COLLECTION_ERR_ALLOC ? URSATZ_GUI_STYLE_ERR_ALLOC : URSATZ_GUI_STYLE_ERR_FAILED;
+        if (result != URSATZ_OK) {
+            return result == URSATZ_ERR_ALLOC ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
         }
         bool ok = true;
         for (size_t i = 0; ok && i < collection->piece_count; i++) {
@@ -454,7 +455,7 @@ static UrsatzGuiStyleResult resolve_piece_ids(const NormalizedSource *source, Co
         clip_utf8(name, NAME_MAX_BYTES);
         snprintf(default_name, default_name_size, "%s", name);
         ursatz_gui_collection_destroy(collection);
-        return ok ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
+        return ok ? URSATZ_OK : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
     if (source->kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
@@ -464,11 +465,11 @@ static UrsatzGuiStyleResult resolve_piece_ids(const NormalizedSource *source, Co
 
     for (size_t i = 0; i < source->piece_ids.count; i++) {
         if (!common_names_add(ids, source->piece_ids.items[i])) {
-            return URSATZ_GUI_STYLE_ERR_ALLOC;
+            return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
     snprintf(default_name, default_name_size, "Selected pieces");
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }
 
 /* --- reading pieces into a profile ---------------------------------------- */
@@ -499,14 +500,14 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
     }
 
     /* Another schema, Analyzer version or Ursatz commit: analyze the piece again first. */
-    UrsatzGuiAnalysisResult ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
-    if (ensured != URSATZ_GUI_ANALYSIS_OK) {
-        *reason = ensured == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
+    UrsatzStatus ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
+    if (ensured != URSATZ_OK) {
+        *reason = ensured == URSATZ_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
         return false;
     }
 
     char *document = NULL;
-    if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_GUI_ANALYSIS_OK) {
+    if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_OK) {
         *reason = "unreadable analysis";
         return false;
     }
@@ -520,13 +521,13 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
 }
 
 /* Resolves the source and adds every piece it names. The caller holds the lock. */
-static UrsatzGuiStyleResult collect_pieces(const NormalizedSource *source, Collected *collected) {
+static UrsatzStatus collect_pieces(const NormalizedSource *source, Collected *collected) {
     memset(collected, 0, sizeof(*collected));
 
     CommonNames ids = {0};
     char default_name[NAME_MAX_BYTES + 1] = "";
-    UrsatzGuiStyleResult resolved = resolve_piece_ids(source, &ids, default_name, sizeof(default_name));
-    if (resolved != URSATZ_GUI_STYLE_OK) {
+    UrsatzStatus resolved = resolve_piece_ids(source, &ids, default_name, sizeof(default_name));
+    if (resolved != URSATZ_OK) {
         common_names_free(&ids);
         return resolved;
     }
@@ -535,26 +536,26 @@ static UrsatzGuiStyleResult collect_pieces(const NormalizedSource *source, Colle
     collected->profile = style_profile_create();
     if (!collected->profile) {
         common_names_free(&ids);
-        return URSATZ_GUI_STYLE_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
-    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
-    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < ids.count; i++) {
+    UrsatzStatus result = URSATZ_OK;
+    for (size_t i = 0; result == URSATZ_OK && i < ids.count; i++) {
         const char *reason = NULL;
         if (add_piece(collected->profile, ids.items[i], &reason)) {
             if (!common_names_add(&collected->used, ids.items[i])) {
-                result = URSATZ_GUI_STYLE_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         } else if (!skipped_add(&collected->skipped, ids.items[i], reason)) {
-            result = URSATZ_GUI_STYLE_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
     common_names_free(&ids);
 
-    if (result == URSATZ_GUI_STYLE_OK && collected->used.count == 0) {
-        result = URSATZ_GUI_STYLE_ERR_NO_PIECES;
+    if (result == URSATZ_OK && collected->used.count == 0) {
+        result = ursatz_gui_fail(URSATZ_ERR_UNSATISFIABLE, "no analyzable pieces");
     }
-    if (result != URSATZ_GUI_STYLE_OK) {
+    if (result != URSATZ_OK) {
         collected_free(collected);
     }
     return result;
@@ -752,35 +753,35 @@ static void remove_style_dir(const char *dir) {
 /* --- build ---------------------------------------------------------------- */
 
 /* The style's name: the given one normalized, or the default when it is empty. */
-static UrsatzGuiStyleResult style_name(const char *requested, const char *default_name, char *out, size_t out_size) {
+static UrsatzStatus style_name(const char *requested, const char *default_name, char *out, size_t out_size) {
     bool too_long = false;
     char *normalized = ursatz_gui_meta_normalize_value(requested, &too_long);
     if (!normalized) {
-        return too_long ? URSATZ_GUI_STYLE_ERR_INVALID_NAME : URSATZ_GUI_STYLE_ERR_ALLOC;
+        return too_long ? ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid name") : ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     snprintf(out, out_size, "%s", normalized[0] != '\0' ? normalized : default_name);
     free(normalized);
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }
 
 /* Normalizes the source, adds its pieces and settles the name. The caller holds the lock; on OK it frees *normalized
  * with normalized_source_free and *collected with collected_free. */
-static UrsatzGuiStyleResult prepare_build(const char *name, const UrsatzGuiStyleSource *source,
+static UrsatzStatus prepare_build(const char *name, const UrsatzGuiStyleSource *source,
                                           NormalizedSource *normalized, Collected *collected, char *final_name,
                                           size_t final_name_size) {
     memset(collected, 0, sizeof(*collected));
-    UrsatzGuiStyleResult result = normalized_source_make(source, normalized);
-    if (result != URSATZ_GUI_STYLE_OK) {
+    UrsatzStatus result = normalized_source_make(source, normalized);
+    if (result != URSATZ_OK) {
         return result;
     }
     result = collect_pieces(normalized, collected);
-    if (result == URSATZ_GUI_STYLE_OK) {
+    if (result == URSATZ_OK) {
         result = style_name(name, collected->default_name, final_name, final_name_size);
-        if (result != URSATZ_GUI_STYLE_OK) {
+        if (result != URSATZ_OK) {
             collected_free(collected);
         }
     }
-    if (result != URSATZ_GUI_STYLE_OK) {
+    if (result != URSATZ_OK) {
         normalized_source_free(normalized);
     }
     return result;
@@ -806,22 +807,22 @@ static void reset_outputs(UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipp
     }
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
+UrsatzStatus ursatz_gui_style_build(const char *name, const UrsatzGuiStyleSource *source, char **out_id,
                                             UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
     if (out_id) {
         *out_id = NULL;
     }
     reset_outputs(out_skipped, out_skipped_count);
     if (!source || !out_id) {
-        return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
     }
 
     LOCK();
     NormalizedSource normalized;
     Collected collected;
     char final_name[NAME_MAX_BYTES + 1];
-    UrsatzGuiStyleResult result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
-    if (result != URSATZ_GUI_STYLE_OK) {
+    UrsatzStatus result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
+    if (result != URSATZ_OK) {
         UNLOCK();
         return result;
     }
@@ -829,12 +830,12 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     char *id = NULL;
     char style_dir[PATH_BYTES];
     bool dir_made = false;
-    result = URSATZ_GUI_STYLE_ERR_FAILED;
+    result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     if ((common_dir_make(kStylesDir, NULL) == URSATZ_OK)) {
         for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
             id = ursatz_gui_new_id("sty");
             if (!id) {
-                result = URSATZ_GUI_STYLE_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
                 break;
             }
             if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
@@ -850,12 +851,12 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
         char now[32];
         common_utc_now(now);
         if (write_style_files(style_dir, id, final_name, now, now, &normalized, &collected)) {
-            result = URSATZ_GUI_STYLE_OK;
+            result = URSATZ_OK;
         } else {
             remove_style_dir(style_dir);
         }
     }
-    if (result == URSATZ_GUI_STYLE_OK) {
+    if (result == URSATZ_OK) {
         *out_id = id;
         id = NULL;
         give_skipped(&collected, out_skipped, out_skipped_count);
@@ -867,7 +868,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     return result;
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
+UrsatzStatus ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, const char *name, const char *path,
                                                  char ***out_pieces, size_t *out_piece_count,
                                                  UrsatzGuiStyleSkipped **out_skipped, size_t *out_skipped_count) {
     if (out_pieces) {
@@ -880,15 +881,15 @@ UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *sou
     char tmp_path[PATH_BYTES + 8];
     if (!source || !path || path[0] == '\0' || strlen(path) >= PATH_BYTES ||
         snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
+        return ursatz_gui_fail(URSATZ_ERR_REQUEST, "invalid source");
     }
 
     LOCK();
     NormalizedSource normalized;
     Collected collected;
     char final_name[NAME_MAX_BYTES + 1];
-    UrsatzGuiStyleResult result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
-    if (result != URSATZ_GUI_STYLE_OK) {
+    UrsatzStatus result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
+    if (result != URSATZ_OK) {
         UNLOCK();
         return result;
     }
@@ -896,7 +897,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *sou
     if (style_model_file_write(collected.profile, final_name, URSATZ_ANALYZER_VERSION, tmp_path) != STYLE_MODEL_FILE_OK ||
         !replace_file(tmp_path, path)) {
         remove(tmp_path);
-        result = URSATZ_GUI_STYLE_ERR_FAILED;
+        result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     } else {
         if (out_pieces) {
             *out_pieces = collected.used.items;
@@ -1146,17 +1147,17 @@ const char *ursatz_gui_style_brief_parse(const cJSON *json, UrsatzGuiStyleBrief 
 }
 
 /* Loads styles/<id>/meta.json into style (zeroed by the caller). */
-static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
+static UrsatzStatus load_style(const char *id, UrsatzGuiStyle *style) {
     char dir[PATH_BYTES];
     char path[PATH_BYTES + 16];
     if (!style_dir_path(id, dir, sizeof(dir))) {
-        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
     snprintf(path, sizeof(path), "%s/meta.json", dir);
     cJSON *meta = NULL;
     common_json_read_object(path, &meta, NULL);
     if (!meta) {
-        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
 
     /* The directory name is the id; a copy of it inside the file is not trusted. */
@@ -1209,9 +1210,9 @@ static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
 
     if (!ok) {
         style_destroy_contents(style);
-        return URSATZ_GUI_STYLE_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }
 
 /* --- list ----------------------------------------------------------------- */
@@ -1229,7 +1230,7 @@ static int compare_styles(const void *left, const void *right) {
     return by_time != 0 ? by_time : strcmp(a->id, b->id);
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_list(UrsatzGuiStyle **out_styles, size_t *out_count) {
+UrsatzStatus ursatz_gui_style_list(UrsatzGuiStyle **out_styles, size_t *out_count) {
     *out_styles = NULL;
     *out_count = 0;
 
@@ -1237,31 +1238,31 @@ UrsatzGuiStyleResult ursatz_gui_style_list(UrsatzGuiStyle **out_styles, size_t *
     CommonNames names = {0};
     if (!list_style_dirs(&names)) {
         UNLOCK();
-        return URSATZ_GUI_STYLE_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
 
     UrsatzGuiStyle *styles = names.count > 0 ? calloc(names.count, sizeof(*styles)) : NULL;
-    UrsatzGuiStyleResult result = names.count > 0 && !styles ? URSATZ_GUI_STYLE_ERR_ALLOC : URSATZ_GUI_STYLE_OK;
+    UrsatzStatus result = names.count > 0 && !styles ? ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory") : URSATZ_OK;
     size_t count = 0;
-    for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < names.count; i++) {
-        UrsatzGuiStyleResult loaded = load_style(names.items[i], &styles[count]);
-        if (loaded == URSATZ_GUI_STYLE_OK) {
+    for (size_t i = 0; result == URSATZ_OK && i < names.count; i++) {
+        UrsatzStatus loaded = load_style(names.items[i], &styles[count]);
+        if (loaded == URSATZ_OK) {
             count++;
-        } else if (loaded != URSATZ_GUI_STYLE_ERR_NOT_FOUND) {
+        } else if (loaded != URSATZ_ERR_NOT_FOUND) {
             result = loaded;
         }
     }
     common_names_free(&names);
     UNLOCK();
 
-    if (result != URSATZ_GUI_STYLE_OK || count == 0) {
+    if (result != URSATZ_OK || count == 0) {
         ursatz_gui_style_free_list(styles, count);
         return result;
     }
     qsort(styles, count, sizeof(*styles), compare_styles);
     *out_styles = styles;
     *out_count = count;
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }
 
 /* --- get ------------------------------------------------------------------ */
@@ -1292,22 +1293,22 @@ static int compare_categories(const void *left, const void *right) {
 }
 
 /* Fills style->categories from the model file; the statistics come sorted by category then label. */
-static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiStyle *style) {
+static UrsatzStatus load_statistics(const char *model_path, UrsatzGuiStyle *style) {
     StyleModel *model = NULL;
     if (style_model_file_read(model_path, &model, NULL) != STYLE_MODEL_FILE_OK) {
-        return URSATZ_GUI_STYLE_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     StyleModelFileResult read = style_model_statistics(model, &statistics, &count);
     style_model_destroy(model);
     if (read != STYLE_MODEL_FILE_OK) {
-        return URSATZ_GUI_STYLE_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
 
-    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
+    UrsatzStatus result = URSATZ_OK;
     size_t start = 0;
-    while (result == URSATZ_GUI_STYLE_OK && start < count) {
+    while (result == URSATZ_OK && start < count) {
         size_t end = start;
         while (end < count && strcmp(statistics[end].category, statistics[start].category) == 0) {
             end++;
@@ -1321,7 +1322,7 @@ static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiSty
         UrsatzGuiStyleCategory *grown =
             realloc(style->categories, (style->category_count + 1) * sizeof(*style->categories));
         if (!grown) {
-            result = URSATZ_GUI_STYLE_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         style->categories = grown;
@@ -1335,7 +1336,7 @@ static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiSty
         category->category = common_strdup(statistics[start].category);
         if (!labels || !category->dimension || !category->category) {
             free(labels);
-            result = URSATZ_GUI_STYLE_ERR_ALLOC;
+            result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             break;
         }
         for (size_t i = 0; i < total_labels; i++) {
@@ -1346,17 +1347,17 @@ static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiSty
         qsort(labels, total_labels, sizeof(*labels), compare_labels);
 
         size_t kept = total_labels < MAX_LABELS_PER_CATEGORY ? total_labels : MAX_LABELS_PER_CATEGORY;
-        for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < kept; i++) {
+        for (size_t i = 0; result == URSATZ_OK && i < kept; i++) {
             labels[i].label = common_strdup(labels[i].label);
             if (!labels[i].label) {
                 for (size_t j = 0; j < i; j++) {
                     free(labels[j].label);
                 }
                 free(labels);
-                result = URSATZ_GUI_STYLE_ERR_ALLOC;
+                result = ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
             }
         }
-        if (result != URSATZ_GUI_STYLE_OK) {
+        if (result != URSATZ_OK) {
             break;
         }
         category->labels = labels;
@@ -1366,21 +1367,21 @@ static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiSty
     }
     style_statistics_free(statistics, count);
 
-    if (result == URSATZ_GUI_STYLE_OK && style->category_count > 1) {
+    if (result == URSATZ_OK && style->category_count > 1) {
         qsort(style->categories, style->category_count, sizeof(*style->categories), compare_categories);
     }
     return result;
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_style) {
+UrsatzStatus ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_style) {
     *out_style = NULL;
     UrsatzGuiStyle *style = calloc(1, sizeof(*style));
     if (!style) {
-        return URSATZ_GUI_STYLE_ERR_ALLOC;
+        return ursatz_gui_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
     LOCK();
-    UrsatzGuiStyleResult result = load_style(id, style);
-    if (result == URSATZ_GUI_STYLE_OK) {
+    UrsatzStatus result = load_style(id, style);
+    if (result == URSATZ_OK) {
         char dir[PATH_BYTES];
         char model_path[PATH_BYTES + 32];
         style_dir_path(id, dir, sizeof(dir));
@@ -1388,23 +1389,23 @@ UrsatzGuiStyleResult ursatz_gui_style_get(const char *id, UrsatzGuiStyle **out_s
         result = load_statistics(model_path, style);
     }
     UNLOCK();
-    if (result != URSATZ_GUI_STYLE_OK) {
+    if (result != URSATZ_OK) {
         ursatz_gui_style_destroy(style);
         return result;
     }
     *out_style = style;
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }
 
 /* --- rebuild, delete, model path ------------------------------------------ */
 
-UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id) {
+UrsatzStatus ursatz_gui_style_rebuild(const char *id) {
     UrsatzGuiStyle style;
     memset(&style, 0, sizeof(style));
 
     LOCK();
-    UrsatzGuiStyleResult result = load_style(id, &style);
-    if (result != URSATZ_GUI_STYLE_OK) {
+    UrsatzStatus result = load_style(id, &style);
+    if (result != URSATZ_OK) {
         UNLOCK();
         return result;
     }
@@ -1421,19 +1422,19 @@ UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id) {
 
     NormalizedSource source;
     result = normalized_source_make(&input, &source);
-    if (result == URSATZ_GUI_STYLE_OK) {
+    if (result == URSATZ_OK) {
         Collected collected;
         result = collect_pieces(&source, &collected);
-        if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND) {
-            result = URSATZ_GUI_STYLE_ERR_SOURCE_MISSING;
+        if (result == URSATZ_ERR_NOT_FOUND) {
+            result = ursatz_gui_fail(URSATZ_ERR_UNSATISFIABLE, "source not found");
         }
-        if (result == URSATZ_GUI_STYLE_OK) {
+        if (result == URSATZ_OK) {
             char dir[PATH_BYTES];
             char now[32];
             common_utc_now(now);
             style_dir_path(id, dir, sizeof(dir));
             if (!write_style_files(dir, style.id, style.name, style.created_at, now, &source, &collected)) {
-                result = URSATZ_GUI_STYLE_ERR_FAILED;
+                result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
             }
             collected_free(&collected);
         }
@@ -1444,30 +1445,30 @@ UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id) {
     return result;
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_delete(const char *id) {
+UrsatzStatus ursatz_gui_style_delete(const char *id) {
     char dir[PATH_BYTES];
     if (!style_dir_path(id, dir, sizeof(dir))) {
-        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
     LOCK();
-    UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (!common_path_is_dir(dir)) {
-        result = URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        result = ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     } else {
         remove_style_dir(dir);
         if (common_path_is_dir(dir)) {
-            result = URSATZ_GUI_STYLE_ERR_FAILED;
+            result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
         }
     }
     UNLOCK();
     return result;
 }
 
-UrsatzGuiStyleResult ursatz_gui_style_model_path(const char *id, char *buffer, size_t buffer_size) {
+UrsatzStatus ursatz_gui_style_model_path(const char *id, char *buffer, size_t buffer_size) {
     char path[PATH_BYTES + 32];
     char dir[PATH_BYTES];
     if (!buffer || buffer_size == 0 || !style_dir_path(id, dir, sizeof(dir))) {
-        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
     snprintf(path, sizeof(path), "%s/style-model.json", dir);
 
@@ -1476,11 +1477,11 @@ UrsatzGuiStyleResult ursatz_gui_style_model_path(const char *id, char *buffer, s
     bool found = realpath(path, resolved) != NULL;
     UNLOCK();
     if (!found) {
-        return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
+        return ursatz_gui_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
     if (strlen(resolved) >= buffer_size) {
-        return URSATZ_GUI_STYLE_ERR_FAILED;
+        return ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
     memcpy(buffer, resolved, strlen(resolved) + 1);
-    return URSATZ_GUI_STYLE_OK;
+    return URSATZ_OK;
 }

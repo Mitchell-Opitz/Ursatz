@@ -1,6 +1,8 @@
 #ifndef URSATZ_GUI_COMPOSE_JOBS_H
 #define URSATZ_GUI_COMPOSE_JOBS_H
 
+#include <common/status.h>
+
 #include <stdbool.h>
 
 #include <cJSON.h>
@@ -58,7 +60,7 @@ void ursatz_gui_job_result_failure_at(UrsatzGuiJobResult *out, int status, const
 
 /* Fills out with the answer for a service result: the item on OK, else the failure (status 404, 400, 422, 499, 500) with
  * message or the given text. Takes item (freed). */
-void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
+void ursatz_gui_compose_reply(UrsatzStatus result, cJSON *item, const UrsatzError *error, const char *invalid_text,
                               const char *failed_text, UrsatzGuiJobResult *out);
 
 #endif /* URSATZ_GUI_COMPOSE_JOBS_H */
