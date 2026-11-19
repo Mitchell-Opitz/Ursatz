@@ -18,6 +18,12 @@ static int send_style_failure(struct mg_connection *conn, UrsatzStatus result) {
   return ursatz_gui_send_service_failure(conn, result, "style operation failed");
 }
 
+/* The failures of a style command: the status of the table, no queue a 503. */
+static int failed_style_command(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return ursatz_gui_send_failure(conn, status == URSATZ_ERR_INTERNAL && strstr(error->message, "queue") ? 503 : workshop_http_status(status, NULL),
+                                 error->message);
+}
+
 /* POST /api/styles: a "style" job (R-645; a second build waits): the answer is 202 with the job, which answers what this route used to. The
  * request is read here, so a bad one is refused at once. */
 static int handle_build_style(struct mg_connection *conn) {
@@ -25,21 +31,7 @@ static int handle_build_style(struct mg_connection *conn) {
   if (!body) {
     return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
-  WorkshopStyleRequest request;
-  UrsatzError error = {{0}, {0}};
-  UrsatzStatus parsed = workshop_style_build_request_parse(body, &request, &error);
-  if (parsed != URSATZ_OK) {
-    cJSON_Delete(body);
-    return ursatz_gui_send_failure(conn, workshop_http_status(parsed, NULL), error.message);
-  }
-  WorkshopAnalysisJob *job = workshop_analysis_job_style_build(&request, body);
-  if (!job) {
-    workshop_style_request_free(&request);
-    cJSON_Delete(body);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
-                                       workshop_analysis_job_free);
+  return ursatz_gui_answer_command(conn, "style.build", "", body, NULL, failed_style_command, false);
 }
 
 static int handle_list_styles(struct mg_connection *conn) {
@@ -51,21 +43,11 @@ static int handle_get_style(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
-  WorkshopAnalysisJob *job = workshop_analysis_job_style_rebuild(id);
-  if (!job) {
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
-                                       workshop_analysis_job_free);
+  return ursatz_gui_answer_command(conn, "style.rebuild", id, NULL, NULL, failed_style_command, false);
 }
 
 static int handle_delete_style(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_style_delete(id);
-  if (result != URSATZ_OK) {
-    return send_style_failure(conn, result);
-  }
-  ursatz_gui_send_json(conn, "{\"ok\":true}");
-  return 200;
+  return ursatz_gui_answer_command(conn, "style.delete", id, NULL, NULL, failed_style_command, false);
 }
 
 /*

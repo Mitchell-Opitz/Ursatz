@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "base/command_context.h"
 #include "coordinator/coordinator.h"
 
 /* --- the table of queries -------------------------------------------------------------------------------------------------------- */
@@ -60,6 +61,60 @@ static const QueryEntry kQueries[] = {
     {"subject.list", workshop_q_subject_list},
     {"subject.groups", workshop_q_subject_groups},
     {"subject.get", workshop_q_subject_get},
+};
+
+/* --- the table of commands ------------------------------------------------------------------------------------------------------- */
+
+typedef struct {
+    const char *name;
+    WorkshopHandler handler;
+    bool takes_base_version; /* the command changes an item that has versions: it needs the version the caller read (commit 3) */
+} CommandEntry;
+
+static const CommandEntry kCommands[] = {
+    {"library.import", workshop_c_library_import, false},
+    {"library.update", workshop_c_library_update, false},
+    {"library.delete", workshop_c_library_delete, false},
+    {"library.reanalyze", workshop_c_library_reanalyze, false},
+    {"collection.create", workshop_c_collection_create, false},
+    {"collection.update", workshop_c_collection_update, false},
+    {"collection.delete", workshop_c_collection_delete, false},
+    {"collection.add-pieces", workshop_c_collection_add_pieces, false},
+    {"collection.remove-piece", workshop_c_collection_remove_piece, false},
+    {"style.build", workshop_c_style_build, false},
+    {"style.rebuild", workshop_c_style_rebuild, false},
+    {"style.delete", workshop_c_style_delete, false},
+    {"links.run", workshop_c_links_run, false},
+    {"links.delete", workshop_c_links_delete, false},
+    {"project.create", workshop_c_project_create, false},
+    {"project.update", workshop_c_project_update, false},
+    {"project.delete", workshop_c_project_delete, false},
+    {"item.create", workshop_c_item_create, false},
+    {"item.update", workshop_c_item_update, true},
+    {"item.delete", workshop_c_item_delete, true},
+    {"item.save", workshop_c_item_save, true},
+    {"item.reanalyze", workshop_c_item_reanalyze, true},
+    {"item.compose", workshop_c_item_compose, true},
+    {"item.regenerate", workshop_c_item_regenerate, true},
+    {"item.variations", workshop_c_item_variations, false},
+    {"item.choose", workshop_c_item_choose, true},
+    {"item.set-op-checks", workshop_c_item_set_op_checks, false},
+    {"item.save-variant", workshop_c_item_save_variant, false},
+    {"item.flag", workshop_c_item_flag, true},
+    {"item.promote", workshop_c_item_promote, true},
+    {"item.link-form", workshop_c_item_link_form, true},
+    {"item.reroll", workshop_c_item_reroll, true},
+    {"item.update-use", workshop_c_item_update_use, true},
+    {"subject.create", workshop_c_subject_create, false},
+    {"subject.update", workshop_c_subject_update, false},
+    {"subject.delete", workshop_c_subject_delete, false},
+    {"subject.link-item", workshop_c_subject_link_item, false},
+    {"subject.unlink-item", workshop_c_subject_unlink_item, false},
+    {"subject.link-piece", workshop_c_subject_link_piece, false},
+    {"subject.unlink-piece", workshop_c_subject_unlink_piece, false},
+    {"subject.relate", workshop_c_subject_relate, false},
+    {"subject.unrelate", workshop_c_subject_unrelate, false},
+    {"job.cancel", workshop_c_job_cancel, false}, /* a runtime control: it changes no file and writes no record */
 };
 
 /* --- parameters ------------------------------------------------------------------------------------------------------------------ */
@@ -272,4 +327,71 @@ UrsatzStatus workshop_query(Workshop *workshop, const char *name, const cJSON *p
         return status;
     }
     return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/query", "unknown query %s", name);
+}
+
+/* --- commands -------------------------------------------------------------------------------------------------------------------- */
+
+UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const WorkshopBytes *bytes, WorkshopReply *reply,
+                              UrsatzError *error) {
+    if (reply) {
+        memset(reply, 0, sizeof(*reply));
+    }
+    if (!workshop || !reply || !cJSON_IsObject(command)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "", "a command is an object");
+    }
+    const cJSON *name = cJSON_GetObjectItemCaseSensitive(command, "command");
+    const cJSON *actor = cJSON_GetObjectItemCaseSensitive(command, "actor");
+    const cJSON *target = cJSON_GetObjectItemCaseSensitive(command, "target");
+    const cJSON *base = cJSON_GetObjectItemCaseSensitive(command, "base_version");
+    const cJSON *params = cJSON_GetObjectItemCaseSensitive(command, "params");
+    if (!cJSON_IsString(name) || name->valuestring[0] == '\0') {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/command", "a command has a name");
+    }
+    if (!cJSON_IsString(actor) || actor->valuestring[0] == '\0' || strlen(actor->valuestring) >= sizeof(((WorkshopCommandContext *)0)->actor)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/actor", "a command has an actor, a text of up to 63 characters");
+    }
+    if (target && !cJSON_IsNull(target) && (!cJSON_IsString(target) || strlen(target->valuestring) >= 256)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "target is an id or null");
+    }
+    if (base && !cJSON_IsNull(base) &&
+        (!cJSON_IsNumber(base) || base->valuedouble < 0 || base->valuedouble != (double)(long)base->valuedouble)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/base_version", "base_version is a whole number or absent");
+    }
+    if (params && !cJSON_IsNull(params) && !cJSON_IsObject(params)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "params is an object");
+    }
+    const CommandEntry *entry = NULL;
+    for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); i++) {
+        if (strcmp(kCommands[i].name, name->valuestring) == 0) {
+            entry = &kCommands[i];
+            break;
+        }
+    }
+    if (!entry || strlen(name->valuestring) >= sizeof(((WorkshopCommandContext *)0)->command)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/command", "unknown command %s", name->valuestring);
+    }
+    cJSON *empty = cJSON_IsObject(params) ? NULL : cJSON_CreateObject();
+    if (!cJSON_IsObject(params) && !empty) {
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    long base_version = cJSON_IsNumber(base) ? (long)base->valuedouble : -1;
+    WorkshopCall call = {workshop, cJSON_IsObject(params) ? params : empty, bytes, actor->valuestring,
+                         cJSON_IsString(target) ? target->valuestring : "", base_version};
+    WorkshopCommandContext context;
+    memset(&context, 0, sizeof(context));
+    snprintf(context.command, sizeof(context.command), "%s", entry->name);
+    snprintf(context.actor, sizeof(context.actor), "%s", actor->valuestring);
+    context.base_version = base_version;
+    workshop_command_context_set(&context);
+    workshop_command_context_set_last_seq(0);
+    UrsatzStatus status = entry->handler(&call, reply, error);
+    workshop_command_context_set(NULL);
+    cJSON_Delete(empty);
+    if (status == URSATZ_OK && cJSON_IsObject(reply->json)) {
+        cJSON_AddNumberToObject(reply->json, "journal_seq", (double)workshop_command_context_last_seq());
+    }
+    if (status != URSATZ_OK && error && error->message[0] == '\0') {
+        workshop_call_fail(error, status, error->path, "the command %s failed", entry->name);
+    }
+    return status;
 }

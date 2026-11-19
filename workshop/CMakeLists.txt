@@ -1,6 +1,7 @@
 # The workshop (R-641): the process that holds the data folder, its services, the job queue, the history and the events, above the
 # two apps and below the GUI. Sources include <ursatz_workshop/...> and the headers beside them.
 add_library(ursatz_workshop STATIC
+    src/base/command_context.c
     src/base/http_status.c
     src/base/knowledge.c
     src/base/last_error.c
@@ -43,6 +44,8 @@ add_library(ursatz_workshop STATIC
     src/jobs/job_queue.c
     src/coordinator/api_analysis.c
     src/coordinator/api_collections.c
+    src/coordinator/api_commands_items.c
+    src/coordinator/api_commands_library.c
     src/coordinator/api_composer.c
     src/coordinator/api_items.c
     src/coordinator/api_jobs.c

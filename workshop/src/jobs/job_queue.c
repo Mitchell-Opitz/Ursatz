@@ -2,6 +2,8 @@
 
 #include "job_queue.h"
 
+#include "base/command_context.h"
+
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +32,8 @@ typedef struct Job {
   void *input;
   void (*free_input)(void *);
   UrsatzJob composer_job;
+  WorkshopCommandContext context; /* the command that queued it, set again on the worker that runs it */
+  bool has_context;
   time_t finished_at;
   struct Job *next;
 } Job;
@@ -222,7 +226,9 @@ static void *worker_main(void *arg) {
     pthread_mutex_unlock(&g_lock);
 
     WorkshopJobResult out = {500, NULL};
+    workshop_command_context_set(job->has_context ? &job->context : NULL);
     UrsatzStatus status = job->run(job->input, &job->composer_job, &out);
+    workshop_command_context_set(NULL);
 
     pthread_mutex_lock(&g_lock);
     bool ok = status == URSATZ_OK && out.http_status >= 200 && out.http_status < 300;
@@ -331,6 +337,11 @@ bool workshop_job_submit(const char *kind, WorkshopJobFn run, void *input, void 
   job->composer_job.progress = on_progress;
   job->composer_job.cancelled = on_cancelled;
   job->composer_job.user = job;
+  const WorkshopCommandContext *queued_by = workshop_command_context();
+  if (queued_by) {
+    job->context = *queued_by;
+    job->has_context = true;
+  }
 
   pthread_mutex_lock(&g_lock);
   if (!g_running || g_stopping) {

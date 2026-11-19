@@ -158,6 +158,23 @@ static inline int query_with_body(struct mg_connection *conn, const char *name, 
   return ursatz_gui_answer_query(conn, name, body, NULL, failed, bare);
 }
 
+/* The failures of a command: what the request got wrong (a failure that names its member, "/params/...") is the error shape, the store's own
+ * failures the message shape. */
+static inline int failed_material_cmd(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return error->path[0] == '/' ? ursatz_gui_failed_error(conn, status, error) : ursatz_gui_failed_message(conn, status, error);
+}
+
+/* Runs the command name on target with the request's JSON body as params. The body's failures are answered here (400, or 413 past
+ * kMaxRequestBodySize). */
+static inline int command_with_body(struct mg_connection *conn, const char *name, const char *target, UrsatzGuiFailureFn failed) {
+  int status = 0;
+  cJSON *body = ursatz_gui_read_json_body_max(conn, kMaxRequestBodySize, &status);
+  if (!body) {
+    return status;
+  }
+  return ursatz_gui_answer_command(conn, name, target, body, NULL, failed, false);
+}
+
 /* The failures the material routes answer: the message shape for the store's own failures, the error shape (with the request path at
  * fault) for what is wrong with the request. */
 static inline int failed_material(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {

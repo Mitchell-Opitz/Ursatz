@@ -24,26 +24,7 @@ static int handle_subject_groups(struct mg_connection *conn) {
 }
 
 static int handle_create_subject(struct mg_connection *conn) {
-  int status = 0;
-  cJSON *body = read_json_body(conn, &status);
-  if (!body) {
-    return status;
-  }
-  bool bad = false;
-  const char *name = optional_string(body, "name", &bad);
-  const char *kind = optional_string(body, "kind", &bad);
-  const char *note = optional_string(body, "note", &bad);
-  if (bad || !name || !kind) {
-    cJSON_Delete(body);
-    return send_failure(conn, 400, "name and kind are required; name, kind and note are strings");
-  }
-  cJSON *subject = NULL;
-  UrsatzStatus result = workshop_subject_create(name, kind, note, &subject);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_ok_with(conn, "subject", subject);
+  return command_with_body(conn, "subject.create", "", failed_material_cmd);
 }
 
 static int handle_get_subject(struct mg_connection *conn, const char *id) {
@@ -51,47 +32,11 @@ static int handle_get_subject(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_patch_subject(struct mg_connection *conn, const char *id) {
-  int status = 0;
-  cJSON *body = read_json_body(conn, &status);
-  if (!body) {
-    return status;
-  }
-  bool bad = false;
-  const char *name = optional_string(body, "name", &bad);
-  const char *kind = optional_string(body, "kind", &bad);
-  const char *note = optional_string(body, "note", &bad);
-  if (bad || (!name && !kind && !note)) {
-    cJSON_Delete(body);
-    return send_failure(conn, 400, "give name, kind and/or note as strings");
-  }
-  cJSON *subject = NULL;
-  UrsatzStatus result = workshop_subject_update(id, name, kind, note, &subject);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_ok_with(conn, "subject", subject);
+  return command_with_body(conn, "subject.update", id, failed_material_cmd);
 }
 
 static int handle_delete_subject(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_subject_delete(id);
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_ok(conn);
-}
-
-/* {"ok":true,"subject":...} plus "already" for a link or relation that was in place. */
-static int send_subject_after(struct mg_connection *conn, cJSON *subject, bool already, bool with_already) {
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !subject || !cJSON_AddBoolToObject(object, "ok", 1) ||
-      (with_already && !cJSON_AddBoolToObject(object, "already", already ? 1 : 0))) {
-    cJSON_Delete(object);
-    cJSON_Delete(subject);
-    return send_failure(conn, 500, "out of memory");
-  }
-  cJSON_AddItemToObject(object, "subject", subject);
-  return ursatz_gui_send_object(conn, 200, object);
+  return ursatz_gui_answer_command(conn, "subject.delete", id, NULL, NULL, failed_material_cmd, false);
 }
 
 /* kind is "items", "pieces" or "related"; POST adds the link, DELETE removes it. */
@@ -101,33 +46,15 @@ static int handle_subject_link(struct mg_connection *conn, const char *method, c
   if (!post && strcmp(method, "DELETE") != 0) {
     return send_method_not_allowed(conn);
   }
-  bool already = false;
-  cJSON *subject = NULL;
-  UrsatzStatus result;
-  if (post && strcmp(kind, "items") == 0) {
-    /* A variant belongs to its motif and has no subjects (R-187). An absent item is left to the subject service. */
-    cJSON *body = NULL;
-    bool variant = workshop_material_item_get(other, NULL, &body) == URSATZ_OK &&
-                   workshop_material_item_is_variant(body);
-    cJSON_Delete(body);
-    if (variant) {
-      return send_failure(conn, 400, "variants have no subjects; save it as a new motif first");
-    }
+  const char *member = strcmp(kind, "items") == 0 ? "item_id" : strcmp(kind, "pieces") == 0 ? "piece_id" : "other_id";
+  const char *action = strcmp(kind, "items") == 0 ? (post ? "subject.link-item" : "subject.unlink-item")
+                       : strcmp(kind, "pieces") == 0 ? (post ? "subject.link-piece" : "subject.unlink-piece")
+                                                     : (post ? "subject.relate" : "subject.unrelate");
+  cJSON *params = cJSON_CreateObject();
+  if (params) {
+    cJSON_AddStringToObject(params, member, other);
   }
-  if (strcmp(kind, "items") == 0) {
-    result = post ? workshop_subject_link_item(id, other, &already, &subject)
-                  : workshop_subject_unlink_item(id, other, &subject);
-  } else if (strcmp(kind, "pieces") == 0) {
-    result = post ? workshop_subject_link_piece(id, other, &already, &subject)
-                  : workshop_subject_unlink_piece(id, other, &subject);
-  } else {
-    result = post ? workshop_subject_relate(id, other, &already, &subject)
-                  : workshop_subject_unrelate(id, other, &subject);
-  }
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_subject_after(conn, subject, already, post);
+  return ursatz_gui_answer_command(conn, action, id, params, NULL, failed_material_cmd, false);
 }
 
 static int route_subjects(struct mg_connection *conn, const char *method, char segments[][256], int count) {

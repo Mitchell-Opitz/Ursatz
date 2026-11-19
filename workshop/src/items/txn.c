@@ -1,3 +1,4 @@
+#include "base/command_context.h"
 #include "txn.h"
 
 #include <dirent.h>
@@ -123,6 +124,13 @@ WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const
         }
         use->next_seq = journal.last_seq + 1;
         workshop_journal_free(&journal);
+    }
+    /* A command in progress names its records, gives their actor and the version it was made against (base/command_context.h). */
+    const WorkshopCommandContext *context = workshop_command_context();
+    if (context) {
+        command = context->command[0] != '\0' ? context->command : command;
+        actor = context->actor[0] != '\0' ? context->actor : actor;
+        base_version = context->base_version >= 0 ? context->base_version : base_version;
     }
     WorkshopTxn *txn = calloc(1, sizeof(*txn));
     if (!txn) {
@@ -571,6 +579,7 @@ UrsatzStatus workshop_txn_commit(WorkshopTxn *txn, UrsatzError *error) {
     }
     write_index(txn->seq);
     CRASH(AFTER_INDEX);
+    workshop_command_context_set_last_seq(txn->seq);
     txn_free(txn);
     unlock();
     return finish;

@@ -37,37 +37,8 @@ static int handle_start_run(struct mg_connection *conn) {
   if (!body) {
     return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
-  WorkshopLinkScope scope;
-  if (!workshop_link_scope_parse(cJSON_GetObjectItemCaseSensitive(body, "scope"), &scope)) {
-    cJSON_Delete(body);
-    return ursatz_gui_send_failure(conn, 400, "invalid scope");
-  }
-  char *id = NULL;
-  char job_id[WORKSHOP_JOB_ID_BYTES];
-  UrsatzStatus result = workshop_link_run_start(&scope, &id, job_id);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return send_link_failure(conn, result);
-  }
-  cJSON *run = NULL;
-  result = workshop_link_run_get(id, &run);
-  free(id);
-  if (result != URSATZ_OK) {
-    return send_link_failure(conn, result);
-  }
   /* 202 {"ok", "run", "job"}: the page follows the job (BackendJobs.runJob) and gets {"ok", "run"} when it ends. */
-  cJSON *object = cJSON_CreateObject();
-  cJSON *job = object ? cJSON_AddObjectToObject(object, "job") : NULL;
-  if (!job || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "run", run) ||
-      !cJSON_AddStringToObject(job, "id", job_id) || !cJSON_AddStringToObject(job, "kind", "links") ||
-      !cJSON_AddStringToObject(job, "state", workshop_job_state_name(WORKSHOP_JOB_QUEUED))) {
-    cJSON_Delete(object);
-    if (!object) {
-      cJSON_Delete(run);
-    }
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 202, object);
+  return ursatz_gui_answer_command(conn, "links.run", "", body, NULL, ursatz_gui_failed_message, false);
 }
 
 static int handle_list_runs(struct mg_connection *conn) {
@@ -79,15 +50,7 @@ static int handle_get_run(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_delete_run(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_link_run_delete(id);
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    return ursatz_gui_send_failure(conn, 404, "run not found");
-  }
-  if (result != URSATZ_OK) {
-    return send_link_failure(conn, result);
-  }
-  ursatz_gui_send_json(conn, "{\"ok\":true}");
-  return 200;
+  return ursatz_gui_answer_command(conn, "links.delete", id, NULL, NULL, ursatz_gui_failed_message, false);
 }
 
 static int handle_piece_links(struct mg_connection *conn, const char *piece_id) {

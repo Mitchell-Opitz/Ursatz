@@ -8,6 +8,7 @@
 #include <cJSON.h>
 
 #include "route_util.h"
+#include "../server.h"
 
 static const char *kJobsPrefix = "/api/jobs";
 
@@ -49,8 +50,19 @@ static int handle_get(struct mg_connection *conn, const char *id) {
 
 /* DELETE /api/jobs/<id>: asks the job to stop (204). */
 static int handle_delete(struct mg_connection *conn, const char *id) {
-  if (!workshop_job_cancel(id)) {
-    return send_error(conn, 404, "job not found");
+  WorkshopReply reply;
+  UrsatzError error = {{0}, {0}};
+  cJSON *command = cJSON_CreateObject();
+  if (!command || !cJSON_AddStringToObject(command, "command", "job.cancel") || !cJSON_AddStringToObject(command, "actor", "michelle") ||
+      !cJSON_AddStringToObject(command, "target", id)) {
+    cJSON_Delete(command);
+    return send_error(conn, 500, "out of memory");
+  }
+  UrsatzStatus status = workshop_command(ursatz_gui_workshop(), command, NULL, &reply, &error);
+  cJSON_Delete(command);
+  workshop_reply_destroy(&reply);
+  if (status != URSATZ_OK) {
+    return send_error(conn, workshop_http_status(status, NULL), error.message);
   }
   mg_printf(conn, "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n");
   return 204;

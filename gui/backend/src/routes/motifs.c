@@ -92,32 +92,13 @@ int ursatz_gui_motifs_each_op(struct mg_connection *conn, const char *id) {
 /* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and stores the
    result as a new version. Runs on the job queue. */
 int ursatz_gui_motifs_reroll(struct mg_connection *conn, const char *id) {
-  WorkshopVariantsJob *job = NULL;
-  UrsatzError error = {{0}};
-  UrsatzStatus result = workshop_variants_job_new(WORKSHOP_VARIANTS_REROLL, id, NULL, &job, &error);
-  if (result != URSATZ_OK) {
-    return send_service_error(conn, result, &error);
-  }
-  return ursatz_gui_jobs_send_accepted(conn, workshop_variants_job_kind(job), workshop_variants_job_run, job,
-                                       workshop_variants_job_free);
+  return ursatz_gui_answer_command(conn, "item.reroll", id, NULL, NULL, failed_material_error, false);
 }
 
 /* POST .../items/<id>/{variants/save, flag, promote, link-form}: a body in, the item out. */
 
-int ursatz_gui_motifs_item_command(struct mg_connection *conn, const char *id, ItemCommand command) {
-  int status = 0;
-  cJSON *body = read_json_body(conn, &status);
-  if (!body) {
-    return status;
-  }
-  cJSON *item = NULL;
-  UrsatzError error = {{0}};
-  UrsatzStatus result = command(id, body, &item, &error);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return send_service_error(conn, result, &error);
-  }
-  return send_ok_with(conn, "item", item);
+int ursatz_gui_motifs_item_command(struct mg_connection *conn, const char *id, const char *command) {
+  return command_with_body(conn, command, id, failed_material_error);
 }
 
 /* POST /api/materials/recognize {source: {item, version}, target: {item, version}}: how the target derives from the source. */
@@ -135,25 +116,14 @@ int ursatz_gui_motifs_op_checks_get(struct mg_connection *conn, const char *id) 
   return QUERY(conn, "item.op-checks", failed_material, false, "id", id);
 }
 
+/* The failures of the op-checks write: the store's message with the status of the table, the path of a refusal counted (422). */
+static int failed_op_checks(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return send_failure(conn, workshop_http_status(status, error), error->message);
+}
+
 /* PUT /api/materials/items/<id>/op-checks {checks}: replaces the marks. The file is not a version. */
 int ursatz_gui_motifs_op_checks_put(struct mg_connection *conn, const char *id) {
-  int status = 0;
-  cJSON *body = read_json_body(conn, &status);
-  if (!body) {
-    return status;
-  }
-  UrsatzError failure = {{0}};
-  cJSON *stored = NULL;
-  UrsatzStatus result = workshop_material_op_checks_put(id, body, &failure, &stored);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return failure.message[0] != '\0' ? send_failure(conn, workshop_http_status(result, &failure), failure.message) : send_material_failure(conn, result);
-  }
-  if (!cJSON_AddBoolToObject(stored, "ok", 1)) {
-    cJSON_Delete(stored);
-    return send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, stored);
+  return command_with_body(conn, "item.set-op-checks", id, failed_op_checks);
 }
 
 /* POST /api/materials/motifs/random {material, meter, key?, form?, style_id?, count?, seed?}: random motives from the Composer; nothing

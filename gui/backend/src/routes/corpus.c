@@ -19,43 +19,18 @@ static void send_ok_false(struct mg_connection *conn, const char *message) {
 
 /* A missing collection is a 404; every other failure keeps the route's
  * 200 with {"ok":false,...}. */
-static int send_collection_failure(struct mg_connection *conn, UrsatzStatus result) {
-  return ursatz_gui_send_failure(conn, result == URSATZ_ERR_NOT_FOUND ? 404 : 200,
-                                 ursatz_gui_failure_message("collection operation failed"));
-}
 
-/* The members every collection answer carries (the answer of a create or an update). */
-static bool add_summary_members(cJSON *object, const char *id, const char *name, const char *description,
-                                size_t piece_count, const char *updated_at) {
-  return cJSON_AddStringToObject(object, "id", id) && cJSON_AddStringToObject(object, "name", name) &&
-         cJSON_AddStringToObject(object, "description", description) &&
-         cJSON_AddNumberToObject(object, "piece_count", (double)piece_count) &&
-         cJSON_AddStringToObject(object, "updated_at", updated_at);
-}
-
-/* {"ok":true,"id","name","description","piece_count","updated_at"} for the
- * stored collection id, so an answer shows the normalized values. */
-static int send_collection_summary(struct mg_connection *conn, const char *id) {
-  WorkshopCollection *collection = NULL;
-  UrsatzStatus result = workshop_collection_get(id, &collection);
-  if (result != URSATZ_OK) {
-    return send_collection_failure(conn, result);
-  }
-  cJSON *object = cJSON_CreateObject();
-  bool built = object && cJSON_AddBoolToObject(object, "ok", 1) &&
-               add_summary_members(object, collection->id, collection->name, collection->description,
-                                   collection->piece_count, collection->updated_at);
-  workshop_collection_destroy(collection);
-  if (!built) {
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
-}
-
-/* The failures of a collection query: a missing collection is a 404, every other one keeps the route's 200 with {"ok":false,...}. */
+/* The failures of a collection command: a missing collection is a 404; every other one keeps the route's 200 with {"ok":false,...} (but the
+ * add of pieces answers 400 for a request it refuses: too many pieces, an unknown piece). */
 static int failed_collection(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
   return ursatz_gui_send_failure(conn, status == URSATZ_ERR_NOT_FOUND ? 404 : 200, error->message);
+}
+
+static int failed_add_pieces(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  if (status == URSATZ_ERR_REQUEST && strncmp(error->message, "invalid", 7) != 0) {
+    return ursatz_gui_send_failure(conn, 400, error->message);
+  }
+  return failed_collection(conn, status, error);
 }
 
 static int handle_create_corpus(struct mg_connection *conn) {
@@ -63,16 +38,7 @@ static int handle_create_corpus(struct mg_connection *conn) {
   if (!body) {
     return ursatz_gui_send_failure(conn, 200, "invalid request body");
   }
-  char *id = NULL;
-  UrsatzError error = {{0}, {0}};
-  UrsatzStatus result = workshop_collection_create_request(body, &id, &error);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_failure(conn, result == URSATZ_ERR_NOT_FOUND ? 404 : 200, error.message);
-  }
-  int status = send_collection_summary(conn, id);
-  free(id);
-  return status;
+  return ursatz_gui_answer_command(conn, "collection.create", "", body, NULL, failed_collection, false);
 }
 
 static int handle_list_corpora(struct mg_connection *conn) {
@@ -88,73 +54,29 @@ static int handle_patch_corpus(struct mg_connection *conn, const char *id) {
   if (!body) {
     return ursatz_gui_send_failure(conn, 200, "invalid request body");
   }
-
-  const cJSON *name_item = cJSON_GetObjectItemCaseSensitive(body, "name");
-  const cJSON *description_item = cJSON_GetObjectItemCaseSensitive(body, "description");
-  if (!name_item && !description_item) {
-    cJSON_Delete(body);
-    return ursatz_gui_send_failure(conn, 200, "nothing to update");
-  }
-  if (name_item && !cJSON_IsString(name_item)) {
-    cJSON_Delete(body);
-    return ursatz_gui_send_failure(conn, 200, "invalid name");
-  }
-  if (description_item && !cJSON_IsString(description_item)) {
-    cJSON_Delete(body);
-    return ursatz_gui_send_failure(conn, 200, "invalid description");
-  }
-
-  UrsatzStatus result = workshop_collection_update(
-      id, name_item ? name_item->valuestring : NULL, description_item ? description_item->valuestring : NULL);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return send_collection_failure(conn, result);
-  }
-  return send_collection_summary(conn, id);
+  return ursatz_gui_answer_command(conn, "collection.update", id, body, NULL, failed_collection, false);
 }
 
 static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_collection_delete(id);
-  if (result != URSATZ_OK) {
-    return send_collection_failure(conn, result);
-  }
-  ursatz_gui_send_json(conn, "{\"ok\":true}");
-  return 200;
+  return ursatz_gui_answer_command(conn, "collection.delete", id, NULL, NULL, failed_collection, false);
 }
 
-/* Adds the ids of {"piece_id":"..."} or {"piece_ids":["...", ...]} to the
- * collection. A piece already in it is counted, not an error:
+/* Adds the ids of {"piece_id":"..."} or {"piece_ids":["...", ...]} to the collection. A piece already in it is counted, not an error:
  * {"ok":true,"added":n,"already":n}. */
 static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
     return ursatz_gui_send_failure(conn, 200, "invalid request body");
   }
-  size_t added = 0;
-  size_t already = 0;
-  int status = 200;
-  UrsatzError error = {{0}, {0}};
-  UrsatzStatus result = workshop_collection_add_request(corpus_id, body, &added, &already, &status, &error);
-  cJSON_Delete(body);
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_failure(conn, status, error.message);
-  }
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddNumberToObject(object, "added", (double)added) ||
-      !cJSON_AddNumberToObject(object, "already", (double)already)) {
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
+  return ursatz_gui_answer_command(conn, "collection.add-pieces", corpus_id, body, NULL, failed_add_pieces, false);
 }
 
 static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id, const char *piece_id) {
-  UrsatzStatus result = workshop_collection_remove_piece(corpus_id, piece_id);
-  if (result != URSATZ_OK) {
-    return send_collection_failure(conn, result);
+  cJSON *params = cJSON_CreateObject();
+  if (params) {
+    cJSON_AddStringToObject(params, "piece_id", piece_id);
   }
-  ursatz_gui_send_json(conn, "{\"ok\":true}");
-  return 200;
+  return ursatz_gui_answer_command(conn, "collection.remove-piece", corpus_id, params, NULL, failed_collection, false);
 }
 
 static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id) {

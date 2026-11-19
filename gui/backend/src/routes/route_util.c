@@ -322,3 +322,39 @@ int ursatz_gui_failed_error(struct mg_connection *conn, UrsatzStatus status, con
   free(text);
   return http;
 }
+
+UrsatzStatus ursatz_gui_run_command(const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
+                                    UrsatzError *error) {
+  cJSON *command = cJSON_CreateObject();
+  if (!command || !cJSON_AddStringToObject(command, "command", name) || !cJSON_AddStringToObject(command, "actor", "michelle") ||
+      !cJSON_AddStringToObject(command, "target", target ? target : "") || !cJSON_AddItemToObject(command, "params", params ? params : cJSON_CreateObject())) {
+    cJSON_Delete(command);
+    memset(reply, 0, sizeof(*reply));
+    snprintf(error->message, sizeof(error->message), "out of memory");
+    error->path[0] = '\0';
+    return URSATZ_ERR_ALLOC;
+  }
+  UrsatzStatus status = workshop_command(ursatz_gui_workshop(), command, bytes, reply, error);
+  cJSON_Delete(command);
+  if (reply->json) {
+    cJSON_DeleteItemFromObjectCaseSensitive(reply->json, "journal_seq");
+  }
+  return status;
+}
+
+int ursatz_gui_answer_command(struct mg_connection *conn, const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes,
+                              UrsatzGuiFailureFn failed, bool bare) {
+  WorkshopReply reply;
+  UrsatzError error = {{0}, {0}};
+  UrsatzStatus status = ursatz_gui_run_command(name, target, params, bytes, &reply, &error);
+  if (status != URSATZ_OK) {
+    int answered = failed(conn, status, &error);
+    workshop_reply_destroy(&reply);
+    return answered;
+  }
+  const cJSON *job = cJSON_GetObjectItemCaseSensitive(reply.json, "job");
+  if (job && !cJSON_GetObjectItemCaseSensitive(job, "stage")) {
+    return ursatz_gui_send_reply_ok(conn, 202, &reply);
+  }
+  return bare ? ursatz_gui_send_reply_json(conn, 200, &reply) : ursatz_gui_send_reply_ok(conn, 200, &reply);
+}

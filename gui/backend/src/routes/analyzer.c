@@ -112,6 +112,27 @@ static char *read_filename_header(struct mg_connection *conn) {
   return decoded;
 }
 
+/* The failure of a command that queues a job: no queue is a 503, no memory the route's 200 with {"ok": false}. */
+static int failed_job_command(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  if (status == URSATZ_ERR_INTERNAL) {
+    return ursatz_gui_send_failure(conn, 503, error->message);
+  }
+  return ursatz_gui_send_failure(conn, 200, error->message);
+}
+
+/* The failures of the Library's writes: a missing piece is a 404, a refused request a 400 (but a refused filename keeps the route's 200 with
+ * {"ok": false}), every other failure the route's 200 with {"ok": false, "message"}. */
+static int failed_library_write(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  if (status == URSATZ_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (status == URSATZ_ERR_REQUEST && strcmp(error->path, "filename") != 0) {
+    return ursatz_gui_send_failure(conn, 400, error->message);
+  }
+  return ursatz_gui_send_failure(conn, 200, error->message);
+}
+
 static int handle_post(struct mg_connection *conn) {
   size_t body_size = 0;
   unsigned char *body_data = read_request_body(conn, &body_size);
@@ -128,15 +149,15 @@ static int handle_post(struct mg_connection *conn) {
   }
 
   /* The import is an "analysis" job (R-645): the answer is 202 with the job, and the job answers what this route used to. */
-  WorkshopAnalysisJob *job = workshop_analysis_job_import(body_data, body_size, filename);
+  cJSON *params = cJSON_CreateObject();
+  if (params) {
+    cJSON_AddStringToObject(params, "filename", filename);
+  }
+  WorkshopBytes file = {body_data, body_size, filename};
+  int status = ursatz_gui_answer_command(conn, "library.import", "", params, &file, failed_job_command, false);
   free(body_data);
   free(filename);
-  if (!job) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
-  }
-  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
-                                       workshop_analysis_job_free);
+  return status;
 }
 
 /* Library failures: every one answers 200 with {"ok": false, "message"} (the old answers, until B12). */
@@ -252,63 +273,18 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
     cJSON_Delete(root);
     return ursatz_gui_send_json_status(conn, 400, "Bad Request", "{\"ok\":false,\"message\":\"invalid request body\"}");
   }
-  cJSON *piece = NULL;
-  UrsatzError failure = {{0}, {0}};
-  UrsatzStatus result = workshop_library_patch(kPiecesDir, id, root, &piece, &failure);
-  cJSON_Delete(root);
-  int status = 200;
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    status = 404;
-  } else if (result == URSATZ_ERR_REQUEST && strcmp(failure.path, "filename") == 0) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"invalid filename\"}");
-  } else if (result == URSATZ_ERR_REQUEST) {
-    cJSON *answer = cJSON_CreateObject();
-    char *text = NULL;
-    if (answer) {
-      cJSON_AddFalseToObject(answer, "ok");
-      cJSON_AddStringToObject(answer, "message", failure.message);
-      text = cJSON_PrintUnformatted(answer);
-      cJSON_Delete(answer);
-    }
-    status = ursatz_gui_send_json_status(conn, 400, "Bad Request", text ? text : "{\"ok\":false,\"message\":\"invalid metadata\"}");
-    free(text);
-  } else if (result == URSATZ_ERR_UNSATISFIABLE) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
-  } else if (result != URSATZ_OK) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to update piece\"}");
-  } else {
-    status = send_ok_with(conn, "piece", piece);
-  }
-  return status;
+  return ursatz_gui_answer_command(conn, "library.update", id, root, NULL, failed_library_write, false);
 }
 
 static int handle_delete_piece(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_library_delete(kPiecesDir, id);
-
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result != URSATZ_OK) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to delete piece\"}");
-    return 200;
-  }
-  ursatz_gui_send_json(conn, "{\"ok\":true}");
-  return 200;
+  return ursatz_gui_answer_command(conn, "library.delete", id, NULL, NULL, failed_library_write, false);
 }
 
 static const char *kReanalyzeSuffix = "/reanalyze";
 
 /* POST /api/analyzer/pieces/<id>/reanalyze: an "analysis" job; the answer is 202 with the job. */
 static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
-  WorkshopAnalysisJob *job = workshop_analysis_job_reanalyze(id);
-  if (!job) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
-  }
-  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
-                                       workshop_analysis_job_free);
+  return ursatz_gui_answer_command(conn, "library.reanalyze", id, NULL, NULL, failed_job_command, false);
 }
 
 static const char *kMusicXmlSuffix = "/musicxml";

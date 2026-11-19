@@ -131,6 +131,9 @@ void workshop_reply_destroy(WorkshopReply *reply);
 UrsatzStatus workshop_query(Workshop *workshop, const char *name, const cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
                             UrsatzError *error);
 
+UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const WorkshopBytes *bytes, WorkshopReply *reply,
+                              UrsatzError *error);
+
 /* Stops what the workshop holds, releases the data folder and frees the workshop. NULL is a no-op. */
 void workshop_close(Workshop *workshop);
 

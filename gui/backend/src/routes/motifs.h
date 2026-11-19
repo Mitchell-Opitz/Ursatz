@@ -24,8 +24,7 @@ int ursatz_gui_motifs_op_checks_put(struct mg_connection *conn, const char *id);
 int ursatz_gui_motifs_random_motifs(struct mg_connection *conn);
 int ursatz_gui_motifs_validate(struct mg_connection *conn);
 
-/* A request body in, an item out: the workshop_variants_save, _flag, _promote and _link_form calls. */
-typedef UrsatzStatus (*ItemCommand)(const char *id, const cJSON *body, cJSON **item, UrsatzError *error);
-int ursatz_gui_motifs_item_command(struct mg_connection *conn, const char *id, ItemCommand command);
+/* A request body in, an item out: the commands item.save-variant, item.flag, item.promote and item.link-form (named by command). */
+int ursatz_gui_motifs_item_command(struct mg_connection *conn, const char *id, const char *command);
 
 #endif /* URSATZ_GUI_ROUTE_MOTIFS_H */
