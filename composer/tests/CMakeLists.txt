@@ -73,7 +73,6 @@ ursatz_test(test_candidate LIBS ursatz_composer)
 
 ursatz_test(test_generation_record LIBS ursatz_composer)
 
-ursatz_test(test_lane_resize LIBS ursatz_composer)
 
 ursatz_test(test_harmony_phrase LIBS ursatz_composer)
 

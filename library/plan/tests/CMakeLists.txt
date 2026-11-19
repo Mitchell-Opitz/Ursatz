@@ -1,5 +1,8 @@
 ursatz_test_includes()
 
+# Resizing a lane span.
+ursatz_test(plan_lane_resize SOURCES test_plan_lane_resize.c LIBS ursatz_plan VALGRIND)
+
 # The section description: vocabulary, codec, rules and the member table against the schema fragment. The test writes
 # plan_section_written_<use>_<n>.json in its build directory; plan_section_schema validates them against the fragment's profiles.
 # The valgrind run writes the same files, so the two share a lock.
