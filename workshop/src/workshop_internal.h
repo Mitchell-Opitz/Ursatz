@@ -29,6 +29,7 @@
 #include "composition/compose_common.h"
 #include "composition/compose_jobs.h"
 #include "composition/composer_client.h"
+#include "composition/motif_import.h"
 #include "composition/motifs.h"
 #include "composition/pieces.h"
 #include "composition/themes.h"
@@ -36,6 +37,7 @@
 
 #include "rendering/export.h"
 #include "rendering/playback.h"
+#include "rendering/render_cache.h"
 
 #include "jobs/job_queue.h"
 

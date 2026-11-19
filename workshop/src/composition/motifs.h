@@ -92,4 +92,21 @@ WorkshopMotifAnalysis workshop_motif_analyze_body(cJSON *version_body, const cJS
                                                      char *refusal, size_t refusal_size, char *refusal_path,
                                                      size_t refusal_path_size);
 
+/* The rules of the motif requests the routes get. */
+
+/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major" or
+ * "C minor" is read as before). Bodies without a motif pass. */
+bool workshop_motif_tonic_ok(const cJSON *version_body);
+
+/* True when a new version of a body that holds a motif or a theme has a version note (every such version says what changed); other
+ * bodies need none. */
+bool workshop_motif_version_note_ok(const cJSON *version_body, const char *note);
+
+/* The note of an item's first version: note when it has text, "Created" for a motif or a theme, else NULL. */
+const char *workshop_motif_first_note(const char *type, const char *note);
+
+/* Random motives from the Composer: body {material | mode, meter, key?, form?, role?, style_id?, count?, seed?}; nothing is saved. The
+ * Composer's document plus "ok" in *document. On a failure *http_status is the status to answer and error holds the message and path. */
+UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document, int *http_status, UrsatzError *error);
+
 #endif /* WORKSHOP_MOTIF_SERVICE_H */

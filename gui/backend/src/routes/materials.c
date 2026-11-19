@@ -253,90 +253,9 @@ static unsigned char *read_file_body(struct mg_connection *conn, size_t *size, i
   return buffer;
 }
 
-/* The key of a motive document as "D minor", or false when it has none. The tonic is spelled as the Composer spells it
-   (pitch_class_names of its vocabulary). */
-static bool import_key_text(const cJSON *document, char *out, size_t out_size) {
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key");
-  const cJSON *tonic = cJSON_GetObjectItemCaseSensitive(key, "tonic_pitch_class");
-  const cJSON *material = cJSON_GetObjectItemCaseSensitive(key, "material");
-  char name[16];
-  char word[32];
-  if (!cJSON_IsNumber(tonic) || !cJSON_IsString(material) ||
-      !workshop_composer_tonic_name(tonic->valueint, material->valuestring, name, sizeof(name)) ||
-      !workshop_composer_key_word(material->valuestring, word, sizeof(word))) {
-    return false;
-  }
-  snprintf(out, out_size, "%s %s", name, word);
-  return true;
-}
 
-/* ---- degrees to C ------------------------------------------------------ */
-
-typedef struct {
-  int status;
-  char message[512];
-  char path[128];
-} ToCFailure;
-
-static void to_c_fail_at(ToCFailure *failure, int status, const char *message, const char *path) {
-  failure->status = status;
-  snprintf(failure->message, sizeof(failure->message), "%s", message);
-  snprintf(failure->path, sizeof(failure->path), "%s", path);
-}
-
-static void to_c_fail(ToCFailure *failure, int status, const char *message) {
-  to_c_fail_at(failure, status, message, "");
-}
-
-/* Writes a full motif's degree list as C notes in mode ("major" or "minor"): the Composer reads the degrees in
-   "C <mode>" and answers analysis.notes_text. Returns the notes text (caller frees), or NULL with failure set. The MIDI
-   import (handle_import_motif) moves a motif found on another tonic to C with it. */
-static char *degrees_to_c_notes(const char *degrees, const char *mode, const char *meter, const char *pickup,
-                                ToCFailure *failure) {
-  size_t length = degrees ? strlen(degrees) : 0;
-  if (length == 0 || length > 4000) {
-    to_c_fail(failure, 400, "degrees must be a list of 1 to 4000 characters");
-    return NULL;
-  }
-  if (!mode) {
-    to_c_fail(failure, 400, "mode is needed");
-    return NULL;
-  }
-  if (!meter || !pickup) {
-    to_c_fail(failure, 400, "meter and pickup are needed");
-    return NULL;
-  }
-  char key[16];
-  snprintf(key, sizeof(key), "C %s", mode);
-  cJSON *request = workshop_motif_motive_request("degrees", NULL, degrees, meter, key, pickup);
-  WorkshopComposerReply reply;
-  bool called = workshop_motif_motive(request, &reply);
-  cJSON_Delete(request);
-  if (!called) {
-    to_c_fail(failure, 500, "out of memory");
-    return NULL;
-  }
-  char *notes = NULL;
-  if (workshop_composer_reply_refused(&reply)) {
-    to_c_fail_at(failure, workshop_composer_reply_failure_status(&reply), reply.message[0] ? reply.message : "composer could not read the degrees", reply.path);
-  } else {
-    cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
-    const cJSON *text = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "notes_text");
-    if (cJSON_IsString(text)) {
-      notes = strdup(text->valuestring);
-    }
-    cJSON_Delete(document);
-    if (!notes) {
-      to_c_fail(failure, 500, "composer could not write the motif in C");
-    }
-  }
-  workshop_composer_reply_destroy(&reply);
-  return notes;
-}
-
-/* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
-   {"ok":true,"notes_text":...,"meter":"4/4","key":"C minor","material":"omt.material.natural-minor","moved_from":"D minor"|null,"pickup":"0",
-   "analysis":{...}} and saves nothing. The notes are moved to C; with no key found they are read as C major. */
+/* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers {"ok":true,"notes_text":...,
+   "meter":"4/4","key":"C minor","material":...,"moved_from":"D minor"|null,"pickup":"0","analysis":{...}} and saves nothing. */
 static int handle_import_motif(struct mg_connection *conn) {
   char meter[16];
   char key[32];
@@ -348,188 +267,14 @@ static int handle_import_motif(struct mg_connection *conn) {
   if (!bytes) {
     return status;
   }
-  cJSON *request = cJSON_CreateObject();
-  if (!request || (has_meter && !cJSON_AddStringToObject(request, "meter", meter)) ||
-      (has_key && !cJSON_AddStringToObject(request, "key", key))) {
-    cJSON_Delete(request);
-    free(bytes);
-    return send_failure(conn, 500, "out of memory");
-  }
-  WorkshopComposerReply reply;
-  bool called = workshop_motif_motive_from_midi(bytes, size, request, &reply);
-  cJSON_Delete(request);
+  cJSON *answer = NULL;
+  UrsatzError error = {{0}};
+  UrsatzStatus result = workshop_motif_import(bytes, size, has_meter ? meter : NULL, has_key ? key : NULL, &answer, &status, &error);
   free(bytes);
-  if (!called) {
-    return send_failure(conn, 500, "out of memory");
+  if (result != URSATZ_OK) {
+    return send_failure_at(conn, status, error.message, error.path);
   }
-  if (reply.status != URSATZ_OK) {
-    int failed = send_failure_at(conn, workshop_composer_reply_failure_status(&reply),
-                                 reply.message[0] ? reply.message : "composer could not read the MIDI file",
-                                 reply.path);
-    workshop_composer_reply_destroy(&reply);
-    return failed;
-  }
-  cJSON *document = reply.json ? cJSON_Parse(reply.json) : NULL;
-  workshop_composer_reply_destroy(&reply);
-  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
-  const cJSON *notes_text = cJSON_GetObjectItemCaseSensitive(analysis, "notes_text");
-  const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(analysis, "pickup");
-  const cJSON *bar = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "meter");
-  const cJSON *beats = cJSON_GetObjectItemCaseSensitive(bar, "beats_per_bar");
-  const cJSON *unit = cJSON_GetObjectItemCaseSensitive(bar, "beat_unit");
-  if (!cJSON_IsString(notes_text) || !cJSON_IsString(pickup) || !cJSON_IsNumber(beats) || !cJSON_IsNumber(unit)) {
-    cJSON_Delete(document);
-    return send_failure(conn, 500, "composer could not analyze the MIDI file");
-  }
-  char meter_text[16];
-  char key_text[32];
-  snprintf(meter_text, sizeof(meter_text), "%d/%d", beats->valueint, unit->valueint);
-  bool keyed = import_key_text(document, key_text, sizeof(key_text));
-  /* Motifs are written with C as the tonic (R-179): a key on another tonic moves the notes to C in the same mode;
-     no key found reads the notes as C major. */
-  const char *final_notes = notes_text->valuestring;
-  const char *final_key = "C major";
-  const char *moved_from = NULL;
-  char *moved_notes = NULL;
-  char c_key[16];
-  if (keyed) {
-    const char *mode = strchr(key_text, ' ') + 1;
-    snprintf(c_key, sizeof(c_key), "C %s", mode);
-    final_key = c_key;
-    if (strncmp(key_text, "C ", 2) != 0) {
-      const cJSON *degrees_text = cJSON_GetObjectItemCaseSensitive(analysis, "degrees_text");
-      ToCFailure failure = {0, ""};
-      moved_notes = degrees_to_c_notes(cJSON_IsString(degrees_text) ? degrees_text->valuestring : NULL, mode, meter_text,
-                                       pickup->valuestring, &failure);
-      if (!moved_notes) {
-        cJSON_Delete(document);
-        return send_failure_at(conn, failure.status, failure.message, failure.path);
-      }
-      final_notes = moved_notes;
-      moved_from = key_text;
-    }
-  }
-  cJSON *answer = cJSON_CreateObject();
-  if (!answer) {
-    free(moved_notes);
-    cJSON_Delete(document);
-    return send_failure(conn, 500, "out of memory");
-  }
-  cJSON_AddBoolToObject(answer, "ok", 1);
-  cJSON_AddStringToObject(answer, "notes_text", final_notes);
-  cJSON_AddStringToObject(answer, "meter", meter_text);
-  cJSON_AddStringToObject(answer, "key", final_key);
-  /* The material of the key the notes are written in (C major when the file names none). */
-  const cJSON *found_material =
-      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key"), "material");
-  char material_id[64];
-  if (keyed && cJSON_IsString(found_material)) {
-    cJSON_AddStringToObject(answer, "material", found_material->valuestring);
-  } else if (workshop_composer_material_of_word("major", material_id, sizeof(material_id))) {
-    cJSON_AddStringToObject(answer, "material", material_id);
-  }
-  cJSON_AddBoolToObject(answer, "key_found", keyed);
-  if (moved_from) {
-    cJSON_AddStringToObject(answer, "moved_from", moved_from);
-  } else {
-    cJSON_AddNullToObject(answer, "moved_from");
-  }
-  free(moved_notes);
-  cJSON_AddStringToObject(answer, "pickup", pickup->valuestring);
-  cJSON_AddItemToObject(answer, "analysis", cJSON_DetachItemFromObjectCaseSensitive(document, "analysis"));
-  cJSON_Delete(document);
   return ursatz_gui_send_object(conn, 200, answer);
-}
-
-typedef struct {
-  const char *form;
-  const char *degrees;
-  const char *meter;
-  const char *key;
-  const char *pickup;
-  const char *render_key;
-  const char *role;
-  const char *harmony;
-  const cJSON *features;
-  const char *tempo; /* the Composer reads it: a whole number or a fraction like 195/2; NULL for none */
-} RenderInput;
-
-typedef struct {
-  int status;
-  char message[512];
-  char path[128];
-} RenderFailure;
-
-static void render_fail_at(RenderFailure *failure, int status, const char *message, const char *path) {
-  failure->status = status;
-  snprintf(failure->message, sizeof(failure->message), "%s", message);
-  snprintf(failure->path, sizeof(failure->path), "%s", path);
-}
-
-static void render_fail(RenderFailure *failure, int status, const char *message) {
-  render_fail_at(failure, status, message, "");
-}
-
-/* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
-   and *out_midi (*out_midi_size bytes) the render's MIDI file, both caller-owned; playback is built from the MIDI by
-   the Analyzer (R-275). On failure failure holds the status and message. */
-static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_midi, size_t *out_midi_size,
-                         RenderFailure *failure) {
-  const char *form = in->form;
-  if (!form) {
-    render_fail(failure, 400, "form is needed");
-    return false;
-  }
-  size_t degrees_length = in->degrees ? strlen(in->degrees) : 0;
-  if (degrees_length == 0 || degrees_length > 4000) {
-    render_fail(failure, 400, "degrees must be a list of 1 to 4000 characters");
-    return false;
-  }
-  bool has_key = in->key && in->key[0] != '\0';
-  const char *render_key = in->render_key && in->render_key[0] != '\0' ? in->render_key : (has_key ? in->key : NULL);
-  if (!in->meter || !in->pickup) {
-    render_fail(failure, 400, "meter and pickup are needed");
-    return false;
-  }
-  if (!render_key) {
-    render_fail(failure, 400, "give a key");
-    return false;
-  }
-  bool full = strcmp(form, "full") == 0;
-  cJSON *request = workshop_motif_motive_request(full ? "degrees" : form, form, in->degrees, in->meter, has_key ? in->key : NULL, in->pickup);
-  if (!request || !workshop_motif_add_extras(request, in->harmony, in->features, workshop_motif_role_option(in->role)) ||
-      !cJSON_AddStringToObject(request, "render_key", render_key) || !cJSON_AddTrueToObject(request, "musicxml") ||
-      !cJSON_AddTrueToObject(request, "midi") ||
-      (in->tempo && !cJSON_AddStringToObject(request, "tempo", in->tempo))) {
-    cJSON_Delete(request);
-    render_fail(failure, 500, "out of memory");
-    return false;
-  }
-  WorkshopComposerReply reply;
-  bool called = workshop_motif_motive_render(request, &reply);
-  cJSON_Delete(request);
-  if (!called) {
-    render_fail(failure, 500, "out of memory");
-    return false;
-  }
-  bool ok = false;
-  if (workshop_composer_reply_refused(&reply)) {
-    render_fail_at(failure, workshop_composer_reply_failure_status(&reply), reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
-  } else {
-    char *xml = reply.status == URSATZ_OK && reply.musicxml && reply.midi ? strdup(reply.musicxml) : NULL;
-    if (xml) {
-      *out_xml = xml;
-      *out_midi = reply.midi;
-      *out_midi_size = reply.midi_size;
-      reply.midi = NULL;
-      reply.midi_size = 0;
-      ok = true;
-    } else {
-      render_fail(failure, 500, "composer could not render the motif");
-    }
-  }
-  workshop_composer_reply_destroy(&reply);
-  return ok;
 }
 
 /* The text of a refusal to build a playback; every one is a 500 (the file came from the Composer, not the request). */
@@ -547,20 +292,6 @@ static int send_playback_text(struct mg_connection *conn, char *json) {
   return ursatz_gui_send_object(conn, 200, playback);
 }
 
-/* Sends {"ok":true,"musicxml":...,"playback":{...}} and frees xml and playback. */
-static int send_render_answer(struct mg_connection *conn, char *xml, cJSON *playback) {
-  cJSON *answer = cJSON_CreateObject();
-  if (!answer || !cJSON_AddBoolToObject(answer, "ok", 1) || !cJSON_AddStringToObject(answer, "musicxml", xml)) {
-    cJSON_Delete(answer);
-    cJSON_Delete(playback);
-    free(xml);
-    return send_failure(conn, 500, "out of memory");
-  }
-  free(xml);
-  cJSON_AddItemToObject(answer, "playback", playback);
-  return ursatz_gui_send_object(conn, 200, answer);
-}
-
 /* POST /api/materials/render {form, degrees, meter, key?, pickup?, render_key?, tempo?, role?}: nothing is saved. */
 static int handle_render(struct mg_connection *conn) {
   int status = 0;
@@ -568,82 +299,14 @@ static int handle_render(struct mg_connection *conn) {
   if (!body) {
     return status;
   }
-  bool bad = false;
-  RenderInput in = {0};
-  in.form = optional_string(body, "form", &bad);
-  in.degrees = optional_string(body, "degrees", &bad);
-  in.meter = optional_string(body, "meter", &bad);
-  in.key = optional_string(body, "key", &bad);
-  in.pickup = optional_string(body, "pickup", &bad);
-  in.render_key = optional_string(body, "render_key", &bad);
-  in.role = optional_string(body, "role", &bad);
-  in.harmony = optional_string(body, "harmony", &bad);
-  in.features = cJSON_GetObjectItemCaseSensitive(body, "features");
-  if (!in.pickup) {
-    in.pickup = "0";
-  }
-  const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(body, "tempo");
-  char tempo_text[48] = "";
-  if (cJSON_IsString(tempo)) {
-    in.tempo = tempo->valuestring;
-  } else if (cJSON_IsNumber(tempo)) {
-    snprintf(tempo_text, sizeof(tempo_text), "%.15g", tempo->valuedouble);
-    in.tempo = tempo_text;
-  } else if (tempo && !cJSON_IsNull(tempo)) {
-    bad = true;
-  }
-  if (bad) {
-    cJSON_Delete(body);
-    return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key, role and harmony must be text and tempo a number or text like 195/2");
-  }
-  char *xml = NULL;
-  uint8_t *midi = NULL;
-  size_t midi_size = 0;
-  RenderFailure failure = {0, ""};
-  bool ok = render_motif(&in, &xml, &midi, &midi_size, &failure);
+  cJSON *answer = NULL;
+  UrsatzError error = {{0}};
+  UrsatzStatus result = workshop_motif_render(body, &answer, &status, &error);
   cJSON_Delete(body);
-  if (!ok) {
-    return send_failure_at(conn, failure.status, failure.message, failure.path);
+  if (result != URSATZ_OK) {
+    return send_failure_at(conn, status, error.message, error.path);
   }
-  /* An unsaved render has no folder: its MIDI goes to a temporary file for the Analyzer, which imports by path. */
-  char tmp_dir[512];
-  char *playback_text = NULL;
-  UrsatzStatus built = workshop_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
-                                      ? workshop_playback_of_midi_bytes(midi, midi_size, tmp_dir, &playback_text)
-                                      : workshop_fail(URSATZ_ERR_IO, NULL);
-  free(midi);
-  cJSON *playback = built == URSATZ_OK ? cJSON_Parse(playback_text) : NULL;
-  free(playback_text);
-  if (!playback) {
-    free(xml);
-    return send_failure(conn, 500, playback_failure_text(built));
-  }
-  return send_render_answer(conn, xml, playback);
-}
-
-/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major"
-   or "C minor" is read as before). Bodies without a motif are left alone. */
-static bool motif_tonic_ok(const cJSON *version_body) {
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
-  if (!cJSON_IsObject(motif)) {
-    return true;
-  }
-  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
-  if (material) {
-    return cJSON_IsString(material) && workshop_composer_vocabulary_has("materials", material->valuestring);
-  }
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
-  return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
-}
-
-/* True when text has a character that is not white space. */
-static bool has_text(const char *text) {
-  for (; text && *text; text++) {
-    if (!isspace((unsigned char)*text)) {
-      return true;
-    }
-  }
-  return false;
+  return ursatz_gui_send_object(conn, 200, answer);
 }
 
 static int handle_create_item(struct mg_connection *conn) {
@@ -662,7 +325,7 @@ static int handle_create_item(struct mg_connection *conn) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "type, name, project_id and an object body are required; note is a string");
   }
-  if (!motif_tonic_ok(version_body)) {
+  if (!workshop_motif_tonic_ok(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
@@ -678,9 +341,7 @@ static int handle_create_item(struct mg_connection *conn) {
   }
   cJSON *item = NULL;
   /* A new motif's or theme's first version is noted "Created" unless the caller gives a note. */
-  const char *first_note = has_text(note)                                             ? note
-                           : strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0 ? "Created"
-                                                                                       : NULL;
+  const char *first_note = workshop_motif_first_note(type, note);
   UrsatzStatus result =
       workshop_material_item_create_noted(type, name, project_id, version_body, first_note, &item);
   cJSON_Delete(body);
@@ -805,12 +466,11 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "an object body is required; note is a string");
   }
   /* Every new version of a motif or a theme says what changed. */
-  if ((cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "motif")) ||
-       cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "theme"))) && !has_text(note)) {
+  if (!workshop_motif_version_note_ok(version_body, note)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "give a version note");
   }
-  if (!motif_tonic_ok(version_body)) {
+  if (!workshop_motif_tonic_ok(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
@@ -1118,125 +778,11 @@ static int handle_version_file(struct mg_connection *conn, const char *id, const
   return 200;
 }
 
-/* The render cache of a motif version (R-275): items/<id>/v<n>/render/ holds score.musicxml and motif.mid, and
-   render.json {api_version, composer_version, ursatz_commit, render_key, tempo} names what they were made with. A
-   version never changes, so the files stand for the same key, tempo and Composer build (its API version, release and
-   Ursatz commit, composer_api_versions). */
-static bool render_cache_dir(const char *id, int number, char *out, size_t out_size) {
-  char version_dir[512];
-  return workshop_material_version_dir(id, number, version_dir, sizeof(version_dir)) &&
-         snprintf(out, out_size, "%s/render", version_dir) < (int)out_size;
-}
-
-static bool render_cache_file(const char *dir, const char *name, char *out, size_t out_size) {
-  return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
-}
-
-/* True when the string member name of meta equals value and value is not empty. */
-static bool render_meta_is(const cJSON *meta, const char *name, const char *value) {
-  const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, name);
-  return cJSON_IsString(item) && value[0] != '\0' && strcmp(item->valuestring, value) == 0;
-}
-
-/* True when render.json in dir names this render key, tempo and the linked Composer build. */
-static bool render_cache_matches(const char *dir, const char *render_key, int tempo) {
-  char path[640];
-  if (!render_cache_file(dir, "render.json", path, sizeof(path))) {
-    return false;
-  }
-  cJSON *meta = NULL;
-  common_json_read_object(path, &meta, NULL);
-  WorkshopComposerBuild build = workshop_composer_build();
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(meta, "render_key");
-  const cJSON *cached_tempo = cJSON_GetObjectItemCaseSensitive(meta, "tempo");
-  bool same = render_meta_is(meta, "api_version", build.api_version) &&
-              render_meta_is(meta, "composer_version", build.composer_version) &&
-              render_meta_is(meta, "ursatz_commit", build.ursatz_commit) && cJSON_IsString(key) &&
-              strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) && cached_tempo->valueint == tempo;
-  cJSON_Delete(meta);
-  return same;
-}
-
-/* The cached MusicXML text of a version for this render key and tempo (caller frees), or NULL. */
-static char *render_cache_read_score(const char *id, int number, const char *render_key, int tempo) {
-  char dir[576];
-  char path[640];
-  if (!render_cache_dir(id, number, dir, sizeof(dir)) || !render_cache_matches(dir, render_key, tempo) ||
-      !render_cache_file(dir, "score.musicxml", path, sizeof(path))) {
-    return NULL;
-  }
-  char *text = NULL;
-  common_file_read(path, &text, NULL, NULL);
-  return text;
-}
-
-/* Stores a render. The files go first and render.json last, so a half-written cache never matches. A failure is
-   silent: the next request renders again. */
-static void render_cache_write(const char *id, int number, const char *render_key, int tempo, const char *xml,
-                               const uint8_t *midi, size_t midi_size) {
-  char version_dir[512];
-  char dir[576];
-  char path[640];
-  if (!workshop_material_version_dir(id, number, version_dir, sizeof(version_dir)) ||
-      !render_cache_dir(id, number, dir, sizeof(dir)) || !(common_dir_make(version_dir, NULL) == URSATZ_OK) ||
-      !(common_dir_make(dir, NULL) == URSATZ_OK)) {
-    return;
-  }
-  cJSON *meta = cJSON_CreateObject();
-  if (!meta) {
-    return;
-  }
-  WorkshopComposerBuild build = workshop_composer_build();
-  cJSON_AddStringToObject(meta, "api_version", build.api_version);
-  cJSON_AddStringToObject(meta, "composer_version", build.composer_version);
-  cJSON_AddStringToObject(meta, "ursatz_commit", build.ursatz_commit);
-  cJSON_AddStringToObject(meta, "render_key", render_key);
-  cJSON_AddNumberToObject(meta, "tempo", tempo);
-  char *meta_text = cJSON_PrintUnformatted(meta);
-  cJSON_Delete(meta);
-  if (meta_text && render_cache_file(dir, "score.musicxml", path, sizeof(path)) &&
-      (common_file_write_atomic(path, xml, strlen(xml), NULL) == URSATZ_OK) && render_cache_file(dir, "motif.mid", path, sizeof(path)) &&
-      (common_file_write_atomic(path, midi, midi_size, NULL) == URSATZ_OK) && render_cache_file(dir, "render.json", path, sizeof(path))) {
-    (common_file_write_atomic(path, meta_text, strlen(meta_text), NULL) == URSATZ_OK);
-  }
-  free(meta_text);
-}
-
 /* Sends a file's bytes with a content type. */
 static int send_bytes(struct mg_connection *conn, const char *type, const void *data, size_t size) {
   mg_send_http_ok(conn, type, (long long)size);
   mg_write(conn, data, size);
   return 200;
-}
-
-/* GET /api/materials/items/<id>/versions/<n>/playback?file=theme|<name>: the playback of a theme version's MIDI file or
-   of the MIDI file of a version of a piece's form (loop, ending, piece...), built by the Analyzer (R-275, R-430). */
-static int handle_version_file_playback(struct mg_connection *conn, const char *id, int number, const char *file) {
-  char name[48];
-  char dir[512];
-  char path[640];
-  cJSON *version_body = NULL;
-  if (strcmp(file, "theme") != 0 && !workshop_material_version_name_ok(file)) {
-    return send_failure(conn, 400, "file must be theme or a version name of a lowercase letter, then up to 30 lowercase letters, digits or hyphens");
-  }
-  snprintf(name, sizeof(name), "%s.mid", file);
-  UrsatzStatus result = workshop_material_item_get_version(id, number, &version_body);
-  if (result != URSATZ_OK) {
-    return send_material_failure(conn, result);
-  }
-  cJSON_Delete(version_body);
-  FILE *exists = workshop_material_version_dir(id, number, dir, sizeof(dir)) &&
-                         snprintf(path, sizeof(path), "%s/%s", dir, name) < (int)sizeof(path)
-                     ? fopen(path, "rb")
-                     : NULL;
-  if (!exists) {
-    return send_failure(conn, 404, "file not found");
-  }
-  fclose(exists);
-  char *json = NULL;
-  UrsatzStatus built = workshop_playback_of_midi(path, &json);
-  return built == URSATZ_OK ? send_playback_text(conn, json)
-                                         : send_failure(conn, 500, playback_failure_text(built));
 }
 
 /* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>/playback: the playback of a variation's MIDI
@@ -1256,10 +802,8 @@ static int handle_piece_variation_playback(struct mg_connection *conn, const cha
                                          : send_failure(conn, 500, playback_failure_text(built));
 }
 
-/* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default:
-   the motif's own key). Both come from the version's render (motif.degrees through the Composer), cached per version
-   so the Composer runs at most once for a key and tempo. With ?file= the playback route answers for a theme or piece
-   version's own MIDI file instead. */
+/* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default: the motif's own
+   key). With ?file= the playback route answers for a theme or piece version's own MIDI file instead. */
 static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
   char *end = NULL;
   long number = strtol(number_text, &end, 10);
@@ -1267,92 +811,23 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
     return send_failure(conn, 404, "version not found");
   }
   char file[16];
-  if (playback_only && query_value(conn, "file", file, sizeof(file))) {
-    return handle_version_file_playback(conn, id, (int)number, file);
-  }
   char render_key[32];
+  bool has_file = playback_only && query_value(conn, "file", file, sizeof(file));
   bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
-  cJSON *version_body = NULL;
-  UrsatzStatus result = workshop_material_item_get_version(id, (int)number, &version_body);
+  char *musicxml = NULL;
+  cJSON *playback = NULL;
+  int status = 0;
+  UrsatzError error = {{0}};
+  UrsatzStatus result = workshop_motif_version_render(id, (int)number, has_render_key ? render_key : NULL, playback_only,
+                                                      has_file ? file : NULL, &musicxml, &playback, &status, &error);
   if (result != URSATZ_OK) {
-    return send_material_failure(conn, result);
+    return send_failure_at(conn, status, error.message, error.path);
   }
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
-  RenderInput in = {0};
-  in.form = optional_string(motif, "form", &(bool){false});
-  in.degrees = optional_string(motif, "degrees", &(bool){false});
-  in.meter = optional_string(motif, "meter", &(bool){false});
-  char motif_key[64];
-  in.key = workshop_motif_key_text(motif, motif_key, sizeof(motif_key));
-  in.pickup = optional_string(motif, "pickup", &(bool){false});
-  in.role = optional_string(version_body, "role", &(bool){false});
-  if (!in.role) {
-    in.role = optional_string(motif, "role", &(bool){false});
+  if (playback) {
+    return ursatz_gui_send_object(conn, 200, playback);
   }
-  in.harmony = workshop_motif_harmony(motif);
-  in.features = cJSON_GetObjectItemCaseSensitive(motif, "features");
-  in.render_key = has_render_key ? render_key : NULL;
-  if (!cJSON_IsObject(motif) || !in.degrees) {
-    cJSON_Delete(version_body);
-    return send_failure(conn, 404, "this version has no degrees to render");
-  }
-  if (!in.pickup) {
-    in.pickup = "0";
-  }
-  /* A copy: the key text lives in version_body, which is freed before the cache is written. */
-  char effective_key_text[64] = "";
-  const char *key_source = in.render_key && in.render_key[0] != '\0' ? in.render_key : in.key;
-  if (key_source) {
-    snprintf(effective_key_text, sizeof(effective_key_text), "%s", key_source);
-  }
-  const char *effective_key = key_source ? effective_key_text : NULL;
-  char cache_dir[576];
-  char midi_path[640];
-  bool cached = effective_key && render_cache_dir(id, (int)number, cache_dir, sizeof(cache_dir)) &&
-                render_cache_matches(cache_dir, effective_key, 0) &&
-                snprintf(midi_path, sizeof(midi_path), "%s/motif.mid", cache_dir) < (int)sizeof(midi_path);
-  if (cached && !playback_only) {
-    char *score = render_cache_read_score(id, (int)number, effective_key, 0);
-    if (score) {
-      cJSON_Delete(version_body);
-      send_bytes(conn, "application/xml", score, strlen(score));
-      free(score);
-      return 200;
-    }
-  }
-  if (cached && playback_only) {
-    char *json = NULL;
-    if (workshop_playback_of_midi(midi_path, &json) == URSATZ_OK) {
-      cJSON_Delete(version_body);
-      return send_playback_text(conn, json);
-    }
-  }
-  char *xml = NULL;
-  uint8_t *midi = NULL;
-  size_t midi_size = 0;
-  RenderFailure failure = {0, ""};
-  bool ok = render_motif(&in, &xml, &midi, &midi_size, &failure);
-  cJSON_Delete(version_body);
-  if (!ok) {
-    return send_failure_at(conn, failure.status, failure.message, failure.path);
-  }
-  if (effective_key) {
-    render_cache_write(id, (int)number, effective_key, 0, xml, midi, midi_size);
-  }
-  int answered;
-  if (playback_only) {
-    char tmp_dir[512];
-    char *json = NULL;
-    UrsatzStatus built = workshop_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
-                                        ? workshop_playback_of_midi_bytes(midi, midi_size, tmp_dir, &json)
-                                        : workshop_fail(URSATZ_ERR_IO, NULL);
-    answered = built == URSATZ_OK ? send_playback_text(conn, json)
-                                               : send_failure(conn, 500, playback_failure_text(built));
-  } else {
-    answered = send_bytes(conn, "application/xml", xml, strlen(xml));
-  }
-  free(midi);
-  free(xml);
+  int answered = send_bytes(conn, "application/xml", musicxml, strlen(musicxml));
+  free(musicxml);
   return answered;
 }
 
@@ -1513,86 +988,20 @@ static int handle_update_use(struct mg_connection *conn, const char *id, const c
   return send_ok_with(conn, "item", item);
 }
 
-/* POST /api/materials/motifs/random {material, meter, key?, form?, style_id?, count?, seed?}: random motives from the
-   Composer; nothing is saved. material (a material's id; the old member mode, a key word, is read as before) and meter may
-   be "random": the Composer draws them from the seed and says what it drew as "drawn". The answer is the Composer's document
-   plus "ok". */
+/* POST /api/materials/motifs/random {material, meter, key?, form?, style_id?, count?, seed?}: random motives from the Composer; nothing
+   is saved. The answer is the Composer's document plus "ok". */
 static int handle_random_motifs(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
   if (!body) {
     return status;
   }
-  bool bad = false;
-  const char *material = optional_string(body, "material", &bad);
-  const char *old_mode = optional_string(body, "mode", &bad);
-  const char *mode = material ? material : old_mode;
-  const char *meter = optional_string(body, "meter", &bad);
-  const char *key = optional_string(body, "key", &bad);
-  const char *form = optional_string(body, "form", &bad);
-  const char *style_id = optional_string(body, "style_id", &bad);
-  const char *role = optional_string(body, "role", &bad);
-  const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
-  const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
-  if (cJSON_IsNull(count_item)) {
-    count_item = NULL;
-  }
-  if (cJSON_IsNull(seed_item)) {
-    seed_item = NULL;
-  }
-  if (key && key[0] == '\0') {
-    key = NULL;
-  }
-  if (style_id && style_id[0] == '\0') {
-    style_id = NULL;
-  }
-  if (role && role[0] == '\0') {
-    role = NULL;
-  }
-  bool valid = !bad && mode && !(material && old_mode) && (!role || workshop_motif_role_option(role)) && meter &&
-               (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
-               (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
-                                count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
-               (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
-                               seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
-  if (!valid) {
-    cJSON_Delete(body);
-    return send_failure(conn, 400,
-                        "material and meter are required, form full, rhythm or contour, role melodic or accompaniment, "
-                        "count 1 to 16 and seed a whole number from 0");
-  }
-  char style_path[1024] = "";
-  if (style_id && workshop_style_model_path(style_id, style_path, sizeof(style_path)) != URSATZ_OK) {
-    cJSON_Delete(body);
-    return send_failure(conn, 400, "unknown style");
-  }
-  cJSON *request = cJSON_CreateObject();
-  bool built = request && cJSON_AddStringToObject(request, material ? "material" : "mode", mode) &&
-               cJSON_AddStringToObject(request, "meter", meter) &&
-               (!key || cJSON_AddStringToObject(request, "key", key)) &&
-               cJSON_AddStringToObject(request, "form", form ? form : "full") &&
-               (!role || cJSON_AddStringToObject(request, "role", role)) &&
-               (!style_id || cJSON_AddStringToObject(request, "style", style_path)) &&
-               cJSON_AddNumberToObject(request, "count", count_item ? (int)count_item->valuedouble : 6) &&
-               (!seed_item || cJSON_AddNumberToObject(request, "seed", seed_item->valuedouble));
+  cJSON *document = NULL;
+  UrsatzError error = {{0}};
+  UrsatzStatus result = workshop_motif_random(body, &document, &status, &error);
   cJSON_Delete(body);
-  WorkshopComposerReply reply;
-  bool called = built && workshop_motif_random_motive(request, &reply);
-  cJSON_Delete(request);
-  if (!called) {
-    return send_failure(conn, 500, "out of memory");
-  }
-  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
-  if (!document) {
-    int failed = send_failure_at(conn, workshop_composer_reply_failure_status(&reply),
-                                 reply.message[0] ? reply.message : "composer could not draw the motives", reply.path);
-    workshop_composer_reply_destroy(&reply);
-    return failed;
-  }
-  workshop_composer_reply_destroy(&reply);
-  if (!cJSON_AddBoolToObject(document, "ok", 1)) {
-    cJSON_Delete(document);
-    return send_failure(conn, 500, "out of memory");
+  if (result != URSATZ_OK) {
+    return send_failure_at(conn, status, error.message, error.path);
   }
   return ursatz_gui_send_object(conn, 200, document);
 }

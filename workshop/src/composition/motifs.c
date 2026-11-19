@@ -1,7 +1,9 @@
 #include "motifs.h"
 #include "base/knowledge.h"
 #include "base/last_error.h"
+#include "analysis/styles.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -485,5 +487,127 @@ WorkshopMotifAnalysis workshop_motif_analyze_body(cJSON *version_body, const cJS
   set_motif_member(motif, "degrees", degrees);
   set_motif_member(motif, "analysis_error", reason);
   return WORKSHOP_MOTIF_ANALYSIS_DONE;
+}
+
+/* ---- rules of the routes' motif requests --------------------------------- */
+
+/* Fills error and *http_status for a failure. */
+static UrsatzStatus refuse(int *http_status, int status, UrsatzStatus kind, UrsatzError *error, const char *path, const char *message) {
+  *http_status = status;
+  return ursatz_error_set(error, kind, path, "%s", message);
+}
+
+
+/* True when text has a character that is not white space. */
+static bool has_text(const char *text) {
+  for (; text && *text; text++) {
+    if (!isspace((unsigned char)*text)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major"
+   or "C minor" is read as before). Bodies without a motif are left alone. */
+bool workshop_motif_tonic_ok(const cJSON *version_body) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  if (!cJSON_IsObject(motif)) {
+    return true;
+  }
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
+  if (material) {
+    return cJSON_IsString(material) && workshop_composer_vocabulary_has("materials", material->valuestring);
+  }
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
+}
+
+bool workshop_motif_version_note_ok(const cJSON *version_body, const char *note) {
+  /* Every new version of a motif or a theme says what changed. */
+  return has_text(note) || !(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "motif")) ||
+                             cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "theme")));
+}
+
+const char *workshop_motif_first_note(const char *type, const char *note) {
+  /* A new motif's or theme's first version is noted "Created" unless the caller gives a note. */
+  return has_text(note)                                             ? note
+         : strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0 ? "Created"
+                                                                     : NULL;
+}
+
+UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int *http_status, UrsatzError *error) {
+  *document_out = NULL;
+  bool bad = false;
+  const char *material = optional_string(body, "material", &bad);
+  const char *old_mode = optional_string(body, "mode", &bad);
+  const char *mode = material ? material : old_mode;
+  const char *meter = optional_string(body, "meter", &bad);
+  const char *key = optional_string(body, "key", &bad);
+  const char *form = optional_string(body, "form", &bad);
+  const char *style_id = optional_string(body, "style_id", &bad);
+  const char *role = optional_string(body, "role", &bad);
+  const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
+  const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  if (cJSON_IsNull(count_item)) {
+    count_item = NULL;
+  }
+  if (cJSON_IsNull(seed_item)) {
+    seed_item = NULL;
+  }
+  if (key && key[0] == '\0') {
+    key = NULL;
+  }
+  if (style_id && style_id[0] == '\0') {
+    style_id = NULL;
+  }
+  if (role && role[0] == '\0') {
+    role = NULL;
+  }
+  bool valid = !bad && mode && !(material && old_mode) && (!role || workshop_motif_role_option(role)) && meter &&
+               (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
+               (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
+                                count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
+               (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
+                               seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
+  if (!valid) {
+    return refuse(http_status, 400, URSATZ_ERR_REQUEST, error, "",
+                  "material and meter are required, form full, rhythm or contour, role melodic or accompaniment, "
+                  "count 1 to 16 and seed a whole number from 0");
+  }
+  char style_path[1024] = "";
+  if (style_id && workshop_style_model_path(style_id, style_path, sizeof(style_path)) != URSATZ_OK) {
+    return refuse(http_status, 400, URSATZ_ERR_REQUEST, error, "", "unknown style");
+  }
+  cJSON *request = cJSON_CreateObject();
+  bool built = request && cJSON_AddStringToObject(request, material ? "material" : "mode", mode) &&
+               cJSON_AddStringToObject(request, "meter", meter) &&
+               (!key || cJSON_AddStringToObject(request, "key", key)) &&
+               cJSON_AddStringToObject(request, "form", form ? form : "full") &&
+               (!role || cJSON_AddStringToObject(request, "role", role)) &&
+               (!style_id || cJSON_AddStringToObject(request, "style", style_path)) &&
+               cJSON_AddNumberToObject(request, "count", count_item ? (int)count_item->valuedouble : 6) &&
+               (!seed_item || cJSON_AddNumberToObject(request, "seed", seed_item->valuedouble));
+  WorkshopComposerReply reply;
+  bool called = built && workshop_motif_random_motive(request, &reply);
+  cJSON_Delete(request);
+  if (!called) {
+    return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
+  }
+  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (!document) {
+    UrsatzStatus failed = refuse(http_status, workshop_composer_reply_failure_status(&reply),
+                                 reply.status != URSATZ_OK ? reply.status : URSATZ_ERR_INTERNAL, error, reply.path,
+                                 reply.message[0] ? reply.message : "composer could not draw the motives");
+    workshop_composer_reply_destroy(&reply);
+    return failed;
+  }
+  workshop_composer_reply_destroy(&reply);
+  if (!cJSON_AddBoolToObject(document, "ok", 1)) {
+    cJSON_Delete(document);
+    return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
+  }
+  *document_out = document;
+  return URSATZ_OK;
 }
 

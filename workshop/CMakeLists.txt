@@ -24,12 +24,14 @@ add_library(ursatz_workshop STATIC
     src/composition/compose_common.c
     src/composition/compose_jobs.c
     src/composition/composer_client.c
+    src/composition/motif_import.c
     src/composition/motifs.c
     src/composition/pieces.c
     src/composition/themes.c
     src/composition/variants.c
     src/rendering/export.c
     src/rendering/playback.c
+    src/rendering/render_cache.c
     src/jobs/job_queue.c
     src/coordinator/data_lock.c
     src/coordinator/settings.c
