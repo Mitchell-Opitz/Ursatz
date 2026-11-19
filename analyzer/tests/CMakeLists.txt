@@ -434,3 +434,11 @@ ursatz_test(test_material_export LIBS ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden)
+
+# The layers of Mozart 545 (R-630): the CLI's --layers folder and Michelle's reading beside the Analyzer's (the full test runs the CLI and
+# analyzes the piece: nightly; the smoke reads only the stored fixture).
+ursatz_test_executable(test_layers_two_readings LIBS ursatz_analyzer analyzer_test_support
+    DEFINITIONS URSATZ_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>")
+add_dependencies(test_layers_two_readings ursatz-analyzer)
+ursatz_test(test_layers_two_readings_smoke TARGET test_layers_two_readings ARGS smoke)
+ursatz_test(test_layers_two_readings TARGET test_layers_two_readings LABELS slow)
