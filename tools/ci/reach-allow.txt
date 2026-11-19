@@ -127,3 +127,41 @@ library/io/imported_realization.c instrument_of  # no app calls it until P62 B9 
 library/io/imported_realization.c map_error  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
 library/io/imported_realization.c plan_parts  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
 library/io/imported_realization.c voice_of  # no app calls it until P62 B9 (the Analyzer builds the realization of an import); its tests call it
+library/reading/reading.c add_claim  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c check_claim  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c id_hash  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c ids_grow  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c ids_has  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c key_valid  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c list_free  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_cadence  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_chord  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_group  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_line  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_meter  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_motive_occurrence  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_region  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_add_voice_fault  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_cadence_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_cadence_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_chord_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_chord_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_create  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_destroy  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_detail  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_group_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_group_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_line_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_line_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_meter_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_meter_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_motive_occurrence_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_motive_occurrence_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_region_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_region_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_set_detail  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_set_target_digest  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_source  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_target  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_voice_fault_at  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it
+library/reading/reading.c reading_voice_fault_count  # no app calls it until P62 B9 (the Analyzer writes readings); its tests call it

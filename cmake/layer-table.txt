@@ -90,6 +90,10 @@ uses analysis-similarity   model analysis-notes
 module realization     library/realization        prefix realization/
 group realization realization
 uses realization model theory cjson
+# The reading group (library/reading, P62, R-629): what one reader says about one realization, as claims over it.
+module reading         library/reading            prefix reading/
+group reading reading
+uses reading model theory realization plan analysis chain cjson
 # The plan group (library/plan, P60, R-605): the section description, shared by forms, plans and piece requests.
 module plan            library/plan               prefix plan/
 group plan plan
@@ -130,7 +134,8 @@ target ursatz_chain chain
 target ursatz_io io
 target ursatz_realization realization
 target ursatz_plan plan
-staged model theory analysis chain io realization plan analyzer-api analyzer composer
+target ursatz_reading reading
+staged model theory analysis chain io realization plan reading analyzer-api analyzer composer
 generated analyzer ursatz_analyzer/version.h ursatz_analyzer/producer_key.h
 generated chain producer_key.h chain/producer_key.h
 generated composer composer/composition_key.h
@@ -206,6 +211,10 @@ uses tests-realization test-helpers
 module tests-plan                library/plan/tests                root library/tests library/tests/support library
 like tests-plan plan
 uses tests-plan test-helpers
+
+module tests-reading             library/reading/tests             root library/tests library/tests/support library
+like tests-reading reading
+uses tests-reading test-helpers
 
 module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library
