@@ -39,6 +39,7 @@ add_library(ursatz_composer STATIC
     style/corpus_seed.c
     check/analyzer_check.c
     check/hearing.c
+    check/key_hear.c
     check/explain.c
     render/render.c
     render/movement_build.c

@@ -1,3 +1,4 @@
+#include "check/style_check.h"
 #include "style/style_internal.h"
 
 #include <limits.h>
@@ -22,6 +23,7 @@
 
 #include "grow/grow_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "texture/texture_internal.h"
@@ -387,5 +389,41 @@ bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator
         ok = false;
     }
     composer_style_labels_destroy(labels);
+    return ok;
+}
+
+bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive *motive, int tonic_pc) {
+    if (!labels || !motive) {
+        return false;
+    }
+    if (motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count == 0) {
+        return true;
+    }
+    size_t count = motive->note_count;
+    const char *degrees[MOTIVE_MAX_NOTES];
+    char durations[MOTIVE_MAX_NOTES][32];
+    const char *duration_parts[MOTIVE_MAX_NOTES];
+    int steps[MOTIVE_MAX_NOTES];
+    for (size_t i = 0; i < count; i++) {
+        int pitch_class = util_pitch_class(motive_pitch(motive, i));
+        degrees[i] = style_label_degree(pitch_class, tonic_pc);
+        Rational length = motive->notes[i].duration;
+        style_label_duration((unsigned long)(length.num < 0 ? 0 : length.num), length.den, durations[i],
+                             sizeof durations[i]);
+        duration_parts[i] = durations[i];
+        if (i > 0) {
+            steps[i - 1] = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
+        }
+    }
+    char *degree_text = style_label_join(degrees, count);
+    char *interval_text = count > 1 ? style_label_motive_intervals(steps, count - 1) : NULL;
+    char *rhythm_text = style_label_join(duration_parts, count);
+    bool ok = degree_text && rhythm_text && (count < 2 || interval_text) &&
+              composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_DEGREES, degree_text) &&
+              (count < 2 || composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_INTERVALS, interval_text)) &&
+              composer_style_labels_add(labels, STYLE_CATEGORY_MOTIVE_RHYTHM, rhythm_text);
+    free(degree_text);
+    free(interval_text);
+    free(rhythm_text);
     return ok;
 }

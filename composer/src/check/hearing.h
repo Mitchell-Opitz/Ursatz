@@ -8,6 +8,7 @@
 
 #include <ursatz_composer/analyzer_check.h>
 #include <plan/plan.h>
+#include <ursatz_composer/key_hear.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/return_hear.h>
@@ -62,7 +63,6 @@ void hearing_destroy(ComposerHearing *hearing);
  */
 AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId section, AnalyzerCheck *out);
 AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out);
-bool piece_check_keys_in(ComposerHearing *hearing, const Plan *plan, PieceKeyCheck *out);
 ReturnHearResult return_hear_in(ComposerHearing *hearing, const Plan *plan, ReturnHeard *out);
 ComposerMeasureResult composer_style_measure_in(ComposerHearing *hearing, const ComposerStyle *style,
                                                 StyleComparison *out);

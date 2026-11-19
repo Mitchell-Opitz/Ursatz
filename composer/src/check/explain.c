@@ -13,6 +13,7 @@
 
 #include "util/shaping.h"
 #include "util/composer_json.h"
+#include "check/style_check.h"
 #include "style/style_internal.h"
 #include "util/plan_util.h"
 

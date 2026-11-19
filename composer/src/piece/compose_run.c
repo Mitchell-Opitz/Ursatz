@@ -29,6 +29,7 @@
 #include "form/form_internal.h"
 #include "grow/grow_internal.h"
 #include "piece/piece_internal.h"
+#include "check/style_check.h"
 #include "style/style_internal.h"
 #include "util/plan_util.h"
 

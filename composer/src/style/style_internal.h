@@ -19,24 +19,4 @@ const StyleReference *composer_style_reference(const ComposerStyle *style);
 /* True when category is in the style's without list. */
 bool composer_style_without_has(const ComposerStyle *style, const char *category);
 
-/*
- * The checker a compose stage uses when a style is set (R-080): the stage's own checker decides what is rejected and
- * what the rules score; a candidate it accepts then gains weight times how close the candidate is to the style. A
- * candidate that is rejected stays rejected (Laws 12 and 13: a style prefers, it never forbids). Candidates of an
- * operator that has no labels (bass, texture, anything but the harmony and melody operators) are neutral, 1/1.
- */
-typedef struct {
-    FillCheckerFn inner;      /* the stage's checker */
-    void *inner_context;      /* ...and the context it is called with (NULL for the stages whose checker has none) */
-    const ComposerStyle *style;
-    Rational weight;     /* resolved: a denominator of 0 reads as 1/1 before it gets here */
-    bool texture;             /* the texture stage: only the accompaniment's candidates gain a style term (R-163) */
-} StyleCheckContext;
-
-bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
-                         const FillCandidate *candidate, void *context, FillCheck *out);
-
-/* Adds weight * closeness to a check's score, in lowest terms and small enough for the loop to compare (below 2^32). */
-void style_add_to_score(FillCheck *check, Rational closeness, Rational weight);
-
 #endif

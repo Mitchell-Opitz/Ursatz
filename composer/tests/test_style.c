@@ -25,6 +25,7 @@
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/style.h>
 
+#include "check/style_check.h"
 #include "util/request_parse.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"

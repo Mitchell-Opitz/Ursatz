@@ -11,6 +11,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 #include <plan/plan.h>
+#include <ursatz_composer/key_hear.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <plan/plan_json.h>
 #include <ursatz_composer/preferences.h>

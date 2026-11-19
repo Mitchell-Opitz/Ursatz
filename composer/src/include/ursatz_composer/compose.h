@@ -13,6 +13,7 @@
 #include <ursatz_composer/piece.h>
 #include <plan/plan.h>
 #include <ursatz_composer/form_spec.h>
+#include <ursatz_composer/key_hear.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/rejection.h>
 #include <ursatz_composer/return_hear.h>

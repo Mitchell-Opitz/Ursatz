@@ -12,7 +12,6 @@
 #include "theory/style/style_model.h"
 #include "theory/style/style_model_file.h"
 
-#include <ursatz_composer/motive.h>
 #include <plan/plan.h>
 
 /*
@@ -162,13 +161,6 @@ typedef struct {
  */
 bool composer_style_labels_add_melody(ComposerStyleLabels *labels, const int *before, const ComposerStyleNote *notes,
                                       size_t count);
-
-/*
- * The motive labels of a full motive (style_labels.h, the Analyzer's words): `motive-degrees` (each note's pitch class
- * as a degree of the tonic, joined by spaces), `motive-intervals` (the signed semitone steps, none for a single note) and
- * `motive-rhythm` (each note's duration, joined). A rhythm or contour motive has no pitches and adds nothing.
- */
-bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive *motive, int tonic_pc);
 
 /*
  * One `motive-nct-figure` label for a non-chord tone: the degree before it, its own degree and its type, and the degree
