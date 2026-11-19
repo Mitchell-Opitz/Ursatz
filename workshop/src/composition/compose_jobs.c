@@ -9,11 +9,10 @@
 
 void workshop_job_result_json(WorkshopJobResult *out, int status, cJSON *object) {
   out->http_status = status;
-  out->json = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!out->json) {
+  out->tree = object;
+  if (!out->tree) {
     out->http_status = 500;
-    out->json = strdup("{\"ok\":false,\"error\":\"out of memory\"}");
+    out->tree = cJSON_Parse("{\"ok\":false,\"error\":\"out of memory\"}");
   }
 }
 
@@ -101,7 +100,7 @@ void workshop_compose_job_free(void *input) {
   }
 }
 
-void workshop_compose_job_run(void *input, const UrsatzJob *composer_job, WorkshopJobResult *out) {
+UrsatzStatus workshop_compose_job_run(void *input, const UrsatzJob *composer_job, WorkshopJobResult *out) {
   const WorkshopComposeJob *job = input;
   cJSON *item = NULL;
   cJSON *made = NULL;
@@ -141,8 +140,9 @@ void workshop_compose_job_run(void *input, const UrsatzJob *composer_job, Worksh
       cJSON_Delete(made);
       workshop_job_result_failure(out, 500, "out of memory");
     }
-    return;
+    return result;
   }
   cJSON_Delete(made);
   workshop_compose_reply(result, item, &error, invalid_text, failed_text, out);
+  return result;
 }

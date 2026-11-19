@@ -4,6 +4,7 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,10 +41,11 @@ static WorkshopJobState wait_finished(const char *id, int timeout_ms, WorkshopJo
 
 /* --- a job that answers ---------------------------------------------------- */
 
-static void answer_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+static UrsatzStatus answer_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
   (void)job;
   out->http_status = *(int *)input;
-  out->json = strdup("{\"ok\":true}");
+  out->tree = cJSON_Parse("{\"ok\":true}");
+  return out->http_status < 300 ? URSATZ_OK : URSATZ_ERR_REQUEST;
 }
 
 static int g_freed = 0;
@@ -59,7 +61,7 @@ static void test_answer(void) {
   check(workshop_job_submit("answer", answer_job, input, count_free, id), "a job is accepted");
   WorkshopJobInfo info = {0};
   check(wait_finished(id, 5000, &info) == WORKSHOP_JOB_DONE, "a 200 job ends done");
-  check(info.http_status == 200 && info.result && strcmp(info.result, "{\"ok\":true}") == 0, "the job keeps its status and answer");
+  check(info.http_status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(info.result, "ok")), "the job keeps its status and answer");
   check(strcmp(info.kind, "answer") == 0, "the job keeps its kind");
   workshop_job_info_destroy(&info);
 
@@ -76,14 +78,15 @@ static void test_answer(void) {
 
 static volatile int g_release = 0;
 
-static void progress_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+static UrsatzStatus progress_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
   (void)input;
   job->progress(job->user, "melody", 6, 9);
   for (int i = 0; i < 500 && !g_release; i++) {
     test_sleep_ms(10);
   }
   out->http_status = 200;
-  out->json = strdup("{}");
+  out->tree = cJSON_Parse("{}");
+  return URSATZ_OK;
 }
 
 static void test_progress(void) {
@@ -106,14 +109,15 @@ static void test_progress(void) {
 
 /* --- cancel of a running theme compose ------------------------------------------ */
 
-static void theme_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+static UrsatzStatus theme_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
   const char *request = input;
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
   UrsatzStatus status = composer_api_theme(workshop_composer_context_global(), request, job, &response);
   out->http_status = status == URSATZ_OK ? 200 : status == URSATZ_ERR_CANCELLED ? 499 : 500;
-  out->json = strdup("{}");
+  out->tree = cJSON_Parse("{}");
   composer_response_destroy(&response);
+  return status;
 }
 
 static void test_cancel(void) {
@@ -170,7 +174,7 @@ static pthread_mutex_t g_meet_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_meeting = 0;
 static int g_met = 0;
 
-static void meet_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+static UrsatzStatus meet_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
   (void)input;
   (void)job;
   pthread_mutex_lock(&g_meet_lock);
@@ -190,7 +194,8 @@ static void meet_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) 
     test_sleep_ms(10);
   }
   out->http_status = 200;
-  out->json = strdup("{}");
+  out->tree = cJSON_Parse("{}");
+  return URSATZ_OK;
 }
 
 static void test_two_workers(void) {
@@ -209,14 +214,15 @@ static void test_two_workers(void) {
 
 static volatile int g_stopped_cleanly = 0;
 
-static void endless_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+static UrsatzStatus endless_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
   (void)input;
   while (!job->cancelled(job->user)) {
     test_sleep_ms(5);
   }
   g_stopped_cleanly = 1;
   out->http_status = 499;
-  out->json = strdup("{}");
+  out->tree = cJSON_Parse("{}");
+  return URSATZ_ERR_CANCELLED;
 }
 
 static void test_stop(void) {
@@ -234,6 +240,96 @@ static void test_stop(void) {
   check(true, "stop is safe twice");
 }
 
+/* --- per-kind limits, the list and retention -------------------------------------------------------------------------------- */
+
+static pthread_mutex_t g_limit_lock = PTHREAD_MUTEX_INITIALIZER;
+static int g_limited_running = 0;
+static int g_limited_peak = 0;
+static volatile int g_limit_release = 0;
+
+/* A job of the limited kind counts itself; the one of the other kind (input not NULL) only waits. */
+static UrsatzStatus limited_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+  (void)job;
+  if (!input) {
+    pthread_mutex_lock(&g_limit_lock);
+    int running = ++g_limited_running;
+    if (running > g_limited_peak) {
+      g_limited_peak = running;
+    }
+    pthread_mutex_unlock(&g_limit_lock);
+  }
+  for (int i = 0; i < 500 && !g_limit_release; i++) {
+    test_sleep_ms(10);
+  }
+  if (!input) {
+    pthread_mutex_lock(&g_limit_lock);
+    g_limited_running--;
+    pthread_mutex_unlock(&g_limit_lock);
+  }
+  out->http_status = 200;
+  out->tree = cJSON_Parse("{}");
+  return URSATZ_OK;
+}
+
+static void test_limits_and_list(void) {
+  /* "links" and "style" run one at a time by default; any other kind can be limited */
+  workshop_jobs_set_limit("limited", 1);
+  g_limit_release = 0;
+  char ids[3][WORKSHOP_JOB_ID_BYTES];
+  char other[WORKSHOP_JOB_ID_BYTES];
+  for (int i = 0; i < 3; i++) {
+    check(workshop_job_submit("limited", limited_job, NULL, NULL, ids[i]), "a job of a limited kind is accepted");
+  }
+  check(workshop_job_submit("unlimited", limited_job, (void *)(uintptr_t)1, NULL, other), "a job of an unlimited kind is accepted");
+  test_sleep_ms(300);
+  WorkshopJobInfo *list = NULL;
+  size_t count = 0;
+  check(workshop_jobs_list(&list, &count) && count == 4, "the list holds the four jobs that have not finished");
+  int running = 0;
+  int queued = 0;
+  for (size_t i = 0; i < count; i++) {
+    running += list[i].state == WORKSHOP_JOB_RUNNING;
+    queued += list[i].state == WORKSHOP_JOB_QUEUED;
+  }
+  check(running == 2 && queued == 2, "one limited job runs beside the unlimited one and the other two wait");
+  check(strcmp(list[0].id, other) == 0 && strcmp(list[count - 1].id, ids[0]) == 0, "the list is newest first");
+  workshop_job_list_destroy(list, count);
+  g_limit_release = 1;
+  WorkshopJobInfo info = {0};
+  for (int i = 0; i < 3; i++) {
+    check(wait_finished(ids[i], 10000, &info) == WORKSHOP_JOB_DONE, "every waiting job runs in its turn");
+  }
+  wait_finished(other, 10000, &info);
+  workshop_job_info_destroy(&info);
+  check(g_limited_peak == 1, "never more than one job of the limited kind ran at once");
+  check(workshop_jobs_list(&list, &count) && count == 0, "the list is empty once every job has finished");
+  workshop_job_list_destroy(list, count);
+  workshop_jobs_set_limit("limited", 0);
+}
+
+static UrsatzStatus quick_job(void *input, const UrsatzJob *job, WorkshopJobResult *out) {
+  (void)input;
+  (void)job;
+  out->http_status = 200;
+  out->tree = cJSON_Parse("{\"ok\":true}");
+  return URSATZ_OK;
+}
+
+static void test_retention(void) {
+  char first[WORKSHOP_JOB_ID_BYTES];
+  char id[WORKSHOP_JOB_ID_BYTES];
+  WorkshopJobInfo info = {0};
+  check(workshop_job_submit("quick", quick_job, NULL, NULL, first), "the first of many jobs is accepted");
+  for (int i = 0; i < 80; i++) {
+    workshop_job_submit("quick", quick_job, NULL, NULL, id);
+  }
+  wait_finished(id, 10000, &info);
+  workshop_job_info_destroy(&info);
+  check(!workshop_job_get(first, &info), "past the newest 64 finished jobs the oldest are dropped");
+  check(workshop_job_get(id, &info) && info.result, "the newest keeps its answer");
+  workshop_job_info_destroy(&info);
+}
+
 int main(void) {
   test_knowledge();
   check(workshop_jobs_start(2), "the queue starts with two workers");
@@ -241,6 +337,8 @@ int main(void) {
   test_progress();
   test_cancel();
   test_two_workers();
+  test_limits_and_list();
+  test_retention();
   test_stop();
   return test_finish("job_queue");
 }

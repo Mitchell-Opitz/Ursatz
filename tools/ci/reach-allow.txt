@@ -41,3 +41,6 @@ common/json.c common_json_bool  # no app reads a boolean member through it until
 common/json.c common_json_rational_text  # no app writes an "n/d" text through it until P63 B15 (request bodies); its test calls it
 common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
 workshop/src/analysis/analysis.c workshop_analysis_delete_piece  # test hook: test_piece_lock deletes a piece without the cascades the route runs (workshop_library_delete)
+workshop/src/jobs/job_queue.c workshop_jobs_list  # until P63 B11 (the jobs query lists the queued and running jobs); test_job_queue calls it
+workshop/src/jobs/job_queue.c workshop_job_list_destroy  # until P63 B11 (the jobs query lists the queued and running jobs); test_job_queue calls it
+workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_queue limits a kind of its own (links and style start limited)

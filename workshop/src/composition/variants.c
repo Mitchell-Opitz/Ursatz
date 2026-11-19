@@ -982,13 +982,14 @@ static void variants_run(const WorkshopVariantsJob *input, const UrsatzJob *comp
   workshop_job_result_json(out, 200, document);
 }
 
-void workshop_variants_job_run(void *input, const UrsatzJob *composer_job, WorkshopJobResult *out) {
+UrsatzStatus workshop_variants_job_run(void *input, const UrsatzJob *composer_job, WorkshopJobResult *out) {
   const WorkshopVariantsJob *job = input;
   if (job->op == WORKSHOP_VARIANTS_REROLL) {
     reroll_run(job->id, composer_job, out);
   } else {
     variants_run(job, composer_job, out);
   }
+  return out->http_status >= 200 && out->http_status < 300 ? URSATZ_OK : URSATZ_ERR_INTERNAL;
 }
 static const int kMaxTreeDepth = 32;
 

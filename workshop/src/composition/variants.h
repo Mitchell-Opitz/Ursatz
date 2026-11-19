@@ -22,9 +22,9 @@ typedef struct WorkshopVariantsJob WorkshopVariantsJob;
  * on a failure. */
 UrsatzStatus workshop_variants_job_new(WorkshopVariantsOp op, const char *id, cJSON *body, WorkshopVariantsJob **out, UrsatzError *error);
 
-/* The job name the queue shows, and the UrsatzGuiJobFn and free function to hand to workshop_job_submit. */
+/* The job name the queue shows, and the WorkshopJobFn and free function to hand to workshop_job_submit. */
 const char *workshop_variants_job_kind(const WorkshopVariantsJob *job);
-void workshop_variants_job_run(void *input, const UrsatzJob *job, WorkshopJobResult *out);
+UrsatzStatus workshop_variants_job_run(void *input, const UrsatzJob *job, WorkshopJobResult *out);
 void workshop_variants_job_free(void *input);
 
 /* The version body of the basic motive of a motif's lineage: the end of its derived.source_item links, at most 32 hops (caller-owned).

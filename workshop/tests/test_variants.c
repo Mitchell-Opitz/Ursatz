@@ -63,8 +63,7 @@ static bool run_candidate(const char *id, int seed, cJSON **candidate) {
     WorkshopJobResult result = {0, NULL};
     workshop_variants_job_run(job, NULL, &result);
     workshop_variants_job_free(job);
-    cJSON *document = result.json ? cJSON_Parse(result.json) : NULL;
-    free(result.json);
+    cJSON *document = result.tree;
     const cJSON *first = cJSON_GetArrayItem(member(document, "variants"), 0);
     *candidate = first ? cJSON_Duplicate(first, 1) : NULL;
     bool ok = result.http_status == 200 && *candidate;
@@ -165,7 +164,7 @@ int main(void) {
     workshop_variants_job_run(job, NULL, &result);
     workshop_variants_job_free(job);
     check(result.http_status == 200, "the reroll answers 200");
-    free(result.json);
+    cJSON_Delete(result.tree);
     cJSON *after = NULL;
     check(workshop_material_item_get(child, NULL, &after) == URSATZ_OK, "the first variant is read again");
     const cJSON *derived = member(member(after, "motif"), "derived");
@@ -180,7 +179,7 @@ int main(void) {
     workshop_variants_job_run(job, NULL, &result);
     workshop_variants_job_free(job);
     check(result.http_status == 400, "a motif that is not derived cannot be rerolled");
-    free(result.json);
+    cJSON_Delete(result.tree);
 
     /* The link-form loop refusal: the source cannot be made a form of its own variant. */
     cJSON *link = cJSON_Parse("{\"source\":{\"item\":\"\",\"version\":1},\"recognition\":{\"found\":true}}");

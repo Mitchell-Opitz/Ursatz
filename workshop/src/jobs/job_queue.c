@@ -24,9 +24,9 @@ typedef struct Job {
   unsigned done;
   unsigned total;
   int http_status;
-  char *result;
+  cJSON *result;
   bool cancel_requested;
-  UrsatzGuiJobFn run;
+  WorkshopJobFn run;
   void *input;
   void (*free_input)(void *);
   UrsatzJob composer_job;
@@ -67,7 +67,7 @@ static void job_free(Job *job) {
   if (job->input && job->free_input) {
     job->free_input(job->input);
   }
-  free(job->result);
+  cJSON_Delete(job->result);
   free(job);
 }
 
@@ -127,9 +127,55 @@ static bool on_cancelled(void *user) {
   return cancelled;
 }
 
+/* The limits on how many jobs of a kind run at once; "links" and "style" run one at a time (R-645). */
+#define MAX_LIMITS 16
+static struct {
+  char kind[WORKSHOP_JOB_KIND_BYTES];
+  unsigned limit;
+} g_limits[MAX_LIMITS] = {{"links", 1}, {"style", 1}};
+static size_t g_limit_count = 2;
+
+void workshop_jobs_set_limit(const char *kind, unsigned limit) {
+  pthread_mutex_lock(&g_lock);
+  for (size_t i = 0; i < g_limit_count; i++) {
+    if (strcmp(g_limits[i].kind, kind) == 0) {
+      g_limits[i].limit = limit;
+      pthread_mutex_unlock(&g_lock);
+      return;
+    }
+  }
+  if (g_limit_count < MAX_LIMITS) {
+    snprintf(g_limits[g_limit_count].kind, sizeof(g_limits[g_limit_count].kind), "%s", kind);
+    g_limits[g_limit_count++].limit = limit;
+  }
+  pthread_mutex_unlock(&g_lock);
+}
+
+static unsigned limit_of_locked(const char *kind) {
+  for (size_t i = 0; i < g_limit_count; i++) {
+    if (strcmp(g_limits[i].kind, kind) == 0) {
+      return g_limits[i].limit;
+    }
+  }
+  return 0;
+}
+
+static unsigned running_of_locked(const char *kind) {
+  unsigned running = 0;
+  for (Job *job = g_head; job; job = job->next) {
+    running += job->state == WORKSHOP_JOB_RUNNING && strcmp(job->kind, kind) == 0 ? 1 : 0;
+  }
+  return running;
+}
+
+/* The oldest queued job whose kind has room to run. */
 static Job *next_queued_locked(void) {
   for (Job *job = g_head; job; job = job->next) {
-    if (job->state == WORKSHOP_JOB_QUEUED) {
+    if (job->state != WORKSHOP_JOB_QUEUED) {
+      continue;
+    }
+    unsigned limit = limit_of_locked(job->kind);
+    if (limit == 0 || running_of_locked(job->kind) < limit) {
       return job;
     }
   }
@@ -151,17 +197,17 @@ static void *worker_main(void *arg) {
     pthread_mutex_unlock(&g_lock);
 
     WorkshopJobResult out = {500, NULL};
-    job->run(job->input, &job->composer_job, &out);
+    UrsatzStatus status = job->run(job->input, &job->composer_job, &out);
 
     pthread_mutex_lock(&g_lock);
-    bool ok = out.http_status >= 200 && out.http_status < 300;
-    if (job->cancel_requested && !ok) {
+    bool ok = status == URSATZ_OK && out.http_status >= 200 && out.http_status < 300;
+    if (status == URSATZ_ERR_CANCELLED || (job->cancel_requested && !ok)) {
       job->state = WORKSHOP_JOB_CANCELLED;
-      free(out.json);
+      cJSON_Delete(out.tree);
     } else {
       job->state = ok ? WORKSHOP_JOB_DONE : WORKSHOP_JOB_FAILED;
       job->http_status = out.http_status;
-      job->result = out.json;
+      job->result = out.tree;
     }
     job->finished_at = time(NULL);
     prune_locked();
@@ -243,7 +289,7 @@ void workshop_jobs_stop(void) {
   }
 }
 
-bool workshop_job_submit(const char *kind, UrsatzGuiJobFn run, void *input, void (*free_input)(void *),
+bool workshop_job_submit(const char *kind, WorkshopJobFn run, void *input, void (*free_input)(void *),
                            char id_out[WORKSHOP_JOB_ID_BYTES]) {
   Job *job = calloc(1, sizeof(*job));
   if (!job) {
@@ -299,7 +345,7 @@ bool workshop_job_get(const char *id, WorkshopJobInfo *info) {
   info->done = job->done;
   info->total = job->total;
   info->http_status = job->http_status;
-  info->result = job->result ? strdup(job->result) : NULL;
+  info->result = job->result ? cJSON_Duplicate(job->result, 1) : NULL;
   pthread_mutex_unlock(&g_lock);
   return true;
 }
@@ -325,7 +371,47 @@ bool workshop_job_cancel(const char *id) {
 
 void workshop_job_info_destroy(WorkshopJobInfo *info) {
   if (info) {
-    free(info->result);
+    cJSON_Delete(info->result);
     memset(info, 0, sizeof(*info));
   }
+}
+
+bool workshop_jobs_list(WorkshopJobInfo **out, size_t *count) {
+  *out = NULL;
+  *count = 0;
+  pthread_mutex_lock(&g_lock);
+  size_t live = 0;
+  for (Job *job = g_head; job; job = job->next) {
+    live += finished(job) ? 0 : 1;
+  }
+  WorkshopJobInfo *infos = live ? calloc(live, sizeof(*infos)) : NULL;
+  if (live && !infos) {
+    pthread_mutex_unlock(&g_lock);
+    return false;
+  }
+  /* the queue is oldest first; the list is newest first */
+  size_t made = live;
+  for (Job *job = g_head; job; job = job->next) {
+    if (finished(job)) {
+      continue;
+    }
+    WorkshopJobInfo *info = &infos[--made];
+    snprintf(info->id, sizeof(info->id), "%s", job->id);
+    snprintf(info->kind, sizeof(info->kind), "%s", job->kind);
+    info->state = job->state;
+    snprintf(info->stage, sizeof(info->stage), "%s", job->stage);
+    info->done = job->done;
+    info->total = job->total;
+  }
+  pthread_mutex_unlock(&g_lock);
+  *out = infos;
+  *count = live;
+  return true;
+}
+
+void workshop_job_list_destroy(WorkshopJobInfo *infos, size_t count) {
+  for (size_t i = 0; infos && i < count; i++) {
+    workshop_job_info_destroy(&infos[i]);
+  }
+  free(infos);
 }

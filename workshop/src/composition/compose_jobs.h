@@ -45,8 +45,8 @@ WorkshopComposeJob *workshop_compose_job_new(WorkshopComposeOp op, const char *i
 
 void workshop_compose_job_free(void *input);
 
-/* The UrsatzGuiJobFn of every compose job. */
-void workshop_compose_job_run(void *input, const UrsatzJob *job, WorkshopJobResult *out);
+/* The WorkshopJobFn of every compose job. */
+UrsatzStatus workshop_compose_job_run(void *input, const UrsatzJob *job, WorkshopJobResult *out);
 
 /* Fills out with object (freed) as the answer with the given status, or the out-of-memory failure. */
 void workshop_job_result_json(WorkshopJobResult *out, int status, cJSON *object);

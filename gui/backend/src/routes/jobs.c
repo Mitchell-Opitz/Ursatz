@@ -20,7 +20,7 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
   return ursatz_gui_send_object(conn, status, object);
 }
 
-int ursatz_gui_jobs_send_accepted(struct mg_connection *conn, const char *kind, UrsatzGuiJobFn run, void *input,
+int ursatz_gui_jobs_send_accepted(struct mg_connection *conn, const char *kind, WorkshopJobFn run, void *input,
                                   void (*free_input)(void *)) {
   char id[WORKSHOP_JOB_ID_BYTES];
   if (!workshop_job_submit(kind, run, input, free_input, id)) {
@@ -51,10 +51,9 @@ static int handle_get(struct mg_connection *conn, const char *id) {
             cJSON_AddStringToObject(job, "stage", info.stage) && cJSON_AddNumberToObject(job, "done", info.done) &&
             cJSON_AddNumberToObject(job, "total", info.total);
   if (ok && info.result) {
-    cJSON *result = cJSON_Parse(info.result);
-    ok = cJSON_AddNumberToObject(job, "http_status", info.http_status) && result && cJSON_AddItemToObject(job, "result", result);
-    if (!ok) {
-      cJSON_Delete(result);
+    ok = cJSON_AddNumberToObject(job, "http_status", info.http_status) && cJSON_AddItemToObject(job, "result", info.result);
+    if (ok) {
+      info.result = NULL; /* the answer owns the tree now */
     }
   }
   workshop_job_info_destroy(&info);
