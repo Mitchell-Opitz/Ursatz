@@ -14,7 +14,7 @@
 
 #include <cJSON.h>
 
-#include "items/material_service.h"
+#include "items/store.h"
 #include "composition/motifs.h"
 #include "composition/pieces.h"
 #include "composition/themes.h"

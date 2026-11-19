@@ -17,7 +17,7 @@
 #include "items/ids.h"
 #include "items/library_metadata.h"
 #include "items/lock.h"
-#include "items/material_service.h"
+#include "items/store.h"
 #include "items/piece_lock.h"
 #include "items/subjects.h"
 

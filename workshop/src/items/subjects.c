@@ -17,7 +17,7 @@
 
 #include "collections.h"
 #include "ids.h"
-#include "material_service.h"
+#include "store.h"
 
 #define NAME_MAX_CHARS 200
 #define NOTE_MAX_CHARS 4000

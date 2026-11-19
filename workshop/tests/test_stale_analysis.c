@@ -27,7 +27,7 @@
 #include "items/collections.h"
 #include "analysis/links.h"
 #include "items/library_metadata.h"
-#include "items/material_service.h"
+#include "items/store.h"
 #include "analysis/styles.h"
 #include "items/subjects.h"
 #include "ursatz_check.h"

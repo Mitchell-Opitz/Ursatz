@@ -6,7 +6,7 @@
 
 #include <cJSON.h>
 
-#include "items/material_service.h"
+#include "items/store.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 

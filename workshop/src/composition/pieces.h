@@ -13,7 +13,7 @@
 /*
  * Piece service: composes a piece item into a new version with the Composer's piece command (R-173, R-174).
  *
- * A piece version keeps its files beside its body, in the material store's items/<id>/v<n>/ (see material_service.h):
+ * A piece version keeps its files beside its body, in the material store's items/<id>/v<n>/ (see store.h):
  * request.json (what the Composer read), brief.style.json (when the piece has a brief), plan.json (the loop version),
  * ending-plan.json, loop.mid, loop.musicxml, ending.mid and ending.musicxml, and theme-<section id>.plan.json, a copy
  * of the plan of each theme version a section uses, so the version keeps its own. The Composer runs in process through the

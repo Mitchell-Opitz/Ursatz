@@ -18,7 +18,7 @@
 
 #include "compose_common.h"
 #include "composer_client.h"
-#include "items/material_service.h"
+#include "items/store.h"
 
 #define PATH_BYTES 800
 

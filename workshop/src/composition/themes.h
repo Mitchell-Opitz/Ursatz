@@ -15,7 +15,7 @@
  * Theme service: composes a theme item into a new version with the Composer's theme command (R-166, R-167).
  *
  * A theme version keeps its files beside its body, in the material store's items/<id>/v<n>/ (see
- * material_service.h): request.json (what the Composer read), brief.style.json (when the theme has a brief),
+ * store.h): request.json (what the Composer read), brief.style.json (when the theme has a brief),
  * plan.json, theme.mid and theme.musicxml. The Composer runs in process through the Composer API
  * (composer_api_theme), on a job worker.
  */

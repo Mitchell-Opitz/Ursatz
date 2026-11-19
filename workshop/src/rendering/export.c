@@ -14,7 +14,7 @@
 
 #include "composition/composer_client.h"
 #include "base/knowledge.h"
-#include "items/material_service.h"
+#include "items/store.h"
 #include "composition/motifs.h"
 
 /* ---- the build: what the export owns until the Analyzer has written the text -------------------------------------- */

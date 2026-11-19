@@ -2,7 +2,7 @@
 
 The backend server and its file stores: pieces, materials, theme and piece versions, item references and subjects. [Docs index](README.md).
 
-The services this page names are in `workshop/src/`, as `<folder>/<file>`.
+Services: `workshop/src/<folder>/<file>`.
 
 C HTTP server using [civetweb](https://github.com/civetweb/civetweb) (MIT),
 fetched by CMake `FetchContent`. Civetweb is small, permissively licensed
@@ -97,7 +97,7 @@ lock. `test_piece_lock` covers it.
 ## Material store
 
 Motifs, themes and pieces live in `materials/` beside `pieces/` and
-`collections/`. `items/material_service.c` is the only code that touches
+`collections/`. `items/store.c` and its five files (`references.c`, `body_rules.c`, `body_migrate.c`, `op_checks.c`, `version_files.c`) are the only code that touches
 it; every operation runs under one mutex, and every file is written to
 `<name>.tmp` and renamed.
 
@@ -126,7 +126,7 @@ materials/
   (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
   `notes`, `meter`, `material` (the id of a material the Composer offers: a motif is in C, so the material says the key), `pickup`, `harmony` (null or text, at most 200
   characters), `features`, `segments_proposed`, `analysis` and `derived`; the rules are listed in
-  `items/material_service.h`. `features` are the motif's segments. `segments_proposed` (a bool; a body without it
+  `items/body_rules.c`. `features` are the motif's segments. `segments_proposed` (a bool; a body without it
   reads as false) is true while the segments are the Composer's proposal rather than ones Michelle set: the proposal is
   stored as `features` and proposed again when the notes, pickup, meter or form change.
 - Projects and items are passed as cJSON objects; the caller frees what it
@@ -140,7 +140,7 @@ Version files are never rewritten. Every body read from the store, and every bod
 
 ### Theme bodies and version files
 
-A theme body (the rules are in `items/material_service.h`) is a placeholder or a composable theme (R-167). The
+A theme body (the rules are in `items/body_rules.c`) is a placeholder or a composable theme (R-167). The
 placeholder, `form` null or a string and `slots` an array of anything, stays valid so earlier versions still read. A
 body with a `form` object, a slot written as `{slot, item_id, version}` or any of the members below is a composable theme:
 
@@ -180,7 +180,7 @@ directory.
 
 ### Piece bodies and version files
 
-A piece body (the rules are in `items/material_service.h`) is a placeholder or a composable piece (R-174). The
+A piece body (the rules are in `items/body_rules.c`) is a placeholder or a composable piece (R-174). The
 placeholder, `structure` null, a string, an array or an object without a list of `sections`, stays valid so earlier
 versions still read. A body whose `structure` has a `sections` list, or that has any of the members below, is a
 composable piece. A structure alone is valid: every fill may be left out.

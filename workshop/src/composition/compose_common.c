@@ -16,7 +16,7 @@
 #include <common/json.h>
 #include <common/status.h>
 
-#include "items/material_service.h"
+#include "items/store.h"
 
 #define PATH_BYTES 800
 

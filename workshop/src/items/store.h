@@ -1,5 +1,5 @@
-#ifndef WORKSHOP_MATERIAL_SERVICE_H
-#define WORKSHOP_MATERIAL_SERVICE_H
+#ifndef WORKSHOP_ITEMS_STORE_H
+#define WORKSHOP_ITEMS_STORE_H
 
 #include <common/status.h>
 
@@ -276,4 +276,4 @@ bool workshop_material_render_tmp_dir(char *out, size_t out_size);
 UrsatzStatus workshop_material_version_file(const char *id, int number, const char *name,
                                                           unsigned char **out_data, size_t *out_size);
 
-#endif /* WORKSHOP_MATERIAL_SERVICE_H */
+#endif /* WORKSHOP_ITEMS_STORE_H */

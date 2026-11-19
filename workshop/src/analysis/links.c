@@ -22,7 +22,7 @@
 #include "items/collections.h"
 #include "items/ids.h"
 #include "base/knowledge.h"
-#include "items/material_service.h"
+#include "items/store.h"
 #include "items/library_metadata.h"
 #include "items/subjects.h"
 

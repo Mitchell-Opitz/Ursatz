@@ -215,8 +215,10 @@ uses workshop-coordinator workshop-api workshop-base composer-api analyzer-api c
 uses workshop-internal workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering
 allow workshop/src/items/collections.c analysis/analysis_service.h -- until P63 B5 commit 3 splits the Library piece store out of the analysis service
 allow workshop/src/items/library_metadata.h analysis/analysis_service.h -- until P63 B5 commit 3 (WorkshopPieceSummary moves to items/library_pieces.h)
-allow workshop/src/items/material_service.c composition/motifs.h -- until P63 B5 commit 4 (the include is unused)
-allow workshop/src/items/material_service.c composition/composer_client.h -- the body rules read the Composer's vocabulary and forms; B14 moves the checks into the Composer
+allow workshop/src/items/store.c composition/motifs.h -- until P63 B5 commit 4 (the include is unused)
+allow workshop/src/items/body_rules.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
+allow workshop/src/items/body_migrate.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
+allow workshop/src/items/references.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
 uses gui           cjson civetweb common theory-style workshop-api workshop-internal -- the routes include workshop_internal.h until B11 gives the GUI the query and command API
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
