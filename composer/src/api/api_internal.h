@@ -160,6 +160,15 @@ ComposerStatus api_lane_targets(const Plan *plan, NodeId node, bool has_lane, Pl
 /* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
 ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);
 
+/* The first node of the plan with the name, or PLAN_NODE_NONE. */
+NodeId api_find_node(const Plan *plan, const char *name);
+
+/* A number written with %g and read back, so a double in a result has no float noise. */
+cJSON *api_number_g(double value);
+
+/* A rational as a number (num / den), for a tempo or a density in a result. */
+cJSON *api_ratio_number(const Rational *ratio);
+
 /* --- the outputs a theme or grow request asks for ---------------------------------------------------- */
 
 typedef struct {

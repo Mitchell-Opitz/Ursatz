@@ -389,3 +389,24 @@ bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *
     }
     return true;
 }
+
+NodeId api_find_node(const Plan *plan, const char *name) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *found = plan_node_name(plan, id);
+        if (found && strcmp(found, name) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* A number written with %g and read back, so a double in a result has no float noise. */
+cJSON *api_number_g(double value) {
+    char text[64];
+    snprintf(text, sizeof text, "%g", value);
+    return cJSON_CreateNumber(strtod(text, NULL));
+}
+
+cJSON *api_ratio_number(const Rational *ratio) {
+    return api_number_g((double)ratio->num / (double)ratio->den);
+}

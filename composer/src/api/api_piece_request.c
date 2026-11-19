@@ -9,7 +9,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_json.h>
 
-#include "api_grow.h"
+#include "api_construction.h"
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "api_piece.h"
@@ -38,30 +38,6 @@ void api_piece_request_destroy(PieceSpec *request) {
     composer_style_destroy(request->style);
     form_spec_destroy(request->form);
     request->form = NULL;
-}
-
-/* "antecedent+continuation": a beginning, a plus sign and an ending (as grow --hybrid), the words of the vocabulary. */
-static bool parse_hybrid(const char *text, SectionPairing *pairing) {
-    const char *plus = strchr(text, '+');
-    if (!plus) {
-        return false;
-    }
-    size_t length = (size_t)(plus - text);
-    bool beginning_found = false;
-    bool ending_found = false;
-    for (int i = 0; API_THEME_BEGINNINGS[i].value; i++) {
-        if (strlen(API_THEME_BEGINNINGS[i].value) == length && strncmp(text, API_THEME_BEGINNINGS[i].value, length) == 0) {
-            pairing->beginning = (SectionBeginning)i;
-            beginning_found = true;
-        }
-    }
-    for (int i = 0; API_THEME_ENDINGS[i].value; i++) {
-        if (request_equals_ignore_case(plus + 1, API_THEME_ENDINGS[i].value)) {
-            pairing->ending = (SectionEnding)i;
-            ending_found = true;
-        }
-    }
-    return beginning_found && ending_found;
 }
 
 static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *fill, const char *base, ComposerError *error) {
@@ -130,7 +106,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         }
         if (section->has_into && section->into == PLAN_ARCHETYPE_HYBRID) {
             snprintf(path, sizeof path, "%s/hybrid", base);
-            if (!hybrid || !parse_hybrid(hybrid, &section->hybrid)) {
+            if (!hybrid || !api_parse_hybrid(hybrid, &section->hybrid)) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path,
                                 "section '%s': a hybrid needs \"hybrid\": \"<beginning>+<ending>\", for example "
                                 "antecedent+continuation",

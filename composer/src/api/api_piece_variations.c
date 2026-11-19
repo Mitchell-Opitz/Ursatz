@@ -9,8 +9,8 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/variations.h>
 
-#include "api_grow.h"
 #include "api_internal.h"
+#include "api_style.h"
 #include "api_piece.h"
 #include "util/util.h"
 #include <ursatz_composer/piece_plan_keys.h>

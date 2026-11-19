@@ -14,7 +14,7 @@
 #include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
-#include "api_grow.h"
+#include "api_style.h"
 #include "structure/plan_util.h"
 #include "util/util.h"
 #include <ursatz_composer/piece_plan_keys.h>

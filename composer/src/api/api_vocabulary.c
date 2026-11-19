@@ -14,9 +14,9 @@
 #include <ursatz_composer/preferences.h>
 #include <ursatz_composer/variant_registry.h>
 
-#include "api_grow.h"
 #include "grow/grow_internal.h"
 #include "api_internal.h"
+#include "api_seed.h"
 #include "api_piece.h"
 #include "api_workflow.h"
 #include "api_vocabulary.h"

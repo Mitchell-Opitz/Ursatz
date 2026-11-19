@@ -9,6 +9,9 @@
 #include <ursatz_composer/render.h>
 
 #include "api_grow.h"
+#include "api_construction.h"
+#include "api_seed.h"
+#include "api_style.h"
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_workflow.h"
@@ -21,78 +24,7 @@
 
 /* --- the style categories --------------------------------------------------------------------------------- */
 
-ComposerStatus api_style_category_check(const char *name, ComposerError *error) {
-    StyleDimension dimension;
-    if (!style_category_dimension(name, &dimension)) {
-        char list[640];
-        size_t used = 0;
-        list[0] = '\0';
-        for (size_t i = 0; i < style_category_count() && used < sizeof list; i++) {
-            int written = snprintf(list + used, sizeof list - used, "%s%s", i ? ", " : "", style_category_name(i));
-            used += written > 0 ? (size_t)written : 0;
-        }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without",
-                        "style_without: '%s' is not a style category (the categories are %s)", name, list);
-    }
-    return COMPOSER_OK;
-}
-
-ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
-                                     ComposerError *error) {
-    ComposerStatus checked = api_style_category_check(name, error);
-    if (checked != COMPOSER_OK) {
-        return checked;
-    }
-    for (size_t i = 0; i < *count; i++) {
-        if (strcmp(names[i], name) == 0) {
-            return COMPOSER_OK;
-        }
-    }
-    if (*count >= capacity) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without is given at most %zu times", capacity);
-    }
-    names[(*count)++] = name;
-    return COMPOSER_OK;
-}
-
 /* --- seeding from a corpus ------------------------------------------------------------------------------- */
-
-static ComposerStatus seed_failure(CorpusSeedResult result, ComposerError *error) {
-    switch (result) {
-    case CORPUS_SEED_ERR_NO_MATCH:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages",
-                        "no passage of corpus_passages gives a motive (it needs two or more notes in its first bar)");
-    default:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages", "%s", corpus_seed_result_name(result));
-    }
-}
-
-ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error) {
-    memset(out, 0, sizeof(*out));
-    if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the source piece's path is too long to record");
-    }
-    out->start_measure = seed->start_measure;
-    out->start_beat = seed->start_beat;
-    out->end_measure = seed->end_measure;
-    out->end_beat = seed->end_beat;
-    out->score_numerator = seed->score_numerator;
-    out->score_denominator = seed->score_denominator;
-    return COMPOSER_OK;
-}
-
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error) {
-    CorpusSeedResult result = corpus_seed_motive(knowledge, passages->items, passages->count, meter, key, seed, out);
-    return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, error);
-}
-
-void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size) {
-    out[0] = '\0';
-    if (seed->stale_documents > 0) {
-        snprintf(out, size, "%zu stale documents (analyzed by another version; run the corpus again)", seed->stale_documents);
-    }
-}
 
 /* --- the request ----------------------------------------------------------------------------------------- */
 

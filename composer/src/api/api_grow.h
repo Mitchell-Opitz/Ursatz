@@ -14,6 +14,8 @@
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
+#include "api_seed.h"
+#include "api_style.h"
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/motive.h>
 #include <plan/plan.h>
@@ -24,27 +26,8 @@
  * result document. Private to the library and the command line.
  */
 
-#define GROW_MAX_SUGGESTIONS 16
-#define GROW_MAX_SEED_TRIES 16
-#define GROW_SEED_MAX 4294967295UL
 /* At most two chords a bar in a theme of eight bars. */
 #define GROW_EXT_CHORDS 16
-
-/* What the brief of a run was. */
-typedef struct {
-    Rational tempo;      /* a denominator of 0 for none */
-    const char *tempo_from;   /* "option", "style" or "none" */
-    const PitchMaterial *material; /* the key's material */
-    const char *mode_from;    /* "request" or "style" */
-    bool has_density;         /* the style's density (attacks per beat) */
-    Rational density;
-    const char *const *without;
-    size_t without_count;
-    const char *development;  /* "melody", "balanced" or "theme" for a theme; NULL for none (not echoed) */
-} GrowBrief;
-
-/* "melody", "balanced" or "theme". */
-const char *api_development_name(GrowDevelopment development);
 
 /* The motives of a theme run (the `theme` request's), besides the basic one. */
 typedef struct {
@@ -153,43 +136,6 @@ typedef struct {
     unsigned long last_seed;
 } GrowRun;
 
-/* The brief of the text: sentence, period or hybrid with its pairing, the key, the meter, the bars, the cadences, the
-   accompaniment and the voicing, into *out (not out->style, out->motive...). Messages name the member. */
-ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, ComposerError *error);
-
-/*
- * The construction member of a request (R-468): null or absent for none, else {"ideas": {"<idea name>": bars, ...},
- * "extensions": [{"kind", "idea", "bars", "varied"}]}, into out->construction with reason GIVEN. Run after
- * api_grow_read_brief (it needs the pairing): a request with a construction and no bars is as long as the construction.
- * Whether the ideas fit the pairing and add up to the bars is grow_build_plan_checked's to refuse, at /construction/...
- */
-ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, ComposerError *error);
-
-/*
- * The construction object itself ({"ideas": {...}, "extensions": [...]}, reason GIVEN) into *out, whose members are
- * refused at `base` ("/construction", or the path of a section's construction in a piece request).
- */
-ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, SectionConstruction *out, ComposerError *error);
-
-/*
- * A construction as a response gives it (R-468): {"halves", "ideas", "extensions", "reason", "text"}, `text` the sentence
- * that says why (grow_construction_describe). NULL when memory runs out.
- */
-cJSON *api_grow_construction_json(const SectionConstruction *construction, const SectionPairing *pairing, const char *text);
-
-/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive". */
-const char *api_accompaniment_name(PlanAccompanimentPattern pattern);
-/* The accompaniment of the two texts (either may be NULL) for the meter. */
-ComposerStatus api_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text,
-                                      const PlanMeter *meter, PlanAccompaniment *out, ComposerError *error);
-/* The blend weights from --blend-weight / --blend-weights texts (any NULL). */
-ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
-                              ComposerStyleWeights *out, ComposerError *error);
-/* Loads the style at path, blended with the one at blend_path when that is not NULL. */
-ComposerStatus api_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
-                              const char *const *without, size_t without_count, ComposerStyle **out,
-                              ComposerError *error);
-
 /*
  * Sets the tempo (from "option_tempo", else the style) and the mode of the key (mode "style" takes the style's) in out,
  * after the style is loaded. option_tempo has the tempo given with the request or NULL.
@@ -210,32 +156,7 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
 void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowRequest *request);
 void api_grow_run_destroy(GrowRun *run);
 
-/*
- * The refusal of a motif longer than the basic idea it fills, at path: "the motif is 3 bars; the basic idea of an 8-bar
- * theme is 2". The motif's bars are those it takes from its start, a pickup included.
- */
-ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const Motive *motive, const PlanMeter *meter,
-                                   size_t theme_bars, size_t idea_bars);
-
-/* COMPOSER_OK when name is a style category a style can be read without, else a request error at /style_without. */
-ComposerStatus api_style_category_check(const char *name, ComposerError *error);
-
-/* The names of the style categories a style can be read without: adds name to names (at most capacity; a repeat is ignored). */
-ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
-                                     ComposerError *error);
-
 /* --- seeding from a corpus ---------------------------------------------------------------------------- */
-
-/* The motive of one of the passages the request gives, in the meter and key. */
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error);
-/* The seed as the plan records it. */
-ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
-/* "3 stale documents (analyzed by another version; run the corpus again)", or "" when none is stale. */
-void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size);
-
-/* The first node of the plan with the name, or PLAN_NODE_NONE. */
-NodeId api_find_node(const Plan *plan, const char *name);
 
 /* --- the result ------------------------------------------------------------------------------------ */
 
@@ -252,13 +173,6 @@ typedef struct {
  * grow. The members after "tempo" (brief and chords) are the theme command's, with info.
  */
 cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const GrowThemeInfo *info);
-
-/* The Analyzer's distance from the style as {dimension: value, ..., overall}, values to four places. */
-cJSON *api_style_distance_json(const StyleComparison *comparison);
-/* The corpus passage a motive was taken from, as {piece, start, end, score}. */
-cJSON *api_seed_json(const CorpusSeed *seed);
-/* {"tempo":..., "mode":..., "density":..., "without": [...]} of a brief. */
-cJSON *api_brief_json(const GrowBrief *brief);
 
 /* The brief of a setup, for the result and the text output. */
 void api_grow_brief(const GrowSetup *setup, GrowBrief *out);

@@ -13,7 +13,9 @@
 #include <ursatz_composer/piece.h>
 #include <plan/plan_json.h>
 
-#include "api_grow.h"
+#include "api_style.h"
+#include "api_seed.h"
+#include "api_construction.h"
 #include "api_vocabulary.h"
 #include "api_workflow.h"
 #include "harmony/harmony_internal.h"

@@ -19,8 +19,8 @@
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/render.h>
 
-#include "api_grow.h"
 #include "api_internal.h"
+#include "api_style.h"
 #include "api_piece.h"
 #include "api_workflow.h"
 #include "grow/grow_internal.h"

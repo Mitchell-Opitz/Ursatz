@@ -17,6 +17,8 @@
 #include <ursatz_composer/render.h>
 
 #include "api_grow.h"
+#include "api_construction.h"
+#include "api_style.h"
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"

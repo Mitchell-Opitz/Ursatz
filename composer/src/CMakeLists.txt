@@ -9,7 +9,11 @@ add_library(ursatz_composer STATIC
     api/api_motive.c
     api/api_variants.c
     api/api_random.c
+    api/api_construction.c
     api/api_grow.c
+    api/api_grow_json.c
+    api/api_seed.c
+    api/api_style.c
     api/api_theme.c
     api/api_target.c
     api/api_workflow.c

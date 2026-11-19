@@ -8,7 +8,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/theme_shape.h>
 
-#include "api_grow.h"
+#include "api_construction.h"
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_vocabulary.h"
