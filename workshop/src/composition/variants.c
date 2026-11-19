@@ -42,7 +42,7 @@ static bool function_name_ok(const char *name) {
 
 /* The version body of the basic motive of motif's lineage: the end of its derived.source_item links, at most 32 hops.
    Caller-owned; NULL when the motif is not derived or the lineage cannot be read. */
-static cJSON *lineage_root(const cJSON *motif) {
+cJSON *workshop_variants_lineage_root(const cJSON *motif) {
   cJSON *root = NULL;
   const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
   for (int hops = 0; hops < 32 && cJSON_IsObject(derived); hops++) {
@@ -867,7 +867,7 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, WorkshopJo
     return;
   }
   cJSON *chain = chain_for_reroll(cJSON_GetObjectItemCaseSensitive(derived, "operations"));
-  cJSON *basic_body = lineage_root(cJSON_GetObjectItemCaseSensitive(source, "motif"));
+  cJSON *basic_body = workshop_variants_lineage_root(cJSON_GetObjectItemCaseSensitive(source, "motif"));
   const cJSON *shown = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
   int status = 500;
   UrsatzError failure = {0};
@@ -959,7 +959,7 @@ static void variants_run(const WorkshopVariantsJob *input, const UrsatzJob *comp
   int status = 400;
   UrsatzError failure = {0};
   workshop_error_text(&failure, "only a motif has variants");
-  cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
+  cJSON *basic_body = cJSON_IsObject(motif) ? workshop_variants_lineage_root(motif) : NULL;
   cJSON *document = cJSON_IsObject(motif)
                         ? (each_op ? workshop_motif_run_variants(motif, basic_body, NULL, NULL, true, NULL, 0, input->seed, composer_job, &status,
                                                   &failure)

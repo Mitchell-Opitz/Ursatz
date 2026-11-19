@@ -57,3 +57,10 @@ ursatz_test(stale_analysis LIBS ursatz_workshop ursatz_test_support
 # The test creates pieces/, styles/, collections/, materials/, subjects/ and links/ in its own working directory and reads
 # the link fixtures.
 
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_variants)
+ursatz_test(workshop_variants SOURCES test_variants.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/workshop_variants"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_variants)
+# The test creates its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR), saves a motif and three generations of
+# variants through the workshop functions, and removes it.

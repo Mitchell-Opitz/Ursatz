@@ -27,6 +27,10 @@ const char *workshop_variants_job_kind(const WorkshopVariantsJob *job);
 void workshop_variants_job_run(void *input, const UrsatzJob *job, WorkshopJobResult *out);
 void workshop_variants_job_free(void *input);
 
+/* The version body of the basic motive of a motif's lineage: the end of its derived.source_item links, at most 32 hops (caller-owned).
+ * NULL when the motif is not derived or the lineage cannot be read. */
+cJSON *workshop_variants_lineage_root(const cJSON *motif);
+
 /* A derived motif made from one candidate: body {variant, name?, flag}. The new item in *item. */
 UrsatzStatus workshop_variants_save(const char *id, const cJSON *body, cJSON **item, UrsatzError *error);
 
