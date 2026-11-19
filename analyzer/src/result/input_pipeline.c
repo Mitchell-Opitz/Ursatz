@@ -1,4 +1,4 @@
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 static UrsatzStatus status_of(ImportedScoreResult result, const ImportedScoreError *detail, const char *path, UrsatzError *error) {
     UrsatzStatus status;

@@ -232,7 +232,7 @@ rebuild changes what that plan's later steps use.
 
 Motive links show which motive families of different pieces are variants of one another: for each family the
 Analyzer finds the nearest families of other pieces and the chain of at most two relations that turns one prototype
-into the other (`ursatz_analyzer/motive_links.h`). `service/link_service.c` is the only code that calls it; it reads
+into the other (`ursatz_analyzer/analyzer_api.h`). `service/link_service.c` is the only code that calls it; it reads
 only analysis documents, never the scores.
 
 A scope names the pieces to link:
@@ -263,7 +263,7 @@ Pieces are taken in id order. A scope that names no piece is `422`.
 A run is `{"id","scope","created_at","finished_at","status","message","done","total","skipped","result"}`. `status`
 is `running`, `done` or `failed` (`message` says why: `no analyzable pieces`, `linking failed`, `interrupted`).
 `skipped` lists `{"id","reason"}` for each piece that was left out, as styles do: `not found`, `re-analysis failed` or
-`unreadable analysis`. On `done`, `result` is the Analyzer's `motive_links_render` output
+`unreadable analysis`. On `done`, `result` is the Analyzer's `analyzer_links_render` output
 (`schema/motive-links.v1.schema.json`): `pieces`, `pairs`, `compared`, `cached`, `cache_reset`, the `links` (each
 with ends `a` and `b`, `reversed`, the `steps` as text, the `distance` and the `similarity` by dimension) and the
 `groups` of linked families. Every link end and group member carries a `title` the route adds: the piece's filename

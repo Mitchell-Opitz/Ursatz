@@ -4,7 +4,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 
 #include "style/style_profile_internal.h"
 #include <common/json.h>
@@ -291,7 +291,7 @@ static bool read_form(StylePiece *piece, const cJSON *document) {
 StyleProfileResult style_piece_from_document(const cJSON *document, StylePiece *piece) {
     long long version;
     if (!document || !piece || !common_json_long(document, "schema_version", &version) ||
-        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        version != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         return STYLE_PROFILE_ERR_FORMAT;
     }
     memset(piece, 0, sizeof *piece);

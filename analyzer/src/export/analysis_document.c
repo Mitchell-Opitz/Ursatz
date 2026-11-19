@@ -6,7 +6,7 @@
 static cJSON *document_json(DocBuild *build, const char *input_path, const ImportedScore *notes, const ChainResult *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
-        !(common_json_add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
+        !(common_json_add(document, "schema_version", cJSON_CreateNumber(ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
           common_json_add(document, "metadata", doc_metadata_json(build, input_path, notes, report)) &&
           common_json_add(document, "meter", doc_meter_json(build, notes)) && common_json_add(document, "keys", doc_keys_json(build, notes, report)) &&
           common_json_add(document, "tonicizations", doc_tonicizations_json(build, notes, report)) &&
@@ -65,7 +65,7 @@ UrsatzStatus analysis_document_build_from_reading(const char *path, const Readin
     return URSATZ_OK;
 }
 
-AnalysisDocument *analysis_document_build_from_result(const char *input_path, const AnalyzerResult *result) {
+AnalysisDocument *analyzer_document_build(const char *input_path, const AnalyzerResult *result) {
     if (!result) {
         return NULL;
     }
@@ -78,16 +78,16 @@ AnalysisDocument *analysis_document_build_from_result(const char *input_path, co
 }
 
 char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result) {
-    AnalysisDocument *document = analysis_document_build_from_result(input_path, result);
+    AnalysisDocument *document = analyzer_document_build(input_path, result);
     if (!document) {
         return NULL;
     }
-    char *json = analysis_document_to_json(document);
-    analysis_document_destroy(document);
+    char *json = analyzer_document_to_json(document);
+    analyzer_document_destroy(document);
     return json;
 }
 
-char *analysis_document_to_json(const AnalysisDocument *document) {
+char *analyzer_document_to_json(const AnalysisDocument *document) {
     CommonText buffer;
     common_text_init(&buffer);
     if (!doc_print_value(&buffer, document->root, 0) || !common_text_append(&buffer, "\n")) {
@@ -97,7 +97,7 @@ char *analysis_document_to_json(const AnalysisDocument *document) {
     return common_text_take(&buffer);
 }
 
-void analysis_document_destroy(AnalysisDocument *document) {
+void analyzer_document_destroy(AnalysisDocument *document) {
     if (!document) {
         return;
     }

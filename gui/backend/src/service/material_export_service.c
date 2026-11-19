@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <ursatz_analyzer/text_export.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <common/json.h>
 

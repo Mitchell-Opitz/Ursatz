@@ -1,4 +1,6 @@
-#include <ursatz_analyzer/text_export.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include <math.h>
 #include <stdarg.h>
@@ -8,9 +10,6 @@
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/score_export.h>
-#include <ursatz_analyzer/version.h>
 
 #include "util/misc_util.h"
 #include "export/score_export_internal.h"
@@ -658,8 +657,8 @@ void text_export_write_summary(CommonText *text, const cJSON *document, const Sc
 
 void text_export_write_legend(CommonText *text) {
     char commit[13];
-    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_producer_key());
-    common_text_appendf(text, "analyzer: %s ursatz %s\n", ursatz_analyzer_version(), commit);
+    snprintf(commit, sizeof(commit), "%.12s", analyzer_producer_key());
+    common_text_appendf(text, "analyzer: %s ursatz %s\n", analyzer_version(), commit);
     common_text_append(text,
                     "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>\n");
 }
@@ -713,7 +712,7 @@ static void add_clefs(CommonText *text, const ScoreTextScore *score, size_t firs
 
 static void add_header(CommonText *text, const cJSON *document, const ScoreTextScore *score, const char *title,
                        size_t first, size_t last, bool whole) {
-    common_text_appendf(text, "# Ursatz export v%d: piece\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION);
+    common_text_appendf(text, "# Ursatz export v%d: piece\n", ANALYZER_TEXT_EXPORT_VERSION);
     common_text_appendf(text, "title: %s\n", title);
     text_export_write_summary(text, document, score, first, last, whole);
     add_clefs(text, score, first);
@@ -848,7 +847,7 @@ static UrsatzStatus text_export_piece(const ImportedScore *notes, const char *do
     cJSON *document = cJSON_Parse(document_json);
     const cJSON *version = member(document, "schema_version");
     if (!document || !cJSON_IsNumber(version) ||
-        (int)version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        (int)version->valuedouble != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return URSATZ_ERR_REQUEST;
     }

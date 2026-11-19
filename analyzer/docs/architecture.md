@@ -18,7 +18,7 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 
 | Directory | What it holds | Doc |
 | --- | --- | --- |
-| `include/ursatz_analyzer/` | The public headers, included as `<ursatz_analyzer/xxx.h>` | [library.md](library.md) |
+| `include/ursatz_analyzer/` | The one API header, `<ursatz_analyzer/analyzer_api.h>`; the internal headers are in `src/include/ursatz_analyzer_internal/` | [library.md](library.md) |
 | `src/util/` | Private JSON, file and misc helpers; the bottom of the stack | [library.md](library.md) |
 | `src/store/` | The corpus walk, paths and the stale check (`corpus_walk`, `path_util`, `staleness`) | [corpus.md](corpus.md) |
 | `src/result/` | The analysis result (`analyzer_analyze`), the file entry (`run_file`) and the thin import entries | [analysis-result.md](analysis-result.md) |
@@ -64,10 +64,10 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 
 | Name | File | Current value | Doc |
 | --- | --- | --- | --- |
-| `URSATZ_ANALYZER_VERSION`, `ursatz_analyzer_version()` | `<ursatz_analyzer/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-producer-key) |
-| `ursatz_analyzer_producer_key()` | `<ursatz_analyzer/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-producer-key) |
-| `URSATZ_ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/text_export.h` | 2 | [text-export.md](text-export.md) |
-| `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 12 | [versions.md](analysis-document/versions.md) |
+| `URSATZ_ANALYZER_VERSION`, `analyzer_version()` | `<ursatz_analyzer_internal/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-producer-key) |
+| `analyzer_producer_key()` | `<ursatz_analyzer_internal/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-producer-key) |
+| `ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 2 | [text-export.md](text-export.md) |
+| `ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 12 | [versions.md](analysis-document/versions.md) |
 | analysis document schema | `schema/analysis-document.v13.schema.json` | v13 | [analysis-document.md](analysis-document.md) |
 | corpus index, motive link cache schemas | `schema/corpus-index.v2.schema.json`, `schema/motive-link-cache.v2.schema.json` | v2 each |
 | motive links, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |

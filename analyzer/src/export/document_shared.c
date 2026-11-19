@@ -455,7 +455,7 @@ cJSON *doc_metadata_json(DocBuild *build, const char *input_path, const Imported
     if (metadata &&
         !(common_json_add(metadata, "source_file", cJSON_CreateString(path_basename(input_path))) &&
           common_json_add(metadata, "analyzer_version", cJSON_CreateString(URSATZ_ANALYZER_VERSION)) &&
-          common_json_add(metadata, "producer_key", cJSON_CreateString(ursatz_analyzer_producer_key())) &&
+          common_json_add(metadata, "producer_key", cJSON_CreateString(analyzer_producer_key())) &&
           common_json_add(metadata, "note_count", cJSON_CreateNumber((double)notes->count)) &&
           common_json_add(metadata, "ticks_per_quarter", notes->ticks_per_quarter > 0
                                                  ? cJSON_CreateNumber((double)notes->ticks_per_quarter)

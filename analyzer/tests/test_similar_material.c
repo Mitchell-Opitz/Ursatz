@@ -5,8 +5,8 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/similar_material.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/similar_material.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"

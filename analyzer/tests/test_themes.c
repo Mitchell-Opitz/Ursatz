@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"

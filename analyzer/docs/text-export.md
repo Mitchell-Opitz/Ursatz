@@ -1,6 +1,6 @@
 # Text export
 
-Back to the [docs index](README.md). Header: `<ursatz_analyzer/text_export.h>`. Command: `ursatz-analyzer export`.
+Back to the [docs index](README.md). Header: `<ursatz_analyzer/analyzer_api.h>`. Command: `ursatz-analyzer export`.
 
 ## What it is for
 
@@ -16,7 +16,7 @@ changes neither `analysis.json`, its schema nor the score MusicXML.
 
 ## Format v2
 
-`URSATZ_ANALYZER_TEXT_EXPORT_VERSION` is 2 and is the `v2` of the first line. Version 2 adds the `clefs:` header line and the clef changes on a measure line (version 1 had neither). This is the start of an export of
+`ANALYZER_TEXT_EXPORT_VERSION` is 2 and is the `v2` of the first line. Version 2 adds the `clefs:` header line and the clef changes on a measure line (version 1 had neither). This is the start of an export of
 `tests/musicxml/pickup.musicxml`:
 
 ```
@@ -123,7 +123,7 @@ UrsatzStatus analyzer_text_export_piece(const ImportedScore *notes, const char *
 
 `notes` is the import the analysis ran on and `document_json` its analysis document (`analysis_document_render_result`
 or the stored `analysis.json`). On `URSATZ_OK` the caller frees `*text` with `free`. `URSATZ_ERR_REQUEST` for a NULL
-argument, a document that is not JSON or whose `schema_version` is not `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION`, or an
+argument, a document that is not JSON or whose `schema_version` is not `ANALYZER_DOCUMENT_SCHEMA_VERSION`, or an
 empty range; `URSATZ_ERR_INTERNAL` when the score cannot be written or read back; `URSATZ_ERR_ALLOC`.
 
 ```sh
@@ -185,7 +185,7 @@ key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
 
 ## Versioning
 
-The first line carries the format version. A change to the layout of any line bumps `URSATZ_ANALYZER_TEXT_EXPORT_VERSION`.
+The first line carries the format version. A change to the layout of any line bumps `ANALYZER_TEXT_EXPORT_VERSION`.
 Adding a claim line or a token a reader can skip does not. The export has its own snapshots
 (`tests/snapshots/<slug>.export.txt`, the `analyzer:` line removed) so a change shows in review.
 

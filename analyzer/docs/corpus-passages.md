@@ -2,7 +2,7 @@
 
 The passages of an analyzed corpus, ready to give to the Composer. Back to the [docs index](README.md).
 
-Library: `include/ursatz_analyzer/corpus_passages.h`, part of the `ursatz_analyzer` target. R-619.
+Library: `include/ursatz_analyzer/analyzer_api.h`, part of the `ursatz_analyzer` target. R-619.
 
 The Composer API seeds a motive or a progression from passages given inline in a request (`corpus_passages`, the
 [schema](../../composer/schema/api/corpus-passages.schema.json)); it does not search a corpus. This is how a caller (the

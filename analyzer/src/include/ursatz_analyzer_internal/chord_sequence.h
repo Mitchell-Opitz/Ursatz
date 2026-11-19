@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
 
 #include "model/core/rational.h"
 

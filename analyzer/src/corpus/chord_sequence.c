@@ -1,4 +1,5 @@
-#include <ursatz_analyzer/chord_sequence.h>
+#include <ursatz_analyzer_internal/chord_sequence.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -6,7 +7,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
 #include "theory/style/style_labels.h"
 
 #include "corpus/chord_sequence_internal.h"
@@ -121,7 +121,7 @@ UrsatzStatus analyzer_chord_sequence_from_document(const char *document_json, An
     cJSON *document = cJSON_Parse(document_json);
     long long version;
     if (!document || !common_json_long(document, "schema_version", &version) ||
-        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        version != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return URSATZ_ERR_REQUEST;
     }

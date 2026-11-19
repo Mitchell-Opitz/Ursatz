@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <ursatz_analyzer/corpus_passages.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/corpus_seed.h>

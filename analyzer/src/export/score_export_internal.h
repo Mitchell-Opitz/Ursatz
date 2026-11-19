@@ -1,7 +1,7 @@
 #ifndef URSATZ_ANALYZER_SCORE_EXPORT_INTERNAL_H
 #define URSATZ_ANALYZER_SCORE_EXPORT_INTERNAL_H
 
-#include <ursatz_analyzer/score_export.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "io/score_layout.h"
 

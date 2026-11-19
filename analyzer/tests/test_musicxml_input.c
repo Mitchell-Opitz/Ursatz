@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include "cJSON.h"
 
@@ -118,7 +118,7 @@ static void test_notated_metadata_and_pickup(void) {
     imported_score_destroy(&notes);
 
     const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
-    assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    assert(number(document, "schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION);
     assert(strcmp(string(input, "format"), "musicxml") == 0);
     assert(strcmp(string(input, "source_type"), "score") == 0);
     assert(strcmp(string(input, "meter"), "notated") == 0);

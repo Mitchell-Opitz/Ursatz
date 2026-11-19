@@ -7,10 +7,10 @@
 #include "cJSON.h"
 #include "model/identity/entity_id.h"
 #include "theory/style/style_model_build.h"
-#include <ursatz_analyzer/corpus.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/style_profile.h>
+#include <ursatz_analyzer_internal/version.h>
 #include "theory/style/style_labels.h"
-#include <ursatz_analyzer/style_profile.h>
-#include <ursatz_analyzer/version.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -327,7 +327,7 @@ static void test_motive_categories(void) {
         "{\"occurrences\": [{\"note_ids\": [3, 4, 5], \"degrees\": [\"1\", \"2\", \"3\"]}]}"
         "]}";
     StyleProfile *profile = style_profile_create();
-    CHECKF(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "motive document");
+    CHECKF(profile && analyzer_style_add_document_json(profile, document) == STYLE_PROFILE_OK, "motive document");
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     if (!profile || style_profile_statistics(profile, &statistics, &count) != STYLE_PROFILE_OK) {
@@ -357,7 +357,7 @@ static void test_motive_figure_ends(void) {
         " \"motives\": [{\"features\": {\"degrees\": [\"1\", \"2\", \"3\"], \"intervals\": [2, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/4\"]},"
         " \"occurrences\": [{\"note_ids\": [1, 2, 3, 4], \"degrees\": [\"6\", \"1\", \"2\", \"3\"]}]}]}";
     StyleProfile *profile = style_profile_create();
-    CHECKF(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "figure document");
+    CHECKF(profile && analyzer_style_add_document_json(profile, document) == STYLE_PROFILE_OK, "figure document");
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     if (!profile || style_profile_statistics(profile, &statistics, &count) != STYLE_PROFILE_OK) {
@@ -424,14 +424,14 @@ static void test_read_without(StyleProfile *reference) {
 static void test_refusals(void) {
     StyleProfile *profile = style_profile_create();
     CHECKF(profile != NULL, "cannot create a profile");
-    CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
-    CHECKF(style_profile_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
-    CHECKF(style_profile_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
-    CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 13}") == STYLE_PROFILE_OK &&
+    CHECKF(analyzer_style_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
+    CHECKF(analyzer_style_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
+    CHECKF(analyzer_style_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
+    CHECKF(analyzer_style_add_document_json(profile, "{\"schema_version\": 13}") == STYLE_PROFILE_OK &&
                style_profile_piece_count(profile) == 1,
            "an empty version 9 document counts as a piece with no labels");
     CHECKF(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");
-    CHECKF(style_profile_add_document_json(NULL, "{}") == STYLE_PROFILE_ERR_ARGUMENT, "no profile");
+    CHECKF(analyzer_style_add_document_json(NULL, "{}") == STYLE_PROFILE_ERR_ARGUMENT, "no profile");
     style_profile_destroy(profile);
 
     char path[1024];

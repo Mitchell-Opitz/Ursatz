@@ -41,7 +41,7 @@ RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const I
 }
 
 AnalysisDocument *analyzer_run_file_document(const char *path, ImportedScore *notes, AnalyzerResult *result) {
-    AnalysisDocument *document = analysis_document_build_from_result(path, result);
+    AnalysisDocument *document = analyzer_document_build(path, result);
     analyzer_result_destroy(result);
     imported_score_destroy(notes);
     return document;

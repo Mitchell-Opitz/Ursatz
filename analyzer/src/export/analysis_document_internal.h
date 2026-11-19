@@ -1,8 +1,8 @@
 #ifndef URSATZ_ANALYZER_ANALYSIS_DOCUMENT_INTERNAL_H
 #define URSATZ_ANALYZER_ANALYSIS_DOCUMENT_INTERNAL_H
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/version.h>
 #include <common/strings.h>
 #include <limits.h>
 #include <stdbool.h>

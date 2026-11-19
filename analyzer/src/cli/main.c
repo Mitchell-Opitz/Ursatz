@@ -4,15 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer_internal/motive_links.h>
+#include <ursatz_analyzer_internal/similar_material.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/style_profile.h>
+#include <ursatz_analyzer_internal/version.h>
 #include <io/imported_score.h>
-#include <ursatz_analyzer/similar_material.h>
-#include <ursatz_analyzer/text_export.h>
-#include <ursatz_analyzer/style_profile.h>
-#include <ursatz_analyzer/version.h>
 #include <plan/plan_json.h>
 #include <reading/reading_json.h>
 #include <reading/reading_plan.h>
@@ -110,7 +110,7 @@ static bool write_model_plan(const char *path, const AnalyzerResult *result, con
     memset(&producer, 0, sizeof(producer));
     snprintf(producer.name, sizeof(producer.name), "%s", "ursatz-analyzer");
     snprintf(producer.version, sizeof(producer.version), "%s", URSATZ_ANALYZER_VERSION);
-    snprintf(producer.producer_key, sizeof(producer.producer_key), "%s", ursatz_analyzer_producer_key());
+    snprintf(producer.producer_key, sizeof(producer.producer_key), "%s", analyzer_producer_key());
     snprintf(producer.knowledge_hash, sizeof(producer.knowledge_hash), "%s", knowledge_snapshot_hash(knowledge));
     PlanJsonError json_error;
     char *text = plan_to_json(plan, &producer, &json_error);
@@ -352,7 +352,7 @@ static void print_json_score(SimilarityScore score) {
 
 static void print_similar_json(const SimilarQuery *query, unsigned long min_numerator, unsigned long min_denominator,
                                const SimilarResults *results) {
-    printf("{\n  \"schema\": \"ursatz-similar-material\",\n  \"schema_version\": 1,\n  \"query\": {\"kind\": ");
+    printf("{\n  \"schema\": \"ursatz-similar-material\",\n  \"schema_version\": %d,\n  \"query\": {\"kind\": ", ANALYZER_SIMILAR_VERSION);
     if (query->kind == SIMILAR_QUERY_MOTIVE) {
         printf("\"motive\", \"notes\": [");
         for (size_t i = 0; i < query->note_count; i++) {
@@ -493,7 +493,7 @@ static void print_links_text(const MotiveLinks *links) {
 
 static int run_link_motives(const char *corpus_output_dir, const char *cache_file, size_t depth, size_t candidates,
                             bool as_json, const KnowledgeSnapshot *knowledge) {
-    MotiveLinkScope *scope = motive_link_scope_create(knowledge);
+    MotiveLinkScope *scope = analyzer_links_scope_create(knowledge);
     if (!scope) {
         fprintf(stderr, "Error: out of memory while linking motives\n");
         return 2;
@@ -510,7 +510,7 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
         } else {
             fprintf(stderr, "Error: cannot read the corpus output '%s'\n", corpus_output_dir);
         }
-        motive_link_scope_destroy(scope);
+        analyzer_links_scope_destroy(scope);
         return 2;
     }
     char *default_cache = NULL;
@@ -518,7 +518,7 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
         default_cache = malloc(strlen(corpus_output_dir) + 32);
         if (!default_cache) {
             fprintf(stderr, "Error: out of memory while linking motives\n");
-            motive_link_scope_destroy(scope);
+            analyzer_links_scope_destroy(scope);
             return 2;
         }
         sprintf(default_cache, "%s/motive-link-cache.json", corpus_output_dir);
@@ -526,12 +526,12 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
     }
     int exit_code = 2;
     MotiveLinkCache *cache = NULL;
-    UrsatzStatus loaded = motive_link_cache_load(cache_file, &cache);
+    UrsatzStatus loaded = analyzer_links_cache_load(cache_file, &cache);
     if (loaded != URSATZ_OK) {
         fprintf(stderr, "Error: cannot read the motive link cache '%s'\n", cache_file);
     } else {
         MotiveLinksOptions options;
-        motive_links_options_default(&options);
+        analyzer_links_options_default(&options);
         if (depth > 0) {
             options.link.max_depth = depth;
         }
@@ -539,14 +539,14 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
             options.candidates = candidates;
         }
         MotiveLinks links;
-        UrsatzStatus ran = motive_links_run(scope, cache, &options, &links);
+        UrsatzStatus ran = analyzer_links_run(scope, cache, &options, &links);
         char *json = NULL;
         if (ran == URSATZ_OK && as_json) {
-            ran = motive_links_render(&links, &json);
+            ran = analyzer_links_render(&links, &json);
         }
         if (ran != URSATZ_OK) {
             fprintf(stderr, "Error: cannot link the motives of '%s'\n", corpus_output_dir);
-        } else if (motive_link_cache_save(cache, cache_file) != URSATZ_OK) {
+        } else if (analyzer_links_cache_save(cache, cache_file) != URSATZ_OK) {
             fprintf(stderr, "Error: cannot write the motive link cache '%s'\n", cache_file);
         } else {
             if (as_json) {
@@ -556,12 +556,12 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
             }
             exit_code = 0;
         }
-        motive_links_destroy(&links);
+        analyzer_links_destroy(&links);
         free(json);
     }
-    motive_link_cache_destroy(cache);
+    analyzer_links_cache_destroy(cache);
     free(default_cache);
-    motive_link_scope_destroy(scope);
+    analyzer_links_scope_destroy(scope);
     return exit_code;
 }
 
@@ -654,9 +654,9 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
         return 1;
     }
 
-    AnalysisDocument *document = analysis_document_build_from_result(path, result);
-    char *json = document ? analysis_document_to_json(document) : NULL;
-    analysis_document_destroy(document);
+    AnalysisDocument *document = analyzer_document_build(path, result);
+    char *json = document ? analyzer_document_to_json(document) : NULL;
+    analyzer_document_destroy(document);
     analyzer_result_destroy(result);
     if (!json) {
         fprintf(stderr, "Error: out of memory while building the analysis document for '%s'\n", path);
@@ -934,10 +934,10 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
         return 1;
     }
 
-    bool ok = write_output(path, "analysis document", "Analysis document", analysis_document_to_json,
+    bool ok = write_output(path, "analysis document", "Analysis document", analyzer_document_to_json,
                            derive_analysis_document_path, document);
 
-    analysis_document_destroy(document);
+    analyzer_document_destroy(document);
     return ok ? 0 : 1;
 }
 

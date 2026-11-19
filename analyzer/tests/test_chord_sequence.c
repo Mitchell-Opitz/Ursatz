@@ -5,10 +5,10 @@
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/chord_sequence.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/chord_sequence.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 #include "theory/style/style_labels.h"
 
 #include <chain/analysis_chain.h>
@@ -137,7 +137,7 @@ static char *case_document(const CaseEntry *entries, size_t count, int version) 
 }
 
 static void check_case(const char *name, const CaseEntry *entries, size_t count, const size_t (*expected)[2], size_t expected_count) {
-    char *json = case_document(entries, count, URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    char *json = case_document(entries, count, ANALYZER_DOCUMENT_SCHEMA_VERSION);
     AnalyzerChord *chords = NULL;
     size_t found = 0;
     CHECKF(analyzer_chord_sequence_from_document(json, &chords, &found) == URSATZ_OK, "%s: not read", name);

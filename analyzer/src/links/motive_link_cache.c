@@ -5,8 +5,8 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/motive_links.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/motive_links.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include "links_internal.h"
 #include <common/json.h>
@@ -14,7 +14,6 @@
 #include "util/misc_util.h"
 
 #define CACHE_SCHEMA "ursatz-motive-link-cache"
-#define CACHE_SCHEMA_VERSION 2
 
 static const char *const dimension_keys[MOTIVE_DIMENSION_COUNT] = {"rhythm", "intervals", "contour", "harmony"};
 
@@ -83,11 +82,11 @@ static bool options_equal(const MotiveLinkOptions *a, const MotiveLinkOptions *b
 bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *options, bool *reset) {
     *reset = false;
     if (cache->keyed && cache->producer_key && cache->analyzer_version &&
-        strcmp(cache->producer_key, ursatz_analyzer_producer_key()) == 0 &&
+        strcmp(cache->producer_key, analyzer_producer_key()) == 0 &&
         strcmp(cache->analyzer_version, URSATZ_ANALYZER_VERSION) == 0 && options_equal(&cache->options, options)) {
         return true;
     }
-    char *commit = text_copy(ursatz_analyzer_producer_key());
+    char *commit = text_copy(analyzer_producer_key());
     char *version = text_copy(URSATZ_ANALYZER_VERSION);
     if (!commit || !version) {
         free(commit);
@@ -107,7 +106,7 @@ bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *
     return true;
 }
 
-void motive_link_cache_destroy(MotiveLinkCache *cache) {
+void analyzer_links_cache_destroy(MotiveLinkCache *cache) {
     if (!cache) {
         return;
     }
@@ -191,7 +190,7 @@ static UrsatzStatus read_cache(const cJSON *root, MotiveLinkCache *cache) {
     const cJSON *contour = common_json_member(options, "contour");
     const cJSON *nearness = common_json_member(options, "min_nearness");
     if (cJSON_IsString(schema) && strcmp(schema->valuestring, CACHE_SCHEMA) == 0 && cJSON_IsNumber(version) &&
-        version->valuedouble < CACHE_SCHEMA_VERSION) {
+        version->valuedouble < ANALYZER_LINK_CACHE_VERSION) {
         /* A cache of an older schema version (it keys itself by ursatz_commit) reads as an empty cache keyed with
            nothing, so the next run starts it again and reports cache_reset. */
         cache->producer_key = text_copy("");
@@ -204,7 +203,7 @@ static UrsatzStatus read_cache(const cJSON *root, MotiveLinkCache *cache) {
         return URSATZ_OK;
     }
     if (!cJSON_IsString(schema) || strcmp(schema->valuestring, CACHE_SCHEMA) != 0 || !cJSON_IsNumber(version) ||
-        version->valuedouble != CACHE_SCHEMA_VERSION || !cJSON_IsString(commit) || !cJSON_IsString(analyzer) ||
+        version->valuedouble != ANALYZER_LINK_CACHE_VERSION || !cJSON_IsString(commit) || !cJSON_IsString(analyzer) ||
         !whole_number(common_json_member(options, "max_depth"), &cache->options.max_depth) ||
         !whole_number(common_json_member(options, "beam"), &cache->options.beam) || !cJSON_IsNumber(nearness) ||
         !cJSON_IsBool(contour) || !cJSON_IsArray(pairs)) {
@@ -231,7 +230,7 @@ static UrsatzStatus read_cache(const cJSON *root, MotiveLinkCache *cache) {
     return URSATZ_OK;
 }
 
-UrsatzStatus motive_link_cache_load(const char *path, MotiveLinkCache **out) {
+UrsatzStatus analyzer_links_cache_load(const char *path, MotiveLinkCache **out) {
     if (!path || !out) {
         return URSATZ_ERR_REQUEST;
     }
@@ -257,7 +256,7 @@ UrsatzStatus motive_link_cache_load(const char *path, MotiveLinkCache **out) {
     free(text);
     cJSON_Delete(root);
     if (result != URSATZ_OK) {
-        motive_link_cache_destroy(cache);
+        analyzer_links_cache_destroy(cache);
         return result;
     }
     *out = cache;
@@ -311,7 +310,7 @@ static cJSON *pair_json(const MotiveLinkCachePair *pair) {
     return entry;
 }
 
-UrsatzStatus motive_link_cache_save(const MotiveLinkCache *cache, const char *path) {
+UrsatzStatus analyzer_links_cache_save(const MotiveLinkCache *cache, const char *path) {
     if (!cache || !path) {
         return URSATZ_ERR_REQUEST;
     }
@@ -328,9 +327,9 @@ UrsatzStatus motive_link_cache_save(const MotiveLinkCache *cache, const char *pa
         return URSATZ_ERR_ALLOC;
     }
     bool ok = cJSON_AddStringToObject(root, "schema", CACHE_SCHEMA) &&
-              cJSON_AddNumberToObject(root, "schema_version", CACHE_SCHEMA_VERSION) &&
+              cJSON_AddNumberToObject(root, "schema_version", ANALYZER_LINK_CACHE_VERSION) &&
               cJSON_AddStringToObject(root, "producer_key",
-                                      cache->keyed ? cache->producer_key : ursatz_analyzer_producer_key()) &&
+                                      cache->keyed ? cache->producer_key : analyzer_producer_key()) &&
               cJSON_AddStringToObject(root, "analyzer_version",
                                       cache->keyed ? cache->analyzer_version : URSATZ_ANALYZER_VERSION) &&
               cJSON_AddNumberToObject(object, "max_depth", (double)options->max_depth) &&

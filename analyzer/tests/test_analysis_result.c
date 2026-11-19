@@ -5,9 +5,9 @@
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 #include "result/analysis_result_internal.h"
 
 #include <chain/analysis_chain.h>
@@ -158,7 +158,7 @@ static void check_options(const char *fixture) {
         CHECKF(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
         CHECKF(analyzer_result_report(result)->progression_count == 0, "progressions without the report");
         CHECKF(analyzer_result_report(result)->entry_count == 0, "report entries from a partial chain");
-        CHECKF(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
+        CHECKF(analyzer_document_build(fixture, result) == NULL, "a document from a partial chain");
     }
     analyzer_result_destroy(result);
     imported_score_destroy(&notes);

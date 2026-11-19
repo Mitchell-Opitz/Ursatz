@@ -8,7 +8,7 @@
 
 #include <common/strings.h>
 
-#include <ursatz_analyzer/text_export.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "io/score_layout.h"
 #include "model/core/rational.h"

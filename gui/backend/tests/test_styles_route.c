@@ -22,8 +22,10 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/analyzer_api.h>
+
+#include <theory/style/style_model.h>
+#include <theory/style/style_model_file.h>
 
 #include "gui_check.h"
 #include "server.h"
@@ -482,7 +484,7 @@ int main(int argc, char **argv) {
     meta_text = test_read_file(meta_path, NULL);
     meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
-    check(number_of(meta, "document_schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION,
+    check(number_of(meta, "document_schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION,
           "its meta.json records the current schema version");
     cJSON_Delete(meta);
   }

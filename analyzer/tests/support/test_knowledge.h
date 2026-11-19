@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/tonality/common_practice_materials.h"

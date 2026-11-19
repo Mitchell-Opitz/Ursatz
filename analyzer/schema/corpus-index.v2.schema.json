@@ -21,7 +21,7 @@
     "producer_key": {
       "type": "string",
       "minLength": 1,
-      "description": "The producer key the run was analyzed against (ursatz_analyzer_producer_key). An index of schema version 1 holds it as ursatz_commit and is stale."
+      "description": "The producer key the run was analyzed against (analyzer_producer_key). An index of schema version 1 holds it as ursatz_commit and is stale."
     },
     "document_schema_version": { "type": "integer", "minimum": 1 },
     "input_dir": { "type": "string" },

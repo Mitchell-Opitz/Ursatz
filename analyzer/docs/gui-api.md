@@ -7,13 +7,13 @@ score export. Each gives the output the GUI's own code gave at its pin (`src/ser
 
 ## Import with tempo
 
-No new entry. `analyzer_import_file` (`<ursatz_analyzer/input_pipeline.h>`, the library's `imported_score_import_file` underneath) fills `ImportedScore.tempo_map` from
+No new entry. `analyzer_import_file` (`<ursatz_analyzer/analyzer_api.h>`, the library's `imported_score_import_file` underneath) fills `ImportedScore.tempo_map` from
 the one library parse of a MIDI file: its set-tempo events, or one defaulted region when it has none. A MusicXML import
 has no tempo map; its tempo is in `ImportedSource` (`tempo_declared`, `initial_quarters_per_minute`, `tempo_markings`).
 
 ## Playback timing
 
-`<ursatz_analyzer/playback.h>`
+`<ursatz_analyzer/analyzer_api.h>`
 
 ```c
 ImportedScore notes;
@@ -53,7 +53,7 @@ name is the MusicXML part name, empty for a MIDI file.
 
 ## Score export
 
-`<ursatz_analyzer/score_export.h>`: `analyzer_score_export_musicxml(&notes, &xml)` writes the imported notes as MusicXML
+`<ursatz_analyzer/analyzer_api.h>`: `analyzer_score_export_musicxml(&notes, &xml)` writes the imported notes as MusicXML
 3.1 (free with `free()`): parts with their General MIDI programs, staves, the source's own meter, key signatures in
 part 0, times quantized to notated values. Tempo markings, dynamics, the title and the composer are not written; the
 GUI keeps the last two with the piece. `URSATZ_ERR_INTERNAL` when the library cannot write the score.

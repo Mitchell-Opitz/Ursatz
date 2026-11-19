@@ -45,7 +45,7 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 | Name | Where reported | Current value | Doc |
 |---|---|---|---|
 | `version`, `api_version`, `analyzer_version`, `producer_key` | `GET /api/composer/status`, from `composer_api_versions` | the Composer of this tree and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
-| `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `ursatz_analyzer_version`, `ursatz_analyzer_producer_key` (kept under the member `ursatz_commit`) and `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | the Analyzer of this tree | [Piece store](storage.md#piece-store) |
+| `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `analyzer_version`, `analyzer_producer_key` (kept under the member `ursatz_commit`) and `ANALYZER_DOCUMENT_SCHEMA_VERSION` | the Analyzer of this tree | [Piece store](storage.md#piece-store) |
 | `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the Composer of this tree | [Motif score and playback](views/playback.md#motif-score-and-playback) |
 | `schema_version` of a Composer request | `theme_service.c`, `piece_service.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](storage.md#theme-bodies-and-version-files) |
 
@@ -53,9 +53,9 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 
 | Service | Entry used | From | For |
 |---|---|---|---|
-| `analysis_service.c` | `analyzer_import_file`, `analyzer_analyze`, `analysis_document_build_from_result`, `analyzer_document_status`, `analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`, `analyzer_playback_build` | Analyzer | import, analysis, score and playback of a piece |
+| `analysis_service.c` | `analyzer_import_file`, `analyzer_analyze`, `analyzer_document_build`, `analyzer_document_status`, `analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`, `analyzer_playback_build` | Analyzer | import, analysis, score and playback of a piece |
 | `playback_service.c` | `analyzer_import_file`, `analyzer_playback_build` | Analyzer | playback of a stored file |
-| `style_service.c`, `link_service.c` | `style_profile_*`, `style_model_*`, `motive_link_scope_*`, `motive_links_run` | Analyzer | style models and motive links |
+| `style_service.c`, `link_service.c` | `style_profile_*`, `style_model_*`, `motive_link_scope_*`, `analyzer_links_run` | Analyzer | style models and motive links |
 | `motif_service.c`, `theme_service.c`, `piece_service.c`, `compose_common.c` | `composer_api_*`, listed in [Backend services](backend-modules.md#backend-services-and-who-calls-the-composer) | Composer | motifs, themes, pieces, export, vocabulary |
 
 ## Data flow
@@ -64,7 +64,7 @@ One piece, from file to composed motif, across four repos.
 
 1. **GUI.** The browser sends the file to `POST /api/analyzer/pieces` (`routes/analyzer.c`).
 2. **Analyzer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md)). `analysis_service.c` calls `analyzer_import_file`.
-3. **Ursatz** ([architecture](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md)). The Analyzer's pipeline runs the Ursatz frameworks (`analyzer_analyze`) and `analysis_document_build_from_result` makes the analysis document.
+3. **Ursatz** ([architecture](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md)). The Analyzer's pipeline runs the Ursatz frameworks (`analyzer_analyze`) and `analyzer_document_build` makes the analysis document.
 4. **GUI.** The service writes `analysis.json` and `meta.json` under the piece lock ([Piece store](storage.md#piece-store)), and the table fills in.
 5. **GUI and Analyzer.** Opening a piece asks for the summary, the sections the score draws, the MusicXML (`analyzer_score_export_musicxml`) and the playback (`analyzer_playback_build`); the frontend draws and plays them ([views](views/analysis-and-score.md)).
 6. **GUI and Composer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md)). A service builds a Composer request and calls a `composer_api_*` entry in process; long runs use the job queue ([Jobs](api/composer-routes.md#jobs)).
@@ -75,7 +75,7 @@ One piece, from file to composed motif, across four repos.
 | Action | Route | GUI service | Answered by |
 |---|---|---|---|
 | Import or analyze a piece | `POST /api/analyzer/pieces`, `.../<id>/reanalyze` | `analysis_service.c` | Analyzer: `analyzer_import_file`, `analyzer_analyze` |
-| Open the Score | `GET .../musicxml`, `.../document?sections=` | `analysis_service.c` | Analyzer: `analyzer_score_export_musicxml`, `analysis_document_to_json` |
+| Open the Score | `GET .../musicxml`, `.../document?sections=` | `analysis_service.c` | Analyzer: `analyzer_score_export_musicxml`, `analyzer_document_to_json` |
 | Play | `GET .../pieces/<id>/playback` | `playback_service.c` | Analyzer: `analyzer_playback_build` |
 | Create, analyze and save a motif | `POST /api/materials/items`, `.../<id>/versions`, `.../reanalyze` | `motif_service.c` | Composer: `composer_api_motive` |
 | Random motif | `POST /api/materials/motifs/random` | `motif_service.c` | Composer: `composer_api_random_motive` |

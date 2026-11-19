@@ -12,7 +12,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <common/files.h>
 #include <common/json.h>
@@ -453,7 +453,7 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
         if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_OK) {
             return "unreadable analysis";
         }
-        UrsatzStatus result = motive_link_scope_add_document(scope, id, document);
+        UrsatzStatus result = analyzer_links_scope_add_document(scope, id, document);
         free(document);
         if (result == URSATZ_OK) {
             return NULL;
@@ -500,7 +500,7 @@ static void job_fail(Job *job, const char *message) {
 /* The run itself, on the worker thread. */
 static void job_run(Job *job) {
     cJSON *skipped = cJSON_GetObjectItemCaseSensitive(job->run, "skipped");
-    MotiveLinkScope *scope = motive_link_scope_create(ursatz_gui_knowledge());
+    MotiveLinkScope *scope = analyzer_links_scope_create(ursatz_gui_knowledge());
     if (!scope) {
         job_fail(job, "out of memory");
         return;
@@ -516,12 +516,12 @@ static void job_run(Job *job) {
         }
     }
     if (!ok) {
-        motive_link_scope_destroy(scope);
+        analyzer_links_scope_destroy(scope);
         job_fail(job, "out of memory");
         return;
     }
     if (used == 0) {
-        motive_link_scope_destroy(scope);
+        analyzer_links_scope_destroy(scope);
         job_fail(job, "no analyzable pieces");
         return;
     }
@@ -529,37 +529,37 @@ static void job_run(Job *job) {
     char cache_path[PATH_BYTES + 64];
     snprintf(cache_path, sizeof(cache_path), "%s/%s", g_state.dir, kCacheFile);
     MotiveLinkCache *cache = NULL;
-    if (motive_link_cache_load(cache_path, &cache) != URSATZ_OK) {
+    if (analyzer_links_cache_load(cache_path, &cache) != URSATZ_OK) {
         /* An unreadable cache is only a cache: start it again. */
         remove(cache_path);
         cache = NULL;
-        if (motive_link_cache_load(cache_path, &cache) != URSATZ_OK) {
-            motive_link_scope_destroy(scope);
+        if (analyzer_links_cache_load(cache_path, &cache) != URSATZ_OK) {
+            analyzer_links_scope_destroy(scope);
             job_fail(job, "cache unreadable");
             return;
         }
     }
 
     MotiveLinksOptions options;
-    motive_links_options_default(&options);
+    analyzer_links_options_default(&options);
     options.progress = job_progress;
     options.progress_context = job;
 
     MotiveLinks links;
     memset(&links, 0, sizeof(links));
-    UrsatzStatus run = motive_links_run(scope, cache, &options, &links);
+    UrsatzStatus run = analyzer_links_run(scope, cache, &options, &links);
     char *rendered = NULL;
     if (run == URSATZ_OK) {
         /* A cache that cannot be saved costs only time on the next run. */
-        motive_link_cache_save(cache, cache_path);
-        run = motive_links_render(&links, &rendered);
+        analyzer_links_cache_save(cache, cache_path);
+        run = analyzer_links_render(&links, &rendered);
     }
     size_t pairs = links.pairs;
     if (run == URSATZ_OK) {
-        motive_links_destroy(&links);
+        analyzer_links_destroy(&links);
     }
-    motive_link_cache_destroy(cache);
-    motive_link_scope_destroy(scope);
+    analyzer_links_cache_destroy(cache);
+    analyzer_links_scope_destroy(scope);
 
     cJSON *result = rendered ? cJSON_Parse(rendered) : NULL;
     free(rendered);

@@ -13,9 +13,14 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/style_profile.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/analyzer_api.h>
+
+#include <theory/style/style_compare.h>
+#include <theory/style/style_features.h>
+#include <theory/style/style_labels.h>
+#include <theory/style/style_model.h>
+#include <theory/style/style_model_file.h>
+#include <theory/style/style_profile.h>
 
 #include <common/files.h>
 #include <common/json.h>
@@ -511,7 +516,7 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
         *reason = "unreadable analysis";
         return false;
     }
-    StyleProfileResult result = style_profile_add_document_json(profile, document);
+    StyleProfileResult result = analyzer_style_add_document_json(profile, document);
     free(document);
     if (result != STYLE_PROFILE_OK) {
         *reason = "unreadable analysis";
@@ -736,7 +741,7 @@ static bool write_style_files(const char *dir, const char *id, const char *name,
     if (!text) {
         return false;
     }
-    bool ok = style_model_file_write(collected->profile, name, URSATZ_ANALYZER_VERSION, tmp_path) == STYLE_MODEL_FILE_OK &&
+    bool ok = style_model_file_write(collected->profile, name, analyzer_version(), tmp_path) == STYLE_MODEL_FILE_OK &&
               replace_file(tmp_path, model_path) && (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     if (!ok) {
@@ -894,7 +899,7 @@ UrsatzStatus ursatz_gui_style_build_file(const UrsatzGuiStyleSource *source, con
         return result;
     }
 
-    if (style_model_file_write(collected.profile, final_name, URSATZ_ANALYZER_VERSION, tmp_path) != STYLE_MODEL_FILE_OK ||
+    if (style_model_file_write(collected.profile, final_name, analyzer_version(), tmp_path) != STYLE_MODEL_FILE_OK ||
         !replace_file(tmp_path, path)) {
         remove(tmp_path);
         result = ursatz_gui_fail(URSATZ_ERR_INTERNAL, "style operation failed");

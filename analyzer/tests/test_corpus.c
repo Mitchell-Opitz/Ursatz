@@ -5,9 +5,9 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"

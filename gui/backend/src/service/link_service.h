@@ -10,7 +10,7 @@
 
 /*
  * Link service: links the motive families of a set of Library pieces through the Analyzer's motive links (R-154,
- * R-156). This module is the only caller of ursatz_analyzer/motive_links.h.
+ * R-156). This module is the only caller of ursatz_analyzer/analyzer_api.h.
  *
  * A scope names the pieces:
  *   ALL         every Library piece
@@ -57,7 +57,7 @@ void ursatz_gui_link_ids_free(char **ids, size_t count);
  *   {"id": "lnk-<hex>", "scope": {"kind", "collection_id", "filter": {"composer", "source", "tag"}, "subject_id",
  *    "project_id"} (members the kind does not use are null), "created_at", "finished_at" (null while running),
  *    "status": "running" | "done" | "failed", "message", "done", "total", "skipped": [{"id", "reason"}],
- *    and on done "result": the Analyzer's motive_links_render output}
+ *    and on done "result": the Analyzer's analyzer_links_render output}
  * One cache, links/motive-link-cache.json, serves every scope. One run at a time.
  */
 

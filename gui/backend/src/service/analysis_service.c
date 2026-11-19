@@ -19,14 +19,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/playback.h>
-#include <ursatz_analyzer/score_export.h>
-#include <ursatz_analyzer/staleness.h>
-#include <ursatz_analyzer/text_export.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <common/files.h>
 #include <common/strings.h>
@@ -41,7 +34,7 @@ static const char *format_label(ImportedFormat format) {
 }
 
 static const char *analyzer_version_string(void) {
-    return ursatz_analyzer_version();
+    return analyzer_version();
 }
 
 /* The name a status goes by in the routes and the stored flags. */
@@ -81,8 +74,8 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
     cJSON_AddStringToObject(meta, "format", format);
     cJSON_AddStringToObject(meta, "uploaded_at", uploaded_at);
     cJSON_AddStringToObject(meta, "analyzer_version", analyzer_version_string());
-    cJSON_AddNumberToObject(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_producer_key());
+    cJSON_AddNumberToObject(meta, "document_schema_version", ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    cJSON_AddStringToObject(meta, "ursatz_commit", analyzer_producer_key());
     char *text = cJSON_Print(meta);
     cJSON_Delete(meta);
     if (!text) {
@@ -273,14 +266,14 @@ static UrsatzStatus analyze_source_file(const char *dir_path, ImportedFormat for
         return ursatz_gui_fail(URSATZ_ERR_FORMAT, NULL);
     }
 
-    AnalysisDocument *document = analysis_document_build_from_result(source_path, result);
+    AnalysisDocument *document = analyzer_document_build(source_path, result);
     analyzer_result_destroy(result);
     imported_score_destroy(&notes);
     if (!document) {
         return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
     }
-    char *json = analysis_document_to_json(document);
-    analysis_document_destroy(document);
+    char *json = analyzer_document_to_json(document);
+    analyzer_document_destroy(document);
     if (!json) {
         return ursatz_gui_fail(URSATZ_ERR_ALLOC, NULL);
     }
@@ -891,8 +884,8 @@ static UrsatzStatus reanalyze_unlocked(const char *pieces_dir, const char *id) {
     free(document_json);
 
     ok = ok && meta_set_string(meta, "analyzer_version", analyzer_version_string()) &&
-         meta_set_number(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) &&
-         meta_set_string(meta, "ursatz_commit", ursatz_analyzer_producer_key());
+         meta_set_number(meta, "document_schema_version", ANALYZER_DOCUMENT_SCHEMA_VERSION) &&
+         meta_set_string(meta, "ursatz_commit", analyzer_producer_key());
     char *text = ok ? cJSON_Print(meta) : NULL;
     cJSON_Delete(meta);
     if (!text) {

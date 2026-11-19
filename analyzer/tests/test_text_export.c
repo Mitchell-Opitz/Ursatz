@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/text_export.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -150,14 +150,14 @@ static void check_pickup_piece(void) {
 
     /* Header lines. */
     CHECKF(line_is(whole, 1, "# Ursatz export v2: piece"), "line 1 is the title line");
-    CHECKF(URSATZ_ANALYZER_TEXT_EXPORT_VERSION == 2, "the format version constant is 2");
+    CHECKF(ANALYZER_TEXT_EXPORT_VERSION == 2, "the format version constant is 2");
     CHECKF(line_is(whole, 2, "title: pickup.musicxml"), "the title is the file name the document records");
     CHECKF(line_is(whole, 3, "key: C major | meter: 4/4 | tempo: not declared | measures: 0-4"), "the key, meter, tempo, measures line");
     CHECKF(line_is(whole, 4, "clefs: P1 S1 treble"), "the clefs line names each part's opening clefs");
     char commit[13];
-    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_producer_key());
+    snprintf(commit, sizeof(commit), "%.12s", analyzer_producer_key());
     char analyzer_line[160];
-    snprintf(analyzer_line, sizeof(analyzer_line), "analyzer: %s ursatz %s", ursatz_analyzer_version(), commit);
+    snprintf(analyzer_line, sizeof(analyzer_line), "analyzer: %s ursatz %s", analyzer_version(), commit);
     CHECKF(line_is(whole, 5, analyzer_line), "the analyzer line names the version and a 12 character commit");
     CHECKF(line_is(whole, 6,
                    "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>"),

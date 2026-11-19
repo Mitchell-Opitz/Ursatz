@@ -1,4 +1,5 @@
-#include <ursatz_analyzer/corpus_passages.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/similar_material.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -7,8 +8,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/similar_material.h>
-#include <ursatz_analyzer/staleness.h>
 
 #include "corpus/chord_sequence_internal.h"
 #include <common/files.h>

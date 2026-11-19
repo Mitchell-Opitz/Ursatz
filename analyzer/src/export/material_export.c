@@ -1,13 +1,12 @@
-#include <ursatz_analyzer/text_export.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/score_export.h>
 
 #include "util/misc_util.h"
 #include "export/analysis_document_internal.h"
@@ -146,7 +145,7 @@ static UrsatzStatus write_section(CommonText *out, const AnalyzerTextExportSecti
 
     /* The document tree and the score layout are made once, from the result and the import: nothing is rendered and read back. */
     if (status == URSATZ_OK) {
-        built = analysis_document_build_from_result(section->label, result);
+        built = analyzer_document_build(section->label, result);
         status = built ? URSATZ_OK : URSATZ_ERR_ALLOC;
     }
     if (status == URSATZ_OK) {
@@ -172,7 +171,7 @@ static UrsatzStatus write_section(CommonText *out, const AnalyzerTextExportSecti
     free(marks);
     score_text_destroy(score);
     score_layout_destroy(&layout);
-    analysis_document_destroy(built);
+    analyzer_document_destroy(built);
     analyzer_result_destroy(result);
     imported_score_destroy(&notes);
     return status;
@@ -192,7 +191,7 @@ static UrsatzStatus text_export_material(const AnalyzerTextExportMaterial *mater
     }
 
     CommonText out = {NULL, 0, 0, false};
-    common_text_appendf(&out, "# Ursatz export v%d: %s\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION, material->kind);
+    common_text_appendf(&out, "# Ursatz export v%d: %s\n", ANALYZER_TEXT_EXPORT_VERSION, material->kind);
     if (material->name) {
         add_line(&out, "name", material->name);
     }

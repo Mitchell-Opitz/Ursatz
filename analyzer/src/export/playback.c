@@ -1,4 +1,4 @@
-#include <ursatz_analyzer/playback.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <limits.h>
 #include <math.h>

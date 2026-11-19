@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -129,12 +129,12 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     assert(test_analyze_report(&imported, &report));
     AnalysisDocument *built = test_build_document(path, &report);
     assert(built != NULL);
-    char *json = analysis_document_to_json(built);
+    char *json = analyzer_document_to_json(built);
     assert(json != NULL);
     Analyzed analyzed = {cJSON_Parse(json)};
     assert(analyzed.document != NULL);
     free(json);
-    analysis_document_destroy(built);
+    analyzer_document_destroy(built);
     test_release_report(&report);
     imported_score_destroy(&imported);
     remove(path);

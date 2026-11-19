@@ -1,4 +1,5 @@
-#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 #include <io/imported_realization.h>
 #include <realization/realization_json.h>
 #include <reading/reading_build.h>
-#include <ursatz_analyzer/version.h>
 
 #include "result/analysis_result_internal.h"
 
@@ -43,7 +43,7 @@ static UrsatzStatus build_layers(AnalyzerResult *result) {
         return imported == IMPORTED_SCORE_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_INTERNAL;
     }
     ReadingSource source = {READING_SOURCE_ANALYZER, "ursatz-analyzer", "", result->options.stages, ""};
-    snprintf(source.producer_key, sizeof(source.producer_key), "%s", ursatz_analyzer_producer_key());
+    snprintf(source.producer_key, sizeof(source.producer_key), "%s", analyzer_producer_key());
     snprintf(source.knowledge_hash, sizeof(source.knowledge_hash), "%s", knowledge_snapshot_hash(result->options.knowledge));
     ReadingTarget target = {"w1", "m1", ""};
     if (!realization_digest(result->realization, target.digest)) {

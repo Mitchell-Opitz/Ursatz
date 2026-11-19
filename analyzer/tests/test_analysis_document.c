@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 #include <io/imported_score.h>
 
 #include "cJSON.h"
@@ -123,8 +123,8 @@ int main(void) {
 
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
-    assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 13);
+    assert(number(document, "schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    assert(ANALYZER_DOCUMENT_SCHEMA_VERSION == 13);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));

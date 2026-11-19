@@ -4,7 +4,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer_internal/motive_links.h>
 #include <common/json.h>
 
 static const char *const dimension_keys[MOTIVE_DIMENSION_COUNT] = {"rhythm", "intervals", "contour", "harmony"};
@@ -89,7 +89,7 @@ static cJSON *group_json(const MotiveLinkGroup *group) {
     return object;
 }
 
-UrsatzStatus motive_links_render(const MotiveLinks *links, char **out) {
+UrsatzStatus analyzer_links_render(const MotiveLinks *links, char **out) {
     if (!links || !out) {
         return URSATZ_ERR_REQUEST;
     }
@@ -98,7 +98,7 @@ UrsatzStatus motive_links_render(const MotiveLinks *links, char **out) {
     cJSON *list = cJSON_CreateArray();
     cJSON *groups = cJSON_CreateArray();
     bool ok = root && list && groups && common_json_add(root, "schema", cJSON_CreateString("ursatz-motive-links")) &&
-              common_json_add(root, "schema_version", cJSON_CreateNumber(1)) &&
+              common_json_add(root, "schema_version", cJSON_CreateNumber(ANALYZER_MOTIVE_LINKS_VERSION)) &&
               common_json_add(root, "pieces", cJSON_CreateNumber((double)links->pieces)) &&
               common_json_add(root, "pairs", cJSON_CreateNumber((double)links->pairs)) &&
               common_json_add(root, "compared", cJSON_CreateNumber((double)links->compared)) &&

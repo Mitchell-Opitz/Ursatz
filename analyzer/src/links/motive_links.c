@@ -1,4 +1,5 @@
-#include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer_internal/motive_links.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -7,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
 
 #include "analysis/motive/motive_link.h"
 #include "links_internal.h"
@@ -176,7 +176,7 @@ static UrsatzStatus read_family(const KnowledgeSnapshot *knowledge, const cJSON 
     return URSATZ_OK;
 }
 
-MotiveLinkScope *motive_link_scope_create(const KnowledgeSnapshot *knowledge) {
+MotiveLinkScope *analyzer_links_scope_create(const KnowledgeSnapshot *knowledge) {
     if (!knowledge) {
         return NULL;
     }
@@ -187,7 +187,7 @@ MotiveLinkScope *motive_link_scope_create(const KnowledgeSnapshot *knowledge) {
     return scope;
 }
 
-void motive_link_scope_destroy(MotiveLinkScope *scope) {
+void analyzer_links_scope_destroy(MotiveLinkScope *scope) {
     if (!scope) {
         return;
     }
@@ -242,7 +242,7 @@ static UrsatzStatus add_document(MotiveLinkScope *scope, const char *piece_id, c
     cJSON *document = cJSON_Parse(json);
     const cJSON *version = common_json_member(document, "schema_version");
     const cJSON *motives = common_json_member(document, "motives");
-    if (!cJSON_IsNumber(version) || version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
+    if (!cJSON_IsNumber(version) || version->valuedouble != ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
         cJSON_Delete(document);
         return URSATZ_ERR_FORMAT;
     }
@@ -283,7 +283,7 @@ static UrsatzStatus add_document(MotiveLinkScope *scope, const char *piece_id, c
     return URSATZ_OK;
 }
 
-UrsatzStatus motive_link_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json) {
+UrsatzStatus analyzer_links_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json) {
     UrsatzStatus result = add_document(scope, piece_id, json);
     if (scope && piece_id && result != URSATZ_OK && result != URSATZ_ERR_REQUEST) {
         return add_failed(scope, piece_id, result);
@@ -305,7 +305,7 @@ static bool add_scope_document(const char *piece_path, const char *document, con
     (void)document;
     (void)status;
     ScopeAdd *add = context;
-    add->result = motive_link_scope_add_document(add->scope, piece_path, json);
+    add->result = analyzer_links_scope_add_document(add->scope, piece_path, json);
     return add->result == URSATZ_OK;
 }
 
@@ -339,7 +339,7 @@ UrsatzStatus motive_link_scope_add_corpus(MotiveLinkScope *scope, const char *ou
 
 /* ---- Run ---- */
 
-void motive_links_options_default(MotiveLinksOptions *options) {
+void analyzer_links_options_default(MotiveLinksOptions *options) {
     memset(options, 0, sizeof *options);
     motive_link_options_default(&options->link);
     options->candidates = 4;
@@ -527,7 +527,7 @@ static bool build_groups(const MotiveLinkScope *scope, const MotiveLinkPair *pai
     return true;
 }
 
-void motive_links_destroy(MotiveLinks *links) {
+void analyzer_links_destroy(MotiveLinks *links) {
     if (!links) {
         return;
     }
@@ -545,7 +545,7 @@ void motive_links_destroy(MotiveLinks *links) {
     memset(links, 0, sizeof *links);
 }
 
-UrsatzStatus motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cache,
+UrsatzStatus analyzer_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cache,
                                    const MotiveLinksOptions *options, MotiveLinks *out) {
     if (!scope || !options || !out || !options_valid(options)) {
         return URSATZ_ERR_REQUEST;
@@ -623,7 +623,7 @@ UrsatzStatus motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cac
     if (result != URSATZ_OK) {
         out->links = links;
         out->link_count = link_count;
-        motive_links_destroy(out);
+        analyzer_links_destroy(out);
         links = NULL;
     }
     free(pairs);

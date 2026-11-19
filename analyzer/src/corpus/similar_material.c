@@ -1,4 +1,7 @@
-#include <ursatz_analyzer/similar_material.h>
+#include <ursatz_analyzer_internal/similar_material.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/chord_sequence.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include <stdbool.h>
 #include <limits.h>
@@ -8,9 +11,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/chord_sequence.h>
-#include <ursatz_analyzer/input_pipeline.h>
 #include "theory/style/style_labels.h"
 
 #include "model/core/rational.h"
@@ -181,15 +181,15 @@ UrsatzStatus similar_query_from_file(const char *path, const KnowledgeSnapshot *
         return ran == RUN_FILE_ERR_IMPORT ? URSATZ_ERR_IO : analyzed;
     }
     AnalysisDocument *built = analyzer_run_file_document(path, &imported, result);
-    char *json = built ? analysis_document_to_json(built) : NULL;
-    analysis_document_destroy(built);
+    char *json = built ? analyzer_document_to_json(built) : NULL;
+    analyzer_document_destroy(built);
     if (!json) {
         return URSATZ_ERR_ALLOC;
     }
     cJSON *document = cJSON_Parse(json);
     free(json);
     long long version;
-    if (!document || !common_json_long(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+    if (!document || !common_json_long(document, "schema_version", &version) || version != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return URSATZ_ERR_FORMAT;
     }
@@ -743,7 +743,7 @@ static bool search_walk_document(const char *piece_path, const char *document, c
     cJSON *parsed = cJSON_Parse(json);
     long long version;
     if (!parsed || !common_json_long(parsed, "schema_version", &version) ||
-        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        version != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(parsed);
         walk->result = URSATZ_ERR_FORMAT;
         return false;

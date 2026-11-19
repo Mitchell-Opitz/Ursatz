@@ -6,7 +6,7 @@ The structure of the analysis JSON document: top level, metadata, meter, sources
 GUI and corpus statistics read. The JSON Schema is
 [`schema/analysis-document.v13.schema.json`](../schema/analysis-document.v13.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render_result` from
-`<ursatz_analyzer/analysis_document.h>`. The document is an export of an `AnalyzerResult`
+`<ursatz_analyzer/analyzer_api.h>`. The document is an export of an `AnalyzerResult`
 (see [analysis-result.md](analysis-result.md)).
 
 ## Where it comes from
@@ -75,7 +75,7 @@ phrases.
 | --- | --- | --- |
 | `source_file` | string | Input file name without its directory. |
 | `analyzer_version` | string | Ursatz-Analyzer version, from the CMake project version. |
-| `producer_key` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`ursatz_analyzer_producer_key()`). Version 11 and older documents call it `ursatz_commit`. |
+| `producer_key` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`analyzer_producer_key()`). Version 11 and older documents call it `ursatz_commit`. |
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
 | `input` | object | The input format and what it states or leaves to inference. See below. |

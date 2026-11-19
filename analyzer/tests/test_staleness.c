@@ -4,9 +4,9 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/staleness.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include "ursatz_test.h"
 
@@ -52,9 +52,9 @@ static AnalyzerDocumentStatus status_of_variant(const char *snapshot, int schema
 }
 
 int main(void) {
-    const char *analyzer = ursatz_analyzer_version();
-    const char *commit = ursatz_analyzer_producer_key();
-    const int schema = URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION;
+    const char *analyzer = analyzer_version();
+    const char *commit = analyzer_producer_key();
+    const int schema = ANALYZER_DOCUMENT_SCHEMA_VERSION;
 
     CHECKF(analyzer_document_status_of(schema, analyzer, commit) == ANALYZER_DOCUMENT_CURRENT, "all keys match");
     CHECKF(analyzer_document_status_of(schema - 1, analyzer, commit) == ANALYZER_DOCUMENT_STALE_SCHEMA, "old schema");

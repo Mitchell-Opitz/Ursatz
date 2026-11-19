@@ -25,7 +25,7 @@
 #endif
 
 #include <cJSON.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "gui_check.h"
 #include "server.h"
@@ -1112,7 +1112,7 @@ int main(int argc, char **argv) {
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
               schema->valuedouble == 13,
           "re-running the analysis rewrites the versions in meta.json");
-    check(cJSON_IsString(version) && strcmp(version->valuestring, ursatz_analyzer_version()) == 0,
+    check(cJSON_IsString(version) && strcmp(version->valuestring, analyzer_version()) == 0,
           "meta.json records the version the Analyzer reports");
     check(cJSON_IsString(uploaded_after) && strcmp(uploaded_after->valuestring, uploaded_at_before) == 0 &&
               cJSON_IsString(filename) && strcmp(filename->valuestring, "Mozart 545.mid") == 0,

@@ -2,7 +2,7 @@
 
 The `AnalyzerResult` the analysis returns and the exports built from it. Back to the [docs index](README.md).
 
-`analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedScore` and returns an
+`analyzer_analyze` (`<ursatz_analyzer/analyzer_api.h>`) runs the analysis once over `ImportedScore` and returns an
 `AnalyzerResult`: the library chain's results, the report view the document is exported from, the realization of the notes and the Analyzer's
 reading of it (R-217, R-220, R-252, R-530, R-630). The analysis document is an export of the result, not its source.
 
@@ -46,7 +46,7 @@ Analyzer.
 
 The report view, and so the document, is built only when every chain stage ran. With fewer,
 the result holds the chain's results of the stages that ran; `analyzer_result_report` is an empty report and
-`analysis_document_build_from_result` returns NULL.
+`analyzer_document_build` returns NULL.
 
 ## Library results
 
@@ -67,7 +67,7 @@ Both are owned by the result (the reading is freed before the chain). A failure 
 
 ## Exports
 
-`analysis_document_build_from_result` and `analysis_document_render_result` (`analysis_document.h`) render from the
+`analyzer_document_build` and `analysis_document_render_result` (`analysis_document.h`) render from the
 result: they call `analysis_document_build_from_reading` over the result's reading, notes and knowledge snapshot (the labels of a notated key signature are spelled with its major and natural minor materials). The report form `analysis_document_build(path, notes, report, knowledge)` is gone (P62 B10).
 
-The wrapper `run_analysis_pipeline` (and `analysis_pipeline.h`) is gone (P61 B9): the GUI calls `analyzer_analyze` and `analysis_document_build_from_result`, and the Analyzer's tests call `analyzer_analyze` through `test_analyze_report` (`tests/support/test_support.h`: it keeps the result and gives the test a shallow copy of its report view, released with `test_release_report`).
+The wrapper `run_analysis_pipeline` (and `analysis_pipeline.h`) is gone (P61 B9): the GUI calls `analyzer_analyze` and `analyzer_document_build`, and the Analyzer's tests call `analyzer_analyze` through `test_analyze_report` (`tests/support/test_support.h`: it keeps the result and gives the test a shallow copy of its report view, released with `test_release_report`).

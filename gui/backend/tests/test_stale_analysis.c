@@ -21,7 +21,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "service/analysis_service.h"
 #include "service/collection_service.h"
@@ -148,7 +148,7 @@ static void test_list_flag(const char *id) {
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "stale_analyzer") == 0, "another Analyzer lists stale");
 
-    cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(ursatz_analyzer_version()));
+    cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(analyzer_version()));
     cJSON_ReplaceItemInObjectCaseSensitive(meta, "ursatz_commit", cJSON_CreateString("0000000"));
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "stale_ursatz") == 0, "another Ursatz lists stale");
@@ -157,8 +157,8 @@ static void test_list_flag(const char *id) {
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "unreadable") == 0, "no ursatz_commit lists as stale");
 
-    cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(ursatz_analyzer_version()));
-    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_producer_key());
+    cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(analyzer_version()));
+    cJSON_AddStringToObject(meta, "ursatz_commit", analyzer_producer_key());
     write_json(path, meta);
     check_quiet(strcmp(listed_status(id, status, sizeof(status)), "current") == 0, "restored lists as current");
     cJSON_Delete(meta);
@@ -175,7 +175,7 @@ static void test_detail(const char *id) {
     check_quiet(detail && strcmp(detail->analysis_status, "current") == 0, "the first open serves a current analysis");
     ursatz_gui_piece_detail_destroy(detail);
     document_analyzer_version(id, version, sizeof(version));
-    check_quiet(strcmp(version, ursatz_analyzer_version()) == 0, "the first open analyzed the piece again");
+    check_quiet(strcmp(version, analyzer_version()) == 0, "the first open analyzed the piece again");
 
     add_marker(id);
     detail = NULL;
@@ -197,7 +197,7 @@ static void test_backfill(const char *id) {
     check_quiet(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_OK, "open an old meta.json");
     ursatz_gui_piece_detail_destroy(detail);
     meta = test_read_json(path);
-    check_quiet(strcmp(str(meta, "ursatz_commit"), ursatz_analyzer_producer_key()) == 0,
+    check_quiet(strcmp(str(meta, "ursatz_commit"), analyzer_producer_key()) == 0,
           "ursatz_commit comes from the document");
     cJSON_Delete(meta);
     check_quiet(has_marker(id), "filling ursatz_commit does not analyze again");

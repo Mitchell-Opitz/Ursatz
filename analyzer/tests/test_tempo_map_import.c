@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 #include <io/imported_score.h>
 
 #include "support/test_support.h"

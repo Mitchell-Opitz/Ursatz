@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/score_export.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"

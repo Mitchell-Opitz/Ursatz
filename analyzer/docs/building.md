@@ -143,8 +143,8 @@ call them and render the result:
 
 ## Version header and producer key
 
-`<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and declares
-`ursatz_analyzer_version()` and `ursatz_analyzer_producer_key()`, so a consumer reads the version and the producer key
+`<ursatz_analyzer_internal/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and declares
+`analyzer_version()` and `analyzer_producer_key()`, so a consumer reads the version and the producer key
 from the library instead of parsing `CMakeLists.txt`.
 
 The producer key is computed at build time, not configure time (R-554). `analyzer/cmake/ProducerKey.cmake` hashes every

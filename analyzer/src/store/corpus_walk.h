@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/staleness.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 typedef enum {
     CORPUS_WALK_OK = 0,

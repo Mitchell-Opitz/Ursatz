@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 /*
  * The imported notes of a piece, kept so that opening a piece imports its source at most once. An entry belongs to

@@ -1,4 +1,4 @@
-#include <ursatz_analyzer/score_export.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "util/misc_util.h"
 #include "export/score_export_internal.h"

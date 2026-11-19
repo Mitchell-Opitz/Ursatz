@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/playback.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <common/files.h>
 #include <common/status.h>

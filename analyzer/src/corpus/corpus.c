@@ -1,4 +1,8 @@
-#include <ursatz_analyzer/corpus.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -8,10 +12,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/staleness.h>
-#include <ursatz_analyzer/version.h>
 
 #include "cJSON.h"
 #include "export/analysis_document_internal.h"
@@ -253,8 +253,8 @@ static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, 
     }
 
     read_document_summary(document, record);
-    char *json = analysis_document_to_json(document);
-    analysis_document_destroy(document);
+    char *json = analyzer_document_to_json(document);
+    analyzer_document_destroy(document);
     char *document_name = malloc(strlen(relative) + strlen(ANALYSIS_DOCUMENT_SUFFIX) + 1);
     if (!json || !document_name) {
         free(json);
@@ -293,13 +293,13 @@ static void append_json_or_null(CommonText *out, const char *text) {
 static char *render_index(const char *input_dir, const char *const *paths, const PieceRecord *records, size_t count) {
     CommonText out;
     common_text_init(&out);
+    common_text_appendf(&out, "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": %d,\n", ANALYZER_CORPUS_INDEX_VERSION);
     common_text_append(&out,
-                       "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 2,\n"
                        "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
                        "  \"producer_key\": \"");
-    common_text_append(&out, ursatz_analyzer_producer_key());
+    common_text_append(&out, analyzer_producer_key());
     common_text_append(&out, "\",\n");
-    common_text_appendf(&out, "  \"document_schema_version\": %d,\n", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    common_text_appendf(&out, "  \"document_schema_version\": %d,\n", ANALYZER_DOCUMENT_SCHEMA_VERSION);
     common_text_append(&out, "  \"input_dir\": ");
     append_json_or_null(&out, input_dir);
     common_text_append(&out, count ? ",\n  \"pieces\": [\n" : ",\n  \"pieces\": []\n");

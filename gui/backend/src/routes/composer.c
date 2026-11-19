@@ -8,7 +8,7 @@
 #include <civetweb.h>
 #include <cJSON.h>
 
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "route_util.h"
 #include "../service/composer_client.h"
@@ -54,7 +54,7 @@ static int handle_status(struct mg_connection *conn) {
                cJSON_AddTrueToObject(object, "ok") && cJSON_AddTrueToObject(object, "available") &&
                cJSON_AddStringToObject(object, "version", version) &&
                cJSON_AddStringToObject(object, "api_version", api_version->valuestring) &&
-               cJSON_AddStringToObject(object, "analyzer_version", ursatz_analyzer_version()) &&
+               cJSON_AddStringToObject(object, "analyzer_version", analyzer_version()) &&
                cJSON_AddStringToObject(object, "producer_key", producer_key->valuestring);
   cJSON_Delete(versions);
   if (!built) {

@@ -15,14 +15,14 @@ Its public include directory is `include/`, and consumers include headers as
 | `chain/chain_result.h` (the library chain's) | `ChainResult` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `ChainResult`), serializes it as JSON, and derives `<stem>.analysis.json`. |
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
-| `style_profile.h` | `style_profile_add_document_json` and `style_profile_add_corpus`: count analysis documents into a `StyleProfile`. It includes the library's style headers (`theory/style/`: the labels, `StyleProfile` and its counting, `style_profile_compare`, the style model file reader and writer, see the [theory README](../../library/theory/README.md#style)). |
+| `style_profile.h` | `analyzer_style_add_document_json` and `style_profile_add_corpus`: count analysis documents into a `StyleProfile`. It includes the library's style headers (`theory/style/`: the labels, `StyleProfile` and its counting, `style_profile_compare`, the style model file reader and writer, see the [theory README](../../library/theory/README.md#style)). |
 | `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and producer key all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [corpus.md](corpus.md). |
 | `chord_sequence.h` | `analyzer_chord_sequence_from_document` gives the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | Playback timing for an import as the GUI player needs it. See [gui-api.md](gui-api.md). |
 | `score_export.h` | MusicXML score export of the imported notes, with the base `xml:id` of each note. See [gui-api.md](gui-api.md). |
 | `text_export.h` | `analyzer_text_export_piece` writes an analyzed piece as measure-addressed text: the notes of the score MusicXML and the claims of the analysis document, each claim in the measure where it starts. `analyzer_text_export_material` does the same for store material: sections of MusicXML with facts and segment marks the caller passes. See [text-export.md](text-export.md). |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
-| `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
+| `motive_links.h` | `MotiveLinkScope` (analysis documents), `analyzer_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `analyzer_links_render` writes the links as JSON. |
 | `corpus_passages.h` | The passages of a corpus like a passage or a progression, as the Composer API takes them inline (R-619). See [corpus-passages.md](corpus-passages.md). |
 
 The Composer does not call the Analyzer (R-620): it hears a fragment it generated through the library chain (`analysis_chain_run_score` on an `imported_score_view`). The Composer CLI calls `corpus_passages.h`.
@@ -30,9 +30,9 @@ The Composer does not call the Analyzer (R-620): it hears a fragment it generate
 Ownership: the caller owns the `ChainResult` and frees it with `chain_result_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
 marks a group or key that was not identified. It also frees each entry's `note_ids`. The caller
-frees an `AnalysisDocument` with `analysis_document_destroy`; it keeps no reference to the notes
+frees an `AnalysisDocument` with `analyzer_document_destroy`; it keeps no reference to the notes
 or the report, so those can be destroyed as soon as it is built. Strings returned by
-`analysis_document_to_json`, `analysis_document_render_result` and `derive_analysis_document_path` are freed by the
+`analyzer_document_to_json`, `analysis_document_render_result` and `derive_analysis_document_path` are freed by the
 caller with `free`.
 
 ```cmake

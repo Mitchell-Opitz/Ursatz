@@ -6,8 +6,8 @@
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/corpus_passages.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"

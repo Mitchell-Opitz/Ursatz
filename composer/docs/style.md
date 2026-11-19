@@ -179,7 +179,7 @@ through the melody, so a melody weight reaches the harmony it measures a little.
 A style says what a corpus is like; seeding starts a piece from a passage of it. The corpus is the output directory of
 `ursatz-analyzer --corpus <folder> --out <dir>`, the same one the Analyzer's `--similar` searches. The Composer does not
 search it (R-619): the Analyzer finds the passages (`analyzer_corpus_passages_like`, `analyzer_corpus_passages_numerals`,
-`<ursatz_analyzer/corpus_passages.h>`, see the Analyzer's `docs/corpus-passages.md`) and the request gives them inline,
+`<ursatz_analyzer/analyzer_api.h>`, see the Analyzer's `docs/corpus-passages.md`) and the request gives them inline,
 ranked best first, as `corpus_passages` (`schema/api/corpus-passages.schema.json`). The command line keeps its flags and does
 the finding itself, so what follows reads the same for it.
 

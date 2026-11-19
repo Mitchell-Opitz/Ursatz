@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/corpus_passages.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "cli_context.h"
 #include "cli_options.h"

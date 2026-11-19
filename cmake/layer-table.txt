@@ -108,18 +108,21 @@ module chain library/chain prefix chain/
 uses chain model theory analysis io
 
 # Applications. A library header an application includes is a staged public header.
-module analyzer-api  analyzer/include  prefix ursatz_analyzer/
-module analyzer      analyzer/src      root analyzer/src analyzer/include
+module analyzer-api  analyzer/include  prefix ursatz_analyzer/analyzer_api.h
+module analyzer      analyzer/src      root analyzer/src analyzer/include analyzer/src/include
+# The Analyzer's internal headers (R-640): the API header's siblings for its command line, its tests and its own files.
+module analyzer-internal analyzer/src/include prefix ursatz_analyzer_internal/ root analyzer/src analyzer/include analyzer/src/include
+uses analyzer-internal model theory analysis chain io realization reading analyzer-api cjson ezxml common
 # The Analyzer's sources by job (R-621's neighbour, A20261115-608): util at the bottom, then store and result, then export, style, corpus
 # and links, and the command line over all of them.
-module analyzer-util   analyzer/src/util   root analyzer/src analyzer/include
-module analyzer-store  analyzer/src/store  root analyzer/src analyzer/include
-module analyzer-result analyzer/src/result root analyzer/src analyzer/include
-module analyzer-export analyzer/src/export root analyzer/src analyzer/include
-module analyzer-style  analyzer/src/style  root analyzer/src analyzer/include
-module analyzer-corpus analyzer/src/corpus root analyzer/src analyzer/include
-module analyzer-links  analyzer/src/links  root analyzer/src analyzer/include
-module analyzer-cli    analyzer/src/cli    root analyzer/src analyzer/include
+module analyzer-util   analyzer/src/util   root analyzer/src analyzer/include analyzer/src/include
+module analyzer-store  analyzer/src/store  root analyzer/src analyzer/include analyzer/src/include
+module analyzer-result analyzer/src/result root analyzer/src analyzer/include analyzer/src/include
+module analyzer-export analyzer/src/export root analyzer/src analyzer/include analyzer/src/include
+module analyzer-style  analyzer/src/style  root analyzer/src analyzer/include analyzer/src/include
+module analyzer-corpus analyzer/src/corpus root analyzer/src analyzer/include analyzer/src/include
+module analyzer-links  analyzer/src/links  root analyzer/src analyzer/include analyzer/src/include
+module analyzer-cli    analyzer/src/cli    root analyzer/src analyzer/include analyzer/src/include
 module composer-api  composer/include  prefix ursatz_composer/composer_api.h
 uses composer-api common
 # The Composer (R-636): each folder of composer/src is a module; a src/include/ursatz_composer header belongs to the module whose files implement it.
@@ -155,21 +158,21 @@ target ursatz_realization realization
 target ursatz_plan plan
 target ursatz_reading reading
 staged model theory analysis chain io realization plan reading analyzer-api analyzer composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain composer-request
-generated analyzer ursatz_analyzer/version.h ursatz_analyzer/producer_key.h
+generated analyzer ursatz_analyzer_internal/version.h ursatz_analyzer_internal/producer_key.h
 generated chain producer_key.h chain/producer_key.h
 generated composer-util composer/composition_key.h
 
 uses analyzer-api  model theory analysis chain io realization reading common
-uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml common
-uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml common
-uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util common
-uses analyzer-result model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store common
-uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
-uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
+uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-internal common
+uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-internal common
+uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-internal common
+uses analyzer-result model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-internal common
+uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-internal common
+uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-internal common
 # corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
-uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h common
-uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
-uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links common
+uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h analyzer-internal common
+uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-internal common
+uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links analyzer-internal common
 # The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for UrsatzJob, UrsatzStatus and UrsatzError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
 uses composer-util model theory realization plan reading analysis chain io cjson composer-api common
 uses composer-structure model theory realization plan reading analysis chain io cjson composer-util common
@@ -190,7 +193,7 @@ uses composer-explain model theory realization plan reading analysis chain io cj
 uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson common
-uses gui           analyzer-api composer-api cjson civetweb common
+uses gui           analyzer-api composer-api cjson civetweb common theory-style -- B5 moves the style service into the workshop
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
@@ -336,7 +339,7 @@ uses tests-chain io tests-io tests-integration -- chain tests import the corpus
 
 module tests-common       common/tests
 like tests-common common
-module analyzer-tests     analyzer/tests            root analyzer/tests analyzer/tests/support analyzer/src analyzer/include
+module analyzer-tests     analyzer/tests            root analyzer/tests analyzer/tests/support analyzer/src analyzer/include analyzer/src/include
 module analyzer-consumer  analyzer/tests/consumer
 module composer-tests     composer/tests            root composer/tests composer/tests/support composer/src composer/src/include composer/include
 module composer-consumer  composer/tests/consumer
@@ -351,6 +354,7 @@ like analyzer-tests analyzer-style
 like analyzer-tests analyzer-corpus
 like analyzer-tests analyzer-links
 like analyzer-tests analyzer-cli
+like analyzer-tests analyzer-internal
 uses composer-tests test-support
 like composer-tests composer-request
 uses gui-tests test-support
