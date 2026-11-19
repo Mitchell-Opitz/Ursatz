@@ -564,6 +564,19 @@ ursatz_test(test_api_theme TARGET test_api_theme ARGS responses WORKING_DIRECTOR
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+# The layers of a composed result (R-634): a theme request with "layers" returns the realization and the reading.
+ursatz_test(test_api_layers LIBS ursatz_composer composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+
+ursatz_test(cli_layers COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_layers
+                     -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json
+                     -DREADING_SCHEMA=${CMAKE_SOURCE_DIR}/library/reading/schema/reading.v1.schema.json
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_layers.cmake)
+
 ursatz_test(test_api_validate LIBS ursatz_composer composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
