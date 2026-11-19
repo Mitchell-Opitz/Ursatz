@@ -6,3 +6,4 @@ ursatz_test(string_copy LIBS ursatz_model VALGRIND)
 ursatz_test(rational LIBS ursatz_model VALGRIND)
 ursatz_test(once LIBS ursatz_model VALGRIND)
 
+ursatz_test(content_hash LIBS ursatz_model VALGRIND)

@@ -1,4 +1,5 @@
 #include <ursatz_composer/form_spec.h>
+#include <model/core/content_hash.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -32,11 +33,8 @@ const char *form_spec_builtin_hash(size_t index) {
         return NULL;
     }
     if (hashes[index][0] == '\0') {
-        unsigned long long hash = 14695981039346656037ULL;
-        for (const unsigned char *byte = (const unsigned char *)COMPOSER_FORM_DOCUMENTS[index]; *byte; byte++) {
-            hash = (hash ^ *byte) * 1099511628211ULL;
-        }
-        snprintf(hashes[index], sizeof(hashes[index]), "%016llx", hash);
+        content_hash_hex16(content_hash_fnv1a64(CONTENT_HASH_FNV1A64_OFFSET, COMPOSER_FORM_DOCUMENTS[index], strlen(COMPOSER_FORM_DOCUMENTS[index])),
+                           hashes[index]);
     }
     return hashes[index];
 }

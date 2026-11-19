@@ -1,4 +1,5 @@
 #include "analysis/motive/motive_sketch.h"
+#include <model/core/content_hash.h>
 
 #include <string.h>
 
@@ -76,11 +77,8 @@ bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b) {
 
 /* --- fingerprint --------------------------------------------------------------------------------- */
 
-#define FNV_OFFSET 14695981039346656037ULL
-#define FNV_PRIME 1099511628211ULL
-
 static unsigned long long fnv_byte(unsigned long long hash, unsigned char byte) {
-    return (hash ^ byte) * FNV_PRIME;
+    return content_hash_fnv1a64(hash, &byte, 1);
 }
 
 /* A 64-bit value as 8 bytes, least significant first, whatever the platform. */
@@ -100,7 +98,7 @@ static unsigned long long fnv_time(unsigned long long hash, Rational time) {
 }
 
 unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch) {
-    unsigned long long hash = FNV_OFFSET;
+    unsigned long long hash = CONTENT_HASH_FNV1A64_OFFSET;
     hash = fnv_value(hash, sketch->note_count);
     for (size_t i = 0; i < sketch->note_count; i++) {
         hash = fnv_signed(hash, sketch->notes[i].pitch);

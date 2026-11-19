@@ -1,4 +1,5 @@
 #include <ursatz_composer/style.h>
+#include <model/core/content_hash.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -42,10 +43,7 @@ static ComposerStyleResult from_blend(StyleBlendResult result) {
 }
 
 static uint64_t fnv1a(uint64_t hash, const char *text) {
-    for (; *text; text++) {
-        hash = (hash ^ (unsigned char)*text) * 1099511628211ULL;
-    }
-    return hash;
+    return content_hash_fnv1a64(hash, text, strlen(text));
 }
 
 /* The statistics of one dimension out of a model's, which are sorted by category: borrowed strings, in one array. */

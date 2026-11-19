@@ -6,6 +6,7 @@ add_library(ursatz_model
     core/entity.c
     core/string_copy.c
     core/once.c
+    core/content_hash.c
     core/rational.c
     core/value.c
     core/occurrence.c
@@ -62,6 +63,7 @@ ursatz_public_headers(ursatz_model
         model/core/occurrence.h
         model/core/once.h
         model/core/provenance_reference.h
+        model/core/content_hash.h
         model/core/rational.h
         model/core/string_copy.h
         model/core/value.h

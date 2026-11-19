@@ -19,6 +19,7 @@
 #include "result/run_file.h"
 #include "util/file_util.h"
 #include "util/misc_util.h"
+#include <model/core/content_hash.h>
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define INDEX_NAME "corpus-index.json"
@@ -214,7 +215,7 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
 }
 
 static unsigned long long fnv1a_file(const char *path) {
-    uint64_t hash = FNV1A_OFFSET_BASIS;
+    uint64_t hash = CONTENT_HASH_FNV1A64_OFFSET;
     FILE *file = fopen(path, "rb");
     if (!file) {
         return hash;
@@ -222,7 +223,7 @@ static unsigned long long fnv1a_file(const char *path) {
     unsigned char chunk[8192];
     size_t got;
     while ((got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        hash = fnv1a_bytes(hash, chunk, got);
+        hash = content_hash_fnv1a64(hash, chunk, got);
     }
     fclose(file);
     return hash;
