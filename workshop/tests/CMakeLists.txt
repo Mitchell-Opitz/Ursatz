@@ -54,6 +54,13 @@ ursatz_test(stale_analysis LIBS ursatz_workshop ursatz_test_support
 # the link fixtures.
 
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_jobs)
+ursatz_test(workshop_jobs SOURCES test_jobs.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_jobs)
+# The test creates library/, settings/, cache/ and the stores in its own working directory, reads the link fixtures, and cancels link runs
+# and style builds between pieces.
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_variants)
 ursatz_test(workshop_variants SOURCES test_variants.c LIBS ursatz_workshop ursatz_test_support
     DEFINITIONS URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/workshop_variants"
