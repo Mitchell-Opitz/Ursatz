@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <cJSON.h>
+
 /*
  * Collection service: named groups of piece ids, owned by the GUI (R-105).
  *
@@ -107,5 +109,26 @@ UrsatzStatus workshop_collection_remove_piece(const char *id, const char *piece_
 
 /* Removes the piece id from every collection that holds it (absent everywhere is fine). */
 UrsatzStatus workshop_collection_remove_piece_everywhere(const char *piece_id);
+
+/* ---- the collection routes' checks (A20261109-47) ---- */
+
+/* "Add all matching" sends every id of a filtered Library in one request. */
+#define WORKSHOP_COLLECTION_MAX_ADD_PIECES 5000
+
+/*
+ * Creates a collection from a request body {name, description?, id?} (R-098: a client may still name the id, when it is valid and
+ * unused). *out_id is the new id (caller frees). REQUEST with "invalid name", "invalid id" or "invalid description" for a member of the
+ * wrong type; the store's own refusals keep their status and message. error always holds the message of a failure.
+ */
+UrsatzStatus workshop_collection_create_request(const cJSON *body, char **out_id, UrsatzError *error);
+
+/*
+ * Adds the pieces of a body {piece_id} or {piece_ids: [...]} (at most WORKSHOP_COLLECTION_MAX_ADD_PIECES) after checking that the
+ * collection and every piece exist; *added and *already count as workshop_collection_add_pieces does. On a failure error holds the
+ * message and *http_status the status the route answers (400 for too many pieces or an unknown piece, 404 for an unknown collection or
+ * a store NOT_FOUND, else 200 with the message: the route's "ok": false).
+ */
+UrsatzStatus workshop_collection_add_request(const char *id, const cJSON *body, size_t *added, size_t *already, int *http_status,
+                                             UrsatzError *error);
 
 #endif /* WORKSHOP_COLLECTION_SERVICE_H */

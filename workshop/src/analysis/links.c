@@ -955,3 +955,106 @@ char *workshop_link_piece_title(const char *piece_id) {
     }
     return title;
 }
+
+/* ---- the links routes' scope and titles (A20261109-47) ---------------------- */
+
+/* A string member, or NULL when it is missing or null. *bad is set when it is some other type. */
+static const char *scope_string(const cJSON *object, const char *key, bool *bad) {
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+  if (!item || cJSON_IsNull(item)) {
+    return NULL;
+  }
+  if (!cJSON_IsString(item)) {
+    *bad = true;
+    return NULL;
+  }
+  return item->valuestring;
+}
+
+/* Reads {"kind", "collection_id", "filter": {...}, "subject_id", "project_id"}. false when it cannot be a scope. */
+bool workshop_link_scope_parse(const cJSON *json, WorkshopLinkScope *scope) {
+  memset(scope, 0, sizeof(*scope));
+  if (!cJSON_IsObject(json)) {
+    return false;
+  }
+  bool bad = false;
+  const char *kind = scope_string(json, "kind", &bad);
+  if (!kind || bad) {
+    return false;
+  }
+  if (strcmp(kind, "all") == 0) {
+    scope->kind = WORKSHOP_LINK_SCOPE_ALL;
+  } else if (strcmp(kind, "collection") == 0) {
+    scope->kind = WORKSHOP_LINK_SCOPE_COLLECTION;
+  } else if (strcmp(kind, "filter") == 0) {
+    scope->kind = WORKSHOP_LINK_SCOPE_FILTER;
+  } else if (strcmp(kind, "subject") == 0) {
+    scope->kind = WORKSHOP_LINK_SCOPE_SUBJECT;
+  } else if (strcmp(kind, "project") == 0) {
+    scope->kind = WORKSHOP_LINK_SCOPE_PROJECT;
+  } else {
+    return false;
+  }
+  scope->collection_id = scope_string(json, "collection_id", &bad);
+  scope->subject_id = scope_string(json, "subject_id", &bad);
+  scope->project_id = scope_string(json, "project_id", &bad);
+  const cJSON *filter = cJSON_GetObjectItemCaseSensitive(json, "filter");
+  if (filter && !cJSON_IsNull(filter)) {
+    if (!cJSON_IsObject(filter)) {
+      return false;
+    }
+    scope->composer = scope_string(filter, "composer", &bad);
+    scope->source = scope_string(filter, "source", &bad);
+    scope->tag = scope_string(filter, "tag", &bad);
+  }
+  return !bad;
+}
+
+/* Adds "title" to an object that names a piece in "piece". */
+static bool add_title(cJSON *end) {
+  const cJSON *piece = cJSON_GetObjectItemCaseSensitive(end, "piece");
+  if (!cJSON_IsString(piece)) {
+    return true;
+  }
+  char *title = workshop_link_piece_title(piece->valuestring);
+  bool ok = title && cJSON_AddStringToObject(end, "title", title);
+  free(title);
+  return ok;
+}
+
+/* Adds each end's title to a link ({"a", "b", ...}). */
+static bool add_link_titles(cJSON *link) {
+  return add_title(cJSON_GetObjectItemCaseSensitive(link, "a")) &&
+         add_title(cJSON_GetObjectItemCaseSensitive(link, "b"));
+}
+
+/* Adds titles to every link end and every group member of a run's "result". */
+bool workshop_link_titles_for_run(cJSON *run) {
+  cJSON *result = cJSON_GetObjectItemCaseSensitive(run, "result");
+  cJSON *item = NULL;
+  cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(result, "links")) {
+    if (!add_link_titles(item)) {
+      return false;
+    }
+  }
+  cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(result, "groups")) {
+    cJSON *member = NULL;
+    cJSON_ArrayForEach(member, cJSON_GetObjectItemCaseSensitive(item, "members")) {
+      if (!add_title(member)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool workshop_link_titles_for_piece_links(cJSON *links) {
+  cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, links) {
+    if (!add_link_titles(cJSON_GetObjectItemCaseSensitive(entry, "link"))) {
+      return false;
+    }
+  }
+  return true;
+}
+

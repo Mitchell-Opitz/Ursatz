@@ -97,4 +97,16 @@ UrsatzStatus workshop_link_piece_links(const char *piece_id, cJSON **out_links);
  * piece is gone. Newly allocated, or NULL when memory ran out. */
 char *workshop_link_piece_title(const char *piece_id);
 
+/* ---- the links routes' scope and titles (A20261109-47) ---- */
+
+/* Reads a request's scope {"kind", "collection_id", "filter": {composer, source, tag}, "subject_id", "project_id"}; the strings point into
+ * json. false when it cannot be a scope. */
+bool workshop_link_scope_parse(const cJSON *json, WorkshopLinkScope *scope);
+
+/* Adds "title" (the piece's filename) to every link end and every group member of a run's "result"; false on no memory. */
+bool workshop_link_titles_for_run(cJSON *run);
+
+/* Adds the titles to each end of each entry's "link" of a piece's links ([{"link": {"a", "b", ...}, ...}]); false on no memory. */
+bool workshop_link_titles_for_piece_links(cJSON *links);
+
 #endif /* WORKSHOP_LINK_SERVICE_H */

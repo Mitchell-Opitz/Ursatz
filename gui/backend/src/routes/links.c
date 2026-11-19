@@ -15,98 +15,6 @@ static const char *kLinksPrefix = "/api/links";
 
 /* --- scope ---------------------------------------------------------------- */
 
-/* A string member, or NULL when it is missing or null. *bad is set when it is some other type. */
-static const char *optional_string(const cJSON *object, const char *key, bool *bad) {
-  const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-  if (!item || cJSON_IsNull(item)) {
-    return NULL;
-  }
-  if (!cJSON_IsString(item)) {
-    *bad = true;
-    return NULL;
-  }
-  return item->valuestring;
-}
-
-/* Reads {"kind", "collection_id", "filter": {...}, "subject_id", "project_id"}. false when it cannot be a scope. */
-static bool parse_scope(const cJSON *json, WorkshopLinkScope *scope) {
-  memset(scope, 0, sizeof(*scope));
-  if (!cJSON_IsObject(json)) {
-    return false;
-  }
-  bool bad = false;
-  const char *kind = optional_string(json, "kind", &bad);
-  if (!kind || bad) {
-    return false;
-  }
-  if (strcmp(kind, "all") == 0) {
-    scope->kind = WORKSHOP_LINK_SCOPE_ALL;
-  } else if (strcmp(kind, "collection") == 0) {
-    scope->kind = WORKSHOP_LINK_SCOPE_COLLECTION;
-  } else if (strcmp(kind, "filter") == 0) {
-    scope->kind = WORKSHOP_LINK_SCOPE_FILTER;
-  } else if (strcmp(kind, "subject") == 0) {
-    scope->kind = WORKSHOP_LINK_SCOPE_SUBJECT;
-  } else if (strcmp(kind, "project") == 0) {
-    scope->kind = WORKSHOP_LINK_SCOPE_PROJECT;
-  } else {
-    return false;
-  }
-  scope->collection_id = optional_string(json, "collection_id", &bad);
-  scope->subject_id = optional_string(json, "subject_id", &bad);
-  scope->project_id = optional_string(json, "project_id", &bad);
-  const cJSON *filter = cJSON_GetObjectItemCaseSensitive(json, "filter");
-  if (filter && !cJSON_IsNull(filter)) {
-    if (!cJSON_IsObject(filter)) {
-      return false;
-    }
-    scope->composer = optional_string(filter, "composer", &bad);
-    scope->source = optional_string(filter, "source", &bad);
-    scope->tag = optional_string(filter, "tag", &bad);
-  }
-  return !bad;
-}
-
-/* --- titles --------------------------------------------------------------- */
-
-/* Adds "title" to an object that names a piece in "piece". */
-static bool add_title(cJSON *end) {
-  const cJSON *piece = cJSON_GetObjectItemCaseSensitive(end, "piece");
-  if (!cJSON_IsString(piece)) {
-    return true;
-  }
-  char *title = workshop_link_piece_title(piece->valuestring);
-  bool ok = title && cJSON_AddStringToObject(end, "title", title);
-  free(title);
-  return ok;
-}
-
-/* Adds each end's title to a link ({"a", "b", ...}). */
-static bool add_link_titles(cJSON *link) {
-  return add_title(cJSON_GetObjectItemCaseSensitive(link, "a")) &&
-         add_title(cJSON_GetObjectItemCaseSensitive(link, "b"));
-}
-
-/* Adds titles to every link end and every group member of a run's "result". */
-static bool add_run_titles(cJSON *run) {
-  cJSON *result = cJSON_GetObjectItemCaseSensitive(run, "result");
-  cJSON *item = NULL;
-  cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(result, "links")) {
-    if (!add_link_titles(item)) {
-      return false;
-    }
-  }
-  cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(result, "groups")) {
-    cJSON *member = NULL;
-    cJSON_ArrayForEach(member, cJSON_GetObjectItemCaseSensitive(item, "members")) {
-      if (!add_title(member)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 /* --- handlers ------------------------------------------------------------- */
 
 static int send_link_failure(struct mg_connection *conn, UrsatzStatus result) {
@@ -130,7 +38,7 @@ static int handle_start_run(struct mg_connection *conn) {
     return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
   WorkshopLinkScope scope;
-  if (!parse_scope(cJSON_GetObjectItemCaseSensitive(body, "scope"), &scope)) {
+  if (!workshop_link_scope_parse(cJSON_GetObjectItemCaseSensitive(body, "scope"), &scope)) {
     cJSON_Delete(body);
     return ursatz_gui_send_failure(conn, 400, "invalid scope");
   }
@@ -165,7 +73,7 @@ static int handle_get_run(struct mg_connection *conn, const char *id) {
     return result == URSATZ_ERR_NOT_FOUND ? ursatz_gui_send_failure(conn, 404, "run not found")
                                                     : send_link_failure(conn, result);
   }
-  if (!add_run_titles(run)) {
+  if (!workshop_link_titles_for_run(run)) {
     cJSON_Delete(run);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
@@ -190,12 +98,9 @@ static int handle_piece_links(struct mg_connection *conn, const char *piece_id) 
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
-  cJSON *entry = NULL;
-  cJSON_ArrayForEach(entry, links) {
-    if (!add_link_titles(cJSON_GetObjectItemCaseSensitive(entry, "link"))) {
-      cJSON_Delete(links);
-      return ursatz_gui_send_failure(conn, 500, "out of memory");
-    }
+  if (!workshop_link_titles_for_piece_links(links)) {
+    cJSON_Delete(links);
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
   return send_ok_with(conn, 200, "links", links);
 }

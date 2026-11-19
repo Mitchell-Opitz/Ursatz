@@ -653,3 +653,110 @@ UrsatzStatus workshop_collection_remove_piece_everywhere(const char *piece_id) {
     common_names_free(&ids);
     return result;
 }
+
+/* ---- the collection routes' checks (A20261109-47) -------------------------- */
+
+/* The failure of the last store call as error; the message the store left, or the fallback. */
+static UrsatzStatus store_failure(UrsatzStatus status, UrsatzError *error) {
+    const UrsatzError *last = workshop_last_error();
+    return ursatz_error_set(error, status, NULL, "%s", last->message[0] != '\0' ? last->message : "collection operation failed");
+}
+
+UrsatzStatus workshop_collection_create_request(const cJSON *body, char **out_id, UrsatzError *error) {
+    *out_id = NULL;
+    const cJSON *id_item = cJSON_GetObjectItemCaseSensitive(body, "id");
+    const cJSON *name_item = cJSON_GetObjectItemCaseSensitive(body, "name");
+    const cJSON *description_item = cJSON_GetObjectItemCaseSensitive(body, "description");
+    if (!cJSON_IsString(name_item)) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "invalid name");
+    }
+    if (id_item && !cJSON_IsString(id_item)) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "invalid id");
+    }
+    if (description_item && !cJSON_IsString(description_item)) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "invalid description");
+    }
+    const char *description = description_item ? description_item->valuestring : "";
+    char *id = NULL;
+    UrsatzStatus result;
+    if (id_item) {
+        id = common_strdup(id_item->valuestring);
+        if (!id) {
+            return ursatz_error_set(error, URSATZ_ERR_ALLOC, NULL, "out of memory");
+        }
+        result = workshop_collection_create_with_id(id, name_item->valuestring, description);
+    } else {
+        result = workshop_collection_create(name_item->valuestring, description, &id);
+    }
+    if (result != URSATZ_OK) {
+        free(id);
+        return store_failure(result, error);
+    }
+    *out_id = id;
+    return URSATZ_OK;
+}
+
+static UrsatzStatus add_refusal(int *http_status, int status, UrsatzStatus kind, UrsatzError *error, const char *message) {
+    *http_status = status;
+    return ursatz_error_set(error, kind, NULL, "%s", message);
+}
+
+UrsatzStatus workshop_collection_add_request(const char *corpus_id, const cJSON *body, size_t *added, size_t *already,
+                                             int *http_status, UrsatzError *error) {
+    const cJSON *single = cJSON_GetObjectItemCaseSensitive(body, "piece_id");
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(body, "piece_ids");
+    size_t count = 0;
+    const char **ids = NULL;
+    UrsatzStatus result = URSATZ_OK;
+
+    if (cJSON_IsArray(list)) {
+        int length = cJSON_GetArraySize(list);
+        if (length <= 0) {
+            return add_refusal(http_status, 200, URSATZ_ERR_REQUEST, error, "invalid piece_ids");
+        }
+        if ((size_t)length > WORKSHOP_COLLECTION_MAX_ADD_PIECES) {
+            return add_refusal(http_status, 400, URSATZ_ERR_REQUEST, error, "too many pieces");
+        }
+        ids = calloc((size_t)length, sizeof(*ids));
+        if (!ids) {
+            return add_refusal(http_status, 200, URSATZ_ERR_ALLOC, error, "out of memory");
+        }
+        const cJSON *item = NULL;
+        cJSON_ArrayForEach(item, list) {
+            if (!cJSON_IsString(item) || !workshop_collection_is_valid_id(item->valuestring)) {
+                free(ids);
+                return add_refusal(http_status, 200, URSATZ_ERR_REQUEST, error, "invalid piece_id");
+            }
+            ids[count++] = item->valuestring;
+        }
+    } else if (cJSON_IsString(single) && workshop_collection_is_valid_id(single->valuestring)) {
+        ids = calloc(1, sizeof(*ids));
+        if (!ids) {
+            return add_refusal(http_status, 200, URSATZ_ERR_ALLOC, error, "out of memory");
+        }
+        ids[count++] = single->valuestring;
+    } else {
+        return add_refusal(http_status, 200, URSATZ_ERR_REQUEST, error, "invalid piece_id");
+    }
+
+    /* An unknown collection is a 404 before any piece is looked at. */
+    if (!workshop_collection_exists(corpus_id)) {
+        free(ids);
+        return add_refusal(http_status, 404, URSATZ_ERR_NOT_FOUND, error, "collection not found");
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (!workshop_collection_piece_exists(ids[i])) {
+            char message[128];
+            snprintf(message, sizeof(message), "unknown piece: %s", ids[i]);
+            free(ids);
+            return add_refusal(http_status, 400, URSATZ_ERR_REQUEST, error, message);
+        }
+    }
+    result = workshop_collection_add_pieces(corpus_id, ids, count, added, already);
+    free(ids);
+    if (result != URSATZ_OK) {
+        *http_status = result == URSATZ_ERR_NOT_FOUND ? 404 : 200;
+        return store_failure(result, error);
+    }
+    return URSATZ_OK;
+}
