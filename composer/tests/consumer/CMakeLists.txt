@@ -13,6 +13,7 @@ set(URSATZ_COMPOSER_BUILD_CLI OFF CACHE BOOL "" FORCE)
 add_subdirectory(${URSATZ_ROOT}/third_party third_party)
 # common/ stages its headers with the library's helper, which is defined first.
 include(${URSATZ_ROOT}/library/cmake/UrsatzPublicHeaders.cmake)
+include(${URSATZ_ROOT}/cmake/UrsatzExports.cmake)
 add_subdirectory(${URSATZ_ROOT}/common common)
 add_subdirectory(${URSATZ_ROOT}/library library)
 add_subdirectory(${URSATZ_ROOT}/analyzer analyzer)

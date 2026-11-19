@@ -27,7 +27,7 @@ mkdir -p "$dir"
 dir=$(cd "$dir" && pwd)
 : > "$dir/.reach-scan"
 
-cmake -S "$root" -B "$dir" -DURSATZ_TESTS=OFF "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" > /dev/null
+cmake -S "$root" -B "$dir" -DURSATZ_TESTS=OFF -DURSATZ_LOCALIZE_EXPORTS=OFF "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" > /dev/null
 cmake --build "$dir" -j > "$dir/reach-build.log" 2>&1 || {
   tail -50 "$dir/reach-build.log" >&2
   echo "check-reach: the scan build failed (log: $dir/reach-build.log)" >&2
