@@ -16,8 +16,6 @@ module pitch           library/model/pitch           prefix model/pitch/
 module events          library/model/events          prefix model/events/
 module containers      library/model/containers      prefix model/containers/
 module structure       library/model/structure       prefix model/structure/
-module relationship    library/model/relationship    prefix model/relationship/
-module interpretation  library/model/interpretation  prefix model/interpretation/
 # The theory group (library/theory, A20261115-507).
 module theory-framework    library/theory/framework    prefix theory/framework/
 module theory-style        library/theory/style        prefix theory/style/
@@ -38,7 +36,7 @@ module io              library/io                  prefix io/
 group L0-L1 identity core
 group L0-L2 L0-L1 time pitch
 group L0-L5 L0-L2 events containers structure
-group model identity core time pitch events containers structure relationship interpretation
+group model identity core time pitch events containers structure
 group theory theory-framework theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
 
 uses core            identity
@@ -47,8 +45,6 @@ uses pitch           L0-L1
 uses events          L0-L2
 uses containers      L0-L2 events
 uses structure       L0-L2 events containers
-uses relationship    model
-uses interpretation  model
 uses io              model realization ezxml
 uses theory-framework    model
 uses theory-style        model theory-tonality cjson
@@ -98,7 +94,6 @@ uses reading model theory realization plan analysis chain cjson
 module plan            library/plan               prefix plan/
 group plan plan
 uses plan model theory cjson
-allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
 only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
 
@@ -177,8 +172,6 @@ module tests-pitch           library/model/tests/pitch           root library/te
 module tests-events          library/model/tests/events          root library/tests library/tests/support
 module tests-containers      library/model/tests/containers      root library/tests library/tests/support
 module tests-structure       library/model/tests/structure       root library/tests library/tests/support
-module tests-relationship    library/model/tests/relationship    root library/tests library/tests/support
-module tests-interpretation  library/model/tests/interpretation  root library/tests library/tests/support
 module tests-io              library/io/tests/io          root library/tests library/tests/support library
 module tests-export          library/io/tests/export      root library/tests library/tests/support library
 like tests-identity identity
@@ -188,8 +181,6 @@ like tests-pitch pitch
 like tests-events events
 like tests-containers containers
 like tests-structure structure
-like tests-relationship relationship
-like tests-interpretation interpretation
 like tests-io io
 like tests-export io
 uses tests-identity test-helpers
@@ -199,8 +190,6 @@ uses tests-pitch test-helpers
 uses tests-events test-helpers
 uses tests-containers test-helpers
 uses tests-structure test-helpers
-uses tests-relationship test-helpers
-uses tests-interpretation test-helpers
 uses tests-io test-helpers
 uses tests-export test-helpers
 

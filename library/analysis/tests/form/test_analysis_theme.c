@@ -6,8 +6,6 @@
 #include "theory/form/phrase_beginning.h"
 #include "theory/form/phrase_ending.h"
 #include "theory/form/phrase_level_form.h"
-#include "interpretation_test_access.h"
-#include "relationship_test_access.h"
 
 /* Themes from segmented phrases: the framework's beginning, ending and pairing rules over idea similarity and the cadences. */
 

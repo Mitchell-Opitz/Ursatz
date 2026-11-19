@@ -3,7 +3,7 @@
 #include "analysis/counterpoint/analysis_motion.h"
 #include "analysis/tests/counterpoint/analysis_test_util.h"
 
-/* Motion between voice pairs: each classification is the existing rule's, as an Interpretation on a note-id shell. */
+/* Motion between voice pairs: each classification is the existing rule's, as a result. */
 
 static MotionType motion_between(TestGrid *g, size_t segment, size_t upper, size_t lower, bool *found) {
     StandardCounterpointPreparedGrid prepared;
@@ -87,7 +87,7 @@ static void test_every_pair_of_consecutive_segments_and_rests(void) {
     test_grid_destroy(&g);
 }
 
-static void test_interpretation_shell_and_uncertainty(void) {
+static void test_motion_and_uncertainty(void) {
     const int r[][TEST_GRID_MAX_VOICES] = {{72, 60}, {74, 62}};
     TestGrid g;
     test_grid_init(&g, 2, 2, r);
@@ -140,7 +140,7 @@ static void test_a_bad_grid_is_rejected(void) {
 int main(void) {
     test_the_four_motion_types_and_static();
     test_every_pair_of_consecutive_segments_and_rests();
-    test_interpretation_shell_and_uncertainty();
+    test_motion_and_uncertainty();
     test_a_held_note_is_one_note_id_and_a_spelling_wins();
     test_a_bad_grid_is_rejected();
     printf("standard-counterpoint analysis motion: all tests passed\n");

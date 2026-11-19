@@ -2,10 +2,7 @@
 
 #include "analysis/form/analysis_motive.h"
 #include "analysis/tests/form/form_test_util.h"
-#include "model/interpretation/uncertainty.h"
 #include "theory/form/phrase_ending.h"
-#include "interpretation_test_access.h"
-#include "relationship_test_access.h"
 #include "structure_test_access.h"
 
 /* Motives of the soprano: windows of notes grouped by interval pattern and rhythm, the kernel's window matching as the first test,

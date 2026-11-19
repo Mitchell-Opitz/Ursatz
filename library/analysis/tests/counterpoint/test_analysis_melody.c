@@ -1,7 +1,6 @@
 #include <math.h>
 
 #include "analysis/counterpoint/analysis_melody.h"
-#include "model/core/framework_reference.h"
 #include "analysis/tests/counterpoint/melody_test_util.h"
 #include "semantics_test_access.h"
 
@@ -40,7 +39,7 @@ static void test_a_stepwise_scale_has_no_leaps_and_rises(void) {
     test_melody_destroy(&m);
 }
 
-static void test_the_interpretation_follows_the_claim_pattern(void) {
+static void test_the_claim_carries_the_measures(void) {
     const int pitches[] = {60, 67};
     TestMelody m;
     test_melody_make(&m, pitches, 2);
@@ -205,7 +204,7 @@ static void test_bad_input_is_refused(void) {
 
 int main(void) {
     test_a_stepwise_scale_has_no_leaps_and_rises();
-    test_the_interpretation_follows_the_claim_pattern();
+    test_the_claim_carries_the_measures();
     test_a_rest_breaks_the_chain();
     test_down_and_same_directions_and_the_summary();
     test_generic_size_from_spellings();

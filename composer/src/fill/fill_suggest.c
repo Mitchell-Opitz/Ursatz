@@ -70,7 +70,7 @@ static FillResult build_set(FillSuggestions *suggestions, unsigned long seed) {
                  suggestions->target.id, k);
         ok = ok && entity_id_create(text, &material) == ENTITY_ID_OK &&
              provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK &&
-             candidate_create(id, material, NULL, 0, NULL, 0, check->score_numerator, check->score_denominator,
+             candidate_create(id, material, check->score_numerator, check->score_denominator,
                               provenance, &candidates[k]) == CANDIDATE_OK;
         if (!ok) {
             entity_id_destroy(id);

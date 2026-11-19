@@ -5,7 +5,6 @@
 #include "model/identity/entity_id.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "analysis/harmony/key_identification.h"
-#include "interpretation_test_access.h"
 #include "test_knowledge.h"
 
 /*

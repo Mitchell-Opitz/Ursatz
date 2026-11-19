@@ -6,8 +6,6 @@
 #include "model/time/score_time.h"
 #include "theory/form/external_expansion_rules.h"
 #include "analysis/tests/form/form_test_util.h"
-#include "model/interpretation/uncertainty.h"
-#include "interpretation_test_access.h"
 #include "structure_test_access.h"
 
 /* Phrases from cadences: the kernel's Phrase Boundary Detection (through the bridge) fed with real cadences, post-cadential
@@ -44,7 +42,7 @@ static void test_two_cadences_make_two_phrases(void) {
     form_destroy(&f);
 }
 
-static void test_the_interpretation_follows_the_claim_pattern(void) {
+static void test_the_claim_carries_the_measures(void) {
     FormFixture f;
     form_init(&f, 4, 0);
     form_measures(&f, 1, 4, RISING);
@@ -275,7 +273,7 @@ static void test_bad_calls_are_refused(void) {
 
 int main(void) {
     test_two_cadences_make_two_phrases();
-    test_the_interpretation_follows_the_claim_pattern();
+    test_the_claim_carries_the_measures();
     test_a_post_cadential_plagal_is_absorbed();
     test_only_a_goal_cadence_ends_a_phrase();
     test_without_a_cadence_the_secondary_signal_applies_after_eight_measures();

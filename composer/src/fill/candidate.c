@@ -8,10 +8,6 @@
 struct Candidate {
     EntityID *id;
     EntityID *material_id;
-    Interpretation **evaluations;
-    size_t evaluation_count;
-    Interpretation **violations;
-    size_t violation_count;
     unsigned long score_numerator;
     unsigned long score_denominator;
     ProvenanceReference *provenance;
@@ -30,56 +26,13 @@ struct CandidateSet {
     ProvenanceReference *provenance;
 };
 
-static Interpretation **copy_interpretation_pointers(Interpretation **interpretations, size_t count) {
-    Interpretation **copy = (Interpretation **)malloc(sizeof(Interpretation *) * count);
-    if (copy == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        copy[i] = interpretations[i];
-    }
-    return copy;
-}
-
-static void destroy_interpretations(Interpretation **interpretations, size_t count) {
-    if (interpretations == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        interpretation_destroy(interpretations[i]);
-    }
-    free(interpretations);
-}
-
-CandidateResult candidate_create(EntityID *id, EntityID *material_id, Interpretation **evaluations,
-                                  size_t evaluation_count, Interpretation **violations, size_t violation_count,
-                                  unsigned long score_numerator, unsigned long score_denominator,
-                                  ProvenanceReference *provenance, Candidate **out) {
+CandidateResult candidate_create(EntityID *id, EntityID *material_id, unsigned long score_numerator,
+                                  unsigned long score_denominator, ProvenanceReference *provenance, Candidate **out) {
     if (id == NULL) {
         return CANDIDATE_ERR_NULL_ID;
     }
     if (material_id == NULL) {
         return CANDIDATE_ERR_NULL_MATERIAL_ID;
-    }
-    if (evaluation_count > 0) {
-        if (evaluations == NULL) {
-            return CANDIDATE_ERR_NULL_EVALUATION;
-        }
-        for (size_t i = 0; i < evaluation_count; i++) {
-            if (evaluations[i] == NULL) {
-                return CANDIDATE_ERR_NULL_EVALUATION;
-            }
-        }
-    }
-    if (violation_count > 0) {
-        if (violations == NULL) {
-            return CANDIDATE_ERR_NULL_VIOLATION;
-        }
-        for (size_t i = 0; i < violation_count; i++) {
-            if (violations[i] == NULL) {
-                return CANDIDATE_ERR_NULL_VIOLATION;
-            }
-        }
     }
     if (score_denominator == 0) {
         return CANDIDATE_ERR_NON_POSITIVE_SCORE_DENOMINATOR;
@@ -92,32 +45,8 @@ CandidateResult candidate_create(EntityID *id, EntityID *material_id, Interpreta
     if (candidate == NULL) {
         return CANDIDATE_ERR_ALLOC;
     }
-
-    Interpretation **copied_evaluations = NULL;
-    if (evaluation_count > 0) {
-        copied_evaluations = copy_interpretation_pointers(evaluations, evaluation_count);
-        if (copied_evaluations == NULL) {
-            free(candidate);
-            return CANDIDATE_ERR_ALLOC;
-        }
-    }
-
-    Interpretation **copied_violations = NULL;
-    if (violation_count > 0) {
-        copied_violations = copy_interpretation_pointers(violations, violation_count);
-        if (copied_violations == NULL) {
-            free(copied_evaluations);
-            free(candidate);
-            return CANDIDATE_ERR_ALLOC;
-        }
-    }
-
     candidate->id = id;
     candidate->material_id = material_id;
-    candidate->evaluations = copied_evaluations;
-    candidate->evaluation_count = evaluation_count;
-    candidate->violations = copied_violations;
-    candidate->violation_count = violation_count;
     candidate->score_numerator = score_numerator;
     candidate->score_denominator = score_denominator;
     candidate->provenance = provenance;
@@ -132,8 +61,6 @@ void candidate_destroy(Candidate *candidate) {
     }
     entity_id_destroy(candidate->id);
     entity_id_destroy(candidate->material_id);
-    destroy_interpretations(candidate->evaluations, candidate->evaluation_count);
-    destroy_interpretations(candidate->violations, candidate->violation_count);
     provenance_reference_destroy(candidate->provenance);
     free(candidate);
 }

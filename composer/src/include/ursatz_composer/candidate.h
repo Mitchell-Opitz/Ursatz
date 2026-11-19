@@ -7,16 +7,12 @@
 #include <model/core/provenance_reference.h>
 #include <model/core/value.h>
 #include <model/identity/entity_id.h>
-#include <model/interpretation/interpretation.h>
 
 /*
- * Candidate: a proposed result before it is accepted (TDD Sec158): material, evaluations, violations, score and
+ * Candidate: a proposed result before it is accepted (TDD Sec158): material, score and
  * provenance. The fill loop's suggestion mode (fill_suggest.h) builds one per suggestion.
  *
  * material_id is a required EntityID reference to the proposed material, referenced by id only, never embedded.
- *
- * evaluations and violations are independent, owned arrays of Interpretation pointers with their counts, kept as two
- * separate fields. Both may be empty (count 0, pass NULL): a Candidate not yet evaluated is valid.
  *
  * score is an exact rational fraction (score_numerator / score_denominator, denominator > 0, never float/double).
  *
@@ -29,25 +25,17 @@ typedef enum {
     CANDIDATE_OK = 0,
     CANDIDATE_ERR_NULL_ID,
     CANDIDATE_ERR_NULL_MATERIAL_ID,
-    CANDIDATE_ERR_NULL_EVALUATION,
-    CANDIDATE_ERR_NULL_VIOLATION,
     CANDIDATE_ERR_NON_POSITIVE_SCORE_DENOMINATOR,
     CANDIDATE_ERR_NULL_PROVENANCE,
     CANDIDATE_ERR_ALLOC
 } CandidateResult;
 
 /*
- * Takes ownership of id, material_id, each Interpretation in
- * evaluations (if any), each Interpretation in violations (if any), and
- * provenance on success (all destroyed by candidate_destroy).
- * evaluations/violations are optional -- pass NULL with the matching
- * count == 0 for either not supplied. No entry of a non-empty array may
- * be NULL. score_denominator must be > 0.
+ * Takes ownership of id, material_id and provenance on success (all destroyed by candidate_destroy).
+ * score_denominator must be > 0.
  */
-CandidateResult candidate_create(EntityID *id, EntityID *material_id, Interpretation **evaluations,
-                                  size_t evaluation_count, Interpretation **violations, size_t violation_count,
-                                  unsigned long score_numerator, unsigned long score_denominator,
-                                  ProvenanceReference *provenance, Candidate **out);
+CandidateResult candidate_create(EntityID *id, EntityID *material_id, unsigned long score_numerator,
+                                  unsigned long score_denominator, ProvenanceReference *provenance, Candidate **out);
 void candidate_destroy(Candidate *candidate);
 
 unsigned long candidate_score_numerator(const Candidate *candidate);

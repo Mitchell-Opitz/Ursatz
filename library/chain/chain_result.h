@@ -7,7 +7,7 @@
 #include "model/core/rational.h"
 #include "model/pitch/pitch_material.h"
 
-/* A library Interpretation's scalar confidence (numerator/denominator in
+/* A scalar confidence (numerator/denominator in
    [0, 1]); present is false when the library supplies none. */
 typedef struct {
     bool present;

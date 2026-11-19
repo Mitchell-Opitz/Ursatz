@@ -3,7 +3,6 @@
 #include "analysis/form/analysis_ideas.h"
 #include "analysis/tests/form/form_test_util.h"
 #include "theory/form/idea_label.h"
-#include "interpretation_test_access.h"
 
 /* Ideas and subphrases of each phrase by standard-form's length conventions, labelled by similarity to the basic idea. */
 
@@ -60,7 +59,7 @@ static void test_an_eight_measure_phrase_has_four_ideas_and_two_subphrases(void)
     form_destroy(&f);
 }
 
-static void test_the_interpretation_follows_the_claim_pattern(void) {
+static void test_the_claim_carries_the_measures(void) {
     FormFixture f;
     form_init(&f, 4, 0);
     const int *measures[4] = {BASIC, BASIC, OTHER, OTHER};
@@ -163,7 +162,7 @@ static void test_bad_calls_are_refused(void) {
 
 int main(void) {
     test_an_eight_measure_phrase_has_four_ideas_and_two_subphrases();
-    test_the_interpretation_follows_the_claim_pattern();
+    test_the_claim_carries_the_measures();
     test_a_six_measure_phrase_has_a_one_idea_ending();
     test_an_odd_length_gives_the_last_idea_the_remainder();
     test_the_pickup_belongs_to_the_first_idea_and_is_not_counted();

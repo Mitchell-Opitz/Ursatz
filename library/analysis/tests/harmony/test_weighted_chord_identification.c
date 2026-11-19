@@ -4,16 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/interpretation/interpretation.h"
-#include "model/interpretation/uncertainty.h"
 #include "member_test_util.h"
 #include "analysis/harmony/weighted_chord_identification.h"
-#include "interpretation_test_access.h"
 #include "test_knowledge.h"
 
 /*
  * Weighted chord identification result tests: the best and runner-up chord, both scores, the uncertainty
- * (runner-up score over best score), the Interpretation's confidence, no match below the minimum, and the
+ * (runner-up score over best score), the candidate's confidence, no match below the minimum, and the
  * two-pass sequence with leftover tones labeled. Key of C major unless stated.
  */
 

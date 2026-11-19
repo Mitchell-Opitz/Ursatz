@@ -9,7 +9,6 @@
 #include "theory/form/internal_expansion_technique.h"
 #include "theory/form/phrase_length_change.h"
 #include "theory/form/phrase_level_form.h"
-#include "interpretation_test_access.h"
 
 /* Expansion and contraction from the theme's own balance (an ending as long as its beginning), the internal technique evidence,
    and the external expansion of a phrase's extension. */

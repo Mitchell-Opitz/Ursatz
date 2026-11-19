@@ -1,4 +1,3 @@
-#include "model/core/framework_reference.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/voice_reference.h"
 
@@ -22,13 +21,6 @@ static void test_voice_reference_holds_target_id_only(void) {
     assert(entity_id_equals(voice_reference_target_id(reference), target_id));
 
     voice_reference_destroy(reference);
-}
-
-static void test_framework_reference_rejects_null_target(void) {
-    FrameworkReference *reference = NULL;
-    FrameworkReferenceResult r = framework_reference_create(NULL, &reference);
-    assert(r == FRAMEWORK_REFERENCE_ERR_NULL_TARGET_ID);
-    assert(reference == NULL);
 }
 
 static void test_provenance_reference_present_rejects_null_target(void) {
@@ -66,7 +58,6 @@ static void test_provenance_reference_absent_has_no_target_id(void) {
 int main(void) {
     test_voice_reference_rejects_null_target();
     test_voice_reference_holds_target_id_only();
-    test_framework_reference_rejects_null_target();
     test_provenance_reference_present_rejects_null_target();
     test_provenance_reference_present_holds_target_id();
     test_provenance_reference_absent_has_no_target_id();

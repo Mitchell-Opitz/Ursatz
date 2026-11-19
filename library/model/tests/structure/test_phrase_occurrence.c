@@ -7,7 +7,7 @@
 #include "structure_test_access.h"
 
 /*
- * Relationship test: a PhraseOccurrence resolves back to its Phrase
+ * Test: a PhraseOccurrence resolves back to its Phrase
  * (by id, via Occurrence's target_id) and to its own concrete event
  * region, and multiple occurrences of the same Phrase remain distinct
  * Occurrence instances (distinct own id) while pointing at the same

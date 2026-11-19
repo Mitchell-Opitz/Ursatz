@@ -1,7 +1,6 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_TEXTURE_ANALYSIS_TEXTURE_ANALYSIS_CLASSIFY_H
 #define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_ANALYSIS_TEXTURE_ANALYSIS_CLASSIFY_H
 
-#include "model/relationship/relationship.h"
 #include "analysis/texture/texture_analysis_features.h"
 #include "theory/vocabulary/texture_rules.h"
 #include "analysis/texture/texture_classification_rules.h"
