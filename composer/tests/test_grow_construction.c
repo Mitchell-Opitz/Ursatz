@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/theme_shape.h>
 
 #include "grow/grow_internal.h"

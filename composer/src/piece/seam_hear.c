@@ -8,7 +8,7 @@
 #include <theory/harmony/harmony_phrase_rules.h>
 #include <theory/harmony/harmony_resolution_rules.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
 
 #include "harmony/harmony_internal.h"

@@ -6,11 +6,11 @@
 #include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/accompaniment.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 
 #include "accompaniment_check.h"
 #include "support/test_composer.h"

@@ -9,7 +9,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <theory/harmony/harmony_chord.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"

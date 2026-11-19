@@ -7,8 +7,8 @@
 #include <theory/harmony/harmony_cadence_rules.h>
 #include <theory/vocabulary/texture_rules.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 #include <theory/tonality/roman_numeral_rules.h>
 
 #include "util/plan_util.h"

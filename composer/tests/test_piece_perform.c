@@ -8,13 +8,13 @@
 #include <theory/harmony/harmony_related_key.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_perform.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"

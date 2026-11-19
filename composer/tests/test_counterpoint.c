@@ -12,10 +12,10 @@
 #include <theory/counterpoint/second_species_rules.h>
 #include <theory/counterpoint/third_species_rules.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/counterpoint.h>
 #include <ursatz_composer/fill_loop.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "accompaniment_check.h"
 #include "support/test_knowledge.h"

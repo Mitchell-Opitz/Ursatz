@@ -8,8 +8,8 @@
 #include <model/time/meter_map.h>
 #include <model/time/musical_time.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * Rendering: a plan's realized lanes as Ursatz NoteEvents, ready for Ursatz's

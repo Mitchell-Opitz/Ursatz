@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive_analysis.h>
 

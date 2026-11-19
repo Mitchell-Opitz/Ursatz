@@ -12,8 +12,8 @@
 #include <realization/work.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "render/movement_build.h"

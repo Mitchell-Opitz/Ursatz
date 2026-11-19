@@ -2,7 +2,7 @@
 #define URSATZ_COMPOSER_COMPOSER_H
 
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 const char *composer_version(void);
 

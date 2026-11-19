@@ -6,8 +6,8 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 
 #include "util/request_parse.h"
 #include "support/test_composer.h"

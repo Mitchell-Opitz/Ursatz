@@ -7,11 +7,11 @@
 
 #include <plan/section.h>
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 struct GrowPoolForm;
 

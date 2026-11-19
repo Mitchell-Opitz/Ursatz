@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /*
  * The prolongation harmony operator (R-050): a Fill operator for harmony lane spans that one harmony is to

@@ -4,7 +4,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/given.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "api_grow.h"
 #include "api_workflow.h"

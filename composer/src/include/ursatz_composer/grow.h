@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/fill_record.h>
@@ -16,7 +16,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/motive_random.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/style.h>
 #include <ursatz_composer/theme_shape.h>
 

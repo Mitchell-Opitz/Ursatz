@@ -11,7 +11,7 @@
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "api_grow.h"

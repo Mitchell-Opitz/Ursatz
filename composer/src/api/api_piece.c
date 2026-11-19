@@ -14,8 +14,8 @@
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/piece_reopen.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/render.h>
 

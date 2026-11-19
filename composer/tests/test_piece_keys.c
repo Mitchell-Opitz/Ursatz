@@ -12,7 +12,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include "support/test_composer.h"

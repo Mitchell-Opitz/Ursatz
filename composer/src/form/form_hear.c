@@ -10,7 +10,7 @@
 #include <chain/chain_result.h>
 #include <chain/analysis_chain.h>
 
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 #include "check/hearing_result.h"
 #include "form/form_internal.h"

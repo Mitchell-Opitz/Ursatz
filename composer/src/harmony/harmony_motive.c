@@ -4,7 +4,7 @@
 #include <ursatz_composer/harmony_motive.h>
 #include <theory/tonality/roman_numeral_grammar.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 

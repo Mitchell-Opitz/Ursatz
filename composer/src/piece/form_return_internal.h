@@ -4,13 +4,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/form_return.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
+#include <plan/plan_state.h>
 
 #define RETURN_PAYLOAD_MAGIC 0x52544E31UL
 /* The owner of a node or span that belongs to the section itself. */

@@ -6,8 +6,8 @@
 
 #include <plan/section.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan.h>
 
 /*
  * A form as a document (R-416): the sections of a short form in order, at each size it comes in, with the keys a piece

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /*
  * The bass operator: a Fill operator for the bass lane. It reads a harmony lane

@@ -1,4 +1,4 @@
-#include <ursatz_composer/piece_plan.h>
+#include "plan/plan.h"
 
 #include <stdlib.h>
 #include <string.h>

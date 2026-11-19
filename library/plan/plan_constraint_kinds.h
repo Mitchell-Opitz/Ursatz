@@ -1,11 +1,11 @@
-#ifndef URSATZ_COMPOSER_CONSTRAINT_KINDS_H
-#define URSATZ_COMPOSER_CONSTRAINT_KINDS_H
+#ifndef URSATZ_PLAN_CONSTRAINT_KINDS_H
+#define URSATZ_PLAN_CONSTRAINT_KINDS_H
 
 #include <stdbool.h>
 
 #include <cJSON.h>
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/piece_plan.h>
+#include "plan/plan_constraint.h"
+#include "plan/plan.h"
 
 #include "plan/plan_json_internal.h"
 

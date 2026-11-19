@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/theme_shape.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"

@@ -4,7 +4,7 @@
 
 #include <theory/harmony/harmony_applied.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/harmony_bass.h>
@@ -13,7 +13,7 @@
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"

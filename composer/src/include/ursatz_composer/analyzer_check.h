@@ -6,7 +6,7 @@
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The Analyzer check (R-080): a realized section is heard by the Analyzer's composer API (analyzer_hear) and what the

@@ -12,11 +12,11 @@
 #include <theory/vocabulary/beat_strength.h>
 #include <theory/vocabulary/cadence_type.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /* One chord of a progression. A chord starts where the one before it ends. */
 typedef struct {

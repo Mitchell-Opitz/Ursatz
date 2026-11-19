@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <theory/tonality/common_practice_materials.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/motive.h>

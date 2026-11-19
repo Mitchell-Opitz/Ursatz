@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece_reopen.h>
-#include <ursatz_composer/plan_edit.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
 
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"

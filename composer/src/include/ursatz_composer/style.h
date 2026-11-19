@@ -11,7 +11,7 @@
 #include "theory/style/style_model_file.h"
 
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * A style the Composer prefers (R-080): a StyleModel file the Analyzer wrote from a corpus (style_model_file_write),

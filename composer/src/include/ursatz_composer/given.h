@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * Given material placed anywhere in a plan (R-071): a phrase's melody, a progression or a bass line, as Given lane

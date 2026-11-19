@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 
 static Rational fraction(long num, unsigned long den) {
     Rational time;

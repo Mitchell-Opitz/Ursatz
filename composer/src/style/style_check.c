@@ -10,15 +10,15 @@
 #include <theory/form/phrase_ending.h>
 #include <theory/form/phrase_level_form.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
 #include "util/plan_util.h"

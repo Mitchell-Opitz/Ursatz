@@ -5,9 +5,9 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
 #include "piece/piece_internal.h"

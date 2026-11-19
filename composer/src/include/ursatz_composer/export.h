@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/render.h>
 
 /*

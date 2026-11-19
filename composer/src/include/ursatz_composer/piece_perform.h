@@ -6,9 +6,9 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md). A form is composed once; the performance is a

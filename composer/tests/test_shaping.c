@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include <ursatz_composer/melody_fill.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "check/shaping.h"
 #include "harmony/harmony_internal.h"

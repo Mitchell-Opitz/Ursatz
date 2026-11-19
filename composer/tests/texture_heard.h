@@ -17,8 +17,8 @@
 #include <model/time/time_signature.h>
 #include <model/time/time_span.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 
 /*
  * How standard-texture hears a written plan: the melody, the bass and the inner voices over a span as three tracks (the

@@ -8,7 +8,7 @@
 
 #include "grow/grow_internal.h"
 #include "util/util.h"
-#include "plan/plan_common.h"
+#include <plan/plan_common.h>
 
 _Static_assert(SECTION_CONSTRUCTION_IDEAS == GROW_IDEA_COUNT, "a construction holds the bars of every idea");
 

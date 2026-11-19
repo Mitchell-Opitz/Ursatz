@@ -1,4 +1,4 @@
-#include <ursatz_composer/lanes.h>
+#include "plan/plan_lanes.h"
 
 #include <stdlib.h>
 #include <string.h>

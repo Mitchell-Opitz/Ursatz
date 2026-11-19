@@ -10,7 +10,7 @@
 #include <model/pitch/pitch_arithmetic.h>
 #include <model/pitch/pitch_spelling.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"

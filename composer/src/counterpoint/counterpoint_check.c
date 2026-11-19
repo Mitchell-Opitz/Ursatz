@@ -25,7 +25,7 @@
 #include <theory/counterpoint/third_species_rules.h>
 
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "counterpoint/counterpoint_internal.h"
 #include "util/util.h"

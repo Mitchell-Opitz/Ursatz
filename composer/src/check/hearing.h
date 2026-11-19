@@ -7,7 +7,7 @@
 #include <theory/knowledge/knowledge_snapshot.h>
 
 #include <ursatz_composer/analyzer_check.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/return_hear.h>

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/plan_edit.h>
+#include <plan/plan_edit.h>
 
 void compose_candidates_destroy(ComposeCandidates *candidates) {
     if (!candidates) {

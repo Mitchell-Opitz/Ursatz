@@ -12,7 +12,7 @@
 #include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /* Test only (hearing.h): how many spans were run through the library chain. Not static, so it is not the file-scope state
    tools/ci/check-statics.sh refuses; nothing in src reads it. */

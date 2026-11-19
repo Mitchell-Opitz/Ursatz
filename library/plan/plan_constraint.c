@@ -1,11 +1,11 @@
-#include <ursatz_composer/constraint.h>
+#include "plan/plan_constraint.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-#include "plan/constraint_kinds.h"
+#include "plan/plan_constraint_kinds.h"
 #include "plan/plan_internal.h"
 #include "plan/plan_common.h"
 

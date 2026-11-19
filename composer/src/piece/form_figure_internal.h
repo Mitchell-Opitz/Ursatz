@@ -8,7 +8,7 @@
 
 #include "harmony/harmony_internal.h"
 #include <ursatz_composer/form_figure.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * What form_figure.c reads a section as, and the helpers over it. The motive of variation writes through them, and the

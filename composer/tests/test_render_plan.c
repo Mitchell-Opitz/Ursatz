@@ -8,12 +8,12 @@
 #include <io/musicxml_importer.h>
 #include <model/pitch/pitch_spelling.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_knowledge.h"
 #include "model/pitch/pitch_material.h"

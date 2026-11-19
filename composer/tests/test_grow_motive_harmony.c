@@ -8,7 +8,7 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "support/test_support.h"
 #include "util/plan_util.h"

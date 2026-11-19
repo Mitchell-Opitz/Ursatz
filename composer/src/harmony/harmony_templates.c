@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 /*
  * The shapes of the embellishments. A shape only says which chords go where; whether standard-harmony

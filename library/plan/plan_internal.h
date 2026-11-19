@@ -1,11 +1,11 @@
-#ifndef URSATZ_COMPOSER_PLAN_INTERNAL_H
-#define URSATZ_COMPOSER_PLAN_INTERNAL_H
+#ifndef URSATZ_PLAN_INTERNAL_H
+#define URSATZ_PLAN_INTERNAL_H
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_edit.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_state.h>
+#include "plan/plan_constraint.h"
+#include "plan/plan_lanes.h"
+#include "plan/plan_edit.h"
+#include "plan/plan.h"
+#include "plan/plan_state.h"
 
 typedef struct {
     PlanConstraint *items;

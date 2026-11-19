@@ -18,8 +18,8 @@
 #include <model/time/temporal_anchor.h>
 #include <model/time/time_signature.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_state.h>
 #include "render/render_notes.h"
 #include "util/plan_util.h"
 #include "util/util.h"

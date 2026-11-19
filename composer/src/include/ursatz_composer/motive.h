@@ -8,9 +8,9 @@
 #include <analysis/motive/motive_tone_roles.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * A motive: a short pitch-and-rhythm cell, typically one bar or less, supplied

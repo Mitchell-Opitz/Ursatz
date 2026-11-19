@@ -11,7 +11,7 @@
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/rejection.h>

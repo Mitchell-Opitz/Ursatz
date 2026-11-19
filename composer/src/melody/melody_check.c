@@ -15,7 +15,7 @@
 #include <theory/vocabulary/non_chord_tone.h>
 
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
 
 #include "check/shaping.h"

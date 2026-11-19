@@ -4,13 +4,13 @@
 
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "util/plan_util.h"
 #include "util/position.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include "motive/motive_internal.h"
 #include "util/util.h"
 

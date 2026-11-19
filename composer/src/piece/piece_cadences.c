@@ -5,7 +5,7 @@
 
 #include <theory/harmony/harmony_cadence_rules.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"

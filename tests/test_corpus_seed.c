@@ -8,10 +8,10 @@
 
 #include <ursatz_analyzer/corpus_passages.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"

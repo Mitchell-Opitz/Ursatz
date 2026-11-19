@@ -3,11 +3,11 @@
 
 #include <stdbool.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/melody_fill.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The return operator (R-070): a Grow operator for a theme section that returns an earlier one. A returning section

@@ -9,7 +9,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
 

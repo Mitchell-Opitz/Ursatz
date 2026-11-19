@@ -6,7 +6,7 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "api/api_grow.h"

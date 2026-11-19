@@ -7,7 +7,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "api/api_grow.h"
 #include "grow/grow_internal.h"

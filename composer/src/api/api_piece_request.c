@@ -7,7 +7,7 @@
 
 #include <plan/section_json.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "api_grow.h"
 #include "api_internal.h"

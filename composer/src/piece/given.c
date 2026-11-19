@@ -7,7 +7,7 @@
 #include <theory/harmony/harmony_functions.h>
 
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "piece/form_return_internal.h"

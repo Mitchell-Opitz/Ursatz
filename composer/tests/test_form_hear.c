@@ -8,10 +8,10 @@
 #include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/form_hear.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 

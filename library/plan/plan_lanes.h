@@ -1,14 +1,14 @@
-#ifndef URSATZ_COMPOSER_LANES_H
-#define URSATZ_COMPOSER_LANES_H
+#ifndef URSATZ_PLAN_LANES_H
+#define URSATZ_PLAN_LANES_H
 
 #include <stdbool.h>
 #include <stddef.h>
 
 #include <theory/tonality/spelled_key.h>
-#include <plan/section.h>
+#include "plan/section.h"
 #include <theory/harmony/harmonic_function.h>
 
-#include <ursatz_composer/piece_plan.h>
+#include "plan/plan.h"
 
 /*
  * Lanes: time-aligned layers of the plan. Each lane span belongs to one node

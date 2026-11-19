@@ -10,8 +10,8 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_edit.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 
 #include "api_workflow.h"

@@ -10,7 +10,7 @@
 #include <theory/knowledge/knowledge_snapshot.h>
 
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * Seeding from a corpus (docs/style.md): the material a piece starts from is taken from a passage of an analyzed

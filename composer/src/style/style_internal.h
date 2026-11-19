@@ -6,7 +6,7 @@
 #include <theory/style/style_reference.h>
 
 #include <ursatz_composer/fill_loop.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/style.h>
 
 /*

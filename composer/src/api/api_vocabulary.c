@@ -3,7 +3,7 @@
 
 #include "theory/style/style_labels.h"
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>

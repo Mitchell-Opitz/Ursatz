@@ -2,7 +2,7 @@
 #define URSATZ_COMPOSER_HARMONY_EMBELLISH_H
 
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The harmony embellishment operator: a Fill operator that embellishes a plain

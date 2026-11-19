@@ -8,7 +8,7 @@
 #include <theory/harmony/harmony_applied.h>
 #include <theory/galant/scale_patterns.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/fill_suggest.h>
@@ -16,7 +16,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "support/test_oracles.h"
 #include "support/test_knowledge.h"
 

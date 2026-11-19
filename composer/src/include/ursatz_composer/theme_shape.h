@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 
 /*
  * What a theme of each beginning and ending is made of (R-416): its ideas, the slot each takes its motive from, the

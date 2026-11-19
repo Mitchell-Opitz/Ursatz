@@ -4,7 +4,7 @@
 #include <chain/analysis_chain.h>
 #include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "api_internal.h"
 

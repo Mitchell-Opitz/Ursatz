@@ -6,8 +6,8 @@
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 
 /*
  * Hearing the phrase-level form of a written plan through the Ursatz Analyzer (R-257). Only the plan's written lanes over

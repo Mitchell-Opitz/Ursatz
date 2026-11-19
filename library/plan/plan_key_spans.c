@@ -1,4 +1,4 @@
-#include <ursatz_composer/plan_json.h>
+#include "plan/plan_json.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -9,8 +9,8 @@
 #include <theory/knowledge/relation.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/region_relation.h>
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
+#include "plan/plan_constraint.h"
+#include "plan/plan_lanes.h"
 
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"

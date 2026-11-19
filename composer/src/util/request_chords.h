@@ -5,9 +5,9 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/given.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 /* The most bars a list of chords reaches. */
 #define REQUEST_CHORDS_BARS_MAX 64

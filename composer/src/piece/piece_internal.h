@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>

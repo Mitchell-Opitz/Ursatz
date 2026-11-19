@@ -11,7 +11,7 @@
 #include "motive/motive_segments.h"
 #include "util/composer_json.h"
 #include "util/util.h"
-#include "plan/plan_common.h"
+#include <plan/plan_common.h>
 
 static long floor_div(long a, long b) {
     long quotient = a / b;

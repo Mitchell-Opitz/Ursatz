@@ -5,12 +5,12 @@
 
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
-#include "plan/plan_common.h"
+#include <plan/plan_common.h>
 
 /*
  * A motif as long as the idea it fills is that idea (B1 of P33): grow_motive_fit for motives of 1, 1.5, 2 and 3 bars with

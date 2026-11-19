@@ -8,10 +8,10 @@
 #include <theory/style/style_profile.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"

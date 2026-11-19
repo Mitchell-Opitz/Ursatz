@@ -8,7 +8,7 @@
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 #include "api_internal.h"
 

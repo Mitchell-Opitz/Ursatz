@@ -9,7 +9,7 @@
 
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/melody_fill.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The tests' check oracles: each reads a written plan back and applies the rules the generating operators check

@@ -1,11 +1,11 @@
-#ifndef URSATZ_COMPOSER_PLAN_JSON_H
-#define URSATZ_COMPOSER_PLAN_JSON_H
+#ifndef URSATZ_PLAN_JSON_H
+#define URSATZ_PLAN_JSON_H
 
 #include <stdbool.h>
 
 #include <model/pitch/pitch_material.h>
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_composer/piece_plan.h>
+#include "plan/plan.h"
 
 /*
  * A plan as JSON, in the Composer's own format (R-260), described by schema/plan.v5.schema.json: "format"

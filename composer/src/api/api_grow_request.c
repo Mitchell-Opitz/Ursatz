@@ -5,7 +5,7 @@
 #include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/explain.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/render.h>
 
 #include "api_grow.h"

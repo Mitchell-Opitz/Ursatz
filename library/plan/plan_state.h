@@ -1,10 +1,10 @@
-#ifndef URSATZ_COMPOSER_PLAN_STATE_H
-#define URSATZ_COMPOSER_PLAN_STATE_H
+#ifndef URSATZ_PLAN_STATE_H
+#define URSATZ_PLAN_STATE_H
 
 #include <stdbool.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include "plan/plan_lanes.h"
+#include "plan/plan.h"
 
 /*
  * Every node and every lane span is in exactly one state. New ones start

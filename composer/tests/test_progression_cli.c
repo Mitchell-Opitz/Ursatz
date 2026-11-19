@@ -12,7 +12,7 @@
 
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "support/test_oracles.h"

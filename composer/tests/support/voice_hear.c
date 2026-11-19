@@ -17,7 +17,7 @@
 #include <model/pitch/pitch_numeric_value.h>
 #include <model/pitch/tuning_system.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "util/util.h"

@@ -12,12 +12,12 @@
 #include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_composer/motive_tones.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "motive/motive_internal.h"
 #include "util/composer_json.h"
 #include "util/util.h"
-#include "plan/plan_common.h"
+#include <plan/plan_common.h>
 
 /* ----------------------------------------------------------------- scores */
 

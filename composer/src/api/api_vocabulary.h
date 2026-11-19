@@ -8,7 +8,7 @@
 
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 
 /*
  * The named tables of the words a request is written in (R-267, R-270). Each table ends with an entry whose value is NULL.

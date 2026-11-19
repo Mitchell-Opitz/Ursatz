@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * Hearing the voice leading of a written plan, the way Ursatz-Analyzer's voice-leading stage hears real music (R-064,

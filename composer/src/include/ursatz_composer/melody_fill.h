@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/style.h>
 

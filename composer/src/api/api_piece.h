@@ -13,7 +13,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/grow_form.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_perform.h>

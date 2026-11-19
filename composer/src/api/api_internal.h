@@ -8,7 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_target.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/preferences.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/regenerate.h>

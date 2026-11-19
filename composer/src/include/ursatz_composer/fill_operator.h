@@ -7,7 +7,7 @@
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/generator.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * Operators: what the fill loop calls to change a plan. There are three kinds.

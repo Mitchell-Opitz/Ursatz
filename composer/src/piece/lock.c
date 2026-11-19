@@ -2,8 +2,8 @@
 
 #include <stdlib.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_state.h>
 
 /* The nodes of the subtree under id, id first, into out (room for every node of the plan). */
 static size_t collect_subtree(const PiecePlan *plan, NodeId id, NodeId *out, size_t count) {

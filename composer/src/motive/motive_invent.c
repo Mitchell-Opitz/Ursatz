@@ -7,8 +7,8 @@
 
 #include <theory/counterpoint/melodic_rules.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"

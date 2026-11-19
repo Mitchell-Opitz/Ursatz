@@ -4,7 +4,7 @@
 #include <theory/harmony/harmony_functions.h>
 #include <theory/harmony/harmony_related_key.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "util/plan_util.h"
 #include "harmony/harmony_internal.h"

@@ -1,11 +1,11 @@
-#include "plan/constraint_kinds.h"
+#include "plan/plan_constraint_kinds.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #include <theory/vocabulary/texture_rules.h>
 #include <theory/galant/galant_prototypes.h>
-#include <ursatz_composer/lanes.h>
+#include "plan/plan_lanes.h"
 
 #include "plan/plan_internal.h"
 #include "plan/plan_common.h"

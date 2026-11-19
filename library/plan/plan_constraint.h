@@ -1,15 +1,15 @@
-#ifndef URSATZ_COMPOSER_CONSTRAINT_H
-#define URSATZ_COMPOSER_CONSTRAINT_H
+#ifndef URSATZ_PLAN_CONSTRAINT_H
+#define URSATZ_PLAN_CONSTRAINT_H
 
 #include <stdbool.h>
 #include <stddef.h>
 
 #include <theory/vocabulary/motive_relation_step.h>
-#include <plan/section.h>
+#include "plan/section.h"
 #include <theory/vocabulary/cadence_type.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include "plan/plan_lanes.h"
+#include "plan/plan.h"
 
 /*
  * Constraints: requirements attached to a node or a lane span ("8 bars",

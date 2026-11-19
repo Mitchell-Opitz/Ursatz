@@ -16,7 +16,7 @@
 #include "util/request_parse.h"
 #include "util/util.h"
 #include "motive/motive_internal.h"
-#include "plan/plan_common.h"
+#include <plan/plan_common.h>
 
 /* The beats of a passage's places are compared as doubles; two are the same place within this. */
 #define BEAT_EPSILON 1e-6

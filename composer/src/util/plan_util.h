@@ -5,13 +5,13 @@
 
 #include <model/time/time_signature.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan.h>
+#include <plan/plan_state.h>
 
-#include "plan/plan_common.h"
+#include <plan/plan_common.h>
 
 /* Small helpers on the plan the sources share. Private: not installed, not part of the API. */
 

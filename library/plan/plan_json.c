@@ -1,4 +1,4 @@
-#include <ursatz_composer/plan_json.h>
+#include "plan/plan_json.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -10,12 +10,12 @@
 #include <theory/harmony/harmonic_function.h>
 #include <theory/tonality/tonal_key.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_state.h>
-#include <plan/section_json.h>
+#include "plan/plan_constraint.h"
+#include "plan/plan_lanes.h"
+#include "plan/plan_state.h"
+#include "plan/section_json.h"
 
-#include "plan/constraint_kinds.h"
+#include "plan/plan_constraint_kinds.h"
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
 #include "plan/plan_common.h"

@@ -6,8 +6,8 @@
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 
 #include "api_piece.h"

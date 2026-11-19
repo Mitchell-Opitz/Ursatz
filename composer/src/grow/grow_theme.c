@@ -14,7 +14,7 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "util/plan_util.h"

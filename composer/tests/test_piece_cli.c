@@ -9,10 +9,10 @@
 #include <model/pitch/pitch_spelling.h>
 #include <model/time/musical_time.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_constraint.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"

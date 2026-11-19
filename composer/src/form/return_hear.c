@@ -18,9 +18,9 @@
 #include <analysis/notes/rhythmic_pattern.h>
 #include <model/time/duration.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_hear.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 
 #include "form/form_internal.h"
 #include "util/plan_util.h"

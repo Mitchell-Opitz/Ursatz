@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 
 #include "support/test_support.h"
 #include "support/test_composer.h"

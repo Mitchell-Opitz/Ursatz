@@ -1,5 +1,5 @@
-#ifndef URSATZ_COMPOSER_PLAN_JSON_INTERNAL_H
-#define URSATZ_COMPOSER_PLAN_JSON_INTERNAL_H
+#ifndef URSATZ_PLAN_JSON_INTERNAL_H
+#define URSATZ_PLAN_JSON_INTERNAL_H
 
 #include <stdbool.h>
 
@@ -7,7 +7,7 @@
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <theory/tonality/spelled_key.h>
 #include <theory/tonality/common_practice_materials.h>
-#include <ursatz_composer/plan_json.h>
+#include "plan/plan_json.h"
 
 /* Writing helpers shared by plan_json.c and fill_record.c. */
 

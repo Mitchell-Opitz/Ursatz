@@ -9,11 +9,11 @@
 #include <model/time/tempo_map.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/render.h>
 #include "support/test_knowledge.h"
 #include "model/pitch/pitch_material.h"

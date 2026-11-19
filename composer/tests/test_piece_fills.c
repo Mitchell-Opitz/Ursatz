@@ -6,7 +6,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/given.h>
-#include <ursatz_composer/plan_json.h>
+#include <plan/plan_json.h>
 #include <ursatz_composer/piece.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"

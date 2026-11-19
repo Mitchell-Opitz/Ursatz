@@ -6,10 +6,10 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/lanes.h>
+#include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_json.h>
+#include <plan/plan.h>
 
 /*
  * The keys of a piece plan (R-069). A section is in the home key, or in a closely related key

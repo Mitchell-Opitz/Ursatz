@@ -37,15 +37,6 @@ add_library(ursatz_composer STATIC
     style/style_check.c
     style/style_measure.c
     style/corpus_seed.c
-    plan/piece_plan.c
-    plan/lanes.c
-    plan/plan_state.c
-    plan/plan_edit.c
-    plan/plan_common.c
-    plan/constraint.c
-    plan/constraint_kinds.c
-    plan/plan_json.c
-    plan/plan_key_spans.c
     check/analyzer_check.c
     check/hearing.c
     check/explain.c

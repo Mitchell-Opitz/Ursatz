@@ -10,9 +10,9 @@
 #include <theory/harmony/harmony_cadence_rules.h>
 #include <theory/tonality/common_practice_materials.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "check/hearing_result.h"
 #include "util/plan_util.h"

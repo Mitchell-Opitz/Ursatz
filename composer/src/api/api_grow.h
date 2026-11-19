@@ -16,7 +16,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 #include <ursatz_composer/style.h>
 
 /*

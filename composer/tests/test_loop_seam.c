@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/seam_hear.h>
 #include "support/test_knowledge.h"

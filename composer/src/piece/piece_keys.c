@@ -12,10 +12,10 @@
 #include <theory/tonality/region_relation.h>
 #include <theory/vocabulary/cadence_type.h>
 
-#include <ursatz_composer/constraint.h>
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 #include "check/hearing.h"
 #include "form/form_internal.h"
 #include "util/plan_util.h"

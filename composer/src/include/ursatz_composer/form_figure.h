@@ -8,7 +8,7 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/melody_fill.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The motive of variation (R-497): a section that returns another with the variation FIGURATE keeps the course of the

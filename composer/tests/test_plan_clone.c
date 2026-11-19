@@ -6,12 +6,12 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan_lanes.h>
+#include <plan/plan.h>
 #include <ursatz_composer/piece_plan_keys.h>
-#include <ursatz_composer/plan_edit.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 
 #include "support/test_knowledge.h"
 #include "support/test_support.h"

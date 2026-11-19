@@ -1,5 +1,5 @@
-#ifndef URSATZ_COMPOSER_PIECE_PLAN_H
-#define URSATZ_COMPOSER_PIECE_PLAN_H
+#ifndef URSATZ_PLAN_PLAN_H
+#define URSATZ_PLAN_PLAN_H
 
 #include <stdbool.h>
 #include <stddef.h>

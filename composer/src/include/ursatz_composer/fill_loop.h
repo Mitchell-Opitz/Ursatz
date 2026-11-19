@@ -7,7 +7,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/fill_target.h>
-#include <ursatz_composer/piece_plan.h>
+#include <plan/plan.h>
 
 /*
  * The fill loop. One loop serves every direction: where the Given material sits

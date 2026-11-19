@@ -7,7 +7,7 @@
 #include <theory/voicing/range_rules.h>
 #include <theory/vocabulary/voice_part.h>
 
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_state.h>
 
 #include "texture/voicing_internal.h"
 #include "util/util.h"

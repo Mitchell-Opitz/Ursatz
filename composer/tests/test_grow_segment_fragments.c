@@ -6,8 +6,8 @@
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/grow.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
+#include <plan/plan_json.h>
+#include <plan/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
