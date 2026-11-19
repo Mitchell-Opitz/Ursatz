@@ -89,7 +89,7 @@ uses analysis-similarity   model analysis-notes
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
 module realization     library/realization        prefix realization/
 group realization realization
-uses realization model theory
+uses realization model theory cjson
 # The plan group (library/plan, P60, R-605): the section description, shared by forms, plans and piece requests.
 module plan            library/plan               prefix plan/
 group plan plan

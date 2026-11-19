@@ -10,6 +10,7 @@ add_library(ursatz_realization
     movement.c
     work.c
     piano_reduction.c
+    realization_json.c
 )
 ursatz_public_headers(ursatz_realization
     BASE ${PROJECT_SOURCE_DIR}
@@ -24,7 +25,7 @@ ursatz_public_headers(ursatz_realization
         realization/scoring.h
         realization/work.h
 )
-target_link_libraries(ursatz_realization PUBLIC ursatz_model ursatz_theory)
+target_link_libraries(ursatz_realization PUBLIC ursatz_model ursatz_theory cjson)
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

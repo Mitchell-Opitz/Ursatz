@@ -26,34 +26,34 @@ library/model/time/time_span.c time_span_length  # the time value API has no cal
 library/plan/section_json.c section_json_member_count  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/plan/section_json.c section_json_member_name  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/plan/section_json.c section_json_member_uses  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
-library/realization/derivation.c note_derivation_present  # no app calls it until P62 (the realization codec writes only the derivations a note has); its tests call it
+library/realization/derivation.c note_derivation_present  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
 library/realization/line.c line_add_relation  # no app calls it until P74 (line-writing stages); its tests call it
-library/realization/line.c line_name  # no app calls it until P62 (the realization codec writes line names); its tests call it
+library/realization/line.c line_name  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
 library/realization/line.c line_relation_at  # no app calls it until P74 (line-writing stages); its tests call it
 library/realization/line.c line_relation_count  # no app calls it until P74 (line-writing stages); its tests call it
-library/realization/line.c line_role_from_name  # no app calls it until P62 (the realization codec reads line roles); its tests call it
-library/realization/movement.c movement_add_compound_part  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/movement.c movement_add_played_span  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/movement.c movement_assignment_at  # no app calls it until P62 (the realization codec writes the assignments); its tests call it
-library/realization/movement.c movement_compound_part_at  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/movement.c movement_compound_part_count  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/movement.c movement_home  # no app reads the home region until P62 (the realization codec writes it); its tests call it
-library/realization/movement.c movement_played_span_at  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/movement.c movement_set_ensemble  # no app calls it until P62 (the realization codec reads a movement's ensemble); its tests call it
+library/realization/line.c line_role_from_name  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_add_compound_part  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_add_played_span  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_assignment_at  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_compound_part_at  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_compound_part_count  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_home  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_played_span_at  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/movement.c movement_set_ensemble  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
 library/realization/performer_part.c note_named  # helper of performer_part_add_note and performer_part_set_note_flags, which no app calls until P62 (the realization built from the imported score); its tests call it
 library/realization/performer_part.c performer_part_add_note  # no app calls it until P62 (the realization built from the imported score); its tests call it
 library/realization/performer_part.c performer_part_add_pedal  # no app calls it until P75 (pedal writing); its tests call it
-library/realization/performer_part.c performer_part_instrument  # no app calls it until P62 (the realization codec writes a part's instrument); its tests call it
-library/realization/performer_part.c performer_part_local_meter_map  # no app calls it until P62 (the realization built from the imported score); its tests call it
-library/realization/performer_part.c performer_part_number  # no app calls it until P62 (the realization codec writes a part's number); its tests call it
-library/realization/performer_part.c performer_part_players  # no app calls it until P62 (the realization codec writes a part's players); its tests call it
-library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P62 (the realization built from the imported score); its tests call it
-library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P62 (edits saved with the realization); its tests call it
-library/realization/work.c material_reference_valid  # helper of work_add_material, which no app calls until P62; its tests call it
-library/realization/work.c work_add_material  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/work.c work_id  # no app calls it until P62 (the realization codec writes a work's id); its tests call it
-library/realization/work.c work_material_at  # no app calls it until P62 (the composer saves its realization); its tests call it
-library/realization/work.c work_material_count  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/performer_part.c performer_part_instrument  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/performer_part.c performer_part_local_meter_map  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/performer_part.c performer_part_number  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/performer_part.c performer_part_players  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/work.c material_reference_valid  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/work.c work_add_material  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/work.c work_id  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/work.c work_material_at  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
+library/realization/work.c work_material_count  # no app calls it until P62 B9 (the realization codec, called by the Analyzer); its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app looks up a chord type by id (chord readings find it by members, P62 may name one); its tests call it
@@ -63,3 +63,59 @@ library/theory/meter/meter_class_rules.c standard_meter_category  # the six-cate
 
 library/chain/chain_collect.c chain_result_take  # only analyzer_result_take_report calls it, which the Analyzer's tests use (P61 B9); its tests call it
 analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it
+library/realization/realization_json.c assignment_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c bad  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c child_index  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c child_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c copy_id  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c derivation_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c document_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c group_refused  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c groups_are_default  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c indent_with_spaces  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c line_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c meter_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c movement_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c musical_time_of  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c number_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c parse_signature  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c part_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c push  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c put  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c rational_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_array  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_assignment  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_bool_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_derivation_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_duration_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_id_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_int_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_line  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_long  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_meter_map  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_movement_body  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_name  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_object  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_part  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_rational  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_region  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_span_members  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_spelling_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_tempo_map  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_text_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_time_member  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c read_work  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c realization_digest  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c realization_work_from_json  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c realization_work_to_compact_json  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c realization_work_to_json  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c refuse  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c region_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c relation_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c set_error  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c spelling_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c tempo_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c text_item  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c write_fail  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
+library/realization/realization_json.c write_work  # no app calls it until P62 B9 (the Analyzer writes realizations); its tests call it
