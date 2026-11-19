@@ -15,7 +15,7 @@
  * plan_variations regenerates the targets (plan_regenerate_all) on a copy of the plan for the seeds config->seed,
  * config->seed + 1, ..., at most 4 * count of them, and keeps the copies that sound different: a copy is kept when its
  * signature differs from the original plan's and from every copy kept before. A seed that gets stuck is skipped. The
- * input plan is never changed; each copy is made with plan_to_json and plan_from_json, so a plan must have the ids a
+ * input plan is never changed; each copy is made with plan_clone, so a plan must have the ids a
  * plan file has (no removed nodes or lane spans), or REGENERATE_ERR_BAD_TARGET is returned.
  *
  * The signature is the FNV-1a 64 hash over the events of plan_render, in order: for each its part index, its onset and

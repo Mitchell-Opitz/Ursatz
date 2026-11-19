@@ -15,6 +15,7 @@
 #include "accompaniment_check.h"
 #include "support/test_oracles.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Melody, accompaniment and voicing over spans that start and end on any beat, and melody pickups (R-168). Everything
@@ -446,11 +447,11 @@ static void test_pickup_json(void) {
     PlanSpan span = {beats(3), beats(9)};
     PlanJsonError error;
     add_melody_target(&piece, span, motive, 8);
-    char *text = plan_to_json(piece.plan, &error);
+    char *text = plan_to_json(piece.plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"kind\": \"pickup\"") && strstr(text, "\"length\": \"1/4\""));
     PiecePlan *parsed = NULL;
     assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK);
-    char *again = plan_to_json(parsed, &error);
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
     LaneSpanId melody;
     assert(plan_lane_find(parsed, PLAN_LANE_MELODY, 0, span, &melody, 1) == 1);

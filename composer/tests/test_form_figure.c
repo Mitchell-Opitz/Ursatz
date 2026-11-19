@@ -19,6 +19,7 @@
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * The figurate return (form_figure.h, R-497, R-498): tests/fixtures/forms/figure-form.json (a theme and three
@@ -160,10 +161,10 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
     counts->bar_changed += bar_changed;
     counts->raised += highest(plan, sections[3]) > highest(plan, theme);
     /* The plan round-trips through plan JSON. */
-    char *json = plan_to_json(plan, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
     PiecePlan *again = NULL;
     assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
-    char *second = plan_to_json(again, NULL);
+    char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
     free(second);
@@ -225,10 +226,10 @@ static void check_parallel_plan(PiecePlan *plan) {
     PieceKeyCheck keys;
     memset(&keys, 0, sizeof(keys));
     assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
-    char *json = plan_to_json(plan, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
     PiecePlan *again = NULL;
     assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
-    char *second = plan_to_json(again, NULL);
+    char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
     free(second);
@@ -262,7 +263,7 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
             }
             counts.composed++;
         } else {
-            if (getenv("DBG")) { NodeId r = plan_root(plan); for (size_t q = 0; q < plan_node_child_count(plan, r); q++) { NodeId c = plan_node_child_at(plan, r, q); printf("DBGSEC %zu children %zu state %d handles %d copies %d\n", q, plan_node_child_count(plan, c), (int)plan_node_state(plan, c), (int)form_return_handles(plan, c), (int)form_return_copies(plan, c)); } } if (0 && outcome.records[COMPOSE_STAGE_HARMONY]) { char *j = fill_record_to_json(outcome.records[COMPOSE_STAGE_HARMONY]); printf("%s\n", j); free(j); char *pj = plan_to_json(plan, NULL); printf("PLAN %s\n", pj); free(pj); }
+            if (getenv("DBG")) { NodeId r = plan_root(plan); for (size_t q = 0; q < plan_node_child_count(plan, r); q++) { NodeId c = plan_node_child_at(plan, r, q); printf("DBGSEC %zu children %zu state %d handles %d copies %d\n", q, plan_node_child_count(plan, c), (int)plan_node_state(plan, c), (int)form_return_handles(plan, c), (int)form_return_copies(plan, c)); } } if (0 && outcome.records[COMPOSE_STAGE_HARMONY]) { char *j = fill_record_to_json(outcome.records[COMPOSE_STAGE_HARMONY]); printf("%s\n", j); free(j); char *pj = plan_to_json(plan, test_plan_producer(), NULL); printf("PLAN %s\n", pj); free(pj); }
             printf("  %s seed %lu: not composed (stuck at %s)\n", row->name, seed,
                    outcome.stuck ? compose_stage_name(outcome.stuck_stage) : "-");
         }

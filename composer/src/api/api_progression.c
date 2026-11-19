@@ -602,7 +602,7 @@ static ComposerStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON 
         }
     }
     if (options->plans) {
-        cJSON *plan = api_piece_plan_object(built->plan);
+        cJSON *plan = api_piece_plan_object(knowledge, built->plan);
         if (!plan || !cJSON_AddItemToObject(object, "plan", plan)) {
             cJSON_Delete(plan);
             return api_fail_alloc(error);

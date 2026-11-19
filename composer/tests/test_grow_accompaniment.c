@@ -14,6 +14,7 @@
 #include "texture_heard.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Themes grown with an accompaniment, seeds 1 to 10, in C major 4/4 and D minor 3/4, for each pattern. Run with no
@@ -147,8 +148,8 @@ static void test_hard_rules(unsigned long last_seed) {
                     PiecePlan *again = NULL;
                     GrowOutcome second;
                     assert(grow(&request, seed, &again, &second) == GROW_OK);
-                    char *a = plan_to_json(plan, NULL);
-                    char *b = plan_to_json(again, NULL);
+                    char *a = plan_to_json(plan, test_plan_producer(), NULL);
+                    char *b = plan_to_json(again, test_plan_producer(), NULL);
                     assert(a && b && strcmp(a, b) == 0);
                     free(a);
                     free(b);

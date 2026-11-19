@@ -11,6 +11,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Progress and cancel (docs/api.md, "Jobs"): compose_run on a theme-fill plan with a job that cancels at its third step
@@ -145,7 +146,7 @@ static void test_same_plan(void) {
         PiecePlan *plan = theme_fill_plan();
         config.job = jobs[i];
         assert(compose_run(plan, &config, &outcome) == PIECE_OK);
-        texts[i] = plan_to_json(plan, NULL);
+        texts[i] = plan_to_json(plan, test_plan_producer(), NULL);
         assert(texts[i]);
         compose_outcome_destroy(&outcome);
         plan_destroy(plan);

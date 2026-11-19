@@ -322,7 +322,7 @@ static ComposerStatus result_json(const KnowledgeSnapshot *knowledge, const Opti
         }
     }
     if (options->plans) {
-        cJSON *plan = api_piece_plan_object(result->plan);
+        cJSON *plan = api_piece_plan_object(knowledge, result->plan);
         if (!plan || !cJSON_AddItemToObject(entry, "plan", plan)) {
             cJSON_Delete(plan);
             cJSON_Delete(entry);

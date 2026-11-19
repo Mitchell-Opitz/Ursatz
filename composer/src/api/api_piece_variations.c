@@ -59,7 +59,7 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
         const Variation *variation = &items[i];
         cJSON *entry = cJSON_CreateObject();
         cJSON *loop = api_piece_version_json(request, &variation->version);
-        cJSON *plan = api_piece_plan_object(variation->version.plan);
+        cJSON *plan = api_piece_plan_object(knowledge, variation->version.plan);
         ok = entry && loop && plan && cJSON_ReplaceItemInObject(loop, "plan", plan);
         if (!ok) {
             cJSON_Delete(loop && plan ? NULL : plan);

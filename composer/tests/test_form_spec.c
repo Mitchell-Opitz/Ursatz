@@ -16,6 +16,7 @@
 #include "harmony/harmony_internal.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /* The old section fields the tests below read, as the description gives them: a key as the index of the region it names (or FORM_SPEC_HOME),
  * the motive as the step it makes from m0, and a return as the index of the section it returns. */
@@ -1201,13 +1202,13 @@ static void test_form_record(void) {
             assert(strcmp(record->hash, form_spec_builtin_hash(i)) == 0);
         }
     }
-    char *text = plan_to_json(plan, NULL);
+    char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text && strstr(text, "\"form\": {") != NULL && strstr(text, "\"checks\": [\"sections\"") != NULL);
     PiecePlan *read = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK);
     assert(plan_form_record(read) && memcmp(plan_form_record(read), record, sizeof(*record)) == 0);
-    char *again = plan_to_json(read, NULL);
+    char *again = plan_to_json(read, test_plan_producer(), NULL);
     assert(again && strcmp(again, text) == 0);
     /* a malformed record is refused at its path, and a record the plan refuses is refused in the file */
     const char *bad[][2] = {{"\"closing\": true", "\"closing\": 1"},
@@ -1243,7 +1244,7 @@ static void test_form_record(void) {
 /* A plan of format 4 has no record: it reads with the record and the closed sections of its built-in form. */
 static void test_form_record_migration(void) {
     PiecePlan *plan = built_plan("ternary");
-    char *v5 = plan_to_json(plan, NULL);
+    char *v5 = plan_to_json(plan, test_plan_producer(), NULL);
     assert(v5);
     cJSON *document = cJSON_Parse(v5);
     assert(document != NULL);
@@ -1277,7 +1278,7 @@ static void test_form_record_migration(void) {
     assert(plan_section_or_empty(read, migrated[0])->closed);
     /* a plan of no built-in form has no record */
     PiecePlan *empty = plan_create();
-    char *empty_text = plan_to_json(empty, NULL);
+    char *empty_text = plan_to_json(empty, test_plan_producer(), NULL);
     PiecePlan *empty_read = NULL;
     assert(empty_text && plan_from_json(test_knowledge(), empty_text, &empty_read, &error) == PLAN_OK);
     assert(plan_form_record(empty_read) == NULL);
@@ -1379,7 +1380,7 @@ static int test_custom(void) {
             }
             assert(outcome.returns_planned == 1);
             first = seed;
-            first_json = plan_to_json(plan, NULL);
+            first_json = plan_to_json(plan, test_plan_producer(), NULL);
             assert(first_json);
         } else {
             printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));
@@ -1408,7 +1409,7 @@ static int test_custom(void) {
     assert(recorded.checks == FORM_CHECK_SECTIONS);
     recorded.checks = FORM_CHECK_ALL;
     assert(plan_set_form_record(plan, &recorded) == PLAN_OK);
-    char *again = plan_to_json(plan, NULL);
+    char *again = plan_to_json(plan, test_plan_producer(), NULL);
     assert(again && strcmp(again, first_json) == 0);
     assert(outcome.returns_planned == 0 && outcome.section_count == 3);
     compose_outcome_destroy(&outcome);

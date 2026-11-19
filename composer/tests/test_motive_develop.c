@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Motivic development. Every transformation is run through the fill loop, across seeds and parameters, on source
@@ -581,8 +582,8 @@ static void test_every_development_is_a_relative(void) {
                 Scene again = make_scene(&source, families[f].ref);
                 Run repeat = run_loop(&again, &context, seed);
                 assert(strcmp(run.record_json, repeat.record_json) == 0);
-                char *one = plan_to_json(scene.plan, NULL);
-                char *two = plan_to_json(again.plan, NULL);
+                char *one = plan_to_json(scene.plan, test_plan_producer(), NULL);
+                char *two = plan_to_json(again.plan, test_plan_producer(), NULL);
                 assert(one && two && strcmp(one, two) == 0);
                 free(one);
                 free(two);
@@ -1070,7 +1071,7 @@ static void test_constraint_json(void) {
     PlanMotiveRef plain = ref_of(MOTIVE_RELATION_INVERT);
     Motive source = load_source(&SOURCES[0]);
     Scene scene = make_scene(&source, plain);
-    char *json = plan_to_json(scene.plan, NULL);
+    char *json = plan_to_json(scene.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"step\": \"invert\"") != NULL);
     /* A motive ref writes its step and nothing of the old transform. */
     assert(strstr(json, "\"transform\"") == NULL && strstr(json, "\"tonal\"") == NULL &&
@@ -1084,7 +1085,7 @@ static void test_constraint_json(void) {
     full.step.value[1] = -1;
     full.step.value[2] = 1;
     scene = make_scene(&source, full);
-    json = plan_to_json(scene.plan, NULL);
+    json = plan_to_json(scene.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"step\": \"interval-change interval=2 amount=-1 keep-contour=1\"") != NULL);
     PiecePlan *copy = NULL;
     PlanJsonError error;
@@ -1093,7 +1094,7 @@ static void test_constraint_json(void) {
     assert(read && read->kind == PLAN_CONSTRAINT_MOTIVE_REF);
     const PlanMotiveRef *ref = &read->params.motive;
     assert(ref->has_step && ref->motive == scene.source && memcmp(&ref->step, &full.step, sizeof(full.step)) == 0);
-    char *again = plan_to_json(copy, NULL);
+    char *again = plan_to_json(copy, test_plan_producer(), NULL);
     assert(again && strcmp(json, again) == 0);
     free(json);
     free(again);
@@ -1102,7 +1103,7 @@ static void test_constraint_json(void) {
 
     /* Every relation the operators answer to is named by its relation name. */
     scene = make_scene(&source, ref_of(MOTIVE_RELATION_LIQUIDATE));
-    json = plan_to_json(scene.plan, NULL);
+    json = plan_to_json(scene.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"step\": \"liquidate\"") != NULL);
     free(json);
     plan_destroy(scene.plan);

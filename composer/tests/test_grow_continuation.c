@@ -152,7 +152,7 @@ static const char *const FRAGMENTS[2] = {"m2", "m3"};
 
 static char *plan_text(const PiecePlan *plan) {
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
     return text;
 }

@@ -35,7 +35,7 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
     for (size_t i = 0; ok && i < variations->count; i++) {
         const PlanVariation *variation = &variations->items[i];
         cJSON *entry = cJSON_CreateObject();
-        cJSON *plan = api_piece_plan_object(variation->plan);
+        cJSON *plan = api_piece_plan_object(knowledge, variation->plan);
         ok = entry && plan && cJSON_AddNumberToObject(entry, "index", (double)(i + 1)) &&
              cJSON_AddNumberToObject(entry, "seed", (double)variation->seed) && cJSON_AddItemToObject(entry, "plan", plan);
         if (!ok) {

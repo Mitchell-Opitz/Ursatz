@@ -95,7 +95,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool perio
 
 static char *plan_text(const PiecePlan *plan) {
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
     return text;
 }

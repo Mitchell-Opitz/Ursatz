@@ -16,6 +16,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * The Analyzer check (analyzer_check.h, docs/analyzer-check.md): a realized section is analyzed in memory by the
@@ -248,7 +249,7 @@ static int test_same(void) {
         PiecePlan *plan = plan_of(SENTENCE, &SCENARIOS[0], &motive);
         ComposeOutcome outcome;
         assert(compose(plan, 1, true, &outcome) == PIECE_OK);
-        texts[run] = plan_to_json(plan, NULL);
+        texts[run] = plan_to_json(plan, test_plan_producer(), NULL);
         agreed[run] = outcome.analyzer_agreed;
         assert(texts[run]);
         compose_outcome_destroy(&outcome);
@@ -287,7 +288,7 @@ static int test_candidates(void) {
     for (int check = 0; check < 2; check++) {
         Motive motive;
         PiecePlan *plan = plan_of(PERIOD, &SCENARIOS[0], &motive);
-        char *before = plan_to_json(plan, NULL);
+        char *before = plan_to_json(plan, test_plan_producer(), NULL);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.knowledge = test_knowledge();
@@ -297,15 +298,15 @@ static int test_candidates(void) {
         ComposeCandidates second;
         assert(compose_candidates(plan, &config, 6, &first) == PIECE_OK);
         assert(compose_candidates(plan, &config, 6, &second) == PIECE_OK);
-        char *after = plan_to_json(plan, NULL);
+        char *after = plan_to_json(plan, test_plan_producer(), NULL);
         assert(strcmp(before, after) == 0); /* the plan given is not changed */
         assert(first.tried == 6 && first.count > 0 && first.count <= 6);
         assert(first.count == second.count);
         expect_ranked(&first);
         for (size_t i = 0; i < first.count; i++) {
             assert(first.items[i].seed == second.items[i].seed && first.items[i].seed >= 1 && first.items[i].seed <= 6);
-            char *a = plan_to_json(first.items[i].plan, NULL);
-            char *b = plan_to_json(second.items[i].plan, NULL);
+            char *a = plan_to_json(first.items[i].plan, test_plan_producer(), NULL);
+            char *b = plan_to_json(second.items[i].plan, test_plan_producer(), NULL);
             assert(strcmp(a, b) == 0);
             free(a);
             free(b);

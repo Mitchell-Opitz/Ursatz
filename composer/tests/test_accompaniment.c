@@ -15,6 +15,7 @@
 #include "accompaniment_check.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * The accompaniment operator on realized plans: the fixed 8-bar sentence in C major 4/4, and plans built here in 3/4
@@ -319,8 +320,8 @@ static void run_pattern(const char *name, Piece (*make)(void), SpelledKey key, P
         Piece again = make();
         open_voices(&again, ask(pattern, -1), voices);
         FillOutcome second = accompany(again.plan, seed);
-        char *a = plan_to_json(piece.plan, NULL);
-        char *b = plan_to_json(again.plan, NULL);
+        char *a = plan_to_json(piece.plan, test_plan_producer(), NULL);
+        char *b = plan_to_json(again.plan, test_plan_producer(), NULL);
         assert(a && b && strcmp(a, b) == 0);
         free(a);
         free(b);
@@ -388,11 +389,11 @@ static void test_unused_voices_are_written_empty(void) {
         assert(plan_lane_span_payload(piece.plan, id)->notes.note_count == 0);
     }
     /* An empty voice survives the plan file. */
-    char *json = plan_to_json(piece.plan, NULL);
+    char *json = plan_to_json(piece.plan, test_plan_producer(), NULL);
     PiecePlan *read = NULL;
     PlanJsonError error;
     assert(json && plan_from_json(test_knowledge(), json, &read, &error) == PLAN_OK);
-    char *again = plan_to_json(read, NULL);
+    char *again = plan_to_json(read, test_plan_producer(), NULL);
     assert(again && strcmp(json, again) == 0);
     free(again);
     free(json);
@@ -482,7 +483,7 @@ static void test_constraint(void) {
     assert(plan_lane_span_constraint_count(piece.plan, target) == 2);
 
     /* The plan file names the pattern and the texture, and gives back what was written. */
-    char *json = plan_to_json(piece.plan, NULL);
+    char *json = plan_to_json(piece.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"kind\": \"accompaniment\"") && strstr(json, "\"pattern\": \"alberti\"") &&
            strstr(json, "\"texture\": \"melody and accompaniment\"") && strstr(json, "\"pattern\": \"oom-pah\""));
     PiecePlan *read = NULL;
@@ -498,7 +499,7 @@ static void test_constraint(void) {
            first->low == 0 && first->high == 0);
     assert(second->pattern == PLAN_ACCOMPANIMENT_OOM_PAH && second->texture == -1 && second->low == 40 &&
            second->high == 72);
-    char *again = plan_to_json(read, NULL);
+    char *again = plan_to_json(read, test_plan_producer(), NULL);
     assert(again && strcmp(json, again) == 0);
     free(again);
 

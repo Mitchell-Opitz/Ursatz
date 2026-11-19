@@ -12,6 +12,7 @@
 #include "util/request_parse.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Motive input and analysis. The same motive is loaded from MIDI, MusicXML, a note list and JSON and must come out
@@ -657,7 +658,7 @@ static void test_attach_as_given(void) {
 
     /* It survives the plan's JSON, still Given, and writes the same text again. */
     PlanJsonError json_error;
-    char *json = plan_to_json(plan, &json_error);
+    char *json = plan_to_json(plan, test_plan_producer(), &json_error);
     assert(json);
     PiecePlan *copy = NULL;
     assert(plan_from_json(test_knowledge(), json, &copy, &json_error) == PLAN_OK);
@@ -671,7 +672,7 @@ static void test_attach_as_given(void) {
         assert(rational_cmp(read->notes.notes[i].duration, motive.notes[i].duration) == 0);
     }
     assert(plan_node_set_state(copy, node, PLAN_STATE_REALIZED) == PLAN_ERR_GIVEN_LOCKED);
-    char *again = plan_to_json(copy, &json_error);
+    char *again = plan_to_json(copy, test_plan_producer(), &json_error);
     assert(again && strcmp(json, again) == 0);
     free(json);
     free(again);

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/plan_json.h>
@@ -141,7 +142,8 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     if (want_plan_file) {
         /* The plan as the library writes a plan file; with nothing else asked for, nothing is rendered. */
         PlanJsonError write_error;
-        out->plan_json = plan_to_json(plan, &write_error);
+        PlanProducer producer = composer_plan_producer(context->knowledge);
+        out->plan_json = plan_to_json(plan, &producer, &write_error);
         if (!out->plan_json) {
             plan_destroy(plan);
             return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "/plan", "cannot write plan: %s", write_error.message);

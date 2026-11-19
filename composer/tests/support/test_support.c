@@ -6,6 +6,8 @@
 
 #include <cJSON.h>
 
+#include <ursatz_composer/composer.h>
+
 #include "util/composer_json.h"
 
 #include "ursatz_test.h"
@@ -64,4 +66,14 @@ MidiImportResult test_midi_import_notes(const unsigned char *data, size_t size, 
     import.count = 0;
     midi_import_destroy(&import);
     return MIDI_IMPORT_OK;
+}
+
+const PlanProducer *test_plan_producer(void) {
+    static PlanProducer producer;
+    static bool made;
+    if (!made) {
+        producer = composer_plan_producer(NULL);
+        made = true;
+    }
+    return &producer;
 }

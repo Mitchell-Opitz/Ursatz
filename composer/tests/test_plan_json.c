@@ -406,7 +406,7 @@ static void test_round_trip(void) {
     PiecePlan *plan = build_sentence_plan();
     PlanJsonError error;
 
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
     assert(text[strlen(text) - 1] == '\n');
     assert(strstr(text, "\"format_version\": 5") != NULL);
@@ -419,7 +419,7 @@ static void test_round_trip(void) {
     assert(plan_lane_span_state(parsed, 1) == PLAN_STATE_GIVEN);
 
     /* Writing the parsed plan gives the same bytes. */
-    char *again = plan_to_json(parsed, &error);
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again != NULL);
     assert(strcmp(text, again) == 0);
 
@@ -441,11 +441,11 @@ static void test_round_trip(void) {
 static void test_motive_tones(void) {
     PlanJsonError error;
     PiecePlan *plain = build_sentence_plan();
-    char *plain_text = plan_to_json(plain, &error);
+    char *plain_text = plan_to_json(plain, test_plan_producer(), &error);
     assert(plain_text && strstr(plain_text, "motive_tones") == NULL);
 
     PiecePlan *plan = build_sentence_plan_with_tones(2);
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"kind\": \"motive_tones\"") != NULL && strstr(text, "\"numeral\": \"bVII65\"") != NULL &&
            strstr(text, "\"passing\"") != NULL);
     PiecePlan *parsed = NULL;
@@ -454,12 +454,12 @@ static void test_motive_tones(void) {
     const PlanConstraint *tones = plan_node_constraint_at(parsed, 6, 0);
     assert(tones && tones->kind == PLAN_CONSTRAINT_MOTIVE_TONES && tones->params.motive_tones.label_count == 2 &&
            strcmp(tones->params.motive_tones.labels[1], "passing") == 0 && tones->params.motive_tones.chord_count == 2);
-    char *again = plan_to_json(parsed, &error);
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
 
     /* Three labels for the two notes of the node. */
     PiecePlan *mismatch = build_sentence_plan_with_tones(3);
-    char *bad = plan_to_json(mismatch, &error);
+    char *bad = plan_to_json(mismatch, test_plan_producer(), &error);
     assert(bad);
     PiecePlan *refused = (PiecePlan *)0x1;
     assert(plan_from_json(test_knowledge(), bad, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
@@ -544,7 +544,7 @@ static void test_old_transforms(void) {
          MOTIVE_RELATION_LIQUIDATE, {2, 1, 0}, 0, "liquidate drop=2 keep-rhythm=1"}};
     PiecePlan *plan = build_sentence_plan();
     PlanJsonError error;
-    char *base = plan_to_json(plan, &error);
+    char *base = plan_to_json(plan, test_plan_producer(), &error);
     assert(base && strstr(base, "\"step\": \"transpose by=-2\"") != NULL);
     assert(strstr(base, "\"transform\"") == NULL);
 
@@ -573,7 +573,7 @@ static void test_old_transforms(void) {
         assert(found > 0);
 
         /* Written as a step (or not at all), and read back equal. */
-        char *written = plan_to_json(read, &error);
+        char *written = plan_to_json(read, test_plan_producer(), &error);
         assert(written && strstr(written, "\"transform\"") == NULL);
         if (c->has_step) {
             char expected[200];
@@ -608,7 +608,7 @@ static void test_old_transforms(void) {
 static void test_empty_plan(void) {
     PiecePlan *plan = plan_create();
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
     PiecePlan *parsed = NULL;
     assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK);
@@ -778,7 +778,7 @@ static void check_plan_file(const char *path, const char *name) {
     PiecePlan *second = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), text, &first, &error) == PLAN_OK);
-    char *written = plan_to_json(first, &error);
+    char *written = plan_to_json(first, test_plan_producer(), &error);
     assert(written != NULL);
     assert(strstr(written, "\"format\": \"ursatz-composer-plan\"") != NULL);
     assert(strstr(written, "\"format_version\": 5") != NULL);
@@ -786,7 +786,7 @@ static void check_plan_file(const char *path, const char *name) {
     assert(strstr(written, "\"ticks_per_quarter\"") == NULL && strstr(written, "\"voice_leading\"") == NULL);
     assert(plan_from_json(test_knowledge(), written, &second, &error) == PLAN_OK);
     assert(plans_equal(first, second));
-    char *again = plan_to_json(second, &error);
+    char *again = plan_to_json(second, test_plan_producer(), &error);
     assert(again != NULL && strcmp(written, again) == 0);
 
     size_t size_first = 0;
@@ -855,7 +855,7 @@ static void test_version_one_values(void) {
     compare_sections = false;
     PiecePlan *plan = build_plan_without_descriptions();
     PlanJsonError error;
-    char *v2 = plan_to_json(plan, &error);
+    char *v2 = plan_to_json(plan, test_plan_producer(), &error);
     assert(v2 != NULL);
     assert(strstr(v2, "\"tonic\": \"D#\"") != NULL && strstr(v2, "\"tonic\": \"G\"") != NULL);
     assert(strstr(v2, "\"composer_version\"") != NULL && strstr(v2, "\"analyzer_version\"") == NULL);
@@ -888,7 +888,7 @@ static void test_version_one_values(void) {
     char *analyzed = replace_all(v2, "\"composer_version\"", "\"analyzer_version\": \"9.8.7\", \"composer_version\"");
     assert(plan_from_json(test_knowledge(), analyzed, &old, &error) == PLAN_OK);
     assert(strcmp(plan_analyzer_version(old), "9.8.7") == 0);
-    char *kept = plan_to_json(old, &error);
+    char *kept = plan_to_json(old, test_plan_producer(), &error);
     assert(kept != NULL && strstr(kept, "\"analyzer_version\": \"9.8.7\"") != NULL);
     free(kept);
     plan_destroy(old);
@@ -923,7 +923,7 @@ static void test_spelling_round_trip(void) {
     add_lane(plan, form, PLAN_LANE_MELODY, 0, bars(0, 1), &melody);
 
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
     assert(strstr(text, "\"tonic\": \"F#\"") != NULL && strstr(text, "\"spelling\": \"E#\"") != NULL);
     PiecePlan *parsed = NULL;
@@ -981,7 +981,7 @@ static void test_older_formats_read_into_materials(void) {
     compare_sections = false;
     PiecePlan *plan = build_plan_without_descriptions();
     PlanJsonError error;
-    char *v3 = plan_to_json(plan, &error);
+    char *v3 = plan_to_json(plan, test_plan_producer(), &error);
     assert(v3 != NULL && strstr(v3, "\"mode\"") == NULL && strstr(v3, "omt.material.") != NULL);
     char *v2 = as_version_two(v3);
     char *v1 = as_version_one(v3);
@@ -993,7 +993,7 @@ static void test_older_formats_read_into_materials(void) {
         PiecePlan *old = NULL;
         assert(plan_from_json(test_knowledge(), texts[i], &old, &error) == PLAN_OK);
         assert(plans_equal(plan, old));
-        char *again = plan_to_json(old, &error);
+        char *again = plan_to_json(old, test_plan_producer(), &error);
         assert(again != NULL && strcmp(again, v3) == 0);
         free(again);
         plan_destroy(old);
@@ -1064,7 +1064,7 @@ static void test_relation_named_spans(void) {
     const KeySpanCase named[] = {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false},
                                  {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, false}};
     PiecePlan *plan = key_spans_plan(named, 2);
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL && strstr(text, "\"relation\": \"omt.relation.dominant\"") != NULL &&
            strstr(text, "\"anchor\": \"home\"") != NULL);
     PiecePlan *read = NULL;
@@ -1072,7 +1072,7 @@ static void test_relation_named_spans(void) {
     const PlanKeyRelation *relation = plan_lane_span_key_relation(read, 2);
     assert(relation && !relation->resolved && relation->anchor == PLAN_KEY_ANCHOR_HOME &&
            strcmp(relation->relation, "omt.relation.dominant") == 0);
-    char *unchanged = plan_to_json(read, &error);
+    char *unchanged = plan_to_json(read, test_plan_producer(), &error);
     assert(unchanged != NULL && strcmp(unchanged, text) == 0);
     free(unchanged);
     plan_destroy(read);
@@ -1081,16 +1081,16 @@ static void test_relation_named_spans(void) {
     const KeySpanCase explicit_keys[] = {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false},
                                          {7, "major", "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, true}};
     PiecePlan *explicit_plan = key_spans_plan(explicit_keys, 2);
-    char *explicit_text = plan_to_json(explicit_plan, &error);
+    char *explicit_text = plan_to_json(explicit_plan, test_plan_producer(), &error);
     assert(explicit_text != NULL);
     assert(read_resolved(text, &read, &error) == PLAN_OK);
-    char *resolved_text = plan_to_json(read, &error);
+    char *resolved_text = plan_to_json(read, test_plan_producer(), &error);
     assert(resolved_text != NULL && strcmp(resolved_text, explicit_text) == 0);
     plan_destroy(read);
     /* a plan with every key named is untouched, and resolving twice changes nothing */
     assert(plan_from_json_resolved(test_knowledge(), explicit_text, &read, &error) == PLAN_OK);
     assert(plan_resolve_key_spans(read, test_knowledge(), &error) == PLAN_OK);
-    char *again = plan_to_json(read, &error);
+    char *again = plan_to_json(read, test_plan_producer(), &error);
     assert(again != NULL && strcmp(again, explicit_text) == 0);
     plan_destroy(read);
     free(again);
@@ -1109,7 +1109,7 @@ static void test_relation_anchors(void) {
                                  {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_PREVIOUS, false},
                                  {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, false}};
     PiecePlan *plan = key_spans_plan(chain, 4);
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     PiecePlan *read = NULL;
     assert(text != NULL && read_resolved(text, &read, &error) == PLAN_OK);
     SpelledKey second = key_span_at(read, 1);
@@ -1141,7 +1141,7 @@ static void test_relation_refusals(void) {
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         const KeySpanCase spans[] = {cases[i].first, {0, NULL, cases[i].relation, cases[i].anchor, false}};
         PiecePlan *plan = key_spans_plan(spans, 2);
-        char *text = plan_to_json(plan, &error);
+        char *text = plan_to_json(plan, test_plan_producer(), &error);
         PiecePlan *read = NULL;
         assert(text != NULL && read_resolved(text, &read, &error) == PLAN_ERR_FORMAT);
         assert(strstr(error.message, cases[i].message) != NULL && strcmp(error.path, "keys[1].composer.payload.relation") == 0);
@@ -1155,7 +1155,7 @@ static void test_relation_refusals(void) {
     /* the first span has no anchor to be taken from */
     const KeySpanCase first[] = {{0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, false}};
     PiecePlan *plan = key_spans_plan(first, 1);
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     PiecePlan *read = NULL;
     assert(text != NULL && read_resolved(text, &read, &error) == PLAN_ERR_FORMAT);
     assert(strcmp(error.path, "keys[0].composer.payload.anchor") == 0);
@@ -1242,7 +1242,7 @@ static void test_format_four_reads_into_descriptions(void) {
     PiecePlan *expected = two_section_plan(&expected_a, &expected_b, &a, &b);
     PiecePlan *bare = two_section_plan(NULL, NULL, &a, &b);
     PlanJsonError error;
-    char *v5 = plan_to_json(bare, &error);
+    char *v5 = plan_to_json(bare, test_plan_producer(), &error);
     assert(v5 != NULL && strstr(v5, "\"format_version\": 5") != NULL);
     const char *first =
         "[{\"kind\":\"section_letter\",\"letter\":\"A\"},{\"kind\":\"piece_part\",\"part\":\"body\",\"id\":\"a\"},"
@@ -1261,10 +1261,10 @@ static void test_format_four_reads_into_descriptions(void) {
     assert(plans_equal(expected, read));
     assert(plan_node_constraint_count(read, a) == 0 && plan_node_constraint_count(read, b) == 0);
     /* it writes format 5 with the description and none of the old kinds, and that reads back the same */
-    char *written = plan_to_json(read, &error);
+    char *written = plan_to_json(read, test_plan_producer(), &error);
     assert(written != NULL && strstr(written, "\"format_version\": 5") != NULL && strstr(written, "\"section\"") != NULL);
     assert(strstr(written, "section_letter") == NULL && strstr(written, "theme_pairing") == NULL && strstr(written, "\"hold\"") == NULL);
-    char *direct = plan_to_json(expected, &error);
+    char *direct = plan_to_json(expected, test_plan_producer(), &error);
     assert(direct != NULL && strcmp(direct, written) == 0);
     PiecePlan *again = NULL;
     assert(plan_from_json(test_knowledge(), written, &again, &error) == PLAN_OK && plans_equal(expected, again));
@@ -1321,12 +1321,12 @@ static void test_section_description_stored(void) {
     NodeId a, b;
     PiecePlan *plan = two_section_plan(&full, NULL, &a, &b);
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
     PiecePlan *read = NULL;
     assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK && plans_equal(plan, read));
     assert(plan_node_section(read, a)->has_first_cadence && plan_node_section(read, b) != NULL);
-    char *again = plan_to_json(read, &error);
+    char *again = plan_to_json(read, test_plan_producer(), &error);
     assert(again != NULL && strcmp(again, text) == 0);
     /* the refusals of the store */
     SectionDescription bad = full;

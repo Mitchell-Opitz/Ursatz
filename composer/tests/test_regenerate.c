@@ -132,7 +132,7 @@ static Piece fill(unsigned long seed) {
 }
 
 static char *json_of(const PiecePlan *plan) {
-    char *text = plan_to_json(plan, NULL);
+    char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text);
     return text;
 }

@@ -9,8 +9,6 @@
 #include <model/pitch/pitch_arithmetic.h>
 #include <theory/harmony/harmonic_function.h>
 #include <theory/tonality/tonal_key.h>
-#include <chain/analysis_chain.h>
-#include <ursatz_composer/composer.h>
 #include <theory/galant/galant_prototypes.h>
 #include <theory/vocabulary/texture_rules.h>
 
@@ -409,12 +407,12 @@ static cJSON *meter_json(const PiecePlan *plan) {
     return object;
 }
 
-/* The Composer that wrote the file, the Ursatz commit it was built on and, for a plan loaded from an analysis, the Analyzer. */
-static cJSON *metadata_json(const PiecePlan *plan) {
+/* The program that wrote the file (the stamp the caller gives), the build it came from and, for a plan loaded from an analysis, the Analyzer. */
+static cJSON *metadata_json(const PiecePlan *plan, const PlanProducer *producer) {
     cJSON *object = cJSON_CreateObject();
     const char *analyzer = plan_analyzer_version(plan);
-    if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(composer_version())) &&
-                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(analysis_chain_producer_key())) &&
+    if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(producer->version)) &&
+                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(producer->producer_key)) &&
                     (analyzer[0] == '\0' || plan_json_add(object, "analyzer_version", cJSON_CreateString(analyzer))))) {
         cJSON_Delete(object);
         return NULL;
@@ -422,7 +420,7 @@ static cJSON *metadata_json(const PiecePlan *plan) {
     return object;
 }
 
-static cJSON *document_json(const PiecePlan *plan) {
+static cJSON *document_json(const PiecePlan *plan, const PlanProducer *producer) {
     cJSON *document = cJSON_CreateObject();
     if (!document) {
         return NULL;
@@ -430,7 +428,7 @@ static cJSON *document_json(const PiecePlan *plan) {
     bool ok = plan_json_add(document, "format", cJSON_CreateString(PLAN_FORMAT_NAME)) &&
               plan_json_add(document, "format_version", json_number(URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) &&
               plan_json_add(document, "next_note_id", json_number((double)plan_next_note_id(plan))) &&
-              plan_json_add(document, "metadata", metadata_json(plan)) && plan_json_add(document, "meter", meter_json(plan)) &&
+              plan_json_add(document, "metadata", metadata_json(plan, producer)) && plan_json_add(document, "meter", meter_json(plan)) &&
               plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
               plan_json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
               plan_json_add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
@@ -482,12 +480,16 @@ char *json_indent_with_spaces(const char *printed) {
     return out;
 }
 
-char *plan_to_json(const PiecePlan *plan, PlanJsonError *error) {
+char *plan_to_json(const PiecePlan *plan, const PlanProducer *producer, PlanJsonError *error) {
     if (!plan) {
         json_set_error(error, -1, "", "plan is NULL");
         return NULL;
     }
-    cJSON *document = document_json(plan);
+    if (!producer) {
+        json_set_error(error, -1, "", "producer is NULL");
+        return NULL;
+    }
+    cJSON *document = document_json(plan, producer);
     char *printed = document ? cJSON_Print(document) : NULL;
     cJSON_Delete(document);
     char *text = printed ? json_indent_with_spaces(printed) : NULL;

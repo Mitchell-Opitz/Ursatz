@@ -4,6 +4,7 @@
 
 #include <cJSON.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/compose.h>
@@ -506,9 +507,10 @@ cJSON *api_piece_loop_json(const PiecePlan *plan) {
     return object;
 }
 
-cJSON *api_piece_plan_object(const PiecePlan *plan) {
+cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const PiecePlan *plan) {
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    char *text = plan_to_json(plan, &producer, &error);
     cJSON *object = text ? cJSON_Parse(text) : NULL;
     free(text);
     return object;
@@ -1503,7 +1505,7 @@ static ComposerStatus add_outputs(const KnowledgeSnapshot *knowledge, cJSON *doc
     cJSON *plans = cJSON_CreateObject();
     bool plans_ok = plans != NULL;
     for (size_t i = 0; plans_ok && i < piece->version_count; i++) {
-        plans_ok = api_add(plans, version_name(request, i), api_piece_plan_object(api_piece_version_output_plan(&piece->versions[i])));
+        plans_ok = api_add(plans, version_name(request, i), api_piece_plan_object(knowledge, api_piece_version_output_plan(&piece->versions[i])));
     }
     if (!plans_ok || !api_add(document, "plans", plans)) {
         cJSON_Delete(plans);
@@ -1550,7 +1552,8 @@ static ComposerStatus add_outputs(const KnowledgeSnapshot *knowledge, cJSON *doc
         }
     }
     PlanJsonError detail;
-    out->plan_json = plan_to_json(api_piece_version_output_plan(&piece->versions[0]), &detail);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    out->plan_json = plan_to_json(api_piece_version_output_plan(&piece->versions[0]), &producer, &detail);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", detail.message);
     }

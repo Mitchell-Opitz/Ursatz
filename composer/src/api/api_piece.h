@@ -186,7 +186,7 @@ cJSON *api_piece_loop_json(const PiecePlan *plan);
 ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error);
 
 /* The plan as a cJSON object, or NULL when it cannot be written. */
-cJSON *api_piece_plan_object(const PiecePlan *plan);
+cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const PiecePlan *plan);
 
 /* The failure of a piece no seed composed: what the last try ran into. */
 ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,

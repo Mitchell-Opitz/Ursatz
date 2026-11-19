@@ -9,6 +9,7 @@
 #include <ursatz_composer/theme_shape.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Uneven themes (R-468, R-471, B2 of P47): a theme of 3 to 16 bars whose ideas are any whole bars, given by a
@@ -298,11 +299,11 @@ static void test_round_trip(void) {
         PiecePlan *plan = NULL;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         PlanJsonError error;
-        char *text = plan_to_json(plan, &error);
+        char *text = plan_to_json(plan, test_plan_producer(), &error);
         assert(text && strstr(text, "\"construction\""));
         PiecePlan *again = NULL;
         assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
-        char *text_again = plan_to_json(again, &error);
+        char *text_again = plan_to_json(again, test_plan_producer(), &error);
         assert(text_again && strcmp(text, text_again) == 0);
         const SectionDescription *read = plan_section_or_empty(again, test_find_node(again, "theme"))->has_construction ? plan_node_section(again, test_find_node(again, "theme")) : NULL;
         assert(read && memcmp(read->construction.idea_bars, construction.idea_bars, sizeof(construction.idea_bars)) == 0);
@@ -332,11 +333,11 @@ static void test_round_trip(void) {
     NodeId scratch_theme = test_find_node(scratch, "theme");
     assert(plan_node_set_section(scratch, scratch_theme, &extended) == PLAN_OK);
     PlanJsonError error;
-    char *text = plan_to_json(scratch, &error);
+    char *text = plan_to_json(scratch, test_plan_producer(), &error);
     assert(text && strstr(text, "\"stretch\"") && strstr(text, "\"cadential\""));
     PiecePlan *again = NULL;
     assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
-    char *text_again = plan_to_json(again, &error);
+    char *text_again = plan_to_json(again, test_plan_producer(), &error);
     assert(text_again && strcmp(text, text_again) == 0);
     free(text);
     free(text_again);
@@ -364,7 +365,7 @@ static void test_round_trip(void) {
     const char *marker = "\"basic idea\"";
     PiecePlan *good = NULL;
     assert(grow_build_plan_checked(&request, &good, NULL) == GROW_OK);
-    char *good_text = plan_to_json(good, &error);
+    char *good_text = plan_to_json(good, test_plan_producer(), &error);
     assert(good_text);
     char *at = strstr(good_text, "\"ideas\"");
     assert(at && strstr(at, marker));

@@ -11,6 +11,7 @@
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_support.h"
 
 /*
  * The fill loop, proven with fake operators. They are test doubles with no
@@ -74,7 +75,7 @@ static PiecePlan *top_down_plan(void) {
 
 static char *plan_text(const PiecePlan *plan) {
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
     return text;
 }

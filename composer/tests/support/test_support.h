@@ -5,6 +5,10 @@
 #include <stddef.h>
 
 #include <io/midi_importer.h>
+#include <ursatz_composer/plan_json.h>
+
+/* The stamp the tests write plans with: the Composer's own (name, version, producer key) and no knowledge hash. */
+const PlanProducer *test_plan_producer(void);
 
 /*
  * Writes the text to a file at the path; aborts with the path when it cannot. The checked form of test_write_file (the

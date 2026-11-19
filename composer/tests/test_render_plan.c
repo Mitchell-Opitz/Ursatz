@@ -17,6 +17,7 @@
 #include <ursatz_composer/render.h>
 #include "support/test_knowledge.h"
 #include "model/pitch/pitch_material.h"
+#include "support/test_support.h"
 
 /*
  * A hand-written 8-bar sentence in D minor, 4/4, with melody and bass. It is
@@ -452,7 +453,7 @@ static void test_files_and_cli(void) {
     musicxml_import_destroy(&imported);
 
     /* The CLI exports the same plan from its JSON. */
-    char *plan_text = plan_to_json(plan, &json_error);
+    char *plan_text = plan_to_json(plan, test_plan_producer(), &json_error);
     assert(plan_text != NULL);
     write_bytes("render_test_cli_plan.json", plan_text, strlen(plan_text));
     free(plan_text);

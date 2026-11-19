@@ -6,6 +6,7 @@
 
 #include <theory/harmony/harmony_chord.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/export.h>
@@ -444,7 +445,7 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
 /* --- the outputs --------------------------------------------------------------------------------------- */
 
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
-static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
+static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
                                         const ApiOutputOptions *outputs, ComposerError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
@@ -452,7 +453,8 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
         const GrowTheme *theme = &run->themes[k];
         if (outputs->plans) {
             PlanJsonError detail;
-            char *text = plan_to_json(theme->plan, &detail);
+            PlanProducer producer = composer_plan_producer(knowledge);
+            char *text = plan_to_json(theme->plan, &producer, &detail);
             cJSON *plan = text ? cJSON_Parse(text) : NULL;
             free(text);
             if (!plan || !cJSON_AddItemToObject(item, "plan", plan)) {
@@ -485,7 +487,8 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
 /* The plan, the MIDI file and the MusicXML of the first theme. */
 static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
     PlanJsonError json_error;
-    out->plan_json = plan_to_json(theme->plan, &json_error);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    out->plan_json = plan_to_json(theme->plan, &producer, &json_error);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", json_error.message);
     }
@@ -678,7 +681,7 @@ ComposerStatus composer_api_theme(const ComposerContext *context, const char *re
         const cJSON *chords = cJSON_GetObjectItemCaseSensitive(state.request, "chords");
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
-        status = document ? add_theme_members(document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
+        status = document ? add_theme_members(context->knowledge, document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK && state.has_preferences &&
             !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(&state.preferences))) {
             status = api_fail_alloc(&out->error);

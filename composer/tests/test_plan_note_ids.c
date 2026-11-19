@@ -186,7 +186,7 @@ static void test_ids_are_not_reused_after_removal(void) {
     assert(note_at(f.plan, span, 0)->id == 6 && plan_next_note_id(f.plan) == 7);
     /* and a file of the plan keeps the note's id and the next id: ids are not renumbered when it is written */
     PlanJsonError error;
-    char *text = plan_to_json(f.plan, &error);
+    char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL && strstr(text, "\"next_note_id\": 7") != NULL);
     PiecePlan *read = NULL;
     assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK && plan_next_note_id(read) == 7 && plan_note_by_id(read, 6, NULL) != NULL);
@@ -222,7 +222,7 @@ static void test_json_round_trip(void) {
     LaneSpanId inner;
     assert(plan_add_lane_span(f.plan, f.section, PLAN_LANE_INNER_VOICE, 1, span_of(0, 2), &payload, &inner) == PLAN_OK);
     PlanJsonError error;
-    char *text = plan_to_json(f.plan, &error);
+    char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL && strstr(text, "\"format_version\": 5") != NULL && strstr(text, "\"next_note_id\": 9") != NULL);
     assert(strstr(text, "\"source\": 1") != NULL && strstr(text, "\"operation\": \"copy\"") != NULL);
     PiecePlan *read = NULL;
@@ -235,7 +235,7 @@ static void test_json_round_trip(void) {
         assert(before[i].id == after[i].id && before[i].source == after[i].source && before[i].operation == after[i].operation);
         assert(before[i].midi == after[i].midi);
     }
-    char *again = plan_to_json(read, &error);
+    char *again = plan_to_json(read, test_plan_producer(), &error);
     assert(again != NULL && strcmp(again, text) == 0);
     free(again);
     plan_destroy(read);
@@ -246,7 +246,7 @@ static void test_json_round_trip(void) {
 static void test_format_three_reads_ids_in_file_order(void) {
     Fixture f = make_fixture();
     PlanJsonError error;
-    char *four = plan_to_json(f.plan, &error);
+    char *four = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(four != NULL);
     char *three = test_plan_text_as_format_three(four);
     assert(three != NULL && strstr(three, "\"format_version\": 3") != NULL && strstr(three, "next_note_id") == NULL);
@@ -296,7 +296,7 @@ static char *with_changes(const char *text, size_t note, const char *member, dou
 static void test_refusals(void) {
     Fixture f = make_fixture();
     PlanJsonError error;
-    char *text = plan_to_json(f.plan, &error);
+    char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL);
     PiecePlan *read = NULL;
     /* a repeated id */

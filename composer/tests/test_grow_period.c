@@ -20,6 +20,7 @@
 #include <ursatz_composer/render.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Growing a theme from each of the nine pairings of a beginning and an ending, in four keys and meters, 8 and 4 bars,
@@ -552,7 +553,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
             assert(outcome.requested_beginning == (int)beginning_of(beginning));
             assert(outcome.requested_ending == (int)ending_of(ending));
         }
-        plans[round] = plan_to_json(plan, NULL);
+        plans[round] = plan_to_json(plan, test_plan_producer(), NULL);
         records[round] = records_text(&outcome);
         assert(plans[round]);
         grow_outcome_destroy(&outcome);

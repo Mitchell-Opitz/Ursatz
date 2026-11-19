@@ -10,6 +10,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Continuations from segments (B2 of P34): a 2-bar 4/4 motif with the segments `a` (bar 1) and `b` (bar 2) in an 8-bar
@@ -185,7 +186,7 @@ static void test_plan_round_trip(void) {
     Motive motive = make_motive(true);
     PiecePlan *plan = grow(&motive, 1);
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"segment\"") && strstr(text, "\"steps\""));
     PiecePlan *again = NULL;
     assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
@@ -196,7 +197,7 @@ static void test_plan_round_trip(void) {
         const PlanMotiveRef *after = ref_of(again, name);
         assert(strcmp(before->segment, after->segment) == 0 && before->steps == after->steps);
     }
-    char *second = plan_to_json(again, &error);
+    char *second = plan_to_json(again, test_plan_producer(), &error);
     assert(second && strcmp(text, second) == 0);
     /* A ref without them reads as no segment and no steps. */
     assert(ref_of(again, "m1")->segment[0] == '\0' && ref_of(again, "m1")->steps == 0);

@@ -295,11 +295,11 @@ static bool invented_motive(const PiecePlan *plan, const char *name, NodeId *nod
 
 static void check_round_trip(const PiecePlan *plan, const Row *row, unsigned long seed) {
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
     PiecePlan *again = NULL;
     assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
-    char *second = plan_to_json(again, &error);
+    char *second = plan_to_json(again, test_plan_producer(), &error);
     assert(second);
     if (strcmp(text, second) != 0) {
         fprintf(stderr, "%s seed %lu: the plan does not round-trip\n", row->name, seed);

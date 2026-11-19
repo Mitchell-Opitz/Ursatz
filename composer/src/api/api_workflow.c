@@ -7,6 +7,7 @@
 
 #include <theory/vocabulary/cadence_type.h>
 
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
@@ -171,7 +172,8 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
                         detail.path[0] ? " at " : "", detail.path);
     }
     cJSON_free(printed);
-    *text = plan_to_json(plan, &detail);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    *text = plan_to_json(plan, &producer, &detail);
     plan_destroy(plan);
     if (!*text) {
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
@@ -223,7 +225,8 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
 
 ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out) {
     PlanJsonError plan_error;
-    out->plan_json = plan_to_json(plan, &plan_error);
+    PlanProducer producer = composer_plan_producer(knowledge);
+    out->plan_json = plan_to_json(plan, &producer, &plan_error);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "cannot write the plan: %s", plan_error.message);
     }

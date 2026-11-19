@@ -272,7 +272,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, cons
     memset(&run, 0, sizeof(run));
     run.complete = compose_run(plan, &config, &outcome) == PIECE_OK;
     if (run.complete) {
-        char *json = plan_to_json(plan, NULL);
+        char *json = plan_to_json(plan, test_plan_producer(), NULL);
         assert(json);
         run.hash = fnv(json);
         free(json);

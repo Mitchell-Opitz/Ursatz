@@ -579,7 +579,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
     memset(&run, 0, sizeof(run));
     run.complete = compose_run(plan, &config, &outcome) == PIECE_OK;
     if (run.complete) {
-        char *json = plan_to_json(plan, NULL);
+        char *json = plan_to_json(plan, test_plan_producer(), NULL);
         assert(json);
         /* The metadata holds the versions the plan was written by; the hash is of the plan, from its meter on. */
         const char *plan_text = strstr(json, "\n  \"meter\"");
@@ -834,7 +834,7 @@ static char *plan_json_with(size_t without_count) {
     snprintf(constraint.params.style.without[1], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", "motive-rhythm");
     constraint.params.style.without_count = without_count;
     assert(plan_node_add_constraint(plan, form, &constraint) == PLAN_OK);
-    char *json = plan_to_json(plan, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
     assert(json);
     plan_destroy(plan);
     return json;

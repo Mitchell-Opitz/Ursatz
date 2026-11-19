@@ -173,7 +173,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
         exit(1);
     }
     PlanJsonError error;
-    char *json = plan_to_json(plan, &error);
+    char *json = plan_to_json(plan, test_plan_producer(), &error);
     if (!json) {
         fprintf(stderr, "plan_to_json: %s\n", error.message);
         exit(1);
@@ -331,7 +331,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
         exit(1);
     }
     PlanJsonError json_error;
-    char *json = plan_to_json(plan, &json_error);
+    char *json = plan_to_json(plan, test_plan_producer(), &json_error);
     if (!json) {
         fprintf(stderr, "plan_to_json: %s\n", json_error.message);
         exit(1);

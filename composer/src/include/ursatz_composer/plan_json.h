@@ -33,8 +33,22 @@ typedef struct {
     long offset;
 } PlanJsonError;
 
-/* Returns the plan as pretty-printed JSON (2-space indent, trailing newline), or NULL with error set. Caller frees. */
-char *plan_to_json(const PiecePlan *plan, PlanJsonError *error);
+/*
+ * Who writes a plan file (R-626): the program's name and version, the key of the build it came from (a hash of its sources), the key of
+ * the composition code, and the hash of the knowledge snapshot it composed against. The caller gives it, so the plan names no program
+ * of its own; a member a program has no value for is "". Format 5 writes `version` as "composer_version" and `producer_key` as
+ * "ursatz_commit".
+ */
+typedef struct {
+    char name[32];
+    char version[32];
+    char producer_key[17];
+    char composition_key[17];
+    char knowledge_hash[17];
+} PlanProducer;
+
+/* Returns the plan as pretty-printed JSON (2-space indent, trailing newline), or NULL with error set (a NULL plan or producer too). Caller frees. */
+char *plan_to_json(const PiecePlan *plan, const PlanProducer *producer, PlanJsonError *error);
 
 /*
  * Parses a plan. The keys of the plan are made of the snapshot's common-practice materials (a file names the id of the material of each key).

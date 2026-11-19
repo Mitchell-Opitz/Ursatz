@@ -288,12 +288,12 @@ static void test_round_trip(const FormSpec *form) {
     PieceResult ran;
     PiecePlan *plan = compose(form, &ROWS[0], 1, &outcome, &ran);
     PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
     assert(strstr(text, "\"liquidation\""));
     PiecePlan *parsed = NULL;
     assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK && parsed);
-    char *again = plan_to_json(parsed, &error);
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
     free(text);
     free(again);

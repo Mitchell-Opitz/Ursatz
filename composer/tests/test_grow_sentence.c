@@ -17,6 +17,7 @@
 #include <ursatz_composer/render.h>
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Growing a sentence from a motive in four keys and meters, 8 and 4 bars, seeds 1 to 10. Each run must complete;
@@ -270,7 +271,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
             check_render(plan, bars, scenario);
             assert(outcome.score.denominator >= 1 && outcome.score.numerator <= outcome.score.denominator);
         }
-        plans[round] = plan_to_json(plan, NULL);
+        plans[round] = plan_to_json(plan, test_plan_producer(), NULL);
         records[round] = records_text(&outcome);
         assert(plans[round]);
         grow_outcome_destroy(&outcome);
@@ -309,7 +310,7 @@ static void test_seeds_vary(void) {
         config.seed = seed;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
-        char *json = plan_to_json(plan, NULL);
+        char *json = plan_to_json(plan, test_plan_producer(), NULL);
         bool known = false;
         for (size_t i = 0; i < distinct; i++) {
             known = known || strcmp(seen[i], json) == 0;
@@ -406,10 +407,10 @@ static void test_built_plan(void) {
     assert(plan_node_lane_spans(plan, m0, &span, 1) == 1 && plan_lane_span_state(plan, span) == PLAN_STATE_GIVEN);
 
     /* The plan survives its own JSON. */
-    char *json = plan_to_json(plan, NULL);
+    char *json = plan_to_json(plan, test_plan_producer(), NULL);
     PiecePlan *again = NULL;
     assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
-    char *second = plan_to_json(again, NULL);
+    char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
     free(second);
@@ -505,8 +506,8 @@ static void test_motive_forms(bool smoke) {
         PiecePlan *again = NULL;
         GrowOutcome second;
         assert(grow_build_plan_checked(&request, &again, NULL) == GROW_OK && grow_run(again, &config, &second) == GROW_OK);
-        char *first_json = plan_to_json(plan, NULL);
-        char *second_json = plan_to_json(again, NULL);
+        char *first_json = plan_to_json(plan, test_plan_producer(), NULL);
+        char *second_json = plan_to_json(again, test_plan_producer(), NULL);
         char *first_records = records_text(&outcome);
         char *second_records = records_text(&second);
         assert(strcmp(first_json, second_json) == 0 && strcmp(first_records, second_records) == 0);

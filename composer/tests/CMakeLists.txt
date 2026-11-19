@@ -61,10 +61,10 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema)
 endif()
 
-ursatz_test(test_render_plan LIBS ursatz_composer DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
+ursatz_test(test_render_plan LIBS ursatz_composer composer_test_support DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_render_plan ursatz-composer)
 
-ursatz_test(test_fill_loop LIBS ursatz_composer)
+ursatz_test(test_fill_loop LIBS ursatz_composer composer_test_support)
 
 ursatz_test(test_candidate LIBS ursatz_composer)
 
@@ -100,7 +100,7 @@ ursatz_test(test_motive_meter LIBS ursatz_composer cjson INCLUDES ${PROJECT_SOUR
 
 ursatz_test(test_motive_segments LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-ursatz_test(test_motive_develop LIBS ursatz_composer)
+ursatz_test(test_motive_develop LIBS ursatz_composer composer_test_support)
 
 ursatz_test(test_develop_cli LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
@@ -197,7 +197,7 @@ ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS sm
 # skipped.
 ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard PROPERTIES WILL_FAIL TRUE)
 
-ursatz_test(test_voicing LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_voicing LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test_executable(test_voicing_heard LIBS ursatz_composer composer_test_support)
 ursatz_test(test_voicing_heard_chorale TARGET test_voicing_heard ARGS chorale)
@@ -385,7 +385,7 @@ endif()
 
 # Variations and harmonizations (docs/regenerate.md). Each mode is one ctest entry; the sweep is slow and CI leaves it
 # out (ctest -LE slow), its smoke test is the sweep on seeds 1 and 2. The cli test runs the commands as processes.
-ursatz_test_executable(test_variations LIBS ursatz_composer)
+ursatz_test_executable(test_variations LIBS ursatz_composer composer_test_support)
 foreach(mode distinct refused harmonize sweep_smoke sweep)
     set(labels)
     if(mode STREQUAL "sweep")
@@ -604,7 +604,7 @@ ursatz_test(test_api_vocabulary LIBS ursatz_composer composer_test_support cjson
 ursatz_test(test_api_forms LIBS ursatz_composer composer_test_support cjson
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written)
 
-ursatz_test(test_job_cancel LIBS ursatz_composer)
+ursatz_test(test_job_cancel LIBS ursatz_composer composer_test_support)
 
 if(URSATZ_VALGRIND)
     # The valgrind runs do not set up the api_responses_written fixture (see test_plan_json_valgrind).

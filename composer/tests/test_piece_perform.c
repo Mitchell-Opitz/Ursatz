@@ -18,6 +18,7 @@
 #include <ursatz_composer/render.h>
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md): tests/fixtures/forms/repeat-form.json (A, B, A',
@@ -471,8 +472,8 @@ int main(int argc, char **argv) {
         /* Repeats do not change composing. */
         assert(ran == plain_ran);
         PlanJsonError detail;
-        char *json = plan_to_json(plan, &detail);
-        char *plain_json = plan_to_json(plain, &detail);
+        char *json = plan_to_json(plan, test_plan_producer(), &detail);
+        char *plain_json = plan_to_json(plain, test_plan_producer(), &detail);
         assert(json && plain_json);
         assert(strcmp(json, plain_json) == 0);
         free(json);

@@ -386,7 +386,7 @@ static void test_plan_formats(void) {
         PiecePlan *read = NULL;
         PlanJsonError error;
         assert(plan_from_json(test_knowledge(), v1, &read, &error) == PLAN_OK);
-        char *v4 = plan_to_json(read, &error);
+        char *v4 = plan_to_json(read, test_plan_producer(), &error);
         assert(v4 && strstr(v4, "\"format_version\": 5") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
         /* format 3 is the same text without the note ids */
         char *v3 = test_plan_text_as_format_three(v4);
@@ -423,7 +423,7 @@ static void test_plan_formats(void) {
         /* every format writes back as the format 4 text (a format 1 to 3 file gets its note ids 1 to n in file order) */
         PiecePlan *again = NULL;
         assert(plan_from_json(test_knowledge(), v2, &again, &error) == PLAN_OK);
-        char *written = plan_to_json(again, &error);
+        char *written = plan_to_json(again, test_plan_producer(), &error);
         assert(written && strcmp(written, v4) == 0);
         free(written);
         plan_destroy(again);
@@ -470,7 +470,7 @@ static char *dominant_plan(unsigned long *seed_out, int *span_out) {
                 continue;
             }
             PlanJsonError error;
-            char *text = plan_to_json(plan, &error);
+            char *text = plan_to_json(plan, test_plan_producer(), &error);
             plan_destroy(plan);
             assert(text);
             cJSON *json = cJSON_Parse(text);

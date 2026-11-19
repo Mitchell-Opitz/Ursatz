@@ -365,7 +365,7 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
         cJSON *item = cJSON_GetArrayItem(themes, (int)k);
         const GrowTheme *theme = &run->themes[k];
         if (outputs->plans) {
-            cJSON *plan = api_piece_plan_object(theme->plan);
+            cJSON *plan = api_piece_plan_object(knowledge, theme->plan);
             if (!plan || !cJSON_AddItemToObject(item, "plan", plan)) {
                 cJSON_Delete(plan);
                 return api_fail_alloc(error);

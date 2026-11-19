@@ -15,6 +15,7 @@
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/variations.h>
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * Variations and harmonizations (variations.h, R-088). Each mode is one ctest entry:
@@ -65,7 +66,7 @@ static FillTarget node_target(NodeId id) {
 }
 
 static char *json_of(const PiecePlan *plan) {
-    char *text = plan_to_json(plan, NULL);
+    char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text);
     return text;
 }

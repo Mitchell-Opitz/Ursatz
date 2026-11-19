@@ -11,6 +11,7 @@
 
 #include "accompaniment_check.h"
 #include "support/test_knowledge.h"
+#include "support/test_support.h"
 
 /*
  * The voicing operator on short realized progressions, a chord a bar in 4/4: I IV V I, I ii6 V7 I in C major and
@@ -283,8 +284,8 @@ static void test_progressions(bool write_soprano) {
             /* The same seed gives the same voicing. */
             Piece again = build(&PROGRESSIONS[p], write_soprano, 0);
             FillOutcome second = voice(again.plan, seed);
-            char *a = plan_to_json(piece.plan, NULL);
-            char *b = plan_to_json(again.plan, NULL);
+            char *a = plan_to_json(piece.plan, test_plan_producer(), NULL);
+            char *b = plan_to_json(again.plan, test_plan_producer(), NULL);
             assert(a && b && strcmp(a, b) == 0);
             free(a);
             free(b);
