@@ -26,6 +26,9 @@ ursatz_test(test_composer_movement LIBS ursatz_composer composer_test_support
 ursatz_test(test_plan_note_ids LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
 
+ursatz_test(test_plan_clone LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
+
 ursatz_test(test_plan_json LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
