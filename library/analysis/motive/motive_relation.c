@@ -856,7 +856,7 @@ static MotiveRelationResult prepare_harmony(MotiveSketch *work) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     if (work->chord_count == 0) {
-        if (!mch_implied_chord(work, &work->chords[0])) {
+        if (!motive_sketch_implied_chord(work, &work->chords[0])) {
             return MOTIVE_RELATION_NO_HARMONY;
         }
         work->chord_count = 1;
