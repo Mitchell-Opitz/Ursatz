@@ -1,6 +1,4 @@
 #include "material_service.h"
-#include "util/fs_util.h"
-#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -9,15 +7,12 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#else
-#include <dirent.h>
 #include <pthread.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#endif
+
+#include <common/files.h>
+#include <common/json.h>
+#include <common/strings.h>
 
 #include "composer_client.h"
 #include "id_service.h"
@@ -38,92 +33,6 @@ static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
 #define LOCK() ursatz_gui_lock_acquire(&g_lock)
 #define UNLOCK() ursatz_gui_lock_release(&g_lock)
 
-
-static bool write_json(const char *path, const cJSON *json) {
-    char *text = cJSON_Print(json);
-    if (!text) {
-        return false;
-    }
-    bool ok = ursatz_gui_write_file_atomic(path, text, strlen(text));
-    free(text);
-    return ok;
-}
-
-/* The names in dir other than "." and "..", sorted by strcmp. *out_names is NULL when there are none. */
-static bool list_names(const char *dir, char ***out_names, size_t *out_count) {
-    char **names = NULL;
-    size_t count = 0;
-    size_t capacity = 0;
-    *out_names = NULL;
-    *out_count = 0;
-
-#ifdef _WIN32
-    char pattern[PATH_BYTES + 4];
-    if (snprintf(pattern, sizeof(pattern), "%s\\*", dir) >= (int)sizeof(pattern)) {
-        return false;
-    }
-    WIN32_FIND_DATAA find_data;
-    HANDLE handle = FindFirstFileA(pattern, &find_data);
-    if (handle == INVALID_HANDLE_VALUE) {
-        return GetLastError() == ERROR_FILE_NOT_FOUND;
-    }
-    do {
-        const char *name = find_data.cFileName;
-#else
-    DIR *handle = opendir(dir);
-    if (!handle) {
-        return false;
-    }
-    struct dirent *entry;
-    while ((entry = readdir(handle)) != NULL) {
-        const char *name = entry->d_name;
-#endif
-        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-            if (count == capacity) {
-                size_t grown_capacity = capacity ? capacity * 2 : 16;
-                char **grown = realloc(names, grown_capacity * sizeof(char *));
-                if (!grown) {
-                    goto fail;
-                }
-                names = grown;
-                capacity = grown_capacity;
-            }
-            names[count] = ursatz_gui_dup_string(name);
-            if (!names[count]) {
-                goto fail;
-            }
-            count++;
-        }
-#ifdef _WIN32
-    } while (FindNextFileA(handle, &find_data));
-    FindClose(handle);
-#else
-    }
-    closedir(handle);
-#endif
-    *out_names = names;
-    *out_count = count;
-    return true;
-
-fail:
-#ifdef _WIN32
-    FindClose(handle);
-#else
-    closedir(handle);
-#endif
-    for (size_t i = 0; i < count; i++) {
-        free(names[i]);
-    }
-    free(names);
-    return false;
-}
-
-static void free_names(char **names, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free(names[i]);
-    }
-    free(names);
-}
 
 static bool is_valid_id(const char *id) {
     if (!id || id[0] == '\0' || strlen(id) > ID_MAX_BYTES) {
@@ -153,34 +62,20 @@ static bool has_suffix(const char *name, const char *suffix) {
  */
 static char *trim_text(const char *text, size_t max_chars, bool *alloc_failed) {
     *alloc_failed = false;
-    const char *start = text ? text : "";
-    while (*start && isspace((unsigned char)*start)) {
-        start++;
-    }
-    size_t length = strlen(start);
-    while (length > 0 && isspace((unsigned char)start[length - 1])) {
-        length--;
-    }
-    size_t chars = 0;
-    for (size_t i = 0; i < length; i++) {
-        unsigned char c = (unsigned char)start[i];
-        if (c < 0x20 || c == 0x7f) {
-            return NULL;
-        }
-        if ((c & 0xC0) != 0x80) {
-            chars++;
-        }
-    }
-    if (chars > max_chars) {
-        return NULL;
-    }
-    char *copy = malloc(length + 1);
+    char *copy = common_strdup(text ? text : "");
     if (!copy) {
         *alloc_failed = true;
         return NULL;
     }
-    memcpy(copy, start, length);
-    copy[length] = '\0';
+    size_t length = common_trim(copy);
+    size_t chars = 0;
+    for (size_t i = 0; i < length; i++) {
+        unsigned char c = (unsigned char)copy[i];
+        if (c < 0x20 || c == 0x7f || (chars += (c & 0xC0) != 0x80) > max_chars) {
+            free(copy);
+            return NULL;
+        }
+    }
     return copy;
 }
 
@@ -207,18 +102,6 @@ static UrsatzGuiMaterialResult normalize_description(const char *text, char **ou
     return URSATZ_GUI_MATERIAL_OK;
 }
 
-static int compare_ci(const char *a, const char *b) {
-    for (; *a && *b; a++, b++) {
-        int ca = tolower((unsigned char)*a);
-        int cb = tolower((unsigned char)*b);
-        if (ca != cb) {
-            return ca < cb ? -1 : 1;
-        }
-    }
-    return (*a != '\0') - (*b != '\0');
-}
-
-
 /* --- paths --------------------------------------------------------------- */
 
 static bool project_path(const char *id, char *out, size_t out_size) {
@@ -230,25 +113,25 @@ static bool project_path(const char *id, char *out, size_t out_size) {
 /* Number of items whose item.json names project_id. */
 static size_t count_items_locked(const char *project_id) {
     char dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
+    CommonNames names = {0};
     size_t found = 0;
-    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         return 0;
     }
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < names.count; i++) {
         char path[PATH_BYTES];
-        if (!is_valid_id(names[i]) ||
-            snprintf(path, sizeof(path), "%s/items/%s/item.json", g_dir, names[i]) >= (int)sizeof(path)) {
+        if (!is_valid_id(names.items[i]) ||
+            snprintf(path, sizeof(path), "%s/items/%s/item.json", g_dir, names.items[i]) >= (int)sizeof(path)) {
             continue;
         }
-        cJSON *meta = ursatz_gui_read_json_object(path);
-        if (meta && strcmp(ursatz_gui_json_string(meta, "project_id"), project_id) == 0) {
+        cJSON *meta = NULL;
+        common_json_read_object(path, &meta, NULL);
+        if (meta && strcmp(common_json_string(meta, "project_id"), project_id) == 0) {
             found++;
         }
         cJSON_Delete(meta);
     }
-    free_names(names, count);
+    common_names_free(&names);
     return found;
 }
 
@@ -258,9 +141,10 @@ static UrsatzGuiMaterialResult load_project_locked(const char *id, cJSON **out) 
     if (!project_path(id, path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    cJSON *project = ursatz_gui_read_json_object(path);
+    cJSON *project = NULL;
+    common_json_read_object(path, &project, NULL);
     if (!project) {
-        return ursatz_gui_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return common_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
     cJSON_DeleteItemFromObjectCaseSensitive(project, "id");
     cJSON *id_item = cJSON_CreateString(id);
@@ -275,10 +159,10 @@ static UrsatzGuiMaterialResult load_project_locked(const char *id, cJSON **out) 
 
 static UrsatzGuiMaterialResult save_project_locked(const cJSON *project) {
     char path[PATH_BYTES];
-    if (!project_path(ursatz_gui_json_string(project, "id"), path, sizeof(path))) {
+    if (!project_path(common_json_string(project, "id"), path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    return write_json(path, project) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_FAILED;
+    return (common_json_write_file(path, project, true, NULL) == URSATZ_OK) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_FAILED;
 }
 
 
@@ -303,7 +187,7 @@ static UrsatzGuiMaterialResult create_project_locked(const char *name, const cha
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
             break;
         }
-        if (project_path(id, path, sizeof(path)) && !ursatz_gui_path_exists(path)) {
+        if (project_path(id, path, sizeof(path)) && !common_path_exists(path)) {
             break;
         }
         free(id);
@@ -316,7 +200,7 @@ static UrsatzGuiMaterialResult create_project_locked(const char *name, const cha
     cJSON *project = NULL;
     if (result == URSATZ_GUI_MATERIAL_OK) {
         char now[32];
-        ursatz_gui_iso_utc_now(now, sizeof(now));
+        common_utc_now(now);
         project = cJSON_CreateObject();
         bool ok = project && cJSON_AddStringToObject(project, "id", id) &&
                   cJSON_AddStringToObject(project, "name", clean_name) &&
@@ -346,19 +230,18 @@ bool ursatz_gui_material_service_init(const char *dir) {
     char items[PATH_BYTES];
     bool ok = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) &&
               snprintf(projects, sizeof(projects), "%s/projects", dir) < (int)sizeof(projects) &&
-              snprintf(items, sizeof(items), "%s/items", dir) < (int)sizeof(items) && ursatz_gui_ensure_dir(g_dir) &&
-              ursatz_gui_ensure_dir(projects) && ursatz_gui_ensure_dir(items);
+              snprintf(items, sizeof(items), "%s/items", dir) < (int)sizeof(items) && (common_dir_make(g_dir, NULL) == URSATZ_OK) &&
+              (common_dir_make(projects, NULL) == URSATZ_OK) && (common_dir_make(items, NULL) == URSATZ_OK);
 
-    char **names = NULL;
-    size_t count = 0;
+    CommonNames names = {0};
     if (ok) {
-        ok = list_names(projects, &names, &count);
+        ok = (common_dir_list(projects, &names, NULL) == URSATZ_OK);
     }
     bool has_project = false;
-    for (size_t i = 0; i < count; i++) {
-        has_project = has_project || has_suffix(names[i], ".json");
+    for (size_t i = 0; i < names.count; i++) {
+        has_project = has_project || has_suffix(names.items[i], ".json");
     }
-    free_names(names, count);
+    common_names_free(&names);
 
     if (ok) {
         g_ready = true;
@@ -393,8 +276,8 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_create(const char *name, con
 static int compare_projects(const void *a, const void *b) {
     const cJSON *left = *(const cJSON *const *)a;
     const cJSON *right = *(const cJSON *const *)b;
-    int by_name = compare_ci(ursatz_gui_json_string(left, "name"), ursatz_gui_json_string(right, "name"));
-    return by_name != 0 ? by_name : strcmp(ursatz_gui_json_string(left, "id"), ursatz_gui_json_string(right, "id"));
+    int by_name = common_compare_ci(common_json_string(left, "name"), common_json_string(right, "name"));
+    return by_name != 0 ? by_name : strcmp(common_json_string(left, "id"), common_json_string(right, "id"));
 }
 
 UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects) {
@@ -406,29 +289,28 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects) {
     }
 
     char dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
-    if (snprintf(dir, sizeof(dir), "%s/projects", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+    CommonNames names = {0};
+    if (snprintf(dir, sizeof(dir), "%s/projects", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         UNLOCK();
         return URSATZ_GUI_MATERIAL_ERR_FAILED;
     }
 
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
-    cJSON **projects = count ? calloc(count, sizeof(cJSON *)) : NULL;
+    cJSON **projects = names.count ? calloc(names.count, sizeof(cJSON *)) : NULL;
     size_t loaded = 0;
-    if (count && !projects) {
+    if (names.count && !projects) {
         result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
-        if (!has_suffix(names[i], ".json")) {
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
+        if (!has_suffix(names.items[i], ".json")) {
             continue;
         }
         char id[ID_MAX_BYTES + 1];
-        size_t id_len = strlen(names[i]) - strlen(".json");
+        size_t id_len = strlen(names.items[i]) - strlen(".json");
         if (id_len > ID_MAX_BYTES) {
             continue;
         }
-        memcpy(id, names[i], id_len);
+        memcpy(id, names.items[i], id_len);
         id[id_len] = '\0';
         cJSON *project = NULL;
         if (load_project_locked(id, &project) != URSATZ_GUI_MATERIAL_OK) {
@@ -441,7 +323,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_list(cJSON **out_projects) {
         }
         projects[loaded++] = project;
     }
-    free_names(names, count);
+    common_names_free(&names);
     UNLOCK();
 
     cJSON *array = result == URSATZ_GUI_MATERIAL_OK ? cJSON_CreateArray() : NULL;
@@ -502,10 +384,10 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
         char now[32];
-        ursatz_gui_iso_utc_now(now, sizeof(now));
-        bool ok = (!clean_name || ursatz_gui_json_set_string(project, "name", clean_name)) &&
-                  (!clean_description || ursatz_gui_json_set_string(project, "description", clean_description)) &&
-                  ursatz_gui_json_set_string(project, "updated_at", now);
+        common_utc_now(now);
+        bool ok = (!clean_name || common_json_set_string(project, "name", clean_name)) &&
+                  (!clean_description || common_json_set_string(project, "description", clean_description)) &&
+                  common_json_set_string(project, "updated_at", now);
         result = ok ? save_project_locked(project) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
     if (result == URSATZ_GUI_MATERIAL_OK && out_project) {
@@ -529,7 +411,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id) {
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     if (!project_path(id, path, sizeof(path))) {
         result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
-    } else if (!ursatz_gui_path_exists(path)) {
+    } else if (!common_path_exists(path)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     } else if (count_items_locked(id) > 0) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_EMPTY;
@@ -572,7 +454,7 @@ static bool version_path(const char *id, int number, char *out, size_t out_size)
 
 static bool project_exists_locked(const char *project_id) {
     char path[PATH_BYTES];
-    return project_path(project_id, path, sizeof(path)) && ursatz_gui_path_exists(path);
+    return project_path(project_id, path, sizeof(path)) && common_path_exists(path);
 }
 
 /* --- body validation ----------------------------------------------------- */
@@ -902,7 +784,7 @@ static UrsatzGuiMaterialResult validate_theme_slots(const cJSON *slots, char *er
     }
     const cJSON *required_entry = cJSON_GetArrayItem(ursatz_gui_composer_vocabulary_list("theme_slots"), required);
     char text[96];
-    snprintf(text, sizeof(text), "a theme needs a %s slot", ursatz_gui_json_string(required_entry, "value"));
+    snprintf(text, sizeof(text), "a theme needs a %s slot", common_json_string(required_entry, "value"));
     return invalid_body(error, error_size, text);
 }
 
@@ -1245,7 +1127,7 @@ static void join_members(const cJSON *list, const char *member, char *out, size_
     out[0] = '\0';
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, list) {
-        const char *text = ursatz_gui_json_string(entry, member);
+        const char *text = common_json_string(entry, member);
         if (text && used + strlen(text) + 3 < out_size) {
             used += (size_t)snprintf(out + used, out_size - used, "%s%s", used ? ", " : "", text);
         }
@@ -1266,7 +1148,7 @@ static UrsatzGuiMaterialResult validate_piece_words(const cJSON *structure, char
 
 /* modulate is a boolean, and true only for a form whose settings allow it. */
 static UrsatzGuiMaterialResult validate_piece_modulate(const cJSON *structure, const cJSON *form, char *error, size_t error_size) {
-    const char *label = ursatz_gui_json_string(form, "label");
+    const char *label = common_json_string(form, "label");
     const cJSON *modulate = cJSON_GetObjectItemCaseSensitive(structure, "modulate");
     if (!is_absent_or_null(structure, "modulate")) {
         const cJSON *allowed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(form, "settings"), "modulate");
@@ -1295,7 +1177,7 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
     if (role_count < 1 || role_count > PIECE_ROLES_MAX) {
         return invalid_body(error, error_size, "the Composer gave no roles for this form");
     }
-    const char *form_label = ursatz_gui_json_string(form, "label");
+    const char *form_label = common_json_string(form, "label");
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
     const cJSON *count_member = cJSON_GetObjectItemCaseSensitive(structure, "count");
     if ((!is_absent_or_null(structure, "bars") && !(cJSON_IsNumber(bars) && bars->valuedouble == 0)) ||
@@ -1329,7 +1211,7 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         int index = 0;
         const cJSON *role = NULL;
         cJSON_ArrayForEach(role, roles) {
-            const char *value = ursatz_gui_json_string(role, "value");
+            const char *value = common_json_string(role, "value");
             if (cJSON_IsString(part) && value && strcmp(value, part->valuestring) == 0) {
                 part_index = index;
             }
@@ -1389,7 +1271,7 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         const cJSON *required = cJSON_GetObjectItemCaseSensitive(role, "required");
         if (cJSON_IsTrue(required) && !present[index]) {
             char message[160];
-            snprintf(message, sizeof(message), "a piece needs at least one %s section", ursatz_gui_json_string(role, "label"));
+            snprintf(message, sizeof(message), "a piece needs at least one %s section", common_json_string(role, "label"));
             return invalid_body(error, error_size, message);
         }
         index++;
@@ -1416,14 +1298,14 @@ static UrsatzGuiMaterialResult validate_piece_overlays(const cJSON *structure, c
                          : cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(size, "default"));
         picked = picked ? picked : (match ? size : NULL);
     }
-    const char *label = ursatz_gui_json_string(form, "label");
+    const char *label = common_json_string(form, "label");
     const cJSON *overlay = NULL;
     cJSON_ArrayForEach(overlay, overlays) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(overlay, "name");
         bool found = false;
         const cJSON *section = NULL;
         cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(picked, "sections")) {
-            found = found || (cJSON_IsString(name) && strcmp(ursatz_gui_json_string(section, "name"), name->valuestring) == 0);
+            found = found || (cJSON_IsString(name) && strcmp(common_json_string(section, "name"), name->valuestring) == 0);
         }
         if (!cJSON_IsObject(overlay) || !cJSON_IsString(name) || !found) {
             char message[256];
@@ -1432,7 +1314,7 @@ static UrsatzGuiMaterialResult validate_piece_overlays(const cJSON *structure, c
             return invalid_body(error, error_size, message);
         }
         for (const cJSON *earlier = overlays->child; earlier != overlay; earlier = earlier->next) {
-            if (strcmp(ursatz_gui_json_string(earlier, "name"), name->valuestring) == 0) {
+            if (strcmp(common_json_string(earlier, "name"), name->valuestring) == 0) {
                 return invalid_body(error, error_size, "each overlay names a section once");
             }
         }
@@ -1450,7 +1332,7 @@ static UrsatzGuiMaterialResult validate_piece_overlays(const cJSON *structure, c
  * default, and modulate only where the form allows it. */
 static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const cJSON *form, char *error,
                                                    size_t error_size) {
-    const char *label = ursatz_gui_json_string(form, "label");
+    const char *label = common_json_string(form, "label");
     char message[256];
     const cJSON *overlays = cJSON_GetObjectItemCaseSensitive(structure, "sections");
     if (!is_absent_or_null(structure, "sections") && (!cJSON_IsArray(overlays) || cJSON_GetArraySize(overlays) > PIECE_SECTIONS_MAX)) {
@@ -1505,7 +1387,7 @@ static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, 
     if (words != URSATZ_GUI_MATERIAL_OK) {
         return words;
     }
-    const char *sections = ursatz_gui_json_string(form, "sections");
+    const char *sections = common_json_string(form, "sections");
     if (sections && strcmp(sections, "request") == 0) {
         return validate_piece_sections(structure, form, error, error_size);
     }
@@ -1532,7 +1414,7 @@ static UrsatzGuiMaterialResult validate_piece(const cJSON *piece, char *error, s
         return invalid_body(error, error_size, "piece pool must be approved-and-unflagged, approved or none");
     }
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(piece, "accompaniment");
-    const char *pattern = ursatz_gui_json_string(accompaniment, "pattern");
+    const char *pattern = common_json_string(accompaniment, "pattern");
     if (!is_absent_or_null(piece, "accompaniment") &&
         ((pattern && strcmp(pattern, "motive") == 0) ||
          validate_theme_accompaniment(accompaniment, error, error_size) != URSATZ_GUI_MATERIAL_OK)) {
@@ -1600,11 +1482,12 @@ static UrsatzGuiMaterialResult load_item_locked(const char *id, cJSON **out) {
     if (!item_file_path(id, "item.json", path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    cJSON *item = ursatz_gui_read_json_object(path);
+    cJSON *item = NULL;
+    common_json_read_object(path, &item, NULL);
     if (!item) {
-        return ursatz_gui_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return common_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
-    if (!ursatz_gui_json_set_string(item, "id", id)) {
+    if (!common_json_set_string(item, "id", id)) {
         cJSON_Delete(item);
         return URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
@@ -1614,10 +1497,10 @@ static UrsatzGuiMaterialResult load_item_locked(const char *id, cJSON **out) {
 
 static UrsatzGuiMaterialResult save_item_locked(const cJSON *item) {
     char path[PATH_BYTES];
-    if (!item_file_path(ursatz_gui_json_string(item, "id"), "item.json", path, sizeof(path))) {
+    if (!item_file_path(common_json_string(item, "id"), "item.json", path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    return write_json(path, item) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_FAILED;
+    return (common_json_write_file(path, item, true, NULL) == URSATZ_OK) ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_FAILED;
 }
 
 static int current_version_of(const cJSON *item) {
@@ -1627,32 +1510,8 @@ static int current_version_of(const cJSON *item) {
 
 static bool touch_item(cJSON *item) {
     char now[32];
-    ursatz_gui_iso_utc_now(now, sizeof(now));
-    return ursatz_gui_json_set_string(item, "updated_at", now);
-}
-
-/* Removes every file in the item directory and in the folders under it (a theme version's files), then the directory. */
-static void remove_item_dir(const char *dir) {
-    char **names = NULL;
-    size_t count = 0;
-    if (list_names(dir, &names, &count)) {
-        for (size_t i = 0; i < count; i++) {
-            char path[PATH_BYTES];
-            if (snprintf(path, sizeof(path), "%s/%s", dir, names[i]) < (int)sizeof(path)) {
-                if (ursatz_gui_path_is_dir(path)) {
-                    remove_item_dir(path);
-                } else {
-                    remove(path);
-                }
-            }
-        }
-        free_names(names, count);
-    }
-#ifdef _WIN32
-    _rmdir(dir);
-#else
-    rmdir(dir);
-#endif
+    common_utc_now(now);
+    return common_json_set_string(item, "updated_at", now);
 }
 
 /* ---- old members ---------------------------------------------------------- */
@@ -1729,7 +1588,7 @@ static void migrate_motif_key(cJSON *motif) {
  * has a harmony already keeps it and loses the fill's numerals. */
 static void migrate_progression_fill(cJSON *section) {
     cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
-    if (!cJSON_IsObject(fill) || strcmp(ursatz_gui_json_string(fill, "kind"), "progression") != 0) {
+    if (!cJSON_IsObject(fill) || strcmp(common_json_string(fill, "kind"), "progression") != 0) {
         return;
     }
     const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
@@ -1775,13 +1634,13 @@ void ursatz_gui_material_body_migrate(cJSON *body) {
 
 static bool write_version_locked(const char *id, int number, const cJSON *body) {
     char path[PATH_BYTES];
-    return version_path(id, number, path, sizeof(path)) && write_json(path, body);
+    return version_path(id, number, path, sizeof(path)) && (common_json_write_file(path, body, true, NULL) == URSATZ_OK);
 }
 
 /* Appends {number, created_at, note} to the item's versions and makes it current. */
 static bool append_version_entry(cJSON *item, int number, const char *note) {
     char now[32];
-    ursatz_gui_iso_utc_now(now, sizeof(now));
+    common_utc_now(now);
     cJSON *versions = cJSON_GetObjectItemCaseSensitive(item, "versions");
     if (!cJSON_IsArray(versions)) {
         cJSON_DeleteItemFromObjectCaseSensitive(item, "versions");
@@ -1804,9 +1663,10 @@ static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, c
     if (!version_path(id, number, path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    cJSON *body = ursatz_gui_read_json_object(path);
+    cJSON *body = NULL;
+    common_json_read_object(path, &body, NULL);
     if (!body) {
-        return ursatz_gui_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
+        return common_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
     ursatz_gui_material_body_migrate(body);
     *out_body = body;
@@ -1827,7 +1687,7 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(filled, "uses")) {
-        const char *source_id = ursatz_gui_json_string(use, "item_id");
+        const char *source_id = common_json_string(use, "item_id");
         int number = cJSON_GetObjectItemCaseSensitive(use, "version")->valueint;
         cJSON *source = NULL;
         cJSON *copy = NULL;
@@ -1908,7 +1768,7 @@ static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENC
         const cJSON *section = NULL;
         cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
             const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
-            const char *kind = ursatz_gui_json_string(fill, "kind");
+            const char *kind = common_json_string(fill, "kind");
             bool theme_fill = strcmp(kind, "theme") == 0;
             if (count < BODY_REFERENCES_MAX && (theme_fill || strcmp(kind, "motif") == 0)) {
                 kinds[count] = theme_fill ? REF_THEME : REF_MELODIC_MOTIF;
@@ -1924,14 +1784,14 @@ static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENC
  * version that was composed (a result and a plan.json beside the version).
  */
 static UrsatzGuiMaterialResult check_reference_locked(const cJSON *reference, ReferenceKind kind) {
-    const char *source_id = ursatz_gui_json_string(reference, "item_id");
+    const char *source_id = common_json_string(reference, "item_id");
     int number = cJSON_GetObjectItemCaseSensitive(reference, "version")->valueint;
     bool theme = kind == REF_THEME;
     cJSON *source = NULL;
     cJSON *version = NULL;
     UrsatzGuiMaterialResult result = load_item_locked(source_id, &source);
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = strcmp(ursatz_gui_json_string(source, "type"), theme ? "theme" : "motif") == 0 && number <= current_version_of(source)
+        result = strcmp(common_json_string(source, "type"), theme ? "theme" : "motif") == 0 && number <= current_version_of(source)
                      ? read_version_locked(source_id, number, &version)
                      : URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
     }
@@ -1940,13 +1800,13 @@ static UrsatzGuiMaterialResult check_reference_locked(const cJSON *reference, Re
         const cJSON *composed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version, "theme"), "result");
         if (!cJSON_IsObject(composed) ||
             snprintf(plan, sizeof(plan), "%s/items/%s/v%d/plan.json", g_dir, source_id, number) >= (int)sizeof(plan) ||
-            !ursatz_gui_path_exists(plan)) {
+            !common_path_exists(plan)) {
             result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
         }
     } else if (result == URSATZ_GUI_MATERIAL_OK) {
         const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version, "motif");
-        const char *form = ursatz_gui_json_string(motif, "form");
-        const char *role = ursatz_gui_json_string(motif, "role");
+        const char *form = common_json_string(motif, "form");
+        const char *role = common_json_string(motif, "role");
         if (!form || !role || strcmp(form, "full") != 0 ||
             strcmp(role, kind == REF_ACCOMPANIMENT_MOTIF ? "accompaniment" : "melodic") != 0) {
             result = URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
@@ -1964,7 +1824,7 @@ static UrsatzGuiMaterialResult check_reference_locked(const cJSON *reference, Re
 static bool add_use(cJSON *uses, const char *item_id, int version) {
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, uses) {
-        if (strcmp(ursatz_gui_json_string(use, "item_id"), item_id) == 0 &&
+        if (strcmp(common_json_string(use, "item_id"), item_id) == 0 &&
             cJSON_GetObjectItemCaseSensitive(use, "version")->valueint == version) {
             return true;
         }
@@ -2007,7 +1867,7 @@ static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **ou
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(prepared, "uses")) {
         bool replaced = false;
         for (size_t i = 0; i < count; i++) {
-            replaced = replaced || strcmp(ursatz_gui_json_string(refs[i], "item_id"), ursatz_gui_json_string(use, "item_id")) == 0;
+            replaced = replaced || strcmp(common_json_string(refs[i], "item_id"), common_json_string(use, "item_id")) == 0;
         }
         if (result == URSATZ_GUI_MATERIAL_OK && !replaced) {
             cJSON *kept = cJSON_Duplicate(use, 1);
@@ -2019,7 +1879,7 @@ static UrsatzGuiMaterialResult prepare_uses_locked(const cJSON *body, cJSON **ou
         }
     }
     for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
-        if (!add_use(uses, ursatz_gui_json_string(refs[i], "item_id"),
+        if (!add_use(uses, common_json_string(refs[i], "item_id"),
                            cJSON_GetObjectItemCaseSensitive(refs[i], "version")->valueint)) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
         }
@@ -2067,7 +1927,7 @@ static bool bump_versions(cJSON *body, const char *source_id, int latest) {
     size_t count = body_references(body, refs, kinds);
     bool ok = true;
     for (size_t i = 0; i < count; i++) {
-        if (strcmp(ursatz_gui_json_string(refs[i], "item_id"), source_id) == 0) {
+        if (strcmp(common_json_string(refs[i], "item_id"), source_id) == 0) {
             cJSON_DeleteItemFromObjectCaseSensitive((cJSON *)refs[i], "version");
             ok = ok && cJSON_AddNumberToObject((cJSON *)refs[i], "version", latest) != NULL;
         }
@@ -2111,7 +1971,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
         id = ursatz_gui_new_id(prefix);
         if (!id) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
-        } else if (item_dir_path(id, dir, sizeof(dir)) && !ursatz_gui_path_exists(dir)) {
+        } else if (item_dir_path(id, dir, sizeof(dir)) && !common_path_exists(dir)) {
             break;
         } else {
             free(id);
@@ -2126,7 +1986,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
     bool dir_made = false;
     if (result == URSATZ_GUI_MATERIAL_OK) {
         char now[32];
-        ursatz_gui_iso_utc_now(now, sizeof(now));
+        common_utc_now(now);
         item = cJSON_CreateObject();
         bool ok = item && cJSON_AddStringToObject(item, "id", id) && cJSON_AddStringToObject(item, "type", type) &&
                   cJSON_AddStringToObject(item, "name", clean_name) &&
@@ -2135,7 +1995,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
                   append_version_entry(item, 1, clean_note);
         if (!ok) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
-        } else if (!ursatz_gui_make_dir(dir)) {
+        } else if (!(common_dir_create(dir, NULL) == URSATZ_OK)) {
             result = URSATZ_GUI_MATERIAL_ERR_FAILED;
         } else {
             dir_made = true;
@@ -2148,7 +2008,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
         }
     }
     if (result != URSATZ_GUI_MATERIAL_OK && dir_made) {
-        remove_item_dir(dir);
+        common_dir_remove(dir, NULL);
     }
     if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
         *out_item = item;
@@ -2187,15 +2047,15 @@ bool ursatz_gui_material_item_is_variant(const cJSON *body) {
 static bool annotate_variant_of_locked(cJSON *item, const cJSON *known_body) {
     cJSON *own_body = NULL;
     const cJSON *body = known_body;
-    if (!body && strcmp(ursatz_gui_json_string(item, "type"), "motif") == 0 &&
-        read_version_locked(ursatz_gui_json_string(item, "id"), current_version_of(item), &own_body) == URSATZ_GUI_MATERIAL_OK) {
+    if (!body && strcmp(common_json_string(item, "type"), "motif") == 0 &&
+        read_version_locked(common_json_string(item, "id"), current_version_of(item), &own_body) == URSATZ_GUI_MATERIAL_OK) {
         body = own_body;
     }
     cJSON_DeleteItemFromObjectCaseSensitive(item, "variant_of");
     bool ok;
     if (body && ursatz_gui_material_item_is_variant(body)) {
         const cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
-        ok = cJSON_AddStringToObject(item, "variant_of", ursatz_gui_json_string(derived, "source_item")) != NULL;
+        ok = cJSON_AddStringToObject(item, "variant_of", common_json_string(derived, "source_item")) != NULL;
     } else {
         ok = cJSON_AddNullToObject(item, "variant_of") != NULL;
     }
@@ -2206,8 +2066,8 @@ static bool annotate_variant_of_locked(cJSON *item, const cJSON *known_body) {
 static int compare_items(const void *a, const void *b) {
     const cJSON *left = *(const cJSON *const *)a;
     const cJSON *right = *(const cJSON *const *)b;
-    int by_updated = strcmp(ursatz_gui_json_string(right, "updated_at"), ursatz_gui_json_string(left, "updated_at"));
-    return by_updated != 0 ? by_updated : strcmp(ursatz_gui_json_string(left, "id"), ursatz_gui_json_string(right, "id"));
+    int by_updated = strcmp(common_json_string(right, "updated_at"), common_json_string(left, "updated_at"));
+    return by_updated != 0 ? by_updated : strcmp(common_json_string(left, "id"), common_json_string(right, "id"));
 }
 
 UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items) {
@@ -2225,26 +2085,25 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
     }
 
     char dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
-    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+    CommonNames names = {0};
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         UNLOCK();
         return URSATZ_GUI_MATERIAL_ERR_FAILED;
     }
 
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
-    cJSON **items = count ? calloc(count, sizeof(cJSON *)) : NULL;
+    cJSON **items = names.count ? calloc(names.count, sizeof(cJSON *)) : NULL;
     size_t loaded = 0;
-    if (count && !items) {
+    if (names.count && !items) {
         result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
         cJSON *item = NULL;
-        if (load_item_locked(names[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+        if (load_item_locked(names.items[i], &item) != URSATZ_GUI_MATERIAL_OK) {
             continue;
         }
-        if ((project_id && strcmp(ursatz_gui_json_string(item, "project_id"), project_id) != 0) ||
-            (type && strcmp(ursatz_gui_json_string(item, "type"), type) != 0)) {
+        if ((project_id && strcmp(common_json_string(item, "project_id"), project_id) != 0) ||
+            (type && strcmp(common_json_string(item, "type"), type) != 0)) {
             cJSON_Delete(item);
             continue;
         }
@@ -2255,7 +2114,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
         }
         items[loaded++] = item;
     }
-    free_names(names, count);
+    common_names_free(&names);
     UNLOCK();
 
     cJSON *array = result == URSATZ_GUI_MATERIAL_OK ? cJSON_CreateArray() : NULL;
@@ -2351,7 +2210,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
     const cJSON *uses = result == URSATZ_GUI_MATERIAL_OK ? cJSON_GetObjectItemCaseSensitive(body, "uses") : NULL;
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, uses) {
-        const char *source_id = ursatz_gui_json_string(use, "item_id");
+        const char *source_id = common_json_string(use, "item_id");
         const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
         int used = cJSON_IsNumber(version) ? version->valueint : 0;
         cJSON *source = NULL;
@@ -2361,9 +2220,9 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
         if (ok && load_item_locked(source_id, &source) == URSATZ_GUI_MATERIAL_OK) {
             int latest = current_version_of(source);
             ok = cJSON_AddNumberToObject(entry, "current_version", latest) &&
-                 cJSON_AddStringToObject(entry, "name", ursatz_gui_json_string(source, "name")) &&
-                 cJSON_AddStringToObject(entry, "type", ursatz_gui_json_string(source, "type")) &&
-                 cJSON_AddStringToObject(entry, "project_id", ursatz_gui_json_string(source, "project_id")) &&
+                 cJSON_AddStringToObject(entry, "name", common_json_string(source, "name")) &&
+                 cJSON_AddStringToObject(entry, "type", common_json_string(source, "type")) &&
+                 cJSON_AddStringToObject(entry, "project_id", common_json_string(source, "project_id")) &&
                  cJSON_AddBoolToObject(entry, "updated", latest > used) && cJSON_AddBoolToObject(entry, "missing", false);
         } else if (ok) {
             ok = cJSON_AddBoolToObject(entry, "updated", false) && cJSON_AddBoolToObject(entry, "missing", true);
@@ -2393,34 +2252,33 @@ UrsatzGuiMaterialResult ursatz_gui_material_uses_status(const char *id, cJSON **
  */
 static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
     char dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
+    CommonNames names = {0};
     if (!is_valid_id(id)) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         return URSATZ_GUI_MATERIAL_ERR_FAILED;
     }
     cJSON *users = cJSON_CreateArray();
     UrsatzGuiMaterialResult result = users ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
         cJSON *item = NULL;
         cJSON *body = NULL;
-        if (strcmp(names[i], id) == 0 || load_item_locked(names[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+        if (strcmp(names.items[i], id) == 0 || load_item_locked(names.items[i], &item) != URSATZ_GUI_MATERIAL_OK) {
             continue;
         }
-        if (read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+        if (read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
             const cJSON *use = NULL;
             cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
                 const cJSON *version = cJSON_GetObjectItemCaseSensitive(use, "version");
-                if (strcmp(ursatz_gui_json_string(use, "item_id"), id) != 0) {
+                if (strcmp(common_json_string(use, "item_id"), id) != 0) {
                     continue;
                 }
                 cJSON *entry = cJSON_CreateObject();
-                bool ok = entry && cJSON_AddStringToObject(entry, "id", names[i]) &&
-                          cJSON_AddStringToObject(entry, "name", ursatz_gui_json_string(item, "name")) &&
-                          cJSON_AddStringToObject(entry, "type", ursatz_gui_json_string(item, "type")) &&
-                          cJSON_AddStringToObject(entry, "project_id", ursatz_gui_json_string(item, "project_id")) &&
+                bool ok = entry && cJSON_AddStringToObject(entry, "id", names.items[i]) &&
+                          cJSON_AddStringToObject(entry, "name", common_json_string(item, "name")) &&
+                          cJSON_AddStringToObject(entry, "type", common_json_string(item, "type")) &&
+                          cJSON_AddStringToObject(entry, "project_id", common_json_string(item, "project_id")) &&
                           cJSON_AddNumberToObject(entry, "version", cJSON_IsNumber(version) ? version->valueint : 0);
                 if (!ok) {
                     cJSON_Delete(entry);
@@ -2434,7 +2292,7 @@ static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
         cJSON_Delete(item);
         cJSON_Delete(body);
     }
-    free_names(names, count);
+    common_names_free(&names);
     if (result == URSATZ_GUI_MATERIAL_OK) {
         *out = users;
     } else {
@@ -2445,27 +2303,26 @@ static UrsatzGuiMaterialResult used_by_locked(const char *id, cJSON **out) {
 
 static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
     char dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
-    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+    CommonNames names = {0};
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         return URSATZ_GUI_MATERIAL_ERR_FAILED;
     }
     cJSON *found = cJSON_CreateArray();
     UrsatzGuiMaterialResult result = found ? URSATZ_GUI_MATERIAL_OK : URSATZ_GUI_MATERIAL_ERR_ALLOC;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
         cJSON *item = NULL;
         cJSON *body = NULL;
-        if (load_item_locked(names[i], &item) != URSATZ_GUI_MATERIAL_OK) {
+        if (load_item_locked(names.items[i], &item) != URSATZ_GUI_MATERIAL_OK) {
             continue;
         }
-        if (strcmp(ursatz_gui_json_string(item, "type"), "motif") == 0 &&
-            read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
+        if (strcmp(common_json_string(item, "type"), "motif") == 0 &&
+            read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK) {
             cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
             if (cJSON_IsObject(derived)) {
                 cJSON *entry = cJSON_CreateObject();
                 cJSON *copy = cJSON_Duplicate(derived, 1);
-                bool ok = entry && copy && cJSON_AddStringToObject(entry, "id", names[i]) &&
-                          cJSON_AddStringToObject(entry, "name", ursatz_gui_json_string(item, "name")) &&
+                bool ok = entry && copy && cJSON_AddStringToObject(entry, "id", names.items[i]) &&
+                          cJSON_AddStringToObject(entry, "name", common_json_string(item, "name")) &&
                           cJSON_AddNumberToObject(entry, "current_version", current_version_of(item)) &&
                           cJSON_AddItemToObject(entry, "derived", copy);
                 if (!ok) {
@@ -2482,7 +2339,7 @@ static UrsatzGuiMaterialResult derived_motifs_locked(cJSON **out) {
         cJSON_Delete(item);
         cJSON_Delete(body);
     }
-    free_names(names, count);
+    common_names_free(&names);
     if (result == URSATZ_GUI_MATERIAL_OK) {
         *out = found;
     } else {
@@ -2532,8 +2389,8 @@ static UrsatzGuiMaterialResult change_item(const char *id, const char *name, con
         }
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        bool ok = (!clean_name || ursatz_gui_json_set_string(item, "name", clean_name)) &&
-                  (!project_id || ursatz_gui_json_set_string(item, "project_id", project_id)) && touch_item(item);
+        bool ok = (!clean_name || common_json_set_string(item, "name", clean_name)) &&
+                  (!project_id || common_json_set_string(item, "project_id", project_id)) && touch_item(item);
         result = ok ? save_item_locked(item) : URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
     if (result == URSATZ_GUI_MATERIAL_OK && out_item) {
@@ -2594,7 +2451,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_add_version(const char *id, con
         }
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        result = ursatz_gui_material_body_validate(ursatz_gui_json_string(item, "type"), body, NULL, 0);
+        result = ursatz_gui_material_body_validate(common_json_string(item, "type"), body, NULL, 0);
     }
     cJSON *stored = NULL;
     if (result == URSATZ_GUI_MATERIAL_OK) {
@@ -2643,7 +2500,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
         bool ok = true;
         cJSON *use = NULL;
         cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
-            if (strcmp(ursatz_gui_json_string(use, "item_id"), source_id) == 0) {
+            if (strcmp(common_json_string(use, "item_id"), source_id) == 0) {
                 found = true;
                 cJSON_DeleteItemFromObjectCaseSensitive(use, "version");
                 ok = ok && cJSON_AddNumberToObject(use, "version", latest) != NULL;
@@ -2654,7 +2511,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
         } else if (!found) {
             result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
         } else {
-            snprintf(note, sizeof(note), "updated %s to v%d", ursatz_gui_json_string(source, "name"), latest);
+            snprintf(note, sizeof(note), "updated %s to v%d", common_json_string(source, "name"), latest);
             result = fill_body_uses_locked(id, body, &stored);
         }
     }
@@ -2721,29 +2578,28 @@ static void id_set_free(IdSet *set) {
  * id itself is not in the set. */
 static UrsatzGuiMaterialResult variant_closure_locked(const char *id, IdSet *out) {
     char dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
-    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+    CommonNames names = {0};
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || common_dir_list(dir, &names, NULL) != URSATZ_OK) {
         return URSATZ_GUI_MATERIAL_ERR_FAILED;
     }
     IdSet children = {0};
     IdSet parents = {0};
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
-    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < names.count; i++) {
         cJSON *item = NULL;
         cJSON *body = NULL;
-        if (load_item_locked(names[i], &item) == URSATZ_GUI_MATERIAL_OK && strcmp(ursatz_gui_json_string(item, "type"), "motif") == 0 &&
-            read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK &&
+        if (load_item_locked(names.items[i], &item) == URSATZ_GUI_MATERIAL_OK && strcmp(common_json_string(item, "type"), "motif") == 0 &&
+            read_version_locked(names.items[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK &&
             ursatz_gui_material_item_is_variant(body)) {
             const cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
-            if (!id_set_add(&children, names[i]) || !id_set_add(&parents, ursatz_gui_json_string(derived, "source_item"))) {
+            if (!id_set_add(&children, names.items[i]) || !id_set_add(&parents, common_json_string(derived, "source_item"))) {
                 result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
             }
         }
         cJSON_Delete(item);
         cJSON_Delete(body);
     }
-    free_names(names, count);
+    common_names_free(&names);
     /* Walk down from id: the descendants found so far are also parents to look for. */
     for (size_t level = 0; result == URSATZ_GUI_MATERIAL_OK && level <= out->count; level++) {
         const char *parent = level == 0 ? id : out->ids[level - 1];
@@ -2771,11 +2627,11 @@ static UrsatzGuiMaterialResult delete_blockers_locked(const char *id, const IdSe
         result = used_by_locked(member == 0 ? id : variants->ids[member - 1], &users);
         const cJSON *user = NULL;
         cJSON_ArrayForEach(user, users) {
-            const char *user_id = ursatz_gui_json_string(user, "id");
+            const char *user_id = common_json_string(user, "id");
             bool seen = false;
             const cJSON *known = NULL;
             cJSON_ArrayForEach(known, blockers) {
-                seen = seen || strcmp(ursatz_gui_json_string(known, "id"), user_id) == 0;
+                seen = seen || strcmp(common_json_string(known, "id"), user_id) == 0;
             }
             if (strcmp(user_id, id) == 0 || id_set_has(variants, user_id) || seen) {
                 continue;
@@ -2828,7 +2684,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     if (!item_dir_path(id, dir, sizeof(dir)) || !item_file_path(id, "item.json", meta, sizeof(meta))) {
         result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
-    } else if (!ursatz_gui_path_exists(meta)) {
+    } else if (!common_path_exists(meta)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     } else if ((result = variant_closure_locked(id, &variants)) != URSATZ_GUI_MATERIAL_OK) {
         /* nothing is deleted when the variants cannot be found */
@@ -2845,7 +2701,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
                 !item_file_path(member_id, "item.json", member_meta, sizeof(member_meta)) || remove(member_meta) != 0) {
                 result = URSATZ_GUI_MATERIAL_ERR_FAILED;
             } else {
-                remove_item_dir(member_dir);
+                common_dir_remove(member_dir, NULL);
                 if (!id_set_add(&removed, member_id)) {
                     result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
                 }
@@ -2941,7 +2797,7 @@ static UrsatzGuiMaterialResult op_checks_path_locked(const char *id, char *path,
     cJSON *item = NULL;
     UrsatzGuiMaterialResult result = load_item_locked(id, &item);
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        if (strcmp(ursatz_gui_json_string(item, "type"), "motif") != 0) {
+        if (strcmp(common_json_string(item, "type"), "motif") != 0) {
             result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
         } else if (!item_file_path(id, "op-checks.json", path, path_size)) {
             result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
@@ -2957,7 +2813,8 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON 
     char path[PATH_BYTES];
     UrsatzGuiMaterialResult result = g_ready ? op_checks_path_locked(id, path, sizeof(path)) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        cJSON *stored = ursatz_gui_read_json_object(path);
+        cJSON *stored = NULL;
+        common_json_read_object(path, &stored, NULL);
         if (stored && ursatz_gui_material_op_checks_validate(stored, NULL, 0) == URSATZ_GUI_MATERIAL_OK) {
             *out = stored;
         } else {
@@ -2993,18 +2850,18 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_put(const char *id, const 
         bool ok = checks != NULL;
         cJSON_ArrayForEach(check, cJSON_GetObjectItemCaseSensitive(body, "checks")) {
             cJSON *copy = cJSON_CreateObject();
-            ok = ok && copy && cJSON_AddStringToObject(copy, "verdict", ursatz_gui_json_string(check, "verdict")) &&
-                 cJSON_AddStringToObject(copy, "comment", ursatz_gui_json_string(check, "comment")) &&
+            ok = ok && copy && cJSON_AddStringToObject(copy, "verdict", common_json_string(check, "verdict")) &&
+                 cJSON_AddStringToObject(copy, "comment", common_json_string(check, "comment")) &&
                  cJSON_AddNumberToObject(copy, "seed", cJSON_GetObjectItemCaseSensitive(check, "seed")->valuedouble) &&
-                 cJSON_AddStringToObject(copy, "notes_text", ursatz_gui_json_string(check, "notes_text")) &&
-                 cJSON_AddStringToObject(copy, "date", ursatz_gui_json_string(check, "date")) &&
+                 cJSON_AddStringToObject(copy, "notes_text", common_json_string(check, "notes_text")) &&
+                 cJSON_AddStringToObject(copy, "date", common_json_string(check, "date")) &&
                  cJSON_AddItemToObject(checks, check->string, copy);
             if (!ok) {
                 cJSON_Delete(copy);
                 break;
             }
         }
-        if (ok && write_json(path, stored)) {
+        if (ok && (common_json_write_file(path, stored, true, NULL) == URSATZ_OK)) {
             *out = stored;
         } else {
             cJSON_Delete(stored);
@@ -3130,36 +2987,15 @@ UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int num
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        FILE *file = fopen(path, "rb");
-        size_t capacity = 65536;
+        char *data = NULL;
         size_t length = 0;
-        unsigned char *data = file ? malloc(capacity) : NULL;
-        while (data) {
-            size_t n = fread(data + length, 1, capacity - length, file);
-            length += n;
-            if (n == 0) {
-                break;
-            }
-            if (length == capacity) {
-                unsigned char *grown = realloc(data, capacity * 2);
-                if (!grown) {
-                    free(data);
-                    data = NULL;
-                    break;
-                }
-                data = grown;
-                capacity *= 2;
-            }
-        }
-        if (file) {
-            fclose(file);
-        }
-        if (!file) {
-            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
-        } else if (!data) {
+        UrsatzStatus read = common_file_read(path, &data, &length, NULL);
+        if (read == URSATZ_ERR_ALLOC) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+        } else if (read != URSATZ_OK) {
+            result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
         } else {
-            *out_data = data;
+            *out_data = (unsigned char *)data;
             *out_size = length;
         }
     }

@@ -1,6 +1,4 @@
 #include "link_service.h"
-#include "util/fs_util.h"
-#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <stdio.h>
@@ -8,19 +6,16 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#else
-#include <dirent.h>
 #include <pthread.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#endif
 
 #include <cJSON.h>
 
 #include <ursatz_analyzer/motive_links.h>
+
+#include <common/files.h>
+#include <common/json.h>
+#include <common/strings.h>
 
 #include "analysis_service.h"
 #include "collection_service.h"
@@ -34,12 +29,6 @@ static const char *kPiecesDir = "pieces";
 
 /* --- id lists ------------------------------------------------------------- */
 
-typedef struct {
-    char **items;
-    size_t count;
-    size_t capacity;
-} IdList;
-
 void ursatz_gui_link_ids_free(char **ids, size_t count) {
     for (size_t i = 0; i < count; i++) {
         free(ids[i]);
@@ -47,48 +36,13 @@ void ursatz_gui_link_ids_free(char **ids, size_t count) {
     free(ids);
 }
 
-static bool id_list_contains(const IdList *list, const char *id) {
-    for (size_t i = 0; i < list->count; i++) {
-        if (strcmp(list->items[i], id) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* Adds a copy of id unless the list has it. false only when memory ran out. */
-static bool id_list_add(IdList *list, const char *id) {
-    if (id_list_contains(list, id)) {
-        return true;
-    }
-    if (list->count == list->capacity) {
-        size_t capacity = list->capacity ? list->capacity * 2 : 16;
-        char **grown = realloc(list->items, capacity * sizeof(*grown));
-        if (!grown) {
-            return false;
-        }
-        list->items = grown;
-        list->capacity = capacity;
-    }
-    list->items[list->count] = ursatz_gui_dup_string(id);
-    if (!list->items[list->count]) {
-        return false;
-    }
-    list->count++;
-    return true;
-}
-
-static int compare_ids(const void *left, const void *right) {
-    return strcmp(*(char *const *)left, *(char *const *)right);
-}
-
-static void id_list_free(IdList *list) {
-    ursatz_gui_link_ids_free(list->items, list->count);
-    memset(list, 0, sizeof(*list));
+static bool id_list_add(CommonNames *list, const char *id) {
+    return common_names_contains(list, id) || common_names_add(list, id);
 }
 
 /* Adds every string of a JSON array. */
-static bool id_list_add_array(IdList *list, const cJSON *array) {
+static bool id_list_add_array(CommonNames *list, const cJSON *array) {
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, array) {
         if (cJSON_IsString(item) && !id_list_add(list, item->valuestring)) {
@@ -118,7 +72,7 @@ static void free_summaries(UrsatzGuiPieceSummary *pieces, size_t count) {
 }
 
 /* Every Library piece, or those that match the filter (NULL for all). */
-static UrsatzGuiLinkResult add_library_pieces(IdList *ids, const UrsatzGuiMetaFilter *filter) {
+static UrsatzGuiLinkResult add_library_pieces(CommonNames *ids, const UrsatzGuiMetaFilter *filter) {
     UrsatzGuiPieceSummary *pieces = NULL;
     size_t count = 0;
     if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
@@ -134,7 +88,7 @@ static UrsatzGuiLinkResult add_library_pieces(IdList *ids, const UrsatzGuiMetaFi
     return result;
 }
 
-static UrsatzGuiLinkResult add_collection_pieces(IdList *ids, const char *collection_id) {
+static UrsatzGuiLinkResult add_collection_pieces(CommonNames *ids, const char *collection_id) {
     if (!text_given(collection_id) || !ursatz_gui_collection_is_valid_id(collection_id)) {
         return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
     }
@@ -169,7 +123,7 @@ static UrsatzGuiLinkResult subject_result(UrsatzGuiSubjectResult result) {
     }
 }
 
-static UrsatzGuiLinkResult add_subject_pieces(IdList *ids, const char *subject_id) {
+static UrsatzGuiLinkResult add_subject_pieces(CommonNames *ids, const char *subject_id) {
     if (!text_given(subject_id)) {
         return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
     }
@@ -184,10 +138,10 @@ static UrsatzGuiLinkResult add_subject_pieces(IdList *ids, const char *subject_i
 }
 
 /* True when any of the subject's items is one of the project's. */
-static bool subject_links_item_of(const cJSON *subject, const IdList *item_ids) {
+static bool subject_links_item_of(const cJSON *subject, const CommonNames *item_ids) {
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(subject, "items")) {
-        if (cJSON_IsString(item) && id_list_contains(item_ids, item->valuestring)) {
+        if (cJSON_IsString(item) && common_names_contains(item_ids, item->valuestring)) {
             return true;
         }
     }
@@ -195,7 +149,7 @@ static bool subject_links_item_of(const cJSON *subject, const IdList *item_ids) 
 }
 
 /* The Library pieces linked to every subject that links at least one item of the project. */
-static UrsatzGuiLinkResult add_project_pieces(IdList *ids, const char *project_id) {
+static UrsatzGuiLinkResult add_project_pieces(CommonNames *ids, const char *project_id) {
     if (!text_given(project_id)) {
         return URSATZ_GUI_LINK_ERR_INVALID_SCOPE;
     }
@@ -217,7 +171,7 @@ static UrsatzGuiLinkResult add_project_pieces(IdList *ids, const char *project_i
     if (found != URSATZ_GUI_MATERIAL_OK) {
         return found == URSATZ_GUI_MATERIAL_ERR_ALLOC ? URSATZ_GUI_LINK_ERR_ALLOC : URSATZ_GUI_LINK_ERR_FAILED;
     }
-    IdList item_ids = {0};
+    CommonNames item_ids = {0};
     const cJSON *item = NULL;
     bool ok = true;
     cJSON_ArrayForEach(item, items) {
@@ -229,7 +183,7 @@ static UrsatzGuiLinkResult add_project_pieces(IdList *ids, const char *project_i
     }
     cJSON_Delete(items);
     if (!ok) {
-        id_list_free(&item_ids);
+        common_names_free(&item_ids);
         return URSATZ_GUI_LINK_ERR_ALLOC;
     }
 
@@ -258,7 +212,7 @@ static UrsatzGuiLinkResult add_project_pieces(IdList *ids, const char *project_i
         cJSON_Delete(subject);
     }
     cJSON_Delete(subjects);
-    id_list_free(&item_ids);
+    common_names_free(&item_ids);
     return result;
 }
 
@@ -270,7 +224,7 @@ UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scop
     *out_ids = NULL;
     *out_count = 0;
 
-    IdList ids = {0};
+    CommonNames ids = {0};
     UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
     switch (scope->kind) {
         case URSATZ_GUI_LINK_SCOPE_ALL:
@@ -302,10 +256,10 @@ UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scop
         result = URSATZ_GUI_LINK_ERR_EMPTY;
     }
     if (result != URSATZ_GUI_LINK_OK) {
-        id_list_free(&ids);
+        common_names_free(&ids);
         return result;
     }
-    qsort(ids.items, ids.count, sizeof(*ids.items), compare_ids);
+    common_names_sort(&ids);
     *out_ids = ids.items;
     *out_count = ids.count;
     return URSATZ_GUI_LINK_OK;
@@ -314,14 +268,6 @@ UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scop
 /* --- files ---------------------------------------------------------------- */
 
 #define PATH_BYTES 400
-
-static void remove_dir(const char *path) {
-#ifdef _WIN32
-    _rmdir(path);
-#else
-    rmdir(path);
-#endif
-}
 
 /* UTC with milliseconds, so two runs in the same second still order. */
 static void iso_utc_now(char *out, size_t out_size) {
@@ -332,11 +278,7 @@ static void iso_utc_now(char *out, size_t out_size) {
     }
     time_t seconds = now.tv_sec;
     struct tm parts;
-#ifdef _WIN32
-    gmtime_s(&parts, &seconds);
-#else
     gmtime_r(&seconds, &parts);
-#endif
     char base[32];
     strftime(base, sizeof(base), "%Y-%m-%dT%H:%M:%S", &parts);
     snprintf(out, out_size, "%s.%03ldZ", base, (long)(now.tv_nsec / 1000000));
@@ -390,43 +332,21 @@ static bool run_file_path(const char *id, char *out, size_t out_size) {
 }
 
 /* The names in the runs directory. false only when memory ran out. */
-static bool list_run_dirs(IdList *names) {
+static bool list_run_dirs(CommonNames *names) {
     char runs[PATH_BYTES];
     if (!runs_dir_path(runs, sizeof(runs))) {
         return false;
     }
+    CommonNames listing = {0};
+    UrsatzStatus status = common_dir_list(runs, &listing, NULL);
+    if (status != URSATZ_OK) {
+        return status != URSATZ_ERR_ALLOC;
+    }
     bool ok = true;
-#ifdef _WIN32
-    char pattern[MAX_PATH];
-    snprintf(pattern, sizeof(pattern), "%s\\*", runs);
-    WIN32_FIND_DATAA find_data;
-    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
-    if (find_handle == INVALID_HANDLE_VALUE) {
-        return true;
+    for (size_t i = 0; ok && i < listing.count; i++) {
+        ok = id_list_add(names, listing.items[i]);
     }
-    bool more = true;
-    while (more && ok) {
-        const char *name = find_data.cFileName;
-        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-            ok = id_list_add(names, name);
-        }
-        more = FindNextFileA(find_handle, &find_data) != 0;
-    }
-    FindClose(find_handle);
-#else
-    DIR *dir = opendir(runs);
-    if (!dir) {
-        return true;
-    }
-    struct dirent *entry;
-    while (ok && (entry = readdir(dir)) != NULL) {
-        const char *name = entry->d_name;
-        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-            ok = id_list_add(names, name);
-        }
-    }
-    closedir(dir);
-#endif
+    common_names_free(&listing);
     return ok;
 }
 
@@ -506,7 +426,7 @@ static void job_free(Job *job) {
 static bool job_write(const Job *job) {
     char path[PATH_BYTES];
     char *text = run_file_path(job->id, path, sizeof(path)) ? cJSON_PrintUnformatted(job->run) : NULL;
-    bool ok = text && ursatz_gui_write_file_atomic(path, text, strlen(text));
+    bool ok = text && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     return ok;
 }
@@ -675,49 +595,29 @@ static void job_main(Job *job) {
     job_free(job);
 }
 
-#ifdef _WIN32
-static DWORD WINAPI job_entry(LPVOID argument) {
-    job_main(argument);
-    return 0;
-}
-#else
 static void *job_entry(void *argument) {
     job_main(argument);
     return NULL;
 }
-#endif
 
 static bool job_spawn(Job *job) {
-#ifdef _WIN32
-    HANDLE thread = CreateThread(NULL, 0, job_entry, job, 0, NULL);
-    if (!thread) {
-        return false;
-    }
-    CloseHandle(thread);
-    return true;
-#else
     pthread_t thread;
     if (pthread_create(&thread, NULL, job_entry, job) != 0) {
         return false;
     }
     pthread_detach(thread);
     return true;
-#endif
 }
 
 static void sleep_ms(unsigned ms) {
-#ifdef _WIN32
-    Sleep(ms);
-#else
     usleep(ms * 1000u);
-#endif
 }
 
 /* --- service -------------------------------------------------------------- */
 
 /* Marks every run still "running" as failed: the process that ran it is gone. */
 static void mark_interrupted(void) {
-    IdList names = {0};
+    CommonNames names = {0};
     if (!list_run_dirs(&names)) {
         return;
     }
@@ -726,7 +626,8 @@ static void mark_interrupted(void) {
         if (!run_file_path(names.items[i], path, sizeof(path))) {
             continue;
         }
-        cJSON *run = ursatz_gui_read_json_object(path);
+        cJSON *run = NULL;
+        common_json_read_object(path, &run, NULL);
         const cJSON *status = cJSON_GetObjectItemCaseSensitive(run, "status");
         if (cJSON_IsString(status) && strcmp(status->valuestring, "running") == 0) {
             char now[40];
@@ -736,13 +637,13 @@ static void mark_interrupted(void) {
             set_member(run, "finished_at", cJSON_CreateString(now));
             char *text = cJSON_PrintUnformatted(run);
             if (text) {
-                ursatz_gui_write_file_atomic(path, text, strlen(text));
+                (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
             }
             free(text);
         }
         cJSON_Delete(run);
     }
-    id_list_free(&names);
+    common_names_free(&names);
 }
 
 bool ursatz_gui_link_service_init(const char *dir) {
@@ -752,7 +653,7 @@ bool ursatz_gui_link_service_init(const char *dir) {
     }
     LOCK();
     snprintf(g_state.dir, sizeof(g_state.dir), "%s", dir);
-    bool ok = ursatz_gui_ensure_dir(dir) && ursatz_gui_ensure_dir(runs);
+    bool ok = (common_dir_make(dir, NULL) == URSATZ_OK) && (common_dir_make(runs, NULL) == URSATZ_OK);
     g_state.ready = ok;
     if (ok) {
         mark_interrupted();
@@ -826,7 +727,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
         result = URSATZ_GUI_LINK_ERR_BUSY;
     } else {
         char dir[PATH_BYTES];
-        result = run_dir_path(job->id, dir, sizeof(dir)) && ursatz_gui_ensure_dir(dir) && job_write(job) ? URSATZ_GUI_LINK_OK
+        result = run_dir_path(job->id, dir, sizeof(dir)) && (common_dir_make(dir, NULL) == URSATZ_OK) && job_write(job) ? URSATZ_GUI_LINK_OK
                                                                                                  : URSATZ_GUI_LINK_ERR_FAILED;
         if (result == URSATZ_GUI_LINK_OK) {
             g_state.active = true;
@@ -837,12 +738,8 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
                 g_state.active = false;
                 g_state.id[0] = '\0';
                 result = URSATZ_GUI_LINK_ERR_FAILED;
-                char path[PATH_BYTES];
-                if (run_file_path(job->id, path, sizeof(path))) {
-                    remove(path);
-                }
                 if (run_dir_path(job->id, dir, sizeof(dir))) {
-                    remove_dir(dir);
+                    common_dir_remove(dir, NULL);
                 }
             }
         }
@@ -854,7 +751,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
         return result;
     }
     if (out_id) {
-        *out_id = ursatz_gui_dup_string(run_id);
+        *out_id = common_strdup(run_id);
         if (!*out_id) {
             return URSATZ_GUI_LINK_ERR_ALLOC;
         }
@@ -869,8 +766,8 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
 static int compare_runs(const void *left, const void *right) {
     const cJSON *a = *(const cJSON *const *)left;
     const cJSON *b = *(const cJSON *const *)right;
-    int by_time = strcmp(ursatz_gui_json_string(b, "created_at"), ursatz_gui_json_string(a, "created_at"));
-    return by_time != 0 ? by_time : strcmp(ursatz_gui_json_string(b, "id"), ursatz_gui_json_string(a, "id"));
+    int by_time = strcmp(common_json_string(b, "created_at"), common_json_string(a, "created_at"));
+    return by_time != 0 ? by_time : strcmp(common_json_string(b, "id"), common_json_string(a, "id"));
 }
 
 static void runs_free(cJSON **runs, size_t count) {
@@ -884,14 +781,14 @@ static void runs_free(cJSON **runs, size_t count) {
 static UrsatzGuiLinkResult load_runs(cJSON ***out_runs, size_t *out_count) {
     *out_runs = NULL;
     *out_count = 0;
-    IdList names = {0};
+    CommonNames names = {0};
     if (!list_run_dirs(&names)) {
-        id_list_free(&names);
+        common_names_free(&names);
         return URSATZ_GUI_LINK_ERR_ALLOC;
     }
     cJSON **runs = names.count ? calloc(names.count, sizeof(*runs)) : NULL;
     if (names.count && !runs) {
-        id_list_free(&names);
+        common_names_free(&names);
         return URSATZ_GUI_LINK_ERR_ALLOC;
     }
     size_t count = 0;
@@ -900,14 +797,15 @@ static UrsatzGuiLinkResult load_runs(cJSON ***out_runs, size_t *out_count) {
         if (!run_file_path(names.items[i], path, sizeof(path))) {
             continue;
         }
-        cJSON *run = ursatz_gui_read_json_object(path);
+        cJSON *run = NULL;
+        common_json_read_object(path, &run, NULL);
         if (run && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(run, "id"))) {
             runs[count++] = run;
         } else {
             cJSON_Delete(run);
         }
     }
-    id_list_free(&names);
+    common_names_free(&names);
     qsort(runs, count, sizeof(*runs), compare_runs);
     *out_runs = runs;
     *out_count = count;
@@ -937,7 +835,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_list(cJSON **out_runs) {
             ok = copy_member(entry, runs[i], kKeys[k]);
         }
         /* A running run reports what the worker has now, not what it last wrote. */
-        if (ok && g_state.active && strcmp(ursatz_gui_json_string(runs[i], "id"), g_state.id) == 0) {
+        if (ok && g_state.active && strcmp(common_json_string(runs[i], "id"), g_state.id) == 0) {
             ok = set_member(entry, "done", cJSON_CreateNumber((double)g_state.done)) &&
                  set_member(entry, "total", cJSON_CreateNumber((double)g_state.total));
         }
@@ -964,7 +862,8 @@ UrsatzGuiLinkResult ursatz_gui_link_run_get(const char *id, cJSON **out_run) {
     if (!id || !run_file_path(id, path, sizeof(path))) {
         return URSATZ_GUI_LINK_ERR_NOT_FOUND;
     }
-    cJSON *run = ursatz_gui_read_json_object(path);
+    cJSON *run = NULL;
+    common_json_read_object(path, &run, NULL);
     if (!run) {
         return URSATZ_GUI_LINK_ERR_NOT_FOUND;
     }
@@ -991,16 +890,10 @@ UrsatzGuiLinkResult ursatz_gui_link_run_delete(const char *id) {
     UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
     if (g_state.active && strcmp(g_state.id, id) == 0) {
         result = URSATZ_GUI_LINK_ERR_BUSY;
-    } else if (!ursatz_gui_path_is_dir(dir)) {
+    } else if (!common_path_is_dir(dir)) {
         result = URSATZ_GUI_LINK_ERR_NOT_FOUND;
     } else {
-        const char *files[] = {"run.json", "run.json.tmp"};
-        for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); i++) {
-            char path[PATH_BYTES + 32];
-            snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
-            remove(path);
-        }
-        remove_dir(dir);
+        common_dir_remove(dir, NULL);
     }
     UNLOCK();
     return result;
@@ -1015,12 +908,12 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
         return result;
     }
     cJSON *list = cJSON_CreateArray();
-    IdList seen = {0}; /* the scopes whose newest done run was taken */
+    CommonNames seen = {0}; /* the scopes whose newest done run was taken */
     for (size_t i = 0; list && result == URSATZ_GUI_LINK_OK && i < count; i++) {
         const cJSON *run = runs[i];
         const cJSON *scope = cJSON_GetObjectItemCaseSensitive(run, "scope");
         const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
-        if (strcmp(ursatz_gui_json_string(run, "status"), "done") != 0 || !scope) {
+        if (strcmp(common_json_string(run, "status"), "done") != 0 || !scope) {
             continue;
         }
         char *scope_text = cJSON_PrintUnformatted(scope);
@@ -1028,7 +921,7 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
             result = URSATZ_GUI_LINK_ERR_ALLOC;
             break;
         }
-        bool newest = !id_list_contains(&seen, scope_text);
+        bool newest = !common_names_contains(&seen, scope_text);
         if (newest && !id_list_add(&seen, scope_text)) {
             result = URSATZ_GUI_LINK_ERR_ALLOC;
         }
@@ -1036,13 +929,13 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
         const cJSON *link = NULL;
         const cJSON *taken = newest && result == URSATZ_GUI_LINK_OK ? links : NULL;
         cJSON_ArrayForEach(link, taken) {
-            const char *a = ursatz_gui_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
-            const char *b = ursatz_gui_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
+            const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
+            const char *b = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
             if (strcmp(a, piece_id) != 0 && strcmp(b, piece_id) != 0) {
                 continue;
             }
             cJSON *entry = cJSON_CreateObject();
-            if (!entry || !cJSON_AddStringToObject(entry, "run", ursatz_gui_json_string(run, "id")) ||
+            if (!entry || !cJSON_AddStringToObject(entry, "run", common_json_string(run, "id")) ||
                 !cJSON_AddItemToObject(entry, "scope", cJSON_Duplicate(scope, 1)) ||
                 !cJSON_AddItemToObject(entry, "link", cJSON_Duplicate(link, 1))) {
                 cJSON_Delete(entry);
@@ -1052,7 +945,7 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
             cJSON_AddItemToArray(list, entry);
         }
     }
-    id_list_free(&seen);
+    common_names_free(&seen);
     runs_free(runs, count);
     if (!list || result != URSATZ_GUI_LINK_OK) {
         cJSON_Delete(list);
@@ -1068,7 +961,7 @@ char *ursatz_gui_link_piece_title(const char *piece_id) {
         ursatz_gui_analysis_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_GUI_ANALYSIS_OK) {
         filename = NULL;
     }
-    char *title = ursatz_gui_dup_string(filename && filename[0] ? filename : (piece_id ? piece_id : ""));
+    char *title = common_strdup(filename && filename[0] ? filename : (piece_id ? piece_id : ""));
     free(filename);
     char *dot = title ? strrchr(title, '.') : NULL;
     if (dot && dot != title) {

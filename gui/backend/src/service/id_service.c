@@ -5,16 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <common/hash.h>
 
-#ifdef _WIN32
-#include <process.h>
-#define URSATZ_GUI_GETPID() ((unsigned long)_getpid())
-#else
-#include <unistd.h>
 #define URSATZ_GUI_GETPID() ((unsigned long)getpid())
-#endif
 
 #define ID_RANDOM_BYTES 8
 

@@ -7,8 +7,6 @@
 #include <cJSON.h>
 
 #include "theme_service.h"
-#include "util/fs_util.h"
-#include "util/json_util.h"
 #include "ursatz_composer/composer_api.h"
 
 /* What the theme and the piece service share when they compose an item into a new version: the small JSON helpers and

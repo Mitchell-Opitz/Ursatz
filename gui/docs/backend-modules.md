@@ -8,13 +8,8 @@ Everything but `main.c` is built as the static library `ursatz_gui_core` (`backe
 (`ursatz-gui-backend`) is `main.c` linked to it, and each test is built with `ursatz_gui_add_test(name source workdir)`
 (`backend/tests/CMakeLists.txt`), which links the same library. A new source file is added to the library once.
 
-- `util/fs_util.c`: `ursatz_gui_dup_string`, `ursatz_gui_copy_message`, `ursatz_gui_iso_utc_now`, `ursatz_gui_path_exists`,
-  `ursatz_gui_path_is_dir`, `ursatz_gui_make_dir`, `ursatz_gui_ensure_dir`, `ursatz_gui_write_file_atomic` (writes `<path>.tmp`, then renames), `ursatz_gui_read_file`
-  and `ursatz_gui_read_json_object`. Every store and the routes use these; none keeps a copy. `link_service.c` keeps
-  its own `iso_utc_now`, which adds milliseconds so two runs in one second still order.
-- `util/json_util.c`: the cJSON helpers the services share: `ursatz_gui_json_string` (the string member, `""` when
-  absent) and `_string_copy`, `_set_string`, `_attach`, `_add_copy_or_null` and `_add_copy_if`.
-- `util/store_lock.h`: `UrsatzGuiLock` (a pthread mutex, an SRWLOCK on Windows) with `URSATZ_GUI_LOCK_INIT` and
+- Files, folders, text, JSON and hashes come from `common/` (`<common/files.h>`, `strings.h`, `json.h`, `hash.h`; see the common part's headers): the backend keeps no copy of them. `link_service.c` keeps its own `iso_utc_now`, which adds milliseconds so two runs in one second still order.
+- `util/store_lock.h`: `UrsatzGuiLock` (a pthread mutex) with `URSATZ_GUI_LOCK_INIT` and
   `ursatz_gui_lock_acquire/release`. Each store wraps it in `LOCK()` and `UNLOCK()`.
 - `service/piece_lock.c`: `ursatz_gui_piece_lock(id)` and `_unlock`, one mutex per piece directory (see [Piece store](storage.md#piece-store), [Concurrency](storage.md#concurrency)).
 - `service/data_check.c`: `ursatz_gui_data_check`, the startup check `server.c` runs first (see [Data check](storage.md#data-check)).

@@ -1,6 +1,4 @@
 #include "collection_service.h"
-#include "util/fs_util.h"
-#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -9,17 +7,15 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#else
-#include <dirent.h>
 #include <pthread.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#endif
 
 #include <cJSON.h>
+
+#include <common/files.h>
+#include <common/strings.h>
+#include <common/json.h>
+#include <common/status.h>
 
 #include "analysis_service.h"
 #include "id_service.h"
@@ -92,9 +88,10 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
     if (!collection_path(id, path, sizeof(path))) {
         return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
     }
-    char *text = ursatz_gui_read_file(path, NULL);
+    char *text = NULL;
+    common_file_read(path, &text, NULL, NULL);
     if (!text) {
-        return ursatz_gui_path_exists(path) ? URSATZ_GUI_COLLECTION_ERR_FAILED : URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
+        return common_path_exists(path) ? URSATZ_GUI_COLLECTION_ERR_FAILED : URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
     }
     cJSON *root = cJSON_Parse(text);
     free(text);
@@ -104,11 +101,11 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
     }
 
     /* The file name is the id; a copy of it inside the file is not trusted. */
-    collection->id = ursatz_gui_dup_string(id);
-    collection->name = ursatz_gui_json_string_copy(root, "name");
-    collection->description = ursatz_gui_json_string_copy(root, "description");
-    collection->created_at = ursatz_gui_json_string_copy(root, "created_at");
-    collection->updated_at = ursatz_gui_json_string_copy(root, "updated_at");
+    collection->id = common_strdup(id);
+    collection->name = common_json_string_copy(root, "name");
+    collection->description = common_json_string_copy(root, "description");
+    collection->created_at = common_json_string_copy(root, "created_at");
+    collection->updated_at = common_json_string_copy(root, "updated_at");
     bool ok = collection->id && collection->name && collection->description && collection->created_at &&
               collection->updated_at;
 
@@ -125,7 +122,7 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
             if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
                 continue;
             }
-            collection->pieces[collection->piece_count] = ursatz_gui_dup_string(item->valuestring);
+            collection->pieces[collection->piece_count] = common_strdup(item->valuestring);
             ok = collection->pieces[collection->piece_count] != NULL;
             if (ok) {
                 collection->piece_count++;
@@ -166,7 +163,7 @@ static UrsatzGuiCollectionResult save_collection(const UrsatzGuiCollection *coll
     if (!text) {
         return URSATZ_GUI_COLLECTION_ERR_ALLOC;
     }
-    ok = ursatz_gui_write_file_atomic(path, text, strlen(text));
+    ok = (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     return ok ? URSATZ_GUI_COLLECTION_OK : URSATZ_GUI_COLLECTION_ERR_FAILED;
 }
@@ -182,7 +179,7 @@ static int piece_index(const UrsatzGuiCollection *collection, const char *piece_
 
 /* Appends a copy of piece_id to the collection's pieces. */
 static bool append_piece(UrsatzGuiCollection *collection, const char *piece_id) {
-    char *copy = ursatz_gui_dup_string(piece_id);
+    char *copy = common_strdup(piece_id);
     char **grown = copy ? realloc(collection->pieces, (collection->piece_count + 1) * sizeof(char *)) : NULL;
     if (!grown) {
         free(copy);
@@ -195,8 +192,8 @@ static bool append_piece(UrsatzGuiCollection *collection, const char *piece_id) 
 
 static void touch(UrsatzGuiCollection *collection) {
     char now[32];
-    ursatz_gui_iso_utc_now(now, sizeof(now));
-    char *copy = ursatz_gui_dup_string(now);
+    common_utc_now(now);
+    char *copy = common_strdup(now);
     if (copy) {
         free(collection->updated_at);
         collection->updated_at = copy;
@@ -253,13 +250,6 @@ static UrsatzGuiCollectionResult normalize_description(const char *text, char **
 
 /* --- directory listing --------------------------------------------------- */
 
-static void free_ids(char **ids, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free(ids[i]);
-    }
-    free(ids);
-}
-
 /* "<id>.json" to "<id>" when it names a collection file (not hidden, valid id). */
 static bool file_name_to_id(const char *name, char *id, size_t id_size) {
     size_t length = strlen(name);
@@ -271,67 +261,24 @@ static bool file_name_to_id(const char *name, char *id, size_t id_size) {
     return ursatz_gui_collection_is_valid_id(id);
 }
 
-static bool push_id(char ***ids, size_t *count, size_t *capacity, const char *id) {
-    if (*count == *capacity) {
-        size_t grown_capacity = *capacity == 0 ? 16 : *capacity * 2;
-        char **grown = realloc(*ids, grown_capacity * sizeof(char *));
-        if (!grown) {
-            return false;
-        }
-        *ids = grown;
-        *capacity = grown_capacity;
-    }
-    (*ids)[*count] = ursatz_gui_dup_string(id);
-    if (!(*ids)[*count]) {
+/* Every collection id in the store directory, sorted. */
+static bool list_collection_ids(CommonNames *ids) {
+    CommonNames files = {0};
+    if (common_dir_list(g_dir, &files, NULL) != URSATZ_OK) {
         return false;
     }
-    (*count)++;
-    return true;
-}
-
-/* Every collection id in the store directory, in no particular order. */
-static bool list_collection_ids(char ***out_ids, size_t *out_count) {
-    char **ids = NULL;
-    size_t count = 0;
-    size_t capacity = 0;
     char id[ID_MAX_BYTES + 8];
     bool ok = true;
-
-#ifdef _WIN32
-    char pattern[PATH_BYTES];
-    snprintf(pattern, sizeof(pattern), "%s\\*.json", g_dir);
-    WIN32_FIND_DATAA find_data;
-    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
-    if (find_handle != INVALID_HANDLE_VALUE) {
-        do {
-            if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-                file_name_to_id(find_data.cFileName, id, sizeof(id))) {
-                ok = push_id(&ids, &count, &capacity, id);
-            }
-        } while (ok && FindNextFileA(find_handle, &find_data) != 0);
-        FindClose(find_handle);
-    }
-#else
-    DIR *dir = opendir(g_dir);
-    if (!dir) {
-        return false;
-    }
-    struct dirent *entry;
-    while (ok && (entry = readdir(dir)) != NULL) {
-        if (file_name_to_id(entry->d_name, id, sizeof(id))) {
-            ok = push_id(&ids, &count, &capacity, id);
+    for (size_t i = 0; ok && i < files.count; i++) {
+        if (file_name_to_id(files.items[i], id, sizeof(id))) {
+            ok = common_names_add(ids, id);
         }
     }
-    closedir(dir);
-#endif
-
+    common_names_free(&files);
     if (!ok) {
-        free_ids(ids, count);
-        return false;
+        common_names_free(ids);
     }
-    *out_ids = ids;
-    *out_count = count;
-    return true;
+    return ok;
 }
 
 /* --- lifecycle ----------------------------------------------------------- */
@@ -341,7 +288,7 @@ bool ursatz_gui_collection_service_init(const char *dir) {
         return false;
     }
     LOCK();
-    bool ok = ursatz_gui_ensure_dir(dir);
+    bool ok = (common_dir_make(dir, NULL) == URSATZ_OK);
     if (ok) {
         strcpy(g_dir, dir);
     }
@@ -365,7 +312,7 @@ static UrsatzGuiCollectionResult create_locked(const char *id, const char *name,
     if (!collection_path(id, path, sizeof(path))) {
         return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
     }
-    if (ursatz_gui_path_exists(path)) {
+    if (common_path_exists(path)) {
         return URSATZ_GUI_COLLECTION_ERR_ALREADY_EXISTS;
     }
 
@@ -381,10 +328,10 @@ static UrsatzGuiCollectionResult create_locked(const char *id, const char *name,
     }
 
     char now[32];
-    ursatz_gui_iso_utc_now(now, sizeof(now));
-    collection.id = ursatz_gui_dup_string(id);
-    collection.created_at = ursatz_gui_dup_string(now);
-    collection.updated_at = ursatz_gui_dup_string(now);
+    common_utc_now(now);
+    collection.id = common_strdup(id);
+    collection.created_at = common_strdup(now);
+    collection.updated_at = common_strdup(now);
     if (!collection.id || !collection.created_at || !collection.updated_at) {
         collection_destroy_contents(&collection);
         return URSATZ_GUI_COLLECTION_ERR_ALLOC;
@@ -465,21 +412,20 @@ UrsatzGuiCollectionResult ursatz_gui_collection_list(UrsatzGuiCollectionEntry **
         return URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
     }
 
-    char **ids = NULL;
-    size_t id_count = 0;
-    if (!list_collection_ids(&ids, &id_count)) {
+    CommonNames ids = {0};
+    if (!list_collection_ids(&ids)) {
         UNLOCK();
         return URSATZ_GUI_COLLECTION_ERR_FAILED;
     }
 
-    UrsatzGuiCollectionEntry *entries = id_count > 0 ? calloc(id_count, sizeof(*entries)) : NULL;
-    UrsatzGuiCollectionResult result = (id_count > 0 && !entries) ? URSATZ_GUI_COLLECTION_ERR_ALLOC
+    UrsatzGuiCollectionEntry *entries = ids.count > 0 ? calloc(ids.count, sizeof(*entries)) : NULL;
+    UrsatzGuiCollectionResult result = (ids.count > 0 && !entries) ? URSATZ_GUI_COLLECTION_ERR_ALLOC
                                                                    : URSATZ_GUI_COLLECTION_OK;
     size_t count = 0;
-    for (size_t i = 0; result == URSATZ_GUI_COLLECTION_OK && i < id_count; i++) {
+    for (size_t i = 0; result == URSATZ_GUI_COLLECTION_OK && i < ids.count; i++) {
         UrsatzGuiCollection collection;
         memset(&collection, 0, sizeof(collection));
-        UrsatzGuiCollectionResult loaded = load_collection(ids[i], &collection);
+        UrsatzGuiCollectionResult loaded = load_collection(ids.items[i], &collection);
         if (loaded == URSATZ_GUI_COLLECTION_ERR_ALLOC) {
             result = loaded;
         } else if (loaded == URSATZ_GUI_COLLECTION_OK) {
@@ -495,7 +441,7 @@ UrsatzGuiCollectionResult ursatz_gui_collection_list(UrsatzGuiCollectionEntry **
         } /* an unreadable file is skipped, as list skips a piece without a meta.json */
     }
     UNLOCK();
-    free_ids(ids, id_count);
+    common_names_free(&ids);
 
     if (result != URSATZ_GUI_COLLECTION_OK) {
         ursatz_gui_collection_free_entries(entries, count);
@@ -514,7 +460,7 @@ UrsatzGuiCollectionResult ursatz_gui_collection_list(UrsatzGuiCollectionEntry **
 bool ursatz_gui_collection_exists(const char *id) {
     char path[PATH_BYTES];
     LOCK();
-    bool exists = g_ready && collection_path(id, path, sizeof(path)) && ursatz_gui_path_exists(path);
+    bool exists = g_ready && collection_path(id, path, sizeof(path)) && common_path_exists(path);
     UNLOCK();
     return exists;
 }
@@ -585,7 +531,7 @@ UrsatzGuiCollectionResult ursatz_gui_collection_delete(const char *id) {
         result = URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
     } else if (!collection_path(id, path, sizeof(path))) {
         result = URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
-    } else if (!ursatz_gui_path_exists(path)) {
+    } else if (!common_path_exists(path)) {
         result = URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
     } else {
         result = remove(path) == 0 ? URSATZ_GUI_COLLECTION_OK : URSATZ_GUI_COLLECTION_ERR_FAILED;
@@ -677,9 +623,8 @@ UrsatzGuiCollectionResult ursatz_gui_collection_remove_piece_everywhere(const ch
         UNLOCK();
         return URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
     }
-    char **ids = NULL;
-    size_t id_count = 0;
-    if (!list_collection_ids(&ids, &id_count)) {
+    CommonNames ids = {0};
+    if (!list_collection_ids(&ids)) {
         UNLOCK();
         return URSATZ_GUI_COLLECTION_ERR_FAILED;
     }
@@ -687,10 +632,10 @@ UrsatzGuiCollectionResult ursatz_gui_collection_remove_piece_everywhere(const ch
     /* Keep going after a failure so one bad file does not leave the piece
      * in every collection after it. */
     UrsatzGuiCollectionResult result = URSATZ_GUI_COLLECTION_OK;
-    for (size_t i = 0; i < id_count; i++) {
+    for (size_t i = 0; i < ids.count; i++) {
         UrsatzGuiCollection collection;
         memset(&collection, 0, sizeof(collection));
-        UrsatzGuiCollectionResult loaded = load_collection(ids[i], &collection);
+        UrsatzGuiCollectionResult loaded = load_collection(ids.items[i], &collection);
         if (loaded != URSATZ_GUI_COLLECTION_OK) {
             result = URSATZ_GUI_COLLECTION_ERR_FAILED;
             continue;
@@ -704,6 +649,6 @@ UrsatzGuiCollectionResult ursatz_gui_collection_remove_piece_everywhere(const ch
         collection_destroy_contents(&collection);
     }
     UNLOCK();
-    free_ids(ids, id_count);
+    common_names_free(&ids);
     return result;
 }

@@ -25,6 +25,16 @@ UrsatzStatus common_json_read_file(const char *path, cJSON **out, UrsatzError *e
     return URSATZ_OK;
 }
 
+UrsatzStatus common_json_read_object(const char *path, cJSON **out, UrsatzError *error) {
+    UrsatzStatus status = common_json_read_file(path, out, error);
+    if (status == URSATZ_OK && !cJSON_IsObject(*out)) {
+        cJSON_Delete(*out);
+        *out = NULL;
+        return ursatz_error_set(error, URSATZ_ERR_FORMAT, path, "%s does not hold a JSON object", path);
+    }
+    return status;
+}
+
 UrsatzStatus common_json_write_file(const char *path, const cJSON *value, bool formatted, UrsatzError *error) {
     char *text = formatted ? cJSON_Print(value) : cJSON_PrintUnformatted(value);
     if (!text) {

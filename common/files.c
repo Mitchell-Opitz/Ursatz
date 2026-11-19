@@ -150,6 +150,16 @@ UrsatzStatus common_file_append_sync(const char *path, const void *data, size_t 
     return ok ? URSATZ_OK : io_error(error, path, "cannot append to");
 }
 
+UrsatzStatus common_dir_create(const char *path, UrsatzError *error) {
+    if (mkdir(path, 0755) != 0) {
+        if (errno == EEXIST) {
+            return ursatz_error_set(error, URSATZ_ERR_CONFLICT, path, "%s already exists", path);
+        }
+        return io_error(error, path, "cannot create folder");
+    }
+    return URSATZ_OK;
+}
+
 UrsatzStatus common_dir_make(const char *path, UrsatzError *error) {
     char partial[PATH_BYTES];
     size_t length = strlen(path);

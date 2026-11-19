@@ -9,11 +9,12 @@
 #include <cJSON.h>
 #include <ursatz_analyzer/text_export.h>
 
+#include <common/json.h>
+
 #include "composer_client.h"
 #include "knowledge_service.h"
 #include "material_service.h"
 #include "motif_service.h"
-#include "util/json_util.h"
 
 /* ---- the build: what the export owns until the Analyzer has written the text -------------------------------------- */
 
@@ -410,12 +411,12 @@ static void build_motif(Build *build, const char *id, const cJSON *body) {
   const cJSON *entry = NULL;
   cJSON_ArrayForEach(entry, derived_list) {
     const cJSON *derived = cJSON_GetObjectItemCaseSensitive(entry, "derived");
-    if (strcmp(ursatz_gui_json_string(derived, "source_item"), id) != 0 ||
+    if (strcmp(common_json_string(derived, "source_item"), id) != 0 ||
         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"))) {
       continue;
     }
     cJSON *variant_body = NULL;
-    if (ursatz_gui_material_item_get(ursatz_gui_json_string(entry, "id"), NULL, &variant_body) !=
+    if (ursatz_gui_material_item_get(common_json_string(entry, "id"), NULL, &variant_body) !=
             URSATZ_GUI_MATERIAL_OK ||
         !keep_document(build, variant_body)) {
       if (!failed(build)) {
@@ -435,7 +436,7 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
   const cJSON *use = NULL;
   cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
     const cJSON *number = cJSON_GetObjectItemCaseSensitive(use, "version");
-    if (strcmp(ursatz_gui_json_string(use, "item_id"), item_id) == 0 && cJSON_IsNumber(number) &&
+    if (strcmp(common_json_string(use, "item_id"), item_id) == 0 && cJSON_IsNumber(number) &&
         number->valueint == version) {
       return cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(use, "copy"), "motif");
     }
@@ -477,7 +478,7 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
     cJSON *meta = NULL;
     const char *motif_name = item->valuestring;
     if (ursatz_gui_material_item_get(item->valuestring, &meta, NULL) == URSATZ_GUI_MATERIAL_OK && keep_document(build, meta)) {
-      motif_name = ursatz_gui_json_string(meta, "name");
+      motif_name = common_json_string(meta, "name");
     }
     add_fact(build, &build->material_facts, format(build, "slot %s", name->valuestring),
              format(build, "%s v%d", motif_name, number->valueint));
@@ -511,7 +512,7 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
     cJSON *meta = NULL;
     const char *motif_name = item->valuestring;
     if (ursatz_gui_material_item_get(item->valuestring, &meta, NULL) == URSATZ_GUI_MATERIAL_OK && keep_document(build, meta)) {
-      motif_name = ursatz_gui_json_string(meta, "name");
+      motif_name = common_json_string(meta, "name");
     }
     add_motif_section(build, format(build, "slot %s: %s v%d", name->valuestring, motif_name, number->valueint), motif,
                       false, NULL);
@@ -526,7 +527,7 @@ static void build_piece(Build *build, const char *id, int version, const cJSON *
   }
   const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
   if (cJSON_IsObject(structure)) {
-    const char *form = ursatz_gui_json_string(structure, "form");
+    const char *form = common_json_string(structure, "form");
     if (form && strcmp(form, "game-loop") != 0) {
       add_text_member(build, &build->material_facts, "form", structure, "form");
     }
@@ -676,7 +677,7 @@ UrsatzGuiMaterialExportResult ursatz_gui_material_export(const char *item_id, in
       return URSATZ_GUI_MATERIAL_EXPORT_ALLOC;
     }
   }
-  const char *type = ursatz_gui_json_string(meta, "type");
+  const char *type = common_json_string(meta, "type");
   if (strcmp(type, "motif") == 0) {
     build_motif(&build, item_id, body);
   } else if (strcmp(type, "theme") == 0) {
@@ -688,7 +689,7 @@ UrsatzGuiMaterialExportResult ursatz_gui_material_export(const char *item_id, in
   }
   UrsatzGuiMaterialExportResult result = build.result;
   if (!failed(&build)) {
-    result = write_text(&build, type, item_id, ursatz_gui_json_string(meta, "name"), version, text);
+    result = write_text(&build, type, item_id, common_json_string(meta, "name"), version, text);
   }
   snprintf(message, URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE, "%s", build.message);
   release(&build);

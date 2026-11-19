@@ -10,9 +10,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <common/files.h>
+#include <common/strings.h>
+#include <common/json.h>
+#include <common/status.h>
+
 #include "material_service.h"
-#include "util/fs_util.h"
-#include "util/json_util.h"
 
 #define PATH_BYTES 800
 
@@ -32,7 +35,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_failure(ComposerStatus status, const Com
                                                 size_t message_size) {
     snprintf(g_failure_path, sizeof(g_failure_path), "%s", response ? response->error.path : "");
     if (response && response->error.message[0] != '\0') {
-        ursatz_gui_copy_message(message, message_size, response->error.message);
+        common_copy_text(message, message_size, response->error.message);
     }
     switch (status) {
         case COMPOSER_OK:
@@ -65,10 +68,10 @@ UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char
     if (status != COMPOSER_OK || !response.plan_json) {
         result = status == COMPOSER_OK ? URSATZ_GUI_THEME_ERR_FAILED : ursatz_gui_compose_failure(status, &response, message, message_size);
         if (status == COMPOSER_OK) {
-            ursatz_gui_copy_message(message, message_size, "the plan could not be written");
+            common_copy_text(message, message_size, "the plan could not be written");
         }
-    } else if (!ursatz_gui_write_file_atomic(path, response.plan_json, strlen(response.plan_json))) {
-        ursatz_gui_copy_message(message, message_size, "a file of the version could not be written");
+    } else if (!(common_file_write_atomic(path, response.plan_json, strlen(response.plan_json), NULL) == URSATZ_OK)) {
+        common_copy_text(message, message_size, "a file of the version could not be written");
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
     composer_response_destroy(&response);
@@ -99,7 +102,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_export(const cJSON *plan, double qpm, bo
     char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
     cJSON_Delete(request);
     if (!printed) {
-        ursatz_gui_copy_message(message, message_size, "the plan could not be rendered");
+        common_copy_text(message, message_size, "the plan could not be rendered");
         return URSATZ_GUI_THEME_ERR_ALLOC;
     }
     memset(response, 0, sizeof(*response));
@@ -150,14 +153,14 @@ UrsatzGuiThemeResult ursatz_gui_compose_stage_make(const char *id, int number, U
     char dir[PATH_BYTES];
     char resolved[PATH_MAX];
     if (!ursatz_gui_material_version_dir(id, number, dir, sizeof(dir))) {
-        ursatz_gui_copy_message(message, message_size, "the version folder does not fit");
+        common_copy_text(message, message_size, "the version folder does not fit");
         return URSATZ_GUI_THEME_ERR_FAILED;
     }
     unsigned serial = __atomic_add_fetch(&g_stage_serial, 1, __ATOMIC_RELAXED);
     if (snprintf(stage->path, sizeof(stage->path), "%s.stage-%u-%d", dir, serial, (int)getpid()) >= (int)sizeof(stage->path) ||
         mkdir(stage->path, 0755) != 0 || !realpath(stage->path, resolved) ||
         snprintf(stage->absolute, sizeof(stage->absolute), "%s", resolved) >= (int)sizeof(stage->absolute)) {
-        ursatz_gui_copy_message(message, message_size, "the version folder could not be made");
+        common_copy_text(message, message_size, "the version folder could not be made");
         return URSATZ_GUI_THEME_ERR_FAILED;
     }
     /* the stage's name without its suffix is the folder the version will have */
@@ -173,13 +176,13 @@ void ursatz_gui_compose_stage_finish(const char *id, const cJSON *item, const Ur
     int actual = cJSON_GetObjectItemCaseSensitive(item, "current_version")->valueint;
     char target[PATH_BYTES];
     if (ursatz_gui_material_version_dir(id, actual, target, sizeof(target))) {
-        ursatz_gui_theme_remove_folder(target); /* a folder no version named is left over from a failed run */
+        common_dir_remove(target, NULL); /* a folder no version named is left over from a failed run */
         rename(stage->path, target);
     }
 }
 
 void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage) {
-    ursatz_gui_theme_remove_folder(stage->path);
+    common_dir_remove(stage->path, NULL);
 }
 
 UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, const char *id, bool has_seed,
@@ -210,8 +213,8 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
     bool made = false;
     int number = cJSON_GetObjectItemCaseSensitive(meta, "current_version")->valueint + 1;
 
-    if (strcmp(ursatz_gui_json_string(meta, "type"), kind->member) != 0 || !cJSON_IsObject(member)) {
-        ursatz_gui_copy_message(message, message_size, kind->not_kind_text);
+    if (strcmp(common_json_string(meta, "type"), kind->member) != 0 || !cJSON_IsObject(member)) {
+        common_copy_text(message, message_size, kind->not_kind_text);
         result = URSATZ_GUI_THEME_ERR_INVALID;
     } else if (!kind->composable(member, has_brief, message, message_size)) {
         result = URSATZ_GUI_THEME_ERR_INVALID;
@@ -226,7 +229,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
     snprintf(style_path, sizeof(style_path), "%s/brief.style.json", made ? stage.absolute : "");
     if (result == URSATZ_GUI_THEME_OK && has_brief) {
         char name[256];
-        snprintf(name, sizeof(name), "%s brief", ursatz_gui_json_string(meta, "name"));
+        snprintf(name, sizeof(name), "%s brief", common_json_string(meta, "name"));
         result = ursatz_gui_theme_build_brief(brief_json, name, style_path, &brief_summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
@@ -236,8 +239,8 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
     snprintf(request_path, sizeof(request_path), "%s/request.json", made ? stage.absolute : "");
     if (result == URSATZ_GUI_THEME_OK) {
         char *text = cJSON_Print(request);
-        if (!text || !ursatz_gui_theme_write_text(request_path, text)) {
-            ursatz_gui_copy_message(message, message_size, "the request could not be written");
+        if (!text || !(common_file_write_atomic(request_path, text, strlen(text), NULL) == URSATZ_OK)) {
+            common_copy_text(message, message_size, "the request could not be written");
             result = text ? URSATZ_GUI_THEME_ERR_FAILED : URSATZ_GUI_THEME_ERR_ALLOC;
         }
         free(text);
@@ -254,8 +257,8 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
         ursatz_gui_compose_rebase(request, stage.absolute, stage.named);
         ursatz_gui_compose_rebase(summary, stage.absolute, stage.named);
         char *text = cJSON_Print(request);
-        if (!text || !ursatz_gui_theme_write_text(request_path, text)) {
-            ursatz_gui_copy_message(message, message_size, "the request could not be written");
+        if (!text || !(common_file_write_atomic(request_path, text, strlen(text), NULL) == URSATZ_OK)) {
+            common_copy_text(message, message_size, "the request could not be written");
             result = text ? URSATZ_GUI_THEME_ERR_FAILED : URSATZ_GUI_THEME_ERR_ALLOC;
         }
         free(text);
@@ -277,7 +280,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
             if (!new_body) {
                 result = URSATZ_GUI_THEME_ERR_ALLOC;
             } else if (ursatz_gui_material_item_add_version(id, new_body, note, &item) != URSATZ_GUI_MATERIAL_OK) {
-                ursatz_gui_copy_message(message, message_size, "the version could not be written");
+                common_copy_text(message, message_size, "the version could not be written");
                 result = URSATZ_GUI_THEME_ERR_FAILED;
             }
         }

@@ -12,6 +12,8 @@
 
 /* Parses the file into *out (caller deletes). NOT_FOUND or IO when it cannot be read, FORMAT naming the path when it does not parse. */
 UrsatzStatus common_json_read_file(const char *path, cJSON **out, UrsatzError *error);
+/* As common_json_read_file, and FORMAT when the file holds anything but a JSON object. *out is NULL on failure. */
+UrsatzStatus common_json_read_object(const char *path, cJSON **out, UrsatzError *error);
 /* Writes value atomically (common_file_write_atomic): cJSON_Print when formatted, else cJSON_PrintUnformatted. */
 UrsatzStatus common_json_write_file(const char *path, const cJSON *value, bool formatted, UrsatzError *error);
 

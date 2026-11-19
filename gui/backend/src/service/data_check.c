@@ -1,102 +1,19 @@
 #include "data_check.h"
-#include "util/fs_util.h"
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <dirent.h>
-#endif
+#include <common/files.h>
+#include <common/json.h>
+#include <common/strings.h>
 
 #define PATH_BYTES 512
 #define TEXT_BYTES 4096
 
 static const char *kChecked = ".pre-overhaul-checked";
 static const char *kStoreMarkers[] = {"tones-migrated", "segments-migrated", "themes-cleared"};
-
-static int compare_names(const void *a, const void *b) {
-    return strcmp(*(char *const *)a, *(char *const *)b);
-}
-
-static void free_names(char **names, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free(names[i]);
-    }
-    free(names);
-}
-
-/* The names in dir other than "." and "..", sorted by strcmp. *out_names is NULL when there are none. */
-static bool list_names(const char *dir, char ***out_names, size_t *out_count) {
-    char **names = NULL;
-    size_t count = 0;
-    size_t capacity = 0;
-    *out_names = NULL;
-    *out_count = 0;
-
-#ifdef _WIN32
-    char pattern[PATH_BYTES + 4];
-    if (snprintf(pattern, sizeof(pattern), "%s\\*", dir) >= (int)sizeof(pattern)) {
-        return false;
-    }
-    WIN32_FIND_DATAA find_data;
-    HANDLE handle = FindFirstFileA(pattern, &find_data);
-    if (handle == INVALID_HANDLE_VALUE) {
-        return GetLastError() == ERROR_FILE_NOT_FOUND;
-    }
-    do {
-        const char *name = find_data.cFileName;
-#else
-    DIR *handle = opendir(dir);
-    if (!handle) {
-        return false;
-    }
-    struct dirent *entry;
-    while ((entry = readdir(handle)) != NULL) {
-        const char *name = entry->d_name;
-#endif
-        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-            if (count == capacity) {
-                size_t grown_capacity = capacity ? capacity * 2 : 16;
-                char **grown = realloc(names, grown_capacity * sizeof(char *));
-                if (!grown) {
-                    goto fail;
-                }
-                names = grown;
-                capacity = grown_capacity;
-            }
-            names[count] = ursatz_gui_dup_string(name);
-            if (!names[count]) {
-                goto fail;
-            }
-            count++;
-        }
-#ifdef _WIN32
-    } while (FindNextFileA(handle, &find_data));
-    FindClose(handle);
-#else
-    }
-    closedir(handle);
-#endif
-    if (count > 1) {
-        qsort(names, count, sizeof(char *), compare_names);
-    }
-    *out_names = names;
-    *out_count = count;
-    return true;
-
-fail:
-#ifdef _WIN32
-    FindClose(handle);
-#else
-    closedir(handle);
-#endif
-    free_names(names, count);
-    return false;
-}
 
 /* Appends text to buffer (of TEXT_BYTES) when it fits; a longer text is cut and ends with "...". */
 static void append(char *buffer, const char *text) {
@@ -127,11 +44,11 @@ static bool key_is_off_c(const char *key) {
 static bool read_item(const char *items_dir, const char *name, cJSON **out_item) {
     char path[PATH_BYTES];
     if (name[0] == '.' || snprintf(path, sizeof(path), "%s/%s/item.json", items_dir, name) >= (int)sizeof(path) ||
-        !ursatz_gui_path_exists(path)) {
+        !common_path_exists(path)) {
         return false;
     }
     if (out_item) {
-        *out_item = ursatz_gui_read_json_object(path);
+        common_json_read_object(path, out_item, NULL);
     }
     return true;
 }
@@ -149,7 +66,8 @@ static bool motif_is_off_c(const char *items_dir, const char *name, const cJSON 
     if (snprintf(path, sizeof(path), "%s/%s/v%d.json", items_dir, name, (int)current->valuedouble) >= (int)sizeof(path)) {
         return false;
     }
-    cJSON *body = ursatz_gui_read_json_object(path);
+    cJSON *body = NULL;
+    common_json_read_object(path, &body, NULL);
     const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
     const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
     bool off = !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(motif, "material")) && cJSON_IsString(key) &&
@@ -170,7 +88,7 @@ bool ursatz_gui_data_check(const char *data_dir, char *message, size_t size) {
         snprintf(message, size, "the data folder path is too long");
         return false;
     }
-    if (ursatz_gui_path_exists(path)) {
+    if (common_path_exists(path)) {
         return true;
     }
 
@@ -182,40 +100,39 @@ bool ursatz_gui_data_check(const char *data_dir, char *message, size_t size) {
     if (snprintf(old_db, sizeof(old_db), "%s/data/corpus.db", data_dir) < (int)sizeof(old_db) &&
         snprintf(import_marker, sizeof(import_marker), "%s/collections/.imported-from-corpus-db", data_dir) <
             (int)sizeof(import_marker) &&
-        ursatz_gui_path_exists(old_db) && !ursatz_gui_path_exists(import_marker)) {
+        common_path_exists(old_db) && !common_path_exists(import_marker)) {
         append(problems, "data/corpus.db was never imported (collections/.imported-from-corpus-db is missing)");
     }
 
     /* (b) and (c) the material store */
     char items_dir[PATH_BYTES];
-    char **names = NULL;
-    size_t count = 0;
+    CommonNames names = {0};
     if (snprintf(items_dir, sizeof(items_dir), "%s/materials/items", data_dir) < (int)sizeof(items_dir) &&
-        list_names(items_dir, &names, &count)) {
+        common_dir_list(items_dir, &names, NULL) == URSATZ_OK) {
         size_t items = 0;
         char motifs[TEXT_BYTES] = "";
-        for (size_t i = 0; i < count; i++) {
+        for (size_t i = 0; i < names.count; i++) {
             cJSON *item = NULL;
-            if (!read_item(items_dir, names[i], &item)) {
+            if (!read_item(items_dir, names.items[i], &item)) {
                 continue;
             }
             items++;
-            if (motif_is_off_c(items_dir, names[i], item)) {
+            if (motif_is_off_c(items_dir, names.items[i], item)) {
                 if (motifs[0]) {
                     append(motifs, ", ");
                 }
-                append(motifs, names[i]);
+                append(motifs, names.items[i]);
             }
             cJSON_Delete(item);
         }
-        free_names(names, count);
+        common_names_free(&names);
 
         if (items > 0) {
             char missing[TEXT_BYTES] = "";
             for (size_t i = 0; i < sizeof(kStoreMarkers) / sizeof(kStoreMarkers[0]); i++) {
                 char marker[PATH_BYTES];
                 if (snprintf(marker, sizeof(marker), "%s/materials/%s", data_dir, kStoreMarkers[i]) < (int)sizeof(marker) &&
-                    ursatz_gui_path_exists(marker)) {
+                    common_path_exists(marker)) {
                     continue;
                 }
                 if (missing[0]) {
@@ -250,7 +167,7 @@ bool ursatz_gui_data_check(const char *data_dir, char *message, size_t size) {
     }
 
     static const char kMarkerText[] = "checked before the overhaul\n";
-    if (!ursatz_gui_write_file_atomic(path, kMarkerText, sizeof(kMarkerText) - 1)) {
+    if (!(common_file_write_atomic(path, kMarkerText, sizeof(kMarkerText) - 1, NULL) == URSATZ_OK)) {
         snprintf(message, size, "the data folder (%s) could not get its marker file %s",
                  strcmp(data_dir, ".") == 0 ? "the working directory" : data_dir, kChecked);
         return false;

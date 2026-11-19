@@ -29,6 +29,8 @@ UrsatzStatus common_file_write_atomic(const char *path, const void *data, size_t
 /* Appends data to path (created when absent) and fsyncs. */
 UrsatzStatus common_file_append_sync(const char *path, const void *data, size_t size, UrsatzError *error);
 
+/* Creates the folder, whose parent exists; CONFLICT when the path already exists (a new id must not reuse a folder). */
+UrsatzStatus common_dir_create(const char *path, UrsatzError *error);
 /* Makes the folder and its parents; an existing folder is OK. */
 UrsatzStatus common_dir_make(const char *path, UrsatzError *error);
 /* Removes the folder and everything under it; an absent path is OK. */

@@ -1,8 +1,9 @@
 #include "piece_metadata.h"
-#include "util/fs_util.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+#include <common/strings.h>
 
 static bool is_space(unsigned char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
@@ -43,17 +44,6 @@ static char *normalize_text(const char *text) {
     return out;
 }
 
-/* Byte-wise comparison ignoring ASCII case. */
-static int compare_ci(const char *a, const char *b) {
-    const unsigned char *x = (const unsigned char *)a;
-    const unsigned char *y = (const unsigned char *)b;
-    while (*x && *y && lower(*x) == lower(*y)) {
-        x++;
-        y++;
-    }
-    return (int)lower(*x) - (int)lower(*y);
-}
-
 char *ursatz_gui_meta_normalize_value(const char *text, bool *too_long) {
     *too_long = false;
     char *out = normalize_text(text);
@@ -86,7 +76,7 @@ char *ursatz_gui_meta_normalize_tag(const char *text, bool *invalid) {
 bool ursatz_gui_meta_values_equal(const char *a, const char *b) {
     char *left = normalize_text(a);
     char *right = normalize_text(b);
-    bool equal = left && right && compare_ci(left, right) == 0;
+    bool equal = left && right && common_compare_ci(left, right) == 0;
     free(left);
     free(right);
     return equal;
@@ -116,7 +106,7 @@ UrsatzGuiMetaResult ursatz_gui_meta_tags_add(char ***tags, size_t *count, const 
     if (*count >= URSATZ_GUI_META_MAX_TAGS) {
         return URSATZ_GUI_META_ERR_TOO_MANY_TAGS;
     }
-    char *copy = ursatz_gui_dup_string(tag);
+    char *copy = common_strdup(tag);
     char **grown = copy ? realloc(*tags, (*count + 1) * sizeof(char *)) : NULL;
     if (!grown) {
         free(copy);
@@ -174,7 +164,7 @@ static void bucket_list_destroy(BucketList *list) {
 static bool bucket_list_add(BucketList *list, const char *value) {
     Bucket *bucket = NULL;
     for (size_t i = 0; i < list->count && !bucket; i++) {
-        if (compare_ci(list->items[i].spellings[0], value) == 0) {
+        if (common_compare_ci(list->items[i].spellings[0], value) == 0) {
             bucket = &list->items[i];
         }
     }
@@ -195,7 +185,7 @@ static bool bucket_list_add(BucketList *list, const char *value) {
             return true;
         }
     }
-    char *copy = ursatz_gui_dup_string(value);
+    char *copy = common_strdup(value);
     char **spellings = copy ? realloc(bucket->spellings, (bucket->spelling_count + 1) * sizeof(char *)) : NULL;
     if (spellings) {
         bucket->spellings = spellings;
@@ -225,7 +215,7 @@ static int compare_groups(const void *left, const void *right) {
     if (a->count != b->count) {
         return a->count > b->count ? -1 : 1;
     }
-    int by_value = compare_ci(a->value, b->value);
+    int by_value = common_compare_ci(a->value, b->value);
     return by_value != 0 ? by_value : strcmp(a->value, b->value);
 }
 
@@ -250,7 +240,7 @@ static bool buckets_to_groups(BucketList *list, UrsatzGuiMetaGroup **out_groups,
                 best = j;
             }
         }
-        groups[i].value = ursatz_gui_dup_string(bucket->spellings[best]);
+        groups[i].value = common_strdup(bucket->spellings[best]);
         groups[i].count = bucket->count;
         if (!groups[i].value) {
             for (size_t k = 0; k < i; k++) {

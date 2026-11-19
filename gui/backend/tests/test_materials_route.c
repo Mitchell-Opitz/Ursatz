@@ -23,6 +23,10 @@
 
 #include <cJSON.h>
 
+#include <common/files.h>
+#include <common/json.h>
+#include <common/status.h>
+
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -46,7 +50,6 @@ static bool ok_true(const cJSON *json) {
 
 #define PORT "18770"
 #include "playback_check.h"
-#include "util/fs_util.h"
 
 static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
@@ -832,9 +835,11 @@ static void test_served_playback(void) {
   for (size_t i = 0; i < 2; i++) {
     char label[160];
     snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_PLAYBACK_FIXTURES "/motif-%s.request.json", motifs[i]);
-    char *request = ursatz_gui_read_file(fixture, NULL);
+    char *request = NULL;
+    common_file_read(fixture, &request, NULL, NULL);
     snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_PLAYBACK_FIXTURES "/motif-%s.playback.json", motifs[i]);
-    cJSON *want = ursatz_gui_read_json_object(fixture);
+    cJSON *want = NULL;
+    common_json_read_object(fixture, &want, NULL);
     cJSON *answer = request ? test_http_json(PORT, "POST", "/api/materials/render", request, &status) : NULL;
     snprintf(label, sizeof(label), "a %s motif render plays as it did before the Analyzer built it", motifs[i]);
     check(status == 200 && want && playback_matches_capture(cJSON_GetObjectItemCaseSensitive(answer, "playback"), want), label);
@@ -873,13 +878,15 @@ static void test_served_playback(void) {
   static const char *const names[] = {"score.musicxml", "motif.mid", "render.json"};
   for (size_t i = 0; i < 3; i++) {
     snprintf(file, sizeof(file), "%s/%s", render_dir, names[i]);
-    char *text = ursatz_gui_read_file(file, NULL);
+    char *text = NULL;
+    common_file_read(file, &text, NULL, NULL);
     stored = stored && text && text[0] != '\0';
     free(text);
   }
   check(stored, "the render is kept under the version (score.musicxml, motif.mid, render.json)");
   snprintf(file, sizeof(file), "%s/render.json", render_dir);
-  cJSON *meta = ursatz_gui_read_json_object(file);
+  cJSON *meta = NULL;
+  common_json_read_object(file, &meta, NULL);
   check(meta && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(meta, "composer_version")) &&
             strcmp(string_of(meta, "render_key"), "C minor") == 0 && number_of(meta, "tempo") == 0,
         "render.json names the Composer version, the render key and the tempo");
@@ -887,7 +894,7 @@ static void test_served_playback(void) {
 
   /* A changed cache is what the next request reads: the Composer does not run again for the same values. */
   snprintf(file, sizeof(file), "%s/score.musicxml", render_dir);
-  check(ursatz_gui_write_file_atomic(file, "<cached/>", 9), "the cached score is replaced");
+  check((common_file_write_atomic(file, "<cached/>", 9, NULL) == URSATZ_OK), "the cached score is replaced");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score", id);
   char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   check(response && strstr(response, "<cached/>") != NULL, "a version's score reads the cache for the same key and tempo");

@@ -1,6 +1,4 @@
 #include "subject_service.h"
-#include "util/fs_util.h"
-#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -9,15 +7,12 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#else
-#include <dirent.h>
 #include <pthread.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#endif
+
+#include <common/files.h>
+#include <common/json.h>
+#include <common/strings.h>
 
 #include "collection_service.h"
 #include "id_service.h"
@@ -36,92 +31,6 @@ static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
 #define LOCK() ursatz_gui_lock_acquire(&g_lock)
 #define UNLOCK() ursatz_gui_lock_release(&g_lock)
 
-
-static bool write_json(const char *path, const cJSON *json) {
-    char *text = cJSON_Print(json);
-    if (!text) {
-        return false;
-    }
-    bool ok = ursatz_gui_write_file_atomic(path, text, strlen(text));
-    free(text);
-    return ok;
-}
-
-/* The names in dir other than "." and "..", sorted by strcmp. *out_names is NULL when there are none. */
-static bool list_names(const char *dir, char ***out_names, size_t *out_count) {
-    char **names = NULL;
-    size_t count = 0;
-    size_t capacity = 0;
-    *out_names = NULL;
-    *out_count = 0;
-
-#ifdef _WIN32
-    char pattern[PATH_BYTES + 4];
-    if (snprintf(pattern, sizeof(pattern), "%s\\*", dir) >= (int)sizeof(pattern)) {
-        return false;
-    }
-    WIN32_FIND_DATAA find_data;
-    HANDLE handle = FindFirstFileA(pattern, &find_data);
-    if (handle == INVALID_HANDLE_VALUE) {
-        return GetLastError() == ERROR_FILE_NOT_FOUND;
-    }
-    do {
-        const char *name = find_data.cFileName;
-#else
-    DIR *handle = opendir(dir);
-    if (!handle) {
-        return false;
-    }
-    struct dirent *entry;
-    while ((entry = readdir(handle)) != NULL) {
-        const char *name = entry->d_name;
-#endif
-        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-            if (count == capacity) {
-                size_t grown_capacity = capacity ? capacity * 2 : 16;
-                char **grown = realloc(names, grown_capacity * sizeof(char *));
-                if (!grown) {
-                    goto fail;
-                }
-                names = grown;
-                capacity = grown_capacity;
-            }
-            names[count] = ursatz_gui_dup_string(name);
-            if (!names[count]) {
-                goto fail;
-            }
-            count++;
-        }
-#ifdef _WIN32
-    } while (FindNextFileA(handle, &find_data));
-    FindClose(handle);
-#else
-    }
-    closedir(handle);
-#endif
-    *out_names = names;
-    *out_count = count;
-    return true;
-
-fail:
-#ifdef _WIN32
-    FindClose(handle);
-#else
-    closedir(handle);
-#endif
-    for (size_t i = 0; i < count; i++) {
-        free(names[i]);
-    }
-    free(names);
-    return false;
-}
-
-static void free_names(char **names, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free(names[i]);
-    }
-    free(names);
-}
 
 static bool is_valid_id(const char *id) {
     if (!id || id[0] == '\0' || strlen(id) > ID_MAX_BYTES) {
@@ -151,48 +60,22 @@ static bool has_suffix(const char *name, const char *suffix) {
  */
 static char *trim_text(const char *text, size_t max_chars, bool *alloc_failed) {
     *alloc_failed = false;
-    const char *start = text ? text : "";
-    while (*start && isspace((unsigned char)*start)) {
-        start++;
-    }
-    size_t length = strlen(start);
-    while (length > 0 && isspace((unsigned char)start[length - 1])) {
-        length--;
-    }
-    size_t chars = 0;
-    for (size_t i = 0; i < length; i++) {
-        unsigned char c = (unsigned char)start[i];
-        if (c < 0x20 || c == 0x7f) {
-            return NULL;
-        }
-        if ((c & 0xC0) != 0x80) {
-            chars++;
-        }
-    }
-    if (chars > max_chars) {
-        return NULL;
-    }
-    char *copy = malloc(length + 1);
+    char *copy = common_strdup(text ? text : "");
     if (!copy) {
         *alloc_failed = true;
         return NULL;
     }
-    memcpy(copy, start, length);
-    copy[length] = '\0';
-    return copy;
-}
-
-static int compare_ci(const char *a, const char *b) {
-    for (; *a && *b; a++, b++) {
-        int ca = tolower((unsigned char)*a);
-        int cb = tolower((unsigned char)*b);
-        if (ca != cb) {
-            return ca < cb ? -1 : 1;
+    size_t length = common_trim(copy);
+    size_t chars = 0;
+    for (size_t i = 0; i < length; i++) {
+        unsigned char c = (unsigned char)copy[i];
+        if (c < 0x20 || c == 0x7f || (chars += (c & 0xC0) != 0x80) > max_chars) {
+            free(copy);
+            return NULL;
         }
     }
-    return (*a != '\0') - (*b != '\0');
+    return copy;
 }
-
 
 static bool valid_kind(const char *kind) {
     return kind && (strcmp(kind, "character") == 0 || strcmp(kind, "place") == 0 || strcmp(kind, "idea") == 0 ||
@@ -233,11 +116,12 @@ static UrsatzGuiSubjectResult load_subject_locked(const char *id, cJSON **out) {
     if (!subject_path(id, path, sizeof(path))) {
         return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
     }
-    cJSON *subject = ursatz_gui_read_json_object(path);
+    cJSON *subject = NULL;
+    common_json_read_object(path, &subject, NULL);
     if (!subject) {
-        return ursatz_gui_path_exists(path) ? URSATZ_GUI_SUBJECT_ERR_FAILED : URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
+        return common_path_exists(path) ? URSATZ_GUI_SUBJECT_ERR_FAILED : URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
     }
-    if (!ursatz_gui_json_set_string(subject, "id", id)) {
+    if (!common_json_set_string(subject, "id", id)) {
         cJSON_Delete(subject);
         return URSATZ_GUI_SUBJECT_ERR_ALLOC;
     }
@@ -247,10 +131,10 @@ static UrsatzGuiSubjectResult load_subject_locked(const char *id, cJSON **out) {
 
 static UrsatzGuiSubjectResult save_subject_locked(const cJSON *subject) {
     char path[PATH_BYTES];
-    if (!subject_path(ursatz_gui_json_string(subject, "id"), path, sizeof(path))) {
+    if (!subject_path(common_json_string(subject, "id"), path, sizeof(path))) {
         return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
     }
-    return write_json(path, subject) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_FAILED;
+    return (common_json_write_file(path, subject, true, NULL) == URSATZ_OK) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_FAILED;
 }
 
 bool ursatz_gui_subject_service_init(const char *dir) {
@@ -258,7 +142,7 @@ bool ursatz_gui_subject_service_init(const char *dir) {
         return false;
     }
     LOCK();
-    g_ready = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) && ursatz_gui_ensure_dir(g_dir);
+    g_ready = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) && (common_dir_make(g_dir, NULL) == URSATZ_OK);
     bool ok = g_ready;
     UNLOCK();
     return ok;
@@ -296,7 +180,7 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
             result = URSATZ_GUI_SUBJECT_ERR_ALLOC;
             break;
         }
-        if (subject_path(id, path, sizeof(path)) && !ursatz_gui_path_exists(path)) {
+        if (subject_path(id, path, sizeof(path)) && !common_path_exists(path)) {
             break;
         }
         free(id);
@@ -309,7 +193,7 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
     cJSON *subject = NULL;
     if (result == URSATZ_GUI_SUBJECT_OK) {
         char now[32];
-        ursatz_gui_iso_utc_now(now, sizeof(now));
+        common_utc_now(now);
         subject = cJSON_CreateObject();
         bool ok = subject && cJSON_AddStringToObject(subject, "id", id) &&
                   cJSON_AddStringToObject(subject, "name", clean_name) &&
@@ -352,8 +236,8 @@ static bool add_count(cJSON *subject, const char *name, const char *count_name) 
 static int compare_subjects(const void *a, const void *b) {
     const cJSON *left = *(const cJSON *const *)a;
     const cJSON *right = *(const cJSON *const *)b;
-    int by_name = compare_ci(ursatz_gui_json_string(left, "name"), ursatz_gui_json_string(right, "name"));
-    return by_name != 0 ? by_name : strcmp(ursatz_gui_json_string(left, "id"), ursatz_gui_json_string(right, "id"));
+    int by_name = common_compare_ci(common_json_string(left, "name"), common_json_string(right, "name"));
+    return by_name != 0 ? by_name : strcmp(common_json_string(left, "id"), common_json_string(right, "id"));
 }
 
 UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects) {
@@ -364,12 +248,13 @@ UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects) {
         return URSATZ_GUI_SUBJECT_ERR_NOT_INITIALIZED;
     }
 
-    char **names = NULL;
-    size_t count = 0;
-    if (!list_names(g_dir, &names, &count)) {
+    CommonNames listing = {0};
+    if (common_dir_list(g_dir, &listing, NULL) != URSATZ_OK) {
         UNLOCK();
         return URSATZ_GUI_SUBJECT_ERR_FAILED;
     }
+    char **names = listing.items;
+    size_t count = listing.count;
 
     UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
     cJSON **subjects = count ? calloc(count, sizeof(cJSON *)) : NULL;
@@ -400,7 +285,7 @@ UrsatzGuiSubjectResult ursatz_gui_subject_list(cJSON **out_subjects) {
         }
         subjects[loaded++] = subject;
     }
-    free_names(names, count);
+    common_names_free(&listing);
     UNLOCK();
 
     cJSON *array = result == URSATZ_GUI_SUBJECT_OK ? cJSON_CreateArray() : NULL;
@@ -458,11 +343,11 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
     }
     if (result == URSATZ_GUI_SUBJECT_OK) {
         char now[32];
-        ursatz_gui_iso_utc_now(now, sizeof(now));
-        bool ok = (!clean_name || ursatz_gui_json_set_string(subject, "name", clean_name)) &&
-                  (!kind || ursatz_gui_json_set_string(subject, "kind", kind)) &&
-                  (!clean_note || ursatz_gui_json_set_string(subject, "note", clean_note)) &&
-                  ursatz_gui_json_set_string(subject, "updated_at", now);
+        common_utc_now(now);
+        bool ok = (!clean_name || common_json_set_string(subject, "name", clean_name)) &&
+                  (!kind || common_json_set_string(subject, "kind", kind)) &&
+                  (!clean_note || common_json_set_string(subject, "note", clean_note)) &&
+                  common_json_set_string(subject, "updated_at", now);
         result = ok ? save_subject_locked(subject) : URSATZ_GUI_SUBJECT_ERR_ALLOC;
     }
     if (result == URSATZ_GUI_SUBJECT_OK && out_subject) {
@@ -480,11 +365,12 @@ static UrsatzGuiSubjectResult edit_list(cJSON *subject, const char *name, const 
 
 /* Removes ref from the array member `name` of every subject that holds it. */
 static UrsatzGuiSubjectResult remove_from_all_locked(const char *name, const char *ref) {
-    char **names = NULL;
-    size_t count = 0;
-    if (!list_names(g_dir, &names, &count)) {
+    CommonNames listing = {0};
+    if (common_dir_list(g_dir, &listing, NULL) != URSATZ_OK) {
         return URSATZ_GUI_SUBJECT_ERR_FAILED;
     }
+    char **names = listing.items;
+    size_t count = listing.count;
     UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
     for (size_t i = 0; i < count; i++) {
         if (!has_suffix(names[i], ".json")) {
@@ -507,7 +393,7 @@ static UrsatzGuiSubjectResult remove_from_all_locked(const char *name, const cha
         }
         cJSON_Delete(subject);
     }
-    free_names(names, count);
+    common_names_free(&listing);
     return result;
 }
 
@@ -540,7 +426,7 @@ UrsatzGuiSubjectResult ursatz_gui_subject_delete(const char *id) {
     UrsatzGuiSubjectResult result = URSATZ_GUI_SUBJECT_OK;
     if (!subject_path(id, path, sizeof(path))) {
         result = URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
-    } else if (!ursatz_gui_path_exists(path)) {
+    } else if (!common_path_exists(path)) {
         result = URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
     } else if (remove(path) != 0) {
         result = URSATZ_GUI_SUBJECT_ERR_FAILED;
@@ -575,8 +461,8 @@ static cJSON *list_member(cJSON *subject, const char *name) {
 
 static UrsatzGuiSubjectResult touch_subject(cJSON *subject) {
     char now[32];
-    ursatz_gui_iso_utc_now(now, sizeof(now));
-    return ursatz_gui_json_set_string(subject, "updated_at", now) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_ALLOC;
+    common_utc_now(now);
+    return common_json_set_string(subject, "updated_at", now) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_ALLOC;
 }
 
 /* Adds ref to the array member `name` of subject, or removes it when add is false. */
@@ -785,8 +671,8 @@ static cJSON *group_row(const cJSON *subject) {
     int items = cJSON_IsNumber(item_count) ? item_count->valueint : 0;
     int pieces = cJSON_IsNumber(piece_count) ? piece_count->valueint : 0;
     cJSON *row = cJSON_CreateObject();
-    bool ok = row && cJSON_AddStringToObject(row, "id", ursatz_gui_json_string(subject, "id")) &&
-              cJSON_AddStringToObject(row, "name", ursatz_gui_json_string(subject, "name")) &&
+    bool ok = row && cJSON_AddStringToObject(row, "id", common_json_string(subject, "id")) &&
+              cJSON_AddStringToObject(row, "name", common_json_string(subject, "name")) &&
               cJSON_AddNumberToObject(row, "item_count", items) && cJSON_AddNumberToObject(row, "piece_count", pieces) &&
               cJSON_AddNumberToObject(row, "link_count", items + pieces);
     if (!ok) {
@@ -815,7 +701,7 @@ UrsatzGuiSubjectResult ursatz_gui_subject_groups(cJSON **out_groups) {
         }
         const cJSON *subject;
         cJSON_ArrayForEach(subject, subjects) {
-            if (strcmp(ursatz_gui_json_string(subject, "kind"), kKinds[k]) != 0) {
+            if (strcmp(common_json_string(subject, "kind"), kKinds[k]) != 0) {
                 continue;
             }
             cJSON *row = group_row(subject);

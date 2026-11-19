@@ -11,13 +11,12 @@
 #include <math.h>
 #include <unistd.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
 
-#include "../util/fs_util.h"
+#include <common/files.h>
+#include <common/json.h>
+#include <common/status.h>
+
 #include "route_util.h"
 #include "../service/composer_client.h"
 #include "../service/compose_jobs.h"
@@ -1194,7 +1193,8 @@ static bool render_cache_matches(const char *dir, const char *render_key, int te
   if (!render_cache_file(dir, "render.json", path, sizeof(path))) {
     return false;
   }
-  cJSON *meta = ursatz_gui_read_json_object(path);
+  cJSON *meta = NULL;
+  common_json_read_object(path, &meta, NULL);
   UrsatzGuiComposerBuild build = ursatz_gui_composer_build();
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(meta, "render_key");
   const cJSON *cached_tempo = cJSON_GetObjectItemCaseSensitive(meta, "tempo");
@@ -1214,7 +1214,9 @@ static char *render_cache_read_score(const char *id, int number, const char *ren
       !render_cache_file(dir, "score.musicxml", path, sizeof(path))) {
     return NULL;
   }
-  return ursatz_gui_read_file(path, NULL);
+  char *text = NULL;
+  common_file_read(path, &text, NULL, NULL);
+  return text;
 }
 
 /* Stores a render. The files go first and render.json last, so a half-written cache never matches. A failure is
@@ -1225,8 +1227,8 @@ static void render_cache_write(const char *id, int number, const char *render_ke
   char dir[576];
   char path[640];
   if (!ursatz_gui_material_version_dir(id, number, version_dir, sizeof(version_dir)) ||
-      !render_cache_dir(id, number, dir, sizeof(dir)) || !ursatz_gui_ensure_dir(version_dir) ||
-      !ursatz_gui_ensure_dir(dir)) {
+      !render_cache_dir(id, number, dir, sizeof(dir)) || !(common_dir_make(version_dir, NULL) == URSATZ_OK) ||
+      !(common_dir_make(dir, NULL) == URSATZ_OK)) {
     return;
   }
   cJSON *meta = cJSON_CreateObject();
@@ -1242,9 +1244,9 @@ static void render_cache_write(const char *id, int number, const char *render_ke
   char *meta_text = cJSON_PrintUnformatted(meta);
   cJSON_Delete(meta);
   if (meta_text && render_cache_file(dir, "score.musicxml", path, sizeof(path)) &&
-      ursatz_gui_write_file_atomic(path, xml, strlen(xml)) && render_cache_file(dir, "motif.mid", path, sizeof(path)) &&
-      ursatz_gui_write_file_atomic(path, midi, midi_size) && render_cache_file(dir, "render.json", path, sizeof(path))) {
-    ursatz_gui_write_file_atomic(path, meta_text, strlen(meta_text));
+      (common_file_write_atomic(path, xml, strlen(xml), NULL) == URSATZ_OK) && render_cache_file(dir, "motif.mid", path, sizeof(path)) &&
+      (common_file_write_atomic(path, midi, midi_size, NULL) == URSATZ_OK) && render_cache_file(dir, "render.json", path, sizeof(path))) {
+    (common_file_write_atomic(path, meta_text, strlen(meta_text), NULL) == URSATZ_OK);
   }
   free(meta_text);
 }

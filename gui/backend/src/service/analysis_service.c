@@ -1,5 +1,4 @@
 #include "analysis_service.h"
-#include "util/fs_util.h"
 #include "id_service.h"
 #include "piece_metadata.h"
 #include "piece_lock.h"
@@ -7,7 +6,6 @@
 #include "knowledge_service.h"
 
 #include <ctype.h>
-#include <errno.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,14 +13,8 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#else
-#include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#endif
 
 #include <cJSON.h>
 
@@ -35,46 +27,14 @@
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/version.h>
 
+#include <common/files.h>
+#include <common/strings.h>
+
 
 #define PIECE_ID_MAX_TRIES 8
 
 /* Creates one directory. Returns 1 if created, 0 if it already exists, -1 on
    any other failure. */
-/* Removes every file in a piece directory, then the directory. */
-static void remove_piece_dir(const char *dir_path) {
-#ifdef _WIN32
-    char pattern[MAX_PATH];
-    snprintf(pattern, sizeof(pattern), "%s\\*", dir_path);
-    WIN32_FIND_DATAA find_data;
-    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
-    if (find_handle != INVALID_HANDLE_VALUE) {
-        do {
-            if (strcmp(find_data.cFileName, ".") != 0 && strcmp(find_data.cFileName, "..") != 0) {
-                char file_path[400];
-                snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, find_data.cFileName);
-                remove(file_path);
-            }
-        } while (FindNextFileA(find_handle, &find_data) != 0);
-        FindClose(find_handle);
-    }
-    _rmdir(dir_path);
-#else
-    DIR *dir = opendir(dir_path);
-    if (dir) {
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != NULL) {
-            if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-                char file_path[400];
-                snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
-                remove(file_path);
-            }
-        }
-        closedir(dir);
-    }
-    rmdir(dir_path);
-#endif
-}
-
 static const char *format_label(ImportedFormat format) {
     return format == IMPORTED_FORMAT_MIDI ? "midi" : "musicxml";
 }
@@ -129,7 +89,7 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
     }
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
+    bool ok = (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     return ok;
 }
@@ -138,7 +98,8 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
 static cJSON *read_meta_file(const char *dir_path) {
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    char *text = ursatz_gui_read_file(meta_path, NULL);
+    char *text = NULL;
+    common_file_read(meta_path, &text, NULL, NULL);
     if (!text) {
         return NULL;
     }
@@ -154,7 +115,7 @@ static cJSON *read_meta_file(const char *dir_path) {
 /* A copy of a string member of meta, "" when it is absent. */
 static char *meta_string_copy(const cJSON *meta, const char *key) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, key);
-    return ursatz_gui_dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
+    return common_strdup(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
 }
 
 /* Copies the string members of meta's "tags" array; *out_tags is NULL when there are none. */
@@ -179,7 +140,7 @@ static bool meta_tags_copy(const cJSON *meta, char ***out_tags, size_t *out_coun
         if (!cJSON_IsString(item) || !item->valuestring) {
             continue;
         }
-        tags[count] = ursatz_gui_dup_string(item->valuestring);
+        tags[count] = common_strdup(item->valuestring);
         if (!tags[count]) {
             ursatz_gui_meta_tags_free(tags, count);
             return false;
@@ -336,14 +297,13 @@ static UrsatzGuiAnalysisResult create_piece_dir(const char *pieces_dir, char **o
         }
         char dir_path[320];
         snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
-        bool made = ursatz_gui_make_dir(dir_path);
-        int made_errno = errno;
-        if (made) {
+        UrsatzStatus made = common_dir_create(dir_path, NULL);
+        if (made == URSATZ_OK) {
             *out_id = id;
             return URSATZ_GUI_ANALYSIS_OK;
         }
         free(id);
-        if (made_errno != EEXIST) {
+        if (made != URSATZ_ERR_CONFLICT) {
             return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
         }
     }
@@ -362,44 +322,44 @@ static UrsatzGuiAnalysisResult save_new_piece(const char *pieces_dir, const char
        is detected from the content, and the final name depends on it. */
     char upload_path[400];
     snprintf(upload_path, sizeof(upload_path), "%s/source.upload", dir_path);
-    if (!ursatz_gui_write_file_atomic(upload_path, data, size)) {
-        remove_piece_dir(dir_path);
+    if (!(common_file_write_atomic(upload_path, data, size, NULL) == URSATZ_OK)) {
+        common_dir_remove(dir_path, NULL);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
     ImportedFormat format = imported_format_detect(upload_path);
     if (format == IMPORTED_FORMAT_AUTO) {
-        remove_piece_dir(dir_path);
+        common_dir_remove(dir_path, NULL);
         return URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT;
     }
 
     char source_path[400];
     snprintf(source_path, sizeof(source_path), "%s/%s", dir_path, source_file_name(format, original_filename));
     if (rename(upload_path, source_path) != 0) {
-        remove_piece_dir(dir_path);
+        common_dir_remove(dir_path, NULL);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
     char *document_json = NULL;
     result = analyze_source_file(dir_path, format, &document_json);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
-        remove_piece_dir(dir_path);
+        common_dir_remove(dir_path, NULL);
         return result;
     }
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool written = ursatz_gui_write_file_atomic(analysis_path, document_json, strlen(document_json));
+    bool written = (common_file_write_atomic(analysis_path, document_json, strlen(document_json), NULL) == URSATZ_OK);
     free(document_json);
     if (!written) {
-        remove_piece_dir(dir_path);
+        common_dir_remove(dir_path, NULL);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
     char uploaded_at[32];
-    ursatz_gui_iso_utc_now(uploaded_at, sizeof(uploaded_at));
+    common_utc_now(uploaded_at);
     if (!write_meta_file(dir_path, original_filename, format_label(format), uploaded_at)) {
-        remove_piece_dir(dir_path);
+        common_dir_remove(dir_path, NULL);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
@@ -409,7 +369,7 @@ static UrsatzGuiAnalysisResult save_new_piece(const char *pieces_dir, const char
 UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
                                                               size_t size, const char *original_filename,
                                                               char **out_id) {
-    if (!ursatz_gui_ensure_dir(pieces_dir)) {
+    if (!(common_dir_make(pieces_dir, NULL) == URSATZ_OK)) {
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
@@ -434,84 +394,6 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
-static void free_ids(char **ids, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free(ids[i]);
-    }
-    free(ids);
-}
-
-/* Names of the entries of dir_path (without "." and ".."). A missing
-   directory yields none. Returns false only on allocation failure. */
-static bool list_dir_names(const char *dir_path, char ***out_names, size_t *out_count) {
-    char **names = NULL;
-    size_t count = 0;
-    size_t capacity = 0;
-    *out_names = NULL;
-    *out_count = 0;
-
-#ifdef _WIN32
-    char pattern[MAX_PATH];
-    snprintf(pattern, sizeof(pattern), "%s\\*", dir_path);
-    WIN32_FIND_DATAA find_data;
-    HANDLE find_handle = FindFirstFileA(pattern, &find_data);
-    if (find_handle == INVALID_HANDLE_VALUE) {
-        return true;
-    }
-    bool more = true;
-    const char *name = NULL;
-    while (more) {
-        name = find_data.cFileName;
-#else
-    DIR *dir = opendir(dir_path);
-    if (!dir) {
-        return true;
-    }
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        const char *name = entry->d_name;
-#endif
-        if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) {
-            if (count == capacity) {
-                size_t new_capacity = capacity == 0 ? 8 : capacity * 2;
-                char **grown = realloc(names, sizeof(char *) * new_capacity);
-                if (!grown) {
-                    free_ids(names, count);
-#ifdef _WIN32
-                    FindClose(find_handle);
-#else
-                    closedir(dir);
-#endif
-                    return false;
-                }
-                names = grown;
-                capacity = new_capacity;
-            }
-            names[count] = ursatz_gui_dup_string(name);
-            if (!names[count]) {
-                free_ids(names, count);
-#ifdef _WIN32
-                FindClose(find_handle);
-#else
-                closedir(dir);
-#endif
-                return false;
-            }
-            count++;
-        }
-#ifdef _WIN32
-        more = FindNextFileA(find_handle, &find_data) != 0;
-    }
-    FindClose(find_handle);
-#else
-    }
-    closedir(dir);
-#endif
-    *out_names = names;
-    *out_count = count;
-    return true;
-}
-
 /* Newest upload first, then id. */
 static int compare_pieces(const void *left, const void *right) {
     const UrsatzGuiPieceSummary *a = left;
@@ -525,17 +407,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
     *out_pieces = NULL;
     *out_count = 0;
 
-    char **names = NULL;
-    size_t name_count = 0;
-    if (!list_dir_names(pieces_dir, &names, &name_count)) {
+    /* A missing folder lists as no pieces. */
+    CommonNames names = {0};
+    if (common_dir_list(pieces_dir, &names, NULL) == URSATZ_ERR_ALLOC) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
 
     UrsatzGuiPieceSummary *pieces = NULL;
-    if (name_count > 0) {
-        pieces = calloc(name_count, sizeof(UrsatzGuiPieceSummary));
+    if (names.count > 0) {
+        pieces = calloc(names.count, sizeof(UrsatzGuiPieceSummary));
         if (!pieces) {
-            free_ids(names, name_count);
+            common_names_free(&names);
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
     }
@@ -544,10 +426,10 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
        "<id>.db" piece, a stray file) is not a piece. */
     size_t count = 0;
     bool failed = false;
-    for (size_t i = 0; i < name_count && !failed; i++) {
+    for (size_t i = 0; i < names.count && !failed; i++) {
         char dir_path[320];
-        snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, names[i]);
-        if (!ursatz_gui_path_is_dir(dir_path)) {
+        snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, names.items[i]);
+        if (!common_path_is_dir(dir_path)) {
             continue;
         }
         cJSON *meta = read_meta_file(dir_path);
@@ -555,7 +437,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
             continue;
         }
         UrsatzGuiPieceSummary *piece = &pieces[count];
-        piece->id = ursatz_gui_dup_string(names[i]);
+        piece->id = common_strdup(names.items[i]);
         piece->filename = meta_string_copy(meta, "filename");
         piece->format = meta_string_copy(meta, "format");
         piece->uploaded_at = meta_string_copy(meta, "uploaded_at");
@@ -573,7 +455,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
         }
         count++;
     }
-    free_ids(names, name_count);
+    common_names_free(&names);
 
     if (failed) {
         for (size_t i = 0; i < count; i++) {
@@ -613,7 +495,7 @@ static bool piece_dir_path(const char *pieces_dir, const char *id, char *out, si
     if (snprintf(out, out_size, "%s/%s", pieces_dir, id) >= (int)out_size) {
         return false;
     }
-    return ursatz_gui_path_is_dir(out);
+    return common_path_is_dir(out);
 }
 
 static ImportedFormat format_from_label(const char *label) {
@@ -631,7 +513,7 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
     static const char *const kNames[] = {"source.mid", "source.musicxml", "source.xml", "source.mxl"};
     for (size_t i = 0; i < sizeof(kNames) / sizeof(kNames[0]); i++) {
         snprintf(out, out_size, "%s/%s", dir_path, kNames[i]);
-        if (ursatz_gui_path_exists(out)) {
+        if (common_path_exists(out)) {
             return true;
         }
     }
@@ -667,14 +549,6 @@ static bool import_piece(const char *dir_path, ImportedFormat format, ImportedSc
 
 /* The size and modification time of a file, as text for a cache version. */
 static bool file_stamp(const char *path, char *out, size_t out_size) {
-#ifdef _WIN32
-    WIN32_FILE_ATTRIBUTE_DATA data;
-    if (!GetFileAttributesExA(path, GetFileExInfoStandard, &data)) {
-        return false;
-    }
-    snprintf(out, out_size, "%lu.%lu/%lu.%lu", (unsigned long)data.nFileSizeHigh, (unsigned long)data.nFileSizeLow,
-             (unsigned long)data.ftLastWriteTime.dwHighDateTime, (unsigned long)data.ftLastWriteTime.dwLowDateTime);
-#else
     struct stat st;
     if (stat(path, &st) != 0) {
         return false;
@@ -686,7 +560,6 @@ static bool file_stamp(const char *path, char *out, size_t out_size) {
     nanoseconds = (long)st.st_mtimespec.tv_nsec;
 #endif
     snprintf(out, out_size, "%lld/%lld.%ld", (long long)st.st_size, (long long)st.st_mtime, nanoseconds);
-#endif
     return true;
 }
 
@@ -751,7 +624,7 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
         cJSON_Delete(meta);
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
-    detail->id = ursatz_gui_dup_string(id);
+    detail->id = common_strdup(id);
     detail->filename = meta_string_copy(meta, "filename");
     detail->format = meta_string_copy(meta, "format");
     detail->uploaded_at = meta_string_copy(meta, "uploaded_at");
@@ -760,7 +633,7 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    detail->document_json = ursatz_gui_read_file(analysis_path, NULL);
+    common_file_read(analysis_path, &detail->document_json, NULL, NULL);
     detail->analysis_status = status_name(detail->document_json ? analyzer_document_status(detail->document_json)
                                                                  : ANALYZER_DOCUMENT_UNREADABLE);
 
@@ -789,7 +662,7 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
     detail->note_xml_ids = id_count > 0 ? calloc(id_count, sizeof(char *)) : NULL;
     bool ok = id_count == 0 || detail->note_xml_ids != NULL;
     for (size_t i = 0; ok && i < id_count; i++) {
-        detail->note_xml_ids[i] = ursatz_gui_dup_string(ids[i]);
+        detail->note_xml_ids[i] = common_strdup(ids[i]);
         if (!detail->note_xml_ids[i]) {
             ok = false;
         }
@@ -811,8 +684,8 @@ static UrsatzGuiAnalysisResult delete_piece_unlocked(const char *pieces_dir, con
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     ursatz_gui_import_cache_invalidate(id);
-    remove_piece_dir(dir_path);
-    return ursatz_gui_path_is_dir(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_OK;
+    common_dir_remove(dir_path, NULL);
+    return common_path_is_dir(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_OK;
 }
 
 /* Sets a string member of meta in place (keeping its position), adding it
@@ -981,7 +854,7 @@ static UrsatzGuiAnalysisResult update_metadata_unlocked(const char *pieces_dir, 
     }
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
+    bool ok = (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
@@ -1023,7 +896,7 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool ok = ursatz_gui_write_file_atomic(analysis_path, document_json, strlen(document_json));
+    bool ok = (common_file_write_atomic(analysis_path, document_json, strlen(document_json), NULL) == URSATZ_OK);
     free(document_json);
 
     ok = ok && meta_set_string(meta, "analyzer_version", analyzer_version_string()) &&
@@ -1036,7 +909,7 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
     }
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    ok = ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
+    ok = (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
@@ -1056,7 +929,7 @@ static void meta_backfill_ursatz_commit(const char *dir_path, cJSON *meta, const
         if (text) {
             char meta_path[400];
             snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-            ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
+            (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
             free(text);
         }
     }
@@ -1077,7 +950,8 @@ static UrsatzGuiAnalysisResult ensure_current_unlocked(const char *pieces_dir, c
     }
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    char *document = ursatz_gui_read_file(analysis_path, NULL);
+    char *document = NULL;
+    common_file_read(analysis_path, &document, NULL, NULL);
     meta_backfill_ursatz_commit(dir_path, meta, document);
     cJSON_Delete(meta);
     AnalyzerDocumentStatus status = document ? analyzer_document_status(document) : ANALYZER_DOCUMENT_UNREADABLE;
@@ -1233,7 +1107,7 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
 
     bool meter_defaulted = false;
     const char *cached = ursatz_gui_import_entry_score(import, &meter_defaulted);
-    char *xml = cached ? ursatz_gui_dup_string(cached) : NULL;
+    char *xml = cached ? common_strdup(cached) : NULL;
     if (cached) {
         ursatz_gui_import_cache_release(import);
         free(title);
@@ -1263,7 +1137,7 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
         xml = score_add_title_composer(xml, title, composer);
         free(title);
         free(composer);
-        char *kept = xml ? ursatz_gui_dup_string(xml) : NULL;
+        char *kept = xml ? common_strdup(xml) : NULL;
         if (kept) {
             ursatz_gui_import_entry_set_score(import, kept, meter_defaulted);
         }
@@ -1371,10 +1245,11 @@ static UrsatzGuiAnalysisResult get_piece_export_unlocked(const char *pieces_dir,
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    char *document_json = ursatz_gui_read_file(analysis_path, NULL);
+    char *document_json = NULL;
+    common_file_read(analysis_path, &document_json, NULL, NULL);
     if (!document_json) {
         free(title);
-        return ursatz_gui_path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED
+        return common_path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED
                                                 : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
 
@@ -1456,9 +1331,10 @@ static UrsatzGuiAnalysisResult get_document_unlocked(const char *pieces_dir, con
     }
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    char *document_json = ursatz_gui_read_file(analysis_path, NULL);
+    char *document_json = NULL;
+    common_file_read(analysis_path, &document_json, NULL, NULL);
     if (!document_json) {
-        return ursatz_gui_path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+        return common_path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     if (!names) {
         *out_json = document_json;
@@ -1528,7 +1404,7 @@ bool ursatz_gui_analysis_piece_exists(const char *pieces_dir, const char *id) {
     char meta_path[400];
     return piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path)) &&
            snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path) < (int)sizeof(meta_path) &&
-           ursatz_gui_path_exists(meta_path);
+           common_path_exists(meta_path);
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_filename(const char *pieces_dir, const char *id, char **out_filename) {

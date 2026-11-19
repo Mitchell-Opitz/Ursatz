@@ -1,8 +1,6 @@
 # Everything but main.c, so the tests link the same code the server runs.
 add_library(ursatz_gui_core STATIC
   src/server.c
-  src/util/fs_util.c
-  src/util/json_util.c
   src/routes/route_util.c
   src/service/data_check.c
   src/service/analysis_service.c

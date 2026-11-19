@@ -72,9 +72,4 @@ UrsatzGuiThemeResult ursatz_gui_theme_add_pool(const cJSON *list, const char *sl
 UrsatzGuiThemeResult ursatz_gui_theme_build_brief(const cJSON *brief_json, const char *name, const char *path,
                                                   cJSON **out_summary, char *message, size_t message_size);
 
-/* Removes the files of a version folder, then the folder. */
-void ursatz_gui_theme_remove_folder(const char *path);
-
-bool ursatz_gui_theme_write_text(const char *path, const char *text);
-
 #endif /* URSATZ_GUI_THEME_SERVICE_H */

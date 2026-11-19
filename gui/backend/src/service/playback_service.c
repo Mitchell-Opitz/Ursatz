@@ -7,8 +7,10 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/playback.h>
 
+#include <common/files.h>
+#include <common/status.h>
+
 #include "id_service.h"
-#include "util/fs_util.h"
 
 UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi(const char *path, char **json) {
     if (!path || !json) {
@@ -45,8 +47,8 @@ UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi_bytes(const uint8_t *bytes, 
     }
     int length = snprintf(path, sizeof(path), "%s/%s.mid", tmp_dir, name);
     free(name);
-    if (length < 0 || length >= (int)sizeof(path) || !ursatz_gui_ensure_dir(tmp_dir) ||
-        !ursatz_gui_write_file_atomic(path, bytes, size)) {
+    if (length < 0 || length >= (int)sizeof(path) || !(common_dir_make(tmp_dir, NULL) == URSATZ_OK) ||
+        !(common_file_write_atomic(path, bytes, size, NULL) == URSATZ_OK)) {
         return URSATZ_GUI_PLAYBACK_ERR_IO;
     }
     UrsatzGuiPlaybackResult result = ursatz_gui_playback_of_midi(path, json);

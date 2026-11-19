@@ -44,6 +44,8 @@ void common_names_free(CommonNames *names);
 char *common_strdup(const char *value);
 /* Removes leading and trailing whitespace in place and returns the new length. */
 size_t common_trim(char *text);
+/* Copies text into out when there is room, truncating to size - 1 bytes; does nothing for a NULL out or a size of 0. */
+void common_copy_text(char *out, size_t size, const char *text);
 /* ASCII case-insensitive comparison, like strcmp. */
 int common_compare_ci(const char *left, const char *right);
 /* The current UTC time as "YYYY-MM-DDTHH:MM:SSZ". */
