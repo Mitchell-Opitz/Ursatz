@@ -12,7 +12,7 @@
 #include <chain/analysis_chain.h>
 #include <ursatz_composer/composer.h>
 #include <theory/galant/galant_prototypes.h>
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/piece_plan_keys.h>

@@ -1,5 +1,5 @@
-#ifndef URSATZ_FRAMEWORKS_STANDARD_TEXTURE_TEXTURE_RULES_H
-#define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_TEXTURE_RULES_H
+#ifndef URSATZ_THEORY_VOCABULARY_TEXTURE_RULES_H
+#define URSATZ_THEORY_VOCABULARY_TEXTURE_RULES_H
 
 #include <stdbool.h>
 
@@ -37,8 +37,7 @@
  *
  * Homorhythm and melody and accompaniment are kinds of homophony, so
  * there are four categories but six textures here: the generic
- * HOMOPHONY is the category, the other two its subcategories. The names
- * are the labels a Texture (src/interpretation/texture.h) carries.
+ * HOMOPHONY is the category, the other two its subcategories.
  */
 
 typedef enum {

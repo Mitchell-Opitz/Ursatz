@@ -27,6 +27,7 @@ add_library(ursatz_theory
     vocabulary/motive_occurrence_kind.c
     vocabulary/motive_relation_step.c
     vocabulary/non_chord_tone.c
+    vocabulary/texture_rules.c
     vocabulary/voice_part.c
     tonality/brightness.c
     tonality/chord_vocabulary.c
@@ -189,6 +190,7 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/motive_relation_step.h
         theory/vocabulary/non_chord_tone.h
         theory/vocabulary/subphrase_role.h
+        theory/vocabulary/texture_rules.h
         theory/vocabulary/voice_part.h
         theory/knowledge/instrument.h
         theory/knowledge/knowledge_snapshot.h

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/constraint.h>

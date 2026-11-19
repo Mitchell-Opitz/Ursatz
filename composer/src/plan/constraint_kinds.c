@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 #include <theory/galant/galant_prototypes.h>
 #include <ursatz_composer/lanes.h>
 

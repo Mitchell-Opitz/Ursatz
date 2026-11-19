@@ -5,7 +5,7 @@
 #include "model/interpretation/texture.h"
 #include "model/relationship/relationship.h"
 #include "analysis/texture/texture_analysis_features.h"
-#include "analysis/texture/texture_rules.h"
+#include "theory/vocabulary/texture_rules.h"
 #include "analysis/texture/texture_classification_rules.h"
 
 /*

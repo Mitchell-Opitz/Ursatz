@@ -8,7 +8,7 @@
 #include <theory/form/phrase_beginning.h>
 #include <theory/form/phrase_ending.h>
 #include <theory/form/phrase_level_form.h>
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/compose.h>

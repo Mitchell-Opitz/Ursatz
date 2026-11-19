@@ -1,4 +1,4 @@
-#include "analysis/texture/texture_rules.h"
+#include "theory/vocabulary/texture_rules.h"
 
 #include <stddef.h>
 #include <string.h>

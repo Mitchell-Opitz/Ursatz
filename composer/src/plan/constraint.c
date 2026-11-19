@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <theory/galant/galant_prototypes.h>
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include "plan/constraint_kinds.h"
 #include "plan/plan_internal.h"

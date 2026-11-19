@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/texture/texture_rules.h"
+#include "theory/vocabulary/texture_rules.h"
 
 /* Texture names: the labels a Texture carries. */
 static void test_names(void) {

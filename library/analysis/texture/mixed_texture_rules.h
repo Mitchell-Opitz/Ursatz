@@ -6,7 +6,7 @@
 
 #include "model/identity/entity_id.h"
 #include "model/interpretation/texture.h"
-#include "analysis/texture/texture_rules.h"
+#include "theory/vocabulary/texture_rules.h"
 
 /*
  * Mixed texture rules for standard-texture-v1. Most musical works do not

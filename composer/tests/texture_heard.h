@@ -8,7 +8,7 @@
 
 #include <analysis/texture/texture_analysis_classify.h>
 #include <analysis/texture/texture_analysis_input.h>
-#include <analysis/texture/texture_rules.h>
+#include <theory/vocabulary/texture_rules.h>
 
 #include <model/identity/entity_id.h>
 #include <model/time/meter_map.h>
