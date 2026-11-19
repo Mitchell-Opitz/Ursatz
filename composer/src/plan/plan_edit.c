@@ -171,3 +171,23 @@ PlanResult plan_copy_into(PiecePlan *plan, const PiecePlan *source) {
     plan_destroy(copy);
     return PLAN_OK;
 }
+
+PlanResult plan_lane_span_reopen(PiecePlan *plan, LaneSpanId span, NodeId owner) {
+    if (!plan) {
+        return PLAN_ERR_NULL;
+    }
+    LaneSpan *entry = plan_lane_span_at(plan, span);
+    const PlanNode *node = plan_node_at(plan, owner);
+    if (!entry || !node) {
+        return PLAN_ERR_NOT_FOUND;
+    }
+    if (entry->state != PLAN_STATE_GIVEN) {
+        return PLAN_ERR_BAD_KIND;
+    }
+    if (!plan_span_contains(node->span, entry->span)) {
+        return PLAN_ERR_BAD_SPAN;
+    }
+    entry->state = PLAN_STATE_REALIZED;
+    entry->owner = owner;
+    return PLAN_OK;
+}

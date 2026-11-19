@@ -4,10 +4,10 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_reopen.h>
+#include <ursatz_composer/plan_edit.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "piece/piece_internal.h"
-#include "plan/plan_internal.h"
 #include "util/plan_util.h"
 
 #define PIECE_REOPEN_RUNS_MAX 64
@@ -153,19 +153,23 @@ size_t piece_reopen_lane(PiecePlan *plan, NodeId section, PlanLaneKind lane) {
     size_t run_count = lane == PLAN_LANE_HARMONY || lane == PLAN_LANE_BASS ? read_runs(plan, section, runs, PIECE_REOPEN_RUNS_MAX) : 0;
     size_t reopened = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        LaneSpan *span = plan_lane_span_at(plan, id);
-        if (!span || span->lane != lane || span->state != PLAN_STATE_GIVEN || !plan_in_subtree(plan, span->owner, section)) {
+        if (!plan_has_lane_span(plan, id) || plan_lane_span_lane(plan, id) != lane ||
+            plan_lane_span_state(plan, id) != PLAN_STATE_GIVEN || !plan_in_subtree(plan, plan_lane_span_owner(plan, id), section)) {
             continue;
         }
-        span->state = PLAN_STATE_REALIZED;
-        if (span->owner == section) {
-            NodeId owner = PLAN_NODE_NONE;
+        NodeId owner = plan_lane_span_owner(plan, id);
+        PlanSpan span = plan_lane_span_span(plan, id);
+        if (owner == section) {
+            NodeId finer = PLAN_NODE_NONE;
             for (size_t r = 0; r < run_count; r++) {
-                if (rational_cmp(span->span.start, runs[r].start) >= 0 && rational_cmp(span->span.start, runs[r].end) < 0) {
-                    owner = runs[r].owner;
+                if (rational_cmp(span.start, runs[r].start) >= 0 && rational_cmp(span.start, runs[r].end) < 0) {
+                    finer = runs[r].owner;
                 }
             }
-            span->owner = owner != PLAN_NODE_NONE ? owner : finest_owner(plan, section, span->span);
+            owner = finer != PLAN_NODE_NONE ? finer : finest_owner(plan, section, span);
+        }
+        if (plan_lane_span_reopen(plan, id, owner) != PLAN_OK) {
+            plan_lane_span_reopen(plan, id, plan_lane_span_owner(plan, id));
         }
         reopened++;
     }

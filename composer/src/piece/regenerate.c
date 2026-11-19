@@ -5,11 +5,11 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/plan_edit.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "util/plan_util.h"
 #include "grow/grow_internal.h"
-#include "plan/plan_internal.h"
 
 const char *regenerate_result_name(RegenerateResult result) {
     static const char *const NAMES[] = {"ok",          "null argument", "out of memory", "not found",
