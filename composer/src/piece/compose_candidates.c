@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_edit.h>
 
 void compose_candidates_destroy(ComposeCandidates *candidates) {
     if (!candidates) {
@@ -46,10 +46,8 @@ PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *confi
     if (!plan || !config || count == 0) {
         return PIECE_ERR_NULL;
     }
-    char *text = plan_to_json(plan, NULL);
     candidates->items = calloc(count, sizeof(ComposeCandidate));
-    if (!text || !candidates->items) {
-        free(text);
+    if (!candidates->items) {
         compose_candidates_destroy(candidates);
         return PIECE_ERR_ALLOC;
     }
@@ -59,7 +57,7 @@ PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *confi
         ComposeConfig run = *config;
         run.seed = config->seed + i;
         candidate->seed = run.seed;
-        if (plan_from_json(config->knowledge, text, &candidate->plan, NULL) != PLAN_OK) {
+        if (plan_clone(plan, &candidate->plan) != PLAN_OK) {
             status = PIECE_ERR_ALLOC;
             break;
         }
@@ -82,7 +80,6 @@ PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *confi
             }
         }
     }
-    free(text);
     if (status != PIECE_OK) {
         compose_candidates_destroy(candidates);
         return status;

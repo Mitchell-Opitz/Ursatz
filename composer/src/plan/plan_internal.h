@@ -65,9 +65,6 @@ void plan_note_next_id_set(PiecePlan *plan, PlanNoteId next);
 
 void constraint_list_free(ConstraintList *list);
 
-/* dst takes everything src holds and src is destroyed; ids and pointers into dst's old contents are void. */
-void plan_replace_contents(PiecePlan *dst, PiecePlan *src);
-
 /* Frees every lane span and the note arrays they own. */
 void plan_lanes_free(PiecePlan *plan);
 

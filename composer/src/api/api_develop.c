@@ -10,7 +10,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_edit.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 
@@ -479,11 +479,10 @@ static ComposerStatus read_flags(const cJSON *request, Flags *flags, char (*buff
 }
 
 /* The notes written on the target once suggestion index is applied to a copy of the plan. */
-static bool suggestion_motive(const KnowledgeSnapshot *knowledge, const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
+static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
                               Motive *out) {
-    char *json = plan_to_json(scene->plan, NULL);
     PiecePlan *copy = NULL;
-    bool ok = json && plan_from_json(knowledge, json, &copy, NULL) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
+    bool ok = plan_clone(scene->plan, &copy) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
     LaneSpanId ids[4];
     if (ok && plan_node_lane_spans(copy, scene->target, ids, 4) == 1) {
         const PlanLanePayload *payload = plan_lane_span_payload(copy, ids[0]);
@@ -494,7 +493,6 @@ static bool suggestion_motive(const KnowledgeSnapshot *knowledge, const Scene *s
     } else {
         ok = false;
     }
-    free(json);
     plan_destroy(copy);
     return ok;
 }
@@ -634,7 +632,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
             for (size_t i = 0; status == COMPOSER_OK && i < count; i++) {
                 const Candidate *candidate = candidate_set_candidate_at(set, i);
                 Motive development;
-                if (!suggestion_motive(context->knowledge, &scene, suggestions, i, &source, &development)) {
+                if (!suggestion_motive(&scene, suggestions, i, &source, &development)) {
                     status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot read candidate %zu", i + 1);
                     break;
                 }

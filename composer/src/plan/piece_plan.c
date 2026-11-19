@@ -254,13 +254,6 @@ NodeId plan_node_child_at(const PiecePlan *plan, NodeId id, size_t index) {
     return node->children[index];
 }
 
-void plan_replace_contents(PiecePlan *dst, PiecePlan *src) {
-    PiecePlan old = *dst;
-    *dst = *src;
-    *src = old;
-    plan_destroy(src);
-}
-
 /* ------------------------------------------------------------- removal */
 
 typedef struct {

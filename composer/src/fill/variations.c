@@ -9,7 +9,7 @@
 #include <model/time/musical_time.h>
 #include <model/time/temporal_anchor.h>
 
-#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_edit.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "util/plan_util.h"
@@ -104,7 +104,7 @@ uint64_t plan_signature(const PiecePlan *plan) {
     return signature_of(plan, false);
 }
 
-/* A plan file numbers its nodes and lane spans from 1 with no gaps; a copy through JSON then keeps every id. */
+/* A clone numbers its nodes and lane spans from 1 with no gaps; a copy of a plan without gaps then keeps every id. */
 static bool ids_are_stable(const PiecePlan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id)) {
@@ -117,12 +117,6 @@ static bool ids_are_stable(const PiecePlan *plan) {
         }
     }
     return true;
-}
-
-static PiecePlan *copy_plan(const KnowledgeSnapshot *knowledge, const char *text) {
-    PiecePlan *copy = NULL;
-    PlanJsonError error;
-    return plan_from_json(knowledge, text, &copy, &error) == PLAN_OK ? copy : NULL;
 }
 
 void plan_variations_destroy(PlanVariations *variations) {
@@ -156,14 +150,8 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
         return scoped;
     }
 
-    PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
-    if (!text) {
-        return REGENERATE_ERR_ALLOC;
-    }
     out->items = calloc(count, sizeof(PlanVariation));
     if (!out->items) {
-        free(text);
         return REGENERATE_ERR_ALLOC;
     }
     uint64_t original = signature_of(plan, with_harmony);
@@ -171,8 +159,8 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
     size_t seeds = 4 * count;
     for (size_t k = 0; k < seeds && out->count < count && result == REGENERATE_OK; k++) {
         out->seeds_tried = k + 1;
-        PiecePlan *copy = copy_plan(config->knowledge, text);
-        if (!copy) {
+        PiecePlan *copy = NULL;
+        if (plan_clone(plan, &copy) != PLAN_OK) {
             result = REGENERATE_ERR_ALLOC;
             break;
         }
@@ -199,7 +187,6 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
             compose_outcome_destroy(&outcome);
         }
     }
-    free(text);
     if (result != REGENERATE_OK) {
         plan_variations_destroy(out);
     }

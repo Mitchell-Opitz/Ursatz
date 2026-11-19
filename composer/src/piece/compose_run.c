@@ -19,7 +19,7 @@
 #include <ursatz_composer/harmony_prolong.h>
 #include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_edit.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/texture_check.h>
@@ -795,17 +795,13 @@ static PieceResult run_returns(Run *run) {
     size_t pending_count = reharmonized(plan, run->themes, run->theme_count, pending);
     size_t figured_count = figurate(plan, run->themes, run->theme_count, figured);
     bool again = pending_count > 0 || figured_count > 0;
-    char *snapshot = again ? plan_to_json(plan, NULL) : NULL;
+    PiecePlan *snapshot = NULL;
     size_t attempts = again ? COMPOSE_RETURN_ATTEMPTS : 1;
-    PieceResult result = again && !snapshot ? PIECE_ERR_ALLOC : PIECE_OK;
+    PieceResult result = again && plan_clone(plan, &snapshot) != PLAN_OK ? PIECE_ERR_ALLOC : PIECE_OK;
     for (size_t attempt = 0; result == PIECE_OK && attempt < attempts; attempt++) {
-        if (attempt > 0) {
-            PiecePlan *fresh = NULL;
-            if (plan_from_json(run->config->knowledge, snapshot, &fresh, NULL) != PLAN_OK) {
-                result = PIECE_ERR_ALLOC;
-                break;
-            }
-            plan_replace_contents(plan, fresh);
+        if (attempt > 0 && plan_copy_into(plan, snapshot) != PLAN_OK) {
+            result = PIECE_ERR_ALLOC;
+            break;
         }
         run->attempt = attempt;
         run->outcome->stuck = false;
@@ -858,7 +854,7 @@ static PieceResult run_returns(Run *run) {
             continue;
         }
     }
-    free(snapshot);
+    plan_destroy(snapshot);
     free(pending);
     free(figured);
     return result;
@@ -1209,18 +1205,15 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
        record runs every check it has the parts for. */
     const PlanFormRecord *recorded = plan_form_record(plan);
     unsigned checks = config->form ? config->form->checks : recorded ? recorded->checks : FORM_CHECK_ALL;
-    char *snapshot = plan_to_json(plan, NULL);
+    PiecePlan *snapshot = NULL;
     PieceResult result = PIECE_ERR_ALLOC;
+    plan_clone(plan, &snapshot);
     ComposeRejection *rejections = NULL;
     size_t rejection_count = 0;
     for (size_t round = 0; snapshot && round < COMPOSE_RUN_ROUNDS; round++) {
-        if (round > 0) {
-            PiecePlan *fresh = NULL;
-            if (plan_from_json(config->knowledge, snapshot, &fresh, NULL) != PLAN_OK) {
-                result = PIECE_ERR_ALLOC;
-                break;
-            }
-            plan_replace_contents(plan, fresh);
+        if (round > 0 && plan_copy_into(plan, snapshot) != PLAN_OK) {
+            result = PIECE_ERR_ALLOC;
+            break;
         }
         ComposerHearing *hearing = NULL;
         result = run_once(plan, config, checks, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome, &hearing);
@@ -1240,7 +1233,7 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
         add_rejection(&rejections, &rejection_count, plan, outcome, round,
                       config->seed + COMPOSE_ROUND_STRIDE * (unsigned long)round);
     }
-    free(snapshot);
+    plan_destroy(snapshot);
     /* Kept apart until now: each run starts by clearing the outcome. */
     outcome->rejections = rejections;
     outcome->rejection_count = rejection_count;
