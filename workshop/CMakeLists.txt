@@ -27,6 +27,7 @@ add_library(ursatz_workshop STATIC
     src/composition/motifs.c
     src/composition/pieces.c
     src/composition/themes.c
+    src/composition/variants.c
     src/rendering/export.c
     src/rendering/playback.c
     src/jobs/job_queue.c

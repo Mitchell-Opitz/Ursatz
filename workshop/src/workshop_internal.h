@@ -32,6 +32,7 @@
 #include "composition/motifs.h"
 #include "composition/pieces.h"
 #include "composition/themes.h"
+#include "composition/variants.h"
 
 #include "rendering/export.h"
 #include "rendering/playback.h"
