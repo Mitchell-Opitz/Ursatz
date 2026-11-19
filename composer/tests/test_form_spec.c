@@ -17,6 +17,7 @@
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /* The old section fields the tests below read, as the description gives them: a key as the index of the region it names (or FORM_SPEC_HOME),
  * the motive as the step it makes from m0, and a return as the index of the section it returns. */
@@ -1206,7 +1207,7 @@ static void test_form_record(void) {
     assert(text && strstr(text, "\"form\": {") != NULL && strstr(text, "\"checks\": [\"sections\"") != NULL);
     PiecePlan *read = NULL;
     PlanJsonError error;
-    assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     assert(plan_form_record(read) && memcmp(plan_form_record(read), record, sizeof(*record)) == 0);
     char *again = plan_to_json(read, test_plan_producer(), NULL);
     assert(again && strcmp(again, text) == 0);
@@ -1221,7 +1222,7 @@ static void test_form_record(void) {
         char *edited = NULL;
         assert(asprintf(&edited, "%.*s%s%s", (int)before, text, bad[i][1], at + strlen(bad[i][0])) > 0);
         PiecePlan *refused = NULL;
-        assert(plan_from_json(test_knowledge(), edited, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+        assert(plan_from_json(test_knowledge(), edited, composer_plan_read_hooks(), &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
         assert(strstr(error.path, "composer/form") != NULL || strstr(error.path, "form") != NULL);
         free(edited);
     }
@@ -1266,7 +1267,7 @@ static void test_form_record_migration(void) {
     assert(v4);
     PiecePlan *read = NULL;
     PlanJsonError error;
-    assert(plan_from_json(test_knowledge(), v4, &read, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), v4, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     assert(plan_form_record(read) && memcmp(plan_form_record(read), plan_form_record(plan), sizeof(PlanFormRecord)) == 0);
     NodeId made[FORM_SPEC_MAX_SECTIONS];
     NodeId migrated[FORM_SPEC_MAX_SECTIONS];
@@ -1280,7 +1281,7 @@ static void test_form_record_migration(void) {
     PiecePlan *empty = plan_create();
     char *empty_text = plan_to_json(empty, test_plan_producer(), NULL);
     PiecePlan *empty_read = NULL;
-    assert(empty_text && plan_from_json(test_knowledge(), empty_text, &empty_read, &error) == PLAN_OK);
+    assert(empty_text && plan_from_json(test_knowledge(), empty_text, composer_plan_read_hooks(), &empty_read, &error) == PLAN_OK);
     assert(plan_form_record(empty_read) == NULL);
     free(empty_text);
     plan_destroy(empty_read);

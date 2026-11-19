@@ -11,6 +11,7 @@
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Continuations from segments (B2 of P34): a 2-bar 4/4 motif with the segments `a` (bar 1) and `b` (bar 2) in an 8-bar
@@ -189,7 +190,7 @@ static void test_plan_round_trip(void) {
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"segment\"") && strstr(text, "\"steps\""));
     PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
     for (int k = 2; k <= 4; k++) {
         char name[4];
         snprintf(name, sizeof(name), "m%d", k);

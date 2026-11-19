@@ -163,7 +163,7 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
     /* The plan round-trips through plan JSON. */
     char *json = plan_to_json(plan, test_plan_producer(), NULL);
     PiecePlan *again = NULL;
-    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
@@ -228,7 +228,7 @@ static void check_parallel_plan(PiecePlan *plan) {
     assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
     char *json = plan_to_json(plan, test_plan_producer(), NULL);
     PiecePlan *again = NULL;
-    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);

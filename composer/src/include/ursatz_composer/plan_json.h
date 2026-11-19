@@ -1,6 +1,9 @@
 #ifndef URSATZ_COMPOSER_PLAN_JSON_H
 #define URSATZ_COMPOSER_PLAN_JSON_H
 
+#include <stdbool.h>
+
+#include <model/pitch/pitch_material.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -51,12 +54,27 @@ typedef struct {
 char *plan_to_json(const PiecePlan *plan, const PlanProducer *producer, PlanJsonError *error);
 
 /*
+ * What a program that reads plans adds to the reader (R-625): `material_supported` says whether a key may be made of a material (a
+ * program composes in some materials only; the reader refuses a key of another with "the Composer composes in major and natural
+ * minor keys only" at the path of its "material"), and `form_record_migrate` gives a plan of a format before 5, which has no form
+ * record, the record of the form it was built from (after the constraints are read, before any state; PLAN_OK, or PLAN_ERR_ALLOC).
+ * A NULL hook, or a NULL PlanReadHooks, leaves the reader as it is: every material is supported and nothing is migrated. `data` is
+ * passed to both.
+ */
+typedef struct {
+    bool (*material_supported)(const PitchMaterial *material, void *data);
+    PlanResult (*form_record_migrate)(PiecePlan *plan, void *data);
+    void *data;
+} PlanReadHooks;
+
+/*
  * Parses a plan. The keys of the plan are made of the snapshot's common-practice materials (a file names the id of the material of each key).
  * On PLAN_OK, *out is a plan the caller destroys; the snapshot must outlive it. On failure *out is NULL and the result is
  * PLAN_ERR_NULL (no text, no out, or no snapshot with the four materials), PLAN_ERR_PARSE (not JSON), PLAN_ERR_FORMAT (JSON
  * that is not a valid plan) or PLAN_ERR_ALLOC.
  */
-PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error);
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+                          PlanJsonError *error);
 
 /*
  * Resolves the key spans a plan names only by a relation and an anchor (R-597), where a read plan is composed: each such span, in
@@ -68,9 +86,10 @@ PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, 
  * message), or it reaches a material the Composer does not compose in (a key is major or natural minor). A refusal leaves the plan
  * as it was.
  */
-PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanJsonError *error);
+PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error);
 
 /* plan_from_json, then plan_resolve_key_spans: the plan a caller composes from. On failure *out is NULL. */
-PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error);
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+                                   PlanJsonError *error);
 
 #endif

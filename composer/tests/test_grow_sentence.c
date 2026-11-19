@@ -18,6 +18,7 @@
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Growing a sentence from a motive in four keys and meters, 8 and 4 bars, seeds 1 to 10. Each run must complete;
@@ -409,7 +410,7 @@ static void test_built_plan(void) {
     /* The plan survives its own JSON. */
     char *json = plan_to_json(plan, test_plan_producer(), NULL);
     PiecePlan *again = NULL;
-    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);

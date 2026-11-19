@@ -29,6 +29,7 @@ typedef struct {
     const CommonPracticeMaterials *materials; /* the materials a plan's keys are made of; NULL where no plan file is read */
     const KnowledgeSnapshot *knowledge;       /* finds the material a version 3 key names by id; NULL where no plan file is read */
     struct NoteIdSet *note_ids;               /* version 4: the note ids read so far, to refuse a repeat; NULL otherwise */
+    const PlanReadHooks *hooks;               /* the reading program's hooks; NULL for none */
 } JsonReader;
 
 void json_set_error(PlanJsonError *error, long offset, const char *path, const char *format, ...);

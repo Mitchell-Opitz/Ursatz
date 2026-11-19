@@ -19,6 +19,7 @@
 #include "support/test_composer.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -298,7 +299,7 @@ static void check_round_trip(const PiecePlan *plan, const Row *row, unsigned lon
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
     PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), &error);
     assert(second);
     if (strcmp(text, second) != 0) {

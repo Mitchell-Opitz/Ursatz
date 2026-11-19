@@ -27,6 +27,7 @@
 #include "util/plan_util.h"
 #include "util/request_parse.h"
 #include "util/util.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * The piece entry (docs/api.md): the piece request composed, or its loop plan regenerated in one section, with the ending
@@ -294,7 +295,7 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     *out = NULL;
     *targets = NULL;
     *count = 0;
-    if (plan_from_json_resolved(request->knowledge, edit->text, &plan, &plan_error) != PLAN_OK) {
+    if (plan_from_json_resolved(request->knowledge, edit->text, composer_plan_read_hooks(), &plan, &plan_error) != PLAN_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s", sized ? "plan" : "loop plan",
                         plan_error.message);
     }
@@ -405,7 +406,7 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
     if (!edit->section) {
         /* The plan is complete: nothing is composed, so the loop version has no outcome to report. */
         PlanJsonError plan_error;
-        if (plan_from_json_resolved(request->knowledge, edit->text, &loop->plan, &plan_error) != PLAN_OK) {
+        if (plan_from_json_resolved(request->knowledge, edit->text, composer_plan_read_hooks(), &loop->plan, &plan_error) != PLAN_OK) {
             *result = PIECE_ERR_BAD_REQUEST;
             return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s",
                             request->form->request_sections ? "loop plan" : "plan", plan_error.message);

@@ -15,6 +15,7 @@
 
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Motivic development. Every transformation is run through the fill loop, across seeds and parameters, on source
@@ -1089,7 +1090,7 @@ static void test_constraint_json(void) {
     assert(json && strstr(json, "\"step\": \"interval-change interval=2 amount=-1 keep-contour=1\"") != NULL);
     PiecePlan *copy = NULL;
     PlanJsonError error;
-    assert(plan_from_json(test_knowledge(), json, &copy, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &copy, &error) == PLAN_OK);
     const PlanConstraint *read = plan_node_constraint_at(copy, scene.target, 0);
     assert(read && read->kind == PLAN_CONSTRAINT_MOTIVE_REF);
     const PlanMotiveRef *ref = &read->params.motive;

@@ -17,6 +17,7 @@
 #include "api_workflow.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * The piece request (docs/piece-request.md, schema "ursatz-piece-request" version 1) as the library reads it: the brief, the
@@ -182,7 +183,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         char *text = cJSON_PrintUnformatted(plan);
         PlanJsonError detail;
         memset(&detail, 0, sizeof detail);
-        PlanResult read = text ? plan_from_json_resolved(request->knowledge, text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
+        PlanResult read = text ? plan_from_json_resolved(request->knowledge, text, composer_plan_read_hooks(), &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
         cJSON_free(text);
         if (read == PLAN_ERR_ALLOC) {
             return api_fail_alloc(error);

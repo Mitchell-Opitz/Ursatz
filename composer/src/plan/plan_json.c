@@ -13,7 +13,6 @@
 #include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 #include <plan/section_json.h>
@@ -915,7 +914,7 @@ static bool read_key_v3(JsonReader *reader, const cJSON *object, const char *pat
     if (!material) {
         return json_bad_format(reader, at, "no material has this id");
     }
-    if (!composer_material_supported(reader->materials, material)) {
+    if (reader->hooks && reader->hooks->material_supported && !reader->hooks->material_supported(material, reader->hooks->data)) {
         return json_bad_format(reader, at, "the Composer composes in major and natural minor keys only");
     }
     PitchLetter letter;
@@ -1990,7 +1989,8 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
     }
     /* A plan before format 5 knows its form by the name of its form node: its record and the closed sections come from the built-in
        form of that name, before any node is Given. */
-    if (ok && reader->version < 5 && !piece_form_record_migrate(plan)) {
+    if (ok && reader->version < 5 && reader->hooks && reader->hooks->form_record_migrate &&
+        reader->hooks->form_record_migrate(plan, reader->hooks->data) != PLAN_OK) {
         ok = json_fail(reader, PLAN_ERR_ALLOC, "form", "out of memory");
     }
     for (size_t i = 0; ok && i < node_count; i++) {
@@ -2090,8 +2090,8 @@ static PlanResult read_document_body(JsonReader *reader, const cJSON *document, 
 }
 
 static PlanResult read_document(const cJSON *document, PiecePlan *plan, const CommonPracticeMaterials *materials,
-                                const KnowledgeSnapshot *knowledge, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK, 0, materials, knowledge, NULL};
+                                const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error) {
+    JsonReader reader = {error, PLAN_OK, 0, materials, knowledge, NULL, hooks};
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
         return reader.result;
@@ -2120,12 +2120,13 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, const Co
     return result;
 }
 
-PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {
-    PlanResult result = plan_from_json(knowledge, text, out, error);
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+                                   PlanJsonError *error) {
+    PlanResult result = plan_from_json(knowledge, text, hooks, out, error);
     if (result != PLAN_OK) {
         return result;
     }
-    result = plan_resolve_key_spans(*out, knowledge, error);
+    result = plan_resolve_key_spans(*out, knowledge, hooks, error);
     if (result != PLAN_OK) {
         plan_destroy(*out);
         *out = NULL;
@@ -2133,7 +2134,8 @@ PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const cha
     return result;
 }
 
-PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+                          PlanJsonError *error) {
     if (!text || !out) {
         json_set_error(error, -1, "", "text or out is NULL");
         return PLAN_ERR_NULL;
@@ -2156,7 +2158,7 @@ PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, 
         json_set_error(error, -1, "", "out of memory");
         return PLAN_ERR_ALLOC;
     }
-    PlanResult result = read_document(document, plan, &materials, knowledge, error);
+    PlanResult result = read_document(document, plan, &materials, knowledge, hooks, error);
     cJSON_Delete(document);
     if (result != PLAN_OK) {
         plan_destroy(plan);

@@ -10,6 +10,7 @@
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Uneven themes (R-468, R-471, B2 of P47): a theme of 3 to 16 bars whose ideas are any whole bars, given by a
@@ -302,7 +303,7 @@ static void test_round_trip(void) {
         char *text = plan_to_json(plan, test_plan_producer(), &error);
         assert(text && strstr(text, "\"construction\""));
         PiecePlan *again = NULL;
-        assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
+        assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
         char *text_again = plan_to_json(again, test_plan_producer(), &error);
         assert(text_again && strcmp(text, text_again) == 0);
         const SectionDescription *read = plan_section_or_empty(again, test_find_node(again, "theme"))->has_construction ? plan_node_section(again, test_find_node(again, "theme")) : NULL;
@@ -336,7 +337,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(scratch, test_plan_producer(), &error);
     assert(text && strstr(text, "\"stretch\"") && strstr(text, "\"cadential\""));
     PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
     char *text_again = plan_to_json(again, test_plan_producer(), &error);
     assert(text_again && strcmp(text, text_again) == 0);
     free(text);
@@ -372,7 +373,7 @@ static void test_round_trip(void) {
     char *name = strstr(at, marker);
     memcpy(name + 1, "basic idxa", 10);
     PiecePlan *broken = NULL;
-    assert(plan_from_json(test_knowledge(), good_text, &broken, &error) == PLAN_ERR_FORMAT && broken == NULL);
+    assert(plan_from_json(test_knowledge(), good_text, composer_plan_read_hooks(), &broken, &error) == PLAN_ERR_FORMAT && broken == NULL);
     assert(strstr(error.path, "ideas") != NULL);
     free(good_text);
     plan_destroy(good);

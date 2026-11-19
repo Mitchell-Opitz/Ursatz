@@ -8,6 +8,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/piece_plan.h>
 
 /*
@@ -123,5 +124,11 @@ bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out);
  * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
  */
 bool piece_form_record_migrate(PiecePlan *plan);
+
+/*
+ * What the Composer adds to the plan reader (plan_json.h): its keys are made of the major and the natural minor only, and a plan of
+ * a format before 5 gets its form record from piece_form_record_migrate. Every read of a plan the Composer composes from passes it.
+ */
+const PlanReadHooks *composer_plan_read_hooks(void);
 
 #endif

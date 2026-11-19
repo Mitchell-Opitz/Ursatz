@@ -51,7 +51,7 @@ static Region key_region(const SpelledKey *key, const CommonPracticeMaterials *m
     return region_tonal(spelled_key_tonic_pitch_class(key), key->material ? key->material : materials->major);
 }
 
-PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanJsonError *error) {
+PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error) {
     CommonPracticeMaterials materials;
     if (!plan || !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
         json_set_error(error, -1, "", "a plan and a knowledge snapshot are required");
@@ -123,7 +123,7 @@ PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *know
             result = refuse(error, plan, ids[i], "relation", "%s", message);
             continue;
         }
-        if (found.kind != REGION_TONAL_MODAL || !composer_material_supported(&materials, found.material)) {
+        if (found.kind != REGION_TONAL_MODAL || (hooks && hooks->material_supported && !hooks->material_supported(found.material, hooks->data))) {
             result = refuse(error, plan, ids[i], "relation", "relation '%s' reaches %s, which is not a key the Composer composes in (major or natural minor)",
                             named->relation, found.material && found.material->name ? found.material->name : "no material");
             continue;

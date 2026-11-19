@@ -9,10 +9,11 @@
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError *error) {
     char *text = test_must_read_file(path, NULL);
-    PlanResult result = plan_from_json(test_knowledge(), text, out, error);
+    PlanResult result = plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), out, error);
     free(text);
     return result;
 }

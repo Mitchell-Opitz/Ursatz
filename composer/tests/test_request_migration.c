@@ -15,6 +15,7 @@
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -385,7 +386,7 @@ static void test_plan_formats(void) {
         assert(strstr(v1, "\"schema_version\": 1") != NULL || strstr(v1, "\"schema_version\":1") != NULL);
         PiecePlan *read = NULL;
         PlanJsonError error;
-        assert(plan_from_json(test_knowledge(), v1, &read, &error) == PLAN_OK);
+        assert(plan_from_json(test_knowledge(), v1, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
         char *v4 = plan_to_json(read, test_plan_producer(), &error);
         assert(v4 && strstr(v4, "\"format_version\": 5") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
         /* format 3 is the same text without the note ids */
@@ -422,7 +423,7 @@ static void test_plan_formats(void) {
 
         /* every format writes back as the format 4 text (a format 1 to 3 file gets its note ids 1 to n in file order) */
         PiecePlan *again = NULL;
-        assert(plan_from_json(test_knowledge(), v2, &again, &error) == PLAN_OK);
+        assert(plan_from_json(test_knowledge(), v2, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
         char *written = plan_to_json(again, test_plan_producer(), &error);
         assert(written && strcmp(written, v4) == 0);
         free(written);
@@ -545,9 +546,9 @@ static void test_relation_named_span_composes(void) {
     /* the relation-named plan is read unresolved, and written resolved once it is composed from */
     PiecePlan *read = NULL;
     PlanJsonError error;
-    assert(plan_from_json(test_knowledge(), by_relation, &read, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), by_relation, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     plan_destroy(read);
-    assert(plan_from_json_resolved(test_knowledge(), by_relation, &read, &error) == PLAN_OK);
+    assert(plan_from_json_resolved(test_knowledge(), by_relation, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     plan_destroy(read);
 
     ComposerResponse named;

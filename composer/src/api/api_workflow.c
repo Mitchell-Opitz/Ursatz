@@ -17,6 +17,7 @@
 #include "api_grow.h"
 #include "util/plan_util.h"
 #include "util/util.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /* --- the sections of a plan ------------------------------------------------------------------------ */
 
@@ -156,7 +157,7 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
     }
     PiecePlan *plan = NULL;
     PlanJsonError detail;
-    PlanResult read = plan_from_json_resolved(knowledge, printed, &plan, &detail);
+    PlanResult read = plan_from_json_resolved(knowledge, printed, composer_plan_read_hooks(), &plan, &detail);
     if (read != PLAN_OK) {
         if (read == PLAN_ERR_FORMAT && looks_like_analysis_document(member)) {
             cJSON_free(printed);
@@ -183,7 +184,7 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
 
 ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, PiecePlan **out, ComposerError *error) {
     PlanJsonError detail;
-    if (plan_from_json_resolved(knowledge, text, out, &detail) != PLAN_OK) {
+    if (plan_from_json_resolved(knowledge, text, composer_plan_read_hooks(), out, &detail) != PLAN_OK) {
         char path[64];
         snprintf(path, sizeof path, "/%s", name);
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);

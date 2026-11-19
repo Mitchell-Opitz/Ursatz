@@ -18,6 +18,7 @@
 #include "support/test_support.h"
 #include "ursatz_test.h"
 #include "support/test_knowledge.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -292,7 +293,7 @@ static void test_round_trip(const FormSpec *form) {
     assert(text);
     assert(strstr(text, "\"liquidation\""));
     PiecePlan *parsed = NULL;
-    assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK && parsed);
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error) == PLAN_OK && parsed);
     char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
     free(text);

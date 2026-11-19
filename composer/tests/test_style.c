@@ -30,6 +30,7 @@
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 /*
  * Styles (style.h, docs/style.md): a StyleModel file the Analyzer wrote is loaded and the harmony and melody stages
@@ -844,7 +845,7 @@ static int test_plan_without(void) {
     char *json = plan_json_with(2);
     assert(strstr(json, "\"without\": [") && strstr(json, "motive-rhythm"));
     PiecePlan *again = NULL;
-    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     const PlanStyle *read = style_of(again);
     assert(read && read->without_count == 2 && strcmp(read->without[0], "motive-degrees") == 0 &&
            strcmp(read->without[1], "motive-rhythm") == 0);
@@ -853,7 +854,7 @@ static int test_plan_without(void) {
     /* a style constraint with no list: no member is written and it reads back with none */
     json = plan_json_with(0);
     assert(!strstr(json, "without"));
-    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     read = style_of(again);
     assert(read && read->without_count == 0);
     plan_destroy(again);

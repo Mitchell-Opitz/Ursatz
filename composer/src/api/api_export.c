@@ -11,6 +11,7 @@
 #include "api_internal.h"
 #include "util/request_parse.h"
 #include "util/plan_util.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 static const char *skip_reason_text(RenderSkipReason reason) {
     return reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized"
@@ -119,7 +120,7 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     }
     PiecePlan *plan = NULL;
     PlanJsonError load_error;
-    PlanResult loaded = plan_from_json_resolved(context->knowledge, plan_text, &plan, &load_error);
+    PlanResult loaded = plan_from_json_resolved(context->knowledge, plan_text, composer_plan_read_hooks(), &plan, &load_error);
     free(plan_text);
     if (loaded != PLAN_OK) {
         if (loaded == PLAN_ERR_ALLOC) {

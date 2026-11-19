@@ -222,3 +222,19 @@ bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
     }
     return true;
 }
+
+/* The Composer composes in the major and the natural minor only (a key is one of them: composer_key_is_minor). */
+static bool plan_material_supported(const PitchMaterial *material, void *data) {
+    (void)data;
+    return material != NULL && (strcmp(material->id, "omt.material.major") == 0 || strcmp(material->id, "omt.material.natural-minor") == 0);
+}
+
+static PlanResult plan_form_record_migrate(PiecePlan *plan, void *data) {
+    (void)data;
+    return piece_form_record_migrate(plan) ? PLAN_OK : PLAN_ERR_ALLOC;
+}
+
+const PlanReadHooks *composer_plan_read_hooks(void) {
+    static const PlanReadHooks hooks = {plan_material_supported, plan_form_record_migrate, NULL};
+    return &hooks;
+}

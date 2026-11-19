@@ -22,6 +22,7 @@
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include <ursatz_composer/piece_plan_keys.h>
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -274,7 +275,7 @@ static int expected_staff(const Line *line) {
 static void check_plan_text(const char *text, const char *name, bool *saw_motive_link) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    if (plan_from_json(test_knowledge(), text, &plan, &error) != PLAN_OK) {
+    if (plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &plan, &error) != PLAN_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
     }
     assert(plan != NULL);
