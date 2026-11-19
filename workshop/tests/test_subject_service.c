@@ -241,8 +241,22 @@ static void test_relations(void) {
 }
 
 /* What the coordinator registers at open: the store tells the subjects about an item an item delete removed. */
-static void forget_item_in_subjects(const char *item_id) {
-    (void)workshop_subject_forget_item(item_id);
+static void forget_item_in_subjects(WorkshopTxn *txn, const char *item_id) {
+    (void)workshop_subject_forget_item(txn, item_id);
+}
+
+/* A piece's links are dropped in a transaction, as the Library's delete does. */
+static UrsatzStatus forget_piece(const char *piece_id) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.delete", "michelle", piece_id, 0);
+    UrsatzStatus result = workshop_subject_forget_piece(txn, piece_id);
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    if (result == URSATZ_OK) {
+        workshop_txn_commit(txn, &error);
+    } else {
+        workshop_txn_abort(txn);
+    }
+    return result;
 }
 
 static void test_forget(void) {
@@ -255,12 +269,12 @@ static void test_forget(void) {
           "link item twice");
     check_quiet(workshop_subject_link_piece(a, g_piece, NULL, NULL) == OK, "link piece");
 
-    check_quiet(workshop_subject_forget_piece(g_piece) == OK, "forget piece");
+    check_quiet(forget_piece(g_piece) == OK, "forget piece");
     subject = get(a);
     check_quiet(length(subject, "pieces") == 0 && length(subject, "items") == 1, "piece link gone, item link kept");
     cJSON_Delete(subject);
-    check_quiet(workshop_subject_forget_piece(g_piece) == OK, "forget absent piece");
-    check_quiet(workshop_subject_forget_piece("a/b") == URSATZ_ERR_REQUEST, "forget bad piece id");
+    check_quiet(forget_piece(g_piece) == OK, "forget absent piece");
+    check_quiet(forget_piece("a/b") == URSATZ_ERR_REQUEST, "forget bad piece id");
 
     check_quiet(workshop_material_item_delete(item, false) == URSATZ_OK, "delete item");
     subject = get(a);

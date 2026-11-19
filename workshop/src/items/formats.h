@@ -19,9 +19,6 @@
 /* The version this build writes (and the newest it reads) of format; 0 for a name that is not a workshop format. */
 int workshop_format_version(const char *format);
 
-/* True when name is one of the workshop's format names. */
-bool workshop_format_known(const char *name);
-
 /* Adds "format" and "format_version" to object as its first members (replacing any it has). false on allocation failure. */
 bool workshop_format_stamp(cJSON *object, const char *format);
 

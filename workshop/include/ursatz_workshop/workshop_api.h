@@ -41,6 +41,7 @@ typedef struct Workshop Workshop;
 #define WORKSHOP_FORMAT_STYLE "ursatz-style"
 #define WORKSHOP_FORMAT_LINK_RUN "ursatz-link-run"
 #define WORKSHOP_FORMAT_RENDER "ursatz-render"
+#define WORKSHOP_FORMAT_JOURNAL "ursatz-journal" /* the first line of journal/journal.jsonl; the file is lines, not one document */
 
 /*
  * The settings of a workshop. A 0 member, or a NULL one, is unset: the layer below answers. data_dir is the data folder, config_path

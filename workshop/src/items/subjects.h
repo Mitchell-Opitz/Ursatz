@@ -8,6 +8,8 @@
 
 #include <cJSON.h>
 
+#include "items/txn.h"
+
 /*
  * Subject service: characters, places, ideas and notes that items and Library
  * pieces can be linked to, owned by the GUI (R-115 to R-119, R-130).
@@ -105,14 +107,14 @@ UrsatzStatus workshop_subject_unrelate(const char *id, const char *other_id, cJS
  * by the analyzer route after a Library piece is deleted. Absent everywhere is
  * fine.
  */
-UrsatzStatus workshop_subject_forget_piece(const char *piece_id);
+UrsatzStatus workshop_subject_forget_piece(WorkshopTxn *txn, const char *piece_id);
 
 /*
  * Removes the id from the items list of every subject that holds it. Called
  * by the material service after an item is deleted, with no material lock
  * held. Absent everywhere is fine.
  */
-UrsatzStatus workshop_subject_forget_item(const char *item_id);
+UrsatzStatus workshop_subject_forget_item(WorkshopTxn *txn, const char *item_id);
 
 /*
  * The panel's view: *out_groups is a caller-owned array of four objects, one

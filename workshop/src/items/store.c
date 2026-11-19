@@ -5,16 +5,31 @@
 
 bool store_ready = false;
 WorkshopLock store_lock = WORKSHOP_LOCK_INIT;
-static void (*g_forget_item)(const char *item_id);
+static void (*g_forget_item)(WorkshopTxn *txn, const char *item_id);
 
-void workshop_store_set_forget_item(void (*forget)(const char *item_id)) {
+void workshop_store_set_forget_item(void (*forget)(WorkshopTxn *txn, const char *item_id)) {
     g_forget_item = forget;
 }
 
-void store_forget_item(const char *item_id) {
+void store_forget_item(WorkshopTxn *txn, const char *item_id) {
     if (g_forget_item) {
-        g_forget_item(item_id);
+        g_forget_item(txn, item_id);
     }
+}
+
+WorkshopTxn *store_txn_begin(const char *command, const char *target) {
+    return workshop_txn_begin(NULL, command, "michelle", target, 0);
+}
+
+UrsatzStatus store_txn_end(WorkshopTxn *txn, UrsatzStatus result) {
+    if (result != URSATZ_OK) {
+        workshop_txn_abort(txn);
+        return result;
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    UrsatzStatus committed = workshop_txn_commit(txn, &error);
+    return committed == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, error.message[0] ? error.message : "material store failure");
 }
 
 bool store_is_valid_id(const char *id) {
@@ -174,26 +189,40 @@ static UrsatzStatus load_project_locked(const char *id, cJSON **out) {
     return URSATZ_OK;
 }
 
-static UrsatzStatus save_project_locked(const cJSON *project) {
+/* Stages a project: a new one is a folder (project.json and its empty items/), an old one only its file. */
+static UrsatzStatus save_project_locked(WorkshopTxn *txn, const cJSON *project, bool is_new) {
     char path[PATH_BYTES];
     char dir[PATH_BYTES];
     const char *id = common_json_string(project, "id");
-    if (!project_path(id, path, sizeof(path)) || !workshop_layout_items_dir(id, dir, sizeof(dir))) {
+    if (!project_path(id, path, sizeof(path)) || !workshop_layout_project_dir(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
-    }
-    if (common_dir_make(dir, NULL) != URSATZ_OK) {
-        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *copy = cJSON_Duplicate(project, 1);
     if (!copy) {
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    UrsatzStatus written = workshop_format_write(path, WORKSHOP_FORMAT_PROJECT, copy, NULL);
+    UrsatzStatus staged = URSATZ_OK;
+    if (is_new) {
+        const char *pending = NULL;
+        char file[PATH_BYTES * 2];
+        staged = workshop_txn_stage_folder(txn, dir, &pending);
+        if (staged == URSATZ_OK) {
+            snprintf(file, sizeof(file), "%s/items", pending);
+            if (common_dir_make(file, NULL) != URSATZ_OK) {
+                staged = URSATZ_ERR_IO;
+            } else {
+                snprintf(file, sizeof(file), "%s/" WORKSHOP_FILE_PROJECT, pending);
+                staged = workshop_format_write(file, WORKSHOP_FORMAT_PROJECT, copy, NULL);
+            }
+        }
+    } else {
+        staged = workshop_txn_stage_json(txn, path, WORKSHOP_FORMAT_PROJECT, copy);
+    }
     cJSON_Delete(copy);
-    return written == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    return staged == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
 }
 
-static UrsatzStatus create_project_locked(const char *name, const char *description, cJSON **out_project) {
+static UrsatzStatus create_project_locked(WorkshopTxn *txn, const char *name, const char *description, cJSON **out_project) {
     char *clean_name = NULL;
     char *clean_description = NULL;
     UrsatzStatus result = normalize_name(name, &clean_name);
@@ -234,7 +263,7 @@ static UrsatzStatus create_project_locked(const char *name, const char *descript
                   cJSON_AddStringToObject(project, "description", clean_description) &&
                   cJSON_AddStringToObject(project, "created_at", now) &&
                   cJSON_AddStringToObject(project, "updated_at", now);
-        result = !ok ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : save_project_locked(project);
+        result = !ok ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : save_project_locked(txn, project, true);
     }
     if (result == URSATZ_OK && out_project) {
         *out_project = project;
@@ -248,6 +277,10 @@ static UrsatzStatus create_project_locked(const char *name, const char *descript
 }
 
 bool workshop_material_service_init(void) {
+    WorkshopTxn *txn = store_txn_begin("project.create", "");
+    if (!txn) {
+        return false;
+    }
     LOCK();
     store_ready = false;
     bool ok = common_dir_make(WORKSHOP_DIR_PROJECTS, NULL) == URSATZ_OK;
@@ -266,12 +299,12 @@ bool workshop_material_service_init(void) {
     if (ok) {
         store_ready = true;
         if (!has_project) {
-            ok = create_project_locked("General", "", NULL) == URSATZ_OK;
+            ok = create_project_locked(txn, "General", "", NULL) == URSATZ_OK;
             store_ready = ok;
         }
     }
     UNLOCK();
-    return ok;
+    return store_txn_end(txn, ok ? URSATZ_OK : URSATZ_ERR_INTERNAL) == URSATZ_OK && ok;
 }
 
 void workshop_material_service_shutdown(void) {
@@ -285,10 +318,19 @@ UrsatzStatus workshop_material_project_create(const char *name, const char *desc
     if (out_project) {
         *out_project = NULL;
     }
+    WorkshopTxn *txn = store_txn_begin("project.create", "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
-    UrsatzStatus result =
-        store_ready ? create_project_locked(name, description, out_project) : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    UrsatzStatus result = store_ready ? create_project_locked(txn, name, description, out_project)
+                                      : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     UNLOCK();
+    result = store_txn_end(txn, result);
+    if (result != URSATZ_OK && out_project) {
+        cJSON_Delete(*out_project);
+        *out_project = NULL;
+    }
     return result;
 }
 
@@ -376,9 +418,14 @@ UrsatzStatus workshop_material_project_update(const char *id, const char *name, 
     if (out_project) {
         *out_project = NULL;
     }
+    WorkshopTxn *txn = store_txn_begin("project.update", id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     if (!store_ready) {
         UNLOCK();
+        workshop_txn_abort(txn);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *project = NULL;
@@ -397,23 +444,29 @@ UrsatzStatus workshop_material_project_update(const char *id, const char *name, 
         bool ok = (!clean_name || common_json_set_string(project, "name", clean_name)) &&
                   (!clean_description || common_json_set_string(project, "description", clean_description)) &&
                   common_json_set_string(project, "updated_at", now);
-        result = ok ? save_project_locked(project) : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        result = ok ? save_project_locked(txn, project, false) : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
+    UNLOCK();
+    result = store_txn_end(txn, result);
     if (result == URSATZ_OK && out_project) {
         *out_project = project;
     } else {
         cJSON_Delete(project);
     }
-    UNLOCK();
     free(clean_name);
     free(clean_description);
     return result;
 }
 
 UrsatzStatus workshop_material_project_delete(const char *id) {
+    WorkshopTxn *txn = store_txn_begin("project.delete", id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     if (!store_ready) {
         UNLOCK();
+        workshop_txn_abort(txn);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     char path[PATH_BYTES];
@@ -426,13 +479,12 @@ UrsatzStatus workshop_material_project_delete(const char *id) {
         result = workshop_fail(URSATZ_ERR_CONFLICT, "the project still holds items");
     } else {
         char dir[PATH_BYTES];
-        /* project.json first: a folder without it is no longer a project */
-        if (remove(path) != 0 || !workshop_layout_project_dir(id, dir, sizeof(dir)) || common_dir_remove(dir, NULL) != URSATZ_OK) {
+        if (!workshop_layout_project_dir(id, dir, sizeof(dir)) || workshop_txn_remove(txn, dir) != URSATZ_OK) {
             result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
         }
     }
     UNLOCK();
-    return result;
+    return store_txn_end(txn, result);
 }
 
 /* --- items and versions -------------------------------------------------- */
@@ -536,24 +588,9 @@ UrsatzStatus store_load_item_locked(const char *id, cJSON **out) {
     return URSATZ_OK;
 }
 
-/* Writes the header of an item (without the members the services add for answers) into its folder. */
-static UrsatzStatus save_item_locked(const cJSON *item) {
-    const char *id = common_json_string(item, "id");
-    const char *project = common_json_string(item, "project_id");
-    char path[PATH_BYTES];
-    if (!workshop_layout_item_file(project, id, WORKSHOP_FILE_ITEM, path, sizeof(path))) {
-        return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
-    }
-    cJSON *header = cJSON_Duplicate(item, 1);
-    if (!header) {
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
-    cJSON_DeleteItemFromObjectCaseSensitive(header, "project_id");
-    cJSON_DeleteItemFromObjectCaseSensitive(header, "versions");
-    cJSON_DeleteItemFromObjectCaseSensitive(header, "variant_of");
-    UrsatzStatus written = workshop_format_write(path, WORKSHOP_FORMAT_ITEM, header, NULL);
-    cJSON_Delete(header);
-    return written == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+/* Sets the header of an item in txn (the members the services add for answers are left out by the transaction). */
+static UrsatzStatus save_item_locked(WorkshopTxn *txn, const cJSON *item) {
+    return workshop_txn_set_header(txn, item) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
 }
 
 static bool touch_item(cJSON *item) {
@@ -668,7 +705,7 @@ UrsatzStatus store_read_version_locked(const char *id, int number, cJSON **out_b
     return URSATZ_OK;
 }
 
-static UrsatzStatus create_item_locked(const char *type, const char *name, const char *project_id,
+static UrsatzStatus create_item_locked(WorkshopTxn *txn, const char *type, const char *name, const char *project_id,
                                                   const cJSON *body, const char *note, cJSON **out_item) {
     const char *prefix = store_prefix_for_type(type);
     if (!prefix) {
@@ -718,10 +755,10 @@ static UrsatzStatus create_item_locked(const char *type, const char *name, const
     }
 
     cJSON *item = NULL;
-    bool dir_made = false;
     if (result == URSATZ_OK) {
         char now[32];
-        char version_dir[PATH_BYTES];
+        char version_dir[PATH_BYTES * 2];
+        const char *pending = NULL;
         common_utc_now(now);
         item = cJSON_CreateObject();
         bool ok = item && cJSON_AddStringToObject(item, "id", id) && cJSON_AddStringToObject(item, "type", type) &&
@@ -731,21 +768,17 @@ static UrsatzStatus create_item_locked(const char *type, const char *name, const
                   advance_item(item, 1, clean_note);
         if (!ok) {
             result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-        } else if (common_dir_make(dir, NULL) != URSATZ_OK || !workshop_layout_version_dir(project_id, id, 1, version_dir, sizeof(version_dir)) ||
+        } else if (workshop_txn_stage_folder(txn, dir, &pending) != URSATZ_OK ||
+                   snprintf(version_dir, sizeof(version_dir), "%s/v1", pending) >= (int)sizeof(version_dir) ||
                    common_dir_make(version_dir, NULL) != URSATZ_OK) {
             result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
-            dir_made = common_path_exists(dir);
         } else {
-            dir_made = true;
-            /* item.json goes last: a folder without it is not an item. */
+            /* the folder holds the version; the header, which makes it an item, is set by the transaction after the folder is in place */
             result = write_version_files_locked(version_dir, id, type, 1, stored, clean_note);
             if (result == URSATZ_OK) {
-                result = save_item_locked(item);
+                result = save_item_locked(txn, item);
             }
         }
-    }
-    if (result != URSATZ_OK && dir_made) {
-        common_dir_remove(dir, NULL);
     }
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
@@ -765,10 +798,19 @@ UrsatzStatus workshop_material_item_create_noted(const char *type, const char *n
     if (out_item) {
         *out_item = NULL;
     }
+    WorkshopTxn *txn = store_txn_begin("item.create", "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
-    UrsatzStatus result = store_ready ? create_item_locked(type, name, project_id, body, note, out_item)
+    UrsatzStatus result = store_ready ? create_item_locked(txn, type, name, project_id, body, note, out_item)
                                              : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     UNLOCK();
+    result = store_txn_end(txn, result);
+    if (result != URSATZ_OK && out_item) {
+        cJSON_Delete(*out_item);
+        *out_item = NULL;
+    }
     return result;
 }
 
@@ -898,15 +940,46 @@ UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSO
     return result;
 }
 
+/* Copies the folder from into the existing folder to, with everything under it. */
+static bool copy_folder(const char *from, const char *to) {
+    CommonNames names = {0};
+    if (common_dir_list(from, &names, NULL) != URSATZ_OK) {
+        return false;
+    }
+    bool ok = true;
+    for (size_t i = 0; ok && i < names.count; i++) {
+        char source[PATH_BYTES * 2];
+        char target[PATH_BYTES * 2];
+        if (snprintf(source, sizeof(source), "%s/%s", from, names.items[i]) >= (int)sizeof(source) ||
+            snprintf(target, sizeof(target), "%s/%s", to, names.items[i]) >= (int)sizeof(target)) {
+            ok = false;
+        } else if (common_path_is_dir(source)) {
+            ok = common_dir_make(target, NULL) == URSATZ_OK && copy_folder(source, target);
+        } else {
+            char *data = NULL;
+            size_t size = 0;
+            ok = common_file_read(source, &data, &size, NULL) == URSATZ_OK && common_file_write_atomic(target, data, size, NULL) == URSATZ_OK;
+            free(data);
+        }
+    }
+    common_names_free(&names);
+    return ok;
+}
+
 /* Sets the name and/or project (each NULL = unchanged) on the item and saves it; a new project is a rename of the item's folder. */
-static UrsatzStatus change_item(const char *id, const char *name, const char *project_id,
+static UrsatzStatus change_item(const char *command, const char *id, const char *name, const char *project_id,
                                            cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
     }
+    WorkshopTxn *txn = store_txn_begin(command, id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     if (!store_ready) {
         UNLOCK();
+        workshop_txn_abort(txn);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
@@ -925,27 +998,31 @@ static UrsatzStatus change_item(const char *id, const char *name, const char *pr
     if (result == URSATZ_OK) {
         bool ok = (!clean_name || common_json_set_string(item, "name", clean_name)) && touch_item(item);
         if (ok && project_id && strcmp(project_id, common_json_string(item, "project_id")) != 0) {
+            /* the folder moves as a copy staged in the new project and the old one removed, in one record */
             char from[PATH_BYTES];
             char to[PATH_BYTES];
             char items[PATH_BYTES];
+            const char *pending = NULL;
             if (!workshop_layout_item_dir(common_json_string(item, "project_id"), id, from, sizeof(from)) ||
                 !workshop_layout_item_dir(project_id, id, to, sizeof(to)) || !workshop_layout_items_dir(project_id, items, sizeof(items)) ||
-                common_dir_make(items, NULL) != URSATZ_OK || rename(from, to) != 0) {
+                common_dir_make(items, NULL) != URSATZ_OK || workshop_txn_stage_folder(txn, to, &pending) != URSATZ_OK ||
+                !copy_folder(from, pending) || workshop_txn_remove(txn, from) != URSATZ_OK) {
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
             } else {
                 ok = common_json_set_string(item, "project_id", project_id);
             }
         }
         if (result == URSATZ_OK) {
-            result = ok ? save_item_locked(item) : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+            result = ok ? save_item_locked(txn, item) : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
     }
+    UNLOCK();
+    result = store_txn_end(txn, result);
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
     }
-    UNLOCK();
     free(clean_name);
     return result;
 }
@@ -954,22 +1031,22 @@ UrsatzStatus workshop_material_item_rename(const char *id, const char *name, cJS
     if (!name) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
     }
-    return change_item(id, name, NULL, out_item);
+    return change_item("item.rename", id, name, NULL, out_item);
 }
 
 UrsatzStatus workshop_material_item_move(const char *id, const char *project_id, cJSON **out_item) {
     if (!project_id) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
-    return change_item(id, NULL, project_id, out_item);
+    return change_item("item.move", id, NULL, project_id, out_item);
 }
 
 /*
- * Writes body as the next version of item and saves the header with it made current. The version folder is the stage (a folder of
- * the files a compose made, renamed into place) when there is one, else a new folder; the body and the envelope go into it and the
- * header last, so a version a header names has everything.
+ * Stages body as the next version of item and its header with it made current, in txn. The version folder is the stage (a folder of the
+ * files a compose made, which becomes the pending folder) when there is one, else a new folder; the body and the envelope go into it and the
+ * header is set last, so a version a header names has everything.
  */
-UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage) {
+UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage) {
     int number = store_current_version_of(item) + 1;
     const char *project = common_json_string(item, "project_id");
     char dir[PATH_BYTES];
@@ -979,17 +1056,17 @@ UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSO
     if (!advance_item(item, number, note)) {
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    common_dir_remove(dir, NULL); /* a folder no version named is left over from a failed run */
-    bool made = stage ? rename(stage, dir) == 0 : common_dir_make(dir, NULL) == URSATZ_OK;
-    UrsatzStatus result = made ? write_version_files_locked(dir, id, common_json_string(item, "type"), number, body, note)
-                               : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
-    if (result == URSATZ_OK) {
-        result = save_item_locked(item);
+    const char *pending = NULL;
+    /* a folder no version named is left over from a failed run */
+    UrsatzStatus staged = workshop_txn_remove(txn, dir);
+    if (staged == URSATZ_OK) {
+        staged = stage ? workshop_txn_adopt_folder(txn, stage, dir, &pending) : workshop_txn_stage_folder(txn, dir, &pending);
     }
-    if (result != URSATZ_OK && made) {
-        common_dir_remove(dir, NULL);
+    if (staged != URSATZ_OK) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
-    return result;
+    UrsatzStatus result = write_version_files_locked(pending, id, common_json_string(item, "type"), number, body, note);
+    return result == URSATZ_OK ? save_item_locked(txn, item) : result;
 }
 
 UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,
@@ -997,9 +1074,14 @@ UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJS
     if (out_item) {
         *out_item = NULL;
     }
+    WorkshopTxn *txn = store_txn_begin("item.save", id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     if (!store_ready) {
         UNLOCK();
+        workshop_txn_abort(txn);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
@@ -1020,14 +1102,15 @@ UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJS
         result = store_fill_body_uses_locked(id, body, &stored);
     }
     if (result == URSATZ_OK) {
-        result = store_commit_version_locked(id, item, stored, clean_note, stage);
+        result = store_commit_version_locked(txn, id, item, stored, clean_note, stage);
     }
+    UNLOCK();
+    result = store_txn_end(txn, result);
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
     }
-    UNLOCK();
     cJSON_Delete(stored);
     free(clean_note);
     return result;

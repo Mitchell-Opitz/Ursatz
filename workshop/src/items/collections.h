@@ -8,6 +8,8 @@
 
 #include <cJSON.h>
 
+#include "items/txn.h"
+
 /*
  * Collection service: named groups of piece ids, owned by the GUI (R-105).
  *
@@ -108,7 +110,7 @@ UrsatzStatus workshop_collection_add_pieces(const char *id, const char *const *p
 UrsatzStatus workshop_collection_remove_piece(const char *id, const char *piece_id);
 
 /* Removes the piece id from every collection that holds it (absent everywhere is fine). */
-UrsatzStatus workshop_collection_remove_piece_everywhere(const char *piece_id);
+UrsatzStatus workshop_collection_remove_piece_everywhere(WorkshopTxn *txn, const char *piece_id);
 
 /* ---- the collection routes' checks (A20261109-47) ---- */
 

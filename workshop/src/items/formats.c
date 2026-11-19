@@ -45,10 +45,6 @@ int workshop_format_version(const char *format) {
     return find_format(format) ? 1 : 0;
 }
 
-bool workshop_format_known(const char *name) {
-    return find_format(name) != NULL;
-}
-
 void workshop_format_strip(cJSON *object) {
     cJSON_DeleteItemFromObjectCaseSensitive(object, "format");
     cJSON_DeleteItemFromObjectCaseSensitive(object, "format_version");

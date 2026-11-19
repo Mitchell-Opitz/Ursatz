@@ -1,6 +1,7 @@
 #include "styles.h"
 #include "items/formats.h"
 #include "items/layout.h"
+#include "items/txn.h"
 #include "base/last_error.h"
 #include "items/lock.h"
 
@@ -753,11 +754,6 @@ static bool write_style_files(const char *dir, const char *id, const char *name,
     return ok;
 }
 
-/* Removes a style directory this module made: its files and temp files. */
-static void remove_style_dir(const char *dir) {
-    common_dir_remove(dir, NULL);
-}
-
 /* --- build ---------------------------------------------------------------- */
 
 /* The style's name: the given one normalized, or the default when it is empty. */
@@ -837,31 +833,35 @@ UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *s
 
     char *id = NULL;
     char style_dir[PATH_BYTES];
-    bool dir_made = false;
+    bool id_found = false;
     result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     if ((common_dir_make(kStylesDir, NULL) == URSATZ_OK)) {
-        for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
+        for (int attempt = 0; attempt < ID_MAX_TRIES && !id_found; attempt++) {
             id = workshop_new_id("sty");
             if (!id) {
                 result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
                 break;
             }
-            if (workshop_layout_style_dir(id, style_dir, sizeof(style_dir))) {
-                dir_made = (common_dir_create(style_dir, NULL) == URSATZ_OK);
-            }
-            if (!dir_made) {
+            id_found = workshop_layout_style_dir(id, style_dir, sizeof(style_dir)) && !common_path_exists(style_dir);
+            if (!id_found) {
                 free(id);
                 id = NULL;
             }
         }
     }
-    if (dir_made) {
+    if (id_found) {
+        /* The style is a folder written whole (the model and its meta) and put in place by one transaction. */
         char now[32];
+        const char *pending = NULL;
         common_utc_now(now);
-        if (write_style_files(style_dir, id, final_name, now, now, &normalized, &collected)) {
-            result = URSATZ_OK;
-        } else {
-            remove_style_dir(style_dir);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "style.build", "michelle", id, 0);
+        if (txn && workshop_txn_stage_folder(txn, style_dir, &pending) == URSATZ_OK &&
+            write_style_files(pending, id, final_name, now, now, &normalized, &collected)) {
+            UrsatzError error;
+            memset(&error, 0, sizeof(error));
+            result = workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
+        } else if (txn) {
+            workshop_txn_abort(txn);
         }
     }
     if (result == URSATZ_OK) {
@@ -1471,7 +1471,18 @@ UrsatzStatus workshop_style_rebuild(const char *id) {
             style_dir_path(id, dir, sizeof(dir));
             const char *name = json_text(stored.meta, "name");
             const char *created_at = json_text(stored.meta, "created_at");
-            if (!write_style_files(dir, id, name ? name : "", created_at ? created_at : "", now, &source, &collected)) {
+            /* The style's folder is replaced whole: the old one is removed and the new one staged, in one transaction. */
+            const char *pending = NULL;
+            WorkshopTxn *txn = workshop_txn_begin(NULL, "style.rebuild", "michelle", id, 0);
+            if (txn && workshop_txn_remove(txn, dir) == URSATZ_OK && workshop_txn_stage_folder(txn, dir, &pending) == URSATZ_OK &&
+                write_style_files(pending, id, name ? name : "", created_at ? created_at : "", now, &source, &collected)) {
+                UrsatzError error;
+                memset(&error, 0, sizeof(error));
+                if (workshop_txn_commit(txn, &error) != URSATZ_OK) {
+                    result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
+                }
+            } else {
+                workshop_txn_abort(txn);
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
             }
             collected_free(&collected);
@@ -1488,18 +1499,25 @@ UrsatzStatus workshop_style_delete(const char *id) {
     if (!style_dir_path(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "style.delete", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
+    }
     LOCK();
     UrsatzStatus result = URSATZ_OK;
     if (!common_path_is_dir(dir)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
-    } else {
-        remove_style_dir(dir);
-        if (common_path_is_dir(dir)) {
-            result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
-        }
+    } else if (workshop_txn_remove(txn, dir) != URSATZ_OK) {
+        result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
     UNLOCK();
-    return result;
+    if (result != URSATZ_OK) {
+        workshop_txn_abort(txn);
+        return result;
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    return workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
 }
 
 UrsatzStatus workshop_style_model_path(const char *id, char *buffer, size_t buffer_size) {

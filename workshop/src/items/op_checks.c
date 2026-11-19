@@ -121,6 +121,10 @@ UrsatzStatus workshop_material_op_checks_put(const char *id, const cJSON *body, 
     if (result != URSATZ_OK) {
         return result;
     }
+    WorkshopTxn *txn = store_txn_begin("item.op-checks", id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     char path[PATH_BYTES];
     result = store_ready ? op_checks_path_locked(id, path, sizeof(path)) : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
@@ -143,7 +147,7 @@ UrsatzStatus workshop_material_op_checks_put(const char *id, const cJSON *body, 
                 break;
             }
         }
-        if (ok && (workshop_format_write(path, WORKSHOP_FORMAT_OP_CHECKS, stored, NULL) == URSATZ_OK)) {
+        if (ok && (workshop_txn_stage_json(txn, path, WORKSHOP_FORMAT_OP_CHECKS, stored) == URSATZ_OK)) {
             *out = stored;
         } else {
             cJSON_Delete(stored);
@@ -151,5 +155,10 @@ UrsatzStatus workshop_material_op_checks_put(const char *id, const cJSON *body, 
         }
     }
     UNLOCK();
+    result = store_txn_end(txn, result);
+    if (result != URSATZ_OK) {
+        cJSON_Delete(*out);
+        *out = NULL;
+    }
     return result;
 }

@@ -1,5 +1,6 @@
 #include "collections.h"
 #include "formats.h"
+#include "txn.h"
 #include "layout.h"
 #include "base/last_error.h"
 #include "lock.h"
@@ -32,6 +33,9 @@ static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
 #define PATH_BYTES 400
 
 static bool g_ready = false;
+
+/* The transaction the writer of the moment stages into (set by the public writers below, which begin it before the lock of this file). */
+static __thread WorkshopTxn *t_txn = NULL;
 
 static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
 #define LOCK() workshop_lock_acquire(&g_lock)
@@ -157,7 +161,7 @@ static UrsatzStatus save_collection(const WorkshopCollection *collection) {
         cJSON_Delete(root);
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    ok = workshop_format_write(path, WORKSHOP_FORMAT_COLLECTION, root, NULL) == URSATZ_OK;
+    ok = t_txn && workshop_txn_stage_json(t_txn, path, WORKSHOP_FORMAT_COLLECTION, root) == URSATZ_OK;
     cJSON_Delete(root);
     return ok ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
 }
@@ -328,7 +332,7 @@ static UrsatzStatus create_locked(const char *id, const char *name, const char *
     return result;
 }
 
-UrsatzStatus workshop_collection_create_with_id(const char *id, const char *name,
+static UrsatzStatus collection_create_with_id_impl(const char *id, const char *name,
                                                                 const char *description) {
     if (!workshop_collection_is_valid_id(id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
@@ -340,7 +344,7 @@ UrsatzStatus workshop_collection_create_with_id(const char *id, const char *name
     return result;
 }
 
-UrsatzStatus workshop_collection_create(const char *name, const char *description, char **out_id) {
+static UrsatzStatus collection_create_impl(const char *name, const char *description, char **out_id) {
     LOCK();
     UrsatzStatus result = workshop_fail(URSATZ_ERR_INTERNAL, "collection store is not available");
     if (g_ready) {
@@ -469,7 +473,7 @@ UrsatzStatus workshop_collection_get(const char *id, WorkshopCollection **out_co
     return URSATZ_OK;
 }
 
-UrsatzStatus workshop_collection_update(const char *id, const char *name, const char *description) {
+static UrsatzStatus collection_update_impl(const char *id, const char *name, const char *description) {
     char *new_name = NULL;
     char *new_description = NULL;
     UrsatzStatus result = URSATZ_OK;
@@ -510,7 +514,7 @@ UrsatzStatus workshop_collection_update(const char *id, const char *name, const 
     return result;
 }
 
-UrsatzStatus workshop_collection_delete(const char *id) {
+static UrsatzStatus collection_delete_impl(const char *id) {
     char path[PATH_BYTES];
     LOCK();
     UrsatzStatus result;
@@ -521,13 +525,13 @@ UrsatzStatus workshop_collection_delete(const char *id) {
     } else if (!common_path_exists(path)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "collection not found");
     } else {
-        result = remove(path) == 0 ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+        result = workshop_txn_remove(t_txn, path) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
     UNLOCK();
     return result;
 }
 
-UrsatzStatus workshop_collection_add_pieces(const char *id, const char *const *piece_ids, size_t count,
+static UrsatzStatus collection_add_pieces_impl(const char *id, const char *const *piece_ids, size_t count,
                                                             size_t *added, size_t *already) {
     for (size_t i = 0; i < count; i++) {
         if (!workshop_collection_is_valid_id(piece_ids[i])) {
@@ -579,7 +583,7 @@ static bool drop_piece(WorkshopCollection *collection, const char *piece_id) {
     return true;
 }
 
-UrsatzStatus workshop_collection_remove_piece(const char *id, const char *piece_id) {
+static UrsatzStatus collection_remove_piece_impl(const char *id, const char *piece_id) {
     if (!workshop_collection_is_valid_id(piece_id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
@@ -601,7 +605,7 @@ UrsatzStatus workshop_collection_remove_piece(const char *id, const char *piece_
     return result;
 }
 
-UrsatzStatus workshop_collection_remove_piece_everywhere(const char *piece_id) {
+static UrsatzStatus remove_piece_everywhere_impl(const char *piece_id) {
     if (!workshop_collection_is_valid_id(piece_id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
@@ -745,4 +749,99 @@ UrsatzStatus workshop_collection_add_request(const char *corpus_id, const cJSON 
         return store_failure(result, error);
     }
     return URSATZ_OK;
+}
+
+/* --- the writers: each begins its transaction before the lock of this file and commits it after ---------------------------------------- */
+
+static UrsatzStatus end_txn(WorkshopTxn *txn, UrsatzStatus result) {
+    if (result != URSATZ_OK) {
+        workshop_txn_abort(txn);
+        return result;
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    return workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+}
+
+UrsatzStatus workshop_collection_remove_piece_everywhere(WorkshopTxn *txn, const char *piece_id) {
+    t_txn = txn;
+    UrsatzStatus result = remove_piece_everywhere_impl(piece_id);
+    t_txn = NULL;
+    return result;
+}
+
+UrsatzStatus workshop_collection_create_with_id(const char *id, const char *name, const char *description) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.create", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+    }
+    t_txn = txn;
+    UrsatzStatus result = collection_create_with_id_impl(id, name, description);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    return result;
+}
+
+UrsatzStatus workshop_collection_create(const char *name, const char *description, char **out_id) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.create", "michelle", "", 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+    }
+    t_txn = txn;
+    UrsatzStatus result = collection_create_impl(name, description, out_id);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_id) {
+        free(*out_id);
+        *out_id = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_collection_update(const char *id, const char *name, const char *description) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.update", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+    }
+    t_txn = txn;
+    UrsatzStatus result = collection_update_impl(id, name, description);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    return result;
+}
+
+UrsatzStatus workshop_collection_delete(const char *id) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.delete", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+    }
+    t_txn = txn;
+    UrsatzStatus result = collection_delete_impl(id);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    return result;
+}
+
+UrsatzStatus workshop_collection_add_pieces(const char *id, const char *const *piece_ids, size_t count, size_t *added, size_t *already) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.add-pieces", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+    }
+    t_txn = txn;
+    UrsatzStatus result = collection_add_pieces_impl(id, piece_ids, count, added, already);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    return result;
+}
+
+UrsatzStatus workshop_collection_remove_piece(const char *id, const char *piece_id) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.remove-piece", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
+    }
+    t_txn = txn;
+    UrsatzStatus result = collection_remove_piece_impl(id, piece_id);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    return result;
 }

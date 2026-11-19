@@ -19,6 +19,7 @@
 #include "compose_common.h"
 #include "composer_client.h"
 #include "items/store.h"
+#include "items/txn.h"
 
 #define PATH_BYTES 800
 
@@ -1067,11 +1068,14 @@ static cJSON *variations_answer(const cJSON *result, const char *name, const cha
     return answer;
 }
 
-/* Makes the folder of the next variations set of the item: the first number from next_set whose folder this call makes. */
-static int make_set_dir(const char *source_dir, const char *id, int current, char *out_dir, size_t out_size) {
+/* Makes the staging folder of the next variations set of the item: the first number from next_set whose folder is not there. The staging folder
+ * becomes final_dir ("<version folder>/variations-<k>") in one transaction once the set is whole. */
+static int make_set_dir(const char *source_dir, const char *id, int current, char *out_dir, size_t out_size, char *final_dir, size_t final_size) {
+    static unsigned serial = 0;
     for (int set = next_set(id, current), tries = 0; tries < 1000; set++, tries++) {
-        snprintf(out_dir, out_size, "%s/variations-%d", source_dir, set);
-        if (mkdir(out_dir, 0755) == 0) {
+        snprintf(final_dir, final_size, "%s/variations-%d", source_dir, set);
+        snprintf(out_dir, out_size, "%s.stage-%d-%u", final_dir, (int)getpid(), __atomic_add_fetch(&serial, 1, __ATOMIC_RELAXED));
+        if (!common_path_exists(final_dir) && mkdir(out_dir, 0755) == 0) {
             return set;
         }
     }
@@ -1205,7 +1209,8 @@ static UrsatzStatus variations_locked(const char *id, int version, const char *s
         return result;
     }
     const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
-    char out_dir[PATH_BYTES + 32];
+    char out_dir[PATH_BYTES + 64];
+    char final_dir[PATH_BYTES + 32];
     char plan_path[PATH_BYTES + 32];
     cJSON *request = NULL;
     cJSON *from = NULL;
@@ -1214,7 +1219,7 @@ static UrsatzStatus variations_locked(const char *id, int version, const char *s
     result = read_inputs(source.dir, plan_path, &request, &from, error);
     int set = 0;
     if (result == URSATZ_OK) {
-        set = make_set_dir(source.dir, id, source.current, out_dir, sizeof(out_dir));
+        set = make_set_dir(source.dir, id, source.current, out_dir, sizeof(out_dir), final_dir, sizeof(final_dir));
         if (set == 0) {
             workshop_error_text(error, "the folder of the variations could not be made");
             result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
@@ -1233,6 +1238,25 @@ static UrsatzStatus variations_locked(const char *id, int version, const char *s
         if (!*out_result) {
             workshop_error_text(error, "the variations could not be read");
             common_dir_remove(out_dir, NULL);
+            result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+        }
+    }
+    if (result == URSATZ_OK) {
+        /* the set becomes part of the version in one transaction: whole, or not there */
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "item.variations", "michelle", id, 0);
+        UrsatzError commit_error;
+        memset(&commit_error, 0, sizeof(commit_error));
+        if (!txn || workshop_txn_adopt_folder(txn, out_dir, final_dir, NULL) != URSATZ_OK) {
+            workshop_txn_abort(txn);
+            common_dir_remove(out_dir, NULL);
+            cJSON_Delete(*out_result);
+            *out_result = NULL;
+            workshop_error_text(error, "the variations could not be stored");
+            result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+        } else if (workshop_txn_commit(txn, &commit_error) != URSATZ_OK) {
+            cJSON_Delete(*out_result);
+            *out_result = NULL;
+            workshop_error_text(error, "the variations could not be stored");
             result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
         }
     }

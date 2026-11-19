@@ -3,6 +3,8 @@
 
 #include <common/status.h>
 
+#include "txn.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -47,7 +49,7 @@ void workshop_material_service_shutdown(void);
  * it: the coordinator registers workshop_subject_forget_item's adapter at open, so the store includes no subjects header).
  * NULL (the start state) calls nothing.
  */
-void workshop_store_set_forget_item(void (*forget)(const char *item_id));
+void workshop_store_set_forget_item(void (*forget)(WorkshopTxn *txn, const char *item_id));
 
 /* --- projects ------------------------------------------------------------ */
 

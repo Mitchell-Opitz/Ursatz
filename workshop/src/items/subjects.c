@@ -20,6 +20,7 @@
 #include "collections.h"
 #include "ids.h"
 #include "store.h"
+#include "txn.h"
 
 #define NAME_MAX_CHARS 200
 #define NOTE_MAX_CHARS 4000
@@ -28,6 +29,9 @@
 #define PATH_BYTES 400
 
 static bool g_ready = false;
+
+/* The transaction the writer of the moment stages into (set by the public writers below, which begin it before the lock of this file). */
+static __thread WorkshopTxn *t_txn = NULL;
 
 static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
 #define LOCK() workshop_lock_acquire(&g_lock)
@@ -140,7 +144,7 @@ static UrsatzStatus save_subject_locked(const cJSON *subject) {
     if (!copy) {
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    UrsatzStatus written = workshop_format_write(path, WORKSHOP_FORMAT_SUBJECT, copy, NULL);
+    UrsatzStatus written = t_txn ? workshop_txn_stage_json(t_txn, path, WORKSHOP_FORMAT_SUBJECT, copy) : URSATZ_ERR_INTERNAL;
     cJSON_Delete(copy);
     return written == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
 }
@@ -218,7 +222,7 @@ static UrsatzStatus create_subject_locked(const char *name, const char *kind, co
     return result;
 }
 
-UrsatzStatus workshop_subject_create(const char *name, const char *kind, const char *note,
+static UrsatzStatus subject_create_impl(const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject) {
     if (out_subject) {
         *out_subject = NULL;
@@ -322,7 +326,7 @@ UrsatzStatus workshop_subject_get(const char *id, cJSON **out_subject) {
     return result;
 }
 
-UrsatzStatus workshop_subject_update(const char *id, const char *name, const char *kind, const char *note,
+static UrsatzStatus subject_update_impl(const char *id, const char *name, const char *kind, const char *note,
                                                  cJSON **out_subject) {
     if (out_subject) {
         *out_subject = NULL;
@@ -412,15 +416,21 @@ static UrsatzStatus forget(const char *name, const char *ref) {
     return result;
 }
 
-UrsatzStatus workshop_subject_forget_piece(const char *piece_id) {
-    return forget("pieces", piece_id);
+UrsatzStatus workshop_subject_forget_piece(WorkshopTxn *txn, const char *piece_id) {
+    t_txn = txn;
+    UrsatzStatus result = forget("pieces", piece_id);
+    t_txn = NULL;
+    return result;
 }
 
-UrsatzStatus workshop_subject_forget_item(const char *item_id) {
-    return forget("items", item_id);
+UrsatzStatus workshop_subject_forget_item(WorkshopTxn *txn, const char *item_id) {
+    t_txn = txn;
+    UrsatzStatus result = forget("items", item_id);
+    t_txn = NULL;
+    return result;
 }
 
-UrsatzStatus workshop_subject_delete(const char *id) {
+static UrsatzStatus subject_delete_impl(const char *id) {
     LOCK();
     if (!g_ready) {
         UNLOCK();
@@ -432,7 +442,7 @@ UrsatzStatus workshop_subject_delete(const char *id) {
         result = workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     } else if (!common_path_exists(path)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "subject not found");
-    } else if (remove(path) != 0) {
+    } else if (workshop_txn_remove(t_txn, path) != URSATZ_OK) {
         result = workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     } else {
         remove_from_all_locked("related", id);
@@ -539,7 +549,7 @@ static UrsatzStatus change_link(const char *id, const char *name, const char *re
  * an item is deleted, so item existence is checked before this service's lock
  * is taken, never while holding it.
  */
-UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, bool *out_already,
+static UrsatzStatus subject_link_item_impl(const char *id, const char *item_id, bool *out_already,
                                                     cJSON **out_subject) {
     cJSON *meta = NULL;
     UrsatzStatus found = workshop_material_item_get(item_id, &meta, NULL);
@@ -554,14 +564,14 @@ UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, boo
     return change_link(id, "items", item_id, true, out_already, out_subject);
 }
 
-UrsatzStatus workshop_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
+static UrsatzStatus subject_unlink_item_impl(const char *id, const char *item_id, cJSON **out_subject) {
     if (!is_valid_id(item_id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
     return change_link(id, "items", item_id, false, NULL, out_subject);
 }
 
-UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, bool *out_already,
+static UrsatzStatus subject_link_piece_impl(const char *id, const char *piece_id, bool *out_already,
                                                      cJSON **out_subject) {
     if (!is_valid_id(piece_id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
@@ -572,7 +582,7 @@ UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, b
     return change_link(id, "pieces", piece_id, true, out_already, out_subject);
 }
 
-UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
+static UrsatzStatus subject_unlink_piece_impl(const char *id, const char *piece_id, cJSON **out_subject) {
     if (!is_valid_id(piece_id)) {
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid id");
     }
@@ -581,7 +591,7 @@ UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id,
 
 /* --- relations ----------------------------------------------------------- */
 
-UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool *out_already,
+static UrsatzStatus subject_relate_impl(const char *id, const char *other_id, bool *out_already,
                                                  cJSON **out_subject) {
     if (out_already) {
         *out_already = false;
@@ -627,7 +637,7 @@ UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool 
     return result;
 }
 
-UrsatzStatus workshop_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
+static UrsatzStatus subject_unrelate_impl(const char *id, const char *other_id, cJSON **out_subject) {
     if (out_subject) {
         *out_subject = NULL;
     }
@@ -781,4 +791,156 @@ cJSON *workshop_subjects_for_piece(const char *piece_id) {
 
 cJSON *workshop_subjects_for_item(const char *item_id) {
   return subjects_for("items", item_id);
+}
+
+/* --- the writers: each begins its transaction before the lock of this file and commits it after ---------------------------------------- */
+
+static UrsatzStatus end_txn(WorkshopTxn *txn, UrsatzStatus result) {
+    if (result != URSATZ_OK) {
+        workshop_txn_abort(txn);
+        return result;
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    return workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+}
+
+UrsatzStatus workshop_subject_create(const char *name, const char *kind, const char *note, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.create", "michelle", "", 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_create_impl(name, kind, note, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_update(const char *id, const char *name, const char *kind, const char *note, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.update", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_update_impl(id, name, kind, note, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_delete(const char *id) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.delete", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_delete_impl(id);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    return result;
+}
+
+UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, bool *out_already, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-item", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_link_item_impl(id, item_id, out_already, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-item", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_unlink_item_impl(id, item_id, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, bool *out_already, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-piece", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_link_piece_impl(id, piece_id, out_already, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-piece", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_unlink_piece_impl(id, piece_id, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool *out_already, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.relate", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_relate_impl(id, other_id, out_already, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
+}
+
+UrsatzStatus workshop_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unrelate", "michelle", id, 0);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
+    }
+    t_txn = txn;
+    UrsatzStatus result = subject_unrelate_impl(id, other_id, out_subject);
+    t_txn = NULL;
+    result = end_txn(txn, result);
+    if (result != URSATZ_OK && out_subject) {
+        cJSON_Delete(*out_subject);
+        *out_subject = NULL;
+    }
+    return result;
 }

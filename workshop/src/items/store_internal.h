@@ -7,6 +7,7 @@
  */
 
 #include "store.h"
+#include "txn.h"
 #include "base/last_error.h"
 #include "lock.h"
 
@@ -34,8 +35,15 @@
 /* Whether the store is ready, and the one lock every operation runs under (store.c). */
 extern bool store_ready;
 extern WorkshopLock store_lock;
-/* Calls the forget hook (workshop_store_set_forget_item) for item_id, if there is one. */
-void store_forget_item(const char *item_id);
+/* Calls the forget hook (workshop_store_set_forget_item) for item_id, if there is one: it stages what the item's delete drops from the
+ * subjects into txn. */
+void store_forget_item(WorkshopTxn *txn, const char *item_id);
+
+/* Begins the transaction of a writer (before the store's lock, which is taken inside it); NULL when the journal cannot be read. */
+WorkshopTxn *store_txn_begin(const char *command, const char *target);
+
+/* Commits the transaction when result is OK and aborts it otherwise; the status to answer (a failed commit is INTERNAL). */
+UrsatzStatus store_txn_end(WorkshopTxn *txn, UrsatzStatus result);
 
 #define LOCK() workshop_lock_acquire(&store_lock)
 #define UNLOCK() workshop_lock_release(&store_lock)
@@ -84,9 +92,9 @@ UrsatzStatus store_fill_body_uses_locked(const char *self_id, const cJSON *body,
  * reads it. */
 bool store_annotate_variant_of_locked(cJSON *item, const cJSON *known_body);
 
-/* Writes body as the next version of item and saves its header with it made current; stage (NULL for none) is a folder of the version's
+/* Stages body as the next version of item and its header with it made current, in txn; stage (NULL for none) is a folder of the version's
  * files that becomes the version folder. */
-UrsatzStatus store_commit_version_locked(const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage);
+UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage);
 
 const char *store_prefix_for_type(const char *type);
 

@@ -8,6 +8,8 @@
 
 #include <cJSON.h>
 
+#include "items/txn.h"
+
 #include <ursatz_analyzer/analyzer_api.h>
 
 /*
@@ -170,7 +172,13 @@ bool workshop_library_meta_write_new(const char *dir_path, const char *filename,
  * "ursatz_commit"); NULL when it is missing or is not a piece file. */
 cJSON *workshop_library_meta_read(const char *dir_path);
 
-/* Writes meta (in that shape) as <dir_path>/piece.json, atomically. */
+/* Sets the transaction the Library writers of this thread stage into (NULL: none, a write goes straight to its file). */
+void workshop_library_set_txn(WorkshopTxn *txn);
+
+/* Writes a file of a piece: staged in the thread's transaction, or atomically in place when there is none. */
+bool workshop_library_write_file(const char *path, const void *data, size_t size);
+
+/* Writes meta (in that shape) as <dir_path>/piece.json: staged in the thread's transaction or atomically in place. */
 bool workshop_library_meta_write(const char *dir_path, const cJSON *meta);
 
 /* A copy of a string member of meta, "" when it is absent. */

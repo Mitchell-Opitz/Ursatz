@@ -1,5 +1,6 @@
 #include "library_pieces.h"
 #include "formats.h"
+#include "txn.h"
 #include "layout.h"
 #include "base/last_error.h"
 #include "ids.h"
@@ -74,6 +75,21 @@ static void meta_to_file(cJSON *meta) {
     }
 }
 
+/* The transaction the writer of the moment stages into (set by the Library's public writers in analysis.c, which begin it before any lock). Without one a
+ * write goes straight to the file, atomically: that is how a piece being imported fills its own staging folder, which the transaction adopts. */
+static __thread WorkshopTxn *t_txn = NULL;
+
+void workshop_library_set_txn(WorkshopTxn *txn) {
+    t_txn = txn;
+}
+
+bool workshop_library_write_file(const char *path, const void *data, size_t size) {
+    if (t_txn) {
+        return workshop_txn_stage_file(t_txn, path, data, size) == URSATZ_OK;
+    }
+    return common_file_write_atomic(path, data, size, NULL) == URSATZ_OK;
+}
+
 bool workshop_library_meta_write(const char *dir_path, const cJSON *meta) {
     cJSON *file = cJSON_Duplicate(meta, 1);
     char path[400];
@@ -82,7 +98,8 @@ bool workshop_library_meta_write(const char *dir_path, const cJSON *meta) {
         return false;
     }
     meta_to_file(file);
-    bool ok = workshop_format_write(path, WORKSHOP_FORMAT_LIBRARY_PIECE, file, NULL) == URSATZ_OK;
+    bool ok = (t_txn ? workshop_txn_stage_json(t_txn, path, WORKSHOP_FORMAT_LIBRARY_PIECE, file)
+                     : workshop_format_write(path, WORKSHOP_FORMAT_LIBRARY_PIECE, file, NULL)) == URSATZ_OK;
     cJSON_Delete(file);
     return ok;
 }
@@ -256,8 +273,8 @@ const char *workshop_library_source_name(ImportedFormat format, const char *orig
     return "source.musicxml";
 }
 
-/* Creates pieces_dir/<id>/ with a fresh id, re-drawing while the directory
-   exists. Returns OK, ERR_ALLOC or ERR_PERSISTENCE_FAILED. */
+/* Draws a fresh id for a piece of pieces_dir, re-drawing while the folder exists. The folder is made by the import's transaction. Returns OK or
+   ERR_ALLOC. */
 UrsatzStatus workshop_library_piece_create(const char *pieces_dir, char **out_id) {
     for (int attempt = 0; attempt < PIECE_ID_MAX_TRIES; attempt++) {
         char *id = workshop_new_id("piece");
@@ -266,15 +283,11 @@ UrsatzStatus workshop_library_piece_create(const char *pieces_dir, char **out_id
         }
         char dir_path[320];
         snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
-        UrsatzStatus made = common_dir_create(dir_path, NULL);
-        if (made == URSATZ_OK) {
+        if (!common_path_exists(dir_path)) {
             *out_id = id;
             return URSATZ_OK;
         }
         free(id);
-        if (made != URSATZ_ERR_CONFLICT) {
-            return workshop_fail(URSATZ_ERR_IO, NULL);
-        }
     }
     return workshop_fail(URSATZ_ERR_IO, NULL);
 }
@@ -399,6 +412,9 @@ UrsatzStatus workshop_library_delete_piece_unlocked(const char *pieces_dir, cons
     char dir_path[320];
     if (!workshop_library_piece_dir(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, NULL);
+    }
+    if (t_txn) {
+        return workshop_txn_remove(t_txn, dir_path) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_IO, NULL);
     }
     common_dir_remove(dir_path, NULL);
     return common_path_is_dir(dir_path) ? workshop_fail(URSATZ_ERR_IO, NULL) : URSATZ_OK;

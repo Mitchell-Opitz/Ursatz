@@ -1,6 +1,7 @@
 #include "links.h"
 #include "items/formats.h"
 #include "items/layout.h"
+#include "items/txn.h"
 #include "base/last_error.h"
 #include "items/lock.h"
 
@@ -589,6 +590,43 @@ static bool job_write(const Job *job) {
     return ok;
 }
 
+/* Commits the run's record through a transaction: a new run is a folder holding run.json, a finished one replaces the file. A progress write
+ * (job_write) is not a change of the data folder that needs a record: it is an atomic write of what a restart reads as interrupted. */
+static bool job_commit(Job *job, bool is_new) {
+    char path[PATH_BYTES];
+    char dir[PATH_BYTES];
+    if (!run_file_path(job->id, path, sizeof(path)) || !run_dir_path(job->id, dir, sizeof(dir))) {
+        return false;
+    }
+    WorkshopTxn *txn = workshop_txn_begin(NULL, is_new ? "links.start" : "links.finish", "michelle", job->id, 0);
+    if (!txn) {
+        return false;
+    }
+    cJSON *copy = cJSON_Duplicate(job->run, 1);
+    bool staged = copy != NULL;
+    if (staged && is_new) {
+        const char *pending = NULL;
+        char file[PATH_BYTES * 2];
+        staged = workshop_txn_stage_folder(txn, dir, &pending) == URSATZ_OK &&
+                 snprintf(file, sizeof(file), "%s/" WORKSHOP_FILE_RUN, pending) < (int)sizeof(file) &&
+                 workshop_format_write(file, WORKSHOP_FORMAT_LINK_RUN, copy, NULL) == URSATZ_OK;
+    } else if (staged) {
+        staged = workshop_txn_stage_json(txn, path, WORKSHOP_FORMAT_LINK_RUN, copy) == URSATZ_OK;
+    }
+    cJSON_Delete(copy);
+    if (!staged) {
+        workshop_txn_abort(txn);
+        return false;
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    bool ok = workshop_txn_commit(txn, &error) == URSATZ_OK;
+    if (ok) {
+        index_update(job->run);
+    }
+    return ok;
+}
+
 static bool job_set_progress(Job *job, size_t done, size_t total) {
     return set_member(job->run, "done", cJSON_CreateNumber((double)done)) &&
            set_member(job->run, "total", cJSON_CreateNumber((double)total));
@@ -662,7 +700,9 @@ static void job_finish(Job *job, const char *status, const char *message, cJSON 
     if (result) {
         set_member(job->run, "result", result);
     }
-    job_write(job);
+    if (!job_commit(job, false)) {
+        job_write(job); /* the record could not be committed: the file is written as a progress write is */
+    }
 }
 
 static void job_fail(Job *job, const char *message) {
@@ -885,8 +925,8 @@ UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_
         result = workshop_fail(URSATZ_ERR_CONFLICT, "a run is in progress");
     } else {
         char dir[PATH_BYTES];
-        result = run_dir_path(job->id, dir, sizeof(dir)) && (common_dir_make(dir, NULL) == URSATZ_OK) && job_write(job) ? URSATZ_OK
-                                                                                                 : workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
+        result = run_dir_path(job->id, dir, sizeof(dir)) && job_commit(job, true) ? URSATZ_OK
+                                                                                   : workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
         if (result == URSATZ_OK) {
             g_state.active = true;
             g_state.done = 0;
@@ -995,8 +1035,18 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
     } else if (!common_path_is_dir(dir)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else {
-        common_dir_remove(dir, NULL);
-        index_remove(id);
+        /* the lock of this file is taken first, as at the start of a run, so the order against the transaction is the same */
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "links.delete", "michelle", id, 0);
+        UrsatzError error;
+        memset(&error, 0, sizeof(error));
+        if (!txn || workshop_txn_remove(txn, dir) != URSATZ_OK) {
+            workshop_txn_abort(txn);
+            result = workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
+        } else if (workshop_txn_commit(txn, &error) != URSATZ_OK) {
+            result = workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
+        } else {
+            index_remove(id);
+        }
     }
     UNLOCK();
     return result;

@@ -6,6 +6,8 @@
 #include "base/knowledge.h"
 #include "items/collections.h"
 #include "items/subjects.h"
+#include "items/txn.h"
+#include "items/library_pieces.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -64,13 +66,10 @@ static UrsatzStatus analyze_source_file(const char *dir_path, ImportedFormat for
     return URSATZ_OK;
 }
 
-/* Writes the upload into the new piece directory pieces_dir/<id>/ and analyzes it. On failure the directory is
-   removed. The caller holds the piece lock. */
-static UrsatzStatus save_new_piece(const char *pieces_dir, const char *id, const unsigned char *data,
-                                              size_t size, const char *original_filename) {
+/* Writes the upload into the staging folder dir_path of a new piece and analyzes it. On failure the folder is removed. The transaction of the
+   import adopts the folder once it is whole (workshop_analysis_import_and_save). */
+static UrsatzStatus save_new_piece(const char *dir_path, const unsigned char *data, size_t size, const char *original_filename) {
     UrsatzStatus result;
-    char dir_path[320];
-    snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
 
     /* The bytes go to disk unchanged under a neutral name first: the format
        is detected from the content, and the final name depends on it. */
@@ -132,15 +131,32 @@ UrsatzStatus workshop_analysis_import_and_save(const char *pieces_dir, const uns
     if (result != URSATZ_OK) {
         return result;
     }
-
-    /* The directory exists from here on, so a reader that lists pieces may open it before it is complete. */
-    if (!workshop_piece_lock(id)) {
+    /* The piece is built in a folder of its own (no reader lists it) and becomes pieces_dir/<id>/ in one transaction, whole or not at all. */
+    static unsigned serial = 0;
+    char stage[400];
+    char final_dir[320];
+    snprintf(final_dir, sizeof(final_dir), "%s/%s", pieces_dir, id);
+    snprintf(stage, sizeof(stage), "%s/%s.stage-%d-%u", pieces_dir, id, (int)getpid(), __atomic_add_fetch(&serial, 1, __ATOMIC_RELAXED));
+    if (common_dir_create(stage, NULL) != URSATZ_OK) {
         free(id);
-        return workshop_fail(URSATZ_ERR_ALLOC, NULL);
+        return workshop_fail(URSATZ_ERR_IO, NULL);
     }
-    result = save_new_piece(pieces_dir, id, data, size, original_filename);
-    workshop_piece_unlock(id);
+    result = save_new_piece(stage, data, size, original_filename);
+    if (result == URSATZ_OK) {
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", "michelle", id, 0);
+        if (!txn) {
+            result = workshop_fail(URSATZ_ERR_IO, NULL);
+        } else if (workshop_txn_adopt_folder(txn, stage, final_dir, NULL) != URSATZ_OK) {
+            workshop_txn_abort(txn);
+            result = workshop_fail(URSATZ_ERR_IO, NULL);
+        } else {
+            UrsatzError error;
+            memset(&error, 0, sizeof(error));
+            result = workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_IO, NULL);
+        }
+    }
     if (result != URSATZ_OK) {
+        common_dir_remove(stage, NULL);
         free(id);
         return result;
     }
@@ -338,7 +354,7 @@ static UrsatzStatus reanalyze_unlocked(const char *pieces_dir, const char *id) {
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool ok = (common_file_write_atomic(analysis_path, document_json, strlen(document_json), NULL) == URSATZ_OK);
+    bool ok = workshop_library_write_file(analysis_path, document_json, strlen(document_json));
     free(document_json);
 
     ok = ok && workshop_library_meta_set_string(meta, "analyzer_version", analyzer_version()) &&
@@ -678,6 +694,7 @@ void workshop_piece_detail_destroy(WorkshopPieceDetail *detail) {
 UrsatzStatus workshop_analysis_get_piece(const char *pieces_dir, const char *id,
                                                         WorkshopPieceDetail **out_detail) {
     UrsatzStatus result;
+    (void)workshop_analysis_ensure_current(pieces_dir, id); /* a stale analysis is made again in a transaction of its own (B10 moves it to a job) */
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return result;
     }
@@ -697,7 +714,31 @@ UrsatzStatus workshop_analysis_get_document(const char *pieces_dir, const char *
     return result;
 }
 
-UrsatzStatus workshop_analysis_delete_piece(const char *pieces_dir, const char *id) {
+/* --- the Library's writers: each begins its transaction before any lock and commits it after (items/txn.h) ----------------------------------- */
+
+static WorkshopTxn *begin_library(const char *command, const char *id) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, command, "michelle", id ? id : "", 0);
+    workshop_library_set_txn(txn);
+    return txn;
+}
+
+/* Commits when result is OK, aborts otherwise; the status to answer. */
+static UrsatzStatus end_library(WorkshopTxn *txn, UrsatzStatus result) {
+    workshop_library_set_txn(NULL);
+    if (!txn) {
+        return result == URSATZ_OK ? workshop_fail(URSATZ_ERR_IO, NULL) : result;
+    }
+    if (result != URSATZ_OK) {
+        workshop_txn_abort(txn);
+        return result;
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    return workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_IO, NULL);
+}
+
+/* Stages the removal of the piece's folder, under the piece lock. */
+static UrsatzStatus delete_piece_staged(const char *pieces_dir, const char *id) {
     UrsatzStatus result;
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return result;
@@ -708,24 +749,58 @@ UrsatzStatus workshop_analysis_delete_piece(const char *pieces_dir, const char *
     return result;
 }
 
+UrsatzStatus workshop_analysis_delete_piece(const char *pieces_dir, const char *id) {
+    WorkshopTxn *txn = begin_library("library.delete", id);
+    return end_library(txn, txn ? delete_piece_staged(pieces_dir, id) : workshop_fail(URSATZ_ERR_IO, NULL));
+}
+
 UrsatzStatus workshop_analysis_reanalyze(const char *pieces_dir, const char *id) {
+    WorkshopTxn *txn = begin_library("library.reanalyze", id);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_IO, NULL);
+    }
     UrsatzStatus result;
     if (!workshop_library_piece_lock_enter(id, &result)) {
-        return result;
+        return end_library(txn, result);
     }
     result = reanalyze_unlocked(pieces_dir, id);
     workshop_piece_unlock(id);
-    return result;
+    return end_library(txn, result);
+}
+
+/* True when the stored analysis of the piece is current and its metadata needs no back-fill: a read, so nothing is begun for it. */
+static bool piece_is_current(const char *pieces_dir, const char *id) {
+    char dir_path[320];
+    if (!workshop_library_piece_dir(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return false;
+    }
+    cJSON *meta = workshop_library_meta_read(dir_path);
+    bool has_key = meta && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(meta, "ursatz_commit"));
+    cJSON_Delete(meta);
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    char *document = NULL;
+    common_file_read(analysis_path, &document, NULL, NULL);
+    bool current = has_key && document && analyzer_document_status(document) == ANALYZER_DOCUMENT_CURRENT;
+    free(document);
+    return current;
 }
 
 UrsatzStatus workshop_analysis_ensure_current(const char *pieces_dir, const char *id) {
+    if (piece_is_current(pieces_dir, id)) {
+        return URSATZ_OK;
+    }
+    WorkshopTxn *txn = begin_library("library.reanalyze", id);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_IO, NULL);
+    }
     UrsatzStatus result;
     if (!workshop_library_piece_lock_enter(id, &result)) {
-        return result;
+        return end_library(txn, result);
     }
     result = ensure_current_unlocked(pieces_dir, id);
     workshop_piece_unlock(id);
-    return result;
+    return end_library(txn, result);
 }
 
 UrsatzStatus workshop_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
@@ -780,8 +855,18 @@ static bool notation_equal(bool has_a, const WorkshopNotation *a, bool has_b, co
                       strcmp(a->pickup, b->pickup) == 0);
 }
 
+static UrsatzStatus update_piece_unlocked_enter(const char *pieces_dir, const char *id, const WorkshopMetaUpdate *update, UrsatzError *error);
+
 UrsatzStatus workshop_analysis_update_piece(const char *pieces_dir, const char *id,
                                                           const WorkshopMetaUpdate *update, UrsatzError *error) {
+    WorkshopTxn *txn = begin_library("library.update", id);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_IO, NULL);
+    }
+    return end_library(txn, update_piece_unlocked_enter(pieces_dir, id, update, error));
+}
+
+static UrsatzStatus update_piece_unlocked_enter(const char *pieces_dir, const char *id, const WorkshopMetaUpdate *update, UrsatzError *error) {
     UrsatzStatus result;
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return result;
@@ -917,17 +1002,19 @@ UrsatzStatus workshop_library_patch(const char *pieces_dir, const char *id, cons
 }
 
 UrsatzStatus workshop_library_delete(const char *pieces_dir, const char *id) {
-    UrsatzStatus result = workshop_analysis_delete_piece(pieces_dir, id);
-    if (result != URSATZ_OK) {
-        return result;
+    WorkshopTxn *txn = begin_library("library.delete", id);
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_IO, NULL);
     }
-    /* A collection never keeps an id whose piece is gone. The piece itself is already deleted, so a failure here is logged, not answered. */
-    if (workshop_collection_remove_piece_everywhere(id) != URSATZ_OK) {
-        fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every collection\n", id);
+    UrsatzStatus result = delete_piece_staged(pieces_dir, id);
+    if (result == URSATZ_OK) {
+        /* A collection never keeps an id whose piece is gone, and neither does a subject: the cleanups are in the same transaction. */
+        if (workshop_collection_remove_piece_everywhere(txn, id) != URSATZ_OK) {
+            fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every collection\n", id);
+        }
+        if (workshop_subject_forget_piece(txn, id) != URSATZ_OK) {
+            fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
+        }
     }
-    /* The same goes for the subjects that linked the piece. */
-    if (workshop_subject_forget_piece(id) != URSATZ_OK) {
-        fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
-    }
-    return URSATZ_OK;
+    return end_library(txn, result);
 }

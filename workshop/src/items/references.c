@@ -471,9 +471,14 @@ UrsatzStatus workshop_material_update_use(const char *id, const char *source_id,
     if (out_item) {
         *out_item = NULL;
     }
+    WorkshopTxn *txn = store_txn_begin("item.update-use", id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     if (!store_ready) {
         UNLOCK();
+        workshop_txn_abort(txn);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON *item = NULL;
@@ -512,14 +517,15 @@ UrsatzStatus workshop_material_update_use(const char *id, const char *source_id,
         }
     }
     if (result == URSATZ_OK) {
-        result = store_commit_version_locked(id, item, stored, note, NULL);
+        result = store_commit_version_locked(txn, id, item, stored, note, NULL);
     }
+    UNLOCK();
+    result = store_txn_end(txn, result);
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {
         cJSON_Delete(item);
     }
-    UNLOCK();
     cJSON_Delete(source);
     cJSON_Delete(body);
     cJSON_Delete(stored);
@@ -667,9 +673,14 @@ UrsatzStatus workshop_material_delete_blockers(const char *id, cJSON **out_users
 }
 
 UrsatzStatus workshop_material_item_delete(const char *id, bool force) {
+    WorkshopTxn *txn = store_txn_begin("item.delete", id ? id : "");
+    if (!txn) {
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
     LOCK();
     if (!store_ready) {
         UNLOCK();
+        workshop_txn_abort(txn);
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     char dir[PATH_BYTES];
@@ -687,19 +698,16 @@ UrsatzStatus workshop_material_item_delete(const char *id, bool force) {
     } else if (!force && (result = delete_blockers_locked(id, &variants, &users)) == URSATZ_OK && users->child) {
         result = workshop_fail(URSATZ_ERR_CONFLICT, "the item is used by other items");
     } else if (result == URSATZ_OK) {
-        /* The variants go with their motif (R-187), then the motif. The header first: a half-deleted folder is no longer an item. */
+        /* The variants go with their motif (R-187), then the motif: each folder is removed in the one transaction. */
         for (size_t member = 0; result == URSATZ_OK && member <= variants.count; member++) {
             const char *member_id = member < variants.count ? variants.ids[member] : id;
             char member_dir[PATH_BYTES];
-            char member_meta[PATH_BYTES];
-            if (!store_item_dir_path(member_id, member_dir, sizeof(member_dir)) ||
-                !store_item_file_path(member_id, WORKSHOP_FILE_ITEM, member_meta, sizeof(member_meta)) || remove(member_meta) != 0) {
+            if (!store_item_dir_path(member_id, member_dir, sizeof(member_dir)) || workshop_txn_remove(txn, member_dir) != URSATZ_OK) {
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
             } else {
-                common_dir_remove(member_dir, NULL);
                 char render[PATH_BYTES];
                 if (snprintf(render, sizeof(render), WORKSHOP_DIR_RENDERS "/%s", member_id) < (int)sizeof(render)) {
-                    common_dir_remove(render, NULL);
+                    (void)workshop_txn_remove(txn, render);
                 }
                 if (!id_set_add(&removed, member_id)) {
                     result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
@@ -709,10 +717,11 @@ UrsatzStatus workshop_material_item_delete(const char *id, bool force) {
     }
     UNLOCK();
     cJSON_Delete(users);
-    /* Subjects take their own lock, so this runs with the material lock released. */
-    for (size_t i = 0; i < removed.count; i++) {
-        store_forget_item(removed.ids[i]);
+    /* The subjects drop their links to the items in the same transaction; they take their own lock, so this runs with the store's lock released. */
+    for (size_t i = 0; result == URSATZ_OK && i < removed.count; i++) {
+        store_forget_item(txn, removed.ids[i]);
     }
+    result = store_txn_end(txn, result);
     id_set_free(&variants);
     id_set_free(&removed);
     return result;

@@ -17,7 +17,8 @@
 static char g_forgotten[64];
 static int g_forgotten_count;
 
-static void record_forgotten(const char *item_id) {
+static void record_forgotten(WorkshopTxn *txn, const char *item_id) {
+    (void)txn;
     snprintf(g_forgotten, sizeof(g_forgotten), "%s", item_id);
     g_forgotten_count++;
 }

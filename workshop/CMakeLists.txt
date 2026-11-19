@@ -8,8 +8,10 @@ add_library(ursatz_workshop STATIC
     src/items/data_check.c
     src/items/formats.c
     src/items/ids.c
+    src/items/journal.c
     src/items/layout.c
     src/items/migrate.c
+    src/items/txn.c
     src/items/library_pieces.c
     src/items/library_metadata.c
     src/items/store.c
@@ -53,6 +55,10 @@ target_link_libraries(ursatz_workshop
     PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory cjson
 )
 target_compile_options(ursatz_workshop PRIVATE -Wall -Wextra -Wpedantic)
+if(URSATZ_TESTS)
+    # The test build of the engine can stop a commit at each of its steps (items/txn.h); without a point set the hooks do nothing.
+    target_compile_definitions(ursatz_workshop PRIVATE URSATZ_WORKSHOP_TEST_HOOKS)
+endif()
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

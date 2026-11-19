@@ -17,8 +17,8 @@
 #include <limits.h>
 
 /* The store's hook for an item an item delete removed: the subjects drop their links to it (items/store.h). */
-static void forget_item_in_subjects(const char *item_id) {
-    (void)workshop_subject_forget_item(item_id);
+static void forget_item_in_subjects(WorkshopTxn *txn, const char *item_id) {
+    (void)workshop_subject_forget_item(txn, item_id);
 }
 
 UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, UrsatzError *error) {
