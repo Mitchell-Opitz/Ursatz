@@ -39,8 +39,8 @@ Tags and Actions.
   hover and focus, labelled "Build style from <row>"). It opens an inline name
   prompt prefilled with the default name ("Composer: X", "Source: X",
   "Tag: x" joined with " · ", "Collection: <name>" or "Selected pieces");
-  Build sends `POST /api/styles` and the button reads "Building..." until the
-  answer. A plain composer, source or tag filter builds from that filter;
+  Build sends `POST /api/styles` as a job (`BackendJobs.runJob`) and the button reads "Building..." until
+  the job ends. A plain composer, source or tag filter builds from that filter;
   Unassigned, Untagged and search have no backend form, so those build from
   the ids of the pieces shown. A failure shows under the button.
 - **Styles**: a section under the collection cards listing each style with

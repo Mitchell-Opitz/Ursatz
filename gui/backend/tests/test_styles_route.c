@@ -61,7 +61,7 @@ static void patch_piece(const char *id, const char *body) {
 
 /* Builds a style with a JSON body; returns the parsed answer (caller deletes). */
 static cJSON *build_style(const char *body, int *status) {
-  return test_http_json(PORT, "POST", "/api/styles", body, status);
+  return test_http_json_finish(PORT, "POST", "/api/styles", body, status);
 }
 
 static const cJSON *style_of(const cJSON *answer) {
@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
     char body[512];
     snprintf(path, sizeof(path), "/api/corpus/%s/pieces", collection_id);
     snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\",\"%s\"]}", clementi_id, mozart_id);
-    cJSON_Delete(test_http_json(PORT, "POST", path, body, &status));
+    cJSON_Delete(test_http_json_finish(PORT, "POST", path, body, &status));
     snprintf(body, sizeof(body), "{\"collection_id\":\"%s\"}", collection_id);
     answer = build_style(body, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2, "a style from a collection holds its pieces");
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
     char body[1024];
     snprintf(path, sizeof(path), "/api/corpus/%s/pieces", solo_id);
     snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\"]}", clementi_id);
-    cJSON_Delete(test_http_json(PORT, "POST", path, body, &status));
+    cJSON_Delete(test_http_json_finish(PORT, "POST", path, body, &status));
 
     snprintf(body, sizeof(body),
              "{\"brief\":{\"scopes\":[{\"kind\":\"collection\",\"collection_id\":\"%s\"},"
@@ -391,11 +391,11 @@ int main(int argc, char **argv) {
 
     /* Rebuild resolves the brief again: the style it names changed. */
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", one_id);
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 200, "rebuilding the style a brief names answers 200");
     cJSON_Delete(answer);
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2 &&
               strcmp(string_of(cJSON_GetObjectItemCaseSensitive(style_of(answer), "source"), "kind"), "brief") == 0,
           "rebuilding a brief resolves it again and keeps its kind");
@@ -406,7 +406,7 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof(path), "/api/styles/%s", one_id);
     cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 422 && !ok_true(answer), "rebuilding a brief whose style is gone answers 422");
     cJSON_Delete(answer);
     check(model_reads_with_pieces(with_style_id, 2), "a refused brief rebuild leaves the model as it was");
@@ -504,7 +504,7 @@ int main(int argc, char **argv) {
       snprintf(old_updated, sizeof(old_updated), "%s", string_of(style_of(answer), "updated_at"));
       cJSON_Delete(answer);
     }
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 1, "rebuilding after untagging one gives 1 piece");
     check(strcmp(string_of(style_of(answer), "id"), tag_style_id) == 0, "the rebuilt style keeps its id");
     check(strcmp(string_of(style_of(answer), "name"), "Tag: sonatina") == 0, "the rebuilt style keeps its name");
@@ -514,7 +514,7 @@ int main(int argc, char **argv) {
 
     /* No piece left: 422, and the style stays as it was. */
     patch_piece(mozart_id, "{\"remove_tags\":[\"sonatina\"]}");
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 422 && !ok_true(answer), "rebuilding with no piece left answers 422");
     cJSON_Delete(answer);
     check(model_reads_with_pieces(tag_style_id, 1), "a refused rebuild leaves the model as it was");
@@ -540,7 +540,7 @@ int main(int argc, char **argv) {
     cJSON_Delete(answer);
     char rebuild[256];
     snprintf(rebuild, sizeof(rebuild), "/api/styles/%s/rebuild", tag_style_id);
-    answer = test_http_json(PORT, "POST", rebuild, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", rebuild, NULL, &status);
     check(status == 404, "rebuilding a deleted style answers 404");
     cJSON_Delete(answer);
     answer = test_http_json(PORT, "GET", "/api/styles/sty-0000000000000000", NULL, &status);

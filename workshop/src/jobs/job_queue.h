@@ -81,6 +81,16 @@ void workshop_jobs_set_limit(const char *kind, unsigned limit);
 bool workshop_jobs_list(WorkshopJobInfo **out, size_t *count);
 void workshop_job_list_destroy(WorkshopJobInfo *infos, size_t count);
 
+/* Fills out with object (freed) as the answer with the given status, or the out-of-memory failure. */
+void workshop_job_result_json(WorkshopJobResult *out, int status, cJSON *object);
+
+/* Fills out with {"ok": false, "error": message} and the status. */
+void workshop_job_result_failure(WorkshopJobResult *out, int status, const char *message);
+
+/* The same with the request member at fault as "path" (the Composer's UrsatzError.path); no path member when it is NULL
+ * or empty. */
+void workshop_job_result_failure_at(WorkshopJobResult *out, int status, const char *message, const char *path);
+
 /* The state's name in the HTTP answers: queued, running, done, failed or cancelled. */
 const char *workshop_job_state_name(WorkshopJobState state);
 

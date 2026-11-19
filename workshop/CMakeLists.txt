@@ -25,6 +25,7 @@ add_library(ursatz_workshop STATIC
     src/items/piece_lock.c
     src/items/subjects.c
     src/analysis/analysis.c
+    src/analysis/analysis_jobs.c
     src/analysis/import_cache.c
     src/analysis/links.c
     src/analysis/styles.c

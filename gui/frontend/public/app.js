@@ -77,6 +77,14 @@ async function fetchJsonResult(url, options) {
   }
 }
 
+/* fetchJsonResult for a request the backend runs as a job (R-645: piece imports and re-analyses, style builds and rebuilds): runJob sends it,
+ * polls the job and answers the status and body the route answered before jobs, so the callers keep their reply handling. */
+async function jobJsonResult(url, options) {
+  const res = await BackendJobs.runJob({ url, method: options.method, headers: options.headers, body: options.body });
+  const data = res.body || null;
+  return { ok: res.status >= 200 && res.status < 300 && !(data && data.error), status: res.status, data };
+}
+
 function postJsonResult(url, body) {
   return fetchJsonResult(url, {
     method: "POST",
@@ -953,8 +961,8 @@ async function startLibraryEdit(row, piece) {
  * or null on success. */
 async function reanalyzePiece(id) {
   try {
-    const res = await fetch(`/api/analyzer/pieces/${id}/reanalyze`, { method: "POST" });
-    const data = await res.json();
+    const res = await BackendJobs.runJob({ url: `/api/analyzer/pieces/${id}/reanalyze`, method: "POST" });
+    const data = res.body || {};
     if (res.status === 404) {
       return "Piece not found.";
     }
@@ -1095,14 +1103,15 @@ async function runUploadQueue(idPrefix, files, onUploaded) {
     show();
     try {
       const bytes = await files[i].arrayBuffer();
-      const res = await fetch("/api/analyzer/pieces", {
+      const res = await BackendJobs.runJob({
+        url: "/api/analyzer/pieces",
         method: "POST",
         headers: { "X-Filename": encodeURIComponent(files[i].name) },
         body: bytes,
       });
-      const data = await res.json();
+      const data = res.body || {};
       if (!data.ok) {
-        queue = UploadQueue.markFailed(queue, i, data.message || "Upload failed.");
+        queue = UploadQueue.markFailed(queue, i, data.message || data.error || "Upload failed.");
         show();
         continue;
       }
@@ -2519,7 +2528,11 @@ function buildStyleRow(style, collectionNames) {
 
 async function rebuildStyle(style) {
   setStylesStatus(`Rebuilding ${style.name}...`, false);
-  const result = await postJsonResult(`/api/styles/${style.id}/rebuild`, {});
+  const result = await jobJsonResult(`/api/styles/${style.id}/rebuild`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
   if (result.ok && result.data && result.data.ok) {
     const skipped = result.data.skipped || [];
     await loadStylesSection();
@@ -2737,7 +2750,11 @@ function startStyleBuild({ source, host, trigger, resultEl }) {
     trigger.disabled = true;
     resultEl.classList.remove("error");
     resultEl.textContent = "";
-    const result = await postJsonResult("/api/styles", PieceMetadata.styleRequestBody(source, name));
+    const result = await jobJsonResult("/api/styles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(PieceMetadata.styleRequestBody(source, name)),
+    });
     trigger.textContent = label;
     trigger.disabled = false;
     if (result.ok && result.data && result.data.ok) {

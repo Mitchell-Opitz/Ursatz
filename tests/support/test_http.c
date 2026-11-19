@@ -97,6 +97,64 @@ cJSON *test_http_json(const char *port, const char *method, const char *path, co
     return json;
 }
 
+/* A response made of the status and body of a finished job, as the route answered before the job. */
+static char *job_answer(int status, const cJSON *result) {
+    char *body = result ? cJSON_PrintUnformatted(result) : NULL;
+    const char *text = body ? body : "{}";
+    size_t size = strlen(text) + 64;
+    char *response = malloc(size);
+    if (response) {
+        snprintf(response, size, "HTTP/1.1 %d Job\r\nContent-Type: application/json\r\n\r\n%s", status, text);
+    }
+    free(body);
+    return response;
+}
+
+char *test_http_finish(const char *port, char *response) {
+    if (!response || test_http_status(response) != 202) {
+        return response;
+    }
+    cJSON *accepted = cJSON_Parse(test_http_body(response));
+    const cJSON *job = accepted ? cJSON_GetObjectItemCaseSensitive(accepted, "job") : NULL;
+    const cJSON *id = job ? cJSON_GetObjectItemCaseSensitive(job, "id") : NULL;
+    if (!cJSON_IsString(id)) {
+        cJSON_Delete(accepted);
+        return response;
+    }
+    char path[128];
+    snprintf(path, sizeof path, "/api/jobs/%s", id->valuestring);
+    cJSON_Delete(accepted);
+    for (int attempt = 0; attempt < 6000; attempt++) {
+        int status = 0;
+        cJSON *polled = test_http_json(port, "GET", path, NULL, &status);
+        const cJSON *current = polled ? cJSON_GetObjectItemCaseSensitive(polled, "job") : NULL;
+        const cJSON *state = current ? cJSON_GetObjectItemCaseSensitive(current, "state") : NULL;
+        if (cJSON_IsString(state) && strcmp(state->valuestring, "queued") != 0 && strcmp(state->valuestring, "running") != 0) {
+            const cJSON *http_status = cJSON_GetObjectItemCaseSensitive(current, "http_status");
+            int answer_status = cJSON_IsNumber(http_status) ? (int)http_status->valuedouble : 499;
+            char *answer = job_answer(answer_status, cJSON_GetObjectItemCaseSensitive(current, "result"));
+            cJSON_Delete(polled);
+            if (answer) {
+                free(response);
+                return answer;
+            }
+            return response;
+        }
+        cJSON_Delete(polled);
+        test_sleep_ms(20);
+    }
+    return response;
+}
+
+cJSON *test_http_json_finish(const char *port, const char *method, const char *path, const char *json_body, int *status) {
+    char *response = test_http_exchange(port, method, path, NULL, json_body ? json_body : "", json_body ? strlen(json_body) : 0);
+    response = test_http_finish(port, response);
+    *status = test_http_status(response);
+    cJSON *json = response ? cJSON_Parse(test_http_body(response)) : NULL;
+    free(response);
+    return json;
+}
+
 char *test_http_upload(const char *port, const char *file_path, const char *encoded_name, char **response_out) {
     size_t size = 0;
     char *data = test_read_file(file_path, &size);
@@ -107,6 +165,7 @@ char *test_http_upload(const char *port, const char *file_path, const char *enco
     snprintf(headers, sizeof headers, "Content-Type: application/json\r\nX-Filename: %s\r\n", encoded_name);
     char *response = exchange_with(port, "POST", "/api/analyzer/pieces", headers, data, size);
     free(data);
+    response = test_http_finish(port, response); /* the import is a job: its answer is what the route answered before jobs */
     char *id = NULL;
     cJSON *json = response ? cJSON_Parse(test_http_body(response)) : NULL;
     const cJSON *id_item = json ? cJSON_GetObjectItemCaseSensitive(json, "id") : NULL;

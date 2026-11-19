@@ -828,7 +828,7 @@ static void check_import_cache(const char *id) {
   check(workshop_import_cache_imports() == 2, "the open after a PATCH imports once more");
 
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", id);
-  char *reanalyzed = test_http_exchange(PORT, "POST", path, NULL, "", 0);
+  char *reanalyzed = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, "", 0));
   check(test_http_status(reanalyzed) == 200, "re-analyze answers 200");
   free(reanalyzed);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
@@ -1037,12 +1037,12 @@ int main(int argc, char **argv) {
   free(unknown_playback);
 
   /* Bodies the Analyzer cannot read. */
-  response = test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "just some text", 14);
+  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "just some text", 14));
   check(test_http_status(response) == 415, "a .txt body gives 415");
-  check(strstr(test_http_body(response), "\"error\": \"unsupported format\"") != NULL,
+  check(strstr(test_http_body(response), "\"error\":\"unsupported format\"") != NULL,
         "the 415 body is {\"error\": \"unsupported format\"}");
   free(response);
-  response = test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "MThd\0\0\0\6", 8);
+  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "MThd\0\0\0\6", 8));
   check(test_http_status(response) == 422, "a truncated MIDI file gives 422");
   free(response);
 
@@ -1092,7 +1092,7 @@ int main(int argc, char **argv) {
 
     char path[256];
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", mozart_id);
-    response = test_http_exchange(PORT, "POST", path, NULL, NULL, 0);
+    response = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, NULL, 0));
     check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL,
           "POST reanalyze is 200 OK");
     free(response);
@@ -1120,7 +1120,7 @@ int main(int argc, char **argv) {
           "re-running the analysis keeps the filename and uploaded_at");
     cJSON_Delete(meta);
   }
-  response = test_http_exchange(PORT, "POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0);
+  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0));
   check(test_http_status(response) == 404, "reanalyze of an unknown id gives 404");
   free(response);
 

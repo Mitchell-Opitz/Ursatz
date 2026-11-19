@@ -4,13 +4,19 @@ The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md)
 
 ## Analyzer routes
 
+An import, a re-analysis, a style build and a style rebuild are jobs on the workshop's queue (R-645): the route answers `202` with
+`{"ok":true,"job":{"id","kind","state"}}` (kind `analysis` or `style`; a style job waits while another one runs) and the answer the route
+gave before jobs is the job's result, in `GET /api/jobs/<id>` as `http_status` and `result`. The frontend runs them with
+`BackendJobs.runJob`, which resolves with that status and body. A style job reports `pieces <done>/<total>`; `DELETE /api/jobs/<id>`
+stops it between pieces and nothing is written.
+
 - `POST /api/analyzer/pieces`: the file as the raw request body, its name
   URL-encoded in the `X-Filename` header. The format is detected from the
   content (`input_format_detect`), not from the filename. Returns
   `{"ok":true,"id":...,"filename":...}`. A body that is neither MIDI nor
-  MusicXML gives `415` with `{"error": "unsupported format"}`; a file the
+  MusicXML gives `415` with `{"error":"unsupported format"}`; a file the
   Analyzer cannot import or analyze gives `422` with
-  `{"error": "import failed"}`; nothing is stored in either case.
+  `{"error":"import failed"}`; nothing is stored in either case. (These are the job's status and result.)
 - `GET /api/analyzer/pieces`: the stored pieces, newest upload first, then by
   id: `{"ok":true,"pieces":[{"id","filename","format","uploaded_at","composer","source","tags":[...],"notation","analysis_status"}]}`.
   `analysis_status` is `current`, `stale_schema`, `stale_analyzer`, `stale_ursatz` or `unreadable`, from `meta.json`
@@ -64,7 +70,7 @@ The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md)
     when unset).
 - `POST /api/analyzer/pieces/<id>/reanalyze`: runs the Analyzer again on the
   stored source. Returns `{"ok":true,"id":...}`, `404` for an unknown id, or
-  `422` with `{"error": "import failed"}` when the source no longer imports.
+  `422` with `{"error":"import failed"}` when the source no longer imports (the job's status and result).
   The piece is unchanged unless the new analysis succeeded.
 - `DELETE /api/analyzer/pieces/<id>`: removes the piece's directory.
 - `GET /api/analyzer/pieces/<id>/musicxml`: the piece's score as MusicXML

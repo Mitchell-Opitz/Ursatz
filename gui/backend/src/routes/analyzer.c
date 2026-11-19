@@ -9,6 +9,7 @@
 #include <civetweb.h>
 #include <cJSON.h>
 
+#include "jobs.h"
 #include "route_util.h"
 #include "workshop_internal.h"
 #include "materials.h"
@@ -133,35 +134,16 @@ static int handle_post(struct mg_connection *conn) {
     return 200;
   }
 
-  char *id = NULL;
-  UrsatzStatus result =
-      workshop_analysis_import_and_save(kPiecesDir, body_data, body_size, filename, &id);
+  /* The import is an "analysis" job (R-645): the answer is 202 with the job, and the job answers what this route used to. */
+  WorkshopAnalysisJob *job = workshop_analysis_job_import(body_data, body_size, filename);
   free(body_data);
-
-  if (result == URSATZ_ERR_REQUEST) {
-    free(filename);
-    return ursatz_gui_send_json_status(conn, 415, "Unsupported Media Type", "{\"error\": \"unsupported format\"}");
-  }
-  if (result == URSATZ_ERR_FORMAT) {
-    free(filename);
-    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
-  }
-  if (result != URSATZ_OK) {
-    free(filename);
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to save piece\"}");
-    return 200;
-  }
-
-  cJSON *answer = cJSON_CreateObject();
-  bool built = answer && cJSON_AddStringToObject(answer, "id", id) && cJSON_AddStringToObject(answer, "filename", filename);
-  free(id);
   free(filename);
-  if (!built) {
-    cJSON_Delete(answer);
+  if (!job) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
-  return send_ok_with(conn, NULL, answer);
+  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
+                                       workshop_analysis_job_free);
 }
 
 /* Reads one query parameter (URL-decoded) into out; false when absent or empty. */
@@ -355,28 +337,15 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
 
 static const char *kReanalyzeSuffix = "/reanalyze";
 
+/* POST /api/analyzer/pieces/<id>/reanalyze: an "analysis" job; the answer is 202 with the job. */
 static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_analysis_reanalyze(kPiecesDir, id);
-
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result == URSATZ_ERR_FORMAT) {
-    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
-  }
-  if (result != URSATZ_OK) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to analyze piece again\"}");
-    return 200;
-  }
-
-  cJSON *answer = cJSON_CreateObject();
-  if (!answer || !cJSON_AddStringToObject(answer, "id", id)) {
-    cJSON_Delete(answer);
+  WorkshopAnalysisJob *job = workshop_analysis_job_reanalyze(id);
+  if (!job) {
     ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
-  return send_ok_with(conn, NULL, answer);
+  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
+                                       workshop_analysis_job_free);
 }
 
 static const char *kMusicXmlSuffix = "/musicxml";

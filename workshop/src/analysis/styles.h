@@ -1,6 +1,7 @@
 #ifndef WORKSHOP_STYLE_SERVICE_H
 #define WORKSHOP_STYLE_SERVICE_H
 
+#include <common/job.h>
 #include <common/status.h>
 
 #include <stdbool.h>
@@ -26,8 +27,8 @@
  *                       "pieces": [ids used], "skipped": [{"id", "reason"}],
  *                       "piece_count": n}
  * Both files are written to "<file>.tmp" and renamed, the model first. Ids are
- * "sty-<hex>". civetweb serves requests on several threads, so every
- * operation here runs under one mutex; a build runs on the caller's thread.
+ * "sty-<hex>". civetweb serves requests on several threads, so the reads and the commit of a style run under one mutex; a build
+ * runs on the caller's thread (the job queue's, for the GUI).
  *
  * Pieces are read from pieces/<id>/ and collections from the collection
  * service. This module reads only analysis documents, never the scores.
@@ -97,12 +98,16 @@ void workshop_style_skipped_free(WorkshopStyleSkipped *skipped, size_t count);
  * default: "Composer: X", "Source: X", "Tag: x" joined with " · " for a
  * filter, "Collection: <name>" for a collection, "Selected pieces" for ids, "Brief" for a brief.
  *
+ * job (NULL for none) is the progress and cancel handle (R-645): it is told "pieces d/t" after each piece and asked between pieces,
+ * and the build stops with URSATZ_ERR_CANCELLED, having written nothing. The pieces are read holding no store lock; the style is put in
+ * place by one transaction.
+ *
  * On OK, *out_id is newly allocated and caller-owned, and *out_skipped
  * (may be NULL) receives the skipped pieces (free with
  * workshop_style_skipped_free). URSATZ_ERR_UNSATISFIABLE when no piece
  * could be added: nothing is written.
  */
-UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *source, char **out_id,
+UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *source, const UrsatzJob *job, char **out_id,
                                             WorkshopStyleSkipped **out_skipped, size_t *out_skipped_count);
 
 /*
@@ -163,9 +168,9 @@ void workshop_style_brief_free(WorkshopStyleBrief *brief);
  * replaces its two files in place; id and name stay, updated_at changes, so a
  * plan that names the file uses the new counts. NOT_FOUND if the style is
  * absent, SOURCE_MISSING if its collection, subject, project or style is gone, NO_PIECES if no piece
- * could be added (the style is left as it was).
+ * could be added (the style is left as it was). job as for workshop_style_build.
  */
-UrsatzStatus workshop_style_rebuild(const char *id);
+UrsatzStatus workshop_style_rebuild(const char *id, const UrsatzJob *job);
 
 /* Deletes the style's directory. NOT_FOUND if absent. */
 UrsatzStatus workshop_style_delete(const char *id);

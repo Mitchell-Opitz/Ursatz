@@ -48,16 +48,6 @@ void workshop_compose_job_free(void *input);
 /* The WorkshopJobFn of every compose job. */
 UrsatzStatus workshop_compose_job_run(void *input, const UrsatzJob *job, WorkshopJobResult *out);
 
-/* Fills out with object (freed) as the answer with the given status, or the out-of-memory failure. */
-void workshop_job_result_json(WorkshopJobResult *out, int status, cJSON *object);
-
-/* Fills out with {"ok": false, "error": message} and the status. */
-void workshop_job_result_failure(WorkshopJobResult *out, int status, const char *message);
-
-/* The same with the request member at fault as "path" (the Composer's UrsatzError.path); no path member when it is NULL
- * or empty. */
-void workshop_job_result_failure_at(WorkshopJobResult *out, int status, const char *message, const char *path);
-
 /* Fills out with the answer for a service result: the item on OK, else the failure (status 404, 400, 422, 499, 500) with
  * message or the given text. Takes item (freed). */
 void workshop_compose_reply(UrsatzStatus result, cJSON *item, const UrsatzError *error, const char *invalid_text,

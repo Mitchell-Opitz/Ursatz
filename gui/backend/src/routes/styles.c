@@ -8,6 +8,7 @@
 #include <cJSON.h>
 #include <civetweb.h>
 
+#include "jobs.h"
 #include "route_util.h"
 #include "workshop_internal.h"
 
@@ -17,29 +18,8 @@ static int send_style_failure(struct mg_connection *conn, UrsatzStatus result) {
   return ursatz_gui_send_service_failure(conn, result, "style operation failed");
 }
 
-/* {"ok":true,"style":{list entry},"skipped":[...]} for the stored style id. */
-static int send_built_style(struct mg_connection *conn, const char *id) {
-  cJSON *entry = NULL;
-  cJSON *skipped = NULL;
-  UrsatzStatus result = workshop_style_get_entry(id, &entry, &skipped);
-  if (result != URSATZ_OK) {
-    return send_style_failure(conn, result);
-  }
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "style", entry)) {
-    cJSON_Delete(entry);
-    cJSON_Delete(skipped);
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  if (!cJSON_AddItemToObject(object, "skipped", skipped)) {
-    cJSON_Delete(skipped);
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
-}
-
+/* POST /api/styles: a "style" job (R-645; a second build waits): the answer is 202 with the job, which answers what this route used to. The
+ * request is read here, so a bad one is refused at once. */
 static int handle_build_style(struct mg_connection *conn) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
@@ -52,23 +32,14 @@ static int handle_build_style(struct mg_connection *conn) {
     cJSON_Delete(body);
     return ursatz_gui_send_failure(conn, workshop_http_status(parsed, NULL), error.message);
   }
-  char *id = NULL;
-  UrsatzStatus result = workshop_style_build(request.name, &request.source, &id, NULL, NULL);
-  WorkshopStyleSourceKind kind = request.source.kind;
-  workshop_style_request_free(&request);
-  cJSON_Delete(body);
-  if (result == URSATZ_ERR_NOT_FOUND && kind == WORKSHOP_STYLE_SOURCE_COLLECTION) {
-    return ursatz_gui_send_failure(conn, 404, "collection not found");
+  WorkshopAnalysisJob *job = workshop_analysis_job_style_build(&request, body);
+  if (!job) {
+    workshop_style_request_free(&request);
+    cJSON_Delete(body);
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  if (result == URSATZ_ERR_NOT_FOUND && kind == WORKSHOP_STYLE_SOURCE_BRIEF) {
-    return ursatz_gui_send_failure(conn, 404, "brief source not found");
-  }
-  if (result != URSATZ_OK) {
-    return send_style_failure(conn, result);
-  }
-  int status = send_built_style(conn, id);
-  free(id);
-  return status;
+  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
+                                       workshop_analysis_job_free);
 }
 
 static int handle_list_styles(struct mg_connection *conn) {
@@ -102,11 +73,12 @@ static int handle_get_style(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
-  UrsatzStatus result = workshop_style_rebuild(id);
-  if (result != URSATZ_OK) {
-    return send_style_failure(conn, result);
+  WorkshopAnalysisJob *job = workshop_analysis_job_style_rebuild(id);
+  if (!job) {
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_built_style(conn, id);
+  return ursatz_gui_jobs_send_accepted(conn, workshop_analysis_job_kind(job), workshop_analysis_job_run, job,
+                                       workshop_analysis_job_free);
 }
 
 static int handle_delete_style(struct mg_connection *conn, const char *id) {

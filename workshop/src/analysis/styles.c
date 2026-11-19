@@ -376,7 +376,9 @@ static UrsatzStatus resolve_brief(const WorkshopStyleBrief *brief, CommonNames *
     }
     for (size_t i = 0; result == URSATZ_OK && i < brief->style_count; i++) {
         cJSON *meta = NULL;
+        LOCK();
         result = load_meta(brief->style_ids[i], &meta);
+        UNLOCK();
         const cJSON *piece = NULL;
         cJSON_ArrayForEach(piece, cJSON_GetObjectItemCaseSensitive(meta, "pieces")) {
             if (result == URSATZ_OK && cJSON_IsString(piece) && !common_names_add(&all, piece->valuestring)) {
@@ -529,8 +531,9 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
     return true;
 }
 
-/* Resolves the source and adds every piece it names. The caller holds the lock. */
-static UrsatzStatus collect_pieces(const NormalizedSource *source, Collected *collected) {
+/* Resolves the source and adds every piece it names, reporting "pieces d/t" and stopping between pieces when the job is cancelled
+ * (URSATZ_ERR_CANCELLED). Holds no lock: a stale piece is analyzed again here, which takes the piece's lock and its own transaction. */
+static UrsatzStatus collect_pieces(const NormalizedSource *source, const UrsatzJob *job, Collected *collected) {
     memset(collected, 0, sizeof(*collected));
 
     CommonNames ids = {0};
@@ -549,7 +552,12 @@ static UrsatzStatus collect_pieces(const NormalizedSource *source, Collected *co
     }
 
     UrsatzStatus result = URSATZ_OK;
+    ursatz_job_progress(job, "pieces", 0, (unsigned)ids.count);
     for (size_t i = 0; result == URSATZ_OK && i < ids.count; i++) {
+        if (ursatz_job_cancelled(job)) {
+            result = URSATZ_ERR_CANCELLED;
+            break;
+        }
         const char *reason = NULL;
         if (add_piece(collected->profile, ids.items[i], &reason)) {
             if (!common_names_add(&collected->used, ids.items[i])) {
@@ -558,6 +566,7 @@ static UrsatzStatus collect_pieces(const NormalizedSource *source, Collected *co
         } else if (!skipped_add(&collected->skipped, ids.items[i], reason)) {
             result = workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
         }
+        ursatz_job_progress(job, "pieces", (unsigned)(i + 1), (unsigned)ids.count);
     }
     common_names_free(&ids);
 
@@ -768,9 +777,9 @@ static UrsatzStatus style_name(const char *requested, const char *default_name, 
     return URSATZ_OK;
 }
 
-/* Normalizes the source, adds its pieces and settles the name. The caller holds the lock; on OK it frees *normalized
- * with normalized_source_free and *collected with collected_free. */
-static UrsatzStatus prepare_build(const char *name, const WorkshopStyleSource *source,
+/* Normalizes the source, adds its pieces and settles the name, holding no lock; on OK it frees *normalized with
+ * normalized_source_free and *collected with collected_free. */
+static UrsatzStatus prepare_build(const char *name, const WorkshopStyleSource *source, const UrsatzJob *job,
                                           NormalizedSource *normalized, Collected *collected, char *final_name,
                                           size_t final_name_size) {
     memset(collected, 0, sizeof(*collected));
@@ -778,7 +787,7 @@ static UrsatzStatus prepare_build(const char *name, const WorkshopStyleSource *s
     if (result != URSATZ_OK) {
         return result;
     }
-    result = collect_pieces(normalized, collected);
+    result = collect_pieces(normalized, job, collected);
     if (result == URSATZ_OK) {
         result = style_name(name, collected->default_name, final_name, final_name_size);
         if (result != URSATZ_OK) {
@@ -811,7 +820,7 @@ static void reset_outputs(WorkshopStyleSkipped **out_skipped, size_t *out_skippe
     }
 }
 
-UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *source, char **out_id,
+UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *source, const UrsatzJob *job, char **out_id,
                                             WorkshopStyleSkipped **out_skipped, size_t *out_skipped_count) {
     if (out_id) {
         *out_id = NULL;
@@ -821,21 +830,24 @@ UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *s
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid source");
     }
 
-    LOCK();
     NormalizedSource normalized;
     Collected collected;
     char final_name[NAME_MAX_BYTES + 1];
-    UrsatzStatus result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
+    UrsatzStatus result = prepare_build(name, source, job, &normalized, &collected, final_name, sizeof(final_name));
     if (result != URSATZ_OK) {
-        UNLOCK();
         return result;
+    }
+    if (ursatz_job_cancelled(job)) {
+        collected_free(&collected);
+        normalized_source_free(&normalized);
+        return URSATZ_ERR_CANCELLED;
     }
 
     char *id = NULL;
     char style_dir[PATH_BYTES];
     bool id_found = false;
     result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
-    if ((common_dir_make(kStylesDir, NULL) == URSATZ_OK)) {
+    if (common_dir_make(kStylesDir, NULL) == URSATZ_OK) {
         for (int attempt = 0; attempt < ID_MAX_TRIES && !id_found; attempt++) {
             id = workshop_new_id("sty");
             if (!id) {
@@ -850,17 +862,22 @@ UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *s
         }
     }
     if (id_found) {
-        /* The style is a folder written whole (the model and its meta) and put in place by one transaction. */
+        /* The style is a folder written whole (the model and its meta) and put in place by one transaction: the transaction is the
+         * outermost lock, then the styles lock (the pieces were read above, holding neither). */
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "style.build", "michelle", id, 0);
+        LOCK();
         char now[32];
         const char *pending = NULL;
         common_utc_now(now);
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "style.build", "michelle", id, 0);
         if (txn && workshop_txn_stage_folder(txn, style_dir, &pending) == URSATZ_OK &&
             write_style_files(pending, id, final_name, now, now, &normalized, &collected)) {
             UrsatzError error;
             memset(&error, 0, sizeof(error));
             result = workshop_txn_commit(txn, &error) == URSATZ_OK ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
-        } else if (txn) {
+            txn = NULL;
+        }
+        UNLOCK();
+        if (txn) {
             workshop_txn_abort(txn);
         }
     }
@@ -871,7 +888,6 @@ UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *s
     }
     free(id);
     collected_free(&collected);
-    UNLOCK();
     normalized_source_free(&normalized);
     return result;
 }
@@ -892,13 +908,11 @@ UrsatzStatus workshop_style_build_file(const WorkshopStyleSource *source, const 
         return workshop_fail(URSATZ_ERR_REQUEST, "invalid source");
     }
 
-    LOCK();
     NormalizedSource normalized;
     Collected collected;
     char final_name[NAME_MAX_BYTES + 1];
-    UrsatzStatus result = prepare_build(name, source, &normalized, &collected, final_name, sizeof(final_name));
+    UrsatzStatus result = prepare_build(name, source, NULL, &normalized, &collected, final_name, sizeof(final_name));
     if (result != URSATZ_OK) {
-        UNLOCK();
         return result;
     }
 
@@ -918,7 +932,6 @@ UrsatzStatus workshop_style_build_file(const WorkshopStyleSource *source, const 
         give_skipped(&collected, out_skipped, out_skipped_count);
     }
     collected_free(&collected);
-    UNLOCK();
     normalized_source_free(&normalized);
     return result;
 }
@@ -1447,12 +1460,12 @@ static UrsatzStatus stored_source_load(const char *id, StoredSource *stored) {
     return URSATZ_OK;
 }
 
-UrsatzStatus workshop_style_rebuild(const char *id) {
+UrsatzStatus workshop_style_rebuild(const char *id, const UrsatzJob *job) {
     LOCK();
     StoredSource stored;
     UrsatzStatus result = stored_source_load(id, &stored);
+    UNLOCK();
     if (result != URSATZ_OK) {
-        UNLOCK();
         return result;
     }
 
@@ -1460,9 +1473,12 @@ UrsatzStatus workshop_style_rebuild(const char *id) {
     result = normalized_source_make(&stored.input, &source);
     if (result == URSATZ_OK) {
         Collected collected;
-        result = collect_pieces(&source, &collected);
+        result = collect_pieces(&source, job, &collected); /* the pieces are read holding no lock */
         if (result == URSATZ_ERR_NOT_FOUND) {
             result = workshop_fail(URSATZ_ERR_UNSATISFIABLE, "source not found");
+        }
+        if (result == URSATZ_OK && ursatz_job_cancelled(job)) {
+            result = URSATZ_ERR_CANCELLED;
         }
         if (result == URSATZ_OK) {
             char dir[PATH_BYTES];
@@ -1471,25 +1487,32 @@ UrsatzStatus workshop_style_rebuild(const char *id) {
             style_dir_path(id, dir, sizeof(dir));
             const char *name = json_text(stored.meta, "name");
             const char *created_at = json_text(stored.meta, "created_at");
-            /* The style's folder is replaced whole: the old one is removed and the new one staged, in one transaction. */
+            /* The style's folder is replaced whole: the old one is removed and the new one staged, in one transaction (the outermost
+             * lock, then the styles lock). A style deleted meanwhile is not built again. */
             const char *pending = NULL;
             WorkshopTxn *txn = workshop_txn_begin(NULL, "style.rebuild", "michelle", id, 0);
-            if (txn && workshop_txn_remove(txn, dir) == URSATZ_OK && workshop_txn_stage_folder(txn, dir, &pending) == URSATZ_OK &&
-                write_style_files(pending, id, name ? name : "", created_at ? created_at : "", now, &source, &collected)) {
+            LOCK();
+            if (!common_path_is_dir(dir)) {
+                result = workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
+            } else if (txn && workshop_txn_remove(txn, dir) == URSATZ_OK && workshop_txn_stage_folder(txn, dir, &pending) == URSATZ_OK &&
+                       write_style_files(pending, id, name ? name : "", created_at ? created_at : "", now, &source, &collected)) {
                 UrsatzError error;
                 memset(&error, 0, sizeof(error));
                 if (workshop_txn_commit(txn, &error) != URSATZ_OK) {
                     result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
                 }
+                txn = NULL;
             } else {
-                workshop_txn_abort(txn);
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
+            }
+            UNLOCK();
+            if (txn) {
+                workshop_txn_abort(txn);
             }
             collected_free(&collected);
         }
         normalized_source_free(&source);
     }
-    UNLOCK();
     stored_source_free(&stored);
     return result;
 }

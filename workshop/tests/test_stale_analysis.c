@@ -217,7 +217,7 @@ static void test_style(const char *id) {
     char *style_id = NULL;
     WorkshopStyleSkipped *skipped = NULL;
     size_t skipped_count = 0;
-    UrsatzStatus result = workshop_style_build("Stale", &source, &style_id, &skipped, &skipped_count);
+    UrsatzStatus result = workshop_style_build("Stale", &source, NULL, &style_id, &skipped, &skipped_count);
     check_quiet(result == URSATZ_OK && skipped_count == 0, "the style builds from a stale piece");
     check_quiet(!has_marker(id), "the style build analyzed the stale piece again");
     free(style_id);

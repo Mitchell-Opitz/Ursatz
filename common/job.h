@@ -19,4 +19,11 @@ static inline bool ursatz_job_cancelled(const UrsatzJob *job) {
     return job && job->cancelled && job->cancelled(job->user);
 }
 
+/* Reports progress when the job has a progress function. */
+static inline void ursatz_job_progress(const UrsatzJob *job, const char *stage, unsigned done, unsigned total) {
+    if (job && job->progress) {
+        job->progress(job->user, stage, done, total);
+    }
+}
+
 #endif

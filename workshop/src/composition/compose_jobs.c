@@ -7,31 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void workshop_job_result_json(WorkshopJobResult *out, int status, cJSON *object) {
-  out->http_status = status;
-  out->tree = object;
-  if (!out->tree) {
-    out->http_status = 500;
-    out->tree = cJSON_Parse("{\"ok\":false,\"error\":\"out of memory\"}");
-  }
-}
-
-void workshop_job_result_failure_at(WorkshopJobResult *out, int status, const char *message, const char *path) {
-  cJSON *object = cJSON_CreateObject();
-  if (object) {
-    cJSON_AddBoolToObject(object, "ok", 0);
-    cJSON_AddStringToObject(object, "error", message);
-    if (path && path[0] != '\0') {
-      cJSON_AddStringToObject(object, "path", path);
-    }
-  }
-  workshop_job_result_json(out, status, object);
-}
-
-void workshop_job_result_failure(WorkshopJobResult *out, int status, const char *message) {
-  workshop_job_result_failure_at(out, status, message, NULL);
-}
-
 void workshop_compose_reply(UrsatzStatus result, cJSON *item, const UrsatzError *error, const char *invalid_text,
                               const char *failed_text, WorkshopJobResult *out) {
   if (result == URSATZ_OK) {

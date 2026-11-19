@@ -44,6 +44,31 @@ static bool g_running = false;
 static bool g_stopping = false;
 static unsigned g_serial = 0;
 
+void workshop_job_result_json(WorkshopJobResult *out, int status, cJSON *object) {
+  out->http_status = status;
+  out->tree = object;
+  if (!out->tree) {
+    out->http_status = 500;
+    out->tree = cJSON_Parse("{\"ok\":false,\"error\":\"out of memory\"}");
+  }
+}
+
+void workshop_job_result_failure_at(WorkshopJobResult *out, int status, const char *message, const char *path) {
+  cJSON *object = cJSON_CreateObject();
+  if (object) {
+    cJSON_AddBoolToObject(object, "ok", 0);
+    cJSON_AddStringToObject(object, "error", message);
+    if (path && path[0] != '\0') {
+      cJSON_AddStringToObject(object, "path", path);
+    }
+  }
+  workshop_job_result_json(out, status, object);
+}
+
+void workshop_job_result_failure(WorkshopJobResult *out, int status, const char *message) {
+  workshop_job_result_failure_at(out, status, message, NULL);
+}
+
 const char *workshop_job_state_name(WorkshopJobState state) {
   switch (state) {
     case WORKSHOP_JOB_QUEUED:

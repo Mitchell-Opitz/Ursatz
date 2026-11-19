@@ -24,7 +24,15 @@ const char *test_http_body(const char *response);
  * *status. The caller deletes the JSON. */
 cJSON *test_http_json(const char *port, const char *method, const char *path, const char *json_body, int *status);
 
-/* POSTs the file to /api/analyzer/pieces with the upload name (already URL encoded) in X-Filename. Returns the new
+/* When response is a 202 with a job (R-645), polls GET /api/jobs/<id> until the job is over and returns, in place of response (freed), a
+ * response holding the job's HTTP status and its answer as the body: what the route answered before the work was a job. Any other
+ * response (or NULL) is returned as it is. */
+char *test_http_finish(const char *port, char *response);
+
+/* test_http_json for a request that may be accepted as a job: the job's status goes to *status and its answer is parsed. */
+cJSON *test_http_json_finish(const char *port, const char *method, const char *path, const char *json_body, int *status);
+
+/* POSTs the file to /api/analyzer/pieces with the upload name (already URL encoded) in X-Filename. Waits for the import job and returns the new
  * piece's id (the caller frees), or NULL. When response is not NULL it gets the whole response (the caller frees). */
 char *test_http_upload(const char *port, const char *file_path, const char *encoded_name, char **response);
 

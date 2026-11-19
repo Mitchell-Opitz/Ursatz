@@ -24,6 +24,7 @@
 #include "items/subjects.h"
 
 #include "analysis/analysis.h"
+#include "analysis/analysis_jobs.h"
 #include "analysis/import_cache.h"
 #include "analysis/links.h"
 #include "analysis/styles.h"
