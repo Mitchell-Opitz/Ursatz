@@ -447,3 +447,11 @@ ursatz_test_executable(test_layers_two_readings LIBS ursatz_analyzer analyzer_te
 add_dependencies(test_layers_two_readings ursatz-analyzer)
 ursatz_test(test_layers_two_readings_smoke TARGET test_layers_two_readings ARGS smoke)
 ursatz_test(test_layers_two_readings TARGET test_layers_two_readings LABELS slow)
+
+# The model plan of Mozart 545 (R-635): --model-plan on a copy, the plan validated against its schema.
+ursatz_test(cli_model_plan COMMAND ${CMAKE_COMMAND} -DANALYZER=$<TARGET_FILE:ursatz-analyzer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_model_plan
+                     "-DMIDI=${CMAKE_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/Mozart 545.mid"
+                     -DSCHEMA=${CMAKE_SOURCE_DIR}/library/plan/schema/plan.v6.schema.json
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
+                     -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON} -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_model_plan.cmake)

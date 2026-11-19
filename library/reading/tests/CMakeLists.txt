@@ -18,6 +18,9 @@ endif()
 
 ursatz_test(reading SOURCES test_reading.c LIBS ursatz_reading VALGRIND)
 
+# A reading made into a plan (R-635): the Analyzer's reading of Mozart 545, Michelle's, and a reading with no region.
+ursatz_test(reading_plan SOURCES test_reading_plan.c LIBS ursatz_reading ursatz_io ursatz_chain ursatz_plan ursatz_test_support)
+
 # The builder: Bach 114 and Mozart 545 through the chain with every stage; the valgrind run reads Bach 114 only (a run of the chain under
 # valgrind on a whole piece is slow).
 ursatz_test(reading_build SOURCES test_reading_build.c LIBS ursatz_reading ursatz_io ursatz_chain ursatz_test_support)
