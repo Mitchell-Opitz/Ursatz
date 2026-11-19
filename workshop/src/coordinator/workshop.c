@@ -10,6 +10,7 @@
 #include <common/json.h>
 
 #include "coordinator.h"
+#include "items/migrate.h"
 #include "items/store.h"
 #include "items/subjects.h"
 
@@ -37,6 +38,11 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     UrsatzStatus locked = workshop_data_lock_acquire(resolved->data_dir, &lock, error);
     if (locked != URSATZ_OK) {
         return locked;
+    }
+    UrsatzStatus prepared = workshop_data_folder_prepare(resolved->data_dir, error);
+    if (prepared != URSATZ_OK) {
+        workshop_data_lock_release(lock);
+        return prepared;
     }
     if (!workshop_knowledge_init()) {
         workshop_data_lock_release(lock);

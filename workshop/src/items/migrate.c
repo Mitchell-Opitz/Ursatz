@@ -792,10 +792,6 @@ static bool has_old_entries(const char *root) {
     return false;
 }
 
-bool workshop_data_folder_has_old_entries(const char *data_dir) {
-    return has_old_entries(data_dir);
-}
-
 UrsatzStatus workshop_data_folder_layout(const char *data_dir, int *layout, UrsatzError *error) {
     char path[PATH_BYTES];
     *layout = 0;
@@ -960,5 +956,32 @@ UrsatzStatus workshop_migrate(const char *data_dir, const WorkshopMigrateOptions
     if (!had_knowledge) {
         workshop_knowledge_shutdown();
     }
+    return status;
+}
+
+UrsatzStatus workshop_data_folder_prepare(const char *data_dir, UrsatzError *error) {
+    int layout = 0;
+    UrsatzStatus status = workshop_data_folder_layout(data_dir, &layout, error);
+    if (status != URSATZ_OK || layout == WORKSHOP_LAYOUT_VERSION) {
+        return status;
+    }
+    char build[PATH_BYTES];
+    if (has_old_entries(data_dir) || (join(build, data_dir, BUILD_DIR) && common_path_exists(build))) {
+        return ursatz_error_set(error, URSATZ_ERR_FORMAT, data_dir,
+                                "the data folder %s is in the GUI's old layout; back it up and migrate it: ursatz-gui-backend --data %s --migrate "
+                                "--dry-run, then ursatz-gui-backend --data %s --migrate",
+                                data_dir, data_dir, data_dir);
+    }
+    /* an empty folder is layout 1 from the start */
+    cJSON *marker = cJSON_CreateObject();
+    char now[32];
+    char path[PATH_BYTES];
+    common_utc_now(now);
+    if (!marker || !cJSON_AddStringToObject(marker, "created_at", now) || !join(path, data_dir, WORKSHOP_FILE_DATA_FOLDER)) {
+        cJSON_Delete(marker);
+        return ursatz_error_set(error, URSATZ_ERR_ALLOC, data_dir, "out of memory");
+    }
+    status = workshop_format_write(path, WORKSHOP_FORMAT_DATA_FOLDER, marker, error);
+    cJSON_Delete(marker);
     return status;
 }
