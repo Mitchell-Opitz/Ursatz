@@ -8,6 +8,7 @@
 
 #include "model/events/note_event.h"
 #include "io/musicxml_export.h"
+#include "io/score_layout.h"
 #include "io/score_clefs.h"
 #include "io/score_quantize.h"
 #include "model/identity/entity_id.h"
@@ -1997,14 +1998,54 @@ static void write_segments(const Prep *prep, XmlBuf *buf, const SegmentList *lis
     }
 }
 
-/* One part's measure m: every voice that sounds in it, then, for the first, a rest to the barline. */
-static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_t m, const SegmentList *lists,
-                               size_t *cursor, size_t *dir_pos) {
+/* --- the layout: what each part writes in each measure --- */
+
+/* One voice's segments of one measure of one part, with the rests that pad the first one to the barline and the tuplet and beam marks. */
+typedef struct {
+    size_t group;
+    int staff;
+    int voice_number;
+    long long backup; /* ticks the document steps back before this voice (0 for the first voice and when it begins where the last ended) */
+    SegmentList items;
+} LayoutChain;
+
+/* What one part writes in one measure: its voices, or, when it has no note there, the rest that fills the measure. */
+typedef struct {
+    LayoutChain *chains;
+    size_t count;
+    SegmentList rests; /* only when count is 0 and the score has notes */
+} LayoutCell;
+
+struct ScoreLayoutPrepared {
+    Prep prep;
+    LayoutCell *cells; /* part_count * measure_count, part-major */
+};
+
+static bool chain_push(LayoutCell *cell, const LayoutChain *chain) {
+    LayoutChain *grown = (LayoutChain *)realloc(cell->chains, (cell->count + 1) * sizeof(LayoutChain));
+    if (grown == NULL) {
+        return false;
+    }
+    cell->chains = grown;
+    cell->chains[cell->count++] = *chain;
+    return true;
+}
+
+static void cell_free(LayoutCell *cell) {
+    for (size_t i = 0; i < cell->count; i++) {
+        free(cell->chains[i].items.items);
+    }
+    free(cell->chains);
+    free(cell->rests.items);
+    memset(cell, 0, sizeof(*cell));
+}
+
+/* One part's measure m: every voice that sounds in it, then, for the first, a rest to the barline. false on allocation failure. */
+static bool build_cell(const Prep *prep, size_t part, size_t m, const SegmentList *lists, size_t *cursor, LayoutCell *cell) {
     long long measure_start = prep->measure_start[m];
     long long measure_end = prep->measure_end[m];
     long long head = measure_start;
     bool first = true;
-    DirCtx dir_ctx = {prep, part, dir_pos, measure_start};
 
     for (size_t g = 0; g < prep->group_count; g++) {
         const Group *group = &prep->groups[g];
@@ -2024,45 +2065,60 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
         if (!has_note) {
             continue;
         }
+        LayoutChain chain = {g, group->staff, group->voice_number, 0, {NULL, 0, 0}};
         if (!first && head > measure_start) {
-            xmlbuf_append(buf, "      <backup>\n        <duration>%lld</duration>\n      </backup>\n",
-                          head - measure_start);
+            chain.backup = head - measure_start;
         }
         head = measure_start;
-        SegmentList chain = {NULL, 0, 0};
         bool ok = true;
         for (size_t i = cursor[g]; i < last; i++) {
-            ok = ok && segment_push(&chain, list->items[i]);
+            ok = ok && segment_push(&chain.items, list->items[i]);
             head = list->items[i].end;
         }
         if (first && head < measure_end) {
-            ok = ok && rest_pieces(prep, part, &chain, head, measure_end, false);
+            ok = ok && rest_pieces(prep, part, &chain.items, head, measure_end, false);
             head = measure_end;
         }
         if (!ok) {
-            buf->failed = true;
-        } else {
-            mark_tuplets(prep, &chain);
-            mark_beams(prep, &chain);
-            write_segments(prep, buf, &chain, part, group->staff, group->voice_number, first ? &dir_ctx : NULL);
-            if (first) {
-                flush_pedals(&dir_ctx, buf, measure_end, m + 1 == prep->measure_count);
-            }
+            free(chain.items.items);
+            return false;
         }
-        free(chain.items);
+        mark_tuplets(prep, &chain.items);
+        mark_beams(prep, &chain.items);
+        if (!chain_push(cell, &chain)) {
+            free(chain.items.items);
+            return false;
+        }
         first = false;
         cursor[g] = last;
     }
     if (first && prep->note_count > 0) {
-        SegmentList rests = {NULL, 0, 0};
-        if (rest_pieces(prep, part, &rests, measure_start, measure_end, true)) {
-            write_segments(prep, buf, &rests, part, 1, 1, &dir_ctx);
-            flush_pedals(&dir_ctx, buf, measure_end, m + 1 == prep->measure_count);
-        } else {
-            buf->failed = true;
+        return rest_pieces(prep, part, &cell->rests, measure_start, measure_end, true);
+    }
+    return true;
+}
+
+/* One part's measure m, printed from its cell: the voices (the dirs of the part go in with the first), or the rest, or the dirs alone. */
+static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_t m, const LayoutCell *cell, size_t *dir_pos) {
+    long long measure_start = prep->measure_start[m];
+    long long measure_end = prep->measure_end[m];
+    long long head = measure_start;
+    DirCtx dir_ctx = {prep, part, dir_pos, measure_start};
+
+    for (size_t i = 0; i < cell->count; i++) {
+        const LayoutChain *chain = &cell->chains[i];
+        if (chain->backup > 0) {
+            xmlbuf_append(buf, "      <backup>\n        <duration>%lld</duration>\n      </backup>\n", chain->backup);
         }
-        free(rests.items);
-    } else if (first) {
+        write_segments(prep, buf, &chain->items, part, chain->staff, chain->voice_number, i == 0 ? &dir_ctx : NULL);
+        if (i == 0) {
+            flush_pedals(&dir_ctx, buf, measure_end, m + 1 == prep->measure_count);
+        }
+    }
+    if (cell->count == 0 && prep->note_count > 0) {
+        write_segments(prep, buf, &cell->rests, part, 1, 1, &dir_ctx);
+        flush_pedals(&dir_ctx, buf, measure_end, m + 1 == prep->measure_count);
+    } else if (cell->count == 0) {
         /* No notes at all: the dirs alone, with <forward> between them. */
         size_t end = prep->dir_first[part + 1];
         while (*dir_pos < end && prep->dirs[*dir_pos].tick < measure_end) {
@@ -2154,18 +2210,9 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     return MUSICXML_EXPORT_OK;
 }
 
-static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
-    SegmentList *lists = NULL;
-    MusicXmlExportResult result = build_segments(prep, &lists);
-    if (result != MUSICXML_EXPORT_OK) {
-        return result;
-    }
-    size_t *cursor = (size_t *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(size_t));
-    if (cursor == NULL) {
-        segments_free(lists, prep->group_count);
-        return MUSICXML_EXPORT_ERR_ALLOC;
-    }
-
+static MusicXmlExportResult write_document(const struct ScoreLayoutPrepared *prepared, XmlBuf *buf) {
+    const Prep *prep = &prepared->prep;
+    MusicXmlExportResult result = MUSICXML_EXPORT_OK;
     xmlbuf_append(buf,
                   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                   "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" "
@@ -2218,13 +2265,10 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
     xmlbuf_append(buf, "  </part-list>\n");
     size_t *dir_pos = (size_t *)calloc(1, sizeof(size_t));
     if (dir_pos == NULL) {
-        free(cursor);
-        segments_free(lists, prep->group_count);
         return MUSICXML_EXPORT_ERR_ALLOC;
     }
     for (size_t p = 0; p < prep->part_count && result == MUSICXML_EXPORT_OK; p++) {
         *dir_pos = prep->dir_first[p];
-        memset(cursor, 0, (prep->group_count > 0 ? prep->group_count : 1) * sizeof(size_t));
         xmlbuf_append(buf, "  <part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
         xmlbuf_append(buf, "\">\n");
@@ -2236,46 +2280,239 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
             if (result != MUSICXML_EXPORT_OK) {
                 break;
             }
-            write_measure_body(prep, buf, p, m, lists, cursor, dir_pos);
+            write_measure_body(prep, buf, p, m, &prepared->cells[p * prep->measure_count + m], dir_pos);
             xmlbuf_append(buf, "    </measure>\n");
         }
         xmlbuf_append(buf, "  </part>\n");
     }
     xmlbuf_append(buf, "</score-partwise>\n");
     free(dir_pos);
-    free(cursor);
-    segments_free(lists, prep->group_count);
     return result;
+}
+
+/* --- building and reading the layout --- */
+
+static void prepared_free(struct ScoreLayoutPrepared *prepared) {
+    if (prepared == NULL) {
+        return;
+    }
+    if (prepared->cells != NULL) {
+        for (size_t i = 0; i < prepared->prep.part_count * prepared->prep.measure_count; i++) {
+            cell_free(&prepared->cells[i]);
+        }
+    }
+    free(prepared->cells);
+    prep_free(&prepared->prep);
+    free(prepared);
+}
+
+void score_layout_destroy(ScoreLayout *layout) {
+    if (layout == NULL) {
+        return;
+    }
+    for (size_t m = 0; m < layout->measure_count; m++) {
+        free(layout->measures[m].clefs);
+        free(layout->measures[m].events);
+    }
+    free(layout->measures);
+    prepared_free(layout->prepared);
+    memset(layout, 0, sizeof(*layout));
+}
+
+/* The event of one segment, as write_segment writes it. */
+static void fill_event(const Prep *prep, const Segment *segment, size_t part, int staff, int voice_number, ScoreLayoutEvent *out) {
+    memset(out, 0, sizeof(*out));
+    out->part = part;
+    out->staff = staff;
+    out->voice = voice_number;
+    out->start = segment->start;
+    out->duration = segment->end - segment->start;
+    out->chord = segment->chord;
+    out->tie_start = segment->tie_start;
+    out->tie_stop = segment->tie_stop;
+    out->tuplet_mark = segment->tuplet;
+    if (segment->note == REST_SEGMENT) {
+        out->rest = true;
+        out->measure_rest = segment->measure_rest;
+    } else {
+        const NoteRec *note = &prep->notes[segment->note];
+        NoteEvent *event = prep->score->events[note->index];
+        char base[64];
+        format_note_xml_id(entity_id_value(note_event_id(event)), base, sizeof(base), true);
+        if (segment->tie_start || segment->tie_stop) {
+            if (segment->fragment < 26) {
+                snprintf(out->xml_id, sizeof(out->xml_id), "%s_%c", base, 'a' + segment->fragment);
+            } else {
+                snprintf(out->xml_id, sizeof(out->xml_id), "%s_%d", base, segment->fragment);
+            }
+        } else {
+            snprintf(out->xml_id, sizeof(out->xml_id), "%s", base);
+        }
+        const PitchSpelling *spelling = note_event_optional_pitch_spelling(event);
+        out->step = PITCH_STEP_NAMES[pitch_spelling_letter(spelling)][0];
+        out->alter = pitch_spelling_accidental(spelling);
+        out->octave = pitch_spelling_octave(spelling);
+    }
+    NotatedValue value;
+    if (!segment->measure_rest && classify_piece(prep, segment->note, segment->end - segment->start, true, &value)) {
+        out->value = value.type;
+        out->dots = value.dots;
+        if (value.tuplet) {
+            out->tuplet_actual = value.actual;
+            out->tuplet_normal = value.normal;
+        }
+    }
+}
+
+static size_t cell_event_count(const LayoutCell *cell) {
+    size_t count = cell->rests.count;
+    for (size_t i = 0; i < cell->count; i++) {
+        count += cell->chains[i].items.count;
+    }
+    return count;
+}
+
+/* The measure m's own members: number, span, time signature and clefs. */
+static MusicXmlExportResult fill_measure(const Prep *prep, size_t m, ScoreLayoutMeasure *out) {
+    out->number = prep->first_measure_number + (int)m;
+    out->implicit = m == 0 && meter_map_has_pickup(prep->meter);
+    out->start = prep->measure_start[m];
+    out->end = prep->measure_end[m];
+    const MeterMapRegion *region = NULL;
+    MeterMapResult status = meter_map_region_of_measure(prep->meter, out->number, &region);
+    if (status != METER_MAP_OK) {
+        return from_meter_status(status);
+    }
+    const TimeSignature *signature = meter_map_region_time_signature(region);
+    out->beats = (int)time_signature_top_number(signature);
+    out->beat_type = (int)time_signature_bottom_number(signature);
+    MusicalTime region_time = meter_map_region_start(region);
+    long long region_start = 0;
+    if (time_ticks((long)region_time.value.num, (unsigned long)region_time.value.den, prep->divisions, &region_start) != TIME_OK) {
+        return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    out->time_written = region_start == out->start;
+    size_t clefs = 0;
+    for (size_t i = 0; i < prep->clefs.count; i++) {
+        clefs += prep->clefs.measure[i] == m + 1;
+    }
+    if (clefs > 0) {
+        out->clefs = (ScoreLayoutClef *)calloc(clefs, sizeof(ScoreLayoutClef));
+        if (out->clefs == NULL) {
+            return MUSICXML_EXPORT_ERR_ALLOC;
+        }
+        for (size_t i = 0; i < prep->clefs.count; i++) {
+            if (prep->clefs.measure[i] == m + 1) {
+                out->clefs[out->clef_count++] = (ScoreLayoutClef){prep->clefs.part[i], prep->clefs.staff[i],
+                                                                 prep->clefs.clef[i] != SCORE_CLEF_TREBLE};
+            }
+        }
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
+MusicXmlExportResult score_layout_build(const MusicXmlExportScore *score, ScoreLayout *out) {
+    if (score == NULL || out == NULL) {
+        return MUSICXML_EXPORT_ERR_NULL_ARG;
+    }
+    memset(out, 0, sizeof(*out));
+    struct ScoreLayoutPrepared *prepared = (struct ScoreLayoutPrepared *)calloc(1, sizeof(*prepared));
+    if (prepared == NULL) {
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    Prep *prep = &prepared->prep;
+    prep->score = score;
+    MusicXmlExportResult result = prepare(prep);
+    SegmentList *lists = NULL;
+    size_t *cursor = NULL;
+    if (result == MUSICXML_EXPORT_OK) {
+        result = build_segments(prep, &lists);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        size_t cells = prep->part_count * prep->measure_count;
+        prepared->cells = (LayoutCell *)calloc(cells > 0 ? cells : 1, sizeof(LayoutCell));
+        cursor = (size_t *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(size_t));
+        if (prepared->cells == NULL || cursor == NULL) {
+            result = MUSICXML_EXPORT_ERR_ALLOC;
+        }
+    }
+    for (size_t p = 0; p < prep->part_count && result == MUSICXML_EXPORT_OK; p++) {
+        memset(cursor, 0, (prep->group_count > 0 ? prep->group_count : 1) * sizeof(size_t));
+        for (size_t m = 0; m < prep->measure_count && result == MUSICXML_EXPORT_OK; m++) {
+            if (!build_cell(prep, p, m, lists, cursor, &prepared->cells[p * prep->measure_count + m])) {
+                result = MUSICXML_EXPORT_ERR_ALLOC;
+            }
+        }
+    }
+    if (lists != NULL) {
+        segments_free(lists, prep->group_count);
+    }
+    free(cursor);
+    if (result == MUSICXML_EXPORT_OK && prep->measure_count > 0) {
+        out->measures = (ScoreLayoutMeasure *)calloc(prep->measure_count, sizeof(ScoreLayoutMeasure));
+        if (out->measures == NULL) {
+            result = MUSICXML_EXPORT_ERR_ALLOC;
+        }
+        out->measure_count = prep->measure_count;
+    }
+    for (size_t m = 0; m < prep->measure_count && result == MUSICXML_EXPORT_OK; m++) {
+        ScoreLayoutMeasure *measure = &out->measures[m];
+        result = fill_measure(prep, m, measure);
+        size_t total = 0;
+        for (size_t p = 0; p < prep->part_count; p++) {
+            total += cell_event_count(&prepared->cells[p * prep->measure_count + m]);
+        }
+        if (result == MUSICXML_EXPORT_OK && total > 0) {
+            measure->events = (ScoreLayoutEvent *)calloc(total, sizeof(ScoreLayoutEvent));
+            result = measure->events == NULL ? MUSICXML_EXPORT_ERR_ALLOC : MUSICXML_EXPORT_OK;
+        }
+        for (size_t p = 0; p < prep->part_count && result == MUSICXML_EXPORT_OK; p++) {
+            const LayoutCell *cell = &prepared->cells[p * prep->measure_count + m];
+            for (size_t c = 0; c < cell->count; c++) {
+                const LayoutChain *chain = &cell->chains[c];
+                for (size_t i = 0; i < chain->items.count; i++) {
+                    fill_event(prep, &chain->items.items[i], p, chain->staff, chain->voice_number,
+                               &measure->events[measure->event_count++]);
+                }
+            }
+            for (size_t i = 0; i < cell->rests.count; i++) {
+                fill_event(prep, &cell->rests.items[i], p, 1, 1, &measure->events[measure->event_count++]);
+            }
+        }
+    }
+    if (result != MUSICXML_EXPORT_OK) {
+        out->prepared = prepared;
+        score_layout_destroy(out);
+        return result;
+    }
+    out->divisions = prep->divisions;
+    out->part_count = prep->part_count;
+    out->meter_defaulted = prep->meter_defaulted;
+    out->prepared = prepared;
+    return MUSICXML_EXPORT_OK;
 }
 
 MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
     if (score == NULL || out_xml == NULL) {
         return MUSICXML_EXPORT_ERR_NULL_ARG;
     }
-    Prep prep;
-    memset(&prep, 0, sizeof(prep));
-    prep.score = score;
-    MusicXmlExportResult result = prepare(&prep);
-
-    XmlBuf buf;
-    bool buf_ok = false;
-    if (result == MUSICXML_EXPORT_OK) {
-        buf_ok = xmlbuf_init(&buf);
-        if (!buf_ok) {
-            result = MUSICXML_EXPORT_ERR_ALLOC;
-        }
-    }
-    if (result == MUSICXML_EXPORT_OK) {
-        result = write_document(&prep, &buf);
-        if (result == MUSICXML_EXPORT_OK && buf.failed) {
-            result = MUSICXML_EXPORT_ERR_ALLOC;
-        }
-    }
-    prep_free(&prep);
+    ScoreLayout layout;
+    MusicXmlExportResult result = score_layout_build(score, &layout);
     if (result != MUSICXML_EXPORT_OK) {
-        if (buf_ok) {
-            xmlbuf_free(&buf);
-        }
+        return result;
+    }
+    XmlBuf buf;
+    if (!xmlbuf_init(&buf)) {
+        score_layout_destroy(&layout);
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    result = write_document(layout.prepared, &buf);
+    if (result == MUSICXML_EXPORT_OK && buf.failed) {
+        result = MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    score_layout_destroy(&layout);
+    if (result != MUSICXML_EXPORT_OK) {
+        xmlbuf_free(&buf);
         return result;
     }
     *out_xml = buf.data;
