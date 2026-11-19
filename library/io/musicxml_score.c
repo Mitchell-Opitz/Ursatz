@@ -124,24 +124,9 @@ static void xmlbuf_append_escaped(XmlBuf *buf, const char *text) {
 
 /* --- exact integer helpers --- */
 
-static long long gcd_ll(long long a, long long b) {
-    if (a < 0) {
-        a = -a;
-    }
-    if (b < 0) {
-        b = -b;
-    }
-    while (b != 0) {
-        long long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
 /* *divisions = lcm(*divisions, den), false when that is above MAX_DIVISIONS. */
 static bool lcm_into(long long *divisions, long long den) {
-    long long g = gcd_ll(*divisions, den);
+    long long g = rational_gcd(*divisions, den);
     long long product = 0;
     if (g == 0 || __builtin_mul_overflow(*divisions / g, den, &product) || product > MAX_DIVISIONS) {
         return false;
@@ -162,7 +147,7 @@ static TimeStatus time_denominator(long n, unsigned long d, long long *out) {
     if (d == 0 || d > (unsigned long)LLONG_MAX || __builtin_mul_overflow((long long)n, 4LL, &four_n)) {
         return TIME_NOT_REPRESENTABLE;
     }
-    *out = (long long)d / gcd_ll(four_n, (long long)d);
+    *out = (long long)d / rational_gcd(four_n, (long long)d);
     return TIME_OK;
 }
 
@@ -172,7 +157,7 @@ static TimeStatus time_ticks(long n, unsigned long d, long long divisions, long 
     if (d == 0 || d > (unsigned long)LLONG_MAX || __builtin_mul_overflow((long long)n, 4LL, &four_n)) {
         return TIME_NOT_REPRESENTABLE;
     }
-    long long g = gcd_ll(four_n, (long long)d);
+    long long g = rational_gcd(four_n, (long long)d);
     long long den = (long long)d / g;
     if (divisions % den != 0 || __builtin_mul_overflow(four_n / g, divisions / den, out)) {
         return TIME_NOT_REPRESENTABLE;

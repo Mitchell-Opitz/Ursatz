@@ -4,11 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "model/pitch/midi_pitch.h"
 #include "theory/tonality/brightness.h"
 
 #define SEMITONES_PER_OCTAVE 12
-
-static const char *const CENTER_NAMES[SEMITONES_PER_OCTAVE] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 static int reduced(int semitones) {
     int value = semitones % SEMITONES_PER_OCTAVE;
@@ -27,7 +26,7 @@ static RegionRelationStatus refuse(char *message, size_t size, const Relation *r
         const PitchMaterial *material = anchor->material;
         const char *word = material != NULL && material->key_word != NULL ? material->key_word : "?";
         snprintf(message, size, "relation '%s' from %s %s: %s", relation->name != NULL ? relation->name : relation->id,
-                 anchor->center >= 0 && anchor->center < SEMITONES_PER_OCTAVE ? CENTER_NAMES[anchor->center] : "-", word, reason);
+                 anchor->center >= 0 && anchor->center < SEMITONES_PER_OCTAVE ? key_tonic_name(anchor->center) : "-", word, reason);
     }
     return REGION_RELATION_REFUSED;
 }
