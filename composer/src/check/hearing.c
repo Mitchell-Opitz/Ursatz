@@ -2,6 +2,7 @@
 #include "util/util.h"
 
 #include <stdatomic.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,6 +14,10 @@
 #include <theory/tonality/tonal_key.h>
 
 #include <plan/plan_lanes.h>
+#include <reading/reading_build.h>
+
+#include "render/movement_build.h"
+#include <ursatz_composer/composer.h>
 
 /* Test only (hearing.h): how many spans were run through the library chain. Not static, so it is not the file-scope state
    tools/ci/check-statics.sh refuses; nothing in src reads it. */
@@ -28,7 +33,14 @@ typedef struct {
     size_t *source; /* each heard event's index among the rendered events */
     ImportedScore *score; /* the view of the events (imported_score_view); the chain borrows it */
     AnalysisChain *chain;
+    Reading *reading; /* the reading of the chain, built on the first request; its detail is the chain */
 } HeardSpan;
+
+/* The performer note id of a rendered event and the event, sorted by id, so a note id gives its event. */
+typedef struct {
+    char id[REALIZATION_ID_MAX];
+    size_t event;
+} NoteEntry;
 
 struct ComposerHearing {
     const Plan *plan;
@@ -40,9 +52,11 @@ struct ComposerHearing {
     size_t span_capacity;
     /* The snapshot the chain reads its materials from (the call context's); borrowed, it outlives the hearing. */
     const KnowledgeSnapshot *knowledge;
+    NoteEntry *note_index; /* built on the first hearing_event_of_note */
 };
 
 static void heard_span_release(HeardSpan *heard) {
+    reading_destroy(heard->reading); /* before its chain */
     analysis_chain_destroy(heard->chain);
     if (heard->score) {
         imported_score_destroy(heard->score);
@@ -63,6 +77,7 @@ void hearing_destroy(ComposerHearing *hearing) {
         heard_span_release(&hearing->spans[i]);
     }
     free(hearing->spans);
+    free(hearing->note_index);
     free(hearing->starts);
     free(hearing->midi);
     rendered_plan_destroy(&hearing->rendered);
@@ -269,4 +284,93 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     hearing->spans[hearing->span_count] = heard;
     *out = hearing->spans[hearing->span_count++].chain;
     return HEARING_OK;
+}
+
+HearingResult hearing_section_reading(ComposerHearing *hearing, PlanSpan span, const Reading **out) {
+    if (!out) {
+        return HEARING_ERR_NULL;
+    }
+    *out = NULL;
+    const AnalysisChain *chain = NULL;
+    HearingResult status = hearing_section(hearing, span, &chain);
+    if (status != HEARING_OK) {
+        return status;
+    }
+    HeardSpan *heard = find_heard(hearing, span);
+    if (!heard) {
+        return HEARING_ERR_ANALYSIS;
+    }
+    if (!heard->reading) {
+        ReadingSource source = {READING_SOURCE_COMPOSER, "ursatz-composer", "", ANALYSIS_CHAIN_STAGE_ALL, ""};
+        snprintf(source.producer_key, sizeof(source.producer_key), "%s", composer_composition_key());
+        snprintf(source.knowledge_hash, sizeof(source.knowledge_hash), "%s", knowledge_snapshot_hash(hearing->knowledge));
+        ReadingTarget target = {"w1", "m1", ""};
+        char(*note_ids)[REALIZATION_ID_MAX] = calloc(heard->count, sizeof(*note_ids));
+        if (!note_ids) {
+            return HEARING_ERR_ALLOC;
+        }
+        for (size_t i = 0; i < heard->count; i++) {
+            if (!rendered_plan_note_id(&hearing->rendered, heard->source[i], note_ids[i])) {
+                free(note_ids);
+                return HEARING_ERR_ANALYSIS;
+            }
+        }
+        RealizationResult built = reading_build(heard->chain, &source, &target, (const char(*)[REALIZATION_ID_MAX])note_ids, heard->count,
+                                                &heard->reading);
+        free(note_ids);
+        if (built != REALIZATION_OK) {
+            return built == REALIZATION_ERR_ALLOC ? HEARING_ERR_ALLOC : HEARING_ERR_ANALYSIS;
+        }
+    }
+    *out = heard->reading;
+    return HEARING_OK;
+}
+
+HearingResult hearing_piece_reading(ComposerHearing *hearing, const Reading **out) {
+    if (!out) {
+        return HEARING_ERR_NULL;
+    }
+    *out = NULL;
+    if (!hearing) {
+        return HEARING_ERR_NULL;
+    }
+    PlanSpan whole = {{0, 1}, hearing->rendered.piece_end};
+    if (whole.length.num <= 0) {
+        whole.length = (Rational){1000000, 1};
+    }
+    return hearing_section_reading(hearing, whole, out);
+}
+
+static int compare_notes(const void *a, const void *b) {
+    return strcmp(((const NoteEntry *)a)->id, ((const NoteEntry *)b)->id);
+}
+
+size_t hearing_event_of_note(const ComposerHearing *hearing, const char *note_id) {
+    ComposerHearing *self = (ComposerHearing *)hearing; /* the index is a cache */
+    if (!self || !note_id) {
+        return (size_t)-1;
+    }
+    size_t count = self->rendered.count;
+    if (!self->note_index && count > 0) {
+        self->note_index = calloc(count, sizeof(*self->note_index));
+        if (!self->note_index) {
+            return (size_t)-1;
+        }
+        for (size_t i = 0; i < count; i++) {
+            if (!rendered_plan_note_id(&self->rendered, i, self->note_index[i].id)) {
+                free(self->note_index);
+                self->note_index = NULL;
+                return (size_t)-1;
+            }
+            self->note_index[i].event = i;
+        }
+        qsort(self->note_index, count, sizeof(*self->note_index), compare_notes);
+    }
+    if (!self->note_index) {
+        return (size_t)-1;
+    }
+    NoteEntry key;
+    snprintf(key.id, sizeof(key.id), "%s", note_id);
+    const NoteEntry *found = bsearch(&key, self->note_index, count, sizeof(*self->note_index), compare_notes);
+    return found ? found->event : (size_t)-1;
 }
