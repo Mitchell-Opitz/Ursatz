@@ -79,18 +79,6 @@ bool composer_key_is_minor(const SpelledKey *key);
 /* Makes the key of the material (the tonic spelling stays). The material is the major or the natural minor of the call's materials. */
 void composer_key_set_material(SpelledKey *key, const PitchMaterial *material);
 
-/*
- * Whether the key has a material the Composer writes: a major third or a minor third (common_practice_key_mode_of). The zero key
- * (C, no material) is valid and reads as C major, which a request left at its defaults holds.
- */
-bool composer_key_valid(const SpelledKey *key);
-
-/* The id of the key's material; the major's for a key with none, which reads as major. */
-const char *composer_key_material_id(const SpelledKey *key);
-
-/* The word after the tonic in the key's name ("minor" in "D minor"): the material's key word; "major" for a key with none. */
-const char *composer_key_word(const SpelledKey *key);
-
 /* The name of a chord's harmonic function, "unknown" for a chord with none. */
 const char *util_function_name(bool has_function, HarmonicFunction function);
 

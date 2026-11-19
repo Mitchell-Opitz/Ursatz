@@ -478,7 +478,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     if (!form_spec_meter_allowed(form, &request->meter) || !grow_cells_per_bar(&request->meter, &cells_per_bar) ||
         spelled_key_tonic_pitch_class(&request->key) < 0 ||
         spelled_key_tonic_pitch_class(&request->key) > 11 ||
-        !composer_key_valid(&request->key) ||
+        !plan_key_valid(&request->key) ||
         (request->motive && request->motive->note_count < 2) ||
         (accompanied && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
         !size_buildable(size, &request->meter, request->motive, constructions, has_construction)) {

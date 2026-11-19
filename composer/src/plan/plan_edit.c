@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "plan/plan_internal.h"
-#include "util/plan_util.h"
+#include "plan/plan_common.h"
 
 /* The constraints of a list, copied; a motive a constraint names is the node the map gives. */
 static bool constraints_clone(const ConstraintList *from, ConstraintList *to, const NodeId *node_map) {

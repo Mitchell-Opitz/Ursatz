@@ -4,13 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <theory/galant/galant_prototypes.h>
-#include <theory/vocabulary/texture_rules.h>
 
 #include "plan/constraint_kinds.h"
 #include "plan/plan_internal.h"
-#include "util/plan_util.h"
-#include "util/util.h"
+#include "plan/plan_common.h"
 
 void constraint_list_free(ConstraintList *list) {
     free(list->items);

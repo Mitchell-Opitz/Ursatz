@@ -4,8 +4,7 @@
 #include <string.h>
 
 #include "plan/plan_internal.h"
-#include "util/plan_util.h"
-#include "util/util.h"
+#include "plan/plan_common.h"
 
 PlanResult plan_span_end(PlanSpan span, Rational *out) {
     return plan_result_of_rational(rational_add(span.start, span.length, out));
@@ -97,6 +96,16 @@ NodeId plan_node_rank(const PiecePlan *plan, NodeId id) {
     return rank;
 }
 
+/* A malloc'd copy of the text, or NULL when out of memory. */
+static char *copy_text(const char *text) {
+    size_t size = strlen(text) + 1;
+    char *out = malloc(size);
+    if (out) {
+        memcpy(out, text, size);
+    }
+    return out;
+}
+
 static bool span_is_valid(PlanSpan span) {
     return span.start.den != 0 && span.length.den != 0 && span.length.num > 0;
 }
@@ -165,7 +174,7 @@ PlanResult plan_add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, Plan
 
     char *name_copy = NULL;
     if (name) {
-        name_copy = util_copy_string(name);
+        name_copy = copy_text(name);
         if (!name_copy) {
             return PLAN_ERR_ALLOC;
         }

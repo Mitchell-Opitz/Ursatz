@@ -114,7 +114,7 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
     size_t cells;
     if (!grow_cells_per_bar(&request->meter, &cells) || spelled_key_tonic_pitch_class(&request->key) < 0 ||
         spelled_key_tonic_pitch_class(&request->key) > 11 ||
-        !composer_key_valid(&request->key) ||
+        !plan_key_valid(&request->key) ||
         request->meter.beats_per_bar <= 0 || request->meter.beat_unit <= 0 ||
         request->section_count > PIECE_STRUCTURE_MAX_SECTIONS || (request->has_accompaniment && request->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;

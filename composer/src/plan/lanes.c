@@ -4,17 +4,17 @@
 #include <string.h>
 
 #include <theory/tonality/common_practice_materials.h>
+#include <model/pitch/midi_pitch.h>
 #include <theory/tonality/tonal_key.h>
 
 #include "plan/plan_internal.h"
-#include "util/plan_util.h"
-#include "util/util.h"
+#include "plan/plan_common.h"
 
 SpelledKey plan_key_of_pitch_class(int pitch_class, const PitchMaterial *material) {
     SpelledKey key = {NULL, PITCH_LETTER_C, 0, material};
     PitchLetter letter;
     int accidental;
-    if (standard_tonality_key_tonic_of_pitch_class_material(util_pitch_class(pitch_class), material, &letter, &accidental)) {
+    if (standard_tonality_key_tonic_of_pitch_class_material(pitch_class_of_midi(pitch_class), material, &letter, &accidental)) {
         key.tonic_letter = letter;
         key.tonic_accidental = accidental;
     }
@@ -107,7 +107,7 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
                payload->meter.bars_per_hyperbar >= 0;
     case PLAN_LANE_KEY:
         return spelled_key_tonic_pitch_class(&payload->key) >= 0 && spelled_key_tonic_pitch_class(&payload->key) <= 11 &&
-               composer_key_valid(&payload->key);
+               plan_key_valid(&payload->key);
     case PLAN_LANE_HARMONY: {
         size_t length = strnlen(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
         return length > 0 && length < PLAN_ROMAN_NUMERAL_MAX;

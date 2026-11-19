@@ -8,8 +8,7 @@
 #include <ursatz_composer/lanes.h>
 
 #include "plan/plan_internal.h"
-#include "util/plan_util.h"
-#include "util/util.h"
+#include "plan/plan_common.h"
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 #define TIME_LIMIT 1000000000L
@@ -372,7 +371,7 @@ static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *p
 static bool valid_key(const PiecePlan *plan, const PlanConstraint *constraint) {
     (void)plan;
     return spelled_key_tonic_pitch_class(&constraint->params.key) >= 0 && spelled_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
-           composer_key_valid(&constraint->params.key);
+           plan_key_valid(&constraint->params.key);
 }
 
 static bool write_key(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {

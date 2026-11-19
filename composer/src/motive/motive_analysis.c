@@ -11,6 +11,7 @@
 #include "motive/motive_segments.h"
 #include "util/composer_json.h"
 #include "util/util.h"
+#include "plan/plan_common.h"
 
 static long floor_div(long a, long b) {
     long quotient = a / b;
@@ -524,7 +525,7 @@ static cJSON *key_json(const MotiveAnalysis *analysis) {
     }
     cJSON *object = cJSON_CreateObject();
     bool ok = object && composer_json_add(object, "tonic_pitch_class", composer_json_number(spelled_key_tonic_pitch_class(&analysis->key))) &&
-              add_string(object, "material", composer_key_material_id(&analysis->key)) &&
+              add_string(object, "material", plan_key_material_id(&analysis->key)) &&
               add_string(object, "source", key_source_name(analysis->key_source));
     if (!ok) {
         cJSON_Delete(object);

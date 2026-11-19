@@ -9,8 +9,6 @@
 #include <model/pitch/pitch_arithmetic.h>
 #include <theory/harmony/harmonic_function.h>
 #include <theory/tonality/tonal_key.h>
-#include <theory/galant/galant_prototypes.h>
-#include <theory/vocabulary/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
@@ -20,8 +18,7 @@
 #include "plan/constraint_kinds.h"
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
-#include "util/plan_util.h"
-#include "util/util.h"
+#include "plan/plan_common.h"
 
 #define COMPOSER_FRAMEWORK "ursatz-composer"
 #define PLAN_FORMAT_NAME "ursatz-composer-plan"
@@ -105,7 +102,7 @@ bool json_key_members(cJSON *object, const SpelledKey *key) {
     char tonic[8];
     return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
            plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
-           plan_json_add(object, "material", cJSON_CreateString(composer_key_material_id(key)));
+           plan_json_add(object, "material", cJSON_CreateString(plan_key_material_id(key)));
 }
 
 /* A key span's payload: the key, with the relation it is named by beside it (R-597); a span not yet resolved is only the relation. */
@@ -222,7 +219,7 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
 static void plan_key_label(const SpelledKey *key, char *out, size_t size) {
     char tonic[8] = "?";
     pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic));
-    snprintf(out, size, "%s %s", tonic, composer_key_word(key));
+    snprintf(out, size, "%s %s", tonic, plan_key_word(key));
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {

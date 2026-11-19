@@ -14,8 +14,7 @@
 
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
-#include "util/plan_util.h"
-#include "util/util.h"
+#include "plan/plan_common.h"
 
 /*
  * Key spans named by a relation (R-597). The spans are resolved in the order the key lane runs, so a span anchored on the one before

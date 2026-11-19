@@ -17,6 +17,7 @@
 #include "motive/motive_internal.h"
 #include "util/composer_json.h"
 #include "util/util.h"
+#include "plan/plan_common.h"
 
 /* ----------------------------------------------------------------- scores */
 
@@ -770,7 +771,7 @@ static cJSON *meter_json(const PlanMeter *meter) {
 static cJSON *key_json(const SpelledKey *key) {
     cJSON *object = cJSON_CreateObject();
     if (object && !(composer_json_add(object, "tonic_pitch_class", composer_json_number(spelled_key_tonic_pitch_class(key))) &&
-                    composer_json_add(object, "material", cJSON_CreateString(composer_key_material_id(key))))) {
+                    composer_json_add(object, "material", cJSON_CreateString(plan_key_material_id(key))))) {
         cJSON_Delete(object);
         return NULL;
     }

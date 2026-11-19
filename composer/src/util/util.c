@@ -59,20 +59,6 @@ bool composer_key_is_minor(const SpelledKey *key) {
     return key && composer_material_is_minor(key->material);
 }
 
-bool composer_key_valid(const SpelledKey *key) {
-    return key && (key->material == NULL || composer_material_valid(key->material));
-}
-
-#define MAJOR_MATERIAL_ID "omt.material.major"
-
-const char *composer_key_material_id(const SpelledKey *key) {
-    return key && key->material ? key->material->id : MAJOR_MATERIAL_ID;
-}
-
-const char *composer_key_word(const SpelledKey *key) {
-    return key && key->material ? key->material->key_word : "major";
-}
-
 void composer_key_set_material(SpelledKey *key, const PitchMaterial *material) {
     key->material = material;
 }
