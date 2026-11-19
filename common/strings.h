@@ -12,6 +12,9 @@ typedef struct {
     bool failed;
 } CommonText;
 
+/* Test hook: the text buffers allocate with fn (the realloc signature) in place of realloc; NULL restores realloc. */
+void common_text_set_realloc(void *(*fn)(void *, size_t));
+
 void common_text_init(CommonText *text);
 bool common_text_append(CommonText *text, const char *value);
 bool common_text_appendf(CommonText *text, const char *format, ...)

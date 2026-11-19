@@ -9,6 +9,12 @@
 
 #include <cJSON.h>
 
+static void *(*g_realloc)(void *, size_t) = NULL;
+
+void common_text_set_realloc(void *(*fn)(void *, size_t)) {
+    g_realloc = fn;
+}
+
 void common_text_init(CommonText *text) {
     text->data = NULL;
     text->length = 0;
@@ -27,7 +33,7 @@ static bool text_reserve(CommonText *text, size_t extra) {
     while (capacity < text->length + extra + 1) {
         capacity *= 2;
     }
-    char *grown = realloc(text->data, capacity);
+    char *grown = g_realloc ? g_realloc(text->data, capacity) : realloc(text->data, capacity);
     if (!grown) {
         text->failed = true;
         return false;
