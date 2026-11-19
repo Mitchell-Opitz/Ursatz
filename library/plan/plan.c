@@ -49,6 +49,29 @@ PlanResult plan_set_form_record(Plan *plan, const PlanFormRecord *record) {
     return PLAN_OK;
 }
 
+PlanResult plan_set_derived_from(Plan *plan, const PlanDerivation *derivation) {
+    if (!plan || !derivation) {
+        return PLAN_ERR_NULL;
+    }
+    size_t reading = strnlen(derivation->reading, PLAN_DERIVATION_READING_MAX);
+    size_t digest = strnlen(derivation->realization, sizeof(derivation->realization));
+    bool hex = digest == PLAN_DERIVATION_DIGEST_LEN;
+    for (size_t i = 0; hex && i < digest; i++) {
+        hex = (derivation->realization[i] >= '0' && derivation->realization[i] <= '9') ||
+              (derivation->realization[i] >= 'a' && derivation->realization[i] <= 'f');
+    }
+    if (reading == 0 || reading >= PLAN_DERIVATION_READING_MAX || !hex) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    plan->derivation = *derivation;
+    plan->has_derivation = true;
+    return PLAN_OK;
+}
+
+const PlanDerivation *plan_derived_from(const Plan *plan) {
+    return plan && plan->has_derivation ? &plan->derivation : NULL;
+}
+
 const PlanFormRecord *plan_form_record(const Plan *plan) {
     return plan && plan->has_form_record ? &plan->form_record : NULL;
 }

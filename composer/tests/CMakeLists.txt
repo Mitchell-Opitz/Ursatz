@@ -45,7 +45,7 @@ endif()
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v5.schema.json
+                     -DSCHEMA=${CMAKE_SOURCE_DIR}/library/plan/schema/plan.v6.schema.json
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake

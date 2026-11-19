@@ -944,7 +944,7 @@ static const ConstraintKindRow ROWS[] = {
     {PLAN_CONSTRAINT_LENGTH_BARS, "length_bars", write_length_bars, read_length_bars, valid_length_bars},
     {PLAN_CONSTRAINT_CADENCE, "cadence", write_cadence, read_cadence, valid_cadence},
     {PLAN_CONSTRAINT_MOTIVE_REF, "motive_ref", write_motive_ref, read_motive_ref, valid_motive_ref},
-    {PLAN_CONSTRAINT_REGION, "key", write_key, read_key, valid_key},
+    {PLAN_CONSTRAINT_REGION, "region", write_key, read_key, valid_key},
     {PLAN_CONSTRAINT_EMBELLISH, "embellish", write_embellish, read_embellish, valid_embellish},
     {PLAN_CONSTRAINT_SCHEMA, "schema", write_schema, read_schema, valid_schema},
     {PLAN_CONSTRAINT_HARMONY_SHAPE, "harmony_shape", write_harmony_shape, read_harmony_shape, valid_harmony_shape},

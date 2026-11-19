@@ -224,9 +224,12 @@ static void test_stamp(void) {
     snprintf(producer.knowledge_hash, sizeof(producer.knowledge_hash), "%s", "00112233aabbccdd");
     char *written = plan_to_json(plan, &producer, NULL);
     assert(written != NULL);
-    /* Format 5 writes the version and the producer key; the other members are format 6's. */
-    assert(strstr(written, "\"composer_version\": \"9.8.7\"") != NULL);
-    assert(strstr(written, "\"ursatz_commit\": \"0123456789abcdef\"") != NULL);
+    /* Format 6 writes the stamp's members as the metadata. */
+    assert(strstr(written, "\"producer\": \"test-program\"") != NULL);
+    assert(strstr(written, "\"producer_version\": \"9.8.7\"") != NULL);
+    assert(strstr(written, "\"producer_key\": \"0123456789abcdef\"") != NULL);
+    assert(strstr(written, "\"composition_key\": \"fedcba9876543210\"") != NULL);
+    assert(strstr(written, "\"knowledge_hash\": \"00112233aabbccdd\"") != NULL);
     free(written);
 
     PlanJsonError error;
@@ -266,6 +269,7 @@ static void test_hooks(void) {
     /* A format 4 text has no form record: only the Composer's hook gives the plan one, the one of the form its root is named for. */
     cJSON *document = cJSON_Parse(text);
     assert(document != NULL);
+    test_plan_document_as_format_five(document);
     cJSON_ReplaceItemInObject(document, "format_version", cJSON_CreateNumber(4));
     cJSON *root = cJSON_GetObjectItemCaseSensitive(document, "form");
     cJSON *composer = cJSON_GetObjectItemCaseSensitive(root, "composer");

@@ -388,7 +388,7 @@ static void test_plan_formats(void) {
         PlanJsonError error;
         assert(plan_from_json(test_knowledge(), v1, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
         char *v4 = plan_to_json(read, test_plan_producer(), &error);
-        assert(v4 && strstr(v4, "\"format_version\": 5") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
+        assert(v4 && strstr(v4, "\"format_version\": 6") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
         /* format 3 is the same text without the note ids */
         char *v3 = test_plan_text_as_format_three(v4);
         assert(v3 && strstr(v3, "\"format_version\": 3") && strstr(v3, "next_note_id") == NULL);
@@ -436,9 +436,9 @@ static void test_plan_formats(void) {
     }
 }
 
-/* The first key span of the plan named by `relation` and resolved: its index in the "keys" member of the plan object, or -1. */
+/* The first key span of the plan named by `relation` and resolved: its index in the "regions" member of the plan object, or -1. */
 static int resolved_span_of(const cJSON *plan, const char *relation) {
-    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(plan, "keys");
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(plan, "regions");
     int index = 0;
     const cJSON *span;
     cJSON_ArrayForEach(span, keys) {
@@ -493,7 +493,7 @@ static char *dominant_plan(unsigned long *seed_out, int *span_out) {
 static char *plan_with_span_named(const char *text, int span, bool by_relation) {
     cJSON *json = cJSON_Parse(text);
     assert(json);
-    cJSON *keys = cJSON_GetObjectItemCaseSensitive(json, "keys");
+    cJSON *keys = cJSON_GetObjectItemCaseSensitive(json, "regions");
     cJSON *payload = cJSON_GetObjectItemCaseSensitive(
         cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(keys, span), "composer"), "payload");
     assert(payload);
@@ -533,7 +533,7 @@ static void test_relation_named_span_composes(void) {
     assert(planned);
     cJSON *json = cJSON_Parse(planned);
     cJSON *payload = cJSON_GetObjectItemCaseSensitive(
-        cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(json, "keys"), span), "composer"), "payload");
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(json, "regions"), span), "composer"), "payload");
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(payload, "tonic")->valuestring, "G") == 0 &&
            strcmp(cJSON_GetObjectItemCaseSensitive(payload, "material")->valuestring, "omt.material.major") == 0 &&
            strcmp(cJSON_GetObjectItemCaseSensitive(payload, "anchor")->valuestring, "home") == 0);

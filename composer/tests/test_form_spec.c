@@ -1249,6 +1249,7 @@ static void test_form_record_migration(void) {
     assert(v5);
     cJSON *document = cJSON_Parse(v5);
     assert(document != NULL);
+    test_plan_document_as_format_five(document);
     cJSON_SetNumberHelper(cJSON_GetObjectItemCaseSensitive(document, "format_version"), 4);
     cJSON *root = cJSON_GetObjectItemCaseSensitive(document, "form");
     cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(root, "composer"), "form");

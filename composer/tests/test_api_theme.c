@@ -96,6 +96,9 @@ static void expect_json_equal(const char *actual, const char *expected_path, boo
             cJSON *metadata = cJSON_GetObjectItemCaseSensitive(both[i], "metadata");
             cJSON_DeleteItemFromObjectCaseSensitive(metadata, "composer_version");
             cJSON_DeleteItemFromObjectCaseSensitive(metadata, "ursatz_commit");
+            cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_version");
+            cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_key");
+            cJSON_DeleteItemFromObjectCaseSensitive(metadata, "composition_key");
         }
     }
     if (!cJSON_Compare(actual_json, expected_json, true)) {

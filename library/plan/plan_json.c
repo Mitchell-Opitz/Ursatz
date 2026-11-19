@@ -20,9 +20,9 @@
 #include "plan/plan_json_internal.h"
 #include "plan/plan_common.h"
 
-#define COMPOSER_FRAMEWORK "ursatz-composer"
-#define PLAN_FORMAT_NAME "ursatz-composer-plan"
-#define COMPOSER_KEY_METHOD "composer_plan"
+#define PLAN_FORMAT_NAME "ursatz-plan"
+/* The name formats 2 to 5 carried: they are read, not written. */
+#define PLAN_FORMAT_NAME_LEGACY "ursatz-composer-plan"
 /* The materials a file of format 1 or 2 means by "major" and "minor". */
 #define MATERIAL_ID_MAJOR "omt.material.major"
 #define MATERIAL_ID_MINOR "omt.material.natural-minor"
@@ -105,7 +105,8 @@ bool json_key_members(cJSON *object, const SpelledKey *key) {
            plan_json_add(object, "material", cJSON_CreateString(plan_key_material_id(key)));
 }
 
-/* A key span's payload: the key, with the relation it is named by beside it (R-597); a span not yet resolved is only the relation. */
+/* A region's payload: a tonal region (a key), with the relation it is named by beside it (R-597); a span not yet resolved is only the relation. */
+#define REGION_KIND_TONAL "tonal"
 static const char *key_anchor_text(const PlanKeyRelation *relation) {
     return relation->anchor == PLAN_KEY_ANCHOR_SECTION ? relation->anchor_section : KEY_ANCHOR_NAMES[relation->anchor];
 }
@@ -115,7 +116,7 @@ static bool key_payload_json(cJSON *object, const SpelledKey *key, const PlanKey
         return plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
                plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)));
     }
-    return json_key_members(object, key) &&
+    return plan_json_add(object, "kind", cJSON_CreateString(REGION_KIND_TONAL)) && json_key_members(object, key) &&
            (!relation || (plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
                           plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)))));
 }
@@ -317,22 +318,11 @@ static void key_span_label(const Plan *plan, LaneSpanId id, char *out, size_t si
     }
 }
 
-/* The label of the key span that covers the start of span, or "no match". */
-static void enclosing_plan_key_label(const Plan *plan, PlanSpan span, char *out, size_t size) {
-    LaneSpanId found = PLAN_LANE_SPAN_NONE;
-    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, span, &found, 1) > 0) {
-        key_span_label(plan, found, out, size);
-    } else {
-        snprintf(out, size, "no match");
-    }
-}
-
 static cJSON *lane_entry_json(const Plan *plan, LaneSpanId id) {
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     PlanSpan span = plan_lane_span_span(plan, id);
     const PlanLanePayload *payload = plan_lane_span_payload(plan, id);
     char label[64];
-    char context_key[64];
     lane_label(payload, lane, label, sizeof(label));
     if (lane == PLAN_LANE_REGION) {
         key_span_label(plan, id, label, sizeof(label));
@@ -348,16 +338,7 @@ static cJSON *lane_entry_json(const Plan *plan, LaneSpanId id) {
          plan_json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
          plan_json_add(composer, "constraints", span_constraints_json(plan, id)) &&
          plan_json_add(composer, "payload", payload_json(lane, payload, plan_lane_span_key_relation(plan, id)));
-    ok = ok && plan_json_add(object, "framework", cJSON_CreateString(COMPOSER_FRAMEWORK)) &&
-         plan_json_add(object, "span", span_json(span)) && plan_json_add(object, "note_ids", cJSON_CreateArray()) &&
-         plan_json_add(object, "label", cJSON_CreateString(label)) && plan_json_add(object, "uncertainty", cJSON_CreateNull());
-    if (ok && lane == PLAN_LANE_REGION) {
-        ok = plan_json_add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
-    }
-    if (ok && lane == PLAN_LANE_HARMONY) {
-        enclosing_plan_key_label(plan, span, context_key, sizeof(context_key));
-        ok = plan_json_add(object, "key_label", cJSON_CreateString(context_key));
-    }
+    ok = ok && plan_json_add(object, "span", span_json(span)) && plan_json_add(object, "label", cJSON_CreateString(label));
     if (ok) {
         ok = plan_json_add(object, "composer", composer);
         composer = NULL;
@@ -402,13 +383,27 @@ static cJSON *meter_json(const Plan *plan) {
     return object;
 }
 
-/* The program that wrote the file (the stamp the caller gives), the build it came from and, for a plan loaded from an analysis, the Analyzer. */
+/* Who wrote the file (the stamp the caller gives) and, for a plan loaded from an analysis, the Analyzer. */
 static cJSON *metadata_json(const Plan *plan, const PlanProducer *producer) {
     cJSON *object = cJSON_CreateObject();
     const char *analyzer = plan_analyzer_version(plan);
-    if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(producer->version)) &&
-                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(producer->producer_key)) &&
+    if (object && !(plan_json_add(object, "producer", cJSON_CreateString(producer->name)) &&
+                    plan_json_add(object, "producer_version", cJSON_CreateString(producer->version)) &&
+                    plan_json_add(object, "producer_key", cJSON_CreateString(producer->producer_key)) &&
+                    plan_json_add(object, "composition_key", cJSON_CreateString(producer->composition_key)) &&
+                    plan_json_add(object, "knowledge_hash", cJSON_CreateString(producer->knowledge_hash)) &&
                     (analyzer[0] == '\0' || plan_json_add(object, "analyzer_version", cJSON_CreateString(analyzer))))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The reading and the realization the plan was made from (R-635). */
+static cJSON *derived_from_json(const PlanDerivation *derivation) {
+    cJSON *object = cJSON_CreateObject();
+    if (object && !(plan_json_add(object, "reading", cJSON_CreateString(derivation->reading)) &&
+                    plan_json_add(object, "realization", cJSON_CreateString(derivation->realization)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -420,11 +415,14 @@ static cJSON *document_json(const Plan *plan, const PlanProducer *producer) {
     if (!document) {
         return NULL;
     }
+    const PlanDerivation *derivation = plan_derived_from(plan);
     bool ok = plan_json_add(document, "format", cJSON_CreateString(PLAN_FORMAT_NAME)) &&
-              plan_json_add(document, "format_version", json_number(URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) &&
+              plan_json_add(document, "format_version", json_number(URSATZ_PLAN_FORMAT_VERSION)) &&
               plan_json_add(document, "next_note_id", json_number((double)plan_next_note_id(plan))) &&
-              plan_json_add(document, "metadata", metadata_json(plan, producer)) && plan_json_add(document, "meter", meter_json(plan)) &&
-              plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_REGION)) &&
+              plan_json_add(document, "metadata", metadata_json(plan, producer)) &&
+              (!derivation || plan_json_add(document, "derived_from", derived_from_json(derivation))) &&
+              plan_json_add(document, "meter", meter_json(plan)) &&
+              plan_json_add(document, "regions", lane_array_json(plan, 1u << PLAN_LANE_REGION)) &&
               plan_json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
               plan_json_add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
               plan_json_add(document, "melody", lane_array_json(plan, 1u << PLAN_LANE_MELODY)) &&
@@ -995,6 +993,18 @@ static bool read_key_relation(JsonReader *reader, const cJSON *object, const cha
  */
 static bool read_key_span(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *key, PlanKeyRelation *relation) {
     memset(relation, 0, sizeof(*relation));
+    /* Format 6: a region names its kind; only the tonal one (a key) is built. */
+    const cJSON *kind = reader->version >= 6 ? cJSON_GetObjectItemCaseSensitive(object, "kind") : NULL;
+    if (kind) {
+        char kind_path[PLAN_JSON_PATH_MAX];
+        json_child_path(kind_path, path, "kind");
+        if (!cJSON_IsString(kind)) {
+            return json_bad_format(reader, kind_path, "expected a string");
+        }
+        if (strcmp(kind->valuestring, REGION_KIND_TONAL) != 0) {
+            return json_fail(reader, PLAN_ERR_FORMAT, kind_path, "region kind '%.40s' is not built until P69", kind->valuestring);
+        }
+    }
     if (reader->version >= 3 && cJSON_GetObjectItemCaseSensitive(object, "relation") &&
         !cJSON_GetObjectItemCaseSensitive(object, "tonic") && !cJSON_GetObjectItemCaseSensitive(object, "material")) {
         SpelledKey zero;
@@ -1299,7 +1309,9 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     if (!cJSON_IsString(named)) {
         return json_bad_format(reader, at, "expected a string");
     }
-    const ConstraintKindRow *row = constraint_kind_named(named->valuestring);
+    /* Formats before 6 called the constraint on a region "key". */
+    const char *kind_name = reader->version < 6 && strcmp(named->valuestring, "key") == 0 ? "region" : named->valuestring;
+    const ConstraintKindRow *row = constraint_kind_named(kind_name);
     if (!row) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", named->valuestring);
     }
@@ -1920,17 +1932,27 @@ static bool build_lane_span(JsonReader *reader, Plan *plan, const ParsedLane *pa
     return ok;
 }
 
+/* The document member that holds the region lane: "regions" from format 6, "keys" before it. */
+static const char *regions_section_name(const JsonReader *reader) {
+    return reader->version >= 6 ? "regions" : "keys";
+}
+
 static bool build_lane_spans(JsonReader *reader, Plan *plan, const cJSON *document) {
-    static const struct {
+    struct {
         const char *name;
         unsigned lanes;
     } sections[] = {
         {"meter", 1u << PLAN_LANE_METER},
-        {"keys", 1u << PLAN_LANE_REGION},
+        {NULL, 1u << PLAN_LANE_REGION}, /* "regions" from format 6, "keys" before it */
         {"chords", 1u << PLAN_LANE_HARMONY},
         {"melody", 1u << PLAN_LANE_MELODY},
         {"texture", (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE)},
     };
+    for (size_t i = 0; i < COUNT_OF(sections); i++) {
+        if (!sections[i].name) {
+            sections[i].name = regions_section_name(reader);
+        }
+    }
     size_t count = 0;
     for (size_t i = 0; i < COUNT_OF(sections); i++) {
         if (!count_section(reader, document, sections[i].name, &count)) {
@@ -2005,7 +2027,7 @@ static bool apply_states(JsonReader *reader, Plan *plan, const cJSON *document) 
         return false;
     }
 
-    static const char *const SECTIONS[] = {"meter", "keys", "chords", "melody", "texture"};
+    const char *const SECTIONS[] = {"meter", regions_section_name(reader), "chords", "melody", "texture"};
     for (size_t s = 0; s < COUNT_OF(SECTIONS); s++) {
         const cJSON *section = cJSON_GetObjectItemCaseSensitive(document, SECTIONS[s]);
         if (section && strcmp(SECTIONS[s], "meter") == 0) {
@@ -2054,9 +2076,42 @@ static bool read_metadata(JsonReader *reader, const cJSON *document, Plan *plan)
     return true;
 }
 
+/* Format 6: "derived_from", the reading and the realization the plan was made from, kept. The metadata's producer members are read by nobody here. */
+static bool read_derived_from(JsonReader *reader, const cJSON *document, Plan *plan) {
+    const cJSON *object = reader->version >= 6 ? cJSON_GetObjectItemCaseSensitive(document, "derived_from") : NULL;
+    if (!object || cJSON_IsNull(object)) {
+        return true;
+    }
+    if (!cJSON_IsObject(object)) {
+        return json_bad_format(reader, "derived_from", "expected an object");
+    }
+    const cJSON *reading = plan_json_member(reader, object, "derived_from", "reading", true);
+    const cJSON *realization = reading ? plan_json_member(reader, object, "derived_from", "realization", true) : NULL;
+    if (!reading || !realization) {
+        return false;
+    }
+    if (!cJSON_IsString(reading)) {
+        return json_bad_format(reader, "derived_from.reading", "expected a string");
+    }
+    if (!cJSON_IsString(realization)) {
+        return json_bad_format(reader, "derived_from.realization", "expected a string");
+    }
+    PlanDerivation derivation;
+    memset(&derivation, 0, sizeof(derivation));
+    if (strlen(reading->valuestring) >= sizeof(derivation.reading) || strlen(realization->valuestring) >= sizeof(derivation.realization)) {
+        return json_bad_format(reader, "derived_from", "the reading or the realization is too long");
+    }
+    snprintf(derivation.reading, sizeof(derivation.reading), "%s", reading->valuestring);
+    snprintf(derivation.realization, sizeof(derivation.realization), "%s", realization->valuestring);
+    if (plan_set_derived_from(plan, &derivation) != PLAN_OK) {
+        return json_bad_format(reader, "derived_from", "expected a reading name and a realization digest of 16 lowercase hexadecimal digits");
+    }
+    return true;
+}
+
 /* Everything after the version: the metadata, the form, the lane spans and, from version 4, the next note id. */
 static PlanResult read_document_body(JsonReader *reader, const cJSON *document, Plan *plan) {
-    if (!read_metadata(reader, document, plan)) {
+    if (!read_metadata(reader, document, plan) || !read_derived_from(reader, document, plan)) {
         return reader->result;
     }
     const cJSON *form = plan_json_member(reader, document, "", "form", true);
@@ -2096,11 +2151,13 @@ static PlanResult read_document(const cJSON *document, Plan *plan, const CommonP
     long version;
     if (cJSON_GetObjectItemCaseSensitive(document, "format")) {
         const cJSON *format = cJSON_GetObjectItemCaseSensitive(document, "format");
-        if (!cJSON_IsString(format) || strcmp(format->valuestring, PLAN_FORMAT_NAME) != 0) {
+        /* "ursatz-plan" is format 6; "ursatz-composer-plan" was the name of formats 2 to 5. */
+        bool current = cJSON_IsString(format) && strcmp(format->valuestring, PLAN_FORMAT_NAME) == 0;
+        if (!current && !(cJSON_IsString(format) && strcmp(format->valuestring, PLAN_FORMAT_NAME_LEGACY) == 0)) {
             json_bad_format(&reader, "format", "expected \"" PLAN_FORMAT_NAME "\"");
             return reader.result;
         }
-        if (!json_read_int_member(&reader, document, "", "format_version", 2, URSATZ_COMPOSER_PLAN_FORMAT_VERSION,
+        if (!json_read_int_member(&reader, document, "", "format_version", current ? 6 : 2, current ? URSATZ_PLAN_FORMAT_VERSION : 5,
                                   &version)) {
             return reader.result;
         }

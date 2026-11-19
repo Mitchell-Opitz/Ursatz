@@ -8,20 +8,23 @@
 #include "plan/plan.h"
 
 /*
- * A plan as JSON, in the Composer's own format (R-260), described by schema/plan.v5.schema.json: "format"
- * "ursatz-composer-plan", "format_version", "metadata", the node tree under "form", and the lane spans under "meter",
- * "keys", "chords", "melody" and "texture". Keys carry a spelled "tonic" and a "material" (the id of a pitch material); a key
- * span the Composer drew from a form region also names the "relation" and "anchor" it came from. Writing always gives version
- * URSATZ_COMPOSER_PLAN_FORMAT_VERSION; reading also takes version 3 (notes have no ids: they get 1 to n in file order), version 2
- * (keys name a "mode", major or minor) and version 1 (every plan saved before it: "schema_version" 1, tonic pitch classes, motive
- * "transform" names). Version 4 gives every note an "id" (unique, from 1) and, where the Composer knows it, a "source" and an
- * "operation", and the document a "next_note_id" above every id (R-601). Version 5 gives every section node a "section" member in its "composer" object, the section description (R-607), in place of the constraints version 4 and before wrote for a section's letter, part, pairing, cadences, return, layers, pedal, construction, connective, figure and function; reading takes those and makes the description of them. See library/docs/modules/plan-format.md.
+ * A plan as JSON (R-626), described by plan/schema/plan.v6.schema.json: "format" "ursatz-plan", "format_version" 6, the "metadata" a
+ * PlanProducer gives (producer, producer_version, producer_key, composition_key, knowledge_hash, and the Analyzer's version when the
+ * plan has one), "derived_from" when the plan has a derivation, the node tree under "form", and the lane spans under "meter",
+ * "regions", "chords", "melody" and "texture". A region carries a "kind" ("tonal" is the only one built), a spelled "tonic" and a
+ * "material" (the id of a pitch material); a region the Composer drew from a form region also names the "relation" and "anchor" it
+ * came from. Writing always gives URSATZ_PLAN_FORMAT_VERSION; reading also takes the formats before it, "format"
+ * "ursatz-composer-plan", versions 5 ("keys", the constraint kind "key", the claim members of a lane span accepted and ignored), 4
+ * (a note has an "id", and a "source" and "operation" where the Composer knows them, and the document a "next_note_id", R-601),
+ * 3 (notes have no ids: they get 1 to n in file order), 2 (keys name a "mode", major or minor) and 1 ("schema_version" 1, tonic pitch
+ * classes, motive "transform" names). Formats before 5 give a section node's description as constraints; reading makes the
+ * description of them. See library/docs/modules/plan-format.md.
  *
  * Reading ignores fields it does not know, but rejects unknown values in the
  * fields it owns (kind, state, lane, constraint kind) and anything malformed.
  */
 
-#define URSATZ_COMPOSER_PLAN_FORMAT_VERSION 5
+#define URSATZ_PLAN_FORMAT_VERSION 6
 /* The "schema_version" of a version 1 file, which is only read. */
 #define PLAN_JSON_SCHEMA_VERSION 1
 #define PLAN_JSON_PATH_MAX 128

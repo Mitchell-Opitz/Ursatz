@@ -143,6 +143,8 @@ PlanResult plan_clone(const Plan *plan, Plan **out) {
     copy->next_note_id = plan->next_note_id;
     copy->has_form_record = plan->has_form_record;
     copy->form_record = plan->form_record;
+    copy->has_derivation = plan->has_derivation;
+    copy->derivation = plan->derivation;
     PlanResult result = nodes_clone(plan, copy, node_map, live);
     if (result == PLAN_OK) {
         result = lane_spans_clone(plan, copy, node_map);

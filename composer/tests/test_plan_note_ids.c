@@ -224,7 +224,7 @@ static void test_json_round_trip(void) {
     assert(plan_add_lane_span(f.plan, f.section, PLAN_LANE_INNER_VOICE, 1, span_of(0, 2), &payload, &inner) == PLAN_OK);
     PlanJsonError error;
     char *text = plan_to_json(f.plan, test_plan_producer(), &error);
-    assert(text != NULL && strstr(text, "\"format_version\": 5") != NULL && strstr(text, "\"next_note_id\": 9") != NULL);
+    assert(text != NULL && strstr(text, "\"format_version\": 6") != NULL && strstr(text, "\"next_note_id\": 9") != NULL);
     assert(strstr(text, "\"source\": 1") != NULL && strstr(text, "\"operation\": \"copy\"") != NULL);
     Plan *read = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK);

@@ -127,28 +127,37 @@ static uint64_t fnv1a(const char *text) {
     return hash;
 }
 
-/* The plan text records the Analyzer's producer key (metadata.ursatz_commit); a source change must not move a plan, so
- * the key, whatever its length, is replaced by 40 zeros before the hash (the width of the commit the goldens were
- * captured with). */
-static uint64_t fnv1a_plan(const char *json) {
-    const char *field = strstr(json, "ursatz_commit");
-    const char *quote = field ? strchr(field + strlen("ursatz_commit") + 1, '"') : NULL;
+/* The plan text records the producer key and the composition key (metadata.producer_key and .composition_key); a source change must not
+ * move a plan, so each key, whatever its length, is replaced by 16 zeros before the hash (the width of a key). */
+static char *blank_member(const char *json, const char *member) {
+    char name[40];
+    snprintf(name, sizeof(name), "\"%s\"", member);
+    const char *field = strstr(json, name);
+    const char *quote = field ? strchr(field + strlen(name) + 1, '"') : NULL;
     const char *end = quote ? strchr(quote + 1, '"') : NULL;
-    if (!end) {
-        return fnv1a(json);
-    }
-    size_t head = (size_t)(quote + 1 - json);
-    size_t tail = strlen(end);
-    char *blanked = malloc(head + 40 + tail + 1);
+    size_t head = end ? (size_t)(quote + 1 - json) : 0;
+    size_t tail = end ? strlen(end) : strlen(json);
+    char *blanked = malloc(head + 16 + tail + 1);
     if (!blanked) {
         fprintf(stderr, "out of memory\n");
         exit(1);
     }
+    if (!end) {
+        memcpy(blanked, json, tail + 1);
+        return blanked;
+    }
     memcpy(blanked, json, head);
-    memset(blanked + head, '0', 40);
-    memcpy(blanked + head + 40, end, tail + 1);
+    memset(blanked + head, '0', 16);
+    memcpy(blanked + head + 16, end, tail + 1);
+    return blanked;
+}
+
+static uint64_t fnv1a_plan(const char *json) {
+    char *without_producer = blank_member(json, "producer_key");
+    char *blanked = blank_member(without_producer, "composition_key");
     uint64_t hash = fnv1a(blanked);
     free(blanked);
+    free(without_producer);
     return hash;
 }
 

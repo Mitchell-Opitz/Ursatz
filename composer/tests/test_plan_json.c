@@ -410,7 +410,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
     assert(text[strlen(text) - 1] == '\n');
-    assert(strstr(text, "\"format_version\": 5") != NULL);
+    assert(strstr(text, "\"format_version\": 6") != NULL);
 
     Plan *parsed = NULL;
     expect_ok(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error), &error);
@@ -781,8 +781,8 @@ static void check_plan_file(const char *path, const char *name) {
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &first, &error) == PLAN_OK);
     char *written = plan_to_json(first, test_plan_producer(), &error);
     assert(written != NULL);
-    assert(strstr(written, "\"format\": \"ursatz-composer-plan\"") != NULL);
-    assert(strstr(written, "\"format_version\": 5") != NULL);
+    assert(strstr(written, "\"format\": \"ursatz-plan\"") != NULL);
+    assert(strstr(written, "\"format_version\": 6") != NULL);
     assert(strstr(written, "schema_version") == NULL && strstr(written, "tonic_pitch_class") == NULL);
     assert(strstr(written, "\"ticks_per_quarter\"") == NULL && strstr(written, "\"voice_leading\"") == NULL);
     assert(plan_from_json(test_knowledge(), written, composer_plan_read_hooks(), &second, &error) == PLAN_OK);
@@ -859,7 +859,7 @@ static void test_version_one_values(void) {
     char *v2 = plan_to_json(plan, test_plan_producer(), &error);
     assert(v2 != NULL);
     assert(strstr(v2, "\"tonic\": \"D#\"") != NULL && strstr(v2, "\"tonic\": \"G\"") != NULL);
-    assert(strstr(v2, "\"composer_version\"") != NULL && strstr(v2, "\"analyzer_version\"") == NULL);
+    assert(strstr(v2, "\"producer_version\"") != NULL && strstr(v2, "\"analyzer_version\"") == NULL);
 
     /* Version 1: tonic pitch classes are spelled as the library spells their keys; a version 1 analyzer_version was the
        Composer's own version and is ignored. */
@@ -886,7 +886,7 @@ static void test_version_one_values(void) {
     assert(!plans_equal(plan, old));
     plan_destroy(old);
     free(flat);
-    char *analyzed = replace_all(v2, "\"composer_version\"", "\"analyzer_version\": \"9.8.7\", \"composer_version\"");
+    char *analyzed = replace_all(v2, "\"producer_version\"", "\"analyzer_version\": \"9.8.7\", \"producer_version\"");
     assert(plan_from_json(test_knowledge(), analyzed, composer_plan_read_hooks(), &old, &error) == PLAN_OK);
     assert(strcmp(plan_analyzer_version(old), "9.8.7") == 0);
     char *kept = plan_to_json(old, test_plan_producer(), &error);
@@ -1191,6 +1191,7 @@ static Plan *two_section_plan(const SectionDescription *first, const SectionDesc
 static char *as_format_four(const char *v5, const char *first, const char *second) {
     cJSON *document = cJSON_Parse(v5);
     assert(document != NULL);
+    test_plan_document_as_format_five(document);
     cJSON *version = cJSON_GetObjectItemCaseSensitive(document, "format_version");
     assert(cJSON_IsNumber(version));
     cJSON_SetNumberHelper(version, 4);
@@ -1244,7 +1245,7 @@ static void test_format_four_reads_into_descriptions(void) {
     Plan *bare = two_section_plan(NULL, NULL, &a, &b);
     PlanJsonError error;
     char *v5 = plan_to_json(bare, test_plan_producer(), &error);
-    assert(v5 != NULL && strstr(v5, "\"format_version\": 5") != NULL);
+    assert(v5 != NULL && strstr(v5, "\"format_version\": 6") != NULL);
     const char *first =
         "[{\"kind\":\"section_letter\",\"letter\":\"A\"},{\"kind\":\"piece_part\",\"part\":\"body\",\"id\":\"a\"},"
         "{\"kind\":\"free_phrase\"},{\"kind\":\"hold\"},{\"kind\":\"archetype\",\"type\":\"sentence\"},"
@@ -1261,9 +1262,9 @@ static void test_format_four_reads_into_descriptions(void) {
     assert(plan_from_json(test_knowledge(), v4, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     assert(plans_equal(expected, read));
     assert(plan_node_constraint_count(read, a) == 0 && plan_node_constraint_count(read, b) == 0);
-    /* it writes format 5 with the description and none of the old kinds, and that reads back the same */
+    /* it writes format 6 with the description and none of the old kinds, and that reads back the same */
     char *written = plan_to_json(read, test_plan_producer(), &error);
-    assert(written != NULL && strstr(written, "\"format_version\": 5") != NULL && strstr(written, "\"section\"") != NULL);
+    assert(written != NULL && strstr(written, "\"format_version\": 6") != NULL && strstr(written, "\"section\"") != NULL);
     assert(strstr(written, "section_letter") == NULL && strstr(written, "theme_pairing") == NULL && strstr(written, "\"hold\"") == NULL);
     char *direct = plan_to_json(expected, test_plan_producer(), &error);
     assert(direct != NULL && strcmp(direct, written) == 0);

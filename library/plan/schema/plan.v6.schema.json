@@ -1,20 +1,32 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v5.schema.json",
-  "title": "Ursatz Composer plan, format version 5",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/plan.v6.schema.json",
+  "title": "Ursatz plan, format version 6",
   "type": "object",
   "required": ["format", "format_version", "next_note_id", "metadata", "form"],
   "properties": {
-    "format": { "const": "ursatz-composer-plan" },
-    "format_version": { "const": 5 },
+    "format": { "const": "ursatz-plan" },
+    "format_version": { "const": 6 },
     "next_note_id": { "type": "integer", "minimum": 1, "description": "The id the next new note gets: above every note id of the plan." },
     "metadata": {
       "type": "object",
-      "required": ["composer_version", "ursatz_commit"],
+      "required": ["producer", "producer_version", "producer_key", "composition_key", "knowledge_hash"],
       "properties": {
-        "composer_version": { "type": "string" },
-        "ursatz_commit": { "type": "string" },
+        "producer": { "type": "string", "description": "The program that wrote the file." },
+        "producer_version": { "type": "string" },
+        "producer_key": { "$ref": "#/$defs/key16", "description": "The key of the library chain the producer was built on." },
+        "composition_key": { "$ref": "#/$defs/key16", "description": "The key of the code that composed the plan; empty for a program that does not compose." },
+        "knowledge_hash": { "$ref": "#/$defs/key16", "description": "The hash of the knowledge snapshot the plan was made against." },
         "analyzer_version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "derived_from": {
+      "type": "object",
+      "required": ["reading", "realization"],
+      "properties": {
+        "reading": { "type": "string", "minLength": 1, "maxLength": 63, "description": "The reading the plan was made from." },
+        "realization": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "The digest of the realization that reading names." }
       },
       "additionalProperties": false
     },
@@ -28,7 +40,7 @@
         }
       ]
     },
-    "keys": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "regions": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
     "chords": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
     "form": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/node" }] },
     "melody": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
@@ -52,6 +64,7 @@
       }
     },
     "state": { "enum": ["constrained", "given", "realized"] },
+    "key16": { "type": "string", "pattern": "^([0-9a-f]{16})?$" },
     "tonic": { "type": "string", "pattern": "^[A-G](bb|b|#|x)?$" },
     "materialId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
     "relationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 63 },
@@ -130,6 +143,7 @@
                 "properties": {
                   "payload": {
                     "properties": {
+                      "kind": { "const": "tonal", "description": "The kind of region; a tonal region (a key) is the only one built." },
                       "tonic": { "$ref": "#/$defs/tonic" },
                       "material": { "$ref": "#/$defs/materialId" },
                       "relation": { "$ref": "#/$defs/relationId" },
@@ -192,13 +206,13 @@
       "required": ["kind"],
       "properties": {
         "kind": {
-          "enum": ["length_bars", "cadence", "motive_ref", "key", "embellish", "schema", "harmony_shape", "accompaniment", "voicing",
+          "enum": ["length_bars", "cadence", "motive_ref", "region", "embellish", "schema", "harmony_shape", "accompaniment", "voicing",
                    "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones"]
         }
       },
       "allOf": [
         {
-          "if": { "properties": { "kind": { "const": "key" } } },
+          "if": { "properties": { "kind": { "const": "region" } } },
           "then": {
             "required": ["tonic", "material"],
             "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "material": { "$ref": "#/$defs/materialId" } }

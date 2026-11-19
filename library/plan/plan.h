@@ -80,6 +80,22 @@ typedef struct {
 PlanResult plan_set_form_record(Plan *plan, const PlanFormRecord *record);
 const PlanFormRecord *plan_form_record(const Plan *plan);
 
+/*
+ * What a plan was made from (R-626, R-635): the id of the reading a plan was made from (a file name or a stored name, 1 to
+ * PLAN_DERIVATION_READING_MAX - 1 characters) and the digest of the realization that reading names (16 lowercase hexadecimal digits).
+ * Nothing sets it before a plan is made from a reading (P62 B14); a plan file keeps it as `derived_from` and a clone copies it.
+ * plan_set_derived_from fails with PLAN_ERR_BAD_PAYLOAD for a reading that is empty or too long or a digest that is not 16 lowercase
+ * hexadecimal digits. plan_derived_from is NULL for a plan that has none.
+ */
+#define PLAN_DERIVATION_READING_MAX 64
+#define PLAN_DERIVATION_DIGEST_LEN 16
+typedef struct {
+    char reading[PLAN_DERIVATION_READING_MAX];
+    char realization[PLAN_DERIVATION_DIGEST_LEN + 1];
+} PlanDerivation;
+PlanResult plan_set_derived_from(Plan *plan, const PlanDerivation *derivation);
+const PlanDerivation *plan_derived_from(const Plan *plan);
+
 /* The span's end time: start plus length. */
 PlanResult plan_span_end(PlanSpan span, Rational *out);
 /* True when inner lies entirely inside outer. */

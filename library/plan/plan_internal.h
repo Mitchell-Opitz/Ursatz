@@ -52,6 +52,8 @@ struct Plan {
     PlanNoteId next_note_id;                          /* the id the next new note gets: 1 in a new plan, only rises */
     bool has_form_record;
     PlanFormRecord form_record;                       /* the form the plan was built from, when has_form_record */
+    bool has_derivation;
+    PlanDerivation derivation;                        /* the reading the plan was made from, when has_derivation */
 };
 
 /*

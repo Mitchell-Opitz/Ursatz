@@ -1,14 +1,16 @@
 {
-  "format": "ursatz-composer-plan",
-  "format_version": 5,
+  "format": "ursatz-plan",
+  "format_version": 6,
   "next_note_id": 20,
   "metadata": {
-    "composer_version": "",
-    "ursatz_commit": ""
+    "producer": "ursatz-composer",
+    "producer_version": "",
+    "producer_key": "",
+    "composition_key": "",
+    "knowledge_hash": "4e5764f2fc6e2592"
   },
   "meter": {
     "spans": [{
-        "framework": "ursatz-composer",
         "span": {
           "start": {
             "num": 0,
@@ -19,9 +21,7 @@
             "den": 1
           }
         },
-        "note_ids": [],
         "label": "4/4",
-        "uncertainty": null,
         "composer": {
           "id": 1,
           "owner": 1,
@@ -37,8 +37,7 @@
         }
       }]
   },
-  "keys": [{
-      "framework": "ursatz-composer",
+  "regions": [{
       "span": {
         "start": {
           "num": 0,
@@ -49,10 +48,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "C major",
-      "uncertainty": null,
-      "method": "composer_plan",
       "composer": {
         "id": 3,
         "owner": 1,
@@ -61,6 +57,7 @@
         "state": "given",
         "constraints": [],
         "payload": {
+          "kind": "tonal",
           "tonic": "C",
           "material": "omt.material.major"
         }
@@ -98,7 +95,7 @@
           "id": 2,
           "state": "constrained",
           "constraints": [{
-              "kind": "key",
+              "kind": "region",
               "tonic": "C",
               "material": "omt.material.major"
             }],
@@ -127,7 +124,7 @@
           "id": 3,
           "state": "constrained",
           "constraints": [{
-              "kind": "key",
+              "kind": "region",
               "tonic": "C",
               "material": "omt.material.major"
             }, {
@@ -236,7 +233,6 @@
     }
   },
   "melody": [{
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 16,
@@ -247,9 +243,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 2,
         "owner": 7,
@@ -275,7 +269,6 @@
         }
       }
     }, {
-      "framework": "ursatz-composer",
       "span": {
         "start": {
           "num": 8,
@@ -286,9 +279,7 @@
           "den": 1
         }
       },
-      "note_ids": [],
       "label": "melody",
-      "uncertainty": null,
       "composer": {
         "id": 4,
         "owner": 3,

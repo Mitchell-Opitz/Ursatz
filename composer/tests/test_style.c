@@ -619,8 +619,9 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
 /* Re-recorded at P58 B14 (plan format 3: keys name their material, a key from a form region names its relation); the notes are the same. */
 /* Re-recorded at P59 B6 (plan format 4: every note has an id, and a source and operation where the Composer knows one); the notes are the same. */
 /* Re-recorded at P60 B3 (plan format 5: a section holds its description in place of its constraints); the notes are the same. */
-static const unsigned long long MAIN_HASH[5] = {0x9a10aeb1065264e1ULL, 0x6df1c83c24b2cc4bULL, 0xf2eff3dde2dfeb24ULL,
-                                                0x6c60b7b5ceee2977ULL, 0xbc1bdaf5205e0d87ULL};
+/* Re-recorded at P62 B4 (plan format 6: the lane `keys` is `regions`, a lane span has no claim members); the notes are the same. */
+static const unsigned long long MAIN_HASH[5] = {0xb96dce4c03801158ULL, 0x286a295674647ddcULL, 0xf7c1cb786b4c8c6bULL,
+                                                0xbc759f369f629a22ULL, 0x7f519305cdaf555cULL};
 
 static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */
