@@ -388,7 +388,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
         check_repeats(piece, document, &report, notes.count);
         cJSON_Delete(document);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

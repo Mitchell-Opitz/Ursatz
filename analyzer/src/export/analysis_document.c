@@ -15,6 +15,8 @@
 #include "model/core/rational.h"
 #include "export/analysis_document_internal.h"
 #include "result/analysis_result_internal.h"
+#include <chain/analysis_chain.h>
+#include <reading/reading.h>
 #include "store/path_util.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/form/framework.h"
@@ -45,11 +47,12 @@ static const char READING_METER_SOURCE[] = "notation-reading-meter";
 
 /* ---- Rational time (whole notes) ---- */
 
-/* The state of one analysis_document_build. overflowed is set when a time value does not fit a Rational; the build then
+/* The state of one analysis_document_build_from_reading. overflowed is set when a time value does not fit a Rational; the build then
    fails instead of printing a wrapped time. */
 typedef struct {
     bool overflowed;
     CommonPracticeMaterials materials; /* the major and natural minor a notated key signature's labels are spelled with */
+    const Reading *reading;            /* the Analyzer's reading the document is exported from (R-631) */
 } DocBuild;
 
 static Rational doc_rational(DocBuild *build, long long num, unsigned long long den) {
@@ -617,7 +620,8 @@ static cJSON *keys_json(DocBuild *build, const ImportedScore *notes, const Chain
         cJSON_Delete(regions);
         return NULL;
     }
-    for (size_t i = 0; i < report->key_region_count; i++) {
+    for (size_t r = 0; r < reading_region_count(build->reading); r++) {
+        size_t i = reading_region_at(build->reading, r)->detail;
         if (!json_append(regions, key_region_json(build, notes, &report->key_regions[i], i))) {
             cJSON_Delete(keys);
             cJSON_Delete(regions);
@@ -1321,8 +1325,8 @@ static cJSON *cadences_json(DocBuild *build, const ImportedScore *notes, const C
         return NULL;
     }
     const char *framework = framework_name(standard_harmony_framework());
-    for (size_t i = 0; i < report->cadence_count; i++) {
-        const AnalysisCadence *cadence = &report->cadences[i];
+    for (size_t c = 0; c < reading_cadence_count(build->reading); c++) {
+        const AnalysisCadence *cadence = &report->cadences[reading_cadence_at(build->reading, c)->detail];
         const ChainEntry *dominant = &report->entries[cadence->dominant_first];
         const ChainEntry *arrival_first = &report->entries[cadence->arrival_first];
         const ChainEntry *arrival_last = &report->entries[cadence->arrival_last];
@@ -1564,7 +1568,12 @@ static cJSON *phrases_json(DocBuild *build, const ImportedScore *notes, const Ch
         return NULL;
     }
     const char *framework = framework_name(standard_form_framework());
-    for (size_t i = 0; i < report->phrase_count; i++) {
+    for (size_t g = 0; g < reading_group_count(build->reading); g++) {
+        const ReadingGroup *held = reading_group_at(build->reading, g);
+        if (held->kind != READING_GROUP_PHRASE) {
+            continue;
+        }
+        size_t i = held->detail;
         const AnalysisPhrase *phrase = &report->phrases[i];
         Rational start = doc_rational(build, phrase->start.num, phrase->start.den);
         Rational end = doc_rational(build, phrase->end.num, phrase->end.den);
@@ -1680,8 +1689,12 @@ static cJSON *themes_json(DocBuild *build, const ImportedScore *notes, const Cha
         return NULL;
     }
     const char *framework = framework_name(standard_form_framework());
-    for (size_t i = 0; i < report->theme_count; i++) {
-        const AnalysisTheme *theme = &report->themes[i];
+    for (size_t g = 0; g < reading_group_count(build->reading); g++) {
+        const ReadingGroup *held = reading_group_at(build->reading, g);
+        if (held->kind != READING_GROUP_THEME) {
+            continue;
+        }
+        const AnalysisTheme *theme = &report->themes[held->detail];
         Rational start = doc_rational(build, theme->start.num, theme->start.den);
         Rational end = doc_rational(build, theme->end.num, theme->end.den);
         cJSON *claim = claim_json_with(build, framework, notes, theme->note_ids, theme->note_id_count, start, end,
@@ -1908,8 +1921,11 @@ static cJSON *form_json(DocBuild *build, const ImportedScore *notes, const Chain
     cJSON *sections = cJSON_CreateArray();
     cJSON *returns = cJSON_CreateArray();
     bool ok = form && sections && returns;
-    for (size_t s = 0; ok && s < report->section_count; s++) {
-        ok = json_append(sections, section_json(build, notes, report, s));
+    for (size_t g = 0; ok && g < reading_group_count(build->reading); g++) {
+        const ReadingGroup *held = reading_group_at(build->reading, g);
+        if (held->kind == READING_GROUP_SECTION) {
+            ok = json_append(sections, section_json(build, notes, report, held->detail));
+        }
     }
     for (size_t r = 0; ok && r < report->thematic_return_count; r++) {
         ok = json_append(returns, return_json(build, notes, report, &report->thematic_returns[r]));
@@ -2636,8 +2652,12 @@ static cJSON *motives_json(DocBuild *build, const ImportedScore *notes, const Ch
         return NULL;
     }
     const char *framework = framework_name(standard_form_framework());
-    for (size_t i = 0; i < report->motive_count; i++) {
-        const AnalysisMotive *motive = &report->motives[i];
+    for (size_t m = 0; m < reading_motive_occurrence_count(build->reading); m++) {
+        const ReadingMotiveOccurrence *held = reading_motive_occurrence_at(build->reading, m);
+        if (held->detail != 0) { /* a family is printed at its prototype, its first occurrence */
+            continue;
+        }
+        const AnalysisMotive *motive = &report->motives[held->motive];
         const AnalysisMotiveOccurrence *prototype = &motive->occurrences[0];
         double uncertainty = 0.0;
         for (size_t o = 0; o < motive->occurrence_count; o++) {
@@ -3970,34 +3990,47 @@ static bool print_value(Buffer *buffer, const cJSON *item, int depth) {
     return buffer_indent(buffer, depth) && buffer_append(buffer, close);
 }
 
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedScore *notes, const ChainResult *report,
-                                          const KnowledgeSnapshot *knowledge) {
-    DocBuild build = {false, {NULL, NULL, NULL, NULL}};
+AnalyzerStatus analysis_document_build_from_reading(const char *path, const Reading *reading, const ImportedScore *score,
+                                                    const KnowledgeSnapshot *knowledge, AnalysisDocument **out) {
+    if (!out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    const AnalysisChain *chain = reading ? reading_detail(reading) : NULL;
+    if (!path || !score || !knowledge || !chain || (reading_source(reading)->stages & ANALYSIS_CHAIN_STAGE_PERCEPTION) != ANALYSIS_CHAIN_STAGE_PERCEPTION) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    DocBuild build = {false, {NULL, NULL, NULL, NULL}, reading};
     if (!common_practice_materials_resolve(knowledge, &build.materials, NULL, 0)) {
-        return NULL;
+        return ANALYZER_ERR_ARGUMENT;
     }
     AnalysisDocument *document = malloc(sizeof(AnalysisDocument));
     if (!document) {
-        return NULL;
+        return ANALYZER_ERR_ALLOC;
     }
-    document->root = document_json(&build, input_path, notes, report);
+    document->root = document_json(&build, path, score, analysis_chain_result(chain));
     if (document->root && build.overflowed) {
         cJSON_Delete(document->root);
         document->root = NULL;
     }
     if (!document->root) {
         free(document);
-        return NULL;
+        return ANALYZER_ERR_ALLOC;
     }
-    return document;
+    *out = document;
+    return ANALYZER_OK;
 }
 
 AnalysisDocument *analysis_document_build_from_result(const char *input_path, const AnalyzerResult *result) {
-    if (!analyzer_result_report_complete(result)) {
+    if (!result) {
         return NULL;
     }
-    return analysis_document_build(input_path, analyzer_result_notes(result), analyzer_result_report(result),
-                                   analyzer_result_knowledge(result));
+    AnalysisDocument *document = NULL;
+    if (analysis_document_build_from_reading(input_path, analyzer_result_reading(result), analyzer_result_notes(result),
+                                             analyzer_result_knowledge(result), &document) != ANALYZER_OK) {
+        return NULL;
+    }
+    return document;
 }
 
 char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result) {

@@ -115,15 +115,3 @@ const ImportedScore *analyzer_result_notes(const AnalyzerResult *result) {
 const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result) {
     return result ? result->options.knowledge : NULL;
 }
-
-bool analyzer_result_report_complete(const AnalyzerResult *result) {
-    return result && (result->options.stages & ANALYSIS_CHAIN_STAGE_PERCEPTION) == ANALYSIS_CHAIN_STAGE_PERCEPTION;
-}
-
-bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report) {
-    if (!result) {
-        return false;
-    }
-    chain_result_take(result->chain, report);
-    return true;
-}

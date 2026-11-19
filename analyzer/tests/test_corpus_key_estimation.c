@@ -48,7 +48,7 @@ int main(void) {
             assert(0);
         }
 
-        chain_result_destroy(&report);
+        test_release_report(&report);
         imported_score_destroy(&notes);
     }
 

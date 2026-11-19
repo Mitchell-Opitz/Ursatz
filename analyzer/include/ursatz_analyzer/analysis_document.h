@@ -18,25 +18,23 @@
 typedef struct AnalysisDocument AnalysisDocument;
 
 /*
- * Builds the analysis document for one piece from the imported notes
- * and the report an AnalyzerResult holds for them (analyzer_analyze). Fills
- * metadata, meter, keys, chords, outer voices and notes; every other section is an empty array, or
- * null for form. Only the basename of input_path is recorded.
+ * Builds the analysis document for one piece as an export of a reading (R-631): `reading` is the Analyzer's reading of `score`
+ * (analyzer_result_reading) and its detail is the chain the document's other areas are read from. The keys, chords, cadences, phrases,
+ * themes, form and motives sections walk the reading's claims of that kind and print each claim's element of the chain's result; every
+ * other area reads the chain's result itself. Only the basename of path is recorded. knowledge is the snapshot the chain ran with: the
+ * labels of a notated key signature are spelled with its major and natural minor materials.
  *
- * knowledge is the snapshot the report was made with: the labels of a notated key signature are spelled with its major and natural
- * minor materials.
- *
- * Returns a document the caller releases with analysis_document_destroy,
- * or NULL on allocation failure or a NULL or incomplete snapshot. It does not reference notes, report or knowledge
- * after returning.
+ * ANALYZER_ERR_ARGUMENT for a NULL argument, a reading that holds no detail (one read from a file) or one whose chain did not run every
+ * stage (its report view is empty), ANALYZER_ERR_ALLOC on allocation failure. On ANALYZER_OK *out is a document the caller releases
+ * with analysis_document_destroy; it references none of the arguments after returning, and is NULL on any other status.
  */
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedScore *notes, const ChainResult *report,
-                                          const KnowledgeSnapshot *knowledge);
+AnalyzerStatus analysis_document_build_from_reading(const char *path, const Reading *reading, const ImportedScore *score,
+                                                    const KnowledgeSnapshot *knowledge, AnalysisDocument **out);
 
 /*
- * Builds the document from an analysis result: the same content as analysis_document_build over the result's notes
- * and report view (analysis_result.h). NULL for a NULL result, a result that did not run every chain stage (its
- * report view is empty), or on allocation failure. The document does not reference the result after returning.
+ * Builds the document from an analysis result: analysis_document_build_from_reading over the result's reading, notes and knowledge.
+ * NULL for a NULL result, a result that did not run every chain stage, or on allocation failure. The document does not reference the
+ * result after returning.
  */
 AnalysisDocument *analysis_document_build_from_result(const char *input_path, const AnalyzerResult *result);
 

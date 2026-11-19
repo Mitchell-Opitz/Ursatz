@@ -73,7 +73,7 @@ static void check_chorale(const char *dir) {
         }
     }
 
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

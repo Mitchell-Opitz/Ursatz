@@ -94,7 +94,7 @@ int main(void) {
     printf("Mozart 545: %zu motive families mapped both ways\n", mapped);
     motive_link_scope_destroy(scope);
     free(json);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     return test_finish("test_motive_sketch_map");
 }

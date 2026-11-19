@@ -57,8 +57,28 @@ bool test_within(const cJSON *inner, const cJSON *outer) {
                test_rational_of(test_json_require(outer, "end")) + 1e-12;
 }
 
+/* The analyses test_analyze_report made and test_release_report has not released: the result each report is a copy of. The copy is
+   shallow (its arrays are the result's chain's), so the result has to stay alive while a test reads the report. */
+static AnalyzerResult **test_results;
+static size_t test_result_count;
+
+static AnalyzerResult *test_result_of(const ChainResult *report) {
+    for (size_t i = 0; i < test_result_count; i++) {
+        if (memcmp(report, analyzer_result_report(test_results[i]), sizeof(*report)) == 0) {
+            return test_results[i];
+        }
+    }
+    return NULL;
+}
+
+AnalysisDocument *test_build_document(const char *input_path, const ChainResult *report) {
+    AnalyzerResult *result = test_result_of(report);
+    return result ? analysis_document_build_from_result(input_path, result) : NULL;
+}
+
 char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report) {
-    AnalysisDocument *document = analysis_document_build(input_path, notes, report, test_knowledge());
+    (void)notes;
+    AnalysisDocument *document = test_build_document(input_path, report);
     if (!document) {
         return NULL;
     }
@@ -74,9 +94,32 @@ bool test_analyze_report(const ImportedScore *notes, ChainResult *report) {
     if (analyzer_analyze(notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
         return false;
     }
-    analyzer_result_take_report(result, report);
-    analyzer_result_destroy(result);
+    AnalyzerResult **grown = realloc(test_results, (test_result_count + 1) * sizeof(*grown));
+    if (!grown) {
+        analyzer_result_destroy(result);
+        return false;
+    }
+    test_results = grown;
+    test_results[test_result_count++] = result;
+    *report = *analyzer_result_report(result);
     return true;
+}
+
+void test_release_report(ChainResult *report) {
+    AnalyzerResult *result = test_result_of(report);
+    if (result) {
+        for (size_t i = 0; i < test_result_count; i++) {
+            if (test_results[i] == result) {
+                test_results[i] = test_results[--test_result_count];
+                break;
+            }
+        }
+        analyzer_result_destroy(result);
+        memset(report, 0, sizeof(*report));
+        report->home_duration.den = 1;
+        return;
+    }
+    chain_result_destroy(report);
 }
 
 cJSON *test_analyze_midi(const char *path) {
@@ -86,7 +129,7 @@ cJSON *test_analyze_midi(const char *path) {
     assert(test_analyze_report(&notes, &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);

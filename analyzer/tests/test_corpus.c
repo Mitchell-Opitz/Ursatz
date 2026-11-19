@@ -137,7 +137,7 @@ static char *render_single(const char *path) {
         return NULL;
     }
     char *json = test_render_document(path, &notes, &report);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     return json;
 }

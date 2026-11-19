@@ -88,7 +88,7 @@ static void test_held_chords(void) {
         check_occurrence(&report.progressions[0], 0, 0, 6);
         check_occurrence(&report.progressions[0], 1, 5, 9);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 static void test_region_break(void) {
@@ -102,7 +102,7 @@ static void test_region_break(void) {
         check_occurrence(&report.progressions[0], 0, 0, 1);
         check_occurrence(&report.progressions[0], 1, 2, 3);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 static void test_unlabelled_break(void) {
@@ -115,7 +115,7 @@ static void test_unlabelled_break(void) {
         check_occurrence(&report.progressions[0], 0, 0, 1);
         check_occurrence(&report.progressions[0], 1, 3, 4);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 static void test_containment(void) {
@@ -130,7 +130,7 @@ static void test_containment(void) {
         CHECK(is_pattern(&report.progressions[1], "I > V > I > V"));
         CHECK(report.progressions[1].occurrence_count == 2);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 static void test_rank_ties(void) {
@@ -147,7 +147,7 @@ static void test_rank_ties(void) {
                   (before->occurrence_count == after->occurrence_count && before->length >= after->length));
         }
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 static void test_length_limit(void) {
@@ -158,18 +158,18 @@ static void test_length_limit(void) {
     for (size_t i = 0; i < report.progression_count; i++) {
         CHECK(report.progressions[i].length >= 2 && report.progressions[i].length <= 6);
     }
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 static void test_no_repeat(void) {
     ChainResult report = report_of("0:I 0:IV 0:V 0:ii");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 0);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     report = report_of("0:I");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 0);
-    chain_result_destroy(&report);
+    test_release_report(&report);
 }
 
 /* ---- Reference pieces ---- */
@@ -273,7 +273,7 @@ static void run_piece(const Piece *piece) {
         check_progressions(document, &report);
         printf("%s: %zu progressions\n", piece->name, report.progression_count);
         cJSON_Delete(document);
-        chain_result_destroy(&report);
+        test_release_report(&report);
         imported_score_destroy(&notes);
     }
 }
@@ -295,7 +295,7 @@ static void check_bach_top(void) {
         CHECK(strcmp(cJSON_GetArrayItem(pattern, cJSON_GetArraySize(pattern) - 1)->valuestring, "I") == 0);
     }
     cJSON_Delete(document);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 }
 

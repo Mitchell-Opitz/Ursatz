@@ -44,7 +44,7 @@ static char *render_piece(const char *fixture) {
         return NULL;
     }
     char *json = test_render_document(fixture, &notes, &report);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
     if (!json) {
         return NULL;

@@ -157,7 +157,7 @@ static void analyze(const char *path, Analyzed *out) {
 
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    chain_result_destroy(&analyzed->report);
+    test_release_report(&analyzed->report);
     imported_score_destroy(&analyzed->notes);
 }
 

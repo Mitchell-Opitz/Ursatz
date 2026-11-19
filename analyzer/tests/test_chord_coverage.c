@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        chain_result_destroy(&report);
+        test_release_report(&report);
         imported_score_destroy(&notes);
     }
 

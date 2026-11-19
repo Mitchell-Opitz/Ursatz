@@ -159,12 +159,12 @@ static void check_piece(const char *path, const char *display_name, const Expect
     assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     ChainResult report;
     assert(test_analyze_report(&notes, &report));
-    AnalysisDocument *built = analysis_document_build(display_name, &notes, &report, test_knowledge());
+    AnalysisDocument *built = test_build_document(display_name, &report);
     assert(built != NULL);
     char *json = analysis_document_to_json(built);
     assert(json != NULL);
     analysis_document_destroy(built);
-    chain_result_destroy(&report);
+    test_release_report(&report);
     imported_score_destroy(&notes);
 
     cJSON *document = cJSON_Parse(json);
