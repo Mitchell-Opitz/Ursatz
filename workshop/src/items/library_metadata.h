@@ -85,15 +85,8 @@ UrsatzStatus workshop_meta_group(const WorkshopPieceSummary *pieces, size_t coun
                                           WorkshopMetaGroups *out);
 void workshop_meta_groups_destroy(WorkshopMetaGroups *groups);
 
-/* NULL string fields match any value; every field given must match. */
-typedef struct {
-    const char *composer;
-    const char *source;
-    const char *tag;
-    bool composer_unassigned; /* match an empty composer */
-    bool source_unassigned;   /* match an empty source */
-    bool untagged;            /* match a piece without tags */
-} WorkshopMetaFilter;
+/* NULL string fields match any value; every field given must match (the filter of library_pieces.h). */
+typedef WorkshopPieceFilter WorkshopMetaFilter;
 
 bool workshop_meta_matches(const WorkshopPieceSummary *piece, const WorkshopMetaFilter *filter);
 

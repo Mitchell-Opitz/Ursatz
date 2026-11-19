@@ -366,7 +366,7 @@ static int handle_get_item(struct mg_connection *conn, const char *id) {
     result = workshop_material_used_by(id, &used_by);
   }
   if (result == URSATZ_OK) {
-    subjects = ursatz_gui_materials_subjects_for("items", id);
+    subjects = workshop_subjects_for_item(id);
   }
   cJSON *object = result == URSATZ_OK && subjects ? cJSON_CreateObject() : NULL;
   if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "item", meta)) {
@@ -1308,49 +1308,6 @@ static int send_subject_failure(struct mg_connection *conn, UrsatzStatus result)
   return ursatz_gui_send_service_failure(conn, result, "subject store failure");
 }
 
-cJSON *ursatz_gui_materials_subjects_for(const char *kind, const char *id) {
-  cJSON *rows = NULL;
-  cJSON *found = cJSON_CreateArray();
-  if (!found || workshop_subject_list(&rows) != URSATZ_OK) {
-    cJSON_Delete(found);
-    return NULL;
-  }
-  const cJSON *row = NULL;
-  cJSON_ArrayForEach(row, rows) {
-    const cJSON *row_id = cJSON_GetObjectItemCaseSensitive(row, "id");
-    cJSON *subject = NULL;
-    if (!cJSON_IsString(row_id) || workshop_subject_get(row_id->valuestring, &subject) != URSATZ_OK) {
-      continue;
-    }
-    const cJSON *links = cJSON_GetObjectItemCaseSensitive(subject, kind);
-    const cJSON *link = NULL;
-    bool linked = false;
-    cJSON_ArrayForEach(link, links) {
-      if (cJSON_IsString(link) && strcmp(link->valuestring, id) == 0) {
-        linked = true;
-        break;
-      }
-    }
-    cJSON *entry = linked ? cJSON_CreateObject() : NULL;
-    if (entry) {
-      const cJSON *name = cJSON_GetObjectItemCaseSensitive(subject, "name");
-      const cJSON *subject_kind = cJSON_GetObjectItemCaseSensitive(subject, "kind");
-      if (!cJSON_AddStringToObject(entry, "id", row_id->valuestring) ||
-          !cJSON_AddStringToObject(entry, "name", cJSON_IsString(name) ? name->valuestring : "") ||
-          !cJSON_AddStringToObject(entry, "kind", cJSON_IsString(subject_kind) ? subject_kind->valuestring : "")) {
-        cJSON_Delete(entry);
-        cJSON_Delete(subject);
-        cJSON_Delete(rows);
-        cJSON_Delete(found);
-        return NULL;
-      }
-      cJSON_AddItemToArray(found, entry);
-    }
-    cJSON_Delete(subject);
-  }
-  cJSON_Delete(rows);
-  return found;
-}
 
 static int handle_list_subjects(struct mg_connection *conn) {
   cJSON *subjects = NULL;

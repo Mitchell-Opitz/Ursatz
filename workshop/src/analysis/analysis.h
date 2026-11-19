@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <cJSON.h>
+
 #include "items/library_pieces.h"
 
 
@@ -193,5 +195,19 @@ UrsatzStatus workshop_analysis_get_piece_playback(const char *pieces_dir, const 
  */
 UrsatzStatus workshop_analysis_get_piece_export(const char *pieces_dir, const char *id,
                                                               int first_measure, int last_measure, char **out_text);
+
+/* ---- the Library route's answers (A20261109-76) ---- */
+
+/* The piece as the Library detail route shows it, in *out: {id, filename, format, uploaded_at, notation, analysis_status, stale?,
+ * note_xml_ids, document, document_sections? (with summary), subjects}. With summary the document keeps only its header sections. */
+UrsatzStatus workshop_library_piece_json(const char *pieces_dir, const char *id, bool summary, cJSON **out);
+
+/* The PATCH of a piece: body {filename, composer, source, tags, add_tags, remove_tags, notation} (workshop_library_patch_parse), then
+ * workshop_analysis_update_piece, then the piece as the list shows it in *piece. */
+UrsatzStatus workshop_library_patch(const char *pieces_dir, const char *id, const cJSON *body, cJSON **piece, UrsatzError *error);
+
+/* Deletes a piece with its collection memberships and its subject links. NOT_FOUND when there is no such piece; a membership that
+ * cannot be removed is logged, not answered. */
+UrsatzStatus workshop_library_delete(const char *pieces_dir, const char *id);
 
 #endif /* WORKSHOP_ANALYSIS_ANALYSIS_H */

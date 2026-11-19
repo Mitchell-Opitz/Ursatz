@@ -118,6 +118,46 @@ typedef struct {
 } WorkshopMetaUpdate;
 
 
+/* NULL string fields match any value; every field given must match (workshop_meta_matches). The Library route fills it from its query
+ * parameters. */
+typedef struct {
+    const char *composer;
+    const char *source;
+    const char *tag;
+    bool composer_unassigned; /* match an empty composer */
+    bool source_unassigned;   /* match an empty source */
+    bool untagged;            /* match a piece without tags */
+} WorkshopPieceFilter;
+
+/* The pieces of pieces_dir that match filter (NULL: all) as the Library list shows them: *out is a JSON array of {id, filename, format,
+ * uploaded_at, composer, source, tags, notation, analysis_status}. */
+UrsatzStatus workshop_library_list_json(const char *pieces_dir, const WorkshopPieceFilter *filter, cJSON **out);
+
+/* The distinct composers, sources and tags with piece counts: {composers: [{value, count}], sources, tags, unassigned: {composer,
+ * source}, untagged, total} in *out. */
+UrsatzStatus workshop_library_groups_json(const char *pieces_dir, cJSON **out);
+
+/* One piece as the list shows it, in *out (JSON null when the piece is not in the list). */
+UrsatzStatus workshop_library_entry_json(const char *pieces_dir, const char *id, cJSON **out);
+
+/* A notation override as JSON: null when the piece has none. */
+cJSON *workshop_library_notation_json(bool has_notation, const WorkshopNotation *notation);
+
+/* The members of a PATCH body (filename, composer, source, tags, add_tags, remove_tags, notation) as a WorkshopMetaUpdate. The update's
+ * lists and notation point into the patch and its body, which must outlive it; release it with workshop_library_patch_free. URSATZ_ERR_REQUEST
+ * with "invalid <member>" in error for a member of the wrong type (filename: also when empty); URSATZ_ERR_UNSATISFIABLE with "nothing to
+ * update" when no member is given. Unknown members are ignored. */
+typedef struct {
+    WorkshopMetaUpdate update;
+    WorkshopNotation notation;
+    const char **tags;
+    const char **add_tags;
+    const char **remove_tags;
+} WorkshopLibraryPatch;
+
+UrsatzStatus workshop_library_patch_parse(const cJSON *body, WorkshopLibraryPatch *patch, UrsatzError *error);
+void workshop_library_patch_free(WorkshopLibraryPatch *patch);
+
 /* ---- what the analysis service builds on ---------------------------------- */
 
 /* The name a status goes by in the routes and the stored flags. */

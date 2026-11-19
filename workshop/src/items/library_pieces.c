@@ -5,6 +5,7 @@
 #include "piece_lock.h"
 
 #include <ctype.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -591,4 +592,331 @@ UrsatzStatus workshop_library_get_filename(const char *pieces_dir, const char *i
     cJSON_Delete(meta);
     workshop_piece_unlock(id);
     return *out_filename ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, NULL);
+}
+
+/* ---- the Library route's answers and checks (A20261109-76) ---------------- */
+
+cJSON *workshop_library_notation_json(bool has_notation, const WorkshopNotation *notation) {
+    if (!has_notation) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!object || !cJSON_AddStringToObject(object, "meter", notation->meter) ||
+        !cJSON_AddStringToObject(object, "value_scale", notation->value_scale) ||
+        !cJSON_AddStringToObject(object, "pickup", notation->pickup)) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* One piece as the list route and the PATCH answer show it. */
+static cJSON *piece_entry(const WorkshopPieceSummary *piece) {
+    cJSON *entry = cJSON_CreateObject();
+    cJSON *tags = cJSON_CreateArray();
+    cJSON *notation = workshop_library_notation_json(piece->has_notation, &piece->notation);
+    bool ok = entry && tags && notation && cJSON_AddStringToObject(entry, "id", piece->id) &&
+              cJSON_AddStringToObject(entry, "filename", piece->filename) &&
+              cJSON_AddStringToObject(entry, "format", piece->format) &&
+              cJSON_AddStringToObject(entry, "uploaded_at", piece->uploaded_at) &&
+              cJSON_AddStringToObject(entry, "composer", piece->composer) &&
+              cJSON_AddStringToObject(entry, "source", piece->source);
+    for (size_t i = 0; ok && i < piece->tag_count; i++) {
+        cJSON *tag = cJSON_CreateString(piece->tags[i]);
+        ok = tag && (cJSON_AddItemToArray(tags, tag), true);
+    }
+    ok = ok && cJSON_AddItemToObject(entry, "tags", tags);
+    if (ok) {
+        tags = NULL;
+        ok = cJSON_AddItemToObject(entry, "notation", notation);
+        notation = ok ? NULL : notation;
+    }
+    ok = ok && cJSON_AddStringToObject(entry, "analysis_status", piece->analysis_status ? piece->analysis_status : "unreadable");
+    if (!ok) {
+        cJSON_Delete(tags);
+        cJSON_Delete(notation);
+        cJSON_Delete(entry);
+        return NULL;
+    }
+    return entry;
+}
+
+static void free_summaries(WorkshopPieceSummary *pieces, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        free(pieces[i].id);
+        free(pieces[i].filename);
+        free(pieces[i].format);
+        free(pieces[i].uploaded_at);
+        free(pieces[i].composer);
+        free(pieces[i].source);
+        workshop_meta_tags_free(pieces[i].tags, pieces[i].tag_count);
+    }
+    free(pieces);
+}
+
+UrsatzStatus workshop_library_list_json(const char *pieces_dir, const WorkshopPieceFilter *filter, cJSON **out) {
+    *out = NULL;
+    WorkshopPieceSummary *pieces = NULL;
+    size_t count = 0;
+    UrsatzStatus result = workshop_library_list(pieces_dir, &pieces, &count);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < count; i++) {
+        if (filter && !workshop_meta_matches(&pieces[i], filter)) {
+            continue;
+        }
+        cJSON *entry = piece_entry(&pieces[i]);
+        if (!entry) {
+            cJSON_Delete(array);
+            array = NULL;
+            break;
+        }
+        cJSON_AddItemToArray(array, entry);
+    }
+    free_summaries(pieces, count);
+    if (!array) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    *out = array;
+    return URSATZ_OK;
+}
+
+UrsatzStatus workshop_library_entry_json(const char *pieces_dir, const char *id, cJSON **out) {
+    *out = NULL;
+    WorkshopPieceSummary *pieces = NULL;
+    size_t count = 0;
+    UrsatzStatus result = workshop_library_list(pieces_dir, &pieces, &count);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    cJSON *entry = NULL;
+    bool found = false;
+    for (size_t i = 0; i < count && !found; i++) {
+        if (strcmp(pieces[i].id, id) == 0) {
+            entry = piece_entry(&pieces[i]);
+            found = true;
+        }
+    }
+    free_summaries(pieces, count);
+    if (!entry) {
+        entry = found ? NULL : cJSON_CreateNull();
+    }
+    if (!entry) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    *out = entry;
+    return URSATZ_OK;
+}
+
+static cJSON *group_array(const WorkshopMetaGroup *groups, size_t count) {
+    cJSON *array = cJSON_CreateArray();
+    for (size_t i = 0; array && i < count; i++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!entry || !cJSON_AddStringToObject(entry, "value", groups[i].value) ||
+            !cJSON_AddNumberToObject(entry, "count", (double)groups[i].count)) {
+            cJSON_Delete(entry);
+            cJSON_Delete(array);
+            return NULL;
+        }
+        cJSON_AddItemToArray(array, entry);
+    }
+    return array;
+}
+
+UrsatzStatus workshop_library_groups_json(const char *pieces_dir, cJSON **out) {
+    *out = NULL;
+    WorkshopPieceSummary *pieces = NULL;
+    size_t count = 0;
+    UrsatzStatus result = workshop_library_list(pieces_dir, &pieces, &count);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    WorkshopMetaGroups groups;
+    UrsatzStatus grouped = workshop_meta_group(pieces, count, &groups);
+    free_summaries(pieces, count);
+    if (grouped != URSATZ_OK) {
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    cJSON *object = cJSON_CreateObject();
+    cJSON *composers = group_array(groups.composers, groups.composer_count);
+    cJSON *sources = group_array(groups.sources, groups.source_count);
+    cJSON *tags = group_array(groups.tags, groups.tag_count);
+    cJSON *unassigned = cJSON_CreateObject();
+    bool ok = object && composers && sources && tags && unassigned &&
+              cJSON_AddNumberToObject(unassigned, "composer", (double)groups.unassigned_composer) &&
+              cJSON_AddNumberToObject(unassigned, "source", (double)groups.unassigned_source);
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "composers", composers);
+        composers = ok ? NULL : composers;
+    }
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "sources", sources);
+        sources = ok ? NULL : sources;
+    }
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "tags", tags);
+        tags = ok ? NULL : tags;
+    }
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "unassigned", unassigned);
+        unassigned = ok ? NULL : unassigned;
+    }
+    ok = ok && cJSON_AddNumberToObject(object, "untagged", (double)groups.untagged) &&
+         cJSON_AddNumberToObject(object, "total", (double)groups.total);
+    workshop_meta_groups_destroy(&groups);
+    if (!ok) {
+        cJSON_Delete(composers);
+        cJSON_Delete(sources);
+        cJSON_Delete(tags);
+        cJSON_Delete(unassigned);
+        cJSON_Delete(object);
+        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+    }
+    *out = object;
+    return URSATZ_OK;
+}
+
+/* Points *out at the strings of a JSON array of strings (valid while the array is). False when item is not an array of strings. */
+static bool string_array_members(const cJSON *item, const char ***out, size_t *out_count) {
+    *out = NULL;
+    *out_count = 0;
+    if (!cJSON_IsArray(item)) {
+        return false;
+    }
+    int size = cJSON_GetArraySize(item);
+    const char **members = size > 0 ? calloc((size_t)size, sizeof(char *)) : NULL;
+    if (size > 0 && !members) {
+        return false;
+    }
+    size_t count = 0;
+    const cJSON *member = NULL;
+    cJSON_ArrayForEach(member, item) {
+        if (!cJSON_IsString(member) || !member->valuestring) {
+            free(members);
+            return false;
+        }
+        members[count++] = member->valuestring;
+    }
+    *out = members;
+    *out_count = count;
+    return true;
+}
+
+/* Reads a PATCH "notation" member: an object whose meter, value_scale and pickup are strings (each optional, absent = not set). */
+static bool read_notation_member(const cJSON *item, WorkshopNotation *out) {
+    static const struct {
+        const char *name;
+        size_t offset;
+        size_t size;
+    } kMembers[] = {
+        {"meter", offsetof(WorkshopNotation, meter), sizeof(((WorkshopNotation *)0)->meter)},
+        {"value_scale", offsetof(WorkshopNotation, value_scale), sizeof(((WorkshopNotation *)0)->value_scale)},
+        {"pickup", offsetof(WorkshopNotation, pickup), sizeof(((WorkshopNotation *)0)->pickup)},
+    };
+    memset(out, 0, sizeof(*out));
+    if (!cJSON_IsObject(item)) {
+        return false;
+    }
+    for (size_t i = 0; i < sizeof(kMembers) / sizeof(kMembers[0]); i++) {
+        const cJSON *member = cJSON_GetObjectItemCaseSensitive(item, kMembers[i].name);
+        if (!member) {
+            continue;
+        }
+        if (!cJSON_IsString(member) || !member->valuestring || strlen(member->valuestring) >= kMembers[i].size) {
+            return false;
+        }
+        strcpy((char *)out + kMembers[i].offset, member->valuestring);
+    }
+    return true;
+}
+
+void workshop_library_patch_free(WorkshopLibraryPatch *patch) {
+    free(patch->tags);
+    free(patch->add_tags);
+    free(patch->remove_tags);
+    memset(patch, 0, sizeof(*patch));
+}
+
+UrsatzStatus workshop_library_patch_parse(const cJSON *root, WorkshopLibraryPatch *patch, UrsatzError *error) {
+    memset(patch, 0, sizeof(*patch));
+    WorkshopMetaUpdate *update = &patch->update;
+    const char *bad_member = NULL;
+    bool any = false;
+
+    const cJSON *filename = cJSON_GetObjectItemCaseSensitive(root, "filename");
+    const cJSON *composer = cJSON_GetObjectItemCaseSensitive(root, "composer");
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(root, "source");
+    const cJSON *tags_item = cJSON_GetObjectItemCaseSensitive(root, "tags");
+    const cJSON *add_item = cJSON_GetObjectItemCaseSensitive(root, "add_tags");
+    const cJSON *remove_item = cJSON_GetObjectItemCaseSensitive(root, "remove_tags");
+
+    if (filename) {
+        if (!cJSON_IsString(filename) || !filename->valuestring || filename->valuestring[0] == '\0') {
+            return ursatz_error_set(error, URSATZ_ERR_REQUEST, "filename", "invalid filename");
+        }
+        update->filename = filename->valuestring;
+        any = true;
+    }
+    if (composer) {
+        if (cJSON_IsString(composer) && composer->valuestring) {
+            update->composer = composer->valuestring;
+            any = true;
+        } else {
+            bad_member = "composer";
+        }
+    }
+    if (!bad_member && source) {
+        if (cJSON_IsString(source) && source->valuestring) {
+            update->source = source->valuestring;
+            any = true;
+        } else {
+            bad_member = "source";
+        }
+    }
+    if (!bad_member && tags_item) {
+        update->has_tags = string_array_members(tags_item, &patch->tags, &update->tag_count);
+        bad_member = update->has_tags ? NULL : "tags";
+        any = any || update->has_tags;
+    }
+    if (!bad_member && add_item) {
+        if (string_array_members(add_item, &patch->add_tags, &update->add_tag_count)) {
+            any = true;
+        } else {
+            bad_member = "add_tags";
+        }
+    }
+    if (!bad_member && remove_item) {
+        if (string_array_members(remove_item, &patch->remove_tags, &update->remove_tag_count)) {
+            any = true;
+        } else {
+            bad_member = "remove_tags";
+        }
+    }
+    const cJSON *notation_item = cJSON_GetObjectItemCaseSensitive(root, "notation");
+    if (!bad_member && notation_item) {
+        if (cJSON_IsNull(notation_item)) {
+            update->has_notation = true;
+            any = true;
+        } else if (read_notation_member(notation_item, &patch->notation)) {
+            update->has_notation = true;
+            update->notation = &patch->notation;
+            any = true;
+        } else {
+            bad_member = "notation";
+        }
+    }
+    update->tags = patch->tags;
+    update->add_tags = patch->add_tags;
+    update->remove_tags = patch->remove_tags;
+    if (bad_member) {
+        workshop_library_patch_free(patch);
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, bad_member, "invalid %s", bad_member);
+    }
+    if (!any) {
+        workshop_library_patch_free(patch);
+        return ursatz_error_set(error, URSATZ_ERR_UNSATISFIABLE, NULL, "nothing to update");
+    }
+    return URSATZ_OK;
 }

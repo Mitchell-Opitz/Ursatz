@@ -725,3 +725,57 @@ UrsatzStatus workshop_subject_groups(cJSON **out_groups) {
     *out_groups = groups;
     return URSATZ_OK;
 }
+
+/* ---- the subjects that link a piece or an item ---------------------------- */
+
+static cJSON *subjects_for(const char *kind, const char *id) {
+  cJSON *rows = NULL;
+  cJSON *found = cJSON_CreateArray();
+  if (!found || workshop_subject_list(&rows) != URSATZ_OK) {
+    cJSON_Delete(found);
+    return NULL;
+  }
+  const cJSON *row = NULL;
+  cJSON_ArrayForEach(row, rows) {
+    const cJSON *row_id = cJSON_GetObjectItemCaseSensitive(row, "id");
+    cJSON *subject = NULL;
+    if (!cJSON_IsString(row_id) || workshop_subject_get(row_id->valuestring, &subject) != URSATZ_OK) {
+      continue;
+    }
+    const cJSON *links = cJSON_GetObjectItemCaseSensitive(subject, kind);
+    const cJSON *link = NULL;
+    bool linked = false;
+    cJSON_ArrayForEach(link, links) {
+      if (cJSON_IsString(link) && strcmp(link->valuestring, id) == 0) {
+        linked = true;
+        break;
+      }
+    }
+    cJSON *entry = linked ? cJSON_CreateObject() : NULL;
+    if (entry) {
+      const cJSON *name = cJSON_GetObjectItemCaseSensitive(subject, "name");
+      const cJSON *subject_kind = cJSON_GetObjectItemCaseSensitive(subject, "kind");
+      if (!cJSON_AddStringToObject(entry, "id", row_id->valuestring) ||
+          !cJSON_AddStringToObject(entry, "name", cJSON_IsString(name) ? name->valuestring : "") ||
+          !cJSON_AddStringToObject(entry, "kind", cJSON_IsString(subject_kind) ? subject_kind->valuestring : "")) {
+        cJSON_Delete(entry);
+        cJSON_Delete(subject);
+        cJSON_Delete(rows);
+        cJSON_Delete(found);
+        return NULL;
+      }
+      cJSON_AddItemToArray(found, entry);
+    }
+    cJSON_Delete(subject);
+  }
+  cJSON_Delete(rows);
+  return found;
+}
+
+cJSON *workshop_subjects_for_piece(const char *piece_id) {
+  return subjects_for("pieces", piece_id);
+}
+
+cJSON *workshop_subjects_for_item(const char *item_id) {
+  return subjects_for("items", item_id);
+}

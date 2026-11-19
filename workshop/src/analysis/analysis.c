@@ -4,6 +4,8 @@
 #include "items/piece_lock.h"
 #include "import_cache.h"
 #include "base/knowledge.h"
+#include "items/collections.h"
+#include "items/subjects.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -824,4 +826,121 @@ UrsatzStatus workshop_analysis_update_piece(const char *pieces_dir, const char *
     }
     workshop_piece_unlock(id);
     return result;
+}
+
+/* ---- the Library route's answers (A20261109-76) ---------------------------- */
+
+/* The members of the document a summary keeps: what the header and the Provenance list read. */
+static const char *const kSummarySections[] = {"schema_version", "metadata", "meter"};
+
+UrsatzStatus workshop_library_piece_json(const char *pieces_dir, const char *id, bool summary, cJSON **out) {
+    *out = NULL;
+    WorkshopPieceDetail *detail = NULL;
+    UrsatzStatus result = workshop_analysis_get_piece(pieces_dir, id, &detail);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    cJSON *object = cJSON_CreateObject();
+    cJSON *notation = workshop_library_notation_json(detail->has_notation, &detail->notation);
+    cJSON *ids = cJSON_CreateArray();
+    cJSON *document = NULL;
+    cJSON *sections = NULL;
+    bool ok = object && notation && ids && cJSON_AddStringToObject(object, "id", detail->id) &&
+              cJSON_AddStringToObject(object, "filename", detail->filename) &&
+              cJSON_AddStringToObject(object, "format", detail->format) &&
+              cJSON_AddStringToObject(object, "uploaded_at", detail->uploaded_at);
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "notation", notation);
+        notation = ok ? NULL : notation;
+    }
+    ok = ok && cJSON_AddStringToObject(object, "analysis_status", detail->analysis_status ? detail->analysis_status : "unreadable");
+    if (ok && detail->analysis_status && strcmp(detail->analysis_status, "current") != 0) {
+        /* The stored document is served as it is: a re-analysis failed (or the piece was written by a build without this check);
+           the status names why it is stale. */
+        ok = cJSON_AddStringToObject(object, "stale", detail->analysis_status) != NULL;
+    }
+    for (size_t i = 0; ok && i < detail->note_count; i++) {
+        cJSON *note = cJSON_CreateString(detail->note_xml_ids[i]);
+        ok = note != NULL;
+        if (ok) {
+            cJSON_AddItemToArray(ids, note);
+        }
+    }
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "note_xml_ids", ids);
+        ids = ok ? NULL : ids;
+    }
+    /* The stored document is inlined, or its summary with the names of all its sections when ?document=summary asks for it. */
+    if (ok && summary) {
+        char *summary_json = NULL;
+        char *names_json = NULL;
+        if (workshop_document_subset(detail->document_json, kSummarySections, sizeof(kSummarySections) / sizeof(kSummarySections[0]),
+                                     &summary_json, &names_json)) {
+            document = cJSON_Parse(summary_json);
+            sections = cJSON_Parse(names_json);
+        }
+        free(summary_json);
+        free(names_json);
+        ok = document && sections;
+    } else if (ok) {
+        document = cJSON_Parse(detail->document_json);
+        ok = document != NULL;
+    }
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "document", document);
+        document = ok ? NULL : document;
+    }
+    if (ok && sections) {
+        ok = cJSON_AddItemToObject(object, "document_sections", sections);
+        sections = ok ? NULL : sections;
+    }
+    /* The subjects that link this piece (R-117). */
+    cJSON *subjects = ok ? workshop_subjects_for_piece(detail->id) : NULL;
+    ok = ok && subjects && cJSON_AddItemToObject(object, "subjects", subjects);
+    if (ok) {
+        subjects = NULL;
+    }
+    cJSON_Delete(subjects);
+    workshop_piece_detail_destroy(detail);
+    if (!ok) {
+        cJSON_Delete(notation);
+        cJSON_Delete(ids);
+        cJSON_Delete(document);
+        cJSON_Delete(sections);
+        cJSON_Delete(object);
+        return workshop_fail(URSATZ_ERR_INTERNAL, "failed to load piece");
+    }
+    *out = object;
+    return URSATZ_OK;
+}
+
+UrsatzStatus workshop_library_patch(const char *pieces_dir, const char *id, const cJSON *body, cJSON **piece, UrsatzError *error) {
+    *piece = NULL;
+    WorkshopLibraryPatch patch;
+    UrsatzStatus result = workshop_library_patch_parse(body, &patch, error);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    result = workshop_analysis_update_piece(pieces_dir, id, &patch.update, error);
+    workshop_library_patch_free(&patch);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    return workshop_library_entry_json(pieces_dir, id, piece);
+}
+
+UrsatzStatus workshop_library_delete(const char *pieces_dir, const char *id) {
+    UrsatzStatus result = workshop_analysis_delete_piece(pieces_dir, id);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    /* A collection never keeps an id whose piece is gone. The piece itself is already deleted, so a failure here is logged, not answered. */
+    if (workshop_collection_remove_piece_everywhere(id) != URSATZ_OK) {
+        fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every collection\n", id);
+    }
+    /* The same goes for the subjects that linked the piece. */
+    if (workshop_subject_forget_piece(id) != URSATZ_OK) {
+        fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
+    }
+    return URSATZ_OK;
 }

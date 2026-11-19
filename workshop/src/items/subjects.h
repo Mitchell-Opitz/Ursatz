@@ -123,4 +123,8 @@ UrsatzStatus workshop_subject_forget_item(const char *item_id);
  */
 UrsatzStatus workshop_subject_groups(cJSON **out_groups);
 
+/* The subjects that link a Library piece or an item: [{id, name, kind}] (JSON, caller-owned); NULL on allocation or read failure. */
+cJSON *workshop_subjects_for_piece(const char *piece_id);
+cJSON *workshop_subjects_for_item(const char *item_id);
+
 #endif /* WORKSHOP_SUBJECT_SERVICE_H */
