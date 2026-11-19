@@ -66,7 +66,7 @@ The Composer composes in the major and the natural minor. A key text that names 
 that names no material is refused as an unknown key, as before. Every request that took a `mode` takes a `material` in its place: an id, name, key word or alias of a material the snapshot knows
 (`omt.material.natural-minor`, `minor`, `natural minor`), `style` where the request offers it today and `random` for the random
 motive. The old `mode` member is read as before; the two together are refused at `/mode`. The versions of the request kinds do not change; the replies say `material` (API 2.0). A plan file names a key by `tonic` and `material` (plan format 3), or by a tonic and a mode (formats 1 and 2),
-which the reader maps to the snapshot's major and natural minor ([plan-format.md](plan-format.md#format-versions)).
+which the reader maps to the snapshot's major and natural minor ([plan-format.md](../../library/docs/modules/plan-format.md#format-versions)).
 The command line builds one snapshot per process.
 
 ## Memory

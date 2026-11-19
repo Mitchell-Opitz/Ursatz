@@ -47,7 +47,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 
 ## Formats and schemas
 
-- [plan-format.md](plan-format.md): the plan JSON file, its nodes, lanes, state and versions.
+- [plan-format.md](../../library/docs/modules/plan-format.md): the plan JSON file, its nodes, lanes, state and versions.
 - [plan-constraints.md](plan-constraints.md): the constraints of a plan node and the motive relation steps.
 - [motive-format.md](motive-format.md): the motive document and its analysis.
 - [variant-registry.md](variant-registry.md): the registry of variant operations, chains and records.

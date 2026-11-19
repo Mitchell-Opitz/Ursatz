@@ -15,7 +15,7 @@
  * URSATZ_COMPOSER_PLAN_FORMAT_VERSION; reading also takes version 3 (notes have no ids: they get 1 to n in file order), version 2
  * (keys name a "mode", major or minor) and version 1 (every plan saved before it: "schema_version" 1, tonic pitch classes, motive
  * "transform" names). Version 4 gives every note an "id" (unique, from 1) and, where the Composer knows it, a "source" and an
- * "operation", and the document a "next_note_id" above every id (R-601). Version 5 gives every section node a "section" member in its "composer" object, the section description (R-607), in place of the constraints version 4 and before wrote for a section's letter, part, pairing, cadences, return, layers, pedal, construction, connective, figure and function; reading takes those and makes the description of them. See docs/plan-format.md.
+ * "operation", and the document a "next_note_id" above every id (R-601). Version 5 gives every section node a "section" member in its "composer" object, the section description (R-607), in place of the constraints version 4 and before wrote for a section's letter, part, pairing, cadences, return, layers, pedal, construction, connective, figure and function; reading takes those and makes the description of them. See library/docs/modules/plan-format.md.
  *
  * Reading ignores fields it does not know, but rejects unknown values in the
  * fields it owns (kind, state, lane, constraint kind) and anything malformed.

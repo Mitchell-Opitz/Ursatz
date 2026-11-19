@@ -7,7 +7,7 @@ It is the texture stage of [grow](grow.md), and it applies to any plan that has 
 
 ## The target
 
-A Constrained inner voice span, voice 1, with an `accompaniment` constraint ([plan-format.md](plan-format.md)) on the
+A Constrained inner voice span, voice 1, with an `accompaniment` constraint ([plan-format.md](../../library/docs/modules/plan-format.md)) on the
 span or on its owner, over the time of a harmony target: the chord spans under it tile it exactly (so it is whole
 bars), its bass and melody are written (Given or Realized, none open), and it lies in one key and one meter.
 

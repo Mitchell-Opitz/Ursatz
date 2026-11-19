@@ -22,7 +22,7 @@ holds an empty array.
 An Ursatz-Analyzer analysis document is not a plan. It describes a piece that is already written, so it is refused,
 with a message that says it is an analysis document. The document is recognized by the Analyzer (`analyzer_document_status` is not
 `ANALYZER_DOCUMENT_UNREADABLE`); the Composer never reads its content. A plan file of format version 1 or 2 opens
-([plan-format.md](plan-format.md#format-versions)); `--out` writes version 2.
+([plan-format.md](../../library/docs/modules/plan-format.md#format-versions)); `--out` writes version 2.
 
 ## Options
 

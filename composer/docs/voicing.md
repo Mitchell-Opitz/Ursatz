@@ -8,7 +8,7 @@ below. The hearing that checks it, the tests' `voice_hear`, is described at the 
 
 ## The target
 
-A Constrained inner voice span, voice 1 (the alto), with a `voicing` constraint ([plan-format.md](plan-format.md)) on
+A Constrained inner voice span, voice 1 (the alto), with a `voicing` constraint ([plan-format.md](../../library/docs/modules/plan-format.md)) on
 the span or on its owner, over the time of a harmony target: the chord spans under it tile it exactly (so it is whole
 bars), its bass is written (Given or Realized, none open), and it lies in one key and one meter.
 

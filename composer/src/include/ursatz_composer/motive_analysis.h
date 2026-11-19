@@ -170,7 +170,7 @@ const char *motive_shape_name(MotiveShape shape);
 void motive_pitch_name(int midi, char *out, size_t size);
 
 /*
- * The motive and its analysis as JSON, in the plan format's vocabulary (docs/plan-format.md, "Motive documents"),
+ * The motive and its analysis as JSON, in the plan format's vocabulary (library/docs/modules/plan-format.md, "Motive documents"),
  * 2-space indent, trailing newline. NULL on failure; caller frees.
  */
 char *motive_analysis_to_json(const Motive *motive, const MotiveAnalysis *analysis);

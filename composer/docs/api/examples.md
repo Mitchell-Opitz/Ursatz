@@ -3,7 +3,7 @@
 Examples of Composer API requests and responses, from runs of the API. Back to the [docs index](../README.md).
 
 Every entry that composes or reads takes the call context first (`composer_api_x(&context, request, job, &out)`; [the call context](../api.md#the-call-context)); the examples below leave it out of the request lines. The examples come from runs of this API (the MIDI entry and the piece variations are written from `tests/test_api_motive.c` and `tests/test_api_piece.c`); a long value is shortened with `…`. A plan object is `{…}`: the plan file of the
-command line, read as JSON (docs/plan-format.md).
+command line, read as JSON (library/docs/modules/plan-format.md).
 
 ## Versions
 

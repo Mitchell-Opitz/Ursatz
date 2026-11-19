@@ -6,7 +6,7 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | --- | --- |
 | `include/ursatz_composer/` | The one public header, `composer_api.h`. |
 | `src/include/ursatz_composer/` | The private headers. |
-| `src/plan/` | The piece plan, its lanes, states, constraints and JSON. |
+| (`library/plan/`) | The piece plan, its lanes, states, constraints and JSON: the library's plan group. |
 | `src/render/` | Rendering a plan to NoteEvents, MIDI and MusicXML. |
 | `src/fill/` | The fill loop, its operators, seeds and records. |
 | `src/harmony/` | The harmony operators and hearing cadences. |

@@ -240,7 +240,7 @@ MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *opti
 MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
 /*
- * JSON, in the plan format's vocabulary (docs/plan-format.md, "Motive documents"):
+ * JSON, in the plan format's vocabulary (library/docs/modules/plan-format.md, "Motive documents"):
  *
  *   {"meter": {"beats_per_bar": 4, "beat_unit": 4},
  *    "key": {"tonic_pitch_class": 2, "mode": "minor"},

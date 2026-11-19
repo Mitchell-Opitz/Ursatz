@@ -487,7 +487,7 @@ static void test_motive_tones(void) {
 static char *replace_all(const char *text, const char *from, const char *to);
 
 /*
- * Plan files saved before relation steps write a motive ref as "transform" and the members it uses (docs/plan-format.md).
+ * Plan files saved before relation steps write a motive ref as "transform" and the members it uses (library/docs/modules/plan-format.md).
  * Each old name reads to the step of the table in docs/modules/motive-relations.md, and is written as "step"; an
  * unknown transform or an unparsable step fails the read with its text in the message.
  */

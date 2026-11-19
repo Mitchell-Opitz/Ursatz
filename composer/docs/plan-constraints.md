@@ -1,11 +1,11 @@
 # Plan format: constraints
 
-The constraints of a plan node and the motive relation steps, continuing the [plan format](plan-format.md). Back to the [docs index](README.md).
+The constraints of a plan node and the motive relation steps, continuing the [plan format](../../library/docs/modules/plan-format.md). Back to the [docs index](README.md).
 
 ## Constraints
 
 A constraint is an object with a `kind` and the fields for that kind. Constraints are data only;
-nothing checks them. What a section is (its letter, role, pairing, cadences, return, layers, pedal, construction, figure, function, hold and connective) is not a constraint: it is the section's description ([plan-format.md](plan-format.md#section-descriptions)). Formats 1 to 4 wrote those as the constraints `archetype`, `material`, `theme_pairing`, `return`, `layers`, `section_letter`, `piece_part`, `free_phrase`, `hold`, `seam`, `pedal`, `construction`, `connective`, `liquidation`, `figure` and `section_function`, and the reader still takes them.
+nothing checks them. What a section is (its letter, role, pairing, cadences, return, layers, pedal, construction, figure, function, hold and connective) is not a constraint: it is the section's description ([plan-format.md](../../library/docs/modules/plan-format.md#section-descriptions)). Formats 1 to 4 wrote those as the constraints `archetype`, `material`, `theme_pairing`, `return`, `layers`, `section_letter`, `piece_part`, `free_phrase`, `hold`, `seam`, `pedal`, `construction`, `connective`, `liquidation`, `figure` and `section_function`, and the reader still takes them.
 
 | `kind` | Fields |
 | --- | --- |
@@ -57,14 +57,14 @@ node from them yet. A `step` that is not a relation step fails the read, with th
 Plan files saved before relation steps write `transform` (`none`, `transposed`, `inverted`, `retrograde`,
 `augmented`, `diminished`, `fragmented`, `restated`, `interval_changed` or `liquidated`), `semitones` and the
 members the transform uses (`tonal`, `steps`, `axis`, `interval`, `amount`, `keep_contour`, `position`, `length`,
-`drop`, `keep_rhythm`, `ratio_num`, `ratio_den`). They are read, by one function in `src/plan/plan_json.c`, into the
+`drop`, `keep_rhythm`, `ratio_num`, `ratio_den`). They are read, by one function in `library/plan/plan_json.c`, into the
 step of the same relation (`none` into no step, `restated` into `exact`; `semitones` or `steps` into `by`; an absent
 `axis` into -1) and are written back as `step`; nothing writes the old names. A `transform` the table does not
 have fails the read with its name in the message. The format version stays 2.
 
 ## Adding a kind
 
-A constraint kind is one row of `src/plan/constraint_kinds.c` (R-609): its value in `PlanConstraintKind`, its name in the plan file, and three functions: `valid` (whether a constraint of the kind is valid in a plan, which `plan_node_add_constraint` and `plan_lane_span_add_constraint` ask), `write` (the members of its JSON object after `kind`) and `read` (the same members read, each refusal at its path). `plan_json.c` and `constraint.c` look the row up and call it, so no switch names a kind. The kind also goes in the constraint enum of `schema/plan.v5.schema.json`, with a row of the table above.
+A constraint kind is one row of `library/plan/plan_constraint_kinds.c` (R-609): its value in `PlanConstraintKind`, its name in the plan file, and three functions: `valid` (whether a constraint of the kind is valid in a plan, which `plan_node_add_constraint` and `plan_lane_span_add_constraint` ask), `write` (the members of its JSON object after `kind`) and `read` (the same members read, each refusal at its path). `plan_json.c` and `constraint.c` look the row up and call it, so no switch names a kind. The kind also goes in the constraint enum of `schema/plan.v5.schema.json`, with a row of the table above.
 
 ## Construction and pedal
 

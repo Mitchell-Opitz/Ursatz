@@ -125,7 +125,7 @@ last anchor of the motive, since few anchors follow it. Whole-bar spans are writ
 
 ## Pickups
 
-A `pickup` constraint (see [plan-format.md](plan-format.md)) on a melody span makes its first `length` an
+A `pickup` constraint (see [plan format](../../library/docs/modules/plan-format.md)) on a melody span makes its first `length` an
 anacrusis. The phrase, the harmony and the key are read from the end of the pickup. The pickup is written as 1 to 4
 notes of equal beats (the first takes what is left over when there are more than four): the last is a step from the
 first downbeat note or a chord tone of the chord before (the harmony span sounding under the pickup; none at the

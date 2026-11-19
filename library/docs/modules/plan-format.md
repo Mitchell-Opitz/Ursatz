@@ -1,16 +1,16 @@
 # Plan format
 
 A piece plan is written as JSON text by `plan_to_json` and read from text by `plan_from_json`
-(`<ursatz_composer/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the Composer's own: it has a
-name, a version and a JSON Schema ([`schema/plan.v5.schema.json`](../schema/plan.v5.schema.json), JSON Schema 2020-12),
+(`<plan/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the plan's own: it has a
+name, a version and a JSON Schema ([`plan.v5.schema.json`](../../../composer/schema/plan.v5.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
 name, a note may carry its spelling and always has an id. Writing always gives format version 5 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
-Reading takes versions 4, 3, 2 and 1, the formats of every plan saved before it, and maps them to materials, note ids and section descriptions ([Format versions](#format-versions)). Back to the [docs index](README.md).
+Reading takes versions 5 to 1, every plan saved before, and maps them to materials, note ids and section descriptions ([Format versions](#format-versions)). Back to the [docs index](../README.md).
 
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same plan always gives the same bytes.
 
-The constraints and the motive relation steps are in [plan-constraints.md](plan-constraints.md); the motive documents and their analysis are in [motive-format.md](motive-format.md).
+The constraints and the motive relation steps are in [plan-constraints.md](../../../composer/docs/plan-constraints.md); the motive documents and their analysis are in [motive-format.md](../../../composer/docs/motive-format.md).
 
 ## Conventions
 
@@ -38,9 +38,9 @@ number with an optional spelling (the file writes `spelling` for a spelled note 
 | Key | Content |
 | --- | --- |
 | `format` | Always `"ursatz-composer-plan"`. |
-| `format_version` | Always `4`. |
+| `format_version` | Always `5`. |
 | `next_note_id` | The id the next new note gets: an integer from 1, above every note id of the file. |
-| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the library's producer key, `analysis_chain_producer_key()` since P61 B8, R-620; the member keeps its name until plan format 3) and, only for a plan that has one, `analyzer_version` (kept; none is written). |
+| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the library chain's producer key, R-620; format 6 names it `producer_key`) and, only for a plan that has one, `analyzer_version` (kept; none is written). |
 | `meter` | `null`, or `{"spans": [<claim>, ...]}` for meter spans. |
 | `keys` | Key lane claims. |
 | `chords` | Harmony lane claims. |
@@ -77,11 +77,11 @@ lies inside its parent's.
 
 ### Section descriptions
 
-A section node holds one description of the section (R-607): the same object a form document and a piece request hold, with the members the plan use of the section description allows (`plan_section` in [`library/plan/schema/section.schema.json`](../../library/plan/schema/section.schema.json), which the plan schema references; [plan module](../../library/docs/modules/plan.md)). The members are written in table order, only when set: `id`, `letter`, `role`, `beginning` and `ending` (the theme pairing), `cadence` and `first_cadence`, `closed`, `keys`, `returns` (the name of the section it returns), `variation`, `setting`, `mode`, `layers`, `pedal`, `leads_in`, `connective` (and `connective_written`), `construction`, `figure`, `function` (with `independent` and `lyric`) and `free_phrase`. A game loop part is the `role` `intro`, `body`, `turnaround` or `ending` and the request's `id`; source material, the seam and a liquidation are the roles `material`, `seam` and `liquidation`; a held section has `leads_in`. In memory it is `SectionDescription` (`plan_node_section`, `plan_node_set_section`); a section node refuses a `cadence` constraint.
+A section node holds one description of the section (R-607): the same object a form document and a piece request hold, with the members the plan use of the section description allows (`plan_section` in [`library/plan/schema/section.schema.json`](../../plan/schema/section.schema.json), which the plan schema references; [plan module](plan.md)). The members are written in table order, only when set: `id`, `letter`, `role`, `beginning` and `ending` (the theme pairing), `cadence` and `first_cadence`, `closed`, `keys`, `returns` (the name of the section it returns), `variation`, `setting`, `mode`, `layers`, `pedal`, `leads_in`, `connective` (and `connective_written`), `construction`, `figure`, `function` (with `independent` and `lyric`) and `free_phrase`. A game loop part is the `role` `intro`, `body`, `turnaround` or `ending` and the request's `id`; source material, the seam and a liquidation are the roles `material`, `seam` and `liquidation`; a held section has `leads_in`. In memory it is `SectionDescription` (`plan_node_section`, `plan_node_set_section`); a section node refuses a `cadence` constraint.
 
 ### Motive refs: the segment and the steps
 
-A `motive_ref` constraint may carry two members that record how a developed idea was made (P34, ch. VIII), both optional: `"segment": "b"`, the label of the segment of the basic motif its motive node is made from (a continuation's fragments), and `"steps": 2`, how many liquidation steps by segments made it (a cadential idea). A plan without them reads as no segment and no steps, and writing it again leaves them out. Regenerating a section or locking a lane keeps them with the rest of the constraint. They name what happened; the motive operators do not read them. (The `steps` of an older file's `transform` is that transform's own.) See [plan-constraints.md](plan-constraints.md#motive-relation-steps).
+A `motive_ref` constraint may carry two members that record how a developed idea was made (P34, ch. VIII), both optional: `"segment": "b"`, the label of the segment of the basic motif its motive node is made from (a continuation's fragments), and `"steps": 2`, how many liquidation steps by segments made it (a cadential idea). A plan without them reads as no segment and no steps, and writing it again leaves them out. Regenerating a section or locking a lane keeps them with the rest of the constraint. They name what happened; the motive operators do not read them. (The `steps` of an older file's `transform` is that transform's own.) See [plan-constraints.md](../../../composer/docs/plan-constraints.md#motive-relation-steps).
 
 ### Form record
 
@@ -152,7 +152,7 @@ Every node and lane span is in one state. New ones are `constrained`.
 
 Node state and span state are independent: a Given node does not lock its children or its spans. `plan_lock`
 (`ursatz-composer lock`) sets both for a node, every node under it and the spans they own, so a lock reads in a file as
-`given` on all of them; see [regenerate.md](regenerate.md). A plan file numbers its nodes and lane spans from 1 without
+`given` on all of them; see [regenerate.md](../../../composer/docs/regenerate.md). A plan file numbers its nodes and lane spans from 1 without
 gaps, so the ids of a plan written after `regenerate` can differ from the ids of the plan read.
 
 ## Reading
@@ -193,7 +193,7 @@ and renders the same MIDI. The schema's lane enum named the inner voice `inner-v
 | `cadences`, `phrases`, `motives`, `rhythm`, `voice_leading`, `schemas`, always `[]` | Ignored; version 2 does not write them. |
 | A key's `tonic_pitch_class` (0 to 11) and `mode` | The tonic the library spells for that pitch class and mode (`standard_tonality_key_tonic_of_pitch_class`: fewest accidentals in the signature, sharps on a tie): 3 minor is `D#`, 6 major is `F#`; the mode is read as in version 2. |
 | A chord's `function` of `unknown` | No function (the member is left out in version 2). |
-| A motive ref's `transform` and its members | The relation step ([Motive relation steps](plan-constraints.md#motive-relation-steps)). |
+| A motive ref's `transform` and its members | The relation step ([Motive relation steps](../../../composer/docs/plan-constraints.md#motive-relation-steps)). |
 
 Writing the plan again gives version 5: `plan_from_json` then `plan_to_json` turns any version 1 to 4 plan into its version 5
 file, and the two render the same MIDI.
@@ -212,7 +212,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
 ```json
 {
   "format": "ursatz-composer-plan",
-  "format_version": 4,
+  "format_version": 5,
   "next_note_id": 1,
   "metadata": {
     "composer_version": "0.1.0",

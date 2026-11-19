@@ -8,12 +8,12 @@ Renders a plan once and exports it, as `ursatz-composer export` does.
 
 | Member | Value |
 |---|---|
-| `plan` | the plan object (docs/plan-format.md) |
+| `plan` | the plan object (library/docs/modules/plan-format.md) |
 | `midi` | `true` to fill `midi` and `midi_size`; default `false` |
 | `musicxml` | `true` to fill `musicxml`; default `false` |
 | `tempo` | quarter notes per minute from 20 to 400, a whole number or a string like `"195/2"`; `null` or absent for none |
 | `plain_midi` | `true` to leave out the MIDI track names and section markers; default `false` |
-| `plan_file` | `true` to fill `plan_json` with the plan as the library writes plan files (docs/plan-format.md), which is how a client saves a plan object it holds; with no `midi` and no `musicxml` nothing is rendered. Default `false` |
+| `plan_file` | `true` to fill `plan_json` with the plan as the library writes plan files (library/docs/modules/plan-format.md), which is how a client saves a plan object it holds; with no `midi` and no `musicxml` nothing is rendered. Default `false` |
 | `loop` | `{"start": "2/1", "end": "14/1"}`, times in whole notes from the start of the plan: the `loopStart` and `loopEnd` markers of the MIDI file ([export.md](../export.md#loop-markers)); the end must come after the start |
 
 `json`: `{"skipped": [{"span", "lane", "reason"}]}`, the lane spans the render left out, with the reasons the CLI prints on

@@ -26,7 +26,7 @@ All four are built by the root `CMakeLists.txt`, in that order. The Composer hea
 |---|---|---|
 | `include/ursatz_composer/` | The one public header, `composer_api.h` | [api.md](api.md) |
 | `src/api/` | The composer API behind the header, one file for each request kind | [api.md](api.md) |
-| `src/plan/` | The piece plan, its lanes, states, section descriptions, form record, constraints (`constraint_kinds.c`: one row per kind holds its name, validity, writer and reader) and JSON | [plan-format.md](plan-format.md) |
+| (`library/plan/`) | The piece plan is the library's (R-625): `Plan`, its lanes, states, section descriptions, form record, constraints (`plan_constraint_kinds.c`: one row per kind holds its name, validity, writer and reader), edits (`plan_clone`, `plan_lane_span_reopen`), the producer stamp and reader hooks of the JSON codec. The Composer writes plans with `composer_plan_producer` and reads them with `composer_plan_read_hooks` | [plan.md](../../library/docs/modules/plan.md), [plan-format.md](../../library/docs/modules/plan-format.md) |
 | `src/render/` | Rendering a plan to NoteEvents, making a work of one movement and one piano part from the render (`movement_build.h`), and writing MIDI and MusicXML through the library's movement export | [export.md](export.md) |
 | `src/fill/` | The fill loop, its operators, seeds and records | [fill-loop.md](fill-loop.md) |
 | `src/harmony/` | The harmony operators and hearing cadences | [grow-harmony.md](grow-harmony.md) |
@@ -43,7 +43,7 @@ All four are built by the root `CMakeLists.txt`, in that order. The Composer hea
 | `src/style/` | Style models, blending, style checks, seeding from a corpus | [style.md](style.md) |
 | `src/util/` | Private helpers the sources share | [structure.md](structure.md) |
 | `cli/` | The `ursatz-composer` command | [cli.md](cli.md) |
-| `schema/` | The plan schema and the API request and response schemas | [plan-format.md](plan-format.md) |
+| `schema/` | The plan schema and the API request and response schemas | [plan-format.md](../../library/docs/modules/plan-format.md) |
 
 The full table with every directory is in [structure.md](structure.md).
 
@@ -67,8 +67,8 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 |---|---|---|---|
 | Composer version | `CMakeLists.txt` (`project(UrsatzComposer VERSION ...)`) | 0.4.1 | [changelog.md](changelog.md) |
 | API version | `include/ursatz_composer/composer_api.h` (`COMPOSER_API_VERSION_MAJOR`, `_MINOR`) | 2.1 | [api.md](api.md#versioning) |
-| Plan format version | `src/include/ursatz_composer/plan_json.h` (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`) | 5 | [plan-format.md](plan-format.md#format-versions) |
-| Plan schema | `schema/plan.v5.schema.json` | plan format 5 (section descriptions) | [plan-format.md](plan-format.md) |
+| Plan format version | `library/plan/plan_json.h` (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`) | 5 | [plan-format.md](../../library/docs/modules/plan-format.md#format-versions) |
+| Plan schema | `schema/plan.v5.schema.json` | plan format 5 (section descriptions) | [plan-format.md](../../library/docs/modules/plan-format.md) |
 | API schemas | `schema/api/*.schema.json` | API 2.1 | [api.md](api.md) |
 | Motive format | the motive document has no version member | none | [motive-format.md](motive-format.md) |
 | Theme request schema | `docs/theme-request.md` (`schema_version`) | 2 | [theme-request.md](theme-request.md) |
