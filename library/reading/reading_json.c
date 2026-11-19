@@ -685,7 +685,8 @@ static bool read_claims(Reader *r, Reading *reading, const cJSON *document, cons
             RealizationResult added = add(reading, claim);
             if (added != REALIZATION_OK) {
                 char id_at[READING_JSON_PATH_MAX];
-                child_member(id_at, at, added == REALIZATION_ERR_BAD_ID || added == REALIZATION_ERR_DUPLICATE_ID ? "id" : "start");
+                const char *member_name = added == REALIZATION_ERR_DUPLICATE_ID ? "id" : added == REALIZATION_ERR_BAD_ID ? (realization_id_valid(head->id) ? "evidence" : "id") : "start";
+                child_member(id_at, at, member_name);
                 ok = group_refused(r, added, id_at);
             }
         }
