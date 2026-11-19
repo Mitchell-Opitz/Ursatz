@@ -11,6 +11,7 @@
 #include "routes/jobs.h"
 #include "routes/links.h"
 #include "routes/materials.h"
+#include "routes/subjects.h"
 #include "routes/styles.h"
 #include "workshop_internal.h"
 
@@ -100,6 +101,7 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
   ursatz_gui_composer_register(ctx);
   ursatz_gui_styles_register(ctx);
   ursatz_gui_materials_register(ctx);
+  ursatz_gui_subjects_register(ctx);
   ursatz_gui_links_register(ctx);
   ursatz_gui_jobs_register(ctx);
 

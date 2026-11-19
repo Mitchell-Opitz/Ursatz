@@ -5,11 +5,8 @@
 
 struct mg_context;
 
-/* Registers the material and subject routes ("/api/materials/..." and
- * "/api/subjects/...") against ctx, following the tool-registration
- * convention in docs/architecture.md (Layers). They only dispatch into
- * service/material_service.h and service/subject_service.h, which own the
- * materials/ and subjects/ stores. */
+/* Registers the material routes ("/api/materials/...") against ctx, following the tool-registration convention in
+ * docs/architecture.md (Layers). The motif routes are in motifs.c and the subject routes (subjects.h) have their own handler. */
 void ursatz_gui_materials_register(struct mg_context *ctx);
 
 #endif /* URSATZ_GUI_ROUTE_MATERIALS_H */
