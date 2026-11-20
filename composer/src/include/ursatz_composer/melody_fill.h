@@ -110,6 +110,33 @@ typedef enum {
     MELODY_RULE_COUNT
 } MelodyHardRule;
 
+/*
+ * The groups of soft rules of the melody stage that a setting may reverse (R-672), by the names the weights use (the
+ * ten of MelodyWeights) and closure, leaps and register.
+ */
+typedef enum {
+    MELODY_GROUP_MELODIC,
+    MELODY_GROUP_AGAINST_BASS,
+    MELODY_GROUP_TENDENCY,
+    MELODY_GROUP_CLIMAX,
+    MELODY_GROUP_CONTOUR,
+    MELODY_GROUP_ENDING_REDUCTION,
+    MELODY_GROUP_WAVES,
+    MELODY_GROUP_CENTRAL_RANGE,
+    MELODY_GROUP_MONOTONY,
+    MELODY_GROUP_SEAM,
+    MELODY_GROUP_CLOSURE,
+    MELODY_GROUP_LEAPS,
+    MELODY_GROUP_REGISTER,
+    MELODY_GROUP_COUNT
+} MelodySoftGroup;
+
+/* The name of a group ("leaps"), or NULL outside the enum. */
+const char *melody_soft_group_name(MelodySoftGroup group);
+
+/* Finds a group by its name; false (and *group untouched) when the name is none. */
+bool melody_soft_group_find(const char *name, MelodySoftGroup *group);
+
 /* The name of a rule ("parallel-fifths"), or NULL outside the enum. */
 const char *melody_hard_rule_name(MelodyHardRule rule);
 
@@ -155,13 +182,18 @@ typedef struct {
      * refuses a candidate nor scores it. 0 (the default) waives none.
      */
     unsigned waive;
+    /*
+     * Reversed soft rule groups (R-672): the bits of MelodySoftGroup whose score counts what the candidate breaks in
+     * place of what it holds, so a setting can ask for the opposite of a preference. 0 (the default) reverses none.
+     */
+    unsigned reverse;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
  * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final, closure_first, rhythm_repeat_bars,
- * leap_weight, register_weight and waive 0.
+ * leap_weight, register_weight, waive and reverse 0.
  */
 MelodyFillParams melody_fill_params_default(void);
 

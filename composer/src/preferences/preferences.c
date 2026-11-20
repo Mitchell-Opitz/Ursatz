@@ -264,41 +264,58 @@ static bool read_closure(const cJSON *closure, MelodyFillParams *melody, const R
     return true;
 }
 
-/* "forbidden-leap, forbidden-outline, ..." for the refusal that names the rules a list may hold. */
-static void waive_names(char *text, size_t size) {
+/* The names a list of the melody group may hold, "forbidden-leap, forbidden-outline, ...", for the refusal that names them. */
+static void rule_names(bool groups, char *text, size_t size) {
     size_t used = 0;
+    unsigned count = groups ? MELODY_GROUP_COUNT : MELODY_RULE_COUNT;
     text[0] = '\0';
-    for (unsigned i = 0; i < MELODY_RULE_COUNT && used < size; i++) {
-        int written = snprintf(text + used, size - used, "%s%s", i ? ", " : "", melody_hard_rule_name((MelodyHardRule)i));
+    for (unsigned i = 0; i < count && used < size; i++) {
+        const char *name = groups ? melody_soft_group_name((MelodySoftGroup)i) : melody_hard_rule_name((MelodyHardRule)i);
+        int written = snprintf(text + used, size - used, "%s%s", i ? ", " : "", name);
         used += written > 0 ? (size_t)written : 0;
     }
 }
 
-/* waive: a list of the names of the hard rules the melody stage does not hold, none twice (R-672). */
-static bool read_waive(const cJSON *list, MelodyFillParams *melody, const Refusal *refusal) {
-    unsigned bits = 0;
+/*
+ * waive and reverse (R-672): a list of names, none twice. waive names hard rules the melody stage does not hold,
+ * reverse names soft groups whose score counts what a candidate breaks. *bits is the list as bits of the enum.
+ */
+static bool read_rule_list(const cJSON *list, bool groups, unsigned *bits, const Refusal *refusal) {
+    const char *key_name = groups ? "reverse" : "waive";
+    unsigned found = 0;
     const cJSON *item;
-    char names[160];
+    char names[192];
     char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
     int index = 0;
     if (!cJSON_IsArray(list)) {
-        return refuse_melody(refusal, "waive", "must be a list of rule names");
+        return refuse_melody(refusal, key_name, "must be a list of names");
     }
-    waive_names(names, sizeof(names));
+    rule_names(groups, names, sizeof(names));
     cJSON_ArrayForEach(item, list) {
-        MelodyHardRule rule;
+        unsigned bit = 0;
+        bool known = false;
         char key[COMPOSER_PREFERENCES_PATH_MAX];
-        snprintf(key, sizeof(key), "waive/%d", index++);
-        if (!cJSON_IsString(item) || !melody_hard_rule_find(item->valuestring, &rule)) {
-            snprintf(message, sizeof(message), "is not a rule the melody stage can waive: %s", names);
+        snprintf(key, sizeof(key), "%s/%d", key_name, index++);
+        if (cJSON_IsString(item) && groups) {
+            MelodySoftGroup group = MELODY_GROUP_MELODIC;
+            known = melody_soft_group_find(item->valuestring, &group);
+            bit = 1u << group;
+        } else if (cJSON_IsString(item)) {
+            MelodyHardRule rule = MELODY_RULE_FORBIDDEN_LEAP;
+            known = melody_hard_rule_find(item->valuestring, &rule);
+            bit = 1u << rule;
+        }
+        if (!known) {
+            snprintf(message, sizeof(message), groups ? "is not a soft rule group: %s" : "is not a rule the melody stage can waive: %s",
+                     names);
             return refuse_melody(refusal, key, message);
         }
-        if (bits & (1u << rule)) {
-            return refuse_melody(refusal, key, "repeats a rule of the list");
+        if (found & bit) {
+            return refuse_melody(refusal, key, "repeats a name of the list");
         }
-        bits |= 1u << rule;
+        found |= bit;
     }
-    melody->waive = bits;
+    *bits = found;
     return true;
 }
 
@@ -342,7 +359,9 @@ static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refu
         } else if (strcmp(key, "register") == 0) {
             ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->register_weight, refusal);
         } else if (strcmp(key, "waive") == 0) {
-            ok = read_waive(item, melody, refusal);
+            ok = read_rule_list(item, false, &melody->waive, refusal);
+        } else if (strcmp(key, "reverse") == 0) {
+            ok = read_rule_list(item, true, &melody->reverse, refusal);
         } else {
             ok = refuse_melody(refusal, key, "unknown member");
         }
@@ -1044,6 +1063,17 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
         }
     }
     ok = ok && waive;
+    cJSON *reverse = ok ? cJSON_AddArrayToObject(group, "reverse") : NULL;
+    for (unsigned i = 0; reverse && i < MELODY_GROUP_COUNT; i++) {
+        if (melody->reverse & (1u << i)) {
+            cJSON *name = cJSON_CreateString(melody_soft_group_name((MelodySoftGroup)i));
+            if (!name || !cJSON_AddItemToArray(reverse, name)) {
+                cJSON_Delete(name);
+                ok = false;
+            }
+        }
+    }
+    ok = ok && reverse;
     if (!ok || !weights) {
         cJSON_Delete(types);
         cJSON_Delete(group);

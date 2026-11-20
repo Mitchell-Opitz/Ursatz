@@ -187,6 +187,28 @@
             ]
           },
           "description": "The hard rules of the melody stage that are not held (R-672): a waived rule neither refuses a candidate nor scores it. Empty by default."
+        },
+        "reverse": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "melodic",
+              "against_bass",
+              "tendency",
+              "climax",
+              "contour",
+              "ending_reduction",
+              "waves",
+              "central_range",
+              "monotony",
+              "seam",
+              "closure",
+              "leaps",
+              "register"
+            ]
+          },
+          "description": "The soft rule groups whose score counts what a candidate breaks in place of what it holds (R-672), so a setting can ask for the opposite. Empty by default."
         }
       }
     },
