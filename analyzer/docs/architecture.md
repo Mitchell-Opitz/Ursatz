@@ -21,7 +21,7 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 | `include/ursatz_analyzer/` | The one API header, `<ursatz_analyzer/analyzer_api.h>`; the internal headers are in `src/include/ursatz_analyzer_internal/` | [library.md](library.md) |
 | `src/util/` | Private JSON, file and misc helpers; the bottom of the stack | [library.md](library.md) |
 | `src/store/` | The corpus walk, paths and the stale check (`corpus_walk`, `path_util`, `staleness`) | [corpus.md](corpus.md) |
-| `src/result/` | The analysis result (`analyzer_analyze`), the file entry (`run_file`) and the thin import entries | [analysis-result.md](analysis-result.md) |
+| `src/result/` | The analysis result (`analyzer_analyze`), the file entry (`analyzer_run_file`) and the thin import entries | [analysis-result.md](analysis-result.md) |
 | `src/export/` | The analysis document (an export of the reading, built by area in `document_*.c`) and its text, material, score and playback exports | [analysis-document.md](analysis-document.md), [text-export.md](text-export.md) |
 | `src/style/` | Style profiles read from documents and the corpus | [style-profile.md](style-profile.md) |
 | `src/corpus/` | The corpus run, similar material, the chord sequence and the corpus passages | [corpus.md](corpus.md), [similar-material.md](similar-material.md), [corpus-passages.md](corpus-passages.md) |
@@ -55,6 +55,8 @@ The GUI entries:
 | `input_pipeline.h` | `analyzer_import_file`, `analyzer_import_buffer` | Thin entries over the library import (`io/imported_score.h`): a file or bytes into an `ImportedScore`, with its tempo map and the failure message | [gui-api.md](gui-api.md#import-with-tempo) |
 | `playback.h` | `analyzer_playback_build`, `analyzer_playback_to_json` | Tempo regions and notes for a player | [gui-api.md](gui-api.md#playback-timing) |
 | `score_export.h` | `analyzer_score_export_musicxml`, `analyzer_score_note_xml_ids`, `analyzer_imported_meter_defaulted` | MusicXML score of the import, note ids, whether the meter was inferred | [gui-api.md](gui-api.md#score-export) |
+
+The run and corpus entries the workshop's tools call (`analyze`, `corpus`, `style-profile`; R-656): `analyzer_run_file` (import, optional reading, analysis; `AnalyzerRunFileResult`) and `analyzer_run_file_document`, `analyzer_document_path_for`, `analyzer_corpus_run` (`AnalyzerCorpusOptions`, `AnalyzerCorpusPieceReport`), `analyzer_corpus_stale_count` and `analyzer_style_profile_add_corpus`.
 
 The corpus passage entries a caller gives to the Composer ([corpus-passages.md](corpus-passages.md)): `analyzer_corpus_passages_like` and `analyzer_corpus_passages_numerals` find the passages of a corpus, `analyzer_corpus_passages_to_json` writes the Composer API's `corpus_passages`.
 

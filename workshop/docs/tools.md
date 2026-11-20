@@ -30,6 +30,9 @@ An unknown name is `URSATZ_ERR_REQUEST`, path `/name`, `unknown tool '<name>'`.
 | `composer` | `entry`, `request`, `kind` | `{json, plan_json, musicxml}`; MIDI as the bytes |
 | `corpus-passages` | `dir`, `like` or `numerals`, `limit` | `{passages: [...]}` |
 | `pitch-names` | `midi` | `{names: [...]}` |
+| `analyze` | `path`, `input_format`, `meter`, `value_scale`, `pickup`, `layers`, `model_plan`, `text` | `{warnings, document, document_path, ...}` |
+| `corpus` | `dir`, `out`, `resume` | `{pieces, analyzed, skipped, failed, out}` |
+| `style-profile` | `dir`, `name`, `out` | `{path, name, pieces, stale}` |
 | `versions` | none | the members of `workshop_status` except `data_dir` |
 
 ### composer
@@ -55,3 +58,19 @@ Failures: an unreadable `like` (or unreadable `numerals`) is `URSATZ_ERR_REQUEST
 ### versions
 
 What `workshop_status` answers, without `data_dir`: `composer_version`, `api_version`, `producer_key`, `composition_key`, `plan_format_version`, `analyzer_version`, `analyzer_producer_key`.
+
+### analyze
+
+One file analyzed as the Analyzer's command line did, with the outputs as text in the answer (the tool writes no file). `path` is required and is used as given: the document's `source` names it as the command line's did. `input_format` is `auto`, `midi` or `musicxml`. The notation reading: `meter` (`3/4`), `value_scale` (`2`, `1/2`) and `pickup` (`1/4`). `layers` and `model_plan` are booleans. `text` is an object `{first_measure, last_measure, title}`, each member optional (0 and 0, the default, export the whole piece).
+
+The reply: `warnings` (the importer's warning lines); without `text`, `document` (the analysis document's text) and `document_path` (where the command line wrote it: `<stem>.analysis.json` beside the input); with `layers`, `realization` and `reading` (texts); with `model_plan`, `plan` (the plan file's text, producer `ursatz-analyzer`); with `text`, `text` (the text export) and no document.
+
+Failures: an import that fails is `URSATZ_ERR_FORMAT` with the importer's message, path `/params/path`; a notation reading that does not apply is `URSATZ_ERR_REQUEST`, `the pickup must be shorter than one measure of the meter` (path `/params/pickup`) or `a scaled time is too large` (`/params/value_scale`); an analysis that fails answers its status (`URSATZ_ERR_ALLOC` or `URSATZ_ERR_INTERNAL`), `the analysis failed`, path `""`; a text range with no measure is `URSATZ_ERR_REQUEST`, path `/params/text`; a model plan that cannot be made is `URSATZ_ERR_UNSATISFIABLE` with the reading's message.
+
+### corpus
+
+Analyzes every piece of the folder `dir` into `out` (default `<dir>/.ursatz-corpus`, the tool's one output); `resume` skips what is unchanged. The reply: `pieces`, one `{state, path, error?, import_message?, warnings}` per piece in run order (`state` is `analyzed`, `skipped` or `failed`), the counts `analyzed`, `skipped`, `failed`, and `out`. A run that fails answers the Analyzer's status and message.
+
+### style-profile
+
+The style model of a corpus output folder: `dir` (required), `name` (required, not empty) and `out` (default `<dir>/style-model.json`). The reply: `path`, `name`, `pieces` (how many pieces it counted) and `stale` (the analyzed pieces whose document another version wrote).
