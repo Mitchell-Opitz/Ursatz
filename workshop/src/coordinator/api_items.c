@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "coordinator/dispatch.h"
+#include "items/views.h"
 
 /* The project and item queries (R-646): the motifs, themes and pieces a person composes, their versions and files. */
 
@@ -123,6 +124,62 @@ WORKSHOP_HANDLER(workshop_q_item_version) {
         cJSON_AddItemToObject(object, "layers", layers);
     }
     return URSATZ_OK;
+}
+
+/* A view of a version of an item (items/views.h): params id, version (the current one when absent), view (default summary), measures ({first,
+ * last}) and section. "json" answers what item.version answers; the others {id, version, view, text}. */
+WORKSHOP_HANDLER(workshop_q_item_view) {
+    const char *id = NULL;
+    if (!workshop_param_require_string(call->params, "id", &id, error)) {
+        return URSATZ_ERR_REQUEST;
+    }
+    long long number = 0;
+    const cJSON *version_item = cJSON_GetObjectItemCaseSensitive(call->params, "version");
+    if (version_item && !cJSON_IsNull(version_item) && !read_version(call->params, "version", VERSION_MAX, &number)) {
+        return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "/params/version", "version not found");
+    }
+    bool bad = false;
+    const char *view = workshop_param_string(call->params, "view", &bad);
+    if (bad) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/view", "view is a string");
+    }
+    view = view && view[0] ? view : "summary";
+    TextViewLimits limits;
+    UrsatzStatus status = workshop_view_limits(call->params, &limits, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    if (strcmp(view, "json") == 0) {
+        if (number == 0) {
+            cJSON *meta = NULL;
+            if (workshop_material_item_get(id, &meta, NULL) != URSATZ_OK) {
+                return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "/params/id", "item not found");
+            }
+            const cJSON *current = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
+            number = cJSON_IsNumber(current) ? (long long)current->valuedouble : 1;
+            cJSON_Delete(meta);
+        }
+        cJSON *own = cJSON_CreateObject();
+        if (!own || !cJSON_AddStringToObject(own, "id", id) || !cJSON_AddNumberToObject(own, "version", (double)number)) {
+            cJSON_Delete(own);
+            return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+        }
+        WorkshopCall again = *call;
+        again.params = own;
+        status = workshop_q_item_version(&again, reply, error);
+        cJSON_Delete(own);
+        return status;
+    }
+    char *text = NULL;
+    status = workshop_view_item(id, (int)number, view, &limits, &text, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    cJSON *object = workshop_reply_object(reply);
+    bool ok = object && cJSON_AddStringToObject(object, "id", id) && cJSON_AddStringToObject(object, "view", view) &&
+              cJSON_AddStringToObject(object, "text", text);
+    free(text);
+    return ok ? URSATZ_OK : workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 
 /* The Analyzer's text export of a motif, theme or piece (text/plain): params id and version (the current one when absent). */

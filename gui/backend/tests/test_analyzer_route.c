@@ -692,7 +692,11 @@ static void check_piece_export(const char *id, const char *expected_title) {
   check(test_http_status(whole) == 200, "export answers 200");
   check(whole && strstr(whole, "Content-Type: text/plain; charset=utf-8") != NULL, "export is text/plain; charset=utf-8");
   const char *body = test_http_body(whole);
+  check(strncmp(body, "ursatz-text 1 view reading piece:", 33) == 0, "export starts with the view frame");
+  body = strchr(body, '\n') ? strchr(body, '\n') + 1 : body; /* the lines between the frame's first line and its trailing # lines are the export */
   check(strncmp(body, "# Ursatz export v2: piece\n", 26) == 0, "export starts with the header line");
+  check(strstr(body, "\n# leaves out: nothing the analysis document holds; the notes are the import's\n# expand: ursatz show piece:") != NULL,
+        "export ends with the frame's lines");
   snprintf(what, sizeof(what), "title: %s\n", expected_title);
   check(strstr(body, what) != NULL, "export names the piece by its file name without the extension");
   check(strstr(body, "\nm1 4/4\n") != NULL && strstr(body, "\nm2\n") != NULL, "the whole export has measures 1 and 2");
@@ -702,6 +706,7 @@ static void check_piece_export(const char *id, const char *expected_title) {
   char *ranged = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   body = test_http_body(ranged);
   check(test_http_status(ranged) == 200, "export of a range answers 200");
+  check(strstr(body, "--measures 2-2") != NULL, "the range is in the frame's expand line");
   check(strstr(body, "\nm2\n") != NULL && strstr(body, "\nm1 ") == NULL && strstr(body, "\nm3\n") == NULL,
         "a range lists only the measures in it");
   free(ranged);

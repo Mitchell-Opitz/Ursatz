@@ -23,6 +23,24 @@
 UrsatzStatus workshop_view_input(const char *path, const char *text, const char *view, const TextViewLimits *limits, cJSON **out,
                                  UrsatzError *error);
 
+/*
+ * The views of a version of an item: params of item.view are read by the handler. Reads the version folder's plan.json, realization.json and
+ * readings/composer.json (the ones present); `view` is a view of text_view.h, "full" (each present layer's text, plan first, joined by a
+ * blank line; with no layer the version's body as kind json) or "json" (answered by the handler). *text is the answer's text. A version
+ * with no layer refuses every view but full with URSATZ_ERR_NOT_FOUND at "/params/view": "this version holds no plan, realization or
+ * reading". An item or version that is not there is NOT_FOUND.
+ */
+UrsatzStatus workshop_view_item(const char *id, int version, const char *view, const TextViewLimits *limits, char **text, UrsatzError *error);
+
+/*
+ * The views of a library piece: summary, structure, harmony and part:<name> read the piece's readings/analyzer.json and realization.json
+ * (R-644), full gives their texts joined by a blank line, and reading is the Analyzer's text export framed as a view (`first` and `last`
+ * its measure range, 0 and 0 for the whole piece; `title` its title, NULL for the file name). A piece analyzed before the layers were stored
+ * refuses the others with URSATZ_ERR_NOT_FOUND at "/params/view": "re-analyze the piece to store its layers".
+ */
+UrsatzStatus workshop_view_piece(const char *id, const char *view, const TextViewLimits *limits, const char *title, char **text,
+                                 UrsatzError *error);
+
 /* The range params of a view call: `measures` ({first, last}, either may be absent) and `section`. */
 UrsatzStatus workshop_view_limits(const cJSON *params, TextViewLimits *out, UrsatzError *error);
 

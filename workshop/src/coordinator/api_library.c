@@ -4,6 +4,7 @@
 
 #include "base/events_hub.h"
 #include "coordinator/dispatch.h"
+#include "items/views.h"
 
 /* The Library queries (R-646): the pieces a person uploaded, as the GUI lists, opens, exports and plays them. */
 
@@ -192,58 +193,48 @@ WORKSHOP_HANDLER(workshop_q_library_document) {
     return workshop_reply_member(reply, "sections", tree, error);
 }
 
-/* A measure number of the export range: digits only, at most 6. */
-static bool parse_measure(const char *text, int *out) {
-    long long value = 0;
-    if (!workshop_parse_whole(text, 6, &value)) {
-        return false;
-    }
-    *out = (int)value;
-    return true;
-}
-
-/* The Analyzer's text export of the piece (text/plain): params id, from and to (measure numbers, both optional). */
-WORKSHOP_HANDLER(workshop_q_library_export) {
+/* A view of a library piece (items/views.h): params id, view (default summary), measures ({first, last}), section and title. The reading view is
+ * the Analyzer's text export of the piece (measures and title as the export took them), framed as a view. */
+WORKSHOP_HANDLER(workshop_q_library_view) {
     const char *id = NULL;
     if (!workshop_param_require_string(call->params, "id", &id, error)) {
         return URSATZ_ERR_REQUEST;
     }
-    const char *from_text = first_text(call->params, "from");
-    const char *to_text = first_text(call->params, "to");
-    int first = 0;
-    int last = 0;
-    static const char *const kBadRange = "from and to must be measure numbers, from not after to";
-    if ((from_text && !parse_measure(from_text, &first)) || (to_text && !parse_measure(to_text, &last))) {
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/from", "%s", kBadRange);
+    bool bad = false;
+    const char *view = workshop_param_string(call->params, "view", &bad);
+    const char *title = workshop_param_string(call->params, "title", &bad);
+    if (bad) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/view", "view and title are strings");
     }
-    if (from_text || to_text) {
-        if (!from_text) {
-            first = 1;
+    view = view && view[0] ? view : "summary";
+    TextViewLimits limits;
+    UrsatzStatus status = workshop_view_limits(call->params, &limits, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    if (strcmp(view, "json") == 0) {
+        return workshop_q_library_piece(call, reply, error);
+    }
+    if (strcmp(view, "reading") == 0 && (limits.first_measure > 0 || limits.last_measure > 0)) {
+        if (limits.first_measure == 0) {
+            limits.first_measure = 1;
         }
-        if (!to_text) {
-            last = 999999;
+        if (limits.last_measure == 0) {
+            limits.last_measure = 999999;
         }
-        if (first > last) {
-            return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/from", "%s", kBadRange);
+        if (limits.first_measure > limits.last_measure) {
+            return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/measures", "measures must be measure numbers, first not after last");
         }
     }
     char *text = NULL;
-    UrsatzStatus result = workshop_analysis_get_piece_export(piece_dir(), id, first, last, &text);
-    if (result != URSATZ_OK) {
-        switch (result) {
-            case URSATZ_ERR_NOT_FOUND:
-                return workshop_call_fail(error, result, "", "piece not found");
-            case URSATZ_ERR_FORMAT:
-                return workshop_call_fail(error, result, "", "could not import the stored source");
-            case URSATZ_ERR_REQUEST:
-                return workshop_call_fail(error, result, "", "no measure in that range");
-            default:
-                return workshop_call_fail(error, URSATZ_ERR_INTERNAL, "", "failed to export the analysis");
-        }
+    status = workshop_view_piece(id, view, &limits, title, &text, error);
+    if (status != URSATZ_OK) {
+        return status;
     }
-    UrsatzStatus replied = workshop_reply_text(reply, text, 0, "text/plain; charset=utf-8", error);
+    cJSON *object = workshop_reply_object(reply);
+    bool ok = object && cJSON_AddStringToObject(object, "view", view) && cJSON_AddStringToObject(object, "text", text);
     free(text);
-    return replied;
+    return ok ? URSATZ_OK : workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 
 /* The piece's score as MusicXML (application/xml). */
