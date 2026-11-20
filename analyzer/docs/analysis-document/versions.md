@@ -2,6 +2,8 @@
 
 Every `schema_version` of the analysis document and what changed. Back to the [docs index](../README.md) and the [analysis document](../analysis-document.md).
 
+The schema is one file, `schema/analysis-document.schema.json`, edited in place when the version changes: its `$id` and file name carry no version, and git keeps the file as it was at each version. Add the new entry here, change the `schema_version` const of the schema and `ANALYZER_DOCUMENT_SCHEMA_VERSION` together, and regenerate the snapshots.
+
 - **13**: A key region's `mode` (`"major"` or `"minor"`) becomes `material`, the id of the pitch material (K1) the key reads its scale
   from, and a motive's `features.minor` (a boolean) becomes `features.material`, the same id for the key region the first note
   starts in. `key_signatures[].mode_hint` stays: it is the file's own word. A renamed field and a changed value are breaking

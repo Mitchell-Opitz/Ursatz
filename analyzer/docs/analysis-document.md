@@ -237,5 +237,6 @@ Each claim section lives in its own file.
 - Additive changes keep the version: new optional fields, new fields inside a claim, new `method`
   values, or filling a placeholder section.
 - Consumers should ignore fields they do not recognize.
+- The schema is one file, `schema/analysis-document.schema.json`, edited in place; git keeps each version of it. Its `schema_version` const and `ANALYZER_DOCUMENT_SCHEMA_VERSION` are the only version marks, and no test writes the number by hand (a test that writes a document takes it from the constant). A version bump touches the schema, the constant, [versions.md](analysis-document/versions.md), the builder of the area and its docs, and the snapshots (R-669).
 
 The history of every version is in [versions.md](analysis-document/versions.md).

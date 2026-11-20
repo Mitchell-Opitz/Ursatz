@@ -2,6 +2,10 @@
 
 The Analyzer's changes by phase. Back to the [docs index](README.md).
 
+## Unreleased (phase P65)
+
+The analysis document schema is one file, `schema/analysis-document.schema.json`, edited in place (R-669; it was `analysis-document.v13.schema.json`), and no test names the document version by a literal: they take it from `ANALYZER_DOCUMENT_SCHEMA_VERSION`. No byte of a document changes. The text export is the reading view of a piece: `ursatz analyze` frames it with `ursatz-text 1 view reading <path>` and the trailing `# leaves out:` and `# expand:` lines (the lines between are unchanged).
+
 ## Unreleased (phase P64)
 
 The Analyzer's command line is `ursatz` (R-658): `ursatz-analyzer`, its `export`, `--similar`, `--compare-styles` and `--link-motives` modes and `src/cli/` are gone. `ursatz analyze` writes the document (and, with `--view text`, the text export), `ursatz corpus` and `ursatz style-profile` run the corpus and the style profile ([cli docs](../../cli/docs/analyze.md)).
