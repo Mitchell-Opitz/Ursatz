@@ -1,8 +1,6 @@
 #ifndef URSATZ_TEXT_TEXT_VIEW_H
 #define URSATZ_TEXT_TEXT_VIEW_H
 
-#include <cJSON.h>
-
 #include "plan/plan.h"
 #include "reading/reading.h"
 #include "realization/work.h"

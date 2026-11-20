@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <cJSON.h>
-
 #include "text/text.h"
+
+/* cJSON.h declares it; a header of this group needs only the name. */
+typedef struct cJSON cJSON;
 
 /*
  * The tree form of Ursatz Text (R-662, grammar 1): any JSON object as indented lines, and back. The rules, with one example each, are

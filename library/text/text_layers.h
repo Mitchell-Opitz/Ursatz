@@ -1,11 +1,12 @@
 #ifndef URSATZ_TEXT_TEXT_LAYERS_H
 #define URSATZ_TEXT_TEXT_LAYERS_H
 
-#include <cJSON.h>
-
 #include "plan/plan_json.h"
 #include "text/text.h"
 #include "theory/knowledge/knowledge_snapshot.h"
+
+/* cJSON.h declares it; a header of this group needs only the name. */
+typedef struct cJSON cJSON;
 
 /*
  * The four layer kinds as Ursatz Text (R-662): a plan, a reading, a realization (with its scoring assignments, which the realization

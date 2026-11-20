@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cJSON.h>
+
 #include <common/strings.h>
 
 #include "plan/plan.h"

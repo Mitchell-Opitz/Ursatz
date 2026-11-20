@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cJSON.h>
+
 #include <common/strings.h>
 
 /* ---- shared helpers ------------------------------------------------------------------------------------------------------------- */
