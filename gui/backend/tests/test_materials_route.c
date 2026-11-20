@@ -424,7 +424,7 @@ static void test_motif_analysis_error(void) {
   int before = saved_version_count(item);
   snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", item);
   answer = test_http_json(PORT, "POST", path, "", &status);
-  check(status == 400 && strstr(string_of(answer, "error"), "not a chord") != NULL, "a refused re-analyze is 400 with the message");
+  check(status == 422 && strstr(string_of(answer, "error"), "not a chord") != NULL, "a refused re-analyze is 422 with the message");
   check(strcmp(string_of(answer, "path"), "/harmony") == 0, "a refused re-analyze names the member at fault");
   cJSON_Delete(answer);
   check(saved_version_count(item) == before, "a refused re-analyze writes no version");
@@ -488,7 +488,7 @@ static void test_motif_forms(void) {
   cJSON_Delete(saved);
 
   saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "\"C major\"", "1;rm", &status);
-  check(status == 400, "a pickup that is not beats is 400");
+  check(status == 422, "a pickup that is not beats is 422");
   cJSON_Delete(saved);
 }
 
@@ -556,7 +556,7 @@ static void test_motif_import(void) {
   cJSON_Delete(answer);
 
   answer = import_exchange(file, size, "?meter=nope", &status);
-  check(status == 400, "a bad meter is 400");
+  check(status == 422, "a bad meter is 422");
   cJSON_Delete(answer);
 
   answer = test_http_json(PORT, "GET", "/api/materials/motifs/import", NULL, &status);
@@ -790,7 +790,7 @@ static void test_motif_render(void) {
   cJSON_Delete(answer);
 
   answer = render_exchange("D minor", "H major", "0", &status);
-  check(status == 400, "a render key that is not a key is 400");
+  check(status == 422, "a render key that is not a key is 422");
   cJSON_Delete(answer);
 
   char project[64] = "";
@@ -815,7 +815,7 @@ static void test_motif_render(void) {
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=nope", id);
   response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-  check(response && strncmp(response, "HTTP/1.1 400", 12) == 0, "a bad key on a version's score is 400");
+  check(response && strncmp(response, "HTTP/1.1 422", 12) == 0, "a bad key on a version's score is 422");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/9/score", id);
   response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
@@ -1016,7 +1016,7 @@ static void test_harmony(void) {
 
   snprintf(request, sizeof(request), shape, project, "\"not a chord\"");
   saved = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
-  check(status == 400, "harmony the Composer cannot read refuses the save");
+  check(status == 422, "harmony the Composer cannot read refuses the save");
   cJSON_Delete(saved);
   snprintf(request, sizeof(request), shape, project, "5");
   saved = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
@@ -1703,23 +1703,23 @@ static void test_random_motifs(void) {
   check(status == 400, "an unknown style is refused");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"four\"}", &status);
-  check(status == 400, "a bad meter is refused");
+  check(status == 422, "a bad meter is refused");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
-  check(status == 400, "a church mode is refused");
+  check(status == 422, "a church mode is refused");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "POST", "/api/materials/render",
                          "{\"form\":\"melody\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
                          "\"pickup\":\"0\"}",
                          &status);
-  check(status == 400 && string_of(answer, "path")[0] == '/', "a form the Composer does not know is refused with its path");
+  check(status == 422 && string_of(answer, "path")[0] == '/', "a form the Composer does not know is refused with its path");
   cJSON_Delete(answer);
 
   answer = test_http_json(PORT, "POST", "/api/materials/render",
                          "{\"form\":\"full\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
                          "\"pickup\":\"0\",\"tempo\":500}",
                          &status);
-  check(status == 400 && strcmp(string_of(answer, "path"), "/tempo") == 0, "a tempo above 400 is refused at /tempo");
+  check(status == 422 && strcmp(string_of(answer, "path"), "/tempo") == 0, "a tempo above 400 is refused at /tempo");
   cJSON_Delete(answer);
 
   answer = test_http_json(PORT, "POST", "/api/materials/render",
@@ -1941,7 +1941,7 @@ static const ReplyCase kReplyCases[] = {
     {"analyze_contour", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"contour\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"0 2 1 3\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
     {"analyze_pickup", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"G3:q C4:q E4:q G4:q\",\"pickup\":\"1\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
     {"analyze_accompaniment", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"C3:q E3:q G3:q E3:q\",\"pickup\":\"0\",\"role\":\"accompaniment\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
-    {"analyze_bad_harmony", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"harmony\":\"not a chord\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 400, ""},
+    {"analyze_bad_harmony", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"harmony\":\"not a chord\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 422, ""},
     {"analyze_refused_notes", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":null,\"meter\":\"4/4\",\"notes\":\"zzz\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 400, ""},
     {"analyze_refused_pickup", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"C4:q D4:q\",\"pickup\":\"9/4\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
     {"import_key", "POST", "/api/materials/motifs/import?key=D%20minor", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
@@ -1954,15 +1954,15 @@ static const ReplyCase kReplyCases[] = {
     {"render_harmony_features", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"features\":[{\"first\":0,\"label\":\"a\",\"last\":2}],\"form\":\"full\",\"harmony\":\"I V@2\",\"key\":\"C minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"C minor\",\"role\":\"melodic\"}", NULL, 200, "musicxml,ok,playback"},
     {"render_rhythm", "POST", "/api/materials/render", "{\"degrees\":\"x:q x:q x:h\",\"form\":\"rhythm\",\"key\":\"C major\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"C major\",\"role\":\"melodic\"}", NULL, 200, "musicxml,ok,playback"},
     {"render_accompaniment", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"D minor\",\"role\":\"accompaniment\"}", NULL, 200, "musicxml,ok,playback"},
-    {"render_bad_key", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"H major\",\"role\":\"melodic\"}", NULL, 400, ""},
+    {"render_bad_key", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"H major\",\"role\":\"melodic\"}", NULL, 422, ""},
     {"operations", "GET", "/api/materials/variant-operations", NULL, NULL, 200, "ok,operations"},
     {"recognize", "POST", "/api/materials/recognize", "{\"source\":{\"item\":\"@source\",\"version\":1},\"target\":{\"item\":\"@target\",\"version\":1}}", NULL, 200, "chain,changed,derivation,distance,found,kept,ok,remoteness"},
     {"recognize_self", "POST", "/api/materials/recognize", "{\"source\":{\"item\":\"@source\",\"version\":1},\"target\":{\"item\":\"@source\",\"version\":1}}", NULL, 200, "chain,changed,derivation,distance,found,kept,ok,remoteness"},
     {"random_0", "POST", "/api/materials/motifs/random", "{\"count\":3,\"form\":\"full\",\"meter\":\"3/4\",\"mode\":\"minor\",\"seed\":5}", NULL, 200, "motives,ok,seed"},
     {"random_1", "POST", "/api/materials/motifs/random", "{\"count\":1,\"form\":\"rhythm\",\"key\":\"D major\",\"meter\":\"4/4\",\"mode\":\"major\",\"seed\":2}", NULL, 200, "motives,ok,seed"},
     {"random_3", "POST", "/api/materials/motifs/random", "{\"count\":1,\"form\":\"contour\",\"meter\":\"4/4\",\"mode\":\"major\",\"role\":\"accompaniment\",\"seed\":9}", NULL, 200, "motives,ok,seed"},
-    {"random_4", "POST", "/api/materials/motifs/random", "{\"meter\":\"four\",\"mode\":\"major\"}", NULL, 400, ""},
-    {"random_5", "POST", "/api/materials/motifs/random", "{\"meter\":\"4/4\",\"mode\":\"dorian\"}", NULL, 400, ""},
+    {"random_4", "POST", "/api/materials/motifs/random", "{\"meter\":\"four\",\"mode\":\"major\"}", NULL, 422, ""},
+    {"random_5", "POST", "/api/materials/motifs/random", "{\"meter\":\"4/4\",\"mode\":\"dorian\"}", NULL, 422, ""},
     {"random_6", "POST", "/api/materials/motifs/random", "{\"count\":99,\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 400, ""},
     {"status", "GET", "/api/composer/status", NULL, NULL, 200, "available,ok,version"},
 };
@@ -2066,7 +2066,7 @@ static void test_served_defaults_and_draws(void) {
 
   cJSON *refused = test_http_json(PORT, "POST", "/api/materials/motifs/random",
                                  "{\"mode\":\"random\",\"meter\":\"random\",\"seed\":4294967296}", &status);
-  check(status == 400 && !ok_true(refused) && strcmp(string_of(refused, "path"), "/seed") == 0,
+  check(status == 422 && !ok_true(refused) && strcmp(string_of(refused, "path"), "/seed") == 0,
         "a seed over the Composer's limit is refused by the Composer at /seed");
   cJSON_Delete(refused);
 
@@ -2149,7 +2149,7 @@ static void test_validation(void) {
                          "{\"type\":\"motif\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q\","
                          "\"meter\":\"4/4\",\"key\":null,\"pickup\":\"0\",\"harmony\":\"I V\"}}}",
                          &status);
-  check(status == 400 && strcmp(string_of(answer, "path"), "/harmony") == 0, "a harmony the Composer cannot read is refused at /harmony");
+  check(status == 422 && strcmp(string_of(answer, "path"), "/harmony") == 0, "a harmony the Composer cannot read is refused at /harmony");
   cJSON_Delete(answer);
 
   /* A key spelled as the GUI did (C# major), as a motif stored before motifs moved to C holds it: the Composer's key
@@ -2185,7 +2185,7 @@ static void test_validation(void) {
   check(draft != NULL, "a theme whose meter the Composer refuses still saves");
   snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
   answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
-  check(status == 400 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/meter") == 0,
+  check(status == 422 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/meter") == 0,
         "validate refuses that meter at /meter");
   cJSON_Delete(answer);
   free(draft);
@@ -2217,7 +2217,7 @@ static void test_validation(void) {
   free(bad_key);
   snprintf(request, sizeof(request), "{\"type\":\"piece\",\"body\":%s}", body);
   answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
-  check(status == 400 && strcmp(string_of(answer, "path"), "/key") == 0, "validate refuses that key at /key");
+  check(status == 422 && strcmp(string_of(answer, "path"), "/key") == 0, "validate refuses that key at /key");
   cJSON_Delete(answer);
 
   /* A section's region and harmony (R-610): kept in the request, and refused when they are not the shapes the route reads. */
@@ -2232,11 +2232,11 @@ static void test_validation(void) {
       {"a region by relation", "\"region\":{\"relation\":\"omt.relation.dominant\",\"anchor\":\"home\"},", 200, true},
       {"a schema harmony", "\"harmony\":{\"schema\":\"romanesca\"},", 200, true},
       {"a chords harmony", "\"harmony\":{\"chords\":[{\"bar\":1,\"text\":\"I V@2\"}]},", 200, true},
-      {"a region that is a number", "\"region\":5,", 400, false},
+      {"a region that is a number", "\"region\":5,", 422, false},
       {"a region with half of a pair", "\"region\":{\"relation\":\"omt.relation.dominant\"},", 200, false},
-      {"a harmony with two members", "\"harmony\":{\"schema\":\"romanesca\",\"cells\":1},", 400, false},
-      {"a harmony with cells of 0", "\"harmony\":{\"progression\":\"i V\",\"cells\":0},", 400, false},
-      {"a chord at bar 0", "\"harmony\":{\"chords\":[{\"bar\":0,\"text\":\"I\"}]},", 400, false},
+      {"a harmony with two members", "\"harmony\":{\"schema\":\"romanesca\",\"cells\":1},", 422, false},
+      {"a harmony with cells of 0", "\"harmony\":{\"progression\":\"i V\",\"cells\":0},", 422, false},
+      {"a chord at bar 0", "\"harmony\":{\"chords\":[{\"bar\":0,\"text\":\"I\"}]},", 422, false},
   };
   for (size_t i = 0; i < sizeof(placed) / sizeof(placed[0]); i++) {
     snprintf(body, sizeof(body),

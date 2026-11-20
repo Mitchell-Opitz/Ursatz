@@ -31,7 +31,7 @@ const char *ursatz_gui_reason_phrase(int status);
 /* Sends body as a 200 application/json answer. */
 void ursatz_gui_send_json(struct mg_connection *conn, const char *body);
 
-/* Sends {"ok":false,"message":...} with status. The message goes through cJSON, so it is escaped. Returns status. */
+/* The failure envelope with status and the message as its error. Returns status. */
 int ursatz_gui_send_failure(struct mg_connection *conn, int status, const char *message);
 
 /* Sends object as the answer with status and frees it (a failure 500 when it cannot be printed). Returns status. */
@@ -71,10 +71,12 @@ int ursatz_gui_answer_command(struct mg_connection *conn, const char *name, cons
 UrsatzStatus ursatz_gui_run_command(const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
                                     UrsatzError *error);
 
-/* The usual failures: the status of the table (the path of a request failure ignored) with {"ok": false, "message"} (message) or
- * {"ok": false, "error", "path"?} (error). B12 gives every route the one envelope. */
-int ursatz_gui_failed_message(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
-int ursatz_gui_failed_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
+/* The failure envelope (R-647): {"ok": false, "error": <message>, "code": <status name>, "path": <pointer, when set>}. code is the name of the status
+ * a failure with that HTTP status stands for when NULL; path may be NULL. Returns status. */
+int ursatz_gui_send_failure_at(struct mg_connection *conn, int status, const char *message, const char *code, const char *path);
+
+/* A failed workshop call as the envelope, with the HTTP status of ursatz_gui_http_status (a request refused at a member is 422). */
+int ursatz_gui_failed(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
 
 /* The request's query variables as params with the path parameters given as name/value pairs after them (NULL ends the list). */
 cJSON *ursatz_gui_request_params(struct mg_connection *conn, ...);

@@ -63,57 +63,57 @@ static int motifs_import_motif(struct mg_connection *conn) {
     return status;
   }
   WorkshopBytes file = {bytes, size, NULL};
-  status = ursatz_gui_answer_query(conn, "composer.import-motif", ursatz_gui_request_params(conn, NULL), &file, failed_material_error, true);
+  status = ursatz_gui_answer_query(conn, "composer.import-motif", ursatz_gui_request_params(conn, NULL), &file, ursatz_gui_failed, true);
   free(bytes);
   return status;
 }
 
 /* POST /api/materials/render {form, degrees, meter, key?, pickup?, render_key?, tempo?, role?}: nothing is saved. */
 static int motifs_render(struct mg_connection *conn) {
-  return query_with_body(conn, "composer.render", failed_material_error, true, NULL);
+  return query_with_body(conn, "composer.render", ursatz_gui_failed, true, NULL);
 }
 
 /* GET /api/materials/variant-operations: the Composer's operation list, as the Composer API gives it. */
 static int motifs_variant_operations(struct mg_connection *conn) {
-  return QUERY(conn, "composer.variant-operations", failed_material_error, false, NULL);
+  return QUERY(conn, "composer.variant-operations", ursatz_gui_failed, false, NULL);
 }
 
 
 /* POST /api/materials/items/<id>/variants {chain?, count?, seed?, functions?, distance?} and .../each-op {seed?}: candidates from the
    item's current degrees; nothing is saved. The answer is the job. */
 static int motifs_variants(struct mg_connection *conn, const char *id) {
-  return query_with_body(conn, "item.variants", failed_material_error, false, id);
+  return query_with_body(conn, "item.variants", ursatz_gui_failed, false, id);
 }
 
 static int motifs_each_op(struct mg_connection *conn, const char *id) {
-  return query_with_body(conn, "item.each-op", failed_material_error, false, id);
+  return query_with_body(conn, "item.each-op", ursatz_gui_failed, false, id);
 }
 
 /* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and stores the
    result as a new version. Runs on the job queue. */
 static int motifs_reroll(struct mg_connection *conn, const char *id) {
-  return command_with_optional_body(conn, "item.reroll", id, failed_material_error);
+  return command_with_optional_body(conn, "item.reroll", id, ursatz_gui_failed);
 }
 
 /* POST .../items/<id>/{variants/save, flag, promote, link-form}: a body in, the item out. */
 
 static int motifs_item_command(struct mg_connection *conn, const char *id, const char *command) {
-  return command_with_body(conn, command, id, failed_material_error);
+  return command_with_body(conn, command, id, ursatz_gui_failed);
 }
 
 /* POST /api/materials/recognize {source: {item, version}, target: {item, version}}: how the target derives from the source. */
 static int motifs_recognize(struct mg_connection *conn) {
-  return query_with_body(conn, "composer.recognize", failed_material_error, true, NULL);
+  return query_with_body(conn, "composer.recognize", ursatz_gui_failed, true, NULL);
 }
 
 /* GET /api/materials/items/<id>/variant-tree: the item and, recursively, every motif derived from it. */
 static int motifs_variant_tree(struct mg_connection *conn, const char *id) {
-  return QUERY(conn, "item.variant-tree", failed_material_error, false, "id", id);
+  return QUERY(conn, "item.variant-tree", ursatz_gui_failed, false, "id", id);
 }
 
 /* GET /api/materials/items/<id>/op-checks: the marks of a motif from Try every operation, {"checks": {...}} (R-190). */
 static int motifs_op_checks_get(struct mg_connection *conn, const char *id) {
-  return QUERY(conn, "item.op-checks", failed_material, false, "id", id);
+  return QUERY(conn, "item.op-checks", ursatz_gui_failed, false, "id", id);
 }
 
 /* The failures of the op-checks write: the store's message with the status of the table, the path of a refusal counted (422). */
@@ -129,7 +129,7 @@ static int motifs_op_checks_put(struct mg_connection *conn, const char *id) {
 /* POST /api/materials/motifs/random {material, meter, key?, form?, style_id?, count?, seed?}: random motives from the Composer; nothing
    is saved. The answer is the Composer's document plus "ok". */
 static int motifs_random_motifs(struct mg_connection *conn) {
-  return query_with_body(conn, "composer.random-motifs", failed_material_error, true, NULL);
+  return query_with_body(conn, "composer.random-motifs", ursatz_gui_failed, true, NULL);
 }
 
 /* POST /api/materials/items/validate {type: "motif"|"theme"|"piece", body}: the Composer reads the request the body
@@ -137,7 +137,7 @@ static int motifs_random_motifs(struct mg_connection *conn) {
    Composer's defaults filled, {"ok":true,"complete":false,"message"} when the body is not composable yet, or the
    refusal (400) with the request member at fault as "path". */
 static int motifs_validate(struct mg_connection *conn) {
-  return query_with_body(conn, "item.validate", failed_material_error, false, NULL);
+  return query_with_body(conn, "item.validate", ursatz_gui_failed, false, NULL);
 }
 
 #define ARG(args, i) ((args)->values[i])

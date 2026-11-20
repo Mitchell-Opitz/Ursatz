@@ -21,23 +21,23 @@ static int handle_start_run(struct mg_connection *conn) {
     return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
   /* 202 {"ok", "run", "job"}: the page follows the job (BackendJobs.runJob) and gets {"ok", "run"} when it ends. */
-  return ursatz_gui_answer_command(conn, "links.run", "", body, NULL, ursatz_gui_failed_message, false);
+  return ursatz_gui_answer_command(conn, "links.run", "", body, NULL, ursatz_gui_failed, false);
 }
 
 static int handle_list_runs(struct mg_connection *conn) {
-  return ursatz_gui_answer_query(conn, "links.list", ursatz_gui_request_params(conn, NULL), NULL, ursatz_gui_failed_message, false);
+  return ursatz_gui_answer_query(conn, "links.list", ursatz_gui_request_params(conn, NULL), NULL, ursatz_gui_failed, false);
 }
 
 static int handle_get_run(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_query(conn, "links.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed_message, false);
+  return ursatz_gui_answer_query(conn, "links.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed, false);
 }
 
 static int handle_delete_run(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "links.delete", id, NULL, NULL, ursatz_gui_failed_message, false);
+  return ursatz_gui_answer_command(conn, "links.delete", id, NULL, NULL, ursatz_gui_failed, false);
 }
 
 static int handle_piece_links(struct mg_connection *conn, const char *piece_id) {
-  return ursatz_gui_answer_query(conn, "links.piece", ursatz_gui_request_params(conn, "id", piece_id, NULL), NULL, ursatz_gui_failed_message,
+  return ursatz_gui_answer_query(conn, "links.piece", ursatz_gui_request_params(conn, "id", piece_id, NULL), NULL, ursatz_gui_failed,
                                  false);
 }
 

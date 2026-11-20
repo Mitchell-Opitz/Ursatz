@@ -27,29 +27,29 @@ static int failed_export(struct mg_connection *conn, UrsatzStatus status, const 
 /* --- projects ------------------------------------------------------------ */
 
 static int handle_list_projects(struct mg_connection *conn) {
-  return QUERY(conn, "project.list", failed_material, false, NULL);
+  return QUERY(conn, "project.list", ursatz_gui_failed, false, NULL);
 }
 
 static int handle_create_project(struct mg_connection *conn) {
-  return command_with_body(conn, "project.create", "", failed_material_cmd);
+  return command_with_body(conn, "project.create", "", ursatz_gui_failed);
 }
 
 static int handle_get_project(struct mg_connection *conn, const char *id) {
-  return QUERY(conn, "project.get", failed_material, false, "id", id);
+  return QUERY(conn, "project.get", ursatz_gui_failed, false, "id", id);
 }
 
 static int handle_patch_project(struct mg_connection *conn, const char *id) {
-  return command_with_body(conn, "project.update", id, failed_material_cmd);
+  return command_with_body(conn, "project.update", id, ursatz_gui_failed);
 }
 
 static int handle_delete_project(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "project.delete", id, NULL, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, "project.delete", id, NULL, NULL, ursatz_gui_failed, false);
 }
 
 /* --- items and versions -------------------------------------------------- */
 
 static int handle_list_items(struct mg_connection *conn) {
-  return QUERY(conn, "item.list", failed_material, false, NULL);
+  return QUERY(conn, "item.list", ursatz_gui_failed, false, NULL);
 }
 
 /* ---- motif import from a MIDI file ------------------------------------ */
@@ -58,16 +58,16 @@ static int handle_list_items(struct mg_connection *conn) {
 
 
 static int handle_create_item(struct mg_connection *conn) {
-  return command_with_body(conn, "item.create", "", failed_material_cmd);
+  return command_with_body(conn, "item.create", "", ursatz_gui_failed);
 }
 
 /* The item answer: {"ok":true,"item":meta,"body":current,"layers":...,"uses_status":[...],"used_by":[...],"subjects":[...]}. */
 static int handle_get_item(struct mg_connection *conn, const char *id) {
-  return QUERY(conn, "item.get", failed_material, false, "id", id);
+  return QUERY(conn, "item.get", ursatz_gui_failed, false, "id", id);
 }
 
 static int handle_patch_item(struct mg_connection *conn, const char *id) {
-  return command_with_body(conn, "item.update", id, failed_material_cmd);
+  return command_with_body(conn, "item.update", id, ursatz_gui_failed);
 }
 
 static int handle_delete_item(struct mg_connection *conn, const char *id) {
@@ -110,19 +110,19 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
   }
   if (status != URSATZ_OK) {
     workshop_reply_destroy(&reply);
-    return failed_material_cmd(conn, status, &error);
+    return ursatz_gui_failed(conn, status, &error);
   }
   return ursatz_gui_send_reply_ok(conn, 200, &reply);
 }
 
 static int handle_add_version(struct mg_connection *conn, const char *id) {
-  return command_with_body(conn, "item.save", id, failed_material_cmd);
+  return command_with_body(conn, "item.save", id, ursatz_gui_failed);
 }
 
 /* POST /api/materials/items/<id>/reanalyze: analyzes the current version of a motif again and saves the result as a
    new version (versions are never rewritten, R-130). A refusal writes nothing. */
 static int handle_reanalyze(struct mg_connection *conn, const char *id) {
-  return command_with_optional_body(conn, "item.reanalyze", id, failed_material_cmd);
+  return command_with_optional_body(conn, "item.reanalyze", id, ursatz_gui_failed);
 }
 
 static int handle_get_version(struct mg_connection *conn, const char *id, const char *number_text) {
@@ -131,7 +131,7 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
 
 /* The failures of a read of a version or one of its files: a missing version or file is the error shape, the rest the store's message. */
 static int failed_version(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return status == URSATZ_ERR_NOT_FOUND ? send_failure(conn, 404, error->message) : failed_material(conn, status, error);
+  return status == URSATZ_ERR_NOT_FOUND ? send_failure(conn, 404, error->message) : ursatz_gui_failed(conn, status, error);
 }
 
 /* A version number from a path segment, 1 to 1000000. */
@@ -148,7 +148,7 @@ static bool parse_version_number(const char *text, int *out) {
 /* POST /api/materials/items/<thm-id or pce-id>/compose {seed?, update_uses?}: composes the theme or piece into a new
    version with its files (R-167, R-174). With update_uses, every updated use moves to its source's current version first. */
 static int handle_compose(struct mg_connection *conn, const char *id) {
-  return command_with_body(conn, "item.compose", id, failed_material_cmd);
+  return command_with_body(conn, "item.compose", id, ursatz_gui_failed);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/regenerate {section_id, lane?, seed?}: writes one section of a composed
@@ -164,7 +164,7 @@ static int handle_piece_regenerate(struct mg_connection *conn, const char *id, c
     return status;
   }
   cJSON_AddNumberToObject(body, "version", version);
-  return ursatz_gui_answer_command(conn, "item.regenerate", id, body, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, "item.regenerate", id, body, NULL, ursatz_gui_failed, false);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/variations {section_id, lane, count, seed?}: makes variations of a
@@ -180,13 +180,13 @@ static int handle_piece_variations(struct mg_connection *conn, const char *id, c
     return status;
   }
   cJSON_AddNumberToObject(body, "version", version);
-  return ursatz_gui_answer_command(conn, "item.variations", id, body, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, "item.variations", id, body, NULL, ursatz_gui_failed, false);
 }
 
 /* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>: a file of a variations set. */
 static int handle_piece_variation_file(struct mg_connection *conn, const char *id, const char *number_text, const char *set_text,
                                        const char *name) {
-  return QUERY(conn, "item.variation-file", failed_material_error, false, "id", id, "version", number_text, "set", set_text, "name", name);
+  return QUERY(conn, "item.variation-file", ursatz_gui_failed, false, "id", id, "version", number_text, "set", set_text, "name", name);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/variations/<set>/choose {index}: makes a variation the next version. */
@@ -203,7 +203,7 @@ static int handle_piece_choose(struct mg_connection *conn, const char *id, const
   }
   cJSON_AddNumberToObject(body, "version", version);
   cJSON_AddNumberToObject(body, "set", set);
-  return ursatz_gui_answer_command(conn, "item.choose", id, body, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, "item.choose", id, body, NULL, ursatz_gui_failed, false);
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme or piece version's files. */
@@ -215,13 +215,13 @@ static int handle_version_file(struct mg_connection *conn, const char *id, const
    file (variation-<i>.mid). */
 static int handle_piece_variation_playback(struct mg_connection *conn, const char *id, const char *number_text,
                                            const char *set_text, const char *name) {
-  return QUERY(conn, "item.variation-playback", failed_material_error, true, "id", id, "version", number_text, "set", set_text, "name", name);
+  return QUERY(conn, "item.variation-playback", ursatz_gui_failed, true, "id", id, "version", number_text, "set", set_text, "name", name);
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default: the motif's own
    key). With ?file= the playback route answers for a theme or piece version's own MIDI file instead. */
 static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
-  return QUERY(conn, playback_only ? "item.playback" : "item.score", failed_material_error, true, "id", id, "version", number_text);
+  return QUERY(conn, playback_only ? "item.playback" : "item.score", ursatz_gui_failed, true, "id", id, "version", number_text);
 }
 
 /* ---- variants ---------------------------------------------------------- */
@@ -254,7 +254,7 @@ static int handle_update_use(struct mg_connection *conn, const char *id, const c
     cJSON_DeleteItemFromObjectCaseSensitive(params, "source_id");
     cJSON_AddStringToObject(params, "source_id", source_id);
   }
-  return ursatz_gui_answer_command(conn, "item.update-use", id, params, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, "item.update-use", id, params, NULL, ursatz_gui_failed, false);
 }
 
 

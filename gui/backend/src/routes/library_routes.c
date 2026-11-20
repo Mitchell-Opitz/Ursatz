@@ -89,40 +89,25 @@ static char *read_filename_header(struct mg_connection *conn) {
   return decoded;
 }
 
-/* The failure of a command that queues a job: no queue is a 503, no memory the route's 200 with {"ok": false}. */
+/* The failure of a command that queues a job: no queue is a 503 (the status of the table says 500). */
 static int failed_job_command(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
   if (status == URSATZ_ERR_INTERNAL) {
-    return ursatz_gui_send_failure(conn, 503, error->message);
+    return ursatz_gui_send_failure_at(conn, 503, error->message, ursatz_status_name(status), error->path);
   }
-  return ursatz_gui_send_failure(conn, 200, error->message);
-}
-
-/* The failures of the Library's writes: a missing piece is a 404, a refused request a 400 (but a refused filename keeps the route's 200 with
- * {"ok": false}), every other failure the route's 200 with {"ok": false, "message"}. */
-static int failed_library_write(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  if (status == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (status == URSATZ_ERR_REQUEST && strcmp(error->path, "filename") != 0) {
-    return ursatz_gui_send_failure(conn, 400, error->message);
-  }
-  return ursatz_gui_send_failure(conn, 200, error->message);
+  return ursatz_gui_failed(conn, status, error);
 }
 
 static int handle_post(struct mg_connection *conn) {
   size_t body_size = 0;
   unsigned char *body_data = read_request_body(conn, &body_size);
   if (!body_data) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
-    return 400;
+    return ursatz_gui_send_failure(conn, 400, "failed to read request body");
   }
 
   char *filename = read_filename_header(conn);
   if (!filename) {
     free(body_data);
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
 
   /* The import is an "analysis" job (R-645): the answer is 202 with the job, and the job answers what this route used to. */
@@ -137,57 +122,22 @@ static int handle_post(struct mg_connection *conn) {
   return status;
 }
 
-/* Library failures: every one answers 200 with {"ok": false, "message"} (the old answers, until B12). */
-static int send_library_failure(struct mg_connection *conn, const UrsatzError *error) {
-  return ursatz_gui_send_failure(conn, 200, error->message);
-}
-
-/* Runs a Library query for the route's id and query variables and answers {"ok": true, ...} or the failure through failed. */
-static int run_library_query(struct mg_connection *conn, const char *name, const char *id, UrsatzGuiFailureFn failed) {
-  return ursatz_gui_answer_query(conn, name, ursatz_gui_request_params(conn, id ? "id" : NULL, id, NULL), NULL, failed, false);
-}
-
-static int failed_200(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  (void)status;
-  return send_library_failure(conn, error);
-}
-
-/* The failures of a read of one piece's document, export, score or playback: 404 for a missing piece, 422 for a source that no longer
- * imports, 400 for a refused request, 500 for the rest. */
-static int failed_piece_read(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  switch (status) {
-    case URSATZ_ERR_NOT_FOUND:
-      mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-      return 404;
-    case URSATZ_ERR_FORMAT:
-      return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"ok\":false,\"message\":\"could not import the stored source\"}");
-    case URSATZ_ERR_REQUEST:
-      if (strcmp(error->message, "failed to export piece") != 0) {
-        return ursatz_gui_send_failure(conn, 400, error->message);
-      }
-      /* fall through: the score export of a source the Analyzer refuses is a 500 naming the code */
-    default: {
-      char body[192];
-      if (strcmp(error->message, "failed to export piece") == 0 && (status == URSATZ_ERR_REQUEST || status == URSATZ_ERR_INTERNAL)) {
-        snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}", ursatz_status_name(status));
-        return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
-      }
-      return ursatz_gui_send_failure(conn, 500, error->message);
-    }
-  }
+/* Runs a Library query for the route's id and query variables and answers {"ok": true, ...} or the failure envelope. */
+static int run_library_query(struct mg_connection *conn, const char *name, const char *id) {
+  return ursatz_gui_answer_query(conn, name, ursatz_gui_request_params(conn, id ? "id" : NULL, id, NULL), NULL, ursatz_gui_failed, false);
 }
 
 static int handle_get(struct mg_connection *conn) {
-  return run_library_query(conn, "library.list", NULL, failed_200);
+  return run_library_query(conn, "library.list", NULL);
 }
 
 /* GET /api/analyzer/groups: the distinct composers, sources and tags with piece counts. */
 static int handle_get_groups(struct mg_connection *conn) {
-  return run_library_query(conn, "library.groups", NULL, failed_200);
+  return run_library_query(conn, "library.groups", NULL);
 }
 
 static int handle_get_piece(struct mg_connection *conn, const char *id) {
-  return run_library_query(conn, "library.piece", id, failed_200);
+  return run_library_query(conn, "library.piece", id);
 }
 
 static char *read_patch_body(struct mg_connection *conn) {
@@ -229,20 +179,19 @@ static char *read_patch_body(struct mg_connection *conn) {
 static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   char *body = read_patch_body(conn);
   if (!body) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
-    return 200;
+    return ursatz_gui_send_failure(conn, 400, "failed to read request body");
   }
   cJSON *root = cJSON_Parse(body);
   free(body);
   if (!cJSON_IsObject(root)) {
     cJSON_Delete(root);
-    return ursatz_gui_send_json_status(conn, 400, "Bad Request", "{\"ok\":false,\"message\":\"invalid request body\"}");
+    return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
-  return ursatz_gui_answer_command(conn, "library.update", id, root, NULL, failed_library_write, false);
+  return ursatz_gui_answer_command(conn, "library.update", id, root, NULL, ursatz_gui_failed, false);
 }
 
 static int handle_delete_piece(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "library.delete", id, NULL, NULL, failed_library_write, false);
+  return ursatz_gui_answer_command(conn, "library.delete", id, NULL, NULL, ursatz_gui_failed, false);
 }
 
 
@@ -255,25 +204,25 @@ static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
 /* GET /api/analyzer/pieces/<id>/document?sections=a,b: only those sections of the stored analysis document, read without importing the
    source. */
 static int handle_get_piece_document(struct mg_connection *conn, const char *id) {
-  return run_library_query(conn, "library.document", id, failed_piece_read);
+  return run_library_query(conn, "library.document", id);
 }
 
 /* GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]: the Analyzer's text export of the piece (text/plain). */
 static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
-  return run_library_query(conn, "library.export", id, failed_piece_read);
+  return run_library_query(conn, "library.export", id);
 }
 
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
-  return run_library_query(conn, "library.musicxml", id, failed_piece_read);
+  return run_library_query(conn, "library.musicxml", id);
 }
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
-  return run_library_query(conn, "library.meter-defaulted", id, failed_piece_read);
+  return run_library_query(conn, "library.meter-defaulted", id);
 }
 
 /* The playback document is the answer as the Analyzer made it (it holds its own "ok"). */
 static int handle_get_piece_playback(struct mg_connection *conn, const char *id) {
-  return run_library_query(conn, "library.playback", id, failed_piece_read);
+  return run_library_query(conn, "library.playback", id);
 }
 
 #define ARG(args, i) ((args)->values[i])

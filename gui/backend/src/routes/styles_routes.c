@@ -12,12 +12,6 @@
 #include "route_util.h"
 
 
-/* The failures of a style command: the status of the table, no queue a 503. */
-static int failed_style_command(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return ursatz_gui_send_failure(conn, status == URSATZ_ERR_INTERNAL && strstr(error->message, "queue") ? 503 : ursatz_gui_http_status(status, NULL),
-                                 error->message);
-}
-
 /* POST /api/styles: a "style" job (R-645; a second build waits): the answer is 202 with the job, which answers what this route used to. The
  * request is read here, so a bad one is refused at once. */
 static int handle_build_style(struct mg_connection *conn) {
@@ -25,23 +19,23 @@ static int handle_build_style(struct mg_connection *conn) {
   if (!body) {
     return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
-  return ursatz_gui_answer_command(conn, "style.build", "", body, NULL, failed_style_command, false);
+  return ursatz_gui_answer_command(conn, "style.build", "", body, NULL, ursatz_gui_failed, false);
 }
 
 static int handle_list_styles(struct mg_connection *conn) {
-  return ursatz_gui_answer_query(conn, "style.list", ursatz_gui_request_params(conn, NULL), NULL, ursatz_gui_failed_message, false);
+  return ursatz_gui_answer_query(conn, "style.list", ursatz_gui_request_params(conn, NULL), NULL, ursatz_gui_failed, false);
 }
 
 static int handle_get_style(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_query(conn, "style.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed_message, false);
+  return ursatz_gui_answer_query(conn, "style.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed, false);
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "style.rebuild", id, NULL, NULL, failed_style_command, false);
+  return ursatz_gui_answer_command(conn, "style.rebuild", id, NULL, NULL, ursatz_gui_failed, false);
 }
 
 static int handle_delete_style(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "style.delete", id, NULL, NULL, failed_style_command, false);
+  return ursatz_gui_answer_command(conn, "style.delete", id, NULL, NULL, ursatz_gui_failed, false);
 }
 
 #define ARG(args, i) ((args)->values[i])

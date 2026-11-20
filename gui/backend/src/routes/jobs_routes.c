@@ -12,22 +12,11 @@
 
 
 static int send_error(struct mg_connection *conn, int status, const char *error) {
-  cJSON *object = cJSON_CreateObject();
-  if (object) {
-    cJSON_AddBoolToObject(object, "ok", 0);
-    cJSON_AddStringToObject(object, "error", error);
-  }
-  return ursatz_gui_send_object(conn, status, object);
+  return ursatz_gui_send_failure(conn, status, error);
 }
-
-/* The failure of a job query: {"ok": false, "error"} with the status of the table. */
-static int failed_job(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_error(conn, ursatz_gui_http_status(status, NULL), error->message);
-}
-
 /* GET /api/jobs/<id>: {"ok": true, "job": {id, kind, state, stage, done, total, http_status?, result?}}. */
 static int handle_get(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_query(conn, "job.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, failed_job, false);
+  return ursatz_gui_answer_query(conn, "job.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed, false);
 }
 
 /* DELETE /api/jobs/<id>: asks the job to stop (204). */

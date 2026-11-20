@@ -10,27 +10,27 @@
 /* --- subjects ------------------------------------------------------------ */
 
 static int handle_list_subjects(struct mg_connection *conn) {
-  return QUERY(conn, "subject.list", failed_material, false, NULL);
+  return QUERY(conn, "subject.list", ursatz_gui_failed, false, NULL);
 }
 
 static int handle_subject_groups(struct mg_connection *conn) {
-  return QUERY(conn, "subject.groups", failed_material, false, NULL);
+  return QUERY(conn, "subject.groups", ursatz_gui_failed, false, NULL);
 }
 
 static int handle_create_subject(struct mg_connection *conn) {
-  return command_with_body(conn, "subject.create", "", failed_material_cmd);
+  return command_with_body(conn, "subject.create", "", ursatz_gui_failed);
 }
 
 static int handle_get_subject(struct mg_connection *conn, const char *id) {
-  return QUERY(conn, "subject.get", failed_material, false, "id", id);
+  return QUERY(conn, "subject.get", ursatz_gui_failed, false, "id", id);
 }
 
 static int handle_patch_subject(struct mg_connection *conn, const char *id) {
-  return command_with_body(conn, "subject.update", id, failed_material_cmd);
+  return command_with_body(conn, "subject.update", id, ursatz_gui_failed);
 }
 
 static int handle_delete_subject(struct mg_connection *conn, const char *id) {
-  return ursatz_gui_answer_command(conn, "subject.delete", id, NULL, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, "subject.delete", id, NULL, NULL, ursatz_gui_failed, false);
 }
 
 /* kind is "items", "pieces" or "related"; POST adds the link, DELETE removes it. */
@@ -45,7 +45,7 @@ static int handle_subject_link(struct mg_connection *conn, const char *method, c
   if (params) {
     cJSON_AddStringToObject(params, member, other);
   }
-  return ursatz_gui_answer_command(conn, action, id, params, NULL, failed_material_cmd, false);
+  return ursatz_gui_answer_command(conn, action, id, params, NULL, ursatz_gui_failed, false);
 }
 
 #define ARG(args, i) ((args)->values[i])

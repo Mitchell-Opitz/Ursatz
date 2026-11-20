@@ -12,33 +12,20 @@
 #include "../server.h"
 
 
-static int send_error(struct mg_connection *conn, int status, const char *error) {
-  cJSON *object = cJSON_CreateObject();
-  if (object) {
-    cJSON_AddStringToObject(object, "error", error);
-  }
-  return ursatz_gui_send_object(conn, status, object);
-}
-
-/* The failure of a Composer query: {"error"} with the status of the table. */
-static int failed_composer(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_error(conn, ursatz_gui_http_status(status, NULL), error->message);
-}
-
 /* GET /api/composer/status: the versions this build holds, from the workshop. "version" keeps the text the command printed; api_version,
  * analyzer_version (the Analyzer's, the workshop holds both apps) and producer_key are additive. */
 static int handle_status(struct mg_connection *conn) {
-  return ursatz_gui_answer_query(conn, "composer.status", NULL, NULL, failed_composer, false);
+  return ursatz_gui_answer_query(conn, "composer.status", NULL, NULL, ursatz_gui_failed, false);
 }
 
 /* GET /api/composer/vocabulary: the words the Composer reads (built once and kept, R-270). */
 static int handle_vocabulary(struct mg_connection *conn) {
-  return ursatz_gui_answer_query(conn, "composer.vocabulary", NULL, NULL, failed_composer, true);
+  return ursatz_gui_answer_query(conn, "composer.vocabulary", NULL, NULL, ursatz_gui_failed, true);
 }
 
 /* GET /api/composer/forms: the forms the Composer builds and their sections, sizes and slots (built once and kept). */
 static int handle_forms(struct mg_connection *conn) {
-  return ursatz_gui_answer_query(conn, "composer.forms", NULL, NULL, failed_composer, true);
+  return ursatz_gui_answer_query(conn, "composer.forms", NULL, NULL, ursatz_gui_failed, true);
 }
 
 static int route_status(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_status(conn); }

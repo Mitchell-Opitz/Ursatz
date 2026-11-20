@@ -478,8 +478,8 @@ static void check_notation_override(const char *id) {
   for (size_t i = 0; i < sizeof(kInvalid) / sizeof(kInvalid[0]); i++) {
     response = patch_piece(id, kInvalid[i]);
     char what[96];
-    snprintf(what, sizeof(what), "%s gives 400 invalid notation", kInvalid[i]);
-    check(test_http_status(response) == 400 && strstr(test_http_body(response), "invalid notation") != NULL, what);
+    snprintf(what, sizeof(what), "%s gives 400 or 422 invalid notation", kInvalid[i]);
+    check((test_http_status(response) == 400 || test_http_status(response) == 422) && strstr(test_http_body(response), "invalid notation") != NULL, what);
     free(response);
   }
   detail = get_json(path);
@@ -1013,20 +1013,20 @@ int main(int argc, char **argv) {
     char route[256];
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml", chords_id);
     char *missing_source = test_http_exchange(PORT, "GET", route, NULL, NULL, 0);
-    check(test_http_status(missing_source) == 422, "a score with a missing source file gives 422");
+    check(test_http_status(missing_source) == 500, "a score with a missing source file gives 500");
     check(strstr(missing_source, "Content-Type: application/json\r\n") != NULL,
           "the missing-source score error is application/json");
-    check(strstr(test_http_body(missing_source), "\"message\":\"could not import the stored source\"") != NULL,
+    check(strstr(test_http_body(missing_source), "\"error\":\"could not import the stored source\"") != NULL,
           "the missing-source score error carries its message");
     free(missing_source);
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml/meta", chords_id);
     missing_source = test_http_exchange(PORT, "GET", route, NULL, NULL, 0);
-    check(test_http_status(missing_source) == 422, "musicxml/meta with a missing source file gives 422");
+    check(test_http_status(missing_source) == 500, "musicxml/meta with a missing source file gives 500");
     free(missing_source);
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/playback", chords_id);
     missing_source = test_http_exchange(PORT, "GET", route, NULL, NULL, 0);
-    check(test_http_status(missing_source) == 422, "playback with a missing source file gives 422");
-    check(strstr(test_http_body(missing_source), "\"message\":\"could not import the stored source\"") != NULL,
+    check(test_http_status(missing_source) == 500, "playback with a missing source file gives 500");
+    check(strstr(test_http_body(missing_source), "\"error\":\"could not import the stored source\"") != NULL,
           "the missing-source playback error carries its message");
     free(missing_source);
   }

@@ -49,23 +49,46 @@ void ursatz_gui_send_json(struct mg_connection *conn, const char *body) {
   mg_write(conn, body, len);
 }
 
-int ursatz_gui_send_failure(struct mg_connection *conn, int status, const char *message) {
+/* The name of the status a failure with this HTTP status stands for (the "code" member of the envelope). */
+static const char *code_of_http(int status) {
+  switch (status) {
+    case 400:
+    case 405:
+    case 413:
+      return ursatz_status_name(URSATZ_ERR_REQUEST);
+    case 404:
+      return ursatz_status_name(URSATZ_ERR_NOT_FOUND);
+    case 409:
+      return ursatz_status_name(URSATZ_ERR_CONFLICT);
+    case 422:
+      return ursatz_status_name(URSATZ_ERR_UNSATISFIABLE);
+    case 499:
+      return ursatz_status_name(URSATZ_ERR_CANCELLED);
+    default:
+      return ursatz_status_name(URSATZ_ERR_INTERNAL);
+  }
+}
+
+/* The failure envelope (R-647): {"ok": false, "error": <message>, "code": <status name>, "path": <pointer, when set>}. */
+int ursatz_gui_send_failure_at(struct mg_connection *conn, int status, const char *message, const char *code, const char *path) {
   cJSON *object = cJSON_CreateObject();
   char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "message", message)) {
+  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "error", message) &&
+      cJSON_AddStringToObject(object, "code", code ? code : code_of_http(status)) &&
+      (!path || path[0] == '\0' || cJSON_AddStringToObject(object, "path", path))) {
     text = cJSON_PrintUnformatted(object);
   }
   cJSON_Delete(object);
   if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"error\":\"out of memory\",\"code\":\"alloc\"}");
   }
-  if (status == 200) {
-    ursatz_gui_send_json(conn, text);
-  } else {
-    ursatz_gui_send_json_status(conn, status, ursatz_gui_reason_phrase(status), text);
-  }
+  ursatz_gui_send_json_status(conn, status, ursatz_gui_reason_phrase(status), text);
   free(text);
   return status;
+}
+
+int ursatz_gui_send_failure(struct mg_connection *conn, int status, const char *message) {
+  return ursatz_gui_send_failure_at(conn, status, message, NULL, NULL);
 }
 
 int ursatz_gui_send_object(struct mg_connection *conn, int status, cJSON *object) {
@@ -84,18 +107,8 @@ int ursatz_gui_send_object(struct mg_connection *conn, int status, cJSON *object
 }
 
 static int send_body_failure(struct mg_connection *conn, int status, const char *reason, const char *message) {
-  cJSON *object = cJSON_CreateObject();
-  char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "error", message)) {
-    text = cJSON_PrintUnformatted(object);
-  }
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"error\":\"out of memory\"}");
-  }
-  ursatz_gui_send_json_status(conn, status, reason, text);
-  free(text);
-  return status;
+  (void)reason;
+  return ursatz_gui_send_failure(conn, status, message);
 }
 
 /* Reports a failure: sent when the caller asked for a status, silent otherwise. */
@@ -325,25 +338,16 @@ cJSON *ursatz_gui_request_params(struct mg_connection *conn, ...) {
   return params;
 }
 
-int ursatz_gui_failed_message(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return ursatz_gui_send_failure(conn, ursatz_gui_http_status(status, NULL), error->message);
+/* A path that points into the call itself ("/params/...", "/target", "/bytes") says what is wrong with the request's own members: a 400. A path into
+ * the request the Composer reads (the body of a motif, a theme, a piece) is the member the Composer refused: a 422. */
+static int is_call_path(const char *path) {
+  return strncmp(path, "/params", 7) == 0 || strncmp(path, "/target", 7) == 0 || strncmp(path, "/bytes", 6) == 0 ||
+         strncmp(path, "/base_version", 13) == 0;
 }
 
-int ursatz_gui_failed_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  cJSON *object = cJSON_CreateObject();
-  char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "error", error->message) &&
-      (error->path[0] == '\0' || cJSON_AddStringToObject(object, "path", error->path))) {
-    text = cJSON_PrintUnformatted(object);
-  }
-  cJSON_Delete(object);
-  int http = ursatz_gui_http_status(status, NULL);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"error\":\"out of memory\"}");
-  }
-  ursatz_gui_send_json_status(conn, http, ursatz_gui_reason_phrase(http), text);
-  free(text);
-  return http;
+int ursatz_gui_failed(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  int http = ursatz_gui_http_status(status, is_call_path(error->path) ? NULL : error);
+  return ursatz_gui_send_failure_at(conn, http, error->message, ursatz_status_name(status), error->path);
 }
 
 UrsatzStatus ursatz_gui_run_command(const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,

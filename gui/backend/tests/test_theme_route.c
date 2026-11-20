@@ -1307,7 +1307,7 @@ static void test_construction(const Motifs *m) {
   char request[3000];
   snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
   cJSON *answer = exchange("POST", "/api/materials/items/validate", request, &status);
-  check(status == 400 && !ok_true(answer), "a construction that is not an object is refused");
+  check(status == 422 && !ok_true(answer), "a construction that is not an object is refused");
   cJSON_Delete(answer);
 }
 

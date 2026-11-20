@@ -18,27 +18,13 @@
 
 static const size_t kMaxRequestBodySize = 256 * 1024;
 
-/* Sends {"ok":false,"error":...} with the given status. The message goes through cJSON, so it is escaped. */
-/* The failure answer {"ok":false,"error":...}; a non-empty path (the request member the Composer refused, as a JSON
-   Pointer) is added as "path". */
+/* The failure envelope with a path (the request member the Composer refused, as a JSON Pointer) when it has one. */
 static inline int send_failure_at(struct mg_connection *conn, int status, const char *message, const char *path) {
-  cJSON *object = cJSON_CreateObject();
-  char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "error", message) &&
-      (!path || path[0] == '\0' || cJSON_AddStringToObject(object, "path", path))) {
-    text = cJSON_PrintUnformatted(object);
-  }
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, ursatz_gui_reason_phrase(500), "{\"ok\":false,\"error\":\"out of memory\"}");
-  }
-  ursatz_gui_send_json_status(conn, status, ursatz_gui_reason_phrase(status), text);
-  free(text);
-  return status;
+  return ursatz_gui_send_failure_at(conn, status, message, NULL, path);
 }
 
 static inline int send_failure(struct mg_connection *conn, int status, const char *message) {
-  return send_failure_at(conn, status, message, NULL);
+  return ursatz_gui_send_failure(conn, status, message);
 }
 
 /* {"ok":true,<key>:value}; value is moved into the answer (and freed on failure). */
@@ -110,12 +96,6 @@ static inline int query_with_body(struct mg_connection *conn, const char *name, 
   return ursatz_gui_answer_query(conn, name, body, NULL, failed, bare);
 }
 
-/* The failures of a command: what the request got wrong (a failure that names its member, "/params/...") is the error shape, the store's own
- * failures the message shape. */
-static inline int failed_material_cmd(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return error->path[0] == '/' ? ursatz_gui_failed_error(conn, status, error) : ursatz_gui_failed_message(conn, status, error);
-}
-
 /* Runs the command name on target with the request's JSON body as params. The body's failures are answered here (400, or 413 past
  * kMaxRequestBodySize). */
 static inline int command_with_body(struct mg_connection *conn, const char *name, const char *target, UrsatzGuiFailureFn failed) {
@@ -133,16 +113,6 @@ static inline int command_with_optional_body(struct mg_connection *conn, const c
     return ursatz_gui_answer_command(conn, name, target, cJSON_CreateObject(), NULL, failed, false);
   }
   return command_with_body(conn, name, target, failed);
-}
-
-/* The failures the material routes answer: the message shape for the store's own failures, the error shape (with the request path at
- * fault) for what is wrong with the request. */
-static inline int failed_material(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return ursatz_gui_failed_message(conn, status, error);
-}
-
-static inline int failed_material_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return ursatz_gui_failed_error(conn, status, error);
 }
 
 #endif /* URSATZ_GUI_ROUTE_MATERIALS_UTIL_H */
