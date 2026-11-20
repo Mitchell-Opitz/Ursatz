@@ -3,7 +3,7 @@
 Corpus mode, which analyzes every piece in a folder into documents and a corpus index. Back to the [docs index](README.md).
 
 ```sh
-ursatz-analyzer --corpus <dir> [--out <dir>] [--resume]
+ursatz corpus <dir> [--out <dir>] [--resume]
 ```
 
 Library: `analyzer_corpus_run` in `include/ursatz_analyzer/analyzer_api.h`. The run prints nothing: a failure comes back in its `UrsatzError`, and what a piece said (the importer's text of a failed import, the warnings of one that worked) in the `AnalyzerCorpusPieceReport` its callback gets; the command line prints them as before.
@@ -19,7 +19,7 @@ Library: `analyzer_corpus_run` in `include/ursatz_analyzer/analyzer_api.h`. The 
 
 `--out` defaults to `<dir>/.ursatz-corpus`. For a piece at the relative path `a/b.mid`:
 
-- `<out>/a/b.mid.analysis.json`: the analysis document, byte for byte what `ursatz-analyzer --json` writes for that
+- `<out>/a/b.mid.analysis.json`: the analysis document, byte for byte what `ursatz analyze` writes for that
   file. The whole file name is kept, so `b.mid` and `b.xml` do not collide.
 - `<out>/corpus-index.json`: the index, below.
 

@@ -4,7 +4,7 @@ Motive entries of the Composer API: core export, motive requests, motive, MIDI, 
 
 ## `composer_api_export(context, request_json, job, out)`
 
-Renders a plan once and exports it, as `ursatz-composer export` does.
+Renders a plan once and exports it, as `ursatz export` does.
 
 | Member | Value |
 |---|---|
@@ -48,7 +48,7 @@ Key and meter text. Every entry reads a `key` and a `meter` with one parser (`re
 
 ## `composer_api_motive(context, request_json, job, out)`
 
-Analyzes a motive, as `ursatz-composer motive <input> --json` does. `json`: the document that command prints,
+Analyzes a motive, as `ursatz motive <input> --format json` does. `json`: the document that command prints,
 `{"motive", "analysis"}`: the motive in the motive-document format and its analysis (intervals, contour, rhythm, range,
 scale degrees, implied harmony, base harmony, the segments and the tone labels with their warnings). `analysis.segments` is `{"given": bool, "items": [{"label", "first", "last"}]}`: the motive's own `features` when it has any, otherwise a proposal (API 1.2; see [motive-format.md](../motive-format.md#segments)); every response that carries a motive analysis has it. Schema:
 `schema/api/motive.response.schema.json`.
@@ -77,7 +77,7 @@ answers with as the `json` input of the render request.
 
 ## `composer_api_variant_operations(out)`
 
-The variant operations of the registry, as `ursatz-composer variants --list-ops --json` prints them: for each its `name`,
+The variant operations of the registry, as `ursatz variants --list-ops --format json` prints them: for each its `name`,
 `label`, `category`, `citation`, `relation`, `params` (`name`, `kind`, `min`, `max`, `description`, `optional`) and `forms`.
 Schema: `schema/api/variant_operations.schema.json`.
 

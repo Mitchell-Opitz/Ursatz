@@ -235,7 +235,7 @@ UrsatzStatus composer_api_piece_variations(const ComposerContext *context, const
                                              const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Plans a whole short piece from a form template (docs/cli-plan.md); nothing is composed. Request: {"form": a form name
+ * Plans a whole short piece from a form template (cli/docs/cli-plan.md); nothing is composed. Request: {"form": a form name
  * (absent with "given": the ternary form of 24 bars, the material in section B), "key": "D" or "D minor", "material":
  * "major"|"minor" (or the old "mode"; not with a mode in "key"), "meter": "4/4", "bars", "count", "modulate", "motive": {"input": {"format",
  * "text"}, "source": <a name to show>} (a motive request, read in the meter and key), "corpus": <a corpus directory> with
@@ -249,7 +249,7 @@ UrsatzStatus composer_api_plan(const ComposerContext *context, const char *reque
                                  const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Realizes a plan (docs/cli-fill.md). Request: {"plan": <plan object>, "seed", "check", "candidates" (1 to 32), "style",
+ * Realizes a plan (cli/docs/cli-fill.md). Request: {"plan": <plan object>, "seed", "check", "candidates" (1 to 32), "style",
  * "style_weight", "style_without", "blend", "blend_weight", "blend_weights" (as for composer_api_plan; they replace the
  * plan's own), "midi", "musicxml", "plain_midi", "tempo", "record": true (the text of the stage records in "record" of the
  * document), "explain" ("text" or "json": "explanation")}. json: what `fill --format json` prints, without "files".
@@ -261,14 +261,14 @@ UrsatzStatus composer_api_fill(const ComposerContext *context, const char *reque
                                  const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Locks a node of a plan, or one lane of it, as Given (docs/cli-fill.md). Request: {"plan", "node" (an id) or "section" (a
+ * Locks a node of a plan, or one lane of it, as Given (cli/docs/cli-fill.md). Request: {"plan", "node" (an id) or "section" (a
  * letter), "lane"}. json: {"locked": {"nodes", "spans"}, "what": "section B"}; plan_json: the plan.
  */
 UrsatzStatus composer_api_lock(const ComposerContext *context, const char *request_json,
                                  const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Writes one node of a plan again (docs/cli-regenerate.md). Request: {"plan", "node" or "section", "lane", "seed",
+ * Writes one node of a plan again (cli/docs/cli-regenerate.md). Request: {"plan", "node" or "section", "lane", "seed",
  * "midi", "musicxml", "plain_midi", "tempo", "record", "explain"}. json: what `regenerate --format json` prints, without
  * "files": as fill's, with "reopened": {"sections", "spans"}. plan_json, midi and musicxml are filled. A refused target is
  * URSATZ_ERR_UNSATISFIABLE.
@@ -277,7 +277,7 @@ UrsatzStatus composer_api_regenerate(const ComposerContext *context, const char 
                                        const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Several distinct versions of one node of a plan (docs/cli-variations.md). Request: {"plan", "node" or "section", "lane",
+ * Several distinct versions of one node of a plan (cli/docs/cli-variations.md). Request: {"plan", "node" or "section", "lane",
  * "count" (1 to 16), "seed", "musicxml", "plain_midi", "tempo"}. json: {"variations": [{"index", "seed", "plan": <the plan
  * object>, "musicxml" (when asked), "sections": [...]}], "kept", "requested", "seeds_tried"}; the MIDI file of a
  * variation is composer_api_export of its plan. URSATZ_ERR_UNSATISFIABLE when none differs from the plan.
@@ -286,14 +286,14 @@ UrsatzStatus composer_api_variations(const ComposerContext *context, const char 
                                        const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * As composer_api_variations for the harmony of a section whose melody is given (docs/cli-variations.md, harmonize).
+ * As composer_api_variations for the harmony of a section whose melody is given (cli/docs/cli-variations.md, harmonize).
  * Request: {"plan", "section", "count", "seed", "musicxml", "plain_midi", "tempo"}.
  */
 UrsatzStatus composer_api_harmonize(const ComposerContext *context, const char *request_json,
                                       const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for (docs/cli-progression.md).
+ * Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for (cli/docs/cli-progression.md).
  * Request: {"key": "D minor", "meter": "4/4" (2/4, 3/4, 4/4 or 6/8), "bars": 1 to 64, "cadence": "PAC"|"IAC"|"HC"|"DC"|"PC"
  * (all four required), "seed" (0 to 4294967295; default from the clock; if no bass line suits the progression the next
  * seeds are tried, up to 16, and the one that worked is the "seed" of the document), "embellish" ("none", "low", "medium"
@@ -313,7 +313,7 @@ UrsatzStatus composer_api_progression(const ComposerContext *context, const char
 
 /*
  * Writes a counter-melody against a line in the first, second, third or fourth species of strict counterpoint
- * (docs/cli-counterpoint.md). Request: the motive request of composer_api_motive for the line ("input": {"format", "form",
+ * (cli/docs/cli-counterpoint.md). Request: the motive request of composer_api_motive for the line ("input": {"format", "form",
  * "text"}, "pickup", "harmony"...; any length) with "species" (1 to 4), "key" (a tonic alone with "material" or the old "mode": "major"|"minor"),
  * "meter" (all three required), "position" ("below": the line is the melody, the default; "above": the line is the bass),
  * "seed" (0 to 4294967295; default from the clock), "suggest" (1 to 16 different counter-melodies), "plans", "midi",
@@ -328,7 +328,7 @@ UrsatzStatus composer_api_counterpoint(const ComposerContext *context, const cha
                                          const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Makes motives related to a motive, best first (docs/cli-develop.md). Request: the motive request of composer_api_motive
+ * Makes motives related to a motive, best first (cli/docs/cli-develop.md). Request: the motive request of composer_api_motive
  * ("input", "meter", "key", ...) with "op" (required: "restate", "invert", "retrograde", "interval", "fragment",
  * "liquidate", "augment" or "diminish"), "seed" (0 to 4294967295, default 0), "suggest" (1 to 16, default 5) and the members
  * the operation takes, each as the option of the command: "by", "degree", "tonal" (restate), "axis", "tonal" (invert),
@@ -342,7 +342,7 @@ UrsatzStatus composer_api_develop(const ComposerContext *context, const char *re
                                     const UrsatzJob *job, ComposerResponse *out);
 
 /*
- * Grows a theme from a motive (docs/cli-grow.md): its structure, a harmony, a bass line and a melody, ending in the cadence
+ * Grows a theme from a motive (cli/docs/cli-grow.md): its structure, a harmony, a bass line and a melody, ending in the cadence
  * asked for. Request: the motive request of composer_api_motive ("input", "harmony", "features", "role"; or, instead of
  * "input", "corpus": a corpus directory with "like": a passage file, whose first bar of a similar passage becomes the motive,
  * which the document reports as "source") and the brief of the command: "into" ("sentence", "period" or "hybrid"), "hybrid"

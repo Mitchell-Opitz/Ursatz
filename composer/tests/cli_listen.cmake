@@ -1,4 +1,4 @@
-# The listen command, run as a process (docs/cli-listen.md).
+# The listen command, run as a process (cli/docs/cli-listen.md).
 # Run with: cmake -DCOMPOSER=<ursatz> -DANALYZER=<ursatz> -DWORK=<empty working directory>
 #           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] -P cli_listen.cmake
 

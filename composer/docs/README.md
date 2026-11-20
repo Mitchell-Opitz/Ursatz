@@ -13,22 +13,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 
 ## Using it
 
-- [cli.md](../../cli/docs/README.md): every command with one example, middle-out, checking, styles and corpora.
-- [cli-motive.md](../../cli/docs/cli-motive.md): the `motive` command.
-- [cli-develop.md](../../cli/docs/cli-develop.md): the `develop` command.
-- [cli-variants.md](../../cli/docs/cli-variants.md): the `variants` command.
-- [cli-recognize.md](../../cli/docs/cli-recognize.md): the `recognize` command.
-- [cli-random-motive.md](../../cli/docs/cli-random-motive.md): the `random-motive` command.
-- [cli-progression.md](../../cli/docs/cli-progression.md): the `progression` command.
-- [cli-counterpoint.md](../../cli/docs/cli-counterpoint.md): the `counterpoint` command.
-- [cli-grow.md](../../cli/docs/cli-grow.md): the `grow` command.
-- [cli-theme.md](../../cli/docs/cli-theme.md): the `theme` command.
-- [cli-piece.md](../../cli/docs/cli-piece.md): the `piece` command.
-- [cli-plan.md](../../cli/docs/cli-plan.md): the `plan` command.
-- [cli-fill.md](../../cli/docs/cli-fill.md): the `fill` command.
-- [cli-regenerate.md](../../cli/docs/cli-regenerate.md): the `lock` and `regenerate` commands.
-- [cli-variations.md](../../cli/docs/cli-variations.md): the `variations` and `harmonize` commands.
-- [cli-listen.md](../../cli/docs/cli-listen.md): the `listen` command and a listening round.
+- [The command line](../../cli/docs/README.md): the `ursatz` commands, one page each ([motive](../../cli/docs/cli-motive.md), [grow](../../cli/docs/cli-grow.md), [plan](../../cli/docs/cli-plan.md), [piece](../../cli/docs/cli-piece.md), [listen](../../cli/docs/cli-listen.md) and the others), the workflows (middle-out, checking, styles and corpora) and the flag table.
 - [export.md](export.md): writing a plan as MIDI or MusicXML.
 - [theme-request.md](theme-request.md): the JSON request of the `theme` command and API entry.
 - [piece-request.md](piece-request.md): the JSON request of the `piece` command and API entry.

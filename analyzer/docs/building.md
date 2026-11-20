@@ -20,7 +20,7 @@ check's own fraction stays until the library owns it.
 
 ## Tests
 
-Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Smoke runs: `<name>_smoke` tests run the same program on Bach 114 alone (under 2 s each, in the fast set) for `test_measure_locations`, `test_chord_coverage`, `test_roman_numerals`, `test_cadences`, `test_harmonic_function`, `test_progressions`, `test_phrases`, `test_themes`, `test_form_plan`, `test_schemas`, `test_musicxml_midi_agreement`, `test_meter_check`, `test_text_export_snapshots` and `test_similar_material`; `test_analysis_document_schema_smoke` validates the Bach 114 document, and `test_cli_style_profile_smoke` and `test_cli_similar_smoke` run a two-piece corpus. Nightly only, because each needs a whole-corpus output and a smoke or CLI test covers the path: `test_motives` and `test_motive_sketch_map` (Mozart 545 only), `test_long_labels`, `test_corpus_key_estimation`, `test_analyzer_corpus`, `test_style_profile`, `test_style_piece`, `test_corpus_index_schema` and `test_style_model_schema`. Test inputs come from the root `tests/fixtures/`; `URSATZ_FIXTURES_DIR` names it. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
+Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Smoke runs: `<name>_smoke` tests run the same program on Bach 114 alone (under 2 s each, in the fast set) for `test_measure_locations`, `test_chord_coverage`, `test_roman_numerals`, `test_cadences`, `test_harmonic_function`, `test_progressions`, `test_phrases`, `test_themes`, `test_form_plan`, `test_schemas`, `test_musicxml_midi_agreement`, `test_meter_check`, `test_text_export_snapshots` and `test_similar_material`; `test_analysis_document_schema_smoke` validates the Bach 114 document, and `test_cli_style_profile_smoke` runs a two-piece corpus. Nightly only, because each needs a whole-corpus output and a smoke or CLI test covers the path: `test_motives` and `test_motive_sketch_map` (Mozart 545 only), `test_long_labels`, `test_corpus_key_estimation`, `test_analyzer_corpus`, `test_style_profile`, `test_style_piece`, `test_corpus_index_schema` and `test_style_model_schema`. Test inputs come from the root `tests/fixtures/`; `URSATZ_FIXTURES_DIR` names it. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
 
 Tests:
 
@@ -68,25 +68,25 @@ Tests:
   chord vocabulary's invariants on those and the five reference pieces: counts add up to the
   chords with a numeral, shares to one, entries sorted. See "Roman numerals and the chord
   vocabulary".
-- `test_cli_output_flags`: which files each output flag writes.
+- `test_cli_output_flags`: which files each output flag of `ursatz analyze` writes.
 - `test_musicxml_midi_agreement`: the five reference pieces from their MusicXML versions
   (`tests/musicxml`) and from their MIDI files: key regions, measure count and meter must agree
   exactly, chords and outer-voice scale degrees to the tolerance stated in the test, and the
   measured agreement is printed.
 - `test_musicxml_input`: format choice, notated key and meter, a pickup, a multi-part score, notated
   spelling (Db vs C#) and every error case.
-- `test_cli_input_formats`: `--input-format`, format detection and the error exits of the CLI.
+- `test_cli_input_formats`: `--input-format`, format detection and the error exits of `ursatz analyze`.
 - `test_notation_reading`: the reading parsers, scaling that keeps note ids, the meter map a reading sets, a failed
   reading leaving the notes unchanged, and Bach 114 read in 3/4 at scale 2 (64 measures, its cadence arrivals on beat 1).
   `test_cli_notation_reading` checks the flags, the document and its schema.
 - `test_corpus`: corpus mode on the `reference` and `mixed` corpora CMake builds in the build tree: the index
   against `tests/snapshots/corpus-index.reference.json`, each document byte for byte equal to a single-file run, and
-  the resume rules. `test_cli_corpus` checks the flags and exit codes (and that an index of schema version 1 is written again). `test_corpus_index_schema` validates the index
+  the resume rules. `test_cli_corpus` checks the flags and exit codes of `ursatz corpus` (and that an index of schema version 1 is written again). `test_corpus_index_schema` validates the index
   against the schema (see below).
 - `test_style_profile`: the profile of the `reference` corpus against
   `tests/snapshots/style-model.reference.json`, the model file round trip, the distances between the `chorales` and
   `sonatinas` corpora CMake builds in the build tree, and the refusals. `test_cli_style_profile` checks the flags and exit
-  codes. `test_style_model_schema` validates the model file against the schema (see below). `test_style_piece` checks, on the five
+  codes of `ursatz style-profile`. `test_style_model_schema` validates the model file against the schema (see below). `test_style_piece` checks, on the five
   reference pieces, that a profile counted from the document's JSON has the statistics of one counted from `chain_style_piece`
   (`test_style_piece_smoke`: Bach 114). The labels, the counting on hand-made pieces, the comparison and the model file are
   tested in the library (`theory_style_labels`, `theory_style_profile`, `theory_style_compare`, `theory_style_model_file`).
@@ -94,13 +94,11 @@ Tests:
 - `test_playback`, `test_score_export`: the playback JSON and the MusicXML score of the five reference pieces and `pickup.musicxml`, `field-5.musicxml` against `tests/snapshots/gui/`, a value scale of 2, the numbers behind the JSON and the refusals. The `_smoke` runs (Bach 114, pickup) and valgrind runs are quick.
 - `test_similar_material`: the similar material search over the `reference` corpus: the opening of Mozart 545 as a
   motive, the same motive moved up, `I IV V I`, the results against `tests/snapshots/similar.reference.txt`, and the
-  refusals. `test_cli_similar` checks the flags, the output and the exit codes, and validates the JSON against the
-  schema (see below).
+  refusals.
 - `test_motive_links`: the library over the four pieces of `tests/fixtures/links`: a link across keys that replays from one
   prototype sketch to the other, a family in no link, the groups, the cache (a second run compares nothing, adding a piece
   compares only its pairs, another analyzer version or other options empty it) and the scope's refusals, also under
-  valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
-  validates both JSON files against their schemas (see below).
+  valgrind.
 - `test_staleness`: each `AnalyzerDocumentStatus`, from keys and from snapshot documents with one key changed, also under
   valgrind. `test_corpus` also resumes across a changed producer key.
 - `test_version`: the public version header returns the macros, the version of `project()` and a producer key of 16

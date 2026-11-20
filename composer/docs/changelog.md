@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P64)
+
+The Composer's command line is `ursatz` (R-657, R-658): `ursatz-composer` is gone, `export` is `ursatz render`, `--json` is `--format json`, and the command pages moved to the [cli docs](../../cli/docs/README.md). The API and its schemas are as they were.
+
 ## Unreleased (phase P63)
 
 API 4.2 (R-651, P63 B16): each section of a form in `forms` has `labels` (`role`, `return`, `keys`, `figure`) and each size a `label`; each row of a piece version has `start_text` (`"bar 3"`, `"bar 3 beat 2"`) and `length_text` (`"2 bars"`, `"1 bar 2 beats"`) in the request's meter, the loop region has `text` and `length_text`, and the seam has `rules` (`id`, `label`, `ok`). The vocabulary's limits have `construction_bars` (`{"min": 3, "max": 16}`) and `construction_pickup` (`false`). The members are additions: a plan and every composed file are as before.

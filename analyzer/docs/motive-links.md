@@ -2,9 +2,7 @@
 
 Motive links: how the families of motives in different pieces are linked, scored and cached. Back to the [docs index](README.md).
 
-```sh
-ursatz-analyzer --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] [--format text|json]
-```
+Linking has no command of its own: the workshop's API and the GUI run it (its inputs are a corpus output folder, a cache file, a depth from 1 to 6 and a candidate count).
 
 Library: `include/ursatz_analyzer/analyzer_api.h`. Output schemas: `schema/motive-links.v1.schema.json` and, for the
 cache, `schema/motive-link-cache.v2.schema.json`.

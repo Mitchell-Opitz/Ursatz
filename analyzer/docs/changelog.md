@@ -4,6 +4,8 @@ The Analyzer's changes by phase. Back to the [docs index](README.md).
 
 ## Unreleased (phase P64)
 
+The Analyzer's command line is `ursatz` (R-658): `ursatz-analyzer`, its `export`, `--similar`, `--compare-styles` and `--link-motives` modes and `src/cli/` are gone. `ursatz analyze` writes the document (and, with `--view text`, the text export), `ursatz corpus` and `ursatz style-profile` run the corpus and the style profile ([cli docs](../../cli/docs/analyze.md)).
+
 The run, corpus and style profile entries are API (R-656; B2). `analyzer_run_file` and `analyzer_run_file_document` (with `AnalyzerRunFileResult`, values `ANALYZER_RUN_FILE_*`), `analyzer_document_path_for` (was `derive_analysis_document_path`), `analyzer_corpus_run` (was `corpus_run`; `AnalyzerCorpusOptions`, `AnalyzerCorpusSummary`, `AnalyzerCorpusPieceReport`, `AnalyzerCorpusPieceStatus`), `analyzer_corpus_stale_count` (was `corpus_walk_stale_count`, now an `UrsatzStatus`) and `analyzer_style_profile_add_corpus` (was `style_profile_add_corpus`) moved into `analyzer_api.h` and `exports.txt`; `run_file.h` and `corpus.h` are gone. Documents, text exports and corpus outputs are byte-identical; `URSATZ_ANALYZER_VERSION` stays 0.7.0.
 
 ## Unreleased (phase P63)

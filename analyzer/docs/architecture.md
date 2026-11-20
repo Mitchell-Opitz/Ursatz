@@ -1,10 +1,10 @@
 # Analyzer architecture
 
-How `ursatz-analyzer` is put together: what it is for, what it calls, what it offers and how one file becomes an analysis document. Back to the [docs index](README.md).
+How the Analyzer is put together: what it is for, what it calls, what it offers and how one file becomes an analysis document. Back to the [docs index](README.md).
 
 ## Purpose
 
-- `ursatz-analyzer` turns a MIDI or MusicXML file into an analysis: a versioned JSON analysis document.
+- The Analyzer (run by `ursatz analyze`) turns a MIDI or MusicXML file into an analysis: a versioned JSON analysis document.
 - It is a thin consumer of the Ursatz library: it imports the file, runs the library's analysis chain once, collects the claims and exports them.
 - It holds no music theory of its own; every rule it applies is the library's.
 - It also runs a corpus, style profiles, similar material search and motive links over analysis documents.
@@ -26,9 +26,8 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 | `src/style/` | Style profiles read from documents and the corpus | [style-profile.md](style-profile.md) |
 | `src/corpus/` | The corpus run, similar material, the chord sequence and the corpus passages | [corpus.md](corpus.md), [similar-material.md](similar-material.md), [corpus-passages.md](corpus-passages.md) |
 | `src/links/` | Motive links, their cache and their JSON | [motive-links.md](motive-links.md) |
-| `src/cli/` | The `ursatz-analyzer` command (`main.c`) | [README](../README.md#usage) |
 
-The folders are modules of `cmake/layer-table.txt` (test `layer_table`): `util` includes nothing of the Analyzer, `store` only `util`, `result` `util` and `store`, `export`, `style`, `corpus` and `links` those three, and `cli` all of them. The one edge into another folder's `*_internal.h` is `corpus.c` reading the document builder's entry, named in the table.
+The folders are modules of `cmake/layer-table.txt` (test `layer_table`): `util` includes nothing of the Analyzer, `store` only `util`, `result` `util` and `store`, `export`, `style`, `corpus` and `links` those three. The one edge into another folder's `*_internal.h` is `corpus.c` reading the document builder's entry, named in the table.
 
 | `schema/` | JSON Schemas of the document and the other JSON files | [analysis-document.md](analysis-document.md) |
 | `../tools/ci/` (repository root) | Include, chain build, file scope and docs checks, shared by every part | [building.md](building.md) |
@@ -37,16 +36,16 @@ The folders are modules of `cmake/layer-table.txt` (test `layer_table`): `util` 
 
 ## Public API
 
-The CLI commands, from [the README](../README.md#usage):
+The commands of `ursatz` that run the Analyzer, from [the README](../README.md#usage):
 
 | Command | What it does | Doc |
 | --- | --- | --- |
-| `ursatz-analyzer <file>` | Writes `<stem>.analysis.json` | [analysis-document.md](analysis-document.md) |
-| `export <file>` | Prints the measure-addressed text export of a piece | [text-export.md](text-export.md) |
-| `--corpus <dir>` | Analyzes a folder into documents and a corpus index | [corpus.md](corpus.md) |
-| `--style-profile`, `--compare-styles` | Counts and compares styles | [style-profile.md](style-profile.md) |
-| `--similar <dir>` | Finds similar material by motive or progression | [similar-material.md](similar-material.md) |
-| `--link-motives <dir>` | Links the motive families across pieces | [motive-links.md](motive-links.md) |
+| `ursatz analyze <file>` | Writes `<stem>.analysis.json` | [analysis-document.md](analysis-document.md) |
+| `ursatz analyze <file> --view text` | Prints the measure-addressed text export of a piece | [text-export.md](text-export.md) |
+| `ursatz corpus <dir>` | Analyzes a folder into documents and a corpus index | [corpus.md](corpus.md) |
+| `ursatz style-profile <dir>` | Counts a corpus into a style model | [style-profile.md](style-profile.md) |
+
+The comparison of styles, the similar material search ([similar-material.md](similar-material.md)) and the motive links ([motive-links.md](motive-links.md)) are functions of the library with no command: the workshop's API and the GUI call them.
 
 The GUI entries:
 
@@ -99,9 +98,9 @@ The theory the Analyzer takes from the library is listed in [building.md](buildi
 
 ## Data flow
 
-One file, `piece.mid` or `piece.musicxml`, through `ursatz-analyzer piece.mid`:
+One file, `piece.mid` or `piece.musicxml`, through `ursatz analyze piece.mid`:
 
-1. `main.c` reads the flags and calls `input_pipeline` ([input.md](input.md)).
+1. The workshop's `analyze` tool reads the params and calls `input_pipeline` ([input.md](input.md)).
 2. `analyzer_run_file` imports the file with the library (`imported_score_import_file`, `io/imported_score.h`, R-614) into an `ImportedScore`: notes, a `MeterMap`, key signature events, the tempo map and an `ImportedSource` ([input.md](input.md#input-formats)). It prints the import's error or warnings, as the command line always did. Notation readings (`--meter`, `--value-scale`, `--pickup`, `imported_reading_apply`) are applied here.
 3. `analyzer_analyze` calls the library's `analysis_chain_run_score` (R-615), which builds the chain's neutral input from the score ([library.md](library.md#pipeline)).
 4. The chain runs once over every stage: segments, key regions, chords, Roman numerals, outer voices, cadences, form, motives, meter, texture, voice leading, melody, schemas and sequences.

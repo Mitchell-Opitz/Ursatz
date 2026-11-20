@@ -29,7 +29,7 @@ All four are built by the root `CMakeLists.txt`, in that order. The Composer hea
 | (`library/plan/`) | The piece plan is the library's (R-625): `Plan`, its lanes, states, section descriptions, form record, constraints (`plan_constraint_kinds.c`: one row per kind holds its name, validity, writer and reader), edits (`plan_clone`, `plan_lane_span_reopen`), the producer stamp and reader hooks of the JSON codec. The Composer writes plans with `composer_plan_producer` and reads them with `composer_plan_read_hooks` | [plan.md](../../library/docs/modules/plan.md), [plan-format.md](../../library/docs/modules/plan-format.md) |
 | `src/<module>/` | One folder for each module of the layers below (R-636) | [structure.md](structure.md), [Layers](#layers) |
 | `forms/` | The built-in forms, one JSON document each, embedded at build time by `cmake/EmbedForms.cmake` | [forms.md](forms.md) |
-| `cli/` | The `ursatz-composer` command | [cli.md](../../cli/docs/README.md) |
+| (`cli/` of the repository) | The command line: the `ursatz` program, which calls the Composer through the workshop | [cli docs](../../cli/docs/README.md) |
 | `schema/` | The plan schema and the API request and response schemas | [plan-format.md](../../library/docs/modules/plan-format.md) |
 
 The full table with every directory is in [structure.md](structure.md).

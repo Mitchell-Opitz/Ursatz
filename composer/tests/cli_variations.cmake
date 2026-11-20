@@ -1,4 +1,4 @@
-# The variations and harmonize commands and lock --format json, run as processes (docs/cli-variations.md).
+# The variations and harmonize commands and lock --format json, run as processes (cli/docs/cli-variations.md).
 # Run with: cmake -DCOMPOSER=<ursatz> -DWORK=<empty working directory> -DFIXTURES=<tests/fixtures> -P cli_variations.cmake
 
 file(REMOVE_RECURSE "${WORK}")

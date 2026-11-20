@@ -25,7 +25,6 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/explain/` | Module `explain`: the explanation report of a run. |
 | `src/api/`, `src/preferences/` | Module `request`: the composer API behind `composer_api.h`, one file for each request kind (the grow toolbox in `api_style`, `api_seed`, `api_construction`, `api_grow`, `api_grow_json`; the piece entry in `api_piece*.c`), and the preferences document: its settings, reading with paths, and writing. |
 | `forms/` | The built-in forms as JSON documents, embedded at build time (`cmake/EmbedForms.cmake`); [forms.md](forms.md). |
-| `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and the layer table (`cmake/layer-table.txt`) fails on any other include. |
 | `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share: file readers, the hearing wrappers, the check oracles the operators' rules define (`test_oracles.c`: the harmony, melody and figure lane checks, the cadence hearing) and the voice-leading hearing (`voice_hear.c`), none of which the library carries; `tests/snapshots/` holds the CLI snapshots. |
 | `schema/` | `api/`, the JSON Schemas of the composer API requests and responses; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 

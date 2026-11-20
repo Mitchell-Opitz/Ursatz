@@ -403,7 +403,7 @@ endforeach()
 ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
 
-# The listen command (docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
+# The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
 # from the sonatina folder with the Analyzer (about 30 s in a Debug build).
 foreach(case smoke style_folder)
     set(folder OFF)
@@ -500,7 +500,7 @@ ursatz_test(test_random_motive_cli LIBS ursatz_composer_engine composer_test_sup
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_random_motive_cli ursatz)
 
-# Recognizing variants (docs/cli-recognize.md). The round trip makes every registry row and random chains on four
+# Recognizing variants (cli/docs/cli-recognize.md). The round trip makes every registry row and random chains on four
 # fixtures and recognizes each result; it is slow and CI leaves it out (ctest -LE slow). Its smoke test is the same
 # check on seeds 1 and 2. The cli test runs the command as a process.
 ursatz_test_executable(test_variant_recognize LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
@@ -517,7 +517,7 @@ ursatz_test(test_motive_connect LIBS ursatz_composer_engine INCLUDES ${PROJECT_S
 
 ursatz_test(test_shaping LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-# The theme command (docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
+# The theme command (cli/docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
 # in a directory of its own, so it can run beside the other command tests.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 # Measured 11.6 s of CPU, over the 10 s fast-set limit.
@@ -527,7 +527,7 @@ ursatz_test(test_theme_cli LIBS ursatz_composer_engine composer_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 add_dependencies(test_theme_cli ursatz)
 
-# The piece command (docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
+# The piece command (cli/docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
 # its files in a directory of its own, so it can run beside the other command tests.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
 ursatz_test(test_piece_cli LIBS ursatz_composer_engine composer_test_support

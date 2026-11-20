@@ -9,7 +9,7 @@
 
 #include "api_workflow.h"
 
-/* `regenerate` as a composer API entry (docs/cli-regenerate.md): one node of a filled plan written again. */
+/* `regenerate` as a composer API entry (cli/docs/cli-regenerate.md): one node of a filled plan written again. */
 
 static UrsatzStatus fail_cancelled(UrsatzError *error) {
     return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");

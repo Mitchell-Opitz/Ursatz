@@ -157,7 +157,7 @@ in `<ursatz_composer/piece_reopen.h>`.
 
 ## The piece command
 
-`ursatz-composer piece` builds the request, composes the loop, and builds the ending version from it
+`ursatz piece` builds the request, composes the loop, and builds the ending version from it
 (`piece_build_ending`). See [cli-piece.md](../../cli/docs/cli-piece.md) and [piece-request.md](piece-request.md). The API reads the piece
 request file into a `PieceRequest` of the form `game-loop` and builds through `piece_build_plan` and `piece_build_ending`;
 requests, responses and errors are as they were.

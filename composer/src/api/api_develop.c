@@ -18,7 +18,7 @@
 #include "motive/motive_internal.h"
 #include "structure/plan_util.h"
 
-/* `develop` as a composer API entry (docs/cli-develop.md): motives related to one motive, best first. */
+/* `develop` as a composer API entry (cli/docs/cli-develop.md): motives related to one motive, best first. */
 
 #define DEFAULT_SUGGEST 5
 #define MAX_SUGGEST 16

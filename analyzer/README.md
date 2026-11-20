@@ -1,6 +1,6 @@
 # Ursatz-Analyzer
 
-A small C11 command-line tool that turns a MIDI or MusicXML file into a JSON analysis
+A C11 library, run from [`ursatz analyze`](../cli/docs/analyze.md), that turns a MIDI or MusicXML file into a JSON analysis
 document: the piece's time signature, measure count and pickup, its local keys over time (key
 regions, with the home key, tonicizations, modulations and pivot chords), and the most likely chord
 for each group of notes that start together, each located by measure and beat. It is a
@@ -38,63 +38,11 @@ tests and warns about fast-set tests over 10 s). Timeouts are set when each test
 
 ## Usage
 
-```sh
-ursatz-analyzer [--json] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>
-```
+The Analyzer's command line is part of `ursatz` ([cli docs](../cli/docs/README.md)):
 
-Writes one file next to the input file, `<stem>.analysis.json`: the analysis document. See
-[docs/analysis-document.md](docs/analysis-document.md) and the
-[schema](schema/analysis-document.v13.schema.json).
-
-`--json` is the default and may be given. `--input-format` forces the input format (see [Input formats](docs/input.md#input-formats)). Flags can come before or
-after the path. Exits 1 with a message on an unknown flag, a
-missing path, bad input, allocation failure, or write failure.
-
-`--meter <n/d>`, `--value-scale <n or n/d>` and `--pickup <n/d>` read the notes as other notation
-than the file's before they are analyzed (see [Notation readings](docs/input.md#notation-readings)). They apply to one input file,
-not to corpus, style or similar-material runs.
-
-```sh
-ursatz-analyzer export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>
-```
-
-Prints the notes of the score and the analysis claims as plain text, one block per measure, to standard output. It writes
-no file. `--measures` limits the export to a range of measure numbers as written in the score. See
-[docs/text-export.md](docs/text-export.md).
-
-```sh
-ursatz-analyzer --corpus <dir> [--out <dir>] [--resume]
-```
-
-Corpus mode analyzes every MIDI and MusicXML file under a folder and writes one analysis document each, plus a
-corpus index. See [docs/corpus.md](docs/corpus.md) and the [index schema](schema/corpus-index.v2.schema.json).
-It cannot be combined with an input file, `--json`, `--input-format`, `--meter`, `--value-scale` or `--pickup`.
-
-```sh
-ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
-ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]
-```
-
-`--style-profile` counts the harmony, rhythm, melody and form labels of a corpus run's documents and writes them as a
-style model file, with four categories for motive degrees, intervals, rhythms and non-chord-tone figures;
-`--compare-styles` gives the distance between two such files, leaving out the categories named by `--without`. See
-[docs/style-profile.md](docs/style-profile.md) and the [model schema](schema/style-model.v1.schema.json).
-
-```sh
-ursatz-analyzer --similar <corpus output dir> (--motive <file> | --progression "<numerals>") [--min <n/d>] [--max <n>] [--format text|json]
-```
-
-`--similar` finds passages of a corpus run's documents that are similar to a motive (the soprano of a MIDI or MusicXML
-file) or a progression (Roman numerals). See [docs/similar-material.md](docs/similar-material.md) and the
-[output schema](schema/similar-material.v1.schema.json).
-
-```sh
-ursatz-analyzer --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] [--format text|json]
-```
-
-`--link-motives` finds the motive families of a corpus run's documents that are variants of one another (a chain of
-motive relations from one to the other), groups them, and keeps what it compared in a cache so a later run compares only
-what is new. See [docs/motive-links.md](docs/motive-links.md) and the [output schema](schema/motive-links.v1.schema.json).
+- `ursatz analyze <input>` writes `<stem>.analysis.json`, the analysis document ([docs/analysis-document.md](docs/analysis-document.md), [schema](schema/analysis-document.v13.schema.json)); `--view text` prints the measure-addressed text export instead ([docs/text-export.md](docs/text-export.md)). The notation readings (`--meter`, `--value-scale`, `--pickup`) and the input formats are in [docs/input.md](docs/input.md); the flags and exit codes are in [analyze.md](../cli/docs/analyze.md).
+- `ursatz corpus <dir>` analyzes a folder into one document each and a corpus index ([docs/corpus.md](docs/corpus.md), [index schema](schema/corpus-index.v2.schema.json)); `ursatz style-profile <corpus output> --name <name>` counts a corpus into a style model ([docs/style-profile.md](docs/style-profile.md), [model schema](schema/style-model.v1.schema.json)). See [corpus.md](../cli/docs/corpus.md).
+- The comparison of two style models, the similar-material search and the motive links are library functions that the workshop's API and the GUI call ([docs/similar-material.md](docs/similar-material.md), [docs/motive-links.md](docs/motive-links.md)); they have no command.
 
 ## Docs
 
@@ -102,7 +50,7 @@ All docs are indexed in [docs/README.md](docs/README.md). How the Analyzer is bu
 
 - Build and test: [docs/building.md](docs/building.md)
 - Input formats and notation readings: [docs/input.md](docs/input.md)
-- Library headers and the source layout (`src/util`, `store`, `result`, `export`, `style`, `corpus`, `links`, `cli`): [docs/library.md](docs/library.md), [docs/architecture.md](docs/architecture.md)
+- Library headers and the source layout (`src/util`, `store`, `result`, `export`, `style`, `corpus`, `links`): [docs/library.md](docs/library.md), [docs/architecture.md](docs/architecture.md)
 - What each analysis reads: [harmony](docs/analyses/harmony.md), [form and motive](docs/analyses/form-and-motive.md), [rhythm, texture and voice leading](docs/analyses/rhythm-texture-voice-leading.md)
 - The analysis document: [docs/analysis-document.md](docs/analysis-document.md)
 - Known limits: [docs/known-limits.md](docs/known-limits.md)

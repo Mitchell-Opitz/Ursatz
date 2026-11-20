@@ -1,6 +1,6 @@
 # Text export
 
-Back to the [docs index](README.md). Header: `<ursatz_analyzer/analyzer_api.h>`. Command: `ursatz-analyzer export`.
+Back to the [docs index](README.md). Header: `<ursatz_analyzer/analyzer_api.h>`. Command: `ursatz analyze --view text`.
 
 ## What it is for
 
@@ -127,10 +127,10 @@ argument, a document that is not JSON or whose `schema_version` is not `ANALYZER
 empty range; `URSATZ_ERR_INTERNAL` when the score cannot be written or read back; `URSATZ_ERR_ALLOC`.
 
 ```sh
-ursatz-analyzer export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>
+ursatz analyze <input> --view text [--input-format <format>] [--measures <first>-<last>] [--title <text>]
 ```
 
-The command analyzes the file as `ursatz-analyzer <file>` does and prints the export to standard output; it writes no
+The command analyzes the file as `ursatz analyze <input>` does and prints the export to standard output; it writes no
 file. Exit 1 with a message on a bad flag, bad input or a range with no measure.
 
 ## Material

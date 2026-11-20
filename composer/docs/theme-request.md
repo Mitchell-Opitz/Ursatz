@@ -1,6 +1,6 @@
 # The theme request
 
-The JSON file `ursatz-composer theme` reads ([cli-theme.md](../../cli/docs/cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
+The JSON file `ursatz theme` reads ([cli-theme.md](../../cli/docs/cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
 of the theme and the single ideas each one gives, and the brief. Schema `ursatz-theme-request`, version 2: a version 1
 request is an error (`the request must have "schema_version": 2`). Back to the [docs index](README.md).
 
