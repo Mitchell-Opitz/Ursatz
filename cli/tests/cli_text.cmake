@@ -137,7 +137,7 @@ expect_status(1 "help item.nope")
 expect_text("unknown command 'item.nope'" "help item.nope")
 ursatz(help grammar)
 expect_status(0 "help grammar")
-expect_text("^\\(\\* Commands in Ursatz Text, grammar 1" "help grammar")
+expect_text("^[(][*] Commands in Ursatz Text, grammar 1" "help grammar")
 ursatz(help commands --format bogus)
 expect_status(1 "help commands --format bogus")
 
