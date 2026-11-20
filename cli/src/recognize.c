@@ -23,36 +23,11 @@ typedef struct {
     bool have_source;
     bool have_target;
     bool json;
-    bool help;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", RECOGNIZE_USAGE_LINE + 7);
-    fprintf(out, "Names the chain of registry operations (see variants --list-ops) that turns the source motive into the\n");
-    fprintf(out, "target, with every parameter set, how far the target is from the source, and what it kept and changed.\n");
-    fprintf(out, "The chain replayed with the variants command gives a motive equal to the target. Operations may differ from\n");
-    fprintf(out, "those that made the target: inverting then transposing equals transposing then inverting.\n\n");
-    fprintf(out, "  <source> <target>    each a MIDI file, a MusicXML file, a note list or a motive JSON file\n");
-    fprintf(out, "  --format, --form, --meter, --key, --pickup   as for the motive command, for the source; the target takes\n");
-    fprintf(out, "                       the same form, meter and key\n");
-    motive_extras_print_help(out, false);
-    fprintf(out, "  --target-format <f>  the target's format (default auto)\n");
-    fprintf(out, "  --target-pickup <b>  the target's pickup in beats (default none)\n");
-    fprintf(out, "  --target-harmony \"<text>\"   the target's own chords, as --harmony\n");
-    fprintf(out, "  --target-feature <l:a-b>     a labelled run of the target's notes; repeatable. The target has the source's\n");
-    fprintf(out, "                       --role\n");
-    motive_input_print_basic_help(out);
-    fprintf(out, "  --depth <n>          the most operations in the chain, 1 to %ld (default %ld)\n", cli_limit("variant_chain"), cli_limit("variant_chain"));
-    fprintf(out, "  --json               print {found, chain, distance, remoteness, kept, changed, derivation}\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 the search ran, found or not; 1 usage, an invalid argument or an input that cannot be loaded.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz recognize theme.txt variant.txt --meter 4/4 --key \"D minor\" --json\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     if (args->input_count > 0) {
         options->source.path = args->inputs[0];
         options->have_source = true;
@@ -196,12 +171,8 @@ int run_recognize(const CliArgs *args) {
     if (status != 0) {
         return status;
     }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
-    }
     if (!options.have_target) {
-        return cli_fail(CLI_EXIT_USAGE, "recognize needs a source and a target motive\n%s", RECOGNIZE_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "recognize needs a source and a target motive\n%s", cli_usage_of("recognize"));
     }
     if (!options.source.meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "recognize needs --meter, which both motives are read in");

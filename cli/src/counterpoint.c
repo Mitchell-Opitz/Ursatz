@@ -14,7 +14,6 @@
 #define MAX_SUGGESTIONS 16
 
 typedef struct {
-    bool help;
     const char *input;
     const char *species_text;
     bool above;
@@ -33,45 +32,11 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", COUNTERPOINT_USAGE_LINE + 7);
-    fprintf(out, "Writes a counter-melody against <line> (a MIDI file, a MusicXML file, a note list or a motive JSON file)\n");
-    fprintf(out, "in the first, second, third or fourth species of strict counterpoint, and checks it with Ursatz's\n");
-    fprintf(out, "standard-counterpoint rules.\n\n");
-    fprintf(out, "Required:\n");
-    fprintf(out, "  --species <1-4>      1 note against 1, 2 against 1, 4 against 1, or syncopated half notes tied over the\n");
-    fprintf(out, "                       barline. Species 2 to 4 need a cantus firmus: one whole note a bar, three bars or more,\n");
-    fprintf(out, "                       and species 3 a meter of four beats\n");
-    fprintf(out, "  --key <key>          tonic and mode in one argument (\"D minor\"), or a tonic with --material\n");
-    fprintf(out, "  --meter <n/m>        the meter of the line, for example 4/4\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --below              the line is the melody and the counter-melody sings below it (default)\n");
-    fprintf(out, "  --above              the line is the bass and the counter-melody sings above it\n");
-    fprintf(out, "  --material <major|minor> the material, when --key gives only a tonic (--mode is the same option)\n");
-    fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same counter-melody. Default: derived\n");
-    fprintf(out, "                       from the clock; the seed used is always printed\n");
-    fprintf(out, "  --suggest <n>        write n different counter-melodies (1 to %d); with files, number k goes to\n", MAX_SUGGESTIONS);
-    fprintf(out, "                       <name>-k.<extension>\n");
-    fprintf(out, "  --out <file.json>    write the plan as JSON\n");
-    fprintf(out, "  --midi <file>        write the two parts as a MIDI file\n");
-    fprintf(out, "  --musicxml <file>    write the two parts as MusicXML\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the request cannot be satisfied (the line cannot be\n");
-    fprintf(out, "read or is not one the species can be written against, or no counter-melody holds the rules); 3 an output\n");
-    fprintf(out, "file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz counterpoint cantus.txt --species 2 --above --key \"D minor\" --meter 4/4 --seed 3 --midi out.mid\n");
-}
 
 /* --- reading the options -------------------------------------------------- */
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->above = cli_switch(args, "--above");
     options->below = cli_switch(args, "--below");
@@ -92,7 +57,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 static int check_options(Options *options) {
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "counterpoint needs a line\n%s", COUNTERPOINT_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "counterpoint needs a line\n%s", cli_usage_of("counterpoint"));
     }
     if (!options->species_text || !options->key_text || !options->meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "counterpoint needs --species, --key and --meter (see --help)");
@@ -254,10 +219,6 @@ int run_counterpoint(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     status = check_options(&options);
     if (status != 0) {

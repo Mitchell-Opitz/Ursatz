@@ -6,8 +6,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-
-
 /*
  * The `grow` subcommand: argv[1] is "grow". Returns the process exit status:
  *   0  success
@@ -16,11 +14,5 @@
  *   3  an output file could not be written
  */
 int run_grow(const CliArgs *args);
-
-/* The line of the usage text that names the subcommand. */
-#define GROW_USAGE_LINE                                                                                          \
-    "       ursatz grow <motive-input> --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] " \
-    "--key <key> --meter <n/m> [options]\n"                                                               \
-    "       ursatz grow --from-corpus <dir> --like <file> --into <...> --key <key> --meter <n/m> [options]"
 
 #endif

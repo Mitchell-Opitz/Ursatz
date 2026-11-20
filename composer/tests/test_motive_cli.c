@@ -246,7 +246,7 @@ static void test_render(void) {
 static void test_help(void) {
     assert(run("--help", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
     char *out = test_must_read_file("motive_cli_out.txt", NULL);
-    assert(strstr(out, "--meter") != NULL && strstr(out, "--format") != NULL && strstr(out, "--json") != NULL);
+    assert(strstr(out, "--meter") != NULL && strstr(out, "--input-format") != NULL && strstr(out, "--format") != NULL);
     assert(strstr(out, "--form") != NULL && strstr(out, "--pickup") != NULL);
     assert(strstr(out, "--render-key") != NULL && strstr(out, "--midi") != NULL && strstr(out, "--musicxml") != NULL);
     free(out);

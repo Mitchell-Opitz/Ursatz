@@ -42,42 +42,13 @@ typedef struct {
     bool keep_contour;
     bool keep_rhythm;
     bool plain_midi;
-    bool help;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", DEVELOP_USAGE_LINE + 7);
-    fprintf(out, "Makes motives related to the one in <motive-input> (a MIDI file, a MusicXML file, a note list or a\n");
-    fprintf(out, "motive JSON file) and prints them best first, each as a note list with its recognizability score.\n\n");
-    fprintf(out, "  --op <name>          restate, invert, retrograde, interval, fragment, liquidate, augment, diminish\n");
-    fprintf(out, "  --seed <n>           whole number, 0 to 4294967295 (default 0); the same seed gives the same output\n");
-    fprintf(out, "  --suggest <n>        how many candidates to print, 1 to %d (default %d)\n", MAX_SUGGEST, DEFAULT_SUGGEST);
-    fprintf(out, "  --meter <n/m>, --key <key>, --format <auto|midi|musicxml|notes|json>   as for the motive command\n");
-    fprintf(out, "  --midi <file>, --musicxml <file>   write the source and the best candidate\n");
-    fprintf(out, "  --tempo <bpm>        write a tempo in both files, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2); --plain-midi: no track names and no section markers in the MIDI\n\n");
-    fprintf(out, "Options by operation (the operation chooses at random from what is left open):\n");
-    fprintf(out, "  restate     --by <n> (semitones; steps with --tonal), --degree <n> (move the first note to scale\n");
-    fprintf(out, "              degree n, tonal), --tonal;  with none, the exact repetition and transpositions\n");
-    fprintf(out, "  invert      --axis <pitch> (D4 or a MIDI number; the first note by default), --tonal\n");
-    fprintf(out, "  retrograde  none\n");
-    fprintf(out, "  interval    --interval <n> (1-based; every one by default), --amount <n> (semitones, negative to\n");
-    fprintf(out, "              narrow), --keep-contour\n");
-    fprintf(out, "  fragment    --position <leading|trailing|middle>, --length <n>, --min <n>\n");
-    fprintf(out, "  liquidate   --drop <n>, --keep-rhythm, --min <n>\n");
-    fprintf(out, "  augment     --ratio <n:m> (2:1 by default)\n");
-    fprintf(out, "  diminish    --ratio <n:m> (1:2 by default)\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the input cannot be loaded or nothing can be\n");
-    fprintf(out, "developed as asked; 3 an output file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz develop theme.txt --op restate --tonal --meter 4/4 --key \"D minor\" --suggest 3\n");
-}
 
 /* --- reading the options -------------------------------------------------- */
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->op_text = cli_value(args, "--op");
     options->seed_text = cli_value(args, "--seed");
@@ -149,12 +120,8 @@ int run_develop(const CliArgs *args) {
     if (status != 0) {
         return status;
     }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
-    }
     if (!options.input) {
-        return cli_fail(EXIT_USAGE, "develop needs an input file\n%s", DEVELOP_USAGE_LINE);
+        return cli_fail(EXIT_USAGE, "develop needs an input file\n%s", cli_usage_of("develop"));
     }
     if (!options.op_text) {
         return cli_fail(EXIT_USAGE, "develop needs --op: restate, invert, retrograde, interval, fragment, liquidate, "

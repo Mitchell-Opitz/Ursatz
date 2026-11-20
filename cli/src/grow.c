@@ -17,7 +17,6 @@
 #define GROW_MAX_SUGGESTIONS 16
 
 typedef struct {
-    bool help;
     const char *input;
     const char *from_corpus;
     const char *like_path;
@@ -55,86 +54,11 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", GROW_USAGE_LINE + 7);
-    fprintf(out, "Grows a theme from the motive in <motive-input> (a MIDI file, a MusicXML file, a note list or a motive\n");
-    fprintf(out, "JSON file): its structure, a harmony, a bass line and a melody, ending in the cadence asked for. With\n");
-    fprintf(out, "--from-corpus and --like the motive is not given but taken from a corpus.\n\n");
-    fprintf(out, "Required:\n");
-    fprintf(out, "  --into <form>        sentence (presentation + continuation), period (antecedent + consequent) or\n");
-    fprintf(out, "                       hybrid (any other pairing, named with --hybrid)\n");
-    fprintf(out, "  --key <key>          tonic and mode in one argument (\"D minor\", \"F# major\"); any case\n");
-    fprintf(out, "  --material <word>    major, minor or style: replaces the material of --key (the key may then be a tonic alone). style\n");
-    fprintf(out, "                       takes the style's most common mode and needs --style with a mode category (--mode is the same option)\n");
-    fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8; the motive must fit in one bar of it\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --hybrid <b>+<e>     with --into hybrid only: the beginning (presentation, antecedent or cbi, a compound\n");
-    fprintf(out, "                       basic idea) and the ending (continuation, consequent or cadential), for example\n");
-    fprintf(out, "                       antecedent+continuation\n");
-    fprintf(out, "  --bars <3-16>        length of the theme (default 8; 4 uses a one-bar basic idea, others a chosen construction)\n");
-    fprintf(out, "  --cadence <type>     PAC (default), IAC or HC: the cadence the theme ends in\n");
-    fprintf(out, "  --first-cadence <t>  HC (default) or IAC: the weaker cadence an antecedent ends in (a period or a hybrid\n");
-    fprintf(out, "                       that begins with an antecedent only)\n");
-    fprintf(out, "  --accompaniment <p>  write an accompaniment in the inner voices: block, arpeggiated, alberti (not in 6/8),\n");
-    fprintf(out, "                       oom-pah or any (the pattern is chosen from the seed)\n");
-    fprintf(out, "  --accompaniment-motive <file>  a saved accompaniment motive as the accompaniment: restated on each chord in\n");
-    fprintf(out, "                       chord tones, liquidated in the last bar; implies --accompaniment motive. Read as a motive\n");
-    fprintf(out, "                       input of the accompaniment role, in --meter, at most one bar long\n");
-    fprintf(out, "  --accompaniment-format <f>, --accompaniment-pickup <b>   as --format and --pickup of the motive command,\n");
-    fprintf(out, "                       for the accompaniment motive's file\n");
-    fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as: \"homophony\", \"homorhythm\" (block\n");
-    fprintf(out, "                       chords only) or \"melody and accompaniment\"; implies --accompaniment any. Or\n");
-    fprintf(out, "                       \"chorale\": four parts in a note a chord, the melody written with the other three\n");
-    fprintf(out, "                       (standard voicing rules), instead of the grown melody\n");
-    fprintf(out, "  --voicing            keep the grown melody as the soprano and add an alto and a tenor under it, voiced\n");
-    fprintf(out, "                       over the bass by the standard voicing rules (not with --accompaniment)\n");
-    fprintf(out, "  --check              analyze the theme with the Ursatz Analyzer and pass over a seed whose analysis contradicts\n");
-    fprintf(out, "                       the plan (the cadences or the key not heard as planned, a hard voice-leading fault)\n");
-    fprintf(out, "  --style <file>       prefer the harmony and melody closest to a style: a style model file from the Ursatz\n");
-    fprintf(out, "                       Analyzer (--style-profile). The Analyzer's distance from the style is printed\n");
-    fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; needs --style)\n");
-    fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; needs --style): the motive\n");
-    fprintf(out, "                       categories are preferences and this switches one off, for the scoring and the distance\n");
-    fprintf(out, "  --blend <file>       a second style model file, blended with --style (needs --style)\n");
-    fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; needs --blend)\n");
-    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
-    fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
-    fprintf(out, "  --from-corpus <dir>  start from material in a corpus instead of <motive-input>: the output directory of\n");
-    fprintf(out, "                       ursatz-analyzer --corpus. Needs --like; the passage it names, the measures and the score\n");
-    fprintf(out, "                       are printed and kept in the plan. Exit 2 when no passage scores 1/2 or more\n");
-    fprintf(out, "  --like <file>        with --from-corpus: a MIDI or MusicXML passage; the first bar of a similar passage of the\n");
-    fprintf(out, "                       corpus (picked by the seed among the best) becomes the motive, in --key\n");
-    motive_extras_print_help(out, false);
-    fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived from\n");
-    fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
-    fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", GROW_MAX_SEED_TRIES);
-    fprintf(out, "  --suggest <n>        write n different themes (1 to %d) instead of one; with files, theme k goes to\n", GROW_MAX_SUGGESTIONS);
-    fprintf(out, "                       <name>-k.<extension>\n");
-    fprintf(out, "  --out <file.json>    write the plan as JSON\n");
-    fprintf(out, "  --midi <file>        write the melody, the bass and the accompaniment as a MIDI file\n");
-    fprintf(out, "  --musicxml <file>    write the melody, the bass and the accompaniment as MusicXML\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --explain <file>     write why each candidate was chosen or rejected: per target the chosen candidate, its\n");
-    fprintf(out, "                       runners-up and the rejected ones with their reasons, the form heard and the analyzer check\n");
-    fprintf(out, "                       (with --check), and the seeds passed over. JSON when the file ends in .json, else text\n");
-    fprintf(out, "  --format <text|json> how to print the theme on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "The form heard in the result (by Ursatz's standard-form) is printed with it; a theme need not be heard as\n");
-    fprintf(out, "the form it was grown as, and that is reported, not an error.\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the request cannot be satisfied;\n");
-    fprintf(out, "3 an output file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz grow theme.txt --into sentence --key \"D minor\" --meter 4/4 --seed 7 --out theme.json\n");
-    fprintf(out, "  ursatz grow theme.txt --into hybrid --hybrid antecedent+continuation --key \"G major\" --meter 3/4\n");
-}
 
 /* --- reading the options -------------------------------------------------- */
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->from_corpus = cli_value(args, "--from-corpus");
     options->like_path = cli_value(args, "--like");
@@ -186,7 +110,7 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "give a motive input or --from-corpus, not both");
     }
     if (!options->input && !options->from_corpus) {
-        return cli_fail(CLI_EXIT_USAGE, "grow needs a motive input\n%s", GROW_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "grow needs a motive input\n%s", cli_usage_of("grow"));
     }
     if (!options->into || !options->key || !options->meter) {
         return cli_fail(CLI_EXIT_USAGE, "grow needs --into, --key and --meter (see --help)");
@@ -253,10 +177,6 @@ int run_grow(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     status = check_options(&options);
     if (status != 0) {

@@ -12,8 +12,4 @@
  */
 int run_progression(const CliArgs *args);
 
-/* The line of the usage text that names the subcommand. */
-#define PROGRESSION_USAGE_LINE \
-    "       ursatz progression --key <key> --meter <n/m> --bars <n> --cadence <PAC|IAC|HC|DC|PC> [options]"
-
 #endif

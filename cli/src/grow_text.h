@@ -6,7 +6,6 @@
 
 #include <cJSON.h>
 
-
 /*
  * Prints the text output of `grow` and `theme` from the result document (docs/api.md, the theme entry): the brief line, the
  * brief and the chords of a theme request, the corpus passage the motive came from ("source"), each theme (numbered

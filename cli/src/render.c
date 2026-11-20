@@ -58,13 +58,9 @@ int run_render(const CliArgs *args) {
     const char *musicxml_path = cli_value(args, "--musicxml");
     const char *tempo_text = cli_value(args, "--tempo");
     bool plain_midi = cli_switch(args, "--plain-midi");
-    if (args->help) {
-        fprintf(stdout, "%s\n", RENDER_USAGE_LINE);
-        return 0;
-    }
     if (!plan_path || (!midi_path && !musicxml_path)) {
         fprintf(stderr, "Error: render needs a plan file and at least one of --midi or --musicxml\n");
-        fprintf(stderr, "%s\n", RENDER_USAGE_LINE);
+        fprintf(stderr, "%s\n", cli_usage_of("render"));
         return 1;
     }
 

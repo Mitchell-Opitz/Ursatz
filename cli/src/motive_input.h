@@ -89,7 +89,4 @@ typedef struct {
 int motive_input_fail(const MotiveFile *file, UrsatzStatus status, const UrsatzError *error,
                       const MotiveInputNames *names);
 
-/* The help lines of the basic options. */
-void motive_input_print_basic_help(FILE *out);
-
 #endif

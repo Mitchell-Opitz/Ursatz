@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-
 #include "grow.h"
 
 /*
@@ -19,10 +18,5 @@
  *   3  an output file could not be written
  */
 int run_theme(const CliArgs *args);
-
-/* The line of the usage text that names the subcommand. */
-#define THEME_USAGE_LINE                                                                                          \
-    "       ursatz theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file.json>] "     \
-    "[--layers <dir>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]"
 
 #endif

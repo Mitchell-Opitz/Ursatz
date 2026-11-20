@@ -19,7 +19,6 @@
 /* --- the command ------------------------------------------------------------------------------------ */
 
 typedef struct {
-    bool help;
     bool check;
     bool plain_midi;
     const char *input;
@@ -33,33 +32,9 @@ typedef struct {
     const char *format;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", THEME_USAGE_LINE + 7);
-    fprintf(out, "Grows a theme from the motives of a request (JSON, schema %s, version 2): up to 16 motives, which the\n", SCHEMA_NAME);
-    fprintf(out, "slots of the theme (basic, contrasting, continuation and cadential) and its single ideas name (a motive may be\n");
-    fprintf(out, "in several), and the brief: key, mode, meter, cadences, an accompaniment or a voicing, and a style that gives\n");
-    fprintf(out, "the tempo, the mode and the note density. The forms of the ideas are invented. See\n");
-    fprintf(out, "docs/theme-request.md.\n\n");
-    fprintf(out, "Options (as grow's):\n");
-    fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output (default: from the clock)\n");
-    fprintf(out, "  --suggest <n>        write n different themes (1 to 16); with files, theme k goes to <name>-k.<extension>\n");
-    fprintf(out, "  --check              analyze the theme with the Ursatz Analyzer and pass over a seed whose analysis contradicts\n");
-    fprintf(out, "                       the plan\n");
-    fprintf(out, "  --out <file.json>    write the plan as JSON\n");
-    fprintf(out, "  --layers <dir>       write the first theme's three layers: plan.json, realization.json and readings/composer.json\n");
-    fprintf(out, "  --midi <file>        write the melody, the bass and the accompaniment as a MIDI file (the tempo of the brief)\n");
-    fprintf(out, "  --musicxml <file>    write them as MusicXML\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --explain <file>     write why each candidate was chosen or rejected\n");
-    fprintf(out, "  --format <text|json> how to print the theme on stdout (default: text), with the slots and the brief\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid request; 2 the request cannot be satisfied; 3 an output file\n");
-    fprintf(out, "could not be written.\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->check = cli_switch(args, "--check");
     options->plain_midi = cli_switch(args, "--plain-midi");
@@ -220,12 +195,8 @@ int run_theme(const CliArgs *args) {
     if (status != 0) {
         return status;
     }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
-    }
     if (!options.input) {
-        return cli_fail(CLI_EXIT_USAGE, "theme needs a request file\n%s", THEME_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "theme needs a request file\n%s", cli_usage_of("theme"));
     }
     bool json = false;
     if (options.format) {

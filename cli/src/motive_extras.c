@@ -44,13 +44,3 @@ bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object) {
     }
     return ok;
 }
-
-void motive_extras_print_help(FILE *out, bool role_only) {
-    if (!role_only) {
-        fprintf(out, "  --harmony \"<text>\"   the motive's own chords as Roman numerals with onsets in beats after @, as\n");
-        fprintf(out, "                       \"I V6@2 I@3\" (the first needs no onset); up to %ld chords\n", cli_limit("motive_chords"));
-        fprintf(out, "  --feature <l:a-b>    a labelled run of notes by 0-based index, as a:0-2; repeatable, up to %ld\n",
-                cli_limit("motive_features"));
-    }
-    fprintf(out, "  --role <role>        melodic (default) or accompaniment\n");
-}

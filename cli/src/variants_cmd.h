@@ -11,11 +11,4 @@
  */
 int run_variants(const CliArgs *args);
 
-/* The line of the usage text that names the subcommand. */
-#define VARIANTS_USAGE_LINE                                                                                          \
-    "       ursatz variants --list-ops [--format <text|json>]\n"                                                          \
-    "       ursatz variants <motive-input> [--input-format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] " \
-    "[--form <full|rhythm|contour>] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--harmony \"<text>\"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--chain <file.json>] "         \
-    "[--each-op] [--distance <close|medium|far>] [--function <name>]... [--basic <file>] [--basic-format <format>] [--basic-pickup <beats>] [--basic-harmony \"<text>\"] [--count <n>] [--seed <n>] [--format <text|json>]"
-
 #endif

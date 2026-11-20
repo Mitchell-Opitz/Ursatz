@@ -11,9 +11,4 @@
  */
 int run_random_motive(const CliArgs *args);
 
-/* The line of the usage text that names the subcommand. */
-#define RANDOM_MOTIVE_USAGE_LINE                                                                                       \
-    "       ursatz random-motive --mode <major|minor> --meter <n/m> [--key <key>] "                         \
-    "[--form <full|rhythm|contour>] [--strategy <segments|drawn>] [--role <melodic|accompaniment>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--format <text|json>]"
-
 #endif

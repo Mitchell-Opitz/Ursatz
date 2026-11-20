@@ -21,7 +21,6 @@
 #define PATH_SIZE 1024
 
 typedef struct {
-    bool help;
     bool check;
     bool plain_midi;
     const char *input;
@@ -45,50 +44,9 @@ typedef struct {
     const char *format;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n", PIECE_USAGE_LINE + 7);
-    fprintf(out, "%s\n", PIECE_REGENERATE_USAGE_LINE);
-    fprintf(out, "%s\n\n", PIECE_VARIATIONS_USAGE_LINE);
-    fprintf(out, "Composes a looping game track from a request (JSON, schema %s): an intro, a body, a turnaround and an\n", SCHEMA_NAME);
-    fprintf(out, "ending, each a list of sections of any length in beats with a pickup, a cadence and a fill (nothing, a motive,\n");
-    fprintf(out, "a composed theme or a progression), in a key and a meter, with an accompaniment or a voicing and a style. Two\n");
-    fprintf(out, "versions are made: the loop (intro once, then the body and the turnaround, which lead back to the body's start)\n");
-    fprintf(out, "and the ending (the intro and the body as the loop has them, then the ending). See docs/piece-request.md.\n");
-    fprintf(out, "A request of schema_version 2 names another built-in form in \"form\" (rounded-binary, ternary, variations, ...)\n");
-    fprintf(out, "and takes its sections from the form's size (\"bars\", \"count\", \"modulate\"); it has the one version.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --seed <n>               whole number from 0; the same seed gives the same output (default: from the clock)\n");
-    fprintf(out, "  --check                  analyze both versions with the Ursatz Analyzer and pass over a seed whose analysis\n");
-    fprintf(out, "                           contradicts the plan\n");
-    fprintf(out, "  --out <loop-plan.json>   write the first version's plan (the loop's) as JSON\n");
-    fprintf(out, "  --layers <dir>           write the first version's three layers: plan.json, realization.json and readings/composer.json\n");
-    fprintf(out, "  --ending-out <file>      write the ending version's plan as JSON (a form with an ending version only)\n");
-    fprintf(out, "  --midi <file>            write the first version as a MIDI file, with loopStart and loopEnd markers for a loop\n");
-    fprintf(out, "  --musicxml <file>        write the first version as MusicXML\n");
-    fprintf(out, "  --ending-midi <file>     write the ending version as a MIDI file\n");
-    fprintf(out, "  --ending-musicxml <file> write the ending version as MusicXML\n");
-    fprintf(out, "  --plain-midi             MIDI: no track names and no section markers (the loop markers stay)\n");
-    fprintf(out, "  --explain <file>         write why each candidate was chosen or rejected, in both versions\n");
-    fprintf(out, "  --format <text|json>     how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --from <loop-plan.json>  work on a loop plan the command wrote, with --request (the request it was made from)\n");
-    fprintf(out, "  --regenerate <id|none>   write the section with that id again (the lane given, or all of it), the rest locked;\n");
-    fprintf(out, "                           the seam is written again when the section holds the body's first bar, and the\n");
-    fprintf(out, "                           ending version is always built again from the new loop. none: only the ending version.\n");
-    fprintf(out, "                           A section filled with a theme needs --lane\n");
-    fprintf(out, "  --lane <lane>            harmony, bass, melody, inner or all (default all)\n");
-    fprintf(out, "  --variations <id>        make --count different versions of the section (--lane needed; harmony over a given\n");
-    fprintf(out, "                           melody is a harmonization), each written to --out-dir as variation-<i>.json, .mid and\n");
-    fprintf(out, "                           .musicxml (the loop version) with result.json: the seeds, scores, seam and cadences\n");
-    fprintf(out, "  --count <n>              how many variations, 1 to %d\n", VARIATIONS_MAX);
-    fprintf(out, "  --out-dir <dir>          where the variations are written\n");
-    fprintf(out, "  --help                   this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid request; 2 the request cannot be satisfied; 3 an output file\n");
-    fprintf(out, "could not be written.\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->check = cli_switch(args, "--check");
     options->plain_midi = cli_switch(args, "--plain-midi");
@@ -116,14 +74,14 @@ static int read_options(const CliArgs *args, Options *options) {
 static int check_edit_options(const Options *options) {
     if (options->from) {
         if (options->input) {
-            return cli_fail(CLI_EXIT_USAGE, "with --from the request is given as --request, not as an argument\n%s", PIECE_USAGE_LINE);
+            return cli_fail(CLI_EXIT_USAGE, "with --from the request is given as --request, not as an argument\n%s", cli_usage_of("piece"));
         }
         if (!options->request) {
-            return cli_fail(CLI_EXIT_USAGE, "--from needs --request <request.json>\n%s", PIECE_USAGE_LINE);
+            return cli_fail(CLI_EXIT_USAGE, "--from needs --request <request.json>\n%s", cli_usage_of("piece"));
         }
         if (!options->regenerate == !options->variations) {
             return cli_fail(CLI_EXIT_USAGE, "--from needs --regenerate <section id>|none or --variations <section id>, not both\n%s",
-                            PIECE_USAGE_LINE);
+                            cli_usage_of("piece"));
         }
         if (options->lane && !cli_equals_ignore_case(options->lane, "all") && !cli_equals_ignore_case(options->lane, "harmony") &&
             !cli_equals_ignore_case(options->lane, "bass") && !cli_equals_ignore_case(options->lane, "melody") &&
@@ -132,7 +90,7 @@ static int check_edit_options(const Options *options) {
         }
         if (options->variations) {
             if (!options->lane || !options->count || !options->out_dir) {
-                return cli_fail(CLI_EXIT_USAGE, "--variations needs --lane, --count and --out-dir\n%s", PIECE_VARIATIONS_USAGE_LINE);
+                return cli_fail(CLI_EXIT_USAGE, "--variations needs --lane, --count and --out-dir\n%s", cli_usage_of("piece"));
             }
             if (options->out || options->ending_out || options->midi || options->musicxml || options->ending_midi ||
                 options->ending_musicxml || options->explain || options->layers) {
@@ -145,10 +103,10 @@ static int check_edit_options(const Options *options) {
     }
     if (options->request || options->regenerate || options->lane || options->variations || options->count || options->out_dir) {
         return cli_fail(CLI_EXIT_USAGE, "--request, --regenerate, --variations, --lane, --count and --out-dir go with --from\n%s",
-                        PIECE_USAGE_LINE);
+                        cli_usage_of("piece"));
     }
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "piece needs a request file\n%s", PIECE_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "piece needs a request file\n%s", cli_usage_of("piece"));
     }
     return 0;
 }
@@ -550,10 +508,6 @@ int run_piece(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     status = check_edit_options(&options);
     if (status != 0) {

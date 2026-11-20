@@ -31,7 +31,6 @@ typedef struct {
 } GivenOption;
 
 typedef struct {
-    bool help;
     const char *form_text;
     const char *key_text;
     const char *material_text;
@@ -59,69 +58,11 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", PLAN_USAGE_LINE + 7);
-    fprintf(out, "Writes the plan of a whole short piece from a form template: its sections, their keys and cadences, the\n");
-    fprintf(out, "sections that return an earlier one, and the motive. Nothing is composed yet; 'ursatz fill'\n");
-    fprintf(out, "realizes the plan.\n\n");
-    fprintf(out, "Required:\n");
-    fprintf(out, "  --form <name>        binary, rounded-binary, ternary, variations, loop or layered; with --given-* material\n");
-    fprintf(out, "                       it may be left out, and the form is a binary form of 16 bars\n");
-    fprintf(out, "  --key <K>            the tonic (\"D\", \"F#\", \"Bb\"); or tonic and mode in one argument (\"D minor\")\n");
-    fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8\n");
-    fprintf(out, "  --out <plan.json>    where the plan is written\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --material <word>    major or minor when --key is a tonic only (default: major; --mode is the same option)\n");
-    fprintf(out, "  --bars <n>           the size of the piece in bars; the sizes of each form are listed when one is refused\n");
-    fprintf(out, "  --count <n>          the variations (variations) or the layers (layered), instead of --bars\n");
-    fprintf(out, "  --modulate           plan the keys and cadences across the sections from the seed (otherwise every section\n");
-    fprintf(out, "                       is in the home key and the cadences are the form's)\n");
-    fprintf(out, "  --motive <file>      the motive: a MIDI file, a MusicXML file, a note list or a motive JSON file; without\n");
-    fprintf(out, "                       it one is invented when the plan is filled\n");
-    fprintf(out, "  --from-corpus <dir>  the output directory of ursatz-analyzer --corpus, for --like and --like-progression; the\n");
-    fprintf(out, "                       passage used, its measures and its score are printed and kept in the plan (SOURCE). Exit 2\n");
-    fprintf(out, "                       when no passage scores 1/2 or more\n");
-    fprintf(out, "  --like <file>        the motive: the first bar of a passage of the corpus similar to this MIDI or MusicXML\n");
-    fprintf(out, "                       passage (picked by the seed among the best), in --key; instead of --motive\n");
-    fprintf(out, "  --like-progression \"<I IV V I>\"\n");
-    fprintf(out, "                       a progression to place like --given-progression, but the chords are those of the passage of\n");
-    fprintf(out, "                       the corpus that best matches these numerals; goes with --at (and --cells)\n");
-    fprintf(out, "  --accompaniment <p>  block, arpeggiated, alberti (not in 6/8), oom-pah or any (a layered form has one in any\n");
-    fprintf(out, "                       case)\n");
-    fprintf(out, "  --texture <name>     the texture the accompaniment is to be heard as (see grow --help); implies\n");
-    fprintf(out, "                       --accompaniment any\n");
-    fprintf(out, "  --given-melody <f>   a phrase to place in the piece: a MIDI file, a MusicXML file, a note list or a motive JSON\n");
-    fprintf(out, "                       file of any length; fill never changes it (repeatable)\n");
-    fprintf(out, "  --given-progression \"<I IV V I>\"\n");
-    fprintf(out, "                       Roman numerals, one chord each, to place in the piece (repeatable)\n");
-    fprintf(out, "  --given-bass <f>     a bass line to place in the piece, the same file formats, no rests (repeatable)\n");
-    fprintf(out, "  --at <L>[:<bar>]     where the --given-* before it goes: the section's letter (\"B\", \"A'\") and, from 1, the bar\n");
-    fprintf(out, "                       of it the material starts in (default 1); without --form, the default is B:1\n");
-    fprintf(out, "  --cells <n>          the cells each chord of the --given-progression before it lasts (default: a bar)\n");
-    fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same plan. Default: from the clock\n");
-    fprintf(out, "  --style <file>       a style model file from the Ursatz Analyzer (--style-profile): fill prefers the harmony\n");
-    fprintf(out, "                       and melody closest to it. The path is kept in the plan as given, so fill finds the file\n");
-    fprintf(out, "                       from where it is run\n");
-    fprintf(out, "  --style-weight <n/d> how strongly fill prefers the style (default 1/1; needs --style)\n");
-    fprintf(out, "  --blend <file>       a second style model file, blended with --style (needs --style); kept in the plan\n");
-    fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; needs --blend)\n");
-    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
-    fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
-    fprintf(out, "  --format <text|json> how to print the plan on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument (an unknown form, a size the form does not have, a bad\n");
-    fprintf(out, "key or meter); 2 the request cannot be satisfied (an unreadable motive, a motive too long for a bar);\n");
-    fprintf(out, "3 the plan could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz plan --form ternary --key \"A\" --material minor --meter 3/4 --out piece.json\n");
-    fprintf(out, "  ursatz plan --form binary --key \"D minor\" --meter 4/4 --bars 8 --motive m.txt --out piece.json\n");
-}
 
 /* --- reading the options -------------------------------------------------- */
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->form_text = cli_value(args, "--form");
     options->key_text = cli_value(args, "--key");
     options->material_text = cli_value(args, "--material");
@@ -179,7 +120,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 static int check_options(Options *options) {
     if ((!options->form_text && options->given_count == 0) || !options->key_text || !options->meter_text || !options->out_path) {
-        return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", PLAN_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", cli_usage_of("plan"));
     }
     bool likes_progression = false;
     for (size_t i = 0; i < options->given_count; i++) {
@@ -461,10 +402,6 @@ int run_plan(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     status = check_options(&options);
     if (status != 0) {

@@ -6,8 +6,8 @@
 
 #include <cJSON.h>
 #include "cli_tools.h"
+#include "commands.h"
 #include "flags.h"
-
 
 /* The exit statuses every command shares. */
 #define CLI_EXIT_USAGE 1

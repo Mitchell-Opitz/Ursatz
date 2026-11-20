@@ -13,7 +13,6 @@
 #define MAX_CANDIDATES 32
 
 typedef struct {
-    bool help;
     const char *input;
     const char *seed_text;
     const char *out_path;
@@ -36,54 +35,9 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", FILL_USAGE_LINE + 7);
-    fprintf(out, "Realizes a plan: composes every open theme section of <plan.json> (a plan from 'ursatz plan' or\n");
-    fprintf(out, "'grow --out') in stages, structure, motives, harmony, bass, melody, texture and the returns, and writes the\n");
-    fprintf(out, "piece. A plan with no open theme section (one from 'grow --out' is written already) is only exported.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --seed <n>           whole number from 0; the same plan and seed give the same output. Default: from the\n");
-    fprintf(out, "                       clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
-    fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
-    fprintf(out, "  --check              analyze every theme section with the Ursatz Analyzer and reject a run whose analysis\n");
-    fprintf(out, "                       contradicts the plan (a planned cadence or the key not heard, a hard voice-leading fault)\n");
-    fprintf(out, "  --candidates <n>     compose n candidates (1 to %d, seeds from --seed) and write the best, ranked by agreement\n", MAX_CANDIDATES);
-    fprintf(out, "                       with the Analyzer, then score, then the lower seed; every candidate is listed\n");
-    fprintf(out, "  --style <file>       prefer the harmony and melody closest to a style: a style model file from the Ursatz\n");
-    fprintf(out, "                       Analyzer (--style-profile). Overrides the plan's own style. The Analyzer's distance from the\n");
-    fprintf(out, "                       style is printed with the result\n");
-    fprintf(out, "  --style-weight <n/d> how strongly the style is preferred (default 1/1; overrides the plan's)\n");
-    fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; overrides the plan's list)\n");
-    fprintf(out, "  --blend <file>       a second style model file, blended with the style (--style, or the plan's). Overrides the\n");
-    fprintf(out, "                       plan's blend; --style without --blend drops the plan's blend\n");
-    fprintf(out, "  --blend-weight <n/d> the second style's share in every dimension, 0 to 1 (default 1/2; overrides the plan's)\n");
-    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
-    fprintf(out, "                       the share per dimension; one not named takes --blend-weight\n");
-    fprintf(out, "  --out <file.json>    write the realized plan as JSON\n");
-    fprintf(out, "  --layers <dir>       write the three layers: plan.json, realization.json and readings/composer.json\n");
-    fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
-    fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --record <file.json> write the records of the stages (what each choice was and why) as one JSON array\n");
-    fprintf(out, "  --explain <file>     write why each candidate was chosen or rejected: the chosen candidate, its runners-up and the\n");
-    fprintf(out, "                       rejected ones with their reasons per target, the analyzer check and the form heard per section, and\n");
-    fprintf(out, "                       the runs thrown away. JSON when the file ends in .json, else text\n");
-    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "The form and cadences heard in each section, and the thematic returns heard, are printed with the result; a\n");
-    fprintf(out, "section need not be heard as the form it was planned as, and that is reported, not an error. When no seed\n");
-    fprintf(out, "completes the plan, the targets left open are printed with the reason each is stuck, and nothing is written.\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the plan cannot be read or cannot be completed;\n");
-    fprintf(out, "3 an output file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz fill piece.json --seed 7 --midi piece.mid --musicxml piece.xml\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->seed_text = cli_value(args, "--seed");
     options->check = cli_switch(args, "--check");
@@ -107,7 +61,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 static int check_options(Options *options) {
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "fill needs a plan file\n%s", FILL_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "fill needs a plan file\n%s", cli_usage_of("fill"));
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
@@ -200,10 +154,6 @@ int run_fill(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     status = check_options(&options);
     if (status != 0) {

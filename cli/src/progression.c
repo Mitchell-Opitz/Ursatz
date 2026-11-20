@@ -18,7 +18,6 @@
 #define MAX_FILES (3 * MAX_SUGGESTIONS)
 
 typedef struct {
-    bool help;
     const char *key_text;
     const char *meter_text;
     const char *bars_text;
@@ -39,58 +38,12 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage: ursatz progression --key <key> --meter <n/m> --bars <n> --cadence <type> [options]\n");
-    fprintf(out, "\n");
-    fprintf(out, "Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for.\n");
-    fprintf(out, "\n");
-    fprintf(out, "Required:\n");
-    fprintf(out, "  --key <key>          tonic and mode: a letter A-G, an optional # or b, then major or minor,\n");
-    fprintf(out, "                       in one argument (\"D minor\", \"F# major\", \"Bb minor\"); any case\n");
-    fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8\n");
-    fprintf(out, "  --bars <n>           length of the phrase, 1 to %d; a cadence needs at least 2 bars in 4/4 and\n", MAX_BARS);
-    fprintf(out, "                       6/8, 3 in 2/4 and 3/4 (more for a plagal cadence)\n");
-    fprintf(out, "  --cadence <type>     PAC, IAC, HC, DC or PC (perfect or imperfect authentic, half, deceptive,\n");
-    fprintf(out, "                       plagal); any case\n");
-    fprintf(out, "\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same output. Default: derived\n");
-    fprintf(out, "                       from the clock. The seed used is always printed (if no bass line suits the\n");
-    fprintf(out, "                       progression, the next seeds are tried and the one that worked is printed)\n");
-    fprintf(out, "  --embellish <level>  none (default), low, medium or high: how often chords are prolonged with\n");
-    fprintf(out, "                       neighbor, passing and six-four chords, given strong predominants and\n");
-    fprintf(out, "                       sevenths, and led into by applied chords\n");
-    fprintf(out, "  --bass, --no-bass    write a bass line (default) or only the chords\n");
-    fprintf(out, "  --schema <name>      build the start of the phrase on a galant schema (see --list-schemas)\n");
-    fprintf(out, "  --sequence <name>    build a continuation on a harmonic sequence (see --list-schemas)\n");
-    fprintf(out, "  --list-schemas       list the schema and sequence names and exit\n");
-    fprintf(out, "  --suggest <n>        write n alternatives (1 to %d) instead of one; with files, alternative k goes\n", MAX_SUGGESTIONS);
-    fprintf(out, "                       to <name>-k.<extension>\n");
-    fprintf(out, "  --out <file.json>    write the plan as JSON\n");
-    fprintf(out, "  --midi <file>        write the bass line as a MIDI file (needs the bass)\n");
-    fprintf(out, "  --musicxml <file>    write the bass line as MusicXML (needs the bass)\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --format <text|json> how to print the progression on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n");
-    fprintf(out, "\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the request cannot be satisfied;\n");
-    fprintf(out, "3 an output file could not be written.\n");
-    fprintf(out, "\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz progression --key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 7 \\\n");
-    fprintf(out, "      --embellish medium --out phrase.json --midi phrase.mid\n");
-    fprintf(out, "  ursatz progression --key \"G major\" --meter 4/4 --bars 8 --cadence PAC --schema romanesca\n");
-    fprintf(out, "  ursatz progression --key \"A minor\" --meter 3/4 --bars 6 --cadence HC --suggest 3\n");
-}
 
 /* --- reading the options -------------------------------------------------- */
 
 /* Reads the options from the parsed arguments; returns 0, or the exit status. The values are checked by the composer API. */
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->bass = !cli_switch(args, "--no-bass"); /* --bass is the default; --no-bass wins when both are given */
     options->key_text = cli_value(args, "--key");
     options->meter_text = cli_value(args, "--meter");
@@ -108,7 +61,7 @@ static int read_options(const CliArgs *args, Options *options) {
     options->musicxml_path = cli_value(args, "--musicxml");
     options->tempo_text = cli_value(args, "--tempo");
     options->plain_midi = cli_switch(args, "--plain-midi");
-    if (options->help || options->list_schemas) {
+    if (options->list_schemas) {
         return 0;
     }
     if (!options->key_text || !options->meter_text || !options->bars_text || !options->cadence_text) {
@@ -210,10 +163,6 @@ int run_progression(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     CliResponse response;
     if (options.list_schemas) {

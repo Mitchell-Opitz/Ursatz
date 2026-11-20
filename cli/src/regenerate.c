@@ -11,7 +11,6 @@
 #include "workflow.h"
 
 typedef struct {
-    bool help;
     const char *input;
     CliTargetOptions target;
     const char *seed_text;
@@ -24,58 +23,10 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_lock_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", LOCK_USAGE_LINE + 7);
-    fprintf(out, "Locks material of a plan as Given: a node and everything under it (a section, a phrase, an idea), or, with\n");
-    fprintf(out, "--lane, one lane of it. Nothing composes over Given material, and it is never regenerated. Locking is for\n");
-    fprintf(out, "good in the plan; to unlock, go back to an earlier plan file.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --node <id>          the node's id in the plan file (composer.id)\n");
-    fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") instead of --node\n");
-    fprintf(out, "  --lane <lane>        harmony, bass, melody or inner: only that lane of the node and of what is under it\n");
-    fprintf(out, "  --out <plan.json>    where the plan is written\n");
-    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Only written material can be locked: a node with a lane span still open is refused.\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the plan cannot be read, the node is not found or has\n");
-    fprintf(out, "open spans; 3 the output file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz lock piece.json --section A --out piece-locked.json\n");
-}
 
-static void print_regenerate_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", REGENERATE_USAGE_LINE + 7);
-    fprintf(out, "Writes one node of a filled plan again and nothing but what depends on it. A section is built again whole\n");
-    fprintf(out, "(its form and its returns too); a phrase or an idea keeps its shape and has its lanes written again; with\n");
-    fprintf(out, "--lane, that lane of the node and what is written from it (the bass and melody over new chords, the next\n");
-    fprintf(out, "chord or idea that joins them). Given material is never changed.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --node <id>          the node's id in the plan file (composer.id)\n");
-    fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") instead of --node\n");
-    fprintf(out, "  --lane <lane>        harmony, bass, melody or inner: only that lane of the node and of what is under it\n");
-    fprintf(out, "  --seed <n>           whole number from 0; the same plan, node and seed give the same output. Default: from\n");
-    fprintf(out, "                       the clock. The seed used is always printed (if a seed gets stuck, the next seeds are\n");
-    fprintf(out, "                       tried, up to %d, and the one that worked is printed)\n", CLI_MAX_SEED_TRIES);
-    fprintf(out, "  --out <plan.json>    where the plan is written\n");
-    fprintf(out, "  --midi <file>        write the piece as a MIDI file\n");
-    fprintf(out, "  --musicxml <file>    write the piece as MusicXML\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "What was reopened, the seed, the form and cadences heard in each section written again, and the returns are\n");
-    fprintf(out, "printed. The ids in a plan file run from 1: a plan written after a section was built again numbers its nodes\n");
-    fprintf(out, "again, so read them from the file you are using.\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the plan cannot be read, the node is not found, is\n");
-    fprintf(out, "Given or cannot be regenerated, or no seed completes the plan; 3 an output file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz regenerate piece.json --section B --seed 3 --out piece-2.json --midi piece-2.mid\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->target.node_text = cli_value(args, "--node");
     options->target.section_text = cli_value(args, "--section");
@@ -91,7 +42,7 @@ static int read_options(const CliArgs *args, Options *options) {
 }
 
 static int check_options(Options *options, bool regenerate) {
-    const char *usage = regenerate ? REGENERATE_USAGE_LINE : LOCK_USAGE_LINE;
+    const char *usage = regenerate ? cli_usage_of("regenerate") : cli_usage_of("lock");
     const char *command = regenerate ? "regenerate" : "lock";
     if (!options->input) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs a plan file\n%s", command, usage);
@@ -136,10 +87,6 @@ int run_lock(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_lock_help(stdout);
-        return 0;
     }
     status = check_options(&options, false);
     if (status != 0) {
@@ -220,10 +167,6 @@ int run_regenerate(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_regenerate_help(stdout);
-        return 0;
     }
     status = check_options(&options, true);
     if (status != 0) {

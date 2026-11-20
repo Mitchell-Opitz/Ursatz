@@ -32,7 +32,4 @@ bool motive_extras_given(const MotiveExtras *extras);
 /* Adds the options given to a request object as "harmony", "features" and "role". False when out of memory. */
 bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object);
 
-/* The help lines of the options. */
-void motive_extras_print_help(FILE *out, bool role_only);
-
 #endif

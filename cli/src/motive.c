@@ -33,35 +33,8 @@ typedef struct {
     const char *tone_texts[CLI_LIST_CAPACITY];
     size_t tone_count;
     bool json;
-    bool help;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", MOTIVE_USAGE_LINE + 7);
-    fprintf(out, "Loads a motive from a file and prints its analysis: intervals, contour, rhythm, range,\n");
-    fprintf(out, "scale degrees and implied harmony.\n\n");
-    fprintf(out, "  <input>              a MIDI file, a MusicXML file, a note list or a motive JSON file\n");
-    fprintf(out, "  --meter <n/m>        the meter, for input that has none (a note list); a MIDI or MusicXML\n");
-    fprintf(out, "                       file that declares another meter is an error\n");
-    fprintf(out, "  --key <key>          the key, for example \"D minor\"; replaces a key the file states\n");
-    fprintf(out, "  --format <name>      auto (default), midi, musicxml, notes, degrees, rhythm, contour or json\n");
-    fprintf(out, "  --form <name>        full (default), rhythm or contour; rhythm and contour read the text as a\n");
-    fprintf(out, "                       rhythm (x:q x:e) or a contour (0 2 1 3) instead of a note list\n");
-    fprintf(out, "  --pickup <beats>     the beats before the first barline, as 1 or 1/2; default 0\n");
-    motive_extras_print_help(out, false);
-    fprintf(out, "  --tone <n>=<role>    label note n (1-based) as chord or as a non-chord tone: passing, neighbor,\n");
-    fprintf(out, "                       appoggiatura, suspension, retardation, escape, anticipation, double-neighbor,\n");
-    fprintf(out, "                       changing-tone or pedal; repeatable\n");
-    fprintf(out, "  --render-key <key>   hear the motive in this key (same degrees); default the motive's key\n");
-    fprintf(out, "  --midi <file>        write the motive as a MIDI file\n");
-    fprintf(out, "  --musicxml <file>    write the motive as a MusicXML file (a pickup is an implicit first measure)\n");
-    fprintf(out, "  --tempo <bpm>        the tempo of the files, 20 to 400 quarter notes per minute\n");
-    fprintf(out, "  --json               print the analysis as JSON, with the rendered notes when a render option is given\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument; 2 the input cannot be loaded; 3 a file cannot be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz motive theme.txt --meter 4/4 --key \"D minor\"\n");
-}
 
 static int fail(int status, const char *format, ...) {
     va_list args;
@@ -75,7 +48,6 @@ static int fail(int status, const char *format, ...) {
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->meter_text = cli_value(args, "--meter");
     options->key_text = cli_value(args, "--key");
@@ -197,12 +169,8 @@ int run_motive(const CliArgs *args) {
     if (status != 0) {
         return status;
     }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
-    }
     if (!options.input) {
-        return fail(EXIT_USAGE, "motive needs an input file\n%s", MOTIVE_USAGE_LINE);
+        return fail(EXIT_USAGE, "motive needs an input file\n%s", cli_usage_of("motive"));
     }
 
     MotiveInput input;

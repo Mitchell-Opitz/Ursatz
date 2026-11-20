@@ -12,9 +12,4 @@
  */
 int run_develop(const CliArgs *args);
 
-/* The line of the usage text that names the subcommand. */
-#define DEVELOP_USAGE_LINE                                                                                    \
-    "       ursatz develop <motive-input> --op <restate|invert|retrograde|interval|fragment|"       \
-    "liquidate|augment|diminish> [--seed <n>] [--suggest <n>] [--meter <n/m>] [--key <key>] [options]"
-
 #endif

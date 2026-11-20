@@ -16,7 +16,6 @@
 #define VARIATIONS_MAX 16
 
 typedef struct {
-    bool help;
     const char *input;
     CliTargetOptions target;
     const char *count_text;
@@ -30,63 +29,10 @@ typedef struct {
     bool json;
 } Options;
 
-static void print_harmonize_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", HARMONIZE_USAGE_LINE + 7);
-    fprintf(out, "Writes several distinct harmonizations of a melody that is given. The whole melody of the section must be\n");
-    fprintf(out, "Given (a plan made with --given-melody for every bar of the section); its harmony, and what is written from\n");
-    fprintf(out, "the harmony (the bass and the voices between), is written again as variations does, on a copy of the plan\n");
-    fprintf(out, "for the seeds N, N+1, ..., at most four times --count of them. A version is kept when it sounds different\n");
-    fprintf(out, "from the plan and from the versions kept before. Every melody note is kept. The plan file is not changed.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") whose melody is given\n");
-    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", VARIATIONS_MAX);
-    fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock\n");
-    fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
-    fprintf(out, "  --write-midi         also write variation-<i>.mid\n");
-    fprintf(out, "  --write-musicxml     also write variation-<i>.musicxml\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 at least one version was kept; 1 usage or an invalid argument; 2 none was kept, the plan\n");
-    fprintf(out, "cannot be read, the section is not found or has no given melody (nothing is written); 3 an output file\n");
-    fprintf(out, "could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz harmonize piece.json --section A --count 4 --seed 3 --out-dir harmonizations --write-midi\n");
-}
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", VARIATIONS_USAGE_LINE + 7);
-    fprintf(out, "Writes several distinct versions of one node of a filled plan. The node is written again (as regenerate\n");
-    fprintf(out, "writes it) on a copy of the plan for the seeds N, N+1, ..., at most four times --count of them; a version\n");
-    fprintf(out, "is kept when it sounds different from the plan and from the versions kept before. A seed that gets stuck\n");
-    fprintf(out, "is skipped. The plan file is not changed. Given material is never changed.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --node <id>          the node's id in the plan file (composer.id)\n");
-    fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") instead of --node\n");
-    fprintf(out, "  --lane <lane>        harmony, bass, melody or inner: only that lane of the node and of what is under it\n");
-    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", VARIATIONS_MAX);
-    fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock. The seed of\n");
-    fprintf(out, "                       every version is printed\n");
-    fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
-    fprintf(out, "  --write-midi         also write variation-<i>.mid\n");
-    fprintf(out, "  --write-musicxml     also write variation-<i>.musicxml\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
-    fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
-    fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
-    fprintf(out, "  --format <text|json> how to print the result on stdout (default: text)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 at least one version was kept; 1 usage or an invalid argument; 2 none was kept, the plan\n");
-    fprintf(out, "cannot be read, the node is not found, is Given or cannot be regenerated (nothing is written); 3 an output\n");
-    fprintf(out, "file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz variations piece.json --section B --count 4 --seed 3 --out-dir variations --write-midi\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
     options->midi = cli_switch(args, "--write-midi");
     options->musicxml = cli_switch(args, "--write-musicxml");
@@ -104,7 +50,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 static int check_options(Options *options, bool harmonize) {
     const char *command = harmonize ? "harmonize" : "variations";
-    const char *usage = harmonize ? HARMONIZE_USAGE_LINE : VARIATIONS_USAGE_LINE;
+    const char *usage = harmonize ? cli_usage_of("harmonize") : cli_usage_of("variations");
     if (!options->input) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs a plan file\n%s", command, usage);
     }
@@ -243,10 +189,6 @@ static int run_command(const CliArgs *args, bool harmonize) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        harmonize ? print_harmonize_help(stdout) : print_help(stdout);
-        return 0;
     }
     status = check_options(&options, harmonize);
     if (status != 0) {

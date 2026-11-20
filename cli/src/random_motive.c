@@ -26,34 +26,11 @@ typedef struct {
     const char *seed_text;
     MotiveExtras extras;
     bool json;
-    bool help;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", RANDOM_MOTIVE_USAGE_LINE + 7);
-    fprintf(out, "Makes random motives that keep the hard melodic rules of standard counterpoint. Their length, pickup,\n");
-    fprintf(out, "number of notes, rhythm and range are not options: they are drawn from defaults in the Composer. The\n");
-    fprintf(out, "same options and seed give the same motives.\n\n");
-    fprintf(out, "  --material <word>    major or minor (required); random draws it from the seed (--mode is the same option)\n");
-    fprintf(out, "  --meter <n/m>        beats over a beat unit, as in 4/4 or 6/8 (required); random draws 4/4, 3/4, 2/4 or 6/8 from the seed\n");
-    fprintf(out, "  --key <key>          for example \"D minor\"; its mode must be --material. Default: C major or A minor\n");
-    fprintf(out, "  --form <form>        full (pitches and rhythm, the default), rhythm or contour\n");
-    fprintf(out, "  --strategy <name>    segments (the default: a harmony plan and repeated segments) or drawn (a rhythm drawn note by note)\n");
-    motive_extras_print_help(out, true);
-    fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motive and keep the closest to it\n");
-    fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; needs --style)\n");
-    fprintf(out, "  --count <n>          how many motives, 1 to %ld (default %d)\n", cli_limit("random_motive_count"), RANDOM_MOTIVE_COUNT_DEFAULT);
-    fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
-    fprintf(out, "  --json               print {\"seed\", \"motives\"}, each motive as the motive command's --json document\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable style file; 2 no motive could be made.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz random-motive --material minor --meter 3/4 --count 4 --seed 7\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     int extras_status = motive_extras_read(&options->extras, args, true);
     if (extras_status != 0) {
         return extras_status;
@@ -137,15 +114,11 @@ int run_random_motive(const CliArgs *args) {
     if (status != 0) {
         return status;
     }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
-    }
     if (options.without.count > 0 && !options.style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
     if (!options.material_text || !options.meter_text) {
-        return cli_fail(CLI_EXIT_USAGE, "random-motive needs --material and --meter\n%s", RANDOM_MOTIVE_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "random-motive needs --material and --meter\n%s", cli_usage_of("random-motive"));
     }
     cJSON *request = cJSON_CreateObject();
     if (!request || !add_members(request, &options)) {

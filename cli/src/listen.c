@@ -22,7 +22,6 @@
 #define LISTEN_PATH_SIZE 1024
 
 typedef struct {
-    bool help;
     bool print_settings;
     const char *what_text;
     const char *count_text;
@@ -57,46 +56,9 @@ typedef struct {
     bool ok;
 } Sample;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", LISTEN_USAGE_LINE + 7);
-    fprintf(out, "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n");
-    fprintf(out, "session plays and reads. Sample i (from 0) uses the seed --seed + i, so the same options, settings and seed\n");
-    fprintf(out, "give the same files. See docs/cli-listen.md.\n\n");
-    fprintf(out, "Options:\n");
-    fprintf(out, "  --what <what>        motifs or themes (required)\n");
-    fprintf(out, "  --out-dir <dir>      where the files are written; created if missing (required)\n");
-    fprintf(out, "  --count <n>          how many samples, 1 to %d (default %d)\n", LISTEN_COUNT_MAX, LISTEN_COUNT_DEFAULT);
-    fprintf(out, "  --seed <n>           whole number from 0 for the first sample (default 1)\n");
-    fprintf(out, "  --settings <file>    a preferences document (docs/preferences.md); absent: none is sent\n");
-    fprintf(out, "  --print-settings     print the default preferences document and exit\n");
-    fprintf(out, "  --material <word>    major (default) or minor (--mode is the same option)\n");
-    fprintf(out, "  --meter <n/m>        beats over a beat unit (default 4/4)\n");
-    fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motif and keep the closest; themes prefer it too\n");
-    fprintf(out, "  --blend <file>       themes: a second style model file, blended with --style (needs --style)\n");
-    fprintf(out, "  --blend-weight <n/d> themes: the second style's share in every dimension, 0 to 1\n");
-    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
-    fprintf(out, "                       themes: the share per dimension\n");
-    fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: quarter notes per minute from 20 to 400\n");
-    fprintf(out, "  --strategy <name>    motifs, and the generated motif of a theme: segments (default) or drawn\n");
-    fprintf(out, "Themes:\n");
-    fprintf(out, "  --into <pairing>     sentence (default) or period\n");
-    fprintf(out, "  --development <d>    melody, balanced (default) or theme\n");
-    fprintf(out, "  --bars <n>           4 or 8 (default 8)\n");
-    fprintf(out, "  --check              pass over a seed whose analysis contradicts the plan\n");
-    fprintf(out, "  --motif <file>       the motif of every theme: anything the motive command reads. Default: a generated motif\n");
-    fprintf(out, "                       for each sample\n");
-    fprintf(out, "  --theme-request <file> a theme request (docs/theme-request.md) with the sample's seed, instead of a motif\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "\nFiles, i from 01: <i>.mid, <i>.musicxml, <i>.json (the API response) and one line per sample in listen.jsonl.\n");
-    fprintf(out, "Exit status: 0 at least one sample was written; 1 usage, an invalid option or an unreadable file; 2 none could\n");
-    fprintf(out, "be composed; 3 an output file could not be written.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz listen --what motifs --count 10 --seed 1 --settings mine.json --out-dir round-1\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->print_settings = cli_switch(args, "--print-settings");
     options->check = cli_switch(args, "--check");
     options->what_text = cli_value(args, "--what");
@@ -122,7 +84,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 static int check_options(Options *options) {
     if (!options->what_text || (strcmp(options->what_text, "motifs") != 0 && strcmp(options->what_text, "themes") != 0)) {
-        return cli_fail(CLI_EXIT_USAGE, "--what must be motifs or themes\n%s", LISTEN_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "--what must be motifs or themes\n%s", cli_usage_of("listen"));
     }
     options->themes = strcmp(options->what_text, "themes") == 0;
     if (!options->themes && (options->into_text || options->development_text || options->bars_text || options->motif_path ||
@@ -159,7 +121,7 @@ static int check_options(Options *options) {
         options->bars_text = "8";
     }
     if (!options->out_dir) {
-        return cli_fail(CLI_EXIT_USAGE, "listen needs --out-dir <dir>\n%s", LISTEN_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "listen needs --out-dir <dir>\n%s", cli_usage_of("listen"));
     }
     options->count = LISTEN_COUNT_DEFAULT;
     if (options->count_text &&
@@ -620,10 +582,6 @@ int run_listen(const CliArgs *args) {
     int status = read_options(args, &options);
     if (status != 0) {
         return status;
-    }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
     }
     if (options.print_settings) {
         return print_default_settings();

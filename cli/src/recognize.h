@@ -10,12 +10,4 @@
  */
 int run_recognize(const CliArgs *args);
 
-/* The line of the usage text that names the subcommand. */
-#define RECOGNIZE_USAGE_LINE                                                                                           \
-    "       ursatz recognize <source> <target> [--input-format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] " \
-    "[--form <full|rhythm|contour>] --meter <n/m> [--key <key>] [--pickup <beats>] [--harmony \"<text>\"] "              \
-    "[--feature <label:first-last>]... [--role <melodic|accompaniment>] [--target-format <format>] "                      \
-    "[--target-pickup <beats>] [--target-harmony \"<text>\"] [--target-feature <label:first-last>]... "                   \
-    "[--basic <file>] [--basic-format <format>] [--basic-pickup <beats>] [--basic-harmony \"<text>\"] [--depth <n>] [--format <text|json>]"
-
 #endif

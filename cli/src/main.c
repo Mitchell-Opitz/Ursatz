@@ -40,6 +40,10 @@ static int run_command(const CliCommand *command, int argc, char **argv) {
     if (!cli_parse_or_fail(command, argc, argv, &args)) {
         return 1;
     }
+    if (args.help) {
+        cli_print_help(command, stdout);
+        return 0;
+    }
     return command->run(&args);
 }
 

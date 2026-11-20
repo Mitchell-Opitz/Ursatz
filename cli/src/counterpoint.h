@@ -13,8 +13,4 @@
  */
 int run_counterpoint(const CliArgs *args);
 
-/* The line of the usage text that names the subcommand. */
-#define COUNTERPOINT_USAGE_LINE                                                                                    \
-    "       ursatz counterpoint <line> --species <1-4> [--above|--below] --key <key> --meter <n/m> [options]"
-
 #endif

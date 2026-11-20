@@ -30,48 +30,11 @@ typedef struct {
     bool list_ops;
     bool each_op;
     bool json;
-    bool help;
 } Options;
 
-static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", VARIANTS_USAGE_LINE + 7);
-    fprintf(out, "Lists the variant operations of the registry, or makes variants of a motive: each variant applies a chain\n");
-    fprintf(out, "of up to %ld operations. A parameter the chain leaves open is drawn from the seed, so the same motive,\n", cli_limit("variant_chain"));
-    fprintf(out, "chain and seed give the same variant, and another seed is a reroll.\n\n");
-    fprintf(out, "  --list-ops           print every operation: name, label, category, citation, parameters and the\n");
-    fprintf(out, "                       forms it applies to\n");
-    fprintf(out, "  <input>              a MIDI file, a MusicXML file, a note list or a motive JSON file\n");
-    fprintf(out, "  --format, --form, --meter, --key, --pickup   as for the motive command\n");
-    motive_extras_print_help(out, false);
-    motive_input_print_basic_help(out);
-    fprintf(out, "  --function <name>    keep only variants that suit a function: beginning, continuation, contrast or\n");
-    fprintf(out, "                       cadential (repeatable: a variant that suits any of them). Draws up to %d chains for\n", VARIANTS_DRAWS_PER_COUNT);
-    fprintf(out, "                       each variant asked for, so fewer than --count may come back\n");
-    fprintf(out, "  --distance <d>       close, medium or far: close draws 1-step chains and keeps remoteness at most 1/3,\n");
-    fprintf(out, "                       medium 2 steps and over 1/3 up to 2/3, far 3 or 4 steps and over 2/3. Draws up to %d\n", VARIANTS_DRAWS_PER_COUNT);
-    fprintf(out, "                       chains for each variant asked for, so fewer than --count may come back; combines with\n");
-    fprintf(out, "                       --function (both must hold). Not with --chain\n");
-    fprintf(out, "  --each-op            one variant for every operation that applies to the motive's form, in registry\n");
-    fprintf(out, "                       order, each a one-step chain with its open parameters drawn from seed + the\n");
-    fprintf(out, "                       operation's position in the registry. An operation the motive refuses is listed as\n");
-    fprintf(out, "                       skipped, with the reason. Not with --chain, --count, --distance or --function\n");
-    fprintf(out, "  --chain <file>       a JSON file {\"steps\": [{\"op\": \"invert\", \"params\": {\"tonal\": true}}]}, the same\n");
-    fprintf(out, "                       chain for every variant. Default: each variant gets its own random chain\n");
-    fprintf(out, "  --count <n>          how many variants, 1 to %d (default %d); variant i uses seed + i\n", VARIANTS_COUNT_MAX, VARIANTS_COUNT_DEFAULT);
-    fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
-    fprintf(out, "  --json               print as JSON: the seed, the source, and for each variant its seed, chain, kind, kept,\n");
-    fprintf(out, "                       changed, derivation, recognizability, remoteness, functions and motive (with its analysis)\n");
-    fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable chain file; 2 the input cannot\n");
-    fprintf(out, "be loaded or a step of the chain is refused.\n\n");
-    fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz variants --list-ops\n");
-    fprintf(out, "  ursatz variants theme.txt --meter 4/4 --key \"D minor\" --count 4 --seed 7\n");
-}
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->help = args->help;
     options->in.path = args->input_count > 0 ? args->inputs[0] : NULL;
     int extras_status = motive_extras_read(&options->in.extras, args, false);
     if (extras_status != 0) {
@@ -314,12 +277,8 @@ int run_variants(const CliArgs *args) {
     if (status != 0) {
         return status;
     }
-    if (options.help) {
-        print_help(stdout);
-        return 0;
-    }
     if (!options.list_ops && !options.in.path) {
-        return cli_fail(CLI_EXIT_USAGE, "variants needs --list-ops or a motive input\n%s", VARIANTS_USAGE_LINE);
+        return cli_fail(CLI_EXIT_USAGE, "variants needs --list-ops or a motive input\n%s", cli_usage_of("variants"));
     }
     if (options.list_ops && (options.in.path || motive_extras_given(&options.in.extras) || motive_input_basic_given(&options.basic))) {
         return cli_fail(CLI_EXIT_USAGE, "--list-ops takes no motive input");

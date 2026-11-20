@@ -175,9 +175,3 @@ int motive_input_fail(const MotiveFile *file, UrsatzStatus status, const UrsatzE
                                                                  : names->source;
     return cli_fail_api(status, error, name);
 }
-
-void motive_input_print_basic_help(FILE *out) {
-    fprintf(out, "  --basic <file>       the basic motive the family of forms comes from, read in the source's form, meter, key\n");
-    fprintf(out, "                       and role; remoteness is measured from it. Default: the source is the basic motive\n");
-    fprintf(out, "  --basic-format <f>, --basic-pickup <b>, --basic-harmony \"<text>\"   as for the basic motive's own file\n");
-}
