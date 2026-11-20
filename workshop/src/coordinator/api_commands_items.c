@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/json.h>
+
 #include "coordinator/dispatch.h"
 
 /* The commands over projects, items and subjects (R-646). */
@@ -152,7 +154,10 @@ WORKSHOP_HANDLER(workshop_c_item_delete) {
         return URSATZ_ERR_REQUEST;
     }
     const cJSON *force = cJSON_GetObjectItemCaseSensitive(call->params, "force");
-    bool forced = cJSON_IsTrue(force) || (cJSON_IsString(force) && strcmp(force->valuestring, "1") == 0);
+    bool forced = false;
+    if (!common_json_bool(call->params, "force", &forced)) {
+        forced = cJSON_IsString(force) && strcmp(force->valuestring, "1") == 0; /* the route's ?force=1 */
+    }
     UrsatzStatus result = workshop_material_item_delete(call->target, forced);
     if (result == URSATZ_ERR_CONFLICT) {
         UrsatzStatus failed = material_failure(error, result);

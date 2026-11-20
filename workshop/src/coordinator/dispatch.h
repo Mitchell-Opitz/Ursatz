@@ -37,10 +37,6 @@ const char *workshop_param_string(const cJSON *params, const char *name, bool *b
 /* A required string member: false (and error filled: REQUEST at the member's path) when absent or not a string. */
 bool workshop_param_require_string(const cJSON *params, const char *name, const char **out, UrsatzError *error);
 
-/* A whole number member from min to max: *present says whether it was there. false (error filled) when it is not a whole number in range. */
-bool workshop_param_int(const cJSON *params, const char *name, long long min, long long max, bool *present, long long *out,
-                        UrsatzError *error);
-
 /* The number in text (digits only, 1 to max_digits of them), false when it is not one. */
 bool workshop_parse_whole(const char *text, int max_digits, long long *out);
 

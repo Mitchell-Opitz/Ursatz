@@ -58,11 +58,6 @@ static int handle_list_items(struct mg_connection *conn) {
 
 
 
-/* The text of a refusal to build a playback; every one is a 500 (the file came from the Composer, not the request). */
-static const char *playback_failure_text(UrsatzStatus result) {
-  return result == URSATZ_ERR_ALLOC ? "out of memory" : "could not build the playback from the MIDI file";
-}
-
 static int handle_create_item(struct mg_connection *conn) {
   return command_with_body(conn, "item.create", "", failed_material_cmd);
 }

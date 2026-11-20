@@ -161,26 +161,6 @@ bool workshop_parse_whole(const char *text, int max_digits, long long *out) {
     return true;
 }
 
-bool workshop_param_int(const cJSON *params, const char *name, long long min, long long max, bool *present, long long *out,
-                        UrsatzError *error) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(params, name);
-    if (present) {
-        *present = item && !cJSON_IsNull(item);
-    }
-    if (!item || cJSON_IsNull(item)) {
-        return true;
-    }
-    if (!cJSON_IsNumber(item) || item->valuedouble != (double)(long long)item->valuedouble || item->valuedouble < (double)min ||
-        item->valuedouble > (double)max) {
-        char path[96];
-        snprintf(path, sizeof(path), "/params/%s", name);
-        workshop_call_fail(error, URSATZ_ERR_REQUEST, path, "%s is a whole number from %lld to %lld", name, min, max);
-        return false;
-    }
-    *out = (long long)item->valuedouble;
-    return true;
-}
-
 /* --- failures -------------------------------------------------------------------------------------------------------------------- */
 
 UrsatzStatus workshop_call_fail(UrsatzError *error, UrsatzStatus status, const char *path, const char *format, ...) {

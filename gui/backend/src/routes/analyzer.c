@@ -59,25 +59,6 @@ static unsigned char *read_request_body(struct mg_connection *conn, size_t *out_
   return buffer;
 }
 
-/* Answers {"ok": true, <name>: value}; value (or the members of object, when name is NULL) is moved into the answer. */
-static int send_ok_with(struct mg_connection *conn, const char *name, cJSON *value) {
-  cJSON *answer = name ? cJSON_CreateObject() : value;
-  if (!answer || !value || (name && (!cJSON_AddBoolToObject(answer, "ok", 1) || !cJSON_AddItemToObject(answer, name, value)))) {
-    if (name) {
-      cJSON_Delete(value);
-    }
-    cJSON_Delete(answer);
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
-  }
-  if (!name && !cJSON_AddBoolToObject(answer, "ok", 1)) {
-    cJSON_Delete(answer);
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
-  }
-  return ursatz_gui_send_object(conn, 200, answer);
-}
-
 static char *empty_string_copy(void) {
   char *copy = malloc(1);
   if (copy) {

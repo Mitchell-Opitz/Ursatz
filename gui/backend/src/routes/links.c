@@ -16,17 +16,6 @@ static const char *kLinksPrefix = "/api/links";
 
 /* --- handlers ------------------------------------------------------------- */
 
-/* {"ok":true,<key>:value}; takes value. */
-static int send_ok_with(struct mg_connection *conn, int status, const char *key, cJSON *value) {
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !value || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, key, value)) {
-    cJSON_Delete(value);
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, status, object);
-}
-
 static int handle_start_run(struct mg_connection *conn) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
