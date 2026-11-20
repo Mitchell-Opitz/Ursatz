@@ -262,7 +262,8 @@ static void test_item_and_subject_queries(void) {
     bool listed = ask("project.list", NULL, &reply, &error);
     bool has_project = false;
     const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, listed ? member(reply.json, "projects") : NULL) {
+    const cJSON *projects = listed ? member(reply.json, "projects") : NULL;
+    cJSON_ArrayForEach(entry, projects) {
         has_project = has_project || strcmp(str(entry, "id"), g_project) == 0;
     }
     check(listed && has_project, "project.list lists the projects, the one made among them");
