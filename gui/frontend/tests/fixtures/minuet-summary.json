@@ -39,7 +39,9 @@
           "part": "Minuet",
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 1",
+          "length_text": "8 bars"
         },
         {
           "id": "A",
@@ -57,7 +59,9 @@
           "part": "Minuet",
           "repeat_of": "A",
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 9",
+          "length_text": "8 bars"
         },
         {
           "id": "B",
@@ -78,7 +82,9 @@
             "chord": "V",
             "next": "I"
           },
-          "connective": null
+          "connective": null,
+          "start_text": "bar 17",
+          "length_text": "8 bars"
         },
         {
           "id": "A return",
@@ -105,7 +111,9 @@
           "part": "Minuet",
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 25",
+          "length_text": "8 bars"
         },
         {
           "id": "B",
@@ -126,7 +134,9 @@
             "chord": "V",
             "next": "I"
           },
-          "connective": null
+          "connective": null,
+          "start_text": "bar 33",
+          "length_text": "8 bars"
         },
         {
           "id": "A return",
@@ -153,7 +163,9 @@
           "part": "Minuet",
           "repeat_of": "A return",
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 41",
+          "length_text": "8 bars"
         },
         {
           "id": "A",
@@ -171,7 +183,9 @@
           "part": "Trio",
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 49",
+          "length_text": "8 bars"
         },
         {
           "id": "A",
@@ -189,7 +203,9 @@
           "part": "Trio",
           "repeat_of": "Trio A",
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 57",
+          "length_text": "8 bars"
         },
         {
           "id": "B",
@@ -210,7 +226,9 @@
             "chord": "V",
             "next": "i"
           },
-          "connective": null
+          "connective": null,
+          "start_text": "bar 65",
+          "length_text": "8 bars"
         },
         {
           "id": "A return",
@@ -237,7 +255,9 @@
           "part": "Trio",
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 73",
+          "length_text": "8 bars"
         },
         {
           "id": "B",
@@ -258,7 +278,9 @@
             "chord": "V",
             "next": "i"
           },
-          "connective": null
+          "connective": null,
+          "start_text": "bar 81",
+          "length_text": "8 bars"
         },
         {
           "id": "A return",
@@ -285,7 +307,9 @@
           "part": "Trio",
           "repeat_of": "Trio A return",
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 89",
+          "length_text": "8 bars"
         },
         {
           "id": "A",
@@ -303,7 +327,9 @@
           "part": "Minuet da capo",
           "repeat_of": "A",
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 97",
+          "length_text": "8 bars"
         },
         {
           "id": "B",
@@ -324,7 +350,9 @@
             "chord": "V",
             "next": "I"
           },
-          "connective": null
+          "connective": null,
+          "start_text": "bar 105",
+          "length_text": "8 bars"
         },
         {
           "id": "A return",
@@ -351,7 +379,9 @@
           "part": "Minuet da capo",
           "repeat_of": "A return",
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 113",
+          "length_text": "8 bars"
         }
       ],
       "score": {

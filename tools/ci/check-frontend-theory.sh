@@ -6,7 +6,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root/gui"
 
-names='playbackFromMidi|randomSettings|defaultCadence|parseHarmonyToken|HARMONY_TOKEN|KEY_TONICS|RANDOM_METERS|chordProblems|numeralsOk|MOTIF_ROLES|MOTIF_FORMS|FUNCTIONS|DISTANCES|SUITS_FILTERS|formProblems|structureProblems|motifFormProblems|featureProblems|DEVELOPMENTS|DEVELOPMENT_HELP|CHORD_BARS|MAX_EXTENSIONS|CHORD_TEXT_MAX|HARMONY_MAX_CHARS|errorField'
+names='playbackFromMidi|randomSettings|defaultCadence|parseHarmonyToken|HARMONY_TOKEN|KEY_TONICS|RANDOM_METERS|chordProblems|numeralsOk|MOTIF_ROLES|MOTIF_FORMS|FUNCTIONS|DISTANCES|SUITS_FILTERS|formProblems|structureProblems|motifFormProblems|featureProblems|DEVELOPMENTS|DEVELOPMENT_HELP|CHORD_BARS|MAX_EXTENSIONS|CHORD_TEXT_MAX|HARMONY_MAX_CHARS|errorField|sectionRoleLabel|sectionReturnLabel|sectionKeysLabel|sizeLabel|figureLabel|FIGURE_KINDS|FIGURE_RHYTHMS|positionLabel|beatsOfTime|FILL_TEXT|SEAM_RULES|MAX_CELLS|LANES|MAX_VARIATIONS'
 pattern="(\\b(function|class|const|let|var)[[:space:]]+($names)\\b)|(^|[^.[:alnum:]_\$])($names)[[:space:]]*(:|=[^=>]|=\$|\\([^)]*\\)[[:space:]]*\\{)"
 
 failed=0

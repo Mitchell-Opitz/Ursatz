@@ -161,7 +161,7 @@ check(same(JSON.parse(P.chooseRequest("pce-1", 2, 4, 1).body), { index: 1 }) && 
 check(P.variationFileUrl("pce-1", 2, 4, "variation-1.musicxml").endsWith("/versions/2/variations/4/variation-1.musicxml"), "variation file url");
 check(same(P.lanesFor(section("s", "body", "A", 8)), ["harmony", "bass", "melody", "inner"]) && same(P.lanesFor(section("s", "body", "A", 8, { kind: "theme" })), ["harmony", "bass"]) && P.lanesFor(section("e", "ending", "E", 8), [{ id: "s" }]).length === 0, "lanes by section");
 const cards = P.variationCards({ set: 1, variations: [{ index: 2, seed: 5, score: { numerator: 8, denominator: 12 }, seam: { held: 3 }, heard: "half" }] });
-check(cards[0].title === "#2 · seed 5" && cards[0].score === "8 of 12" && cards[0].seam === "3 of 4 seam rules" && cards[0].heard === "half", "variation cards");
+check(cards[0].title === "#2 · seed 5" && cards[0].score === "8 of 12" && cards[0].seam === "3 seam rules held" && cards[0].heard === "half", "variation cards");
 
 /* result */
 const summary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "piece-summary.json"), "utf8"));
@@ -345,7 +345,7 @@ check(ternaryRows.every((row) => row.plannedKey === "") && minuetRows.every((row
 const figuredEntry = P.formOf("figured-variations");
 const figuredSections = figuredEntry.sizes.find((size) => size.bars === 56).sections;
 check(
-  same(figuredSections.map((entry) => P.figureLabel(entry)), [
+  same(figuredSections.map((entry) => entry.labels.figure), [
     "",
     "neighbor tones in eighths",
     "neighbor tones in sixteenths",
@@ -358,7 +358,7 @@ check(
   "the figure of each variation of the figured variations reads in words and its theme and codettas have none",
 );
 check(
-  P.formOf("minuet").sizes.every((size) => size.sections.every((entry) => P.figureLabel(entry) === "")) && P.figureLabel(null) === "" && P.figureLabel({}) === "",
+  P.formOf("minuet").sizes.every((size) => size.sections.every((entry) => entry.labels.figure === "")),
   "a section with no figure has no label",
 );
 const figuredSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "figured-variations-summary.json"), "utf8"));
@@ -380,12 +380,8 @@ check(minuetRows.every((row) => row.figure === "" && row.skeleton === ""), "a ro
 const partsEntry = P.formOf("main-and-subordinate");
 const partsSections = partsEntry.sizes.find((size) => size.bars === 57).sections;
 check(
-  same(partsSections.map((entrySection) => P.sectionRoleLabel(entrySection)), ["Theme", "Transition", "Subordinate theme", "Subordinate theme (lyric)", "Codetta", "Retransition", "Return", "Coda"]),
+  same(partsSections.map((entrySection) => entrySection.labels.role), ["Theme", "Transition", "Subordinate theme", "Subordinate theme (lyric)", "Codetta", "Retransition", "Return", "Coda"]),
   "the structure table's role label names a lyric theme and the other roles by their label",
-);
-check(
-  P.sectionRoleLabel({ role: { value: "transition", label: "Transition" }, independent: true, lyric: false }) === "Transition (independent)" && P.sectionRoleLabel(null) === "",
-  "an independent transition is named in the role label",
 );
 check(
   same(P.functionsFor("body").map((entry) => entry.name), ["transition"]) &&
@@ -427,24 +423,22 @@ check(minuetRows.every((row) => row.function === ""), "a row without a function 
 const rondoSections = require(generated("forms.json")).forms.find((form) => form.name === "small-rondo-ababa").sizes[0].sections;
 const rondoSection = (name) => rondoSections.find((section) => section.name === name);
 check(
-  P.sectionReturnLabel(rondoSection("A1")) === "A (embellish)" &&
-    P.sectionReturnLabel(rondoSection("B1")) === "B (exact)" &&
-    P.sectionReturnLabel(rondoSection("A2")) === "A (setting: arpeggiated)" &&
-    P.sectionReturnLabel(rondoSection("A")) === "" &&
-    P.sectionReturnLabel(null) === "",
+  rondoSection("A1").labels.return === "A (embellish)" &&
+    rondoSection("B1").labels.return === "B (exact)" &&
+    rondoSection("A2").labels.return === "A (setting: arpeggiated)" &&
+    rondoSection("A").labels.return === "",
   "a return names its variation, and its setting for a setting return",
 );
 check(
-  P.sectionKeysLabel(rondoSection("B1")).endsWith(" (tonic major)") &&
-    P.sectionKeysLabel(rondoSection("B")) === "subordinate to subordinate" &&
-    P.sectionKeysLabel(rondoSection("A1")) === "home to home" &&
-    P.sectionKeysLabel(null) === "",
+  rondoSection("B1").labels.keys.endsWith(" (tonic major)") &&
+    rondoSection("B").labels.keys === "subordinate to subordinate" &&
+    rondoSection("A1").labels.keys === "home to home",
   "a section in the tonic major says so and any other shows its keys alone",
 );
 const mainSections = require(generated("forms.json")).forms.find((form) => form.name === "main-and-subordinate").sizes[0].sections;
 const mainReturn = mainSections.find((section) => section.returns);
 check(
-  P.sectionReturnLabel(mainReturn) === `${mainReturn.returns} (${mainReturn.variation})` && P.sectionReturnLabel(mainReturn) === "A (exact)" && P.sectionKeysLabel(mainSections.find((section) => section.name === "T")) === "home to subordinate",
+  mainReturn.labels.return === `${mainReturn.returns} (${mainReturn.variation})` && mainReturn.labels.return === "A (exact)" && (mainSections.find((section) => section.name === "T")).labels.keys === "home to subordinate",
   "a main and subordinate section's labels are as the inline text gave",
 );
 const rondoSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "small-rondo-ababa-summary.json"), "utf8"));
@@ -456,15 +450,15 @@ const sonatinaForms = require(generated("forms.json")).forms;
 const sonatinaSections = sonatinaForms.find((form) => form.name === "sonatina").sizes[0].sections;
 const sonatinaSection = (name) => sonatinaSections.find((section) => section.name === name);
 check(
-  P.sectionKeysLabel(sonatinaSection("B1")) === "home to home (home mode)" &&
-    P.sectionKeysLabel(sonatinaSection("E")) === "elaboration to elaboration" &&
-    P.sectionReturnLabel(sonatinaSection("B1")) === "B (reharmonize)" &&
-    P.sectionReturnLabel(sonatinaSection("E")) === "B (embellish)",
+  sonatinaSection("B1").labels.keys === "home to home (home mode)" &&
+    sonatinaSection("E").labels.keys === "elaboration to elaboration" &&
+    sonatinaSection("B1").labels.return === "B (reharmonize)" &&
+    sonatinaSection("E").labels.return === "B (embellish)",
   "a sonatina section in the home mode says so, the elaboration shows its keys and returns of B",
 );
 const sonatinaMajorSections = sonatinaForms.find((form) => form.name === "sonatina-tonic-major").sizes[0].sections;
 check(
-  P.sectionKeysLabel(sonatinaMajorSections.find((section) => section.name === "B1")).endsWith(" (tonic major)"),
+  (sonatinaMajorSections.find((section) => section.name === "B1")).labels.keys.endsWith(" (tonic major)"),
   "a sonatina-tonic-major section in the tonic major says so",
 );
 const sonatinaSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "sonatina-summary.json"), "utf8"));

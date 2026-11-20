@@ -32,8 +32,9 @@
   const constructedBars = () => Themes.BARS;
   /* The pickups offered in a meter, in beats (any other multiple of 1/32 shorter than a bar is accepted too). */
   const pickups = (meter) => (Vocab.get().pickups || {})[meter] || [];
-  /* A limit of the GUI's own: the Composer holds none for the cells of a chord. */
-  const MAX_CELLS = 8;
+  /* The limits the Composer serves: the cells of a chord, the variations of a section. */
+  const maxCells = () => Vocab.limit("harmony_cells", 0);
+  const maxVariations = () => Vocab.limit("piece_variations", 0);
 
   function text(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -168,48 +169,6 @@
     return value;
   }
 
-  /* The label of a forms entry section's role, then " (independent)" for an independent transition and " (lyric)" for a lyric
-   * subordinate theme (P51, R-510). Not roleLabel: that one looks a role value up in a form. */
-  function sectionRoleLabel(entrySection) {
-    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
-    const base = section.role ? section.role.label : "";
-    return `${base}${section.independent === true ? " (independent)" : ""}${section.lyric === true ? " (lyric)" : ""}`;
-  }
-
-  /* The Returns cell of a forms entry section (P52, R-521): "" with no `returns`, else the returned name, then " (<variation>)"
-   * when it has a variation, written " (setting: <setting>)" for a setting return: "A (embellish)", "A (setting: arpeggiated)". */
-  function sectionReturnLabel(entrySection) {
-    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
-    if (!section.returns) {
-      return "";
-    }
-    if (!section.variation) {
-      return section.returns;
-    }
-    if (section.variation === "setting" && section.setting) {
-      return `${section.returns} (setting: ${section.setting})`;
-    }
-    return `${section.returns} (${section.variation})`;
-  }
-
-  /* The Keys cell of a forms entry section (P52, R-521; P53, R-525): "" with no `keys`, else "<start> to <end>", then " (tonic major)" for
-   * a section in the tonic major and " (home mode)" for a section in the home mode. */
-  function sectionKeysLabel(entrySection) {
-    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
-    if (!section.keys) {
-      return "";
-    }
-    const modeNote = section.mode === "major" ? " (tonic major)" : section.mode === "home" ? " (home mode)" : "";
-    return `${section.keys.start} to ${section.keys.end}${modeNote}`;
-  }
-
-  /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars". */
-  function sizeLabel(size) {
-    const last = size.sections.length > 0 ? size.sections[size.sections.length - 1].role : null;
-    const noun = last && last.label ? last.label.toLowerCase() : "section";
-    return size.count > 0 ? `${size.count} ${noun}${size.count === 1 ? "" : "s"}, ${size.bars} bars` : `${size.bars} bars`;
-  }
-
   /* The sizes of a sized form: [{value, bars, count, default, label}] (value "<bars>:<count>"). */
   function sizeOptions(form) {
     if (!isSized(form)) {
@@ -220,7 +179,7 @@
       bars: size.bars,
       count: size.count,
       default: size.default === true,
-      label: sizeLabel(size),
+      label: size.label,
     }));
   }
 
@@ -255,34 +214,6 @@
       return { halves: "", text: "" };
     }
     return { halves: Themes.constructionHalves(construction), text: typeof construction.text === "string" ? construction.text : "" };
-  }
-
-  const FIGURE_KINDS = { neighbor: "neighbor tones", scale: "scale line", "broken-chord": "broken chord" };
-  const FIGURE_RHYTHMS = { eighths: "in eighths", sixteenths: "in sixteenths" };
-
-  /* The figure of a sized form's section (P50, R-501) in words: the kind and the rhythm, then reharmonized, the root
-   * change at a bar and the climax as they apply, and the parallel mode when the section is in it; "" for a section with
-   * no figure. */
-  function figureLabel(section) {
-    const figure = section && section.figure;
-    if (!figure || typeof figure !== "object") {
-      return "";
-    }
-    const words = [FIGURE_KINDS[figure.kind] || figure.kind, FIGURE_RHYTHMS[figure.rhythm] || (figure.rhythm ? `in ${figure.rhythm}` : "")].filter((word) => word);
-    const parts = [words.join(" ")];
-    if (figure.harmony === "reharmonized") {
-      parts.push("reharmonized");
-    }
-    if (Number.isInteger(figure.change_at)) {
-      parts.push(`root changed at bar ${figure.change_at}`);
-    }
-    if (figure.climax === true) {
-      parts.push("climax");
-    }
-    if (section.mode === "parallel") {
-      parts.push("parallel mode");
-    }
-    return parts.join(", ");
   }
 
   /* A state on another form: a request-listed form starts with one section of its first required role, a sized form
@@ -325,16 +256,6 @@
   function beatUnit(meter) {
     const d = parseInt(String(meter || "").split("/")[1], 10);
     return Number.isInteger(d) && d > 0 ? d : 4;
-  }
-
-  /* n or n/d as a number of beats, or null when the text is not that. */
-  function rational(value) {
-    const m = /^(\d+)(?:\/(\d+))?$/.exec(text(String(value === undefined || value === null ? "" : value)));
-    if (!m) {
-      return null;
-    }
-    const bottom = m[2] === undefined ? 1 : Number(m[2]);
-    return bottom > 0 ? Number(m[1]) / bottom : null;
   }
 
   /* --- section ids and letters ------------------------------------------ */
@@ -527,7 +448,7 @@
     const h = harmony && typeof harmony === "object" ? harmony : emptyHarmony();
     if (h.kind === "progression" && text(h.numerals) !== "") {
       const out = { progression: text(h.numerals).split(/\s+/).join(" ") };
-      const cells = wholeNumber(h.cells, 1, MAX_CELLS);
+      const cells = wholeNumber(h.cells, 1, maxCells());
       if (cells !== null) {
         out.cells = cells;
       }
@@ -976,11 +897,14 @@
     return Boolean(body && body.result && typeof body.result === "object");
   }
 
-  /* True when the section is whole bars (3 to 16) with no pickup: it may be a theme with a construction. */
+  /* True when the section is whole bars within the Composer's construction limits with no pickup: it may be a theme with a
+   * construction. */
   function constructionPossible(section, meter) {
     const bars = Number(section.beats) / barBeats(meter);
-    const pickup = rational(section.pickup);
-    return constructedBars().includes(bars) && (pickup === null || pickup === 0);
+    const limit = (Vocab.get().limits || {}).construction_bars || {};
+    const pickup = Number(section.pickup);
+    const noPickup = section.pickup === undefined || section.pickup === null || section.pickup === "" || pickup === 0;
+    return Number.isInteger(bars) && bars >= limit.min && bars <= limit.max && noPickup;
   }
 
   /* A motif fill takes its theme form (sentence, period, hybrid) at 4 or 8 whole bars without a pickup, or at any whole
@@ -1072,8 +996,8 @@
 
   /* --- regenerate and variations ---------------------------------------- */
 
-  const LANES = ["harmony", "bass", "melody", "inner"];
-  const MAX_VARIATIONS = 8;
+  /* The lanes a section may be written again in, the Composer's (all is the choice of every lane). */
+  const lanes = () => Vocab.values("lanes").filter((value) => value !== "all");
 
   /* The lanes of a section that can be written again (R-173): only a section of the first version (rows, as versionView
    * gives them) can be; a section filled with a theme takes harmony and bass only (the backend refuses the others). With no
@@ -1082,7 +1006,7 @@
     if (!section || (Array.isArray(rows) && !rows.some((row) => row.id === section.id))) {
       return [];
     }
-    return section.fill && section.fill.kind === "theme" ? ["harmony", "bass"] : LANES.slice();
+    return section.fill && section.fill.kind === "theme" ? ["harmony", "bass"] : lanes();
   }
 
   /* The sections that offer regenerate and variations, from the first version's rows (resultView `versions[0].view.rows`):
@@ -1137,9 +1061,9 @@
     if (seed.error) {
       return { error: seed.error };
     }
-    const count = wholeNumber(o.count, 1, MAX_VARIATIONS);
+    const count = wholeNumber(o.count, 1, maxVariations());
     if (count === null) {
-      return { error: `The count is 1 to ${MAX_VARIATIONS}.` };
+      return { error: `The count is 1 to ${maxVariations()}.` };
     }
     if (!text(o.section_id) || text(o.lane) === "") {
       return { error: "Choose a section and a lane." };
@@ -1179,44 +1103,13 @@
         index: entry.index,
         title: `#${entry.index} · seed ${entry.seed}`,
         score,
-        seam: Number.isFinite(seam) ? `${seam} of ${SEAM_RULES.length} seam rules` : "",
+        seam: Number.isFinite(seam) ? `${seam} seam rules held` : "",
         heard: typeof entry.heard === "string" ? entry.heard : "",
       };
     });
   }
 
   /* --- the result ------------------------------------------------------ */
-
-  const FROM_TEXT = { request: "set here", option: "set here", style: "from the brief", none: "not set" };
-  const DISTANCE_LABELS = ["harmony", "rhythm", "melody", "form", "overall"];
-  const FILL_TEXT = { empty: "empty", motif: "motif", theme: "theme" };
-  const SEAM_RULES = [
-    { key: "progression", label: "The chords lead back" },
-    { key: "no_parallels", label: "No parallel perfect intervals across the seam" },
-    { key: "step", label: "The melody leaps no further than it can recover" },
-    { key: "leading_tone", label: "The leading tone resolves" },
-  ];
-
-  /* A time "n/d" in whole notes as the beat count of a meter, or null. */
-  function beatsOfTime(time, meter) {
-    const m = /^(\d+)\/(\d+)$/.exec(String(time || ""));
-    if (!m || Number(m[2]) === 0) {
-      return null;
-    }
-    return (Number(m[1]) / Number(m[2])) * beatUnit(meter);
-  }
-
-  /* "bar 3" or "bar 3 beat 2" for a beat count. */
-  function positionLabel(beats, meter) {
-    if (!Number.isFinite(beats)) {
-      return "";
-    }
-    const per = barBeats(meter);
-    const bar = Math.floor(beats / per) + 1;
-    const beat = beats - (bar - 1) * per;
-    const shown = Number.isInteger(beat) ? String(beat + 1) : String(Math.round((beat + 1) * 100) / 100);
-    return beat === 0 ? `bar ${bar}` : `bar ${bar} beat ${shown}`;
-  }
 
   /* Where a section's material came from: the Composer's words, or for a theme fill (its plan's path) the name the
    * caller gives that section in names ({<section id>: "Theme One v2"}). */
@@ -1238,7 +1131,6 @@
     }
     const planned = options && options.form && isSized(options.form) ? sectionsOf(options.form, options.bars, options.count) : [];
     const rows = (Array.isArray(v.sections) ? v.sections : []).map((section) => {
-      const beats = beatsOfTime(section.start, meter);
       const part = section.role || section.part || "";
       const entry = planned.find((item) => item.name === section.id);
       return {
@@ -1252,13 +1144,12 @@
         upbeat: section.upbeat ? `${section.upbeat.chord} to ${section.upbeat.next}` : "",
         connective: section.connective === true ? "yes" : section.connective === false ? "no" : "",
         letter: section.letter || "",
-        start: positionLabel(beats, meter),
-        startBeats: beats,
+        start: section.start_text || "",
         beats: section.beats,
-        length: beatsLabel(section.beats, meter),
+        length: section.length_text || "",
         cadence: section.cadence || "",
         heard: section.heard || "",
-        fill: FILL_TEXT[section.fill] || section.fill || "",
+        fill: section.fill || "",
         source: sourceText(section.source, options && options.sourceNames),
         plannedKey: section.key || "",
         /* The region and the harmony the request gave the section, as it asked (R-610); "" for none. */
@@ -1287,9 +1178,9 @@
       seam: seam
         ? {
             held: seam.held,
-            total: SEAM_RULES.length,
-            label: `${seam.held} of ${SEAM_RULES.length} seam rules held`,
-            rules: SEAM_RULES.map((rule) => ({ label: rule.label, held: seam[rule.key] === true })),
+            total: Array.isArray(seam.rules) ? seam.rules.length : 0,
+            label: `${seam.held} of ${Array.isArray(seam.rules) ? seam.rules.length : 0} seam rules held`,
+            rules: (Array.isArray(seam.rules) ? seam.rules : []).map((rule) => ({ label: rule.label, held: rule.ok === true })),
           }
         : null,
       score: score ? { numerator: score.numerator, denominator: score.denominator, label: `${score.numerator} of ${score.denominator}` } : null,
@@ -1302,7 +1193,7 @@
           }
         : null,
       distance: distance
-        ? DISTANCE_LABELS.filter((label) => Number.isFinite(distance[label])).map((label) => ({ label, value: distance[label].toFixed(4) }))
+        ? Object.keys(distance).filter((label) => Number.isFinite(distance[label])).map((label) => ({ label, value: distance[label].toFixed(4) }))
         : [],
     };
   }
@@ -1384,19 +1275,17 @@
     const without = Array.isArray(brief.without) ? brief.without : [];
     const loop = summary.loop && typeof summary.loop === "object" ? summary.loop : null;
     const pieces = r.brief && typeof r.brief === "object" ? r.brief : {};
-    const startBeats = loop ? beatsOfTime(loop.start, meter) : null;
-    const endBeats = loop ? beatsOfTime(loop.end, meter) : null;
     return {
       seed: Number.isInteger(r.seed) ? r.seed : null,
       key: typeof summary.key === "string" ? summary.key : "",
       meter,
-      loop: loop && startBeats !== null && endBeats !== null ? `${positionLabel(startBeats, meter)} to ${positionLabel(endBeats, meter)}` : "",
+      loop: loop && typeof loop.text === "string" ? loop.text : "",
       playLoop: playbackLoop(summary, form),
-      loopLength: startBeats !== null && endBeats !== null ? beatsLabel(endBeats - startBeats, meter) : "",
+      loopLength: loop && typeof loop.length_text === "string" ? loop.length_text : "",
       versions: versionViews(versions, form, meter, rowOptions),
       brief: {
-        tempo: Number.isFinite(tempo.qpm) ? `${tempo.qpm} (${FROM_TEXT[tempo.from] || tempo.from})` : "not set",
-        mode: mode.mode ? `${mode.mode} (${FROM_TEXT[mode.from] || mode.from})` : "",
+        tempo: Number.isFinite(tempo.qpm) ? `${tempo.qpm} (${Themes.FROM_TEXT[tempo.from] || tempo.from})` : "not set",
+        mode: mode.mode ? `${mode.mode} (${Themes.FROM_TEXT[mode.from] || mode.from})` : "",
         density: Number.isFinite(brief.density) ? `${brief.density} attacks per beat` : "not set",
         without: without.length > 0 ? without.join(", ") : "none",
       },
@@ -1427,17 +1316,12 @@
     performedParts,
     rolesOf,
     roleLabel,
-    sectionRoleLabel,
-    sectionReturnLabel,
-    sectionKeysLabel,
     functionsFor,
     defaultRole,
     sizeOptions,
-    sizeLabel,
     sizeOf,
     sectionsOf,
     sectionConstruction,
-    figureLabel,
     withForm,
     get CADENCES() {
       return cadences();
@@ -1464,7 +1348,7 @@
       return Themes.WEIGHTS;
     },
     pickups,
-    MAX_CELLS,
+    maxCells,
     fieldForPath,
     validateRequest,
     emptyState,
@@ -1496,8 +1380,8 @@
     composeRequest,
     versionFileUrl,
     versionPlaybackUrl,
-    LANES,
-    MAX_VARIATIONS,
+    lanes,
+    maxVariations,
     lanesFor,
     actionSections,
     optionalSeed,
@@ -1507,7 +1391,6 @@
     variationFileUrl,
     variationCards,
     resultView,
-    positionLabel,
     updatedUses,
   };
   if (typeof module !== "undefined" && module.exports) {

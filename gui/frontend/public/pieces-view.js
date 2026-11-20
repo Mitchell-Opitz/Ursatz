@@ -74,21 +74,21 @@ function pieceSectionStrip(sections) {
   const constructions = sections.map((section) => PiecesModel.sectionConstruction(section).text);
   const withConstruction = constructions.some((text) => text !== "");
   /* The Figure column (P50) is there only when a section has a figure. */
-  const figures = sections.map((section) => PiecesModel.figureLabel(section));
+  const figures = sections.map((section) => (section.labels ? section.labels.figure : ""));
   const withFigure = figures.some((text) => text !== "");
   box.appendChild(
     pieceTable(
       ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots", ...(withFigure ? ["Figure"] : []), ...(withConstruction ? ["Construction"] : [])],
       sections.map((section, at) => [
         section.letter,
-        PiecesModel.sectionRoleLabel(section),
+        section.labels.role,
         lengthOf(section),
         section.beginning ? section.beginning.label : "",
         section.ending ? section.ending.label : "",
         section.cadence ? section.cadence.label : "",
-        PiecesModel.sectionKeysLabel(section),
+        section.labels.keys,
         section.pedal ? section.pedal.label : "",
-        PiecesModel.sectionReturnLabel(section),
+        section.labels.return,
         (Array.isArray(section.slots) ? section.slots : []).map((slot) => `${slot.slot}: ${slot.ideas.join(", ")}`).join("; "),
         ...(withFigure ? [figures[at]] : []),
         ...(withConstruction ? [constructions[at]] : []),
@@ -547,7 +547,7 @@ function buildPieceActions(ctx, state, rows) {
 
   for (const section of PiecesModel.actionSections(state, rows)) {
     const lanes = section.lanes;
-    const whole = lanes.length === PiecesModel.LANES.length;
+    const whole = lanes.length === PiecesModel.lanes().length;
     const row = materialsElement("div", "upload-controls piece-action-row");
     row.appendChild(materialsElement("strong", "", `${section.letter} (${section.length})`));
     const regenLane = themeSelect([...(whole ? [{ value: "", label: "All lanes" }] : []), ...lanes], whole ? "" : lanes[0]);
@@ -675,7 +675,7 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   const sizedFacts = () => {
     const size = PiecesModel.sizeOf(form, state.bars, state.count);
     return [
-      ["Size", size ? PiecesModel.sizeLabel(size) : "not found"],
+      ["Size", size ? size.label : "not found"],
       ...(PiecesModel.isModulating(form)
         ? [["Modulate", "always"]]
         : form.settings && form.settings.modulate === true
