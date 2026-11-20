@@ -20,6 +20,18 @@ static const char *const kRules[] = {
     "Params in [brackets] are optional; one|two lists the words an enum takes.",
 };
 
+/* The same rules for the markdown page: a placeholder in angle brackets would read as a tag there, so each is a code span. */
+static const char *const kRulesMarkdown[] = {
+    "One command a line: `<command> [<kind>:<id>[@v<n>]] {<param> <value>}`.",
+    "The target is what the command works on, written `<kind>:<id>`: item, piece, collection, style, links, project, subject or job.",
+    "A command that changes an item that has versions names the version you read: `item:<id>@v<n>`.",
+    "A value is one token: a word, a number, `true`, `false`, `null`, `n/d`, a `\"quoted string\"` or a `[list of words]`.",
+    "An object param is written below the command, two spaces in, one member a line: `key value` (nested members go in two more).",
+    "A command that takes a file ends with: `file <path>`.",
+    "A line starting with `#` is a comment; blank lines are ignored; the header `ursatz-text 1 commands` is allowed first.",
+    "Params in `[brackets]` are optional; `one|two` lists the words an enum takes.",
+};
+
 static const char *type_text(const cJSON *param, CommonText *scratch) {
     const char *type = cJSON_GetObjectItemCaseSensitive(param, "type")->valuestring;
     if (strcmp(type, "string") == 0) {
@@ -44,7 +56,7 @@ static const char *type_text(const cJSON *param, CommonText *scratch) {
     common_text_init(scratch);
     const cJSON *word;
     cJSON_ArrayForEach(word, cJSON_GetObjectItemCaseSensitive(param, "values")) {
-        common_text_appendf(scratch, "%s%s", word->prev ? "|" : "", word->valuestring);
+        common_text_appendf(scratch, "%s%s", word == cJSON_GetObjectItemCaseSensitive(param, "values")->child ? "" : "|", word->valuestring);
     }
     return scratch->data ? scratch->data : "word";
 }
@@ -129,8 +141,8 @@ char *workshop_command_sheet_markdown(void) {
     common_text_append(&out, "Every command of the workshop, as Ursatz Text and as the call `ursatz apply` and the GUI send. Generated from `workshop/commands/*.json` "
                              "(tool `commands`, `ursatz help commands --format markdown`): do not edit. [Docs index](README.md).\n\n");
     common_text_append(&out, "## The text form\n\n");
-    for (size_t i = 0; i < sizeof kRules / sizeof kRules[0]; i++) {
-        common_text_appendf(&out, "- %s\n", kRules[i]);
+    for (size_t i = 0; i < sizeof kRulesMarkdown / sizeof kRulesMarkdown[0]; i++) {
+        common_text_appendf(&out, "- %s\n", kRulesMarkdown[i]);
     }
     for (size_t f = 0; f < workshop_command_family_count(); f++) {
         const cJSON *family = workshop_command_family_at(f);
@@ -144,8 +156,22 @@ char *workshop_command_sheet_markdown(void) {
             common_text_init(&params);
             target_text(command, &target);
             params_text(command, &params);
-            common_text_appendf(&out, "| `%s` | %s | %s | %s |\n", command_name(command), target.data && target.data[0] ? target.data + 1 : "none",
-                                params.data && params.data[0] ? params.data + 1 : "none", command_summary(command));
+            common_text_appendf(&out, "| `%s` | ", command_name(command));
+            if (target.data && target.data[0]) {
+                common_text_appendf(&out, "`%s` | ", target.data + 1);
+            } else {
+                common_text_append(&out, "none | ");
+            }
+            if (params.data && params.data[0]) {
+                common_text_append(&out, "`");
+                for (const char *c = params.data + 1; *c; c++) {
+                    common_text_append(&out, *c == '|' ? "\\|" : (char[2]){*c, '\0'});
+                }
+                common_text_append(&out, "`");
+            } else {
+                common_text_append(&out, "none");
+            }
+            common_text_appendf(&out, " | %s |\n", command_summary(command));
             common_text_free(&target);
             common_text_free(&params);
         }
@@ -208,7 +234,7 @@ char *workshop_command_sheet_grammar(void) {
                        "rational   = [ \"-\" ] , digits , \"/\" , digits ;\n"
                        "list       = \"[\" , { value } , \"]\" ;\n"
                        "indent     = \"  \" ;\n\n"
-                       "(* One production a command: the params it takes, in any order; (* required *) names the ones it must have. *)\n");
+                       "(* One production a command: the params it takes, in any order; a comment names the ones it must have. *)\n");
     for (size_t f = 0; f < workshop_command_family_count(); f++) {
         const cJSON *command;
         cJSON_ArrayForEach(command, cJSON_GetObjectItemCaseSensitive(workshop_command_family_at(f), "commands")) {
@@ -226,7 +252,7 @@ char *workshop_command_sheet_grammar(void) {
                 common_text_append(&out, " , { ");
                 const cJSON *param;
                 cJSON_ArrayForEach(param, params) {
-                    common_text_appendf(&out, "%s\"%s\" , %s", param->prev ? " | " : "", cJSON_GetObjectItemCaseSensitive(param, "name")->valuestring,
+                    common_text_appendf(&out, "%s\"%s\" , %s", param == params->child ? "" : " | ", cJSON_GetObjectItemCaseSensitive(param, "name")->valuestring,
                                         value_production(param));
                 }
                 common_text_append(&out, " }");
@@ -318,7 +344,7 @@ char *workshop_command_sheet_help(const cJSON *command) {
         common_text_append(&out, "  give exactly one of:");
         const cJSON *member;
         cJSON_ArrayForEach(member, group) {
-            common_text_appendf(&out, "%s %s", member->prev ? "," : "", member->valuestring);
+            common_text_appendf(&out, "%s %s", member == group->child ? "" : ",", member->valuestring);
         }
         common_text_append(&out, "\n");
     }

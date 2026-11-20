@@ -169,3 +169,23 @@ ursatz_test(workshop_text_generated SOURCES test_text_generated.c LIBS ursatz_wo
                 TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
                 TEXT_CORPUS="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
+
+# The commands as schemas (P65 B5): the table and the schemas agree, the check of a command's params at its path, the actor in the version envelope.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_schemas)
+ursatz_test(workshop_command_schemas SOURCES test_command_schemas.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_schemas)
+
+# workshop/docs/command-reference.md is what the tool commands generates; the sheet stays short and every command has an example. The page is
+# written with URSATZ_UPDATE_GOLDENS=1.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/command_reference)
+ursatz_test(command_reference SOURCES test_command_reference.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_COMMAND_REFERENCE="${PROJECT_SOURCE_DIR}/workshop/docs/command-reference.md"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/command_reference LABELS golden)
+
+# Each workshop/commands/*.json against its meta-schema. Needs python3 with jsonschema (cmake/UrsatzTools.cmake).
+if(URSATZ_JSONSCHEMA_PYTHON)
+    file(GLOB URSATZ_COMMAND_FILES ${PROJECT_SOURCE_DIR}/workshop/commands/*.json)
+    ursatz_test(command_schemas_validate COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${PROJECT_SOURCE_DIR}/tests/support/validate_schema.py
+                     ${PROJECT_SOURCE_DIR}/workshop/schema/ursatz-commands.v1.schema.json ${URSATZ_COMMAND_FILES}
+        LABELS schema)
+endif()
