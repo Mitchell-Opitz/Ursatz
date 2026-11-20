@@ -4,7 +4,7 @@
 
 foreach(corpus reference mixed)
     file(REMOVE_RECURSE "${WORK_DIR}")
-    execute_process(COMMAND "${CLI}" --corpus "${CORPORA_DIR}/${corpus}" --out "${WORK_DIR}"
+    execute_process(COMMAND "${CLI}" corpus "${CORPORA_DIR}/${corpus}" --out "${WORK_DIR}"
                     RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "${corpus}: CLI exited ${result}")

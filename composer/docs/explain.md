@@ -68,7 +68,7 @@ one taken on main).
 
 ## In the CLI
 
-`--explain <file>` on [fill](cli-fill.md) and [grow](cli-grow.md) writes JSON when the name ends in `.json`, else the
+`--explain <file>` on [fill](../../cli/docs/cli-fill.md) and [grow](../../cli/docs/cli-grow.md) writes JSON when the name ends in `.json`, else the
 text. It works with or without `--check` and `--style`, and is written with the other outputs, all or none.
 
 ## Limits

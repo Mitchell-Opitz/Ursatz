@@ -18,7 +18,7 @@
 #include "ursatz_test.h"
 
 /*
- * Seeding from a corpus (corpus_seed.h, docs/style.md; R-619). The corpus is the output directory of `ursatz-analyzer --corpus`
+ * Seeding from a corpus (corpus_seed.h, docs/style.md; R-619). The corpus is the output directory of `ursatz corpus`
  * over the two sonatinas (Clementi 36 and Mozart 545), analyzed by CMake when the test is built. The Analyzer finds the passages
  * (analyzer_corpus_passages_like and _numerals) and the Composer seeds from them given inline, so this test sits at the root, where both
  * apps are linked. The passage is the

@@ -1,1 +1,1 @@
-ursatz-composer <VERSION>
+ursatz <VERSION>

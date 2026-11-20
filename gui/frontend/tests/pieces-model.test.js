@@ -1,6 +1,6 @@
 /* Covers the pure piece helpers (public/pieces-model.js): the body round trip, the structure problems, the beats
  * labels, the timeline, the default cadences, the compose, regenerate and variations requests and the result rows.
- * piece-summary.json is the output of `ursatz-composer piece --format json` for the request of the loop-and-ending
+ * piece-summary.json is the output of `ursatz piece --format json` for the request of the loop-and-ending
  * fixture (intro 2 bars, body of 8 and 4 bars from two motives, turnaround 2 bars, ending 2 bars), D minor at tempo
  * 170 from a style, seed 7 and --check.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */

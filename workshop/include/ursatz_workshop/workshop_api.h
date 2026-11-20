@@ -150,6 +150,23 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
                               UrsatzError *error);
 
 /*
+ * Tools (R-656). A tool is a third kind of call, beside queries and commands: it works on the files its params name (requests, plans, motive
+ * and score files, corpus folders) and never on the data folder or the journal, it writes only into an output its params name, it is not
+ * journaled and it takes no actor. The reply is a WorkshopReply like a query's: json (a tree the caller owns) and, for a tool that makes a
+ * file, bytes. An unknown name is URSATZ_ERR_REQUEST, path "/name". A workshop on a data folder answers tools too, started or not.
+ *
+ * workshop_tools_open opens a workshop with no data folder: it builds the knowledge snapshot only (no lock, recovery, services, jobs, events or
+ * change of directory). Such a workshop answers tools, refuses workshop_query, workshop_command and workshop_start with URSATZ_ERR_REQUEST,
+ * "this workshop has no data folder" (path ""), and its workshop_status gives data_dir null. One process holds one workshop at a time:
+ * workshop_tools_open while another is open is URSATZ_ERR_CONFLICT, "a workshop is already open in this process". *out is the workshop on
+ * URSATZ_OK and NULL otherwise; workshop_close closes it.
+ */
+UrsatzStatus workshop_tools_open(Workshop **out, UrsatzError *error);
+
+UrsatzStatus workshop_tool(Workshop *workshop, const char *name, const cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
+                           UrsatzError *error);
+
+/*
  * Events (R-648). A program that follows the workshop subscribes, waits for the next event and unsubscribes. An event is a name and a JSON object:
  * item-changed {item_id, version}, item-removed {item_id}, library-changed {piece_id}, collection-changed {collection_id}, subject-changed {subject_id},
  * style-changed {style_id}, links-changed {run_id} (published after the transaction that made the change committed), job-progress {id, kind, stage, done,
@@ -176,6 +193,18 @@ void workshop_stop(Workshop *workshop);
 
 /* Stops what the workshop holds, releases the data folder and frees the workshop. NULL is a no-op. */
 void workshop_close(Workshop *workshop);
+
+/*
+ * The lock file of the data folder, ".ursatz.lock", holds "<pid>\n" or "<pid> <port>\n" (R-659): the pid of the process that holds the folder and,
+ * when it serves HTTP, the port it announced. workshop_announce rewrites the file of the lock this workshop holds as "<pid> <port>\n" (URSATZ_ERR_REQUEST
+ * for a tools workshop and for a port outside 1 to 65535), so another program that finds the folder in use knows where to connect.
+ *
+ * workshop_lock_holder asks whether another open file holds the lock of data_dir: URSATZ_OK with the holder's pid and port (0 when it announced
+ * none), URSATZ_ERR_NOT_FOUND when there is no lock file or nobody holds it (what it took to find out is released), URSATZ_ERR_IO for a file it cannot
+ * open. It never keeps the lock.
+ */
+UrsatzStatus workshop_announce(Workshop *workshop, int port);
+UrsatzStatus workshop_lock_holder(const char *data_dir, long *pid, int *port, UrsatzError *error);
 
 /*
  * The versions the workshop was built with, as a JSON object (caller deletes): composer_version, api_version, producer_key,

@@ -65,8 +65,8 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema)
 endif()
 
-ursatz_test(test_render_plan LIBS ursatz_composer_engine composer_test_support DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
-add_dependencies(test_render_plan ursatz-composer)
+ursatz_test(test_render_plan LIBS ursatz_composer_engine composer_test_support DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>")
+add_dependencies(test_render_plan ursatz)
 
 ursatz_test(test_fill_loop LIBS ursatz_composer_engine composer_test_support)
 
@@ -88,16 +88,16 @@ ursatz_test(test_harmony_schema LIBS ursatz_composer_engine composer_test_suppor
 ursatz_test(test_harmony_lookups LIBS ursatz_composer_engine)
 
 ursatz_test(test_progression_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
-add_dependencies(test_progression_cli ursatz-composer)
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>")
+add_dependencies(test_progression_cli ursatz)
 
 ursatz_test(test_motive LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_motive_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_motive_cli ursatz-composer)
+add_dependencies(test_motive_cli ursatz)
 
 ursatz_test(test_motive_meter LIBS ursatz_composer_engine cjson INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
 
@@ -106,9 +106,9 @@ ursatz_test(test_motive_segments LIBS ursatz_composer_engine INCLUDES ${PROJECT_
 ursatz_test(test_motive_develop LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test(test_develop_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_develop_cli ursatz-composer)
+add_dependencies(test_develop_cli ursatz)
 
 ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support)
 
@@ -186,9 +186,9 @@ endforeach()
 
 # Measured 11.6 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_grow_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
-add_dependencies(test_grow_cli ursatz-composer)
+add_dependencies(test_grow_cli ursatz)
 
 ursatz_test(test_accompaniment LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -227,9 +227,9 @@ ursatz_test(test_counterpoint_species_3_smoke TARGET test_counterpoint ARGS 3 sm
 ursatz_test(test_counterpoint_not_applicable TARGET test_counterpoint ARGS na)
 
 ursatz_test(test_counterpoint_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_counterpoint_cli ursatz-composer)
+add_dependencies(test_counterpoint_cli ursatz)
 
 ursatz_test(test_motive_invent LIBS ursatz_composer_engine)
 
@@ -305,9 +305,9 @@ endforeach()
 
 # Theme and progression fills (R-170). The theme plan comes from the theme command, run as a process in a directory of its own.
 ursatz_test_executable(test_piece_fills LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_piece_fills ursatz-composer)
+add_dependencies(test_piece_fills ursatz)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
 foreach(mode fixture theme refused progression partial)
     # Every mode writes piece_fills_theme.json and piece_fills_out.txt in the one directory.
@@ -355,9 +355,9 @@ ursatz_test(test_return_heard_heard TARGET test_return_heard ARGS heard LABELS s
 
 # Measured 24.6 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_plan_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
-add_dependencies(test_plan_cli ursatz-composer)
+add_dependencies(test_plan_cli ursatz)
 
 # Chords given at exact onsets (given.h plan_give_chords).
 ursatz_test(test_given_chords LIBS ursatz_composer_engine)
@@ -375,8 +375,8 @@ endforeach()
 # Locking and regenerating (docs/regenerate.md). Each mode is one ctest entry; the cli mode runs the commands as
 # processes.
 ursatz_test_executable(test_regenerate LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
-add_dependencies(test_regenerate ursatz-composer)
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>")
+add_dependencies(test_regenerate ursatz)
 foreach(mode remove lock dependents section scope scope-config returns lanes locked determinism cli)
     ursatz_test(test_regenerate_${mode} TARGET test_regenerate ARGS ${mode})
 endforeach()
@@ -400,10 +400,10 @@ foreach(mode distinct refused harmonize sweep_smoke sweep)
     endif()
     ursatz_test(test_variations_${mode} TARGET test_variations ARGS ${mode} LABELS ${labels})
 endforeach()
-ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
+ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
 
-# The listen command (docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
+# The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
 # from the sonatina folder with the Analyzer (about 30 s in a Debug build).
 foreach(case smoke style_folder)
     set(folder OFF)
@@ -413,7 +413,7 @@ foreach(case smoke style_folder)
         set(labels slow)
     endif()
     ursatz_test(test_listen_cli_${case}
-        COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DANALYZER=$<TARGET_FILE:ursatz-analyzer>
+        COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DANALYZER=$<TARGET_FILE:ursatz>
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/listen_cli_${case} -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
                 -DSTYLE_FOLDER=${folder} -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listen.cmake
         LABELS ${labels} TIMEOUT 300)
@@ -421,7 +421,7 @@ endforeach()
 
 # The DAW-friendly export (docs/export.md): names, markers and tempo in the MIDI file, tempo in the MusicXML.
 ursatz_test(test_export_daw LIBS ursatz_composer_engine)
-ursatz_test(test_export_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
+ursatz_test(test_export_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_export.cmake)
 
 # The JSON snapshot comparison ignores member order and indentation and fails on a changed value.
@@ -431,7 +431,7 @@ ursatz_test(test_cli_snapshot_compare COMMAND ${CMAKE_COMMAND} -DWORK=${CMAKE_CU
 # Seeded CLI output against tests/snapshots; URSATZ_UPDATE_GOLDENS=1 (cmake --build build --target update-goldens)
 # recaptures them.
 # Comparing runs only the CLI front end (cli_snapshots.cmake): about 5 s of CPU, so it is in the fast set.
-ursatz_test(test_cli_snapshots COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
+ursatz_test(test_cli_snapshots COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
                  -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake
     LABELS golden)
@@ -445,19 +445,19 @@ endforeach()
 ursatz_test(test_analyzer_check_planned TARGET test_analyzer_check ARGS planned LABELS slow)
 
 ursatz_test_executable(test_explain LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
-add_dependencies(test_explain ursatz-composer)
+add_dependencies(test_explain ursatz)
 # The explanation of a run (docs/explain.md); every mode is quick.
 foreach(mode choices rejections same cli)
     ursatz_test(test_explain_${mode} TARGET test_explain ARGS ${mode})
 endforeach()
 
 ursatz_test_executable(test_style LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
-add_dependencies(test_style ursatz-composer)
+add_dependencies(test_style ursatz)
 # Styles (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
 foreach(mode labels same motives labels-motive prefer without measure smoke cli)
     ursatz_test(test_style_${mode} TARGET test_style ARGS ${mode})
@@ -468,10 +468,10 @@ ursatz_test(test_style_brief TARGET test_style ARGS brief WORKING_DIRECTORY ${CM
 ursatz_test(test_style_distance TARGET test_style ARGS distance LABELS slow)
 
 ursatz_test_executable(test_style_blend LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
-add_dependencies(test_style_blend ursatz-composer)
+add_dependencies(test_style_blend ursatz)
 # Style blending (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
 foreach(mode statistics labels form smoke cli)
     ursatz_test(test_style_blend_${mode} TARGET test_style_blend ARGS ${mode})
@@ -486,9 +486,9 @@ ursatz_test(test_variant_registry LIBS ursatz_composer_engine INCLUDES ${PROJECT
 
 # Measured 43.9 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_variants_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
-add_dependencies(test_variants_cli ursatz-composer)
+add_dependencies(test_variants_cli ursatz)
 
 ursatz_test(test_motive_random LIBS ursatz_composer_engine cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -496,11 +496,11 @@ ursatz_test(test_motive_random LIBS ursatz_composer_engine cjson INCLUDES ${PROJ
 ursatz_test(test_motive_random_segments LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test(test_random_motive_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_random_motive_cli ursatz-composer)
+add_dependencies(test_random_motive_cli ursatz)
 
-# Recognizing variants (docs/cli-recognize.md). The round trip makes every registry row and random chains on four
+# Recognizing variants (cli/docs/cli-recognize.md). The round trip makes every registry row and random chains on four
 # fixtures and recognizes each result; it is slow and CI leaves it out (ctest -LE slow). Its smoke test is the same
 # check on seeds 1 and 2. The cli test runs the command as a process.
 ursatz_test_executable(test_variant_recognize LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
@@ -508,33 +508,33 @@ ursatz_test(test_variant_recognize TARGET test_variant_recognize LABELS slow)
 ursatz_test(test_variant_recognize_smoke TARGET test_variant_recognize ARGS --smoke)
 
 ursatz_test(test_recognize_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_recognize_cli ursatz-composer)
+add_dependencies(test_recognize_cli ursatz)
 
 ursatz_test(test_motive_connect LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/../library)
 
 ursatz_test(test_shaping LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-# The theme command (docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
+# The theme command (cli/docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
 # in a directory of its own, so it can run beside the other command tests.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 # Measured 11.6 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_theme_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
-add_dependencies(test_theme_cli ursatz-composer)
+add_dependencies(test_theme_cli ursatz)
 
-# The piece command (docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
+# The piece command (cli/docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
 # its files in a directory of its own, so it can run beside the other command tests.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
 ursatz_test(test_piece_cli LIBS ursatz_composer_engine composer_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
-add_dependencies(test_piece_cli ursatz-composer)
+add_dependencies(test_piece_cli ursatz)
 
 ursatz_test(test_harmony_beats LIBS ursatz_composer_engine composer_test_support)
 
@@ -570,7 +570,7 @@ ursatz_test(test_api_layers LIBS ursatz_composer_engine composer_test_support cj
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 
-ursatz_test(cli_layers COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_layers
+ursatz_test(cli_layers COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_layers
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json

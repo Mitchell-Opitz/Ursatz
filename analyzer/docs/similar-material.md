@@ -2,9 +2,7 @@
 
 The similar material search over a corpus, by motive or by progression. Back to the [docs index](README.md).
 
-```sh
-ursatz-analyzer --similar <corpus output dir> (--motive <file> | --progression "<numerals>") [--min <n/d>] [--max <n>] [--format text|json]
-```
+The search has no command of its own: the workshop's API and the GUI call it (the `corpus-passages` tool of `ursatz` reads the same passages for the Composer's `--from-corpus`). Its inputs are a corpus output folder, a motive or a progression (Roman numerals), a minimum similarity and a maximum count.
 
 Library: `src/include/ursatz_analyzer_internal/similar_material.h`. Output schema: `schema/similar-material.v1.schema.json`.
 

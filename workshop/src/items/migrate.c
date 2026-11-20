@@ -1064,17 +1064,17 @@ UrsatzStatus workshop_data_folder_prepare(const char *data_dir, UrsatzError *err
     if (layout == 1) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, data_dir,
                                 "the data folder %s is in layout 1 (theme and piece bodies the services translated on every compose); back it up "
-                                "and migrate it: ursatz-gui-backend --data %s --migrate --dry-run, then ursatz-gui-backend --data %s --migrate",
+                                "and migrate it: ursatz --data %s migrate --dry-run, then ursatz --data %s migrate",
                                 data_dir, data_dir, data_dir);
     }
     char build[PATH_BYTES];
     if (has_old_entries(data_dir) || (join(build, data_dir, BUILD_DIR) && common_path_exists(build))) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, data_dir,
-                                "the data folder %s is in the GUI's old layout; back it up and migrate it: ursatz-gui-backend --data %s --migrate "
-                                "--dry-run, then ursatz-gui-backend --data %s --migrate",
+                                "the data folder %s is in the GUI's old layout; back it up and migrate it: ursatz --data %s migrate "
+                                "--dry-run, then ursatz --data %s migrate",
                                 data_dir, data_dir, data_dir);
     }
-    /* an empty folder is layout 1 from the start */
+    /* an empty folder is layout 2 from the start */
     cJSON *marker = cJSON_CreateObject();
     char now[32];
     char path[PATH_BYTES];

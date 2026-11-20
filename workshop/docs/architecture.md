@@ -8,20 +8,21 @@ The workshop is the one process that holds the data folder and the services over
 
 ```
 GUI backend (routes)          one route table over workshop_api.h: parse, call, answer, no logic
+  ursatz (cli)                the second client: opens the folder, or connects to the process that holds it (workshop routes)
   workshop                    data folder, transactions, jobs, events, queries and commands
     Analyzer   Composer       every music answer (analyzer_api.h, composer_api.h)
       library                 theory, models, readers and writers
         common                status, files, strings, JSON, hash, job handle, events
 ```
 
-It holds no music logic: a query or command reads or changes files and asks the Analyzer or the Composer. The one header a program includes is `workshop/include/ursatz_workshop/workshop_api.h`; the library exports only its 19 names (`workshop/src/exports.txt`, checked by the test `app_exports`): `workshop_settings_resolve`, `_open`, `_start`, `_stop`, `_close`, `_query`, `_command`, `_reply_destroy`, `_migrate`, `_status`, `_events_subscribe/next/unsubscribe/close`, `_recovery_summary` and the settings accessors (`_data_dir`, `_port`, `_http_threads`, `_job_workers`).
+It holds no music logic: a query or command reads or changes files and asks the Analyzer or the Composer. The one header a program includes is `workshop/include/ursatz_workshop/workshop_api.h`; the library exports only its 23 names (`workshop/src/exports.txt`, checked by the test `app_exports`): `workshop_settings_resolve`, `_open`, `_start`, `_stop`, `_close`, `_query`, `_command`, `_reply_destroy`, `_migrate`, `_status`, `_events_subscribe/next/unsubscribe/close`, `_recovery_summary` and the settings accessors (`_data_dir`, `_port`, `_http_threads`, `_job_workers`).
 
 ## Life of a workshop
 
 1. `workshop_settings_resolve` merges defaults, `<data>/ursatz.json`, the environment and the flags ([settings](data-folder.md#settings)).
 2. `workshop_open` creates or checks the data folder (`workshop_data_folder_prepare`: a layout 2 folder passes, an empty one gets `data-folder.json`, an older one is refused with the commands to run), takes the lock, runs recovery ([transactions](data-folder.md#changes-are-transactions)) and builds the knowledge snapshot and the Composer context.
 3. `workshop_start` starts the stores, the link run index, the job queue and the event bus, and makes the data folder the process's working directory (the services' paths are relative to it).
-4. `workshop_query` and `workshop_command` ([commands](commands.md)), `workshop_events_*` ([jobs and events](jobs-and-events.md)).
+4. `workshop_query` and `workshop_command` ([commands](commands.md)), `workshop_tool` ([tools](tools.md)), `workshop_events_*` ([jobs and events](jobs-and-events.md)).
 5. `workshop_stop` cancels every job and joins the workers; `workshop_close` releases the folder.
 
 ## Source layout

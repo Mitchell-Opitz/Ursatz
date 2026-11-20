@@ -153,11 +153,11 @@ in `<ursatz_composer/piece_reopen.h>`.
 - A free phrase of whole bars needs the room the cadence's chords need: a bar alone is too short for any cadence; the
   structure stays open at the structure stage.
 - A one-bar turnaround, or any section of one bar on a barline, does not compose either (the structure stage leaves it open);
-  a turnaround of two bars does. The `piece` command ([cli-piece.md](cli-piece.md)) reports the stage and tells you.
+  a turnaround of two bars does. The `piece` command ([cli-piece.md](../../cli/docs/cli-piece.md)) reports the stage and tells you.
 
 ## The piece command
 
-`ursatz-composer piece` builds the request, composes the loop, and builds the ending version from it
-(`piece_build_ending`). See [cli-piece.md](cli-piece.md) and [piece-request.md](piece-request.md). The API reads the piece
+`ursatz piece` builds the request, composes the loop, and builds the ending version from it
+(`piece_build_ending`). See [cli-piece.md](../../cli/docs/cli-piece.md) and [piece-request.md](piece-request.md). The API reads the piece
 request file into a `PieceRequest` of the form `game-loop` and builds through `piece_build_plan` and `piece_build_ending`;
 requests, responses and errors are as they were.

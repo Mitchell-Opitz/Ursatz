@@ -100,5 +100,5 @@ The rounded binary in A minor 3/4 does not complete without the check either (st
 `fill --check` composes with `analyzer_check`; `fill --candidates <n>` (1 to 32) runs `compose_candidates` and writes the
 best candidate where `--out`, `--midi` and `--musicxml` point, listing every candidate (seed, agreement, score) in the
 result; `grow --check` passes over a seed whose theme the Analyzer contradicts and prints the seed that was kept. See
-[cli-fill.md](cli-fill.md) and [cli-grow.md](cli-grow.md). The check costs one analysis for each theme section
+[cli-fill.md](../../cli/docs/cli-fill.md) and [cli-grow.md](../../cli/docs/cli-grow.md). The check costs one analysis for each theme section
 and round: twelve candidates of a rounded binary in C major took about 8 seconds with the check and 1.4 without.

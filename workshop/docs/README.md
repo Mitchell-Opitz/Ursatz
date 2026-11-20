@@ -1,6 +1,6 @@
 # Workshop docs
 
-The workshop is the process that holds the data folder, the jobs and the events, and answers every query and command of the GUI. Back to the [README](../../README.md).
+The workshop is the process that holds the data folder, the jobs and the events, and answers every query and command of the GUI and of the [`ursatz` command line](../../cli/docs/data-folder.md). Back to the [README](../../README.md).
 
 ## Start here
 
@@ -13,6 +13,7 @@ The workshop is the process that holds the data folder, the jobs and the events,
 ## The calls
 
 - [commands.md](commands.md): `workshop_query` and `workshop_command`, the 42 commands, the queries, base versions, actors and failures.
+- [tools.md](tools.md): `workshop_tool`, the tools workshop with no data folder, and each tool's params, reply and failures.
 - [jobs-and-events.md](jobs-and-events.md): the job queue, the job kinds, cancel, and the event bus with its events.
 
 ## Behind the GUI

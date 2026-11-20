@@ -11,7 +11,7 @@
 #include "api_workflow.h"
 #include "structure/request_parse.h"
 
-/* `fill` as a composer API entry (docs/cli-fill.md): a plan realized in stages. */
+/* `fill` as a composer API entry (cli/docs/cli-fill.md): a plan realized in stages. */
 
 #define MAX_CANDIDATES 32
 

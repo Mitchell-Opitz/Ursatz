@@ -95,7 +95,7 @@ static void test_forms(void) {
 }
 
 static void test_json(void) {
-    char *out = output_of("--mode minor --meter 3/4 --key \"D minor\" --count 2 --seed 3 --json");
+    char *out = output_of("--mode minor --meter 3/4 --key \"D minor\" --count 2 --seed 3 --format json");
     assert(strncmp(out, "{\n  \"seed\": 3,\n  \"motives\": [", 29) == 0);
     assert(count_of(out, "\"notes_text\"") == 2 && count_of(out, "\"degrees_text\"") == 2);
     assert(count_of(out, "\"tonic_pitch_class\": 2") == 4 && count_of(out, "\"material\": \"omt.material.natural-minor\"") == 4);
@@ -108,11 +108,11 @@ static void test_json(void) {
     free(out);
 
     /* Over some seeds a figure is named. */
-    out = output_of("--mode major --meter 4/4 --count 16 --seed 1 --json");
+    out = output_of("--mode major --meter 4/4 --count 16 --seed 1 --format json");
     assert(count_of(out, "\"role\": \"non-chord\"") > 0 && count_of(out, "\"unresolved\": true") == 0);
     free(out);
 
-    out = output_of("--mode major --meter 4/4 --form rhythm --seed 3 --json");
+    out = output_of("--mode major --meter 4/4 --form rhythm --seed 3 --format json");
     assert(count_of(out, "\"form\": \"rhythm\"") >= 1 && count_of(out, "\"rhythm_text\"") == 1);
     free(out);
 }

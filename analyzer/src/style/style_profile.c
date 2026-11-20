@@ -48,7 +48,7 @@ static bool add_corpus_document(const char *piece_path, const char *document, co
     return add->result == STYLE_PROFILE_OK;
 }
 
-StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *output_dir) {
+StyleProfileResult analyzer_style_profile_add_corpus(StyleProfile *profile, const char *output_dir) {
     if (!profile || !output_dir) {
         return STYLE_PROFILE_ERR_ARGUMENT;
     }

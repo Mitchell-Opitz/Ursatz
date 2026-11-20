@@ -7,7 +7,7 @@
 #include "cJSON.h"
 #include "model/identity/entity_id.h"
 #include "theory/style/style_model_build.h"
-#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer_internal/style_profile.h>
 #include <ursatz_analyzer_internal/version.h>
 #include "theory/style/style_labels.h"
@@ -37,13 +37,13 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
     char input[1024], output[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, NULL, NULL, test_knowledge()};
-    CorpusRunSummary summary;
-    CHECKF(corpus_run(&options, &summary, NULL) == URSATZ_OK, "%s run failed", name);
+    AnalyzerCorpusOptions options = {input, output, false, NULL, NULL, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    CHECKF(analyzer_corpus_run(&options, &summary, NULL) == URSATZ_OK, "%s run failed", name);
     CHECKF(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,
            summary.failed);
     StyleProfile *profile = style_profile_create();
-    CHECKF(profile && style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile failed", name);
+    CHECKF(profile && analyzer_style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile failed", name);
     CHECKF(profile && style_profile_piece_count(profile) == expected_pieces, "%s profile counts %zu pieces", name,
            profile ? style_profile_piece_count(profile) : 0);
     return profile;
@@ -430,7 +430,7 @@ static void test_refusals(void) {
     CHECKF(analyzer_style_add_document_json(profile, "{\"schema_version\": 13}") == STYLE_PROFILE_OK &&
                style_profile_piece_count(profile) == 1,
            "an empty version 9 document counts as a piece with no labels");
-    CHECKF(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");
+    CHECKF(analyzer_style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");
     CHECKF(analyzer_style_add_document_json(NULL, "{}") == STYLE_PROFILE_ERR_ARGUMENT, "no profile");
     style_profile_destroy(profile);
 

@@ -24,7 +24,7 @@
 #include "util/util.h"
 
 /*
- * `plan` as a composer API entry (docs/cli-plan.md): the plan of a whole short piece from a form template, with the
+ * `plan` as a composer API entry (cli/docs/cli-plan.md): the plan of a whole short piece from a form template, with the
  * motive and the given material placed in it. Nothing is composed.
  */
 

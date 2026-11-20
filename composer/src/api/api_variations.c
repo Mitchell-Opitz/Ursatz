@@ -9,7 +9,7 @@
 #include "api_piece.h"
 #include "api_workflow.h"
 
-/* `variations` and `harmonize` as composer API entries (docs/cli-variations.md): several distinct versions of a node. */
+/* `variations` and `harmonize` as composer API entries (cli/docs/cli-variations.md): several distinct versions of a node. */
 
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
 static UrsatzStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, char **text, UrsatzError *error) {

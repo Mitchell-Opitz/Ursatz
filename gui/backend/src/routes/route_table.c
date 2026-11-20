@@ -16,6 +16,7 @@
 #include "route_util.h"
 #include "styles_routes.h"
 #include "subjects_routes.h"
+#include "workshop_routes.h"
 
 #define SEGMENTS_MAX 10
 
@@ -81,7 +82,7 @@ static const RouteFile kRouteFiles[] = {
     /* the motif rows first: "/items/validate" is a word, and a pattern with a placeholder must not take it */
     ursatz_gui_motifs_routes,  ursatz_gui_library_routes, ursatz_gui_collections_routes, ursatz_gui_composer_routes,
     ursatz_gui_styles_routes,  ursatz_gui_links_routes,   ursatz_gui_jobs_routes,        ursatz_gui_subjects_routes,
-    ursatz_gui_materials_routes,    ursatz_gui_events_routes,
+    ursatz_gui_materials_routes,    ursatz_gui_events_routes,   ursatz_gui_workshop_routes,
 };
 
 /* civetweb's one handler for "/api": the row that fits the method and the path, else 405 when another method fits it, else 404. */

@@ -19,6 +19,7 @@ struct Workshop {
     int lock_descriptor; /* the data folder's lock, held until close */
     char recovery[512];  /* what the open recovered from the journal, "" when nothing (workshop_recovery_summary) */
     bool started;        /* workshop_start ran and workshop_stop has not */
+    bool tools_only;     /* workshop_tools_open: no data folder, no lock, no services; answers tools only (R-656) */
 };
 
 /*
@@ -28,5 +29,8 @@ struct Workshop {
  */
 UrsatzStatus workshop_data_lock_acquire(const char *data_dir, int *descriptor, UrsatzError *error);
 void workshop_data_lock_release(int descriptor);
+
+/* Rewrites the lock file this descriptor holds as "<pid> <port>\n" (workshop_announce). */
+UrsatzStatus workshop_data_lock_announce(int descriptor, int port, UrsatzError *error);
 
 #endif

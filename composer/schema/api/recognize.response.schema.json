@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/recognize.response.schema.json",
   "title": "composer_api_recognize response",
-  "description": "What `recognize --json` prints.",
+  "description": "What `ursatz recognize --format json` prints.",
   "type": "object",
   "required": [
     "found",

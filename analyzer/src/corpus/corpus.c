@@ -1,4 +1,4 @@
-#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer_internal/analysis_document.h>
 #include <ursatz_analyzer_internal/input_pipeline.h>
 #include <ursatz_analyzer/analyzer_api.h>
@@ -16,7 +16,6 @@
 #include "cJSON.h"
 #include "export/analysis_document_internal.h"
 #include "corpus/corpus_internal.h"
-#include "result/run_file.h"
 #include <common/files.h>
 #include <common/hash.h>
 #include <common/strings.h>
@@ -28,7 +27,7 @@
 
 /* What the corpus index records about one piece. */
 typedef struct {
-    CorpusPieceStatus status;
+    AnalyzerCorpusPieceStatus status;
     const char *error;               /* static text; NULL unless failed */
     char *document;                  /* output path relative to the output directory; NULL unless analyzed */
     unsigned long long content_hash; /* FNV-1a 64 of the input file's bytes */
@@ -240,7 +239,7 @@ static void read_document_summary(const AnalysisDocument *document, PieceRecord 
    returns OK; only a failure to write an output file is a run error. */
 static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, const char *input_path,
                                      const KnowledgeSnapshot *knowledge, PieceRecord *record, UrsatzError *error) {
-    record->status = CORPUS_PIECE_FAILED;
+    record->status = ANALYZER_CORPUS_PIECE_FAILED;
     record->error = NULL;
     record->document = NULL;
     record->measures = -1;
@@ -252,14 +251,14 @@ static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, 
     ImportedScoreResult imported = IMPORTED_SCORE_OK;
     UrsatzStatus analyzed = URSATZ_OK;
     UrsatzError import_error = {{0}};
-    RunFileResult ran =
+    AnalyzerRunFileResult ran =
         analyzer_run_file(input_path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL, &analyzed, &import_error);
-    if (ran == RUN_FILE_ERR_IMPORT) {
+    if (ran == ANALYZER_RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
         record->message = strdup(import_error.message);
         return URSATZ_OK;
     }
-    if (ran != RUN_FILE_OK) {
+    if (ran != ANALYZER_RUN_FILE_OK) {
         record->error = analyzed == URSATZ_ERR_ALLOC ? "out of memory" : "analysis failed";
         return URSATZ_OK;
     }
@@ -297,7 +296,7 @@ static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, 
         free(document_name);
         return URSATZ_ERR_IO;
     }
-    record->status = CORPUS_PIECE_ANALYZED;
+    record->status = ANALYZER_CORPUS_PIECE_ANALYZED;
     record->document = document_name;
     return URSATZ_OK;
 }
@@ -334,7 +333,7 @@ static char *render_index(const char *input_dir, const char *const *paths, const
         common_text_append(&out, ",\n      \"document\": ");
         append_json_or_null(&out, record->document);
         common_text_append(&out, ",\n      \"status\": ");
-        common_text_append(&out, record->status == CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"");
+        common_text_append(&out, record->status == ANALYZER_CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"");
         common_text_append(&out, ",\n      \"error\": ");
         append_json_or_null(&out, record->error);
         common_text_appendf(&out, ",\n      \"content_hash\": \"%016llx\",\n      \"measures\": ", record->content_hash);
@@ -441,7 +440,7 @@ static bool reuse_previous(const cJSON *previous, const char *output_dir, const 
     }
     const cJSON *measures = cJSON_GetObjectItemCaseSensitive(entry, "measures");
     const cJSON *home_key = cJSON_GetObjectItemCaseSensitive(entry, "home_key");
-    record->status = CORPUS_PIECE_SKIPPED;
+    record->status = ANALYZER_CORPUS_PIECE_SKIPPED;
     record->error = NULL;
     record->document = document_copy;
     record->content_hash = content_hash;
@@ -464,8 +463,8 @@ static bool write_index(const char *output_dir, const char *input_dir, const cha
     return ok;
 }
 
-UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out, UrsatzError *error) {
-    CorpusRunSummary summary = {0, 0, 0};
+UrsatzStatus analyzer_corpus_run(const AnalyzerCorpusOptions *options, AnalyzerCorpusSummary *out, UrsatzError *error) {
+    AnalyzerCorpusSummary summary = {0, 0, 0};
     if (out) {
         *out = summary;
     }
@@ -537,15 +536,15 @@ UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out, 
             done++;
             break;
         }
-        if (record->status == CORPUS_PIECE_ANALYZED) {
+        if (record->status == ANALYZER_CORPUS_PIECE_ANALYZED) {
             summary.analyzed++;
-        } else if (record->status == CORPUS_PIECE_SKIPPED) {
+        } else if (record->status == ANALYZER_CORPUS_PIECE_SKIPPED) {
             summary.skipped++;
         } else {
             summary.failed++;
         }
         if (options->on_piece) {
-            CorpusPieceReport report = {record->message, (const char *const *)record->warnings, record->warning_count};
+            AnalyzerCorpusPieceReport report = {record->message, (const char *const *)record->warnings, record->warning_count};
             options->on_piece(relative, record->status, record->error, &report, options->user);
         }
         record_report_free(record);

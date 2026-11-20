@@ -1,7 +1,7 @@
 # --layers of theme, piece and fill, run as processes (R-634): the three files of the layers are written, they validate against their
 # schemas when python3 with jsonschema was found, the reading names the realization by its digest, no layers are written without the
 # option, and the result printed does not carry them.
-# Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DFIXTURES=<tests/fixtures>
+# Run with: cmake -DCOMPOSER=<ursatz> -DWORK=<empty working directory> -DFIXTURES=<tests/fixtures>
 #           -DREALIZATION_SCHEMA=<file> -DREADING_SCHEMA=<file> [-DPYTHON=<python3> -DVALIDATOR=<validate_schema.py>] -P cli_layers.cmake
 
 file(REMOVE_RECURSE "${WORK}")
@@ -18,7 +18,7 @@ endfunction()
 function(expect_status expected)
     composer(${ARGN})
     if(NOT STATUS EQUAL expected)
-        message(FATAL_ERROR "ursatz-composer ${ARGN}: exit ${STATUS}, expected ${expected}\n${OUT}\n${ERR}")
+        message(FATAL_ERROR "ursatz ${ARGN}: exit ${STATUS}, expected ${expected}\n${OUT}\n${ERR}")
     endif()
     set(OUT "${OUT}" PARENT_SCOPE)
 endfunction()

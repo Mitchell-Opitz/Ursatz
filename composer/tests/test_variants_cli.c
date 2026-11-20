@@ -73,7 +73,7 @@ static void test_list_ops(void) {
     assert(strstr(out, "forms: full, contour") != NULL);
     free(out);
 
-    out = output_of("--list-ops --json");
+    out = output_of("--list-ops --format json");
     assert(strstr(out, "\"operations\"") != NULL);
     assert(count_of(out, "\"citation\"") == 33);
     free(out);
@@ -119,7 +119,7 @@ static void test_seeds(void) {
 }
 
 static void test_json(void) {
-    char *out = output_of(THEME " --count 2 --seed 3 --json");
+    char *out = output_of(THEME " --count 2 --seed 3 --format json");
     assert(strncmp(out, "{\n  \"seed\": 3,\n  \"source\": {", 28) == 0);
     assert(strstr(out, "\"variants\": [") != NULL);
     assert(count_of(out, "\"derivation\"") == 2);
@@ -165,7 +165,7 @@ static void test_refused_step(void) {
 static void test_harmony_json(void) {
     test_write_text("variants_cli_harmony.json",
                "{\"steps\": [{\"op\": \"harmony-substitute\", \"params\": {\"chord\": 1, \"degree\": 4}}]}");
-    char *out = output_of(THEME " --harmony \"I V@2\" --chain variants_cli_harmony.json --count 1 --seed 1 --json");
+    char *out = output_of(THEME " --harmony \"I V@2\" --chain variants_cli_harmony.json --count 1 --seed 1 --format json");
     /* The source's harmony, then the record's, then the variant's motive. */
     assert(count_of(out, "\"harmony\": \"I V@2\"") == 1);
     assert(count_of(out, "\"harmony\": \"I IV@2\"") == 2);
@@ -179,7 +179,7 @@ static void test_harmony_json(void) {
     free(out);
 
     test_write_text("variants_cli_transpose.json", "{\"steps\": [{\"op\": \"transpose\", \"params\": {\"by\": 2}}]}");
-    out = output_of(THEME " --chain variants_cli_transpose.json --count 1 --seed 1 --json");
+    out = output_of(THEME " --chain variants_cli_transpose.json --count 1 --seed 1 --format json");
     assert(count_of(out, "\"harmony\": \"") == 0);
     free(out);
 }
@@ -206,7 +206,7 @@ static void test_function_filter(void) {
     free(out);
 
     /* Repeated, a variant suits any of them; in JSON each carries what it suits. */
-    out = output_of(THEME " --count 4 --seed 1 --function continuation --function contrast --json");
+    out = output_of(THEME " --count 4 --seed 1 --function continuation --function contrast --format json");
     assert(count_of(out, "\"derivation\"") >= 1);
     assert(count_of(out, "\"functions\": [\"") == count_of(out, "\"derivation\""));
     free(out);
@@ -265,8 +265,8 @@ static void test_distance(void) {
     assert(check_remoteness(out, 2, 3, 1, 1) >= 1);
     free(out);
 
-    /* With --function both must hold, and --json carries both. */
-    out = output_with_notes(THEME " --count 3 --seed 1 --distance far --function contrast --json");
+    /* With --function both must hold, and --format json carries both. */
+    out = output_with_notes(THEME " --count 3 --seed 1 --distance far --function contrast --format json");
     assert(count_of(out, "\"derivation\"") >= 1);
     assert(count_of(out, "\"contrast\"") == count_of(out, "\"derivation\""));
     free(out);
@@ -332,7 +332,7 @@ static void test_each_op_labels(void) {
     }
     free(out);
 
-    out = output_of(THEME " --each-op --seed 3 --json");
+    out = output_of(THEME " --each-op --seed 3 --format json");
     assert(row_has_pickup(out, "rhythm-shift") && row_has_pickup(out, "add-upbeat"));
     assert(strstr(out, "\"warnings\": [") != NULL && strstr(out, "Does not outline its harmony") != NULL);
     free(out);
@@ -355,7 +355,7 @@ static void test_each_op(void) {
     check_steps(out, 1, 1);
     free(out);
 
-    out = output_of(THEME " --each-op --seed 3 --json");
+    out = output_of(THEME " --each-op --seed 3 --format json");
     assert(count_of(out, "\"derivation\"") == made);
     assert(strstr(out, "\"skipped\": [") != NULL && count_of(out, "\"reason\"") == skipped);
     assert(strstr(out, "\"op\": \"counter-line\"") != NULL);

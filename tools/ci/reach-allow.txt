@@ -41,5 +41,7 @@ common/json.c common_json_rational_text  # no app writes an "n/d" text through i
 common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
 workshop/src/analysis/analysis.c workshop_analysis_delete_piece  # test hook: test_piece_lock deletes a piece without the cascades the route runs (workshop_library_delete)
 workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_queue limits a kind of its own (links and style start limited)
-workshop/src/coordinator/workshop.c workshop_data_dir  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
-workshop/src/coordinator/workshop.c workshop_job_workers  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
+analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives read a corpus through it
+analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
+analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
+library/analysis/similarity/similarity_model.c similarity_dimension_name  # the front end of the old --similar printed the dimension names; kept with the similarity search (A20261115-607); its test calls it

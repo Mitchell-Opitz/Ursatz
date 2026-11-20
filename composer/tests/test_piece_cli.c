@@ -19,7 +19,7 @@
 #include "ursatz_test.h"
 
 /*
- * The `piece` command, run as a process (docs/cli-piece.md, docs/piece-request.md): the loop version and the ending version
+ * The `piece` command, run as a process (cli/docs/cli-piece.md, docs/piece-request.md): the loop version and the ending version
  * of a looping game track.
  *
  *   done-when    intro 2 bars, a body of an 8-bar sentence from motive A and a 4-bar free phrase from motive B, a turnaround

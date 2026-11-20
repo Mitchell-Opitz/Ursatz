@@ -2,7 +2,7 @@
 
 The structure of the analysis JSON document: top level, metadata, meter, sources and the claim index. Back to the [docs index](README.md).
 
-`ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README). It is the structured, versioned output that the Composer, the
+`ursatz analyze` writes `<stem>.analysis.json` next to each input file (see [analyze.md](../../cli/docs/analyze.md)). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
 [`schema/analysis-document.v13.schema.json`](../schema/analysis-document.v13.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render_result` from

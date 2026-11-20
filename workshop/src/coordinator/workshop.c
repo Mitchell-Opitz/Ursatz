@@ -27,6 +27,29 @@ static void forget_item_in_subjects(WorkshopTxn *txn, const char *item_id) {
     (void)workshop_subject_forget_item(txn, item_id);
 }
 
+/* One workshop per process (R-656): the workshops open now. A tools workshop is refused while any is open. */
+static int g_open = 0;
+
+UrsatzStatus workshop_tools_open(Workshop **out, UrsatzError *error) {
+    *out = NULL;
+    if (g_open > 0) {
+        return ursatz_error_set(error, URSATZ_ERR_CONFLICT, "", "a workshop is already open in this process");
+    }
+    if (!workshop_knowledge_init()) {
+        return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the knowledge cannot be read");
+    }
+    Workshop *workshop = calloc(1, sizeof(*workshop));
+    if (!workshop) {
+        workshop_knowledge_shutdown();
+        return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    workshop->lock_descriptor = -1;
+    workshop->tools_only = true;
+    g_open++;
+    *out = workshop;
+    return URSATZ_OK;
+}
+
 UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, UrsatzError *error) {
     *out = NULL;
     if (!resolved || !resolved->data_dir || resolved->data_dir[0] == '\0' || resolved->port <= 0 || resolved->http_threads <= 0 ||
@@ -83,6 +106,7 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     workshop->http_threads = resolved->http_threads;
     workshop->job_workers = resolved->job_workers;
     workshop_store_set_forget_item(forget_item_in_subjects);
+    g_open++;
     *out = workshop;
     return URSATZ_OK;
 }
@@ -91,6 +115,9 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
 UrsatzStatus workshop_start(Workshop *workshop, UrsatzError *error) {
     if (!workshop) {
         return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "no workshop to start");
+    }
+    if (workshop->tools_only) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "this workshop has no data folder");
     }
     if (workshop->started) {
         return URSATZ_OK;
@@ -157,9 +184,14 @@ void workshop_stop(Workshop *workshop) {
 void workshop_close(Workshop *workshop) {
     workshop_stop(workshop);
     if (workshop) {
-        workshop_store_set_forget_item(NULL);
+        if (!workshop->tools_only) {
+            workshop_store_set_forget_item(NULL);
+        }
         workshop_knowledge_shutdown();
-        workshop_data_lock_release(workshop->lock_descriptor);
+        workshop_data_lock_release(workshop->lock_descriptor); /* -1 for a tools workshop: nothing to release */
+        if (g_open > 0) {
+            g_open--;
+        }
     }
     free(workshop);
 }
@@ -184,7 +216,8 @@ UrsatzStatus workshop_status(Workshop *workshop, cJSON **out, UrsatzError *error
     cJSON_Delete(versions);
     ok = ok && cJSON_AddStringToObject(object, "analyzer_version", analyzer_version()) &&
          cJSON_AddStringToObject(object, "analyzer_producer_key", analyzer_producer_key()) &&
-         cJSON_AddStringToObject(object, "data_dir", workshop->data_dir);
+         (workshop->tools_only ? cJSON_AddNullToObject(object, "data_dir") != NULL
+                               : cJSON_AddStringToObject(object, "data_dir", workshop->data_dir) != NULL);
     if (!ok) {
         cJSON_Delete(object);
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
@@ -211,4 +244,11 @@ int workshop_job_workers(const Workshop *workshop) {
 
 int workshop_port(const Workshop *workshop) {
     return workshop->port;
+}
+
+UrsatzStatus workshop_announce(Workshop *workshop, int port) {
+    if (!workshop || workshop->tools_only || port < 1 || port > 65535) {
+        return URSATZ_ERR_REQUEST;
+    }
+    return workshop_data_lock_announce(workshop->lock_descriptor, port, NULL);
 }

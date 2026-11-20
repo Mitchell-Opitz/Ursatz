@@ -23,7 +23,7 @@
 #include "structure/request_parse.h"
 #include "util/util.h"
 
-/* `progression` as a composer API entry (docs/cli-progression.md): a chord progression for one phrase, with a bass line. */
+/* `progression` as a composer API entry (cli/docs/cli-progression.md): a chord progression for one phrase, with a bass line. */
 
 #define MAX_BARS 64
 #define MAX_CHORDS 64

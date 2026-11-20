@@ -9,7 +9,7 @@ functions: it reads its arguments into a request, calls the API and prints the r
 This page covers what every entry shares, and indexes every entry: the core, export, the motive entries, variants, recognize, random motives, themes, pieces, the
 plan workflow, the material commands (progression, counterpoint, develop, grow), the vocabularies and request validation.
 Each entry has its request and response in a file under `docs/api/` (see [Entries](#entries)), an example in
-[examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). The CLI (`cli/`) includes no header but `composer_api.h` (the layer table, `cmake/layer-table.txt`).
+[examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). `ursatz` (`cli/`) calls the entries through the workshop's `composer` tool, and includes no Composer header (the layer table, `cmake/layer-table.txt`).
 
 A minimal client in C is in [Using the API from C](#using-the-api-from-c).
 
@@ -185,8 +185,7 @@ add_subdirectory(ursatz/composer)
 target_link_libraries(app PRIVATE ursatz_composer)
 ```
 
-`URSATZ_COMPOSER_BUILD_CLI` (on in the repository's root build) builds the `ursatz-composer` command; the tests that
-run it are registered only when it is built. `tests/consumer/` is such an application, built by the `consumer_build` test.
+`tests/consumer/` is such an application, built by the `consumer_build` test. The command line is the `ursatz` program of the [cli part](../../cli/docs/README.md).
 
 This grows a theme from a motive and writes its MIDI file:
 

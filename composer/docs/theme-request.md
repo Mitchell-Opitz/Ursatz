@@ -1,6 +1,6 @@
 # The theme request
 
-The JSON file `ursatz-composer theme` reads ([cli-theme.md](cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
+The JSON file `ursatz theme` reads ([cli-theme.md](../../cli/docs/cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
 of the theme and the single ideas each one gives, and the brief. Schema `ursatz-theme-request`, version 2: a version 1
 request is an error (`the request must have "schema_version": 2`). Back to the [docs index](README.md).
 
@@ -29,7 +29,7 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 | `key`, `material` | The tonic (or a key like `"D minor"`) and the material: an id, name, key word or alias (`omt.material.natural-minor`, `minor`, `natural minor`) of a material the Composer writes keys in (major and natural minor), or `style`, which takes the mode from the style's `mode` category and needs a `style`. The old member `mode` (`major`, `minor`, `style`) is still read, and `material` and `mode` together are refused at `/mode`. |
 | `meter`, `bars` | `2/4`, `3/4`, `4/4` or `6/8`; 3 to 16 bars (default 8; with a `construction` and no `bars`, the construction's). 4 and 8 bars are built as they always were; any other length gets a construction chosen from the motif or the length ([grow-construction.md](grow-construction.md#choosing-a-construction)) and is refused at `/bars` when none fits (`no construction makes a 15-bar sentence from this motif`). |
 | `construction` | API 1.18, `null` (default) or `{"ideas": {"<idea name>": bars, ...}, "extensions": [{"kind", "idea", "bars", "varied"}]}`: the bars of each idea of the theme (the idea names of `ideas`: `basic idea`, `repetition`, `contrasting idea`, ...) and up to 3 extensions (`kind` `repeat`, `stretch`, `addition` or `evaded`; `idea` is required for a repeat and a stretch; `bars` 0 to 4, 0 for the default; `varied` for a repeat). The ideas and the extensions must add up to `bars`. The construction is `given` ([grow-construction.md](grow-construction.md)). |
-| `cadence`, `first_cadence` | As the options of [grow](cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |
+| `cadence`, `first_cadence` | As the options of [grow](../../cli/docs/cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |
 | `development` | `melody`, `balanced` (default) or `theme` (ch. XI, API 1.9): how far the presentation and the continuation stray from the motif. `melody` keeps them close (exact repetitions, a segment `a` and the next segment, liquidation of one step at most); `theme` develops it (sequences, segment `b`, fragment 2 always a sequence, liquidation of two steps or more). The weights are in [grow-development.md](grow-development.md). The brief of the result and the explanation name it. |
 | `accompaniment` | `null`, `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `{"pattern": "motive", "motive": {"degrees", "pickup", "form", "role": "accompaniment"}}`, a saved accompaniment motive as the pattern. |
 | `voicing` | `null`, `"satb"` (alto and tenor under the grown melody) or `"chorale"` (four parts, the melody written too). Not with an accompaniment. |
@@ -99,7 +99,7 @@ The motive of an idea must fit it as a slot motive does (exit 2 when it does not
 ## Chords
 
 `chords` gives chords of the theme (R-208): a list of `{"bar", "text"}`, at most one entry for a bar. `bar` counts from 0 inside
-the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](cli-motive.md)) relative to the bar: Roman
+the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](../../cli/docs/cli-motive.md)) relative to the bar: Roman
 numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
 the beat unit (`I V@2`). At most 2 chords; the first is at 0 unless it is written with an onset, the onsets rise, each is a
 multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. The

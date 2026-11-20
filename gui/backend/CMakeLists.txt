@@ -14,6 +14,7 @@ set(URSATZ_GUI_CORE_SOURCES
   src/routes/subjects_routes.c
   src/routes/links_routes.c
   src/routes/jobs_routes.c
+  src/routes/workshop_routes.c
 )
 
 foreach(core ursatz_gui_core ursatz_gui_core_internal)

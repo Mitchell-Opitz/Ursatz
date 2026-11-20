@@ -1,6 +1,6 @@
 # Motive link fixtures
 
-Four small MusicXML pieces for `test_motive_links` and `cli_link_motives.cmake`. Each states one motive three
+Four small MusicXML pieces for `test_motive_links`. Each states one motive three
 times in the top line, with a bar of silence (in both voices) between the statements, so the library's motive
 analysis finds exactly one family per piece. Written for this repository (same licence as the repository).
 

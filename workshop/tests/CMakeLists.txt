@@ -4,6 +4,22 @@ ursatz_test(workshop_open LIBS ursatz_workshop)
 ursatz_test(workshop_settings LIBS ursatz_workshop)
 ursatz_test(workshop_lock LIBS ursatz_workshop)
 
+# The third call, tools (P64 B1): a workshop with no data folder and the tools the command line calls. The seed corpus is built by the target
+# seed_corpora (tests/CMakeLists.txt); the test works in a folder of its own and checks that a tools workshop leaves nothing in it.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_tools)
+ursatz_test(workshop_tools SOURCES test_tools.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_TEST_COMPOSER="${CMAKE_SOURCE_DIR}/composer/tests"
+                URSATZ_TEST_SEED_CORPUS="${CMAKE_BINARY_DIR}/tests/corpora/sonatinas-analyzed"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_tools)
+add_dependencies(test_workshop_tools seed_corpora)
+
+# The Analyzer's tools (P64 B2): analyze, corpus and style-profile on a tools workshop, one small piece, compared with the Analyzer's goldens.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_analyzer_tools)
+ursatz_test(workshop_analyzer_tools SOURCES test_analyzer_tools.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_FIXTURES="${URSATZ_FIXTURES_DIR}"
+                URSATZ_SNAPSHOTS="${CMAKE_SOURCE_DIR}/analyzer/tests/snapshots"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_analyzer_tools)
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
 ursatz_test(piece_metadata LIBS ursatz_workshop_internal ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
 

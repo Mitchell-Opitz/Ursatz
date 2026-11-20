@@ -14,6 +14,10 @@
 char *test_http_exchange(const char *port, const char *method, const char *path, const char *content_type,
                          const char *body, size_t body_size);
 
+/* One exchange with extra header lines (each ending in "\r\n", the Content-Type among them), no base version added. The whole response as a string the
+ * caller frees, or NULL when the connection failed. */
+char *test_http_exchange_headers(const char *port, const char *method, const char *path, const char *headers, const char *body, size_t body_size);
+
 /* The status code of a response, or 0 when it has none. */
 int test_http_status(const char *response);
 

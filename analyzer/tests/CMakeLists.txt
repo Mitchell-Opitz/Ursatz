@@ -17,15 +17,17 @@ ursatz_test(test_long_labels LIBS ursatz_analyzer_engine analyzer_test_support
 ursatz_test(test_analysis_document LIBS ursatz_analyzer_engine analyzer_test_support cjson)
 
 ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DFIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 "-DBACH_114=${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Bach 114.mid"
+                 -DEXPORT_GOLDEN=${CMAKE_CURRENT_SOURCE_DIR}/snapshots/bach-114.export.txt
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
 
 if(URSATZ_JSONSCHEMA_PYTHON)
     # The smoke validates the Bach 114 document only.
     ursatz_test(test_analysis_document_schema_smoke COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
@@ -36,7 +38,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema)
     # Over 10 s in the fast set (about 49 s of CPU measured): runs nightly.
     ursatz_test(test_analysis_document_schema COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
@@ -231,7 +233,7 @@ ursatz_test(test_notation_reading LIBS ursatz_analyzer_engine
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
 ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
@@ -240,7 +242,7 @@ ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
 
 ursatz_test(test_cli_input_formats COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DMIDI_FIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
@@ -278,7 +280,7 @@ ursatz_test(test_analyzer_corpus SOURCES test_corpus.c LIBS ursatz_analyzer_engi
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK corpus_work)
 
 ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DFIXTURE=${URSATZ_REFERENCE_FIXTURES}/Field\ 1.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_corpus
@@ -287,7 +289,7 @@ ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
 # Over 10 s in the fast set (about 41 s of CPU measured): runs nightly.
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_corpus_index_schema COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
@@ -311,7 +313,7 @@ ursatz_test(test_style_profile LIBS ursatz_analyzer_engine analyzer_test_support
 
 # The smoke profiles the corpus "small" (Bach 114 and Clementi 36).
 ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
@@ -321,7 +323,7 @@ ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake)
 # Over 10 s in the fast set (about 85 s of CPU measured): runs nightly.
 ursatz_test(test_cli_style_profile COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_style_profile
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake
@@ -330,7 +332,7 @@ ursatz_test(test_cli_style_profile COMMAND ${CMAKE_COMMAND}
 # Over 10 s in the fast set (about 43 s of CPU measured): runs nightly.
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_style_model_schema COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
@@ -353,34 +355,6 @@ ursatz_test(test_similar_material_smoke TARGET test_similar_material ARGS smoke 
 # Over 10 s in the fast set (about 44 s of CPU measured): runs nightly.
 ursatz_test(test_similar_material TARGET test_similar_material LABELS golden slow PROPERTIES RESOURCE_LOCK similar_work)
 
-# The --similar flag: the motive file comes from the test program, which writes it.
-ursatz_test(test_cli_similar_motive_file TARGET test_similar_material ARGS --write-motive
-    ${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid PROPERTIES FIXTURES_SETUP similar_motive_file)
-# The smoke searches the corpus "small" (Bach 114 and Clementi 36).
-ursatz_test(test_cli_similar_smoke COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
-                 -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
-                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
-                 -DSMOKE=1
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_smoke
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
-    PROPERTIES FIXTURES_REQUIRED similar_motive_file)
-# Over 10 s in the fast set (about 46 s of CPU measured): runs nightly.
-ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
-                 -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
-                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
-    LABELS slow
-    PROPERTIES FIXTURES_REQUIRED similar_motive_file)
-
 ursatz_test_executable(test_meter_check LIBS ursatz_analyzer_engine analyzer_test_support cjson m
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 ursatz_test(test_meter_check_smoke TARGET test_meter_check ARGS smoke)
@@ -395,15 +369,6 @@ if(URSATZ_VALGRIND)
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_links> LABELS slow valgrind
         PROPERTIES RESOURCE_LOCK motive_links_work)
 endif()
-ursatz_test(test_cli_link_motives COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/links
-                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                 -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
-                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v2.schema.json
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 
 ursatz_test(test_staleness LIBS ursatz_test_support ursatz_analyzer_engine cjson
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
@@ -443,13 +408,13 @@ ursatz_test(test_material_export LIBS ursatz_analyzer_engine analyzer_test_suppo
 # The layers of Mozart 545 (R-630): the CLI's --layers folder and Michelle's reading beside the Analyzer's (the full test runs the CLI and
 # analyzes the piece: nightly; the smoke reads only the stored fixture).
 ursatz_test_executable(test_layers_two_readings LIBS ursatz_analyzer_engine analyzer_test_support
-    DEFINITIONS URSATZ_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>")
-add_dependencies(test_layers_two_readings ursatz-analyzer)
+    DEFINITIONS URSATZ_ANALYZER_CLI="$<TARGET_FILE:ursatz>")
+add_dependencies(test_layers_two_readings ursatz)
 ursatz_test(test_layers_two_readings_smoke TARGET test_layers_two_readings ARGS smoke)
 ursatz_test(test_layers_two_readings TARGET test_layers_two_readings LABELS slow)
 
 # The model plan of Mozart 545 (R-635): --model-plan on a copy, the plan validated against its schema.
-ursatz_test(cli_model_plan COMMAND ${CMAKE_COMMAND} -DANALYZER=$<TARGET_FILE:ursatz-analyzer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_model_plan
+ursatz_test(cli_model_plan COMMAND ${CMAKE_COMMAND} -DANALYZER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_model_plan
                      "-DMIDI=${CMAKE_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/Mozart 545.mid"
                      -DSCHEMA=${CMAKE_SOURCE_DIR}/library/plan/schema/plan.v6.schema.json
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json

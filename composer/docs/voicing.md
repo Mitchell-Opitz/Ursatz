@@ -78,7 +78,7 @@ what is written. Targets filled in another order do not have this.
 ## Growing with a voicing
 
 `GrowRequest.has_voicing` and `GrowRequest.voicing` ask for one ([grow.md](grow.md)); `grow --voicing` and
-`--texture chorale` ([cli-grow.md](cli-grow.md)) set them, and it is refused together with an accompaniment.
+`--texture chorale` ([cli-grow.md](../../cli/docs/cli-grow.md)) set them, and it is refused together with an accompaniment.
 `grow-theme` opens, for every harmony target, a Constrained alto (voice 1, with the constraint) and tenor (voice 2) over
 the same time. With `write_soprano` it opens a Constrained melody span there too, with the cadence the harmony target
 ends in, and makes no melody for the ideas: the melody stage has nothing to do, the texture stage writes the melody with

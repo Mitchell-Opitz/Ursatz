@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/random_motive.response.schema.json",
   "title": "composer_api_random_motive response",
-  "description": "What `random-motive --json` prints, and `drawn` when the mode or the meter was drawn from the seed.",
+  "description": "What `ursatz random-motive --format json` prints, and `drawn` when the mode or the meter was drawn from the seed.",
   "type": "object",
   "required": [
     "seed",

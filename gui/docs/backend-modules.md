@@ -4,12 +4,11 @@ The backend's files, its route table and the route helpers. Back to the [docs in
 
 ## The process
 
-`ursatz-gui-backend [--data <dir>] [--port <n>] [--migrate [--dry-run] [--backup <dir>]]` (`backend/src/main.c`):
+`ursatz-gui-backend [--data <dir>] [--port <n>]` (`backend/src/main.c`):
 
 1. It resolves the settings (`workshop_settings_resolve`: the defaults, `<data>/ursatz.json`, `URSATZ_DATA`, `URSATZ_PORT`, `URSATZ_JOB_WORKERS`, then the flags). An unknown flag prints the usage line and exits 2; a port that is not a whole number from 1 to 65535 is refused.
-2. With `--migrate` it runs `workshop_migrate` (a dry run writes nothing), prints the JSON report and exits ([older folders](../../workshop/docs/data-folder.md#older-folders-and-migration)); a folder in an older layout is otherwise refused with the commands to run.
-3. It opens the workshop (`workshop_open`; a second process on one folder exits 1 with "the data folder <path> is in use by another Ursatz process (pid <n>)"), prints the recovery line to stderr when the open recovered something, starts it (`workshop_start`) and starts the HTTP server (`server.c`) over `frontend/public/` with the workshop's `http_threads` request threads (default 16, each with a 32 MB stack for the Composer's deepest entries).
-4. On SIGINT or SIGTERM the server ends the event streams (`ursatz_gui_events_stop`, `workshop_events_close`, so the stream threads come back) and stops; `workshop_close` then stops the workshop (it cancels every job and joins the workers) and releases the data folder.
+2. It opens the workshop (`workshop_open`; a second process on one folder exits 1 with "the data folder <path> is in use by another Ursatz process (pid <n>)"), prints the recovery line to stderr when the open recovered something, starts it (`workshop_start`) and starts the HTTP server (`server.c`) over `frontend/public/` with the workshop's `http_threads` request threads (default 16, each with a 32 MB stack for the Composer's deepest entries).
+3. On SIGINT or SIGTERM the server ends the event streams (`ursatz_gui_events_stop`, `workshop_events_close`, so the stream threads come back) and stops; `workshop_close` then stops the workshop (it cancels every job and joins the workers) and releases the data folder.
 
 Everything but `main.c` is built as the static library `ursatz_gui_core` (`backend/CMakeLists.txt`); the server `ursatz-gui-backend` is `main.c` linked to it. The route tests that read the workshop's internals link `ursatz_gui_core_internal` (the engine archive); never link a library and its engine into one executable. A new source file is added to the library once. The GUI includes only `workshop_api.h`, `common/`, civetweb and cJSON; the layer table enforces it.
 

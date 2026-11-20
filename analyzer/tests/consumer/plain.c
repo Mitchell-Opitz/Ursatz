@@ -2,7 +2,6 @@
 #include <ursatz_analyzer_internal/analysis_document.h>
 #include <ursatz_analyzer_internal/analysis_result.h>
 #include <ursatz_analyzer_internal/chord_sequence.h>
-#include <ursatz_analyzer_internal/corpus.h>
 #include <ursatz_analyzer_internal/input_pipeline.h>
 #include <ursatz_analyzer_internal/motive_links.h>
 #include <ursatz_analyzer/analyzer_api.h>

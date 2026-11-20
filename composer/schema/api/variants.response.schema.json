@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variants.response.schema.json",
   "title": "composer_api_variants response",
-  "description": "What `variants --json` prints, with notices when a draw was skipped or fewer variants than asked for were found.",
+  "description": "What `ursatz variants --format json` prints, with notices when a draw was skipped or fewer variants than asked for were found.",
   "type": "object",
   "required": [
     "seed",

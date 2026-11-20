@@ -12,9 +12,6 @@ endif()
 option(URSATZ_GUI "Build the GUI and its HTTP server" ON)
 option(URSATZ_TESTS "Build and register the tests of every part" ON)
 
-# Each part reads its own switch; the root sets them all from the two options above.
-set(URSATZ_COMPOSER_BUILD_CLI ON)
-
 enable_testing()
 include(cmake/UrsatzTools.cmake)
 include(cmake/UrsatzTest.cmake)
@@ -29,6 +26,7 @@ add_subdirectory(library)
 add_subdirectory(analyzer)
 add_subdirectory(composer)
 add_subdirectory(workshop)
+add_subdirectory(cli)
 if(URSATZ_GUI)
     add_subdirectory(gui)
 endif()

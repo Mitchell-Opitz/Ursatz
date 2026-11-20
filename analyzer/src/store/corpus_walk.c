@@ -86,7 +86,16 @@ static bool count_stale_document(const char *piece_path, const char *document, c
     return true;
 }
 
-CorpusWalkResult corpus_walk_stale_count(const char *index_path, size_t *stale) {
+UrsatzStatus analyzer_corpus_stale_count(const char *index_path, size_t *stale) {
     *stale = 0;
-    return corpus_walk_documents(index_path, count_stale_document, stale, NULL);
+    switch (corpus_walk_documents(index_path, count_stale_document, stale, NULL)) {
+    case CORPUS_WALK_OK:
+        return URSATZ_OK;
+    case CORPUS_WALK_ERR_ALLOC:
+        return URSATZ_ERR_ALLOC;
+    case CORPUS_WALK_ERR_FORMAT:
+        return URSATZ_ERR_FORMAT;
+    default:
+        return URSATZ_ERR_IO;
+    }
 }

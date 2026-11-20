@@ -1,0 +1,118 @@
+# The data folder subcommands of ursatz (P64 B8), run as processes on a copy of the layout 0 fixture folder.
+# Run with: cmake -DURSATZ=<ursatz> -DDATA_V0=<fixture folder> -DWORK=<folder of its own> -P cli_data_commands.cmake
+
+if(NOT URSATZ OR NOT DATA_V0 OR NOT WORK)
+    message(FATAL_ERROR "give -DURSATZ, -DDATA_V0 and -DWORK")
+endif()
+
+file(REMOVE_RECURSE "${WORK}")
+file(MAKE_DIRECTORY "${WORK}")
+file(COPY "${DATA_V0}/" DESTINATION "${WORK}/data")
+set(DATA "${WORK}/data")
+
+# Runs ursatz in WORK with the arguments; sets out (stdout and stderr together) and status.
+function(ursatz)
+    execute_process(COMMAND "${URSATZ}" ${ARGN} WORKING_DIRECTORY "${WORK}" RESULT_VARIABLE status OUTPUT_VARIABLE out ERROR_VARIABLE err)
+    set(out "${out}${err}" PARENT_SCOPE)
+    set(status "${status}" PARENT_SCOPE)
+endfunction()
+
+macro(expect_status wanted what)
+    if(NOT status EQUAL ${wanted})
+        message(FATAL_ERROR "${what}: exit ${status}, expected ${wanted}:\n${out}")
+    endif()
+endmacro()
+
+macro(expect_text pattern what)
+    if(NOT out MATCHES "${pattern}")
+        message(FATAL_ERROR "${what}: the output does not match '${pattern}':\n${out}")
+    endif()
+endmacro()
+
+# A folder in layout 0 is refused with the commands to run.
+ursatz(--data "${DATA}" query item.list)
+expect_status(2 "an unmigrated folder")
+expect_text("ursatz --data [^ ]+ migrate --dry-run, then ursatz --data [^ ]+ migrate" "the refusal names migrate")
+
+# The dry run reports and writes nothing.
+file(GLOB_RECURSE before RELATIVE "${DATA}" "${DATA}/*")
+ursatz(--data "${DATA}" migrate --dry-run)
+expect_status(0 "migrate --dry-run")
+expect_text("\"dry_run\":[ \t]*true" "migrate --dry-run")
+file(GLOB_RECURSE after RELATIVE "${DATA}" "${DATA}/*")
+if(NOT before STREQUAL after OR EXISTS "${DATA}/data-folder.json")
+    message(FATAL_ERROR "migrate --dry-run changed the folder")
+endif()
+
+# The migration makes layout 2, after a backup.
+ursatz(--data "${DATA}" migrate --backup "${WORK}/backup")
+expect_status(0 "migrate")
+if(NOT EXISTS "${WORK}/backup")
+    message(FATAL_ERROR "migrate wrote no backup")
+endif()
+file(READ "${DATA}/data-folder.json" marker)
+string(JSON format GET "${marker}" format_version)
+if(NOT format EQUAL 2)
+    message(FATAL_ERROR "data-folder.json has format_version ${format}")
+endif()
+
+# The theme item of the fixture.
+ursatz(--data "${DATA}" query item.list)
+expect_status(0 "query item.list")
+string(JSON items GET "${out}" items)
+string(JSON count LENGTH "${items}")
+set(theme "")
+math(EXPR last "${count} - 1")
+foreach(i RANGE ${last})
+    string(JSON name GET "${items}" ${i} name)
+    if(name STREQUAL "Sentence theme")
+        string(JSON theme GET "${items}" ${i} id)
+    endif()
+endforeach()
+if(theme STREQUAL "")
+    message(FATAL_ERROR "item.list has no 'Sentence theme':\n${items}")
+endif()
+
+ursatz(--data "${DATA}" show "item:${theme}")
+expect_status(0 "show item")
+expect_text("${theme}" "show item")
+ursatz(--data "${DATA}" show "item:${theme}" --view summary)
+expect_status(1 "show --view summary")
+expect_text("--view takes json" "show --view summary")
+ursatz(--data "${DATA}" show nothing)
+expect_status(1 "show nothing")
+expect_text("not an address" "show nothing")
+
+# Compose, history, render.
+ursatz(--data "${DATA}" compose "item:${theme}" --seed 1)
+expect_status(0 "compose")
+expect_text("item ${theme} version [0-9]+" "compose")
+ursatz(--data "${DATA}" history "item:${theme}")
+expect_status(0 "history")
+expect_text("item.compose" "history")
+expect_text("claude" "history")
+ursatz(--data "${DATA}" render "item:${theme}" --midi "${WORK}/t.mid")
+expect_status(0 "render item")
+file(READ "${WORK}/t.mid" head HEX LIMIT 4)
+if(NOT head STREQUAL "4d546864")
+    message(FATAL_ERROR "t.mid does not start with MThd: ${head}")
+endif()
+ursatz(--data "${DATA}" render "item:${theme}")
+expect_status(1 "render item without an output")
+
+# Apply: a command goes through, a stale base version is refused.
+file(WRITE "${WORK}/create.jsonl" "{\"command\":\"project.create\",\"params\":{\"name\":\"P\"}}\n")
+ursatz(--data "${DATA}" apply "${WORK}/create.jsonl")
+expect_status(0 "apply project.create")
+expect_text("journal" "apply project.create")
+file(WRITE "${WORK}/stale.jsonl" "{\"command\":\"item.save\",\"target\":\"${theme}\",\"base_version\":1,\"params\":{\"body\":{},\"note\":\"x\"}}\n")
+ursatz(--data "${DATA}" apply "${WORK}/stale.jsonl")
+expect_status(2 "apply with a stale base version")
+expect_text("changed since you read it" "apply with a stale base version")
+expect_text("current version" "apply with a stale base version")
+file(WRITE "${WORK}/actor.jsonl" "{\"command\":\"project.create\",\"actor\":\"x\",\"params\":{\"name\":\"Q\"}}\n")
+ursatz(--data "${DATA}" apply "${WORK}/actor.jsonl")
+expect_status(1 "apply with an actor")
+expect_text("the actor comes from --actor" "apply with an actor")
+
+message(STATUS "ok")

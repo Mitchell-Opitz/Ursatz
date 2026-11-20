@@ -3,13 +3,14 @@
 Style profiles: counting labels over a corpus, the style model file and comparing styles. Back to the [docs index](README.md).
 
 ```sh
-ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
-ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]
+ursatz style-profile <corpus output dir> --name <style name> [--out <file>]
 ```
+
+The command is [`ursatz style-profile`](../../cli/docs/corpus.md#style-profile). Comparing two style models (the distance, with categories left out) is a library function that the workshop's API and the GUI call; it has no command.
 
 Library: the profile, its counting, the comparison, the model file and the labels are the library's (`theory/style/`, see
 [the theory README](../../library/theory/README.md#style)); the Analyzer's `include/ursatz_analyzer/analyzer_api.h` keeps the two
-entries that read documents: `analyzer_style_add_document_json` and `style_profile_add_corpus`. A document is read into a
+entries that read documents: `analyzer_style_add_document_json` and `analyzer_style_profile_add_corpus`. A document is read into a
 `StylePiece` (`src/style/style_piece_document.c`) and the library counts it.
 
 A style profile counts harmony, rhythm, melody and form labels over the analysis documents of a corpus run (see

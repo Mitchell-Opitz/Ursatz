@@ -17,7 +17,7 @@
 #include "ursatz_test.h"
 
 /*
- * The `theme` command, run as a process (docs/cli-theme.md, docs/theme-request.md): themes from up to 16 motives, named
+ * The `theme` command, run as a process (cli/docs/cli-theme.md, docs/theme-request.md): themes from up to 16 motives, named
  * by the slots and the single ideas, and a brief.
  *
  *   one motive   a request with the one motive is the theme `grow` makes of it with the same options and seed

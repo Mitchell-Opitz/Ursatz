@@ -31,8 +31,7 @@ The internal headers (`src/include/ursatz_analyzer_internal/`):
 | --- | --- |
 | `input_pipeline.h` | The import entries behind `analyzer_import_file` and `analyzer_import_buffer`. |
 | `analysis_result.h` | The `AnalyzerResult` and its report view. |
-| `analysis_document.h` | The document's builder and serializer (`analysis_document_render_result`, `derive_analysis_document_path`). |
-| `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable; it prints nothing (its callback gets a `CorpusPieceReport`: the importer's text of a failed import, the warnings of one that worked; the CLI prints them). |
+| `analysis_document.h` | The document's builder and serializer (`analysis_document_render_result`; the path of a document is `analyzer_document_path_for`, in the API). |
 | `chord_sequence.h` | `analyzer_chord_sequence_from_document` gives the joined chord sequence of a stored document. |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 | `motive_links.h`, `style_profile.h` | The links and the style profile behind their API entries. |
@@ -45,7 +44,7 @@ which also frees every entry's labels. Labels are heap strings with no length li
 marks a group or key that was not identified. It also frees each entry's `note_ids`. The caller
 frees an `AnalysisDocument` with `analyzer_document_destroy`; it keeps no reference to the notes
 or the report, so those can be destroyed as soon as it is built. Strings returned by
-`analyzer_document_to_json`, `analysis_document_render_result` and `derive_analysis_document_path` are freed by the
+`analyzer_document_to_json`, `analysis_document_render_result` and `analyzer_document_path_for` are freed by the
 caller with `free`.
 
 ```cmake
@@ -63,8 +62,8 @@ Private helper modules, each the one home of what several files used to copy:
 | --- | --- |
 | `common/` (`<common/json.h>`, `files.h`, `strings.h`) | The JSON member readers, `common_json_add` and `_append`, the rational reader, whole-file read and atomic write, folder creation and the `CommonText` builder; the Analyzer keeps no copy. |
 | `src/util/misc_util.h` | `text_copy`, `size_compare`, `fraction_compare`, `entity_id_copy`, `notes_last_end`, `fnv1a_bytes`. |
-| `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece with its `AnalyzerDocumentStatus`; `corpus_walk_stale_count`. |
-| `src/pipeline/run_file.h` | `analyzer_run_file` (import, optional reading, `analyzer_analyze`) and `analyzer_run_file_document`. |
+| `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece with its `AnalyzerDocumentStatus`; `analyzer_corpus_stale_count` counts the stale ones (API). |
+| `src/result/run_file.c` | `analyzer_run_file` (import, optional reading, `analyzer_analyze`) and `analyzer_run_file_document`, declared in the API header. |
 
 The tests share `tests/support/test_support.h` (the `analyzer_test_support` library): a MIDI builder, JSON accessors,
 file helpers and a document analyzer.

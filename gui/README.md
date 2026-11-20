@@ -82,7 +82,7 @@ only staged public headers are visible). Run them from anywhere in the repositor
 Done-when for the client boundary, checked by hand: analyze a reference
 piece (same claims and score as before the phase); make the "Knight's house"
 theme with the same seeded plan; during a compose `ps` shows no
-`ursatz-composer` process; opening a piece imports it once (the import counter);
+composer process; opening a piece imports it once (the import counter);
 all checks above pass.
 
 ## Out of scope

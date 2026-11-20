@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer_internal/similar_material.h>
 
 #include "test_support.h"
@@ -18,7 +18,7 @@
  * score 1, and again where the piece returns to them; the same motive a fourth higher must score the same. "I IV V I"
  * must find Bach 114's cadences. The motive and progression results are compared with
  * tests/snapshots/similar.reference.txt (with URSATZ_UPDATE_GOLDENS=1 in the environment, the snapshot is rewritten
- * instead). Run with --write-motive <file> to write the four-note MIDI motive the CLI test searches for.
+ * instead).
  *
  * With the argument "smoke" the corpus is Bach 114 alone (copied from the fixtures into a folder of its own); the
  * motive is Bach 114's own opening, which must come back first at m. 1 with score 1, and the snapshot and the return of
@@ -267,9 +267,6 @@ static void test_queries(void) {
 }
 
 int main(int argc, char **argv) {
-    if (argc == 3 && strcmp(argv[1], "--write-motive") == 0) {
-        return write_motive_midi(argv[2]) ? 0 : 1;
-    }
     smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     snprintf(work_dir, sizeof work_dir, "%s", URSATZ_SIMILAR_WORK_DIR);
     char command[1400];
@@ -303,9 +300,9 @@ int main(int argc, char **argv) {
         free(bytes);
     }
 
-    CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
-    CorpusRunSummary summary;
-    if (corpus_run(&run, &summary, NULL) != URSATZ_OK || summary.analyzed != corpus_pieces) {
+    AnalyzerCorpusOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    if (analyzer_corpus_run(&run, &summary, NULL) != URSATZ_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");
         return 1;
     }

@@ -2,6 +2,12 @@
 
 The Analyzer's changes by phase. Back to the [docs index](README.md).
 
+## Unreleased (phase P64)
+
+The Analyzer's command line is `ursatz` (R-658): `ursatz-analyzer`, its `export`, `--similar`, `--compare-styles` and `--link-motives` modes and `src/cli/` are gone. `ursatz analyze` writes the document (and, with `--view text`, the text export), `ursatz corpus` and `ursatz style-profile` run the corpus and the style profile ([cli docs](../../cli/docs/analyze.md)).
+
+The run, corpus and style profile entries are API (R-656; B2). `analyzer_run_file` and `analyzer_run_file_document` (with `AnalyzerRunFileResult`, values `ANALYZER_RUN_FILE_*`), `analyzer_document_path_for` (was `derive_analysis_document_path`), `analyzer_corpus_run` (was `corpus_run`; `AnalyzerCorpusOptions`, `AnalyzerCorpusSummary`, `AnalyzerCorpusPieceReport`, `AnalyzerCorpusPieceStatus`), `analyzer_corpus_stale_count` (was `corpus_walk_stale_count`, now an `UrsatzStatus`) and `analyzer_style_profile_add_corpus` (was `style_profile_add_corpus`) moved into `analyzer_api.h` and `exports.txt`; `run_file.h` and `corpus.h` are gone. Documents, text exports and corpus outputs are byte-identical; `URSATZ_ANALYZER_VERSION` stays 0.7.0.
+
 ## Unreleased (phase P63)
 
 One API header and one status set (R-639, R-640; B2, B3). `<ursatz_analyzer/analyzer_api.h>` holds the 38 entries with a caller outside the Analyzer and the version constants of its persisted formats; the unprefixed public names are `analyzer_*`, and the other public headers are internal (`src/include/ursatz_analyzer_internal/`). The library exports only the API (`cmake/UrsatzExports.cmake`, the test `app_exports`). Every entry answers `UrsatzStatus` with an `UrsatzError` (`NOT_FOUND`, `FORMAT`, `IO`, `UNSATISFIABLE` and the rest of the common set); `AnalyzerStatus` and the public result enums are gone. `corpus_run` prints nothing: its callback gets a `CorpusPieceReport`, and the CLI prints. `analyzer_run_file` has an `import_error` and an `analyze_status` out parameter. `analyzer_score_export_musicxml` takes an `AnalyzerScoreMetadata` and writes the title and composer itself, so the GUI's splice is gone. `analyzer_document_status_of` names its parameters `written_by` and `written_against`. The motive links take a `cancelled` callback checked between pairs (R-645). The Analyzer calls `common/` for its files, JSON, strings and hash.

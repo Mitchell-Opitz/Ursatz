@@ -6,7 +6,7 @@
 
 #include "cJSON.h"
 #include <ursatz_analyzer_internal/analysis_document.h>
-#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include "test_support.h"
@@ -64,10 +64,10 @@ static unsigned long long fnv1a(const char *data, size_t length) {
     return hash;
 }
 
-static CorpusRunSummary run(const char *input, const char *output, bool resume, UrsatzStatus *result) {
-    CorpusRunOptions options = {input, output, resume, NULL, NULL, test_knowledge()};
-    CorpusRunSummary summary;
-    *result = corpus_run(&options, &summary, NULL);
+static AnalyzerCorpusSummary run(const char *input, const char *output, bool resume, UrsatzStatus *result) {
+    AnalyzerCorpusOptions options = {input, output, resume, NULL, NULL, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    *result = analyzer_corpus_run(&options, &summary, NULL);
     return summary;
 }
 
@@ -148,7 +148,7 @@ static void test_reference(const char *work) {
     snprintf(output, sizeof(output), "%s/reference", work);
 
     UrsatzStatus result;
-    CorpusRunSummary summary = run(input, output, false, &result);
+    AnalyzerCorpusSummary summary = run(input, output, false, &result);
     CHECKF(result == URSATZ_OK, "reference run result %d", (int)result);
     CHECKF(summary.analyzed == 5 && summary.skipped == 0 && summary.failed == 0, "reference summary %zu/%zu/%zu",
            summary.analyzed, summary.skipped, summary.failed);
@@ -215,7 +215,7 @@ static void test_mixed(const char *work) {
     snprintf(output, sizeof(output), "%s/mixed", work);
 
     UrsatzStatus result;
-    CorpusRunSummary summary = run(input, output, false, &result);
+    AnalyzerCorpusSummary summary = run(input, output, false, &result);
     CHECKF(result == URSATZ_OK, "mixed run result %d (one failed piece is not a failed run)", (int)result);
     CHECKF(summary.analyzed == 2 && summary.skipped == 0 && summary.failed == 1, "mixed summary %zu/%zu/%zu",
            summary.analyzed, summary.skipped, summary.failed);
@@ -268,7 +268,7 @@ static void test_resume_changes(const char *work) {
     CHECKF(copy_file(from, path), "cannot copy the MusicXML");
 
     UrsatzStatus result;
-    CorpusRunSummary summary = run(input, output, false, &result);
+    AnalyzerCorpusSummary summary = run(input, output, false, &result);
     CHECKF(summary.analyzed == 2, "first run analyzed %zu", summary.analyzed);
 
     /* Changing one file's bytes re-analyzes only that file. */
@@ -361,9 +361,9 @@ static void test_resume_changes(const char *work) {
 
 static void test_arguments(const char *work) {
     UrsatzStatus result;
-    CorpusRunOptions options = {NULL, NULL, false, NULL, NULL, test_knowledge()};
-    CHECKF(corpus_run(&options, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL input_dir");
-    CHECKF(corpus_run(NULL, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL options");
+    AnalyzerCorpusOptions options = {NULL, NULL, false, NULL, NULL, test_knowledge()};
+    CHECKF(analyzer_corpus_run(&options, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL input_dir");
+    CHECKF(analyzer_corpus_run(NULL, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL options");
     char missing[1024];
     snprintf(missing, sizeof(missing), "%s/does-not-exist", work);
     run(missing, work, false, &result);
@@ -385,12 +385,12 @@ typedef struct {
     char message[256];
 } Reports;
 
-static void collect_report(const char *path, CorpusPieceStatus status, const char *error, const CorpusPieceReport *report, void *user) {
+static void collect_report(const char *path, AnalyzerCorpusPieceStatus status, const char *error, const AnalyzerCorpusPieceReport *report, void *user) {
     (void)path;
     (void)error;
     Reports *reports = user;
     reports->pieces++;
-    if (status == CORPUS_PIECE_FAILED && report->message) {
+    if (status == ANALYZER_CORPUS_PIECE_FAILED && report->message) {
         reports->with_message++;
         snprintf(reports->message, sizeof(reports->message), "%s", report->message);
     }
@@ -400,13 +400,13 @@ static void test_messages(const char *work) {
     UrsatzError error = {{0}};
     char missing[1024];
     snprintf(missing, sizeof(missing), "%s/no-such-input", work);
-    CorpusRunOptions options = {missing, work, false, NULL, NULL, test_knowledge()};
-    CHECKF(corpus_run(&options, NULL, &error) == URSATZ_ERR_NOT_FOUND, "a missing input folder");
+    AnalyzerCorpusOptions options = {missing, work, false, NULL, NULL, test_knowledge()};
+    CHECKF(analyzer_corpus_run(&options, NULL, &error) == URSATZ_ERR_NOT_FOUND, "a missing input folder");
     CHECKF(strstr(error.message, "cannot read input directory") != NULL && strcmp(error.path, missing) == 0,
            "the error names the input folder: '%s' at '%s'", error.message, error.path);
 
-    CorpusRunOptions no_knowledge = {work, work, false, NULL, NULL, NULL};
-    CHECKF(corpus_run(&no_knowledge, NULL, &error) == URSATZ_ERR_REQUEST && strstr(error.message, "knowledge snapshot") != NULL,
+    AnalyzerCorpusOptions no_knowledge = {work, work, false, NULL, NULL, NULL};
+    CHECKF(analyzer_corpus_run(&no_knowledge, NULL, &error) == URSATZ_ERR_REQUEST && strstr(error.message, "knowledge snapshot") != NULL,
            "no knowledge snapshot is a request error with its message");
 
     char output[1024];
@@ -414,9 +414,9 @@ static void test_messages(const char *work) {
     snprintf(output, sizeof(output), "%s/messages-out", work);
     snprintf(input, sizeof(input), "%s/mixed", URSATZ_CORPORA_DIR);
     Reports reports = {0};
-    CorpusRunOptions mixed = {input, output, false, collect_report, &reports, test_knowledge()};
-    CorpusRunSummary summary;
-    CHECKF(corpus_run(&mixed, &summary, &error) == URSATZ_OK && summary.failed == 1 && reports.pieces == 3,
+    AnalyzerCorpusOptions mixed = {input, output, false, collect_report, &reports, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    CHECKF(analyzer_corpus_run(&mixed, &summary, &error) == URSATZ_OK && summary.failed == 1 && reports.pieces == 3,
            "the mixed corpus runs: %zu pieces, %zu failed", reports.pieces, summary.failed);
     CHECKF(reports.with_message == 1 && reports.message[0] != '\0', "the failed piece's importer text reaches the callback: '%s'", reports.message);
 }

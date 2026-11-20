@@ -6,6 +6,7 @@ add_library(ursatz_workshop_engine STATIC
     src/base/http_status.c
     src/base/knowledge.c
     src/base/last_error.c
+    src/base/names.c
     src/items/collections.c
     src/items/data_check.c
     src/items/formats.c
@@ -28,13 +29,17 @@ add_library(ursatz_workshop_engine STATIC
     src/items/piece_lock.c
     src/items/subjects.c
     src/analysis/analysis.c
+    src/analysis/analyze_tool.c
+    src/analysis/corpus_tools.c
     src/analysis/analysis_jobs.c
     src/analysis/import_cache.c
     src/analysis/links.c
+    src/analysis/passages.c
     src/analysis/styles.c
     src/composition/compose_common.c
     src/composition/compose_jobs.c
     src/composition/composer_client.c
+    src/composition/composer_tool.c
     src/composition/motif_import.c
     src/composition/motifs.c
     src/composition/pieces.c
@@ -52,11 +57,13 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_composer.c
     src/coordinator/api_items.c
     src/coordinator/api_jobs.c
+    src/coordinator/api_journal.c
     src/coordinator/api_library.c
     src/coordinator/data_lock.c
     src/coordinator/dispatch.c
     src/coordinator/events.c
     src/coordinator/settings.c
+    src/coordinator/tools.c
     src/coordinator/workshop.c
 )
 ursatz_public_headers(ursatz_workshop_engine

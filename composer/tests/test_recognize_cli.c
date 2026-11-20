@@ -9,12 +9,12 @@
 
 /*
  * The `recognize` command, run as a process: a pair that is found (a transposition), a pair that is not found within the
- * depth, bad input (exit 1 with a message), the `--json` shape, and a contour pair.
+ * depth, bad input (exit 1 with a message), the `--format json` shape, and a contour pair.
  */
 
 #define SOURCE "recognize_cli_source.txt"
 #define TARGET "recognize_cli_target.txt"
-#define MAJOR " --format notes --meter 4/4 --key \"C major\""
+#define MAJOR " --input-format notes --meter 4/4 --key \"C major\""
 
 /* Runs the command with these arguments; stdout and stderr go to files. Returns the exit status. */
 static int run(const char *arguments, const char *out_file, const char *err_file) {
@@ -80,13 +80,13 @@ static void test_bad_input(void) {
     expect_failure(SOURCE " no_such_recognize_target.txt" MAJOR, 1, "cannot load 'no_such_recognize_target.txt'");
     expect_failure(SOURCE, 1, "recognize needs a source and a target motive");
     expect_failure(SOURCE " " SOURCE MAJOR " --depth 9", 1, "--depth must be a whole number from 1 to 4");
-    expect_failure(SOURCE " " SOURCE " --format notes", 1, "meter");
+    expect_failure(SOURCE " " SOURCE " --input-format notes", 1, "meter");
 }
 
 static void test_json(void) {
     test_write_text(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
     test_write_text(TARGET, "D4:q F#4:e A4:e G4:q F#4:q");
-    char *text = output_of(SOURCE " " TARGET MAJOR " --json");
+    char *text = output_of(SOURCE " " TARGET MAJOR " --format json");
     expect_contains(text, "\"found\": true");
     expect_contains(text, "\"chain\": {");
     expect_contains(text, "\"steps\": [{");
@@ -100,7 +100,7 @@ static void test_json(void) {
     free(text);
 
     test_write_text(TARGET, "G2:q B6:e");
-    text = output_of(SOURCE " " TARGET MAJOR " --depth 1 --json");
+    text = output_of(SOURCE " " TARGET MAJOR " --depth 1 --format json");
     expect_contains(text, "\"found\": false");
     expect_contains(text, "\"steps\": []");
     expect_contains(text, "\"distance\": 1");
@@ -112,11 +112,11 @@ static void test_remoteness(void) {
     test_write_text("recognize_cli_basic.txt", "C4:q E4:e G4:e F4:q E4:q");
     test_write_text(SOURCE, "D4:q F#4:e A4:e G4:q F#4:q");
     test_write_text(TARGET, "D4:h F#4:q A4:q G4:h F#4:h");
-    char *text = output_of(SOURCE " " TARGET MAJOR " --json");
+    char *text = output_of(SOURCE " " TARGET MAJOR " --format json");
     expect_contains(text, "\"distance\": 0.2");
     expect_contains(text, "\"remoteness\": 0.2");
     free(text);
-    text = output_of(SOURCE " " TARGET MAJOR " --basic recognize_cli_basic.txt --json");
+    text = output_of(SOURCE " " TARGET MAJOR " --basic recognize_cli_basic.txt --format json");
     expect_contains(text, "\"distance\": 0.2");
     expect_contains(text, "\"remoteness\": 0.3333");
     free(text);
@@ -129,7 +129,7 @@ static void test_remoteness(void) {
 static void test_contour(void) {
     test_write_text(SOURCE, "0 2 1 3 2");
     test_write_text(TARGET, "0 2 1 2");
-    char *text = output_of(SOURCE " " TARGET " --format contour --target-format contour --meter 4/4 --json");
+    char *text = output_of(SOURCE " " TARGET " --input-format contour --target-format contour --meter 4/4 --format json");
     expect_contains(text, "\"found\": true");
     expect_contains(text, "\"op\": \"omit-interval\"");
     expect_contains(text, "\"interval\": 3");

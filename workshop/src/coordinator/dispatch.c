@@ -40,6 +40,7 @@ static const QueryEntry kQueries[] = {
     {"links.list", workshop_q_links_list},
     {"links.get", workshop_q_links_get},
     {"links.piece", workshop_q_links_piece},
+    {"journal.list", workshop_q_journal_list},
     {"job.get", workshop_q_job_get},
     {"job.list", workshop_q_job_list},
     {"project.list", workshop_q_project_list},
@@ -287,6 +288,9 @@ UrsatzStatus workshop_query(Workshop *workshop, const char *name, const cJSON *p
     if (!workshop || !name || !reply) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/query", "a query needs a workshop, a name and a reply");
     }
+    if (workshop->tools_only) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "", "this workshop has no data folder");
+    }
     if (params && !cJSON_IsObject(params)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "params is an object");
     }
@@ -348,6 +352,9 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
     }
     if (!workshop || !reply || !cJSON_IsObject(command)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "", "a command is an object");
+    }
+    if (workshop->tools_only) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "", "this workshop has no data folder");
     }
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(command, "command");
     const cJSON *actor = cJSON_GetObjectItemCaseSensitive(command, "actor");
@@ -412,4 +419,51 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
         workshop_call_fail(error, status, error->path, "the command %s failed", entry->name);
     }
     return status;
+}
+
+/* --- tools ----------------------------------------------------------------------------------------------------------------------- */
+
+typedef struct {
+    const char *name;
+    WorkshopHandler handler;
+} ToolEntry;
+
+static const ToolEntry WORKSHOP_TOOLS[] = {
+    {"analyze", workshop_t_analyze},
+    {"composer", workshop_t_composer},
+    {"corpus", workshop_t_corpus},
+    {"corpus-passages", workshop_t_corpus_passages},
+    {"pitch-names", workshop_t_pitch_names},
+    {"style-profile", workshop_t_style_profile},
+    {"versions", workshop_t_versions},
+};
+
+UrsatzStatus workshop_tool(Workshop *workshop, const char *name, const cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
+                           UrsatzError *error) {
+    if (reply) {
+        memset(reply, 0, sizeof(*reply));
+    }
+    if (!workshop || !name || !reply) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/name", "a tool needs a workshop, a name and a reply");
+    }
+    if (params && !cJSON_IsObject(params)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "params is an object");
+    }
+    for (size_t i = 0; i < sizeof(WORKSHOP_TOOLS) / sizeof(WORKSHOP_TOOLS[0]); i++) {
+        if (strcmp(WORKSHOP_TOOLS[i].name, name) != 0) {
+            continue;
+        }
+        cJSON *empty = params ? NULL : cJSON_CreateObject();
+        if (!params && !empty) {
+            return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+        }
+        WorkshopCall call = {workshop, params ? params : empty, bytes, "", "", -1};
+        UrsatzStatus status = WORKSHOP_TOOLS[i].handler(&call, reply, error);
+        cJSON_Delete(empty);
+        if (status != URSATZ_OK && error && error->message[0] == '\0') {
+            workshop_call_fail(error, status, error->path, "the tool %s failed", name);
+        }
+        return status;
+    }
+    return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/name", "unknown tool '%s'", name);
 }

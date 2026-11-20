@@ -459,17 +459,17 @@ static void test_files_and_cli(void) {
     free(plan_text);
     char command[1024];
     snprintf(command, sizeof(command),
-             "\"%s\" export render_test_cli_plan.json --midi render_test_cli.mid --musicxml render_test_cli.xml "
+             "\"%s\" render render_test_cli_plan.json --midi render_test_cli.mid --musicxml render_test_cli.xml "
              ">render_test_cli.out 2>render_test_cli.err",
              COMPOSER_CLI_PATH);
     assert(system(command) == 0);
     assert(file_size("render_test_cli.mid") == file_size("render_test_plan.mid"));
     assert(file_size("render_test_cli.xml") == file_size("render_test_plan.xml"));
 
-    snprintf(command, sizeof(command), "\"%s\" export no_such_plan.json --midi x.mid >/dev/null 2>&1",
+    snprintf(command, sizeof(command), "\"%s\" render no_such_plan.json --midi x.mid >/dev/null 2>&1",
              COMPOSER_CLI_PATH);
     assert(system(command) != 0);
-    snprintf(command, sizeof(command), "\"%s\" export render_test_cli_plan.json >/dev/null 2>&1", COMPOSER_CLI_PATH);
+    snprintf(command, sizeof(command), "\"%s\" render render_test_cli_plan.json >/dev/null 2>&1", COMPOSER_CLI_PATH);
     assert(system(command) != 0);
 
     plan_destroy(plan);

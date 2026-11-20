@@ -42,6 +42,12 @@ ursatz_test(corpus_route LIBS ursatz_gui_core ursatz_test_http gui_server_suppor
 # The one status-to-HTTP table of the routes and the last error the services keep for them (R-639).
 ursatz_test(gui_http_status SOURCES test_http_status.c LIBS ursatz_gui_core_internal ursatz_test_support)
 
+# The generic workshop routes (P64 B7): any query or command by its name, and the status, in a working directory of its own.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_routes)
+ursatz_test(workshop_routes SOURCES test_workshop_routes.c LIBS ursatz_gui_core ursatz_test_http gui_server_support
+    DEFINITIONS URSATZ_GUI_TEST_MIDI="${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Bach 114.mid"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_routes)
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
 ursatz_test(composer_route LIBS ursatz_gui_core ursatz_test_http gui_server_support
     DEFINITIONS URSATZ_GUI_TEST_VOCABULARY_FIXTURE="${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json"

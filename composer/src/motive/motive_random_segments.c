@@ -8,7 +8,7 @@
 #include "util/util.h"
 
 /*
- * Random motives from segments (docs/cli-random-motive.md): a motive is made of one to three segments (Schoenberg's
+ * Random motives from segments (cli/docs/cli-random-motive.md): a motive is made of one to three segments (Schoenberg's
  * motives), the way a theme starts. Segment a is a rhythm cell with one distinctive feature; a' repeats a's rhythm and
  * contour on the next chord (the dominant form); b is a new cell. A harmony plan puts one chord on each segment, and the
  * last segment slows down to end on a chord tone of the last chord. The defaults below are the whole of what shapes a

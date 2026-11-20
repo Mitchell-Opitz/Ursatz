@@ -3,16 +3,16 @@
 How a style model from the Analyzer steers the Composer's stages. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --out piece.json
-ursatz-composer fill piece.json --style-weight 2/1
-ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --style sonatinas.style.json
-ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --style chorales.style.json \
+ursatz plan --form binary --key C --meter 4/4 --style chorales.style.json --out piece.json
+ursatz fill piece.json --style-weight 2/1
+ursatz grow theme.txt --into sentence --key "D minor" --meter 4/4 --style sonatinas.style.json
+ursatz grow theme.txt --into sentence --key "D minor" --meter 4/4 --style chorales.style.json \
     --blend sonatinas.style.json --blend-weights harmony=1/4,form=1
 ```
 
 Library: `<ursatz_composer/style.h>`. `ComposeConfig.style` and `.style_weight` (`compose.h`), `GrowConfig` the same.
 
-A style is a StyleModel file the Ursatz Analyzer wrote from a corpus (`ursatz-analyzer --style-profile`, see the Analyzer's
+A style is a StyleModel file the Ursatz Analyzer wrote from a corpus (`ursatz style-profile`, see the Analyzer's
 `docs/style-profile.md`). The Composer reads it with the Analyzer's own reader (`composer_style_load_without`) and keeps, for each
 category, how often each label was seen. A style is a count, not a rule (Laws 12, 13): it prefers one candidate over another
 and never rejects one.
@@ -126,9 +126,9 @@ also hears the Composer's chords through the notes only (`ii7` where `ii` was wr
 ## Blending
 
 ```sh
-ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --blend sonatinas.style.json \
+ursatz plan --form binary --key C --meter 4/4 --style chorales.style.json --blend sonatinas.style.json \
     --blend-weight 1/4 --blend-weights harmony=3/4,form=1 --out piece.json
-ursatz-composer fill piece.json
+ursatz fill piece.json
 ```
 
 `composer_style_blend(a, b, weights, &out)` mixes two styles with a weight for each dimension (`ComposerStyleWeights`, in the
@@ -177,15 +177,15 @@ through the melody, so a melody weight reaches the harmony it measures a little.
 ## Seeding from a corpus
 
 A style says what a corpus is like; seeding starts a piece from a passage of it. The corpus is the output directory of
-`ursatz-analyzer --corpus <folder> --out <dir>`, the same one the Analyzer's `--similar` searches. The Composer does not
+`ursatz corpus <folder> --out <dir>`, the same one the Analyzer's similar-material search reads. The Composer does not
 search it (R-619): the Analyzer finds the passages (`analyzer_corpus_passages_like`, `analyzer_corpus_passages_numerals`,
 `<ursatz_analyzer/analyzer_api.h>`, see the Analyzer's `docs/corpus-passages.md`) and the request gives them inline,
 ranked best first, as `corpus_passages` (`schema/api/corpus-passages.schema.json`). The command line keeps its flags and does
 the finding itself, so what follows reads the same for it.
 
 ```sh
-ursatz-composer grow --from-corpus corpus-out --like passage.mid --into sentence --key "D major" --meter 4/4 --seed 3 --out theme.json
-ursatz-composer plan --form rounded-binary --key "D major" --meter 4/4 --from-corpus corpus-out --like passage.mid \
+ursatz grow --from-corpus corpus-out --like passage.mid --into sentence --key "D major" --meter 4/4 --seed 3 --out theme.json
+ursatz plan --form rounded-binary --key "D major" --meter 4/4 --from-corpus corpus-out --like passage.mid \
     --like-progression "I IV V I" --at B --out piece.json
 ```
 
@@ -231,8 +231,8 @@ each renamed `<folder>.musicxml`) and `sonatinas/` (the two files in `tests/fixt
 
 ```sh
 for c in chorales sonatinas; do
-  ursatz-analyzer --corpus $c --out out-$c
-  ursatz-analyzer --style-profile out-$c --name $c --out $c.style.json
+  ursatz corpus $c --out out-$c
+  ursatz style-profile out-$c --name $c --out $c.style.json
 done
 ```
 

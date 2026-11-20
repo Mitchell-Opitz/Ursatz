@@ -23,10 +23,4 @@ UrsatzStatus analysis_document_build_from_reading(const char *path, const Readin
 /* Convenience: analyzer_document_build, then analyzer_document_to_json. NULL as for the build. */
 char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result);
 
-/*
- * The analysis document path for input_path: "<stem>.analysis.json"
- * next to it. Caller frees; NULL on allocation failure.
- */
-char *derive_analysis_document_path(const char *input_path);
-
 #endif

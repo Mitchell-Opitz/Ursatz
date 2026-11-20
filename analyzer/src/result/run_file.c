@@ -1,7 +1,7 @@
-#include "result/run_file.h"
+#include <ursatz_analyzer/analyzer_api.h>
 
 
-RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const ImportedReading *reading,
+AnalyzerRunFileResult analyzer_run_file(const char *path, ImportedFormat format, const ImportedReading *reading,
                                 const KnowledgeSnapshot *knowledge, ImportedScore *notes, AnalyzerResult **result, ImportedScoreResult *import_status,
                                 ImportedReadingResult *reading_status, UrsatzStatus *analyze_status, UrsatzError *import_error) {
     ImportedScoreError error = {{0}};
@@ -11,7 +11,7 @@ RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const I
     }
     if (imported != IMPORTED_SCORE_OK) {
         ursatz_error_set(import_error, URSATZ_ERR_FORMAT, path, "%s", error.message);
-        return RUN_FILE_ERR_IMPORT;
+        return ANALYZER_RUN_FILE_ERR_IMPORT;
     }
     if (reading) {
         ImportedReadingResult applied = imported_reading_apply(notes, reading);
@@ -20,7 +20,7 @@ RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const I
         }
         if (applied != IMPORTED_READING_OK) {
             imported_score_destroy(notes);
-            return RUN_FILE_ERR_READING;
+            return ANALYZER_RUN_FILE_ERR_READING;
         }
     }
     AnalyzerOptions options = analyzer_options_default();
@@ -31,9 +31,9 @@ RunFileResult analyzer_run_file(const char *path, ImportedFormat format, const I
             *analyze_status = analyzed;
         }
         imported_score_destroy(notes);
-        return RUN_FILE_ERR_ANALYZE;
+        return ANALYZER_RUN_FILE_ERR_ANALYZE;
     }
-    return RUN_FILE_OK;
+    return ANALYZER_RUN_FILE_OK;
 }
 
 AnalysisDocument *analyzer_run_file_document(const char *path, ImportedScore *notes, AnalyzerResult *result) {
