@@ -9,6 +9,7 @@
 #include <io/imported_score.h>
 #include <plan/plan_json.h>
 #include <reading/reading_json.h>
+#include <text/text_view.h>
 #include <reading/reading_plan.h>
 #include <realization/realization_json.h>
 
@@ -136,7 +137,13 @@ UrsatzStatus workshop_analyze(const WorkshopAnalyzeRequest *request, cJSON **out
             UrsatzStatus exported = analyzer_text_export_piece(&notes, json, &options, &text, &export_error);
             free(json);
             if (exported == URSATZ_OK) {
-                ok = add_text(object, "text", text);
+                /* the export is the reading view of the file, framed as every view is (R-663) */
+                char expand[512];
+                snprintf(expand, sizeof(expand), "ursatz analyze %s --view reading --measures a-b", request->path);
+                char *framed = text ? text_view_frame("reading", request->path, text, "nothing the analysis document holds; the notes are the import's", expand)
+                                    : NULL;
+                free(text);
+                ok = add_text(object, "text", framed);
             } else if (exported == URSATZ_ERR_REQUEST) {
                 status = ursatz_error_set(error, URSATZ_ERR_REQUEST, "/params/text", "no measure of '%s' falls in the range given", request->path);
             } else if (exported == URSATZ_ERR_INTERNAL) {

@@ -59,6 +59,19 @@ static char *mask_member(char *text, const char *name) {
 }
 
 /* The text export without its "analyzer: ..." line, which changes with the build. */
+/* The lines between the view frame: after the first line, before the trailing "# leaves out" and "# expand" lines. A new string. */
+static char *without_frame(const char *framed) {
+    assert(strncmp(framed, "ursatz-text 1 view reading Bach 114.mid\n", 40) == 0);
+    const char *body = strchr(framed, '\n') + 1;
+    const char *tail = strstr(body, "# leaves out: ");
+    assert(tail && strstr(tail, "\n# expand: ursatz analyze Bach 114.mid --view reading --measures a-b\n") != NULL);
+    char *copy = malloc((size_t)(tail - body) + 1);
+    assert(copy);
+    memcpy(copy, body, (size_t)(tail - body));
+    copy[tail - body] = '\0';
+    return copy;
+}
+
 static char *without_analyzer_line(const char *text) {
     const char *line = strstr(text, "\nanalyzer: ");
     char *copy = malloc(strlen(text) + 1);
@@ -111,7 +124,9 @@ static void test_analyze(Workshop *workshop) {
     /* the text export, and no document */
     assert(call(workshop, "analyze", "{\"path\":\"Bach 114.mid\",\"text\":{}}", &reply, &error) == URSATZ_OK);
     assert(!cJSON_GetObjectItemCaseSensitive(reply.json, "document"));
-    char *text = without_analyzer_line(text_member(reply.json, "text"));
+    char *body = without_frame(text_member(reply.json, "text"));
+    char *text = without_analyzer_line(body);
+    free(body);
     golden = read_text(URSATZ_SNAPSHOTS "/bach-114.export.txt");
     assert(strcmp(text, golden) == 0);
     free(text);
