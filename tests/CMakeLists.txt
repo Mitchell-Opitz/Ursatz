@@ -59,11 +59,11 @@ add_custom_command(
 add_custom_target(seed_corpora DEPENDS ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json)
 
 ursatz_test_executable(test_corpus_seed LIBS ursatz_composer_internal ursatz_analyzer composer_test_support ursatz_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/composer/tests/fixtures"
     COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
     COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
-add_dependencies(test_corpus_seed ursatz-composer seed_corpora)
+add_dependencies(test_corpus_seed ursatz seed_corpora)
 # Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
 # The same mode measured 36.2 s of CPU, over the 10 s fast-set limit.
 foreach(mode motive same plan progression no-match cli)

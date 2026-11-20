@@ -9,7 +9,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 else()
     set(URSATZ_COMPOSER_TESTS_DEFAULT OFF)
 endif()
-option(URSATZ_COMPOSER_BUILD_CLI "Build the ursatz-composer command" ${URSATZ_COMPOSER_TESTS_DEFAULT})
 
 # Library and Analyzer headers are not ours to warn about.
 foreach(submodule_target ursatz_model ursatz_theory ursatz_realization ursatz_plan ursatz_analysis ursatz_io ursatz_chain cjson)
@@ -17,9 +16,6 @@ foreach(submodule_target ursatz_model ursatz_theory ursatz_realization ursatz_pl
     set_target_properties(${submodule_target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${submodule_includes}")
 endforeach()
 add_subdirectory(src)
-if(URSATZ_COMPOSER_BUILD_CLI)
-    add_subdirectory(cli)
-endif()
 if(URSATZ_TESTS)
     add_subdirectory(tests)
 endif()

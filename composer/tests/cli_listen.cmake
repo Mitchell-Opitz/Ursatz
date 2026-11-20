@@ -1,5 +1,5 @@
 # The listen command, run as a process (docs/cli-listen.md).
-# Run with: cmake -DCOMPOSER=<ursatz-composer> -DANALYZER=<ursatz-analyzer> -DWORK=<empty working directory>
+# Run with: cmake -DCOMPOSER=<ursatz> -DANALYZER=<ursatz-analyzer> -DWORK=<empty working directory>
 #           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] -P cli_listen.cmake
 
 file(REMOVE_RECURSE "${WORK}")
@@ -17,7 +17,7 @@ endfunction()
 function(expect_status expected)
     run("${COMPOSER}" ${ARGN})
     if(NOT STATUS EQUAL expected)
-        message(FATAL_ERROR "ursatz-composer ${ARGN}: exit ${STATUS}, expected ${expected}\n${OUT}\n${ERR}")
+        message(FATAL_ERROR "ursatz ${ARGN}: exit ${STATUS}, expected ${expected}\n${OUT}\n${ERR}")
     endif()
     set(OUT "${OUT}" PARENT_SCOPE)
     set(ERR "${ERR}" PARENT_SCOPE)

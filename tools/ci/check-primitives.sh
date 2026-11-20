@@ -15,7 +15,7 @@ python3 - "$root" <<'PY'
 import os, re, sys
 
 root = sys.argv[1]
-scan = ["common", "library", "analyzer", "composer", "gui/backend/src"]
+scan = ["common", "library", "analyzer", "composer", "cli", "gui/backend/src"]
 owners = ["library/model/core/rational.c", "library/model/core/rational.h", "common/hash.c", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
 
 allowed = set()

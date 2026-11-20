@@ -1,5 +1,5 @@
 # Seeded CLI output compared with the committed snapshots in tests/snapshots (one file per output of a case).
-# Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DSNAPSHOTS=<tests/snapshots>
+# Run with: cmake -DCOMPOSER=<ursatz> -DWORK=<empty working directory> -DSNAPSHOTS=<tests/snapshots>
 #                 -DFIXTURES=<tests/fixtures> -P cli_snapshots.cmake
 # The values of the analyzer_version, composer_version and ursatz_commit keys are removed and the working and fixture
 # directories are replaced by <WORK> and <FIXTURES> before comparing text; files ending .json are then compared as JSON
@@ -37,7 +37,7 @@ function(composer)
     execute_process(COMMAND "${COMPOSER}" ${ARGN} WORKING_DIRECTORY "${WORK}"
                     OUTPUT_FILE "${WORK}/stdout.txt" ERROR_VARIABLE err RESULT_VARIABLE status)
     if(NOT status EQUAL 0)
-        message(FATAL_ERROR "ursatz-composer ${ARGN}: exit ${status}\n${err}")
+        message(FATAL_ERROR "ursatz ${ARGN}: exit ${status}\n${err}")
     endif()
 endfunction()
 
@@ -244,7 +244,7 @@ endif()
 # --version: the version text is normalized to <VERSION> for this case only.
 composer(--version)
 file(READ "${WORK}/stdout.txt" version_text)
-string(REGEX REPLACE "^ursatz-composer [^\n]*" "ursatz-composer <VERSION>" version_text "${version_text}")
+string(REGEX REPLACE "^ursatz [^\n]*" "ursatz <VERSION>" version_text "${version_text}")
 file(WRITE "${WORK}/version.stdout.txt" "${version_text}")
 snapshot(version.stdout.txt version.stdout.txt)
 
@@ -256,7 +256,7 @@ function(run_error_case name expected_status)
     execute_process(COMMAND "${COMPOSER}" ${ARGN} WORKING_DIRECTORY "${WORK}"
                     OUTPUT_VARIABLE out ERROR_FILE "${WORK}/${name}.stderr.txt" RESULT_VARIABLE status)
     if(NOT status EQUAL expected_status)
-        message(FATAL_ERROR "case ${name}: ursatz-composer ${ARGN}: exit ${status}, expected ${expected_status}")
+        message(FATAL_ERROR "case ${name}: ursatz ${ARGN}: exit ${status}, expected ${expected_status}")
     endif()
     file(WRITE "${WORK}/${name}.status.txt" "${status}\n")
     snapshot("${name}.stderr.txt" "${name}.stderr.txt")

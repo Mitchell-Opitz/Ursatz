@@ -1,5 +1,5 @@
 # The variations and harmonize commands and lock --format json, run as processes (docs/cli-variations.md).
-# Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DFIXTURES=<tests/fixtures> -P cli_variations.cmake
+# Run with: cmake -DCOMPOSER=<ursatz> -DWORK=<empty working directory> -DFIXTURES=<tests/fixtures> -P cli_variations.cmake
 
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}")
@@ -16,7 +16,7 @@ endfunction()
 function(expect_status expected)
     composer(${ARGN})
     if(NOT STATUS EQUAL expected)
-        message(FATAL_ERROR "ursatz-composer ${ARGN}: exit ${STATUS}, expected ${expected}\n${OUT}\n${ERR}")
+        message(FATAL_ERROR "ursatz ${ARGN}: exit ${STATUS}, expected ${expected}\n${OUT}\n${ERR}")
     endif()
     set(OUT "${OUT}" PARENT_SCOPE)
     set(ERR "${ERR}" PARENT_SCOPE)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Reach scan (Law 25 as amended, R-529): lists every function in Ursatz's own C code that no application reaches.
-# Roots are the mains of the three applications: ursatz-analyzer, ursatz-composer and ursatz-gui-backend.
+# Roots are the mains of the three applications: ursatz-analyzer, ursatz and ursatz-gui-backend.
 #
 # usage: bash tools/ci/check-reach.sh [<scan build dir>]     (default: build-reach at the repository root)
 #
@@ -70,7 +70,7 @@ sections_of() {
 : > "$out/kept"
 : > "$out/objects"
 found=0
-for app in ursatz-analyzer ursatz-composer ursatz-gui-backend; do
+for app in ursatz-analyzer ursatz ursatz-gui-backend; do
   lt=$(find "$dir" -path "*/CMakeFiles/$app.dir/link.txt" | head -1)
   [ -n "$lt" ] || continue
   found=$((found + 1))

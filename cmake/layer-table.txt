@@ -145,7 +145,7 @@ module composer-explain composer/src/explain composer/src/include/ursatz_compose
 module composer-request composer/src/api composer/src/preferences composer/src/include/ursatz_composer/corpus_seed.h composer/src/include/ursatz_composer/preferences.h root composer/src composer/src/include composer/include
 group composer-core composer-util composer-structure composer-fill composer-render composer-style
 group composer-operators composer-harmony composer-motive composer-melody composer-texture composer-counterpoint composer-material
-module composer-cli  composer/cli
+module cli           cli/src
 module gui           gui/backend/src   root gui/backend/src
 # The workshop (R-641): the API header, the coordinator and the service folders, lowest first (P63 B4, B5). Files of workshop/src include
 # one another as "<folder>/<name>.h" (the root dir workshop/src), their own folder's as "<name>.h".
@@ -201,8 +201,8 @@ uses composer-piece model theory realization plan reading analysis chain io cjso
 uses composer-candidates model theory realization plan reading analysis chain io cjson composer-piece composer-core common
 uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core common
 uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
-# The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
-uses composer-cli  composer-api analyzer-api cjson common
+# The command line finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): it orchestrates the two apps until P64 B4.
+uses cli           composer-api analyzer-api cjson common
 uses workshop-api common cjson
 uses workshop-base common composer-api analyzer-api theory pitch cjson
 uses workshop-jobs workshop-base common composer-api cjson
@@ -215,7 +215,7 @@ allow workshop/src/items/body_migrate.c composition/composer_client.h -- the mig
 allow workshop/src/items/body_requests.c composition/composer_client.h -- the migration of a format 1 body names the theme slots and the sized forms of the Composer's vocabulary once, in the migration only
 allow workshop/src/items/references.c composition/composer_client.h -- the migration of the old mode and key words and the slot count of a theme's uses still read the Composer's words; B15 moves them
 uses gui           cjson civetweb common workshop-api
-allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
+allow cli/src/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context, until P64 B4
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
 # Tests: a test folder may include its module and what that module may include, plus the rows below.

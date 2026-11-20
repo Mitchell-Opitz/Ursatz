@@ -20,7 +20,7 @@
 #define OUT "plan_cli_out.txt"
 #define ERR "plan_cli_err.txt"
 
-/* Runs "ursatz-composer <command> <arguments>"; stdout and stderr go to files. Returns the exit status. */
+/* Runs "ursatz <command> <arguments>"; stdout and stderr go to files. Returns the exit status. */
 static int run(const char *command, const char *arguments) {
     char line[4096];
     snprintf(line, sizeof(line), "\"%s\" %s %s >" OUT " 2>" ERR, COMPOSER_CLI_PATH, command, arguments);
