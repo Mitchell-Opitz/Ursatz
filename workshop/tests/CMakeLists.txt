@@ -160,3 +160,12 @@ ursatz_test(workshop_text SOURCES test_text.c LIBS ursatz_workshop_internal ursa
                 TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
                 TEXT_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
+
+# Ursatz Text over generated layers (P65 B3, slow): the layers of a composed piece of every form but the game loop and of five analyzed pieces
+# read with their codecs, printed and read back. Three minutes in a debug build.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
+ursatz_test(workshop_text_generated SOURCES test_text_generated.c LIBS ursatz_workshop_internal ursatz_test_support LABELS slow
+    DEFINITIONS TEXT_FORMS="${CMAKE_SOURCE_DIR}/composer/forms"
+                TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
+                TEXT_CORPUS="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
