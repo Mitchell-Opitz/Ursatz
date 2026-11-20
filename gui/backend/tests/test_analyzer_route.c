@@ -473,7 +473,7 @@ static void check_notation_override(const char *id) {
   static const char *const kInvalid[] = {
       "{\"notation\":{\"meter\":\"3/0\"}}",       "{\"notation\":{\"value_scale\":\"3\"}}",
       "{\"notation\":{\"pickup\":\"x\"}}",         "{\"notation\":{\"meter\":4}}",
-      "{\"notation\":\"3/4\"}",                     "{\"notation\":{\"pickup\":\"1/1\"}}",
+      "{\"notation\":{\"pickup\":\"1/1\"}}",
   };
   for (size_t i = 0; i < sizeof(kInvalid) / sizeof(kInvalid[0]); i++) {
     response = patch_piece(id, kInvalid[i]);
@@ -482,6 +482,11 @@ static void check_notation_override(const char *id) {
     check((test_http_status(response) == 400 || test_http_status(response) == 422) && strstr(test_http_body(response), "invalid notation") != NULL, what);
     free(response);
   }
+  /* a notation that is not an object is refused by the command's schema, at its member */
+  response = patch_piece(id, "{\"notation\":\"3/4\"}");
+  check((test_http_status(response) == 400 || test_http_status(response) == 422) && strstr(test_http_body(response), "notation must be an object") != NULL,
+        "{\"notation\":\"3/4\"} gives 400 or 422 notation must be an object");
+  free(response);
   detail = get_json(path);
   check(detail && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(detail, "notation")),
         "a refused notation leaves the piece without an override");
