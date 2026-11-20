@@ -7,7 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 #include "cli_options.h"
 #include "workflow.h"
@@ -209,7 +209,7 @@ static int write_variations(const Options *options, const cJSON *variations, cha
         snprintf(entry_paths[2], PATH_SIZE, "%s/variation-%zu.musicxml", options->out_dir, index + 1);
         const cJSON *plan = cJSON_GetObjectItemCaseSensitive(entry, "plan");
         const char *musicxml = cli_json_string(entry, "musicxml");
-        ComposerResponse midi;
+        CliResponse midi;
         memset(&midi, 0, sizeof midi);
         CliFile files[3];
         size_t count = 0;
@@ -224,7 +224,7 @@ static int write_variations(const Options *options, const cJSON *variations, cha
         if (status == 0) {
             status = cli_write_files(files, count);
         }
-        composer_response_destroy(&midi);
+        cli_response_destroy(&midi);
         index++;
     }
     return status;
@@ -292,8 +292,8 @@ static int run_command(int argc, char **argv, bool harmonize) {
         cJSON_Delete(plan);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus called = cli_call(harmonize ? composer_api_harmonize : composer_api_variations, request, &response);
+    CliResponse response;
+    UrsatzStatus called = cli_call(harmonize ? "harmonize" : "variations", request, &response);
     if (called != URSATZ_OK) {
         status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
@@ -308,7 +308,7 @@ static int run_command(int argc, char **argv, bool harmonize) {
         free(paths);
         cJSON_Delete(document);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }
 

@@ -1,5 +1,5 @@
 #include "cli_options.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -45,10 +45,10 @@ bool cli_equals_ignore_case(const char *a, const char *b) {
 }
 
 const char *cli_material_word(const char *id, char *out, size_t size) {
-    ComposerResponse response;
+    CliResponse response;
     memset(&response, 0, sizeof response);
     snprintf(out, size, "%s", id ? id : "");
-    if (id && composer_api_vocabulary(cli_context(), &response) == URSATZ_OK) {
+    if (id && cli_composer("vocabulary", NULL, NULL, &response) == URSATZ_OK) {
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *entry = NULL;
         cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(document, "materials")) {
@@ -60,20 +60,20 @@ const char *cli_material_word(const char *id, char *out, size_t size) {
         }
         cJSON_Delete(document);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return out;
 }
 
 long cli_limit(const char *name) {
-    ComposerResponse response;
+    CliResponse response;
     long value = 0;
-    if (composer_api_vocabulary(cli_context(), &response) == URSATZ_OK) {
+    if (cli_composer("vocabulary", NULL, NULL, &response) == URSATZ_OK) {
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "limits"), name);
         value = cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
         cJSON_Delete(document);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return value;
 }
 
@@ -243,7 +243,7 @@ static int write_layer(const char *dir, const char *name, const char *text) {
     return 0;
 }
 
-int cli_write_layers(const char *dir, const ComposerResponse *response) {
+int cli_write_layers(const char *dir, const CliResponse *response) {
     char readings[1100];
     if (snprintf(readings, sizeof readings, "%s/readings", dir) >= (int)sizeof readings ||
         (mkdir(dir, 0755) != 0 && errno != EEXIST) || (mkdir(readings, 0755) != 0 && errno != EEXIST)) {
@@ -294,22 +294,20 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
     cJSON *request = cJSON_CreateObject();
     bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
               cJSON_AddBoolToObject(request, "plan_file", true);
-    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    ComposerResponse response;
+    CliResponse response;
     memset(&response, 0, sizeof response);
-    UrsatzStatus status = printed ? composer_api_export(cli_context(), printed, NULL, &response) : URSATZ_ERR_ALLOC;
-    cJSON_free(printed);
+    UrsatzStatus status = ok ? cli_composer("export", request, NULL, &response) : URSATZ_ERR_ALLOC;
+    cJSON_Delete(request);
     ok = status == URSATZ_OK && response.plan_json &&
          cli_write_bytes(temporary, response.plan_json, strlen(response.plan_json));
     const char *why = response.error.message[0] ? response.error.message : "the plan";
     int result = ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, why);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return result;
 }
 
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
-                    ComposerResponse *out) {
+                    CliResponse *out) {
     cJSON *request = cJSON_CreateObject();
     bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
               cJSON_AddBoolToObject(request, "midi", midi) && cJSON_AddBoolToObject(request, "musicxml", musicxml) &&
@@ -328,13 +326,12 @@ int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, b
         }
         ok = text[0] && cJSON_AddStringToObject(request, "tempo", text);
     }
-    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!printed) {
+    if (!ok) {
+        cJSON_Delete(request);
         return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
     }
-    UrsatzStatus status = composer_api_export(cli_context(), printed, NULL, out);
-    cJSON_free(printed);
+    UrsatzStatus status = cli_composer("export", request, NULL, out);
+    cJSON_Delete(request);
     return status == URSATZ_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 

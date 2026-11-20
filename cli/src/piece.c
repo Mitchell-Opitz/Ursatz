@@ -1,5 +1,5 @@
 #include "piece.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -10,7 +10,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "workflow.h"
@@ -269,8 +268,8 @@ static int add_edit(const Options *options, cJSON *request) {
     return ok ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
 }
 
-/* The API request: the request file (taken) and the options of the command as members, printed as text. */
-static int build_request(const Options *options, cJSON *piece, char **out) {
+/* The API request: the request file (taken) and the options of the command as members. */
+static int build_request(const Options *options, cJSON *piece, cJSON **out) {
     cJSON *request = cJSON_CreateObject();
     bool ok = request && cJSON_AddItemToObject(request, "request", piece);
     if (!ok) {
@@ -299,9 +298,13 @@ static int build_request(const Options *options, cJSON *piece, char **out) {
             ok = cJSON_AddStringToObject(request, "explain", json ? "json" : "text");
         }
     }
-    *out = ok ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    return *out ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    if (!ok) {
+        cJSON_Delete(request);
+        *out = NULL;
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    *out = request;
+    return 0;
 }
 
 /* The tempo of the brief of a document in quarter notes per minute, 0 for none. */
@@ -360,7 +363,7 @@ static int start_file(CliPendingFile *entry, const char *path) {
  * Writes every output to a temporary file next to its final name and renames them all only when every one was written, so
  * that an error leaves no output file behind.
  */
-static int write_files(const Options *options, const ComposerResponse *response, const cJSON *document, CliPendingFile *pending,
+static int write_files(const Options *options, const CliResponse *response, const cJSON *document, CliPendingFile *pending,
                        size_t *pending_count) {
     const cJSON *plans = cJSON_GetObjectItemCaseSensitive(document, "plans");
     const cJSON *explanation = cJSON_GetObjectItemCaseSensitive(document, "explanation");
@@ -396,7 +399,7 @@ static int write_files(const Options *options, const ComposerResponse *response,
         }
         const void *data = NULL;
         size_t size = 0;
-        ComposerResponse exported;
+        CliResponse exported;
         memset(&exported, 0, sizeof exported);
         if (kind == OUT_EXPLAIN) {
             data = explanation->valuestring;
@@ -420,7 +423,7 @@ static int write_files(const Options *options, const ComposerResponse *response,
         if (!cli_write_bytes(entry->temporary, data, size)) {
             status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': could not write '%s'", entry->final_path, entry->temporary);
         }
-        composer_response_destroy(&exported);
+        cli_response_destroy(&exported);
     }
     return finish_files(pending, *pending_count, status);
 }
@@ -448,7 +451,7 @@ static void print_json(cJSON *document, const Options *options, const CliPending
 }
 
 /* The result of a composed or regenerated piece: the files written, then the result printed. Returns the exit status. */
-static int emit(const Options *options, const ComposerResponse *response, bool json) {
+static int emit(const Options *options, const CliResponse *response, bool json) {
     cJSON *document = cJSON_Parse(response->json);
     if (!document) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "the piece could not be read back");
@@ -531,7 +534,7 @@ static int write_variations(const Options *options, cJSON *document, bool json) 
         }
         CliPendingFile *plan_file = &pending[pending_count - 3];
         const cJSON *plan = cJSON_GetObjectItemCaseSensitive(loop, "plan");
-        ComposerResponse exported;
+        CliResponse exported;
         memset(&exported, 0, sizeof exported);
         status = cli_write_plan_object(plan, plan_file[0].temporary, plan_file[0].final_path);
         if (status == 0) {
@@ -543,7 +546,7 @@ static int write_variations(const Options *options, cJSON *document, bool json) 
                             !cli_write_bytes(plan_file[2].temporary, musicxml->valuestring, strlen(musicxml->valuestring)))) {
             status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", plan_file[1].final_path);
         }
-        composer_response_destroy(&exported);
+        cli_response_destroy(&exported);
         /* The document as printed: the plan of the version is its file, and the files are named. */
         set_string(loop, "plan", named->plan);
         set_string(item, "midi", named->midi);
@@ -609,15 +612,14 @@ int run_piece(int argc, char **argv) {
     }
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(piece, "form");
     snprintf(options.form, sizeof options.form, "%s", cJSON_IsString(form) ? form->valuestring : "game-loop");
-    char *text = NULL;
-    status = build_request(&options, piece, &text);
+    cJSON *request = NULL;
+    status = build_request(&options, piece, &request);
     if (status != 0) {
         return status;
     }
-    ComposerResponse response;
-    UrsatzStatus api_status = options.variations ? composer_api_piece_variations(cli_context(), text, NULL, &response)
-                                                   : composer_api_piece(cli_context(), text, NULL, &response);
-    cJSON_free(text);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer(options.variations ? "piece_variations" : "piece", request, NULL, &response);
+    cJSON_Delete(request);
     if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
     } else if (options.variations) {
@@ -627,6 +629,6 @@ int run_piece(int argc, char **argv) {
     } else {
         status = emit(&options, &response, json);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

@@ -1,5 +1,5 @@
 #include "theme.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "grow_text.h"
@@ -108,8 +107,8 @@ static int read_options(int argc, char **argv, Options *options) {
 
 /* --- the request --------------------------------------------------------------------------------------- */
 
-/* The request file with the options of the command as members, printed as the text the API reads. */
-static int build_request(const Options *options, char **out) {
+/* The request file with the options of the command as members. */
+static int build_request(const Options *options, cJSON **out) {
     char *text;
     if (!cli_read_file(options->input, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read the request '%s'", options->input);
@@ -137,9 +136,13 @@ static int build_request(const Options *options, char **out) {
         bool json = length >= 5 && cli_equals_ignore_case(options->explain + length - 5, ".json");
         ok = ok && cJSON_AddStringToObject(request, "explain", json ? "json" : "text");
     }
-    *out = ok ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    return *out ? 0 : cli_fail(CLI_EXIT_USAGE, "out of memory");
+    if (!ok) {
+        cJSON_Delete(request);
+        *out = NULL;
+        return cli_fail(CLI_EXIT_USAGE, "out of memory");
+    }
+    *out = request;
+    return 0;
 }
 
 /* --- the files ----------------------------------------------------------------------------------------- */
@@ -148,7 +151,7 @@ static int build_request(const Options *options, char **out) {
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was written, so
  * that an error leaves no output file behind.
  */
-static int write_files(const Options *options, const ComposerResponse *response, const cJSON *document, CliPendingFile *pending,
+static int write_files(const Options *options, const CliResponse *response, const cJSON *document, CliPendingFile *pending,
                        size_t *pending_count) {
     const cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     size_t count = (size_t)cJSON_GetArraySize(themes);
@@ -174,7 +177,7 @@ static int write_files(const Options *options, const ComposerResponse *response,
             (*pending_count)++;
             const void *data = NULL;
             size_t size = 0;
-            ComposerResponse exported;
+            CliResponse exported;
             memset(&exported, 0, sizeof exported);
             if (kind == 0 && k == 0) {
                 data = response->plan_json;
@@ -201,7 +204,7 @@ static int write_files(const Options *options, const ComposerResponse *response,
                 status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': could not write '%s'", entry->final_path,
                                   entry->temporary);
             }
-            composer_response_destroy(&exported);
+            cli_response_destroy(&exported);
         }
     }
     if (status != 0) {
@@ -262,22 +265,22 @@ int run_theme(int argc, char **argv) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options.format);
         }
     }
-    char *request = NULL;
+    cJSON *request = NULL;
     status = build_request(&options, &request);
     if (status != 0) {
         return status;
     }
-    ComposerResponse response;
-    UrsatzStatus api_status = composer_api_theme(cli_context(), request, NULL, &response);
-    cJSON_free(request);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer("theme", request, NULL, &response);
+    cJSON_Delete(request);
     if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
     cJSON *document = cJSON_Parse(response.json);
     if (!document) {
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return cli_fail(CLI_EXIT_USAGE, "the theme could not be read back");
     }
     size_t made = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(document, "themes"));
@@ -305,6 +308,6 @@ int run_theme(int argc, char **argv) {
         }
     }
     cJSON_Delete(document);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

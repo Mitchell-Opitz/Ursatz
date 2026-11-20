@@ -1,5 +1,5 @@
 #include "motive_input.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -145,16 +145,14 @@ int motive_input_text_request(const MotiveInput *input, cJSON **out, MotiveFile 
     }
     if (midi) {
         /* Read once with the input's options; the motive that came out is the input, which the entry reads as text. */
-        char *text = cJSON_PrintUnformatted(request);
-        ComposerResponse response;
-        memset(&response, 0, sizeof response);
-        UrsatzStatus status = text ? composer_api_motive_from_midi(cli_context(), bytes, size, text, NULL, &response) : URSATZ_ERR_ALLOC;
-        free(text);
+        CliResponse response;
+        WorkshopBytes file = {bytes, size, NULL};
+        UrsatzStatus status = cli_composer("motive_from_midi", request, &file, &response);
         free(bytes);
         cJSON_Delete(request);
         if (status != URSATZ_OK) {
             int failed = cli_fail_api(status, &response.error, input->path);
-            composer_response_destroy(&response);
+            cli_response_destroy(&response);
             return failed;
         }
         cJSON *document = cJSON_Parse(response.json);
@@ -167,7 +165,7 @@ int motive_input_text_request(const MotiveInput *input, cJSON **out, MotiveFile 
                   (!input->extras.role_text || cJSON_AddStringToObject(request, "role", input->extras.role_text));
         free(motive_text);
         cJSON_Delete(document);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         if (!ok) {
             cJSON_Delete(request);
             return cli_fail(CLI_EXIT_USAGE, "out of memory");

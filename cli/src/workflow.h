@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <cJSON.h>
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 /*
  * What the plan workflow commands (plan, fill, lock, regenerate, variations, harmonize) share: files in and out of the
@@ -41,10 +41,8 @@ int cli_fail_plan_api(UrsatzStatus status, const UrsatzError *error, const char 
 
 /* --- calling --------------------------------------------------------------------------------------- */
 
-/* Calls the entry with the request (taken and deleted). */
-typedef UrsatzStatus (*CliEntry)(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
-                                   ComposerResponse *out);
-UrsatzStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out);
+/* Calls the composer tool's entry (its name: "plan", "fill"...) with the request (taken and deleted). */
+UrsatzStatus cli_call(const char *entry, cJSON *request, CliResponse *out);
 
 /* --- the node a command works on ------------------------------------------------------------------- */
 
@@ -102,7 +100,7 @@ typedef struct {
 
 /* Writes all or none. Returns 0 (written->paths lists the final paths, freed by cli_written_free) or the exit status. */
 int cli_write_alternatives(const CliAlternativePaths *paths, const cJSON *const *entries, size_t entry_count,
-                           const ComposerResponse *first, const char *tempo_text, bool plain_midi, CliWrittenFiles *written);
+                           const CliResponse *first, const char *tempo_text, bool plain_midi, CliWrittenFiles *written);
 void cli_written_free(CliWrittenFiles *written);
 /* The final paths as the array of strings the commands print. */
 const char *const *cli_written_list(CliWrittenFiles *written, const char **storage, size_t capacity);
@@ -112,7 +110,7 @@ void cli_strip_entry_files(cJSON *entry);
 void cli_print_document_with_files(cJSON *document, const CliWrittenFiles *written);
 
 /* The MIDI file of a plan object through composer_api_export; the caller destroys *out. Returns 0 or the exit status. */
-int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, ComposerResponse *out);
+int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, CliResponse *out);
 
 /* --- printing -------------------------------------------------------------------------------------- */
 
@@ -152,6 +150,6 @@ void cli_print_candidates_text(const cJSON *document);
 void cli_print_composed_json(cJSON *document, const char *const *files, size_t file_count);
 
 /* The stuck report of a failed fill or regenerate: the error line, the targets left open and why. */
-int cli_report_stuck(const UrsatzError *error, const ComposerResponse *response);
+int cli_report_stuck(const UrsatzError *error, const CliResponse *response);
 
 #endif

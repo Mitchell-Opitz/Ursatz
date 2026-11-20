@@ -1,12 +1,11 @@
 #include "plan_cmd.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include <stdint.h>
 
@@ -264,7 +263,7 @@ static bool is_midi(const char *bytes, size_t size) {
 
 /*
  * The motive request of a file: {"input": {"format", "text"}, "source": <the file>}. A MIDI file is read through
- * composer_api_motive_from_midi and arrives as the motive it made. *held says why a file could not be read.
+ * the composer tool's motive_from_midi and arrives as the motive it made. *held says why a file could not be read.
  */
 static cJSON *motive_request(const Options *options, const char *path, Held *held) {
     char *bytes = NULL;
@@ -285,23 +284,21 @@ static cJSON *motive_request(const Options *options, const char *path, Held *hel
         snprintf(key, sizeof key, minor_key ? "%s" : "%s %s", options->key_text, options->material_text ? options->material_text : "major");
         bool ok = midi_request && cJSON_AddStringToObject(midi_request, "meter", options->meter_text) &&
                   cJSON_AddStringToObject(midi_request, "key", key);
-        char *printed = ok ? cJSON_PrintUnformatted(midi_request) : NULL;
+        CliResponse response;
+        WorkshopBytes file = {(const uint8_t *)bytes, size, NULL};
+        UrsatzStatus status = ok ? cli_composer("motive_from_midi", midi_request, &file, &response) : URSATZ_ERR_ALLOC;
         cJSON_Delete(midi_request);
-        ComposerResponse response;
-        UrsatzStatus status = printed ? composer_api_motive_from_midi(cli_context(), (const uint8_t *)bytes, size, printed, NULL, &response)
-                                        : URSATZ_ERR_ALLOC;
-        cJSON_free(printed);
         if (status != URSATZ_OK) {
             held->failed = true;
             held->status = status == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE;
             snprintf(held->message, sizeof held->message, "cannot load '%s': %s", path, response.error.message);
-            composer_response_destroy(&response);
+            cli_response_destroy(&response);
             text = "";
         } else {
             cJSON *document = cJSON_Parse(response.json);
             motive_text = document ? cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "motive")) : NULL;
             cJSON_Delete(document);
-            composer_response_destroy(&response);
+            cli_response_destroy(&response);
             text = motive_text;
         }
     }
@@ -547,8 +544,8 @@ static int request_plan(Options *options_in) {
     if (!request) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus called = cli_call(composer_api_plan, request, &response);
+    CliResponse response;
+    UrsatzStatus called = cli_call("plan", request, &response);
     bool load_failure = called != URSATZ_OK && strncmp(response.error.message, "cannot load the input", 21) == 0;
     if (called != URSATZ_OK && !(held.failed && load_failure)) {
         status = cli_fail_api(called, &response.error, input_name(&options, response.error.path));
@@ -575,6 +572,6 @@ static int request_plan(Options *options_in) {
         cJSON_Delete(document);
         cJSON_Delete(plan);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

@@ -1,9 +1,8 @@
 #include "motive_text.h"
 
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <cJSON.h>
-#include <ursatz_composer/composer_api.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,9 +45,8 @@ static Rational rational(const cJSON *object, const char *name) {
 
 /* The key's name, "D minor": the tonic's spelling and the key word of the material, both from the Composer's vocabulary. */
 static void key_text(long tonic, const char *material, char *out, size_t size) {
-    ComposerResponse response;
-    memset(&response, 0, sizeof response);
-    cJSON *vocabulary = composer_api_vocabulary(cli_context(), &response) == URSATZ_OK ? cJSON_Parse(response.json) : NULL;
+    CliResponse response;
+    cJSON *vocabulary = cli_composer("vocabulary", NULL, NULL, &response) == URSATZ_OK ? cJSON_Parse(response.json) : NULL;
     const char *spelling = NULL;
     const char *word = NULL;
     const cJSON *entry = NULL;
@@ -69,7 +67,7 @@ static void key_text(long tonic, const char *material, char *out, size_t size) {
         snprintf(out, size, "%ld %s", tonic, material);
     }
     cJSON_Delete(vocabulary);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
 }
 
 /* A position in beats, counting from 1: "1", "2+1/2". */

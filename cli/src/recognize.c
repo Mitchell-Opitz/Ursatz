@@ -1,5 +1,5 @@
 #include "recognize.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "motive_input.h"
@@ -234,22 +233,20 @@ int run_recognize(int argc, char **argv) {
     if (status != 0) {
         return CLI_EXIT_USAGE;
     }
-    char *text = cJSON_PrintUnformatted(request);
-    cJSON_Delete(request);
-    if (!text) {
+    if (!request) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus api_status = composer_api_recognize(cli_context(), text, NULL, &response);
-    free(text);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer("recognize", request, NULL, &response);
+    cJSON_Delete(request);
     if (api_status != URSATZ_OK) {
         MotiveInputNames names = {options.source.path, options.target.path, options.basic.path, NULL};
         motive_input_fail(&file, api_status, &response.error, &names);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return CLI_EXIT_USAGE;
     }
     cJSON *document = cJSON_Parse(response.json);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     if (!document) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 #include "cli_options.h"
 #include "workflow.h"
@@ -251,14 +251,14 @@ int run_progression(int argc, char **argv) {
         print_help(stdout);
         return 0;
     }
-    ComposerResponse response;
+    CliResponse response;
     if (options.list_schemas) {
         cJSON *request = cJSON_CreateObject();
         if (!request || !cJSON_AddTrueToObject(request, "list_schemas")) {
             cJSON_Delete(request);
             return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         }
-        UrsatzStatus listed = cli_call(composer_api_progression, request, &response);
+        UrsatzStatus listed = cli_call("progression", request, &response);
         if (listed != URSATZ_OK) {
             status = cli_fail_api(listed, &response.error, NULL);
         } else {
@@ -266,7 +266,7 @@ int run_progression(int argc, char **argv) {
             print_names(names);
             cJSON_Delete(names);
         }
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
 
@@ -274,15 +274,15 @@ int run_progression(int argc, char **argv) {
     if (!request) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    UrsatzStatus called = cli_call(composer_api_progression, request, &response);
+    UrsatzStatus called = cli_call("progression", request, &response);
     if (called != URSATZ_OK) {
         status = cli_fail_api(called, &response.error, NULL);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
     cJSON *document = cJSON_Parse(response.json);
     if (!document) {
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     const cJSON *notice = NULL;
@@ -326,6 +326,6 @@ int run_progression(int argc, char **argv) {
         cli_written_free(&written);
     }
     cJSON_Delete(document);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

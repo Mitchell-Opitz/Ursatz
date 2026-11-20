@@ -1,5 +1,5 @@
 #include "random_motive.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
@@ -167,21 +166,20 @@ int run_random_motive(int argc, char **argv) {
         return cli_fail(CLI_EXIT_USAGE, "random-motive needs --material and --meter\n%s", RANDOM_MOTIVE_USAGE_LINE);
     }
     cJSON *request = cJSON_CreateObject();
-    char *text = request && add_members(request, &options) ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!text) {
+    if (!request || !add_members(request, &options)) {
+        cJSON_Delete(request);
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus api_status = composer_api_random_motive(cli_context(), text, NULL, &response);
-    free(text);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer("random_motive", request, NULL, &response);
+    cJSON_Delete(request);
     if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
     cJSON *document = cJSON_Parse(response.json);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     if (!document) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }

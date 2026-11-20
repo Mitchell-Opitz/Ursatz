@@ -1,5 +1,5 @@
 #include "motive.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
@@ -176,32 +175,24 @@ static int fail_response(UrsatzStatus status, const UrsatzError *error, const Op
 }
 
 /*
- * The request is run through composer_api_motive, or composer_api_motive_from_midi for a MIDI file. A motive that is a MIDI
+ * The request is run through the composer tool's motive entry, or motive_from_midi for a MIDI file. A motive that is a MIDI
  * file and is also rendered is read once by the bytes entry; its motive document, which holds the motive whole, is the input of
  * the render entry, which takes text only.
  */
 static UrsatzStatus call_api(const Options *options, const MotiveInput *input, const unsigned char *bytes, size_t size,
-                               bool midi, bool render, cJSON *request, ComposerResponse *response) {
-    char *text = cJSON_PrintUnformatted(request);
-    if (!text) {
-        memset(response, 0, sizeof *response);
-        snprintf(response->error.message, sizeof response->error.message, "out of memory");
-        return URSATZ_ERR_ALLOC;
-    }
+                               bool midi, bool render, cJSON *request, CliResponse *response) {
     UrsatzStatus status;
+    WorkshopBytes file = {bytes, size, NULL};
     if (!midi) {
-        status = render ? composer_api_motive_render(cli_context(), text, NULL, response)
-                        : composer_api_motive(cli_context(), text, NULL, response);
+        status = cli_composer(render ? "motive_render" : "motive", request, NULL, response);
     } else if (!render) {
-        status = composer_api_motive_from_midi(cli_context(), bytes, size, text, NULL, response);
+        status = cli_composer("motive_from_midi", request, &file, response);
     } else {
         /* Read once with the input's options; render the motive that came out. */
         cJSON *plain = motive_input_request(input, bytes, size, &(bool){false});
         bool ok = plain && add_command_members(plain, options, false);
-        char *plain_text = ok ? cJSON_PrintUnformatted(plain) : NULL;
+        status = ok ? cli_composer("motive_from_midi", plain, &file, response) : URSATZ_ERR_ALLOC;
         cJSON_Delete(plain);
-        status = plain_text ? composer_api_motive_from_midi(cli_context(), bytes, size, plain_text, NULL, response) : URSATZ_ERR_ALLOC;
-        free(plain_text);
         if (status == URSATZ_OK) {
             cJSON *document = cJSON_Parse(response->json);
             const cJSON *motive = document ? cJSON_GetObjectItemCaseSensitive(document, "motive") : NULL;
@@ -210,16 +201,13 @@ static UrsatzStatus call_api(const Options *options, const MotiveInput *input, c
             char *motive_text = motive ? cJSON_PrintUnformatted(motive) : NULL;
             ok = second && source && motive_text && cJSON_AddStringToObject(source, "format", "json") &&
                  cJSON_AddStringToObject(source, "text", motive_text) && add_command_members(second, options, true);
-            composer_response_destroy(response);
-            char *second_text = ok ? cJSON_PrintUnformatted(second) : NULL;
-            status = second_text ? composer_api_motive_render(cli_context(), second_text, NULL, response) : URSATZ_ERR_ALLOC;
-            free(second_text);
+            cli_response_destroy(response);
+            status = ok ? cli_composer("motive_render", second, NULL, response) : URSATZ_ERR_ALLOC;
             free(motive_text);
             cJSON_Delete(second);
             cJSON_Delete(document);
         }
     }
-    free(text);
     return status;
 }
 
@@ -260,18 +248,18 @@ int run_motive(int argc, char **argv) {
         return fail(EXIT_USAGE, "out of memory");
     }
 
-    ComposerResponse response;
+    CliResponse response;
     UrsatzStatus api_status = call_api(&options, &input, bytes, size, midi, render, request, &response);
     cJSON_Delete(request);
     free(bytes);
     if (read_status != 0 && api_status != URSATZ_ERR_REQUEST) {
         /* A bad option is reported before a file that cannot be read, as it always was. */
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return fail(read_status, "%s", read_error);
     }
     if (api_status != URSATZ_OK) {
         status = fail_response(api_status, &response.error, &options);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
 
@@ -286,6 +274,6 @@ int run_motive(int argc, char **argv) {
     } else if (status == 0 && !motive_text_print(response.json, stdout)) {
         status = fail(EXIT_UNLOADABLE, "cannot analyze '%s'", options.input);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

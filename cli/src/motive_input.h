@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include <cJSON.h>
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 #include "motive_extras.h"
 

@@ -4,9 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analyzer_api.h>
 
-#include "cli_context.h"
+#include "cli_tools.h"
 #include "cli_options.h"
 
 /* --- reading --------------------------------------------------------------------------------------- */
@@ -46,16 +45,14 @@ int cli_fail_plan_api(UrsatzStatus status, const UrsatzError *error, const char 
     return cli_fail_api(status, error, plan_file);
 }
 
-UrsatzStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out) {
-    char *text = request ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!text) {
+UrsatzStatus cli_call(const char *entry, cJSON *request, CliResponse *out) {
+    if (!request) {
         memset(out, 0, sizeof *out);
         snprintf(out->error.message, sizeof out->error.message, "out of memory");
         return URSATZ_ERR_ALLOC;
     }
-    UrsatzStatus status = entry(cli_context(), text, NULL, out);
-    cJSON_free(text);
+    UrsatzStatus status = cli_composer(entry, request, NULL, out);
+    cJSON_Delete(request);
     return status;
 }
 
@@ -127,7 +124,7 @@ int cli_write_files(const CliFile *files, size_t count) {
     return status;
 }
 
-int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, ComposerResponse *out) {
+int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, CliResponse *out) {
     cJSON *request = cJSON_CreateObject();
     bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
               cJSON_AddBoolToObject(request, "midi", true) && cJSON_AddBoolToObject(request, "plain_midi", plain_midi);
@@ -138,16 +135,16 @@ int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, 
         cJSON_Delete(request);
         return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
     }
-    UrsatzStatus status = cli_call(composer_api_export, request, out);
+    UrsatzStatus status = cli_call("export", request, out);
     return status == URSATZ_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 
 int cli_write_alternatives(const CliAlternativePaths *paths, const cJSON *const *entries, size_t entry_count,
-                           const ComposerResponse *first, const char *tempo_text, bool plain_midi, CliWrittenFiles *written) {
+                           const CliResponse *first, const char *tempo_text, bool plain_midi, CliWrittenFiles *written) {
     const char *requested[4] = {paths->plan, paths->midi, paths->musicxml, paths->explanation};
     size_t capacity = 4 * (entry_count ? entry_count : 1);
     CliFile *files = calloc(capacity, sizeof *files);
-    ComposerResponse *midis = calloc(entry_count ? entry_count : 1, sizeof *midis);
+    CliResponse *midis = calloc(entry_count ? entry_count : 1, sizeof *midis);
     written->paths = calloc(capacity, CLI_WRITTEN_PATH_SIZE);
     written->count = 0;
     int status = files && midis && written->paths ? 0 : cli_fail(CLI_EXIT_WRITE, "out of memory");
@@ -195,7 +192,7 @@ int cli_write_alternatives(const CliAlternativePaths *paths, const cJSON *const 
         status = cli_write_files(files, count);
     }
     for (size_t k = 0; midis && k < entry_count; k++) {
-        composer_response_destroy(&midis[k]);
+        cli_response_destroy(&midis[k]);
     }
     free(midis);
     free(files);
@@ -271,11 +268,21 @@ void cli_print_notices(cJSON *document) {
 }
 
 cJSON *cli_corpus_passages(const char *corpus_dir, const char *like_path, const char *numerals, int *status) {
-    AnalyzerCorpusPassages found;
     const char *what = like_path ? like_path : numerals;
-    const KnowledgeSnapshot *knowledge = cli_context()->knowledge;
-    UrsatzStatus searched = like_path ? analyzer_corpus_passages_like(corpus_dir, knowledge, like_path, 10, &found)
-                                                : analyzer_corpus_passages_numerals(corpus_dir, knowledge, numerals, 100, &found);
+    Workshop *workshop = cli_tools();
+    cJSON *params = cJSON_CreateObject();
+    bool built = params && cJSON_AddStringToObject(params, "dir", corpus_dir) &&
+                 (like_path ? cJSON_AddStringToObject(params, "like", like_path) : cJSON_AddStringToObject(params, "numerals", numerals)) &&
+                 cJSON_AddNumberToObject(params, "limit", like_path ? 10 : 100);
+    WorkshopReply reply;
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    UrsatzStatus searched = !workshop ? URSATZ_ERR_REQUEST : (built ? workshop_tool(workshop, "corpus-passages", params, NULL, &reply, &error) : URSATZ_ERR_ALLOC);
+    cJSON_Delete(params);
+    if (!workshop) {
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "a knowledge snapshot is required");
+        return NULL;
+    }
     if (searched == URSATZ_ERR_REQUEST) {
         *status = cli_fail(CLI_EXIT_USAGE, "cannot read %s as a passage to look for", what);
         return NULL;
@@ -286,23 +293,18 @@ cJSON *cli_corpus_passages(const char *corpus_dir, const char *like_path, const 
         return NULL;
     }
     if (searched != URSATZ_OK) {
-        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", knowledge ? "out of memory" : "a knowledge snapshot is required");
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", searched == URSATZ_ERR_ALLOC ? "out of memory" : error.message);
         return NULL;
     }
-    if (found.count == 0) {
-        analyzer_corpus_passages_destroy(&found);
+    cJSON *passages = cJSON_DetachItemFromObjectCaseSensitive(reply.json, "passages");
+    workshop_reply_destroy(&reply);
+    if (cJSON_GetArraySize(passages) == 0) {
+        cJSON_Delete(passages);
         *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no passage of the corpus '%s' is similar to %s (a score of 1/2 or more)",
                            corpus_dir, what);
         return NULL;
     }
-    char *text = analyzer_corpus_passages_to_json(&found);
-    analyzer_corpus_passages_destroy(&found);
-    cJSON *array = text ? cJSON_Parse(text) : NULL;
-    free(text);
-    if (!array) {
-        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-    }
-    return array;
+    return passages;
 }
 
 /* What was heard in a section, in words: the "heard" text, or "kept" for a section outside the scope. */
@@ -427,7 +429,7 @@ void cli_print_composed_json(cJSON *document, const char *const *files, size_t f
     cJSON_free(text);
 }
 
-int cli_report_stuck(const UrsatzError *error, const ComposerResponse *response) {
+int cli_report_stuck(const UrsatzError *error, const CliResponse *response) {
     fprintf(stderr, "Error: %s\n", error->message);
     cJSON *document = response && response->json ? cJSON_Parse(response->json) : NULL;
     const cJSON *stuck = cJSON_GetObjectItemCaseSensitive(document, "stuck");

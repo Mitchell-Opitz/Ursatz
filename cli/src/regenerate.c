@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 #include "cli_options.h"
 #include "workflow.h"
@@ -184,8 +184,8 @@ int run_lock(int argc, char **argv) {
         cJSON_Delete(plan);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus called = cli_call(composer_api_lock, request, &response);
+    CliResponse response;
+    UrsatzStatus called = cli_call("lock", request, &response);
     if (called != URSATZ_OK) {
         status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
@@ -212,7 +212,7 @@ int run_lock(int argc, char **argv) {
         cJSON_Delete(document);
         cJSON_Delete(locked_plan);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }
 
@@ -268,8 +268,8 @@ int run_regenerate(int argc, char **argv) {
         cJSON_Delete(plan);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus called = cli_call(composer_api_regenerate, request, &response);
+    CliResponse response;
+    UrsatzStatus called = cli_call("regenerate", request, &response);
     if (called == URSATZ_ERR_UNSATISFIABLE && response.json && !response.error.path[0]) {
         status = cli_report_stuck(&response.error, &response);
     } else if (called != URSATZ_OK) {
@@ -306,6 +306,6 @@ int run_regenerate(int argc, char **argv) {
         cJSON_Delete(document);
         cJSON_Delete(written);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

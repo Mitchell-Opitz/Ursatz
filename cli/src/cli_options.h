@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <cJSON.h>
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 
 /* The exit statuses every command shares. */
@@ -57,7 +57,7 @@ void cli_print_json(const cJSON *document);
  * readings/composer.json (the "realization" and "reading" members of the response document, printed as cli_print_json does). The
  * response was asked with "layers": true. Returns 0, or CLI_EXIT_WRITE after printing "cannot write '<file>'".
  */
-int cli_write_layers(const char *dir, const ComposerResponse *response);
+int cli_write_layers(const char *dir, const CliResponse *response);
 
 /* The --style-without values as given; the API checks that each is a style category and how many there are. */
 typedef struct {
@@ -95,6 +95,6 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
  * printing "cannot render the plan". The caller destroys *out.
  */
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
-                    ComposerResponse *out);
+                    CliResponse *out);
 
 #endif

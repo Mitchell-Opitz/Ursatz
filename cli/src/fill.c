@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 #include "cli_options.h"
 #include "workflow.h"
@@ -204,7 +204,7 @@ static cJSON *build_request(const Options *options, cJSON *plan) {
 }
 
 /* The files of a run, plan first; the paths written are listed in files. */
-static int write_outputs(const Options *options, const ComposerResponse *response, const cJSON *document, const char **files,
+static int write_outputs(const Options *options, const CliResponse *response, const cJSON *document, const char **files,
                          size_t *file_count) {
     CliFile list[5];
     size_t count = 0;
@@ -259,8 +259,8 @@ int run_fill(int argc, char **argv) {
     CliHeldFailure held;
     cli_read_plan_held(options.input, &plan, &held);
     cJSON *request = build_request(&options, plan);
-    ComposerResponse response;
-    UrsatzStatus called = request ? cli_call(composer_api_fill, request, &response) : URSATZ_ERR_ALLOC;
+    CliResponse response;
+    UrsatzStatus called = request ? cli_call("fill", request, &response) : URSATZ_ERR_ALLOC;
     if (!request) {
         cJSON_Delete(plan);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
@@ -293,6 +293,6 @@ int run_fill(int argc, char **argv) {
         }
         cJSON_Delete(document);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

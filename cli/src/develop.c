@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/composer_api.h>
+#include "cli_tools.h"
 
 #include "cli_options.h"
 #include "motive_input.h"
@@ -214,17 +214,17 @@ int run_develop(int argc, char **argv) {
     if (!request) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    ComposerResponse response;
-    UrsatzStatus called = cli_call(composer_api_develop, request, &response);
+    CliResponse response;
+    UrsatzStatus called = cli_call("develop", request, &response);
     if (called != URSATZ_OK) {
         MotiveInputNames names = {options.input, NULL, NULL, NULL};
         status = motive_input_fail(&file, called, &response.error, &names);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
     cJSON *document = cJSON_Parse(response.json);
     if (!document) {
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     printf("Source: %s\n", cli_json_string(document, "source"));
@@ -243,6 +243,6 @@ int run_develop(int argc, char **argv) {
         status = write_file("MusicXML", options.musicxml_path, response.musicxml, response.musicxml ? strlen(response.musicxml) : 0);
     }
     cJSON_Delete(document);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }

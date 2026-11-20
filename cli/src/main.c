@@ -7,7 +7,7 @@
 #include <common/files.h>
 
 #include "counterpoint.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 #include "develop.h"
 #include "fill.h"
 #include "grow.h"
@@ -24,7 +24,6 @@
 #include "variants_cmd.h"
 #include "cli_options.h"
 
-#include <ursatz_composer/composer_api.h>
 
 static void print_usage(FILE *out) {
     fprintf(out, "Usage: ursatz [--version] [--help]\n");
@@ -142,16 +141,14 @@ static int run_export(int argc, char **argv) {
     if (tempo_text) {
         cJSON_AddStringToObject(request, "tempo", tempo_text);
     }
-    char *request_text = cJSON_PrintUnformatted(request);
-    cJSON_Delete(request);
-    if (!request_text) {
+    if (!request) {
         fprintf(stderr, "Error: out of memory\n");
         return 1;
     }
 
-    ComposerResponse response;
-    UrsatzStatus api_status = composer_api_export(cli_context(), request_text, NULL, &response);
-    free(request_text);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer("export", request, NULL, &response);
+    cJSON_Delete(request);
     if (api_status != URSATZ_OK) {
         return report_export_error(&response.error, plan_path, tempo_text);
     }
@@ -172,7 +169,7 @@ static int run_export(int argc, char **argv) {
     } else if (musicxml_path) {
         printf("MusicXML written to %s\n", musicxml_path);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }
 
@@ -232,13 +229,18 @@ int main(int argc, char **argv) {
         return run_harmonize(argc, argv);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
-        ComposerResponse response;
-        memset(&response, 0, sizeof response);
-        cJSON *versions = composer_api_versions(&response) == URSATZ_OK ? cJSON_Parse(response.json) : NULL;
-        const cJSON *version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
-        printf("ursatz (composer %s)\n", cJSON_IsString(version) ? version->valuestring : "");
-        cJSON_Delete(versions);
-        composer_response_destroy(&response);
+        WorkshopReply reply;
+        UrsatzError error;
+        memset(&error, 0, sizeof error);
+        Workshop *workshop = cli_tools();
+        if (!workshop || workshop_tool(workshop, "versions", NULL, NULL, &reply, &error) != URSATZ_OK) {
+            return 1;
+        }
+        const cJSON *composer_version = cJSON_GetObjectItemCaseSensitive(reply.json, "composer_version");
+        const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(reply.json, "analyzer_version");
+        printf("ursatz (composer %s, analyzer %s)\n", cJSON_IsString(composer_version) ? composer_version->valuestring : "",
+               cJSON_IsString(analyzer_version) ? analyzer_version->valuestring : "");
+        workshop_reply_destroy(&reply);
         return 0;
     }
     if (argc == 2 && strcmp(argv[1], "--help") == 0) {

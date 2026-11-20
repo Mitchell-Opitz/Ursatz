@@ -1,5 +1,5 @@
 #include "listen.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <limits.h>
 #include <stdbool.h>
@@ -11,7 +11,6 @@
 
 #include <common/files.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "motive_input.h"
@@ -280,14 +279,14 @@ static int write_sample_file(const Options *options, unsigned long index, const 
 
 /* The preferences document of the default settings, as the vocabulary serves it. */
 static int print_default_settings(void) {
-    ComposerResponse response;
+    CliResponse response;
     memset(&response, 0, sizeof response);
-    if (composer_api_vocabulary(cli_context(), &response) != URSATZ_OK) {
-        composer_response_destroy(&response);
+    if (cli_composer("vocabulary", NULL, NULL, &response) != URSATZ_OK) {
+        cli_response_destroy(&response);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the vocabulary");
     }
     cJSON *vocabulary = cJSON_Parse(response.json);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     const cJSON *preferences = cJSON_GetObjectItemCaseSensitive(vocabulary, "preferences");
     if (!preferences) {
         cJSON_Delete(vocabulary);
@@ -391,39 +390,35 @@ static cJSON *render_request(const Options *options, const cJSON *motive) {
 }
 
 /* Calls an API entry with the request object (consumed). */
-static UrsatzStatus call(UrsatzStatus (*entry)(const ComposerContext *, const char *, const UrsatzJob *, ComposerResponse *),
-                           cJSON *request, ComposerResponse *response) {
-    memset(response, 0, sizeof *response);
-    char *text = request ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!text) {
-        response->error.message[0] = '\0';
+static UrsatzStatus call(const char *entry, cJSON *request, CliResponse *response) {
+    if (!request) {
+        memset(response, 0, sizeof *response);
         snprintf(response->error.message, sizeof response->error.message, "out of memory");
         return URSATZ_ERR_ALLOC;
     }
-    UrsatzStatus status = entry(cli_context(), text, NULL, response);
-    cJSON_free(text);
+    UrsatzStatus status = cli_composer(entry, request, NULL, response);
+    cJSON_Delete(request);
     return status;
 }
 
 /* One motif: a random motive, rendered to MIDI and MusicXML, and its API response as json. */
 static int make_motif(const Options *options, unsigned long index, unsigned long seed, const cJSON *preferences, Sample *sample) {
-    ComposerResponse drawn;
-    UrsatzStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
+    CliResponse drawn;
+    UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences), &drawn);
     if (status != URSATZ_OK) {
         refuse(sample, status, &drawn.error);
-        composer_response_destroy(&drawn);
+        cli_response_destroy(&drawn);
         return 0;
     }
     cJSON *document = cJSON_Parse(drawn.json);
-    composer_response_destroy(&drawn);
+    cli_response_destroy(&drawn);
     const cJSON *first = document ? cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0) : NULL;
-    ComposerResponse rendered;
-    status = call(composer_api_motive_render, render_request(options, cJSON_GetObjectItemCaseSensitive(first, "motive")), &rendered);
+    CliResponse rendered;
+    status = call("motive_render", render_request(options, cJSON_GetObjectItemCaseSensitive(first, "motive")), &rendered);
     cJSON_Delete(document);
     if (status != URSATZ_OK) {
         refuse(sample, status, &rendered.error);
-        composer_response_destroy(&rendered);
+        cli_response_destroy(&rendered);
         return 0;
     }
     int result = write_sample_file(options, index, ".mid", rendered.midi, rendered.midi_size, sample);
@@ -433,7 +428,7 @@ static int make_motif(const Options *options, unsigned long index, unsigned long
     if (result == 0) {
         result = write_sample_file(options, index, ".json", rendered.json, strlen(rendered.json), sample);
     }
-    composer_response_destroy(&rendered);
+    cli_response_destroy(&rendered);
     if (result == 0) {
         sample->ok = true;
         snprintf(sample->status, sizeof sample->status, "ok");
@@ -495,8 +490,8 @@ static int read_motif_file(const Options *options, cJSON **document) {
         return status;
     }
     /* A MIDI file was read already; its motive is the text input of the request. */
-    ComposerResponse response;
-    UrsatzStatus called = call(composer_api_motive, request, &response);
+    CliResponse response;
+    UrsatzStatus called = call("motive", request, &response);
     if (called != URSATZ_OK) {
         MotiveInputNames names = {options->motif_path, NULL, NULL, NULL};
         status = motive_input_fail(&file, called, &response.error, &names);
@@ -504,12 +499,12 @@ static int read_motif_file(const Options *options, cJSON **document) {
         *document = cJSON_Parse(response.json);
         status = *document ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return status;
 }
 
 /* The same analysis for a generated motive of a random motive response. */
-static UrsatzStatus analyze_motive(const cJSON *motive, ComposerResponse *response) {
+static UrsatzStatus analyze_motive(const cJSON *motive, CliResponse *response) {
     cJSON *request = cJSON_CreateObject();
     cJSON *input = request ? cJSON_AddObjectToObject(request, "input") : NULL;
     char *text = motive ? cJSON_PrintUnformatted(motive) : NULL;
@@ -519,7 +514,7 @@ static UrsatzStatus analyze_motive(const cJSON *motive, ComposerResponse *respon
         cJSON_Delete(request);
         request = NULL;
     }
-    return call(composer_api_motive, request, response);
+    return call("motive", request, response);
 }
 
 /* The theme request of a motive document: key C, the options as the brief, the motive as M1 in the basic slot. */
@@ -586,26 +581,26 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
     } else if (motif_document) {
         request = theme_request_from_motive(options, motif_document, seed, preferences);
     } else {
-        ComposerResponse drawn;
-        UrsatzStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
+        CliResponse drawn;
+        UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences), &drawn);
         if (status != URSATZ_OK) {
             refuse(sample, status, &drawn.error);
-            composer_response_destroy(&drawn);
+            cli_response_destroy(&drawn);
             return 0;
         }
         cJSON *document = cJSON_Parse(drawn.json);
-        composer_response_destroy(&drawn);
+        cli_response_destroy(&drawn);
         const cJSON *first = document ? cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0) : NULL;
-        ComposerResponse analyzed;
+        CliResponse analyzed;
         status = analyze_motive(cJSON_GetObjectItemCaseSensitive(first, "motive"), &analyzed);
         cJSON_Delete(document);
         if (status != URSATZ_OK) {
             refuse(sample, status, &analyzed.error);
-            composer_response_destroy(&analyzed);
+            cli_response_destroy(&analyzed);
             return 0;
         }
         cJSON *analysis = cJSON_Parse(analyzed.json);
-        composer_response_destroy(&analyzed);
+        cli_response_destroy(&analyzed);
         request = analysis ? theme_request_from_motive(options, analysis, seed, preferences) : NULL;
         cJSON_Delete(analysis);
     }
@@ -613,11 +608,11 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         snprintf(sample->status, sizeof sample->status, "refused: the theme request could not be built");
         return 0;
     }
-    ComposerResponse response;
-    UrsatzStatus status = call(composer_api_theme, request, &response);
+    CliResponse response;
+    UrsatzStatus status = call("theme", request, &response);
     if (status != URSATZ_OK) {
         refuse(sample, status, &response.error);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return 0;
     }
     int result = write_sample_file(options, index, ".mid", response.midi, response.midi_size, sample);
@@ -627,7 +622,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
     if (result == 0) {
         result = write_sample_file(options, index, ".json", response.json, strlen(response.json), sample);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     if (result == 0) {
         sample->ok = true;
         snprintf(sample->status, sizeof sample->status, "ok");
@@ -637,16 +632,13 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
 
 /* A request the API would refuse (the mode, meter, strategy, style or settings) is a usage error, not a refused sample. */
 static int validate_options(const Options *options, const cJSON *preferences) {
-    ComposerResponse response;
+    CliResponse response;
     cJSON *request = random_motive_request(options, options->seed, preferences);
-    char *text = request ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!text) {
+    if (!request) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
-    memset(&response, 0, sizeof response);
-    UrsatzStatus status = composer_api_validate(cli_context(), "random_motive", text, &response);
-    cJSON_free(text);
+    UrsatzStatus status = cli_composer_validate("random_motive", request, &response);
+    cJSON_Delete(request);
     int result = 0;
     if (status != URSATZ_OK) {
         const char *settings = strncmp(response.error.path, "/preferences", 12) == 0 ? options->settings_path : NULL;
@@ -656,7 +648,7 @@ static int validate_options(const Options *options, const cJSON *preferences) {
             result = cli_fail_api(status, &response.error, NULL);
         }
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return result;
 }
 

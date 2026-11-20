@@ -1,5 +1,5 @@
 #include "variants_cmd.h"
-#include "cli_context.h"
+#include "cli_tools.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
@@ -303,25 +302,24 @@ static int make_variants(const Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     status = add_members(request, options);
-    char *text = status == 0 ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!text) {
-        return status != 0 ? status : cli_fail(CLI_EXIT_USAGE, "out of memory");
+    if (status != 0) {
+        cJSON_Delete(request);
+        return status;
     }
-    ComposerResponse response;
-    UrsatzStatus api_status = composer_api_variants(cli_context(), text, NULL, &response);
-    free(text);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer("variants", request, NULL, &response);
+    cJSON_Delete(request);
     if (api_status != URSATZ_OK) {
         if (strncmp(response.error.path, "/chain", 6) == 0 && options->chain_path) {
             status = cli_fail(CLI_EXIT_USAGE, "%s: %s", options->chain_path, response.error.message);
         } else {
             status = motive_input_fail(&file, api_status, &response.error, &names);
         }
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
     cJSON *document = cJSON_Parse(response.json);
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     if (!document) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
@@ -355,11 +353,11 @@ int run_variants(int argc, char **argv) {
     if (!options.list_ops) {
         return make_variants(&options);
     }
-    ComposerResponse response;
-    UrsatzStatus api_status = composer_api_variant_operations(&response);
+    CliResponse response;
+    UrsatzStatus api_status = cli_composer("variant_operations", NULL, NULL, &response);
     if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
-        composer_response_destroy(&response);
+        cli_response_destroy(&response);
         return status;
     }
     if (options.json) {
@@ -367,12 +365,12 @@ int run_variants(int argc, char **argv) {
     } else {
         cJSON *document = cJSON_Parse(response.json);
         if (!document) {
-            composer_response_destroy(&response);
+            cli_response_destroy(&response);
             return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         }
         print_operations(document);
         cJSON_Delete(document);
     }
-    composer_response_destroy(&response);
+    cli_response_destroy(&response);
     return 0;
 }
