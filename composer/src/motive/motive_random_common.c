@@ -1,4 +1,5 @@
 #include "motive/motive_random_internal.h"
+#include "analysis/similarity/similarity_scoring.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -201,6 +202,49 @@ bool motive_random_apply_form(const MotiveRandomOptions *options, const Motive *
                               : motive_from_contour_text(text, &read, out, NULL)) == MOTIVE_OK;
     free(text);
     return ok;
+}
+
+/* The score as a number. */
+static double score_value(SimilarityScore score) {
+    return score.den != 0 ? (double)score.num / (double)score.den : 0.0;
+}
+
+double motive_random_distance(const Motive *a, const Motive *b) {
+    SimilarityDuration durations_a[MOTIVE_MAX_NOTES];
+    SimilarityDuration durations_b[MOTIVE_MAX_NOTES];
+    long intervals_a[MOTIVE_MAX_NOTES];
+    long intervals_b[MOTIVE_MAX_NOTES];
+    ContourDirection directions_a[MOTIVE_MAX_NOTES];
+    ContourDirection directions_b[MOTIVE_MAX_NOTES];
+    size_t count_a = a->note_count;
+    size_t count_b = b->note_count;
+    for (size_t i = 0; i < count_a; i++) {
+        durations_a[i] = a->notes[i].duration;
+        intervals_a[i] = i > 0 ? (long)a->notes[i].pitch - (long)a->notes[i - 1].pitch : 0;
+    }
+    for (size_t i = 0; i < count_b; i++) {
+        durations_b[i] = b->notes[i].duration;
+        intervals_b[i] = i > 0 ? (long)b->notes[i].pitch - (long)b->notes[i - 1].pitch : 0;
+    }
+    SimilarityScore rhythm = {0, 1};
+    SimilarityScore contour = {0, 1};
+    if (count_a == 0 || count_b == 0 ||
+        similarity_rhythm_score(durations_a, count_a, durations_b, count_b, &rhythm) != SIMILARITY_SCORE_OK) {
+        rhythm.num = 0;
+        rhythm.den = 1;
+    }
+    if (count_a > 1 && count_b > 1) {
+        similarity_directions_from_intervals(intervals_a + 1, count_a - 1, directions_a);
+        similarity_directions_from_intervals(intervals_b + 1, count_b - 1, directions_b);
+        if (similarity_contour_score(directions_a, count_a - 1, directions_b, count_b - 1, &contour) != SIMILARITY_SCORE_OK) {
+            contour.num = 0;
+            contour.den = 1;
+        }
+    } else if (count_a <= 1 && count_b <= 1) {
+        contour.num = 1;
+        contour.den = 1;
+    }
+    return 1.0 - (score_value(rhythm) + score_value(contour)) / 2.0;
 }
 
 bool motive_random_already_made(const Motive *made, size_t count, const Motive *motive) {

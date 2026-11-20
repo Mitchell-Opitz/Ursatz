@@ -28,6 +28,8 @@
 #define OFF_FRAME_REACH 5      /* scale steps either side of the frame note before, searched for a non-chord tone */
 #define ATTEMPTS_PER_MOTIVE 256
 #define STYLE_CANDIDATES 8     /* candidates drawn per motive when there is a style */
+#define VARIETY_POOL_MAX 8     /* the most candidates a variety pool draws (COMPOSER_PREFERENCES_POOL_MAX) */
+#define VARIETY_MAX 20         /* the largest variety, the weight of distance against closeness to the style */
 
 /*
  * The frame is a walk on the chord tones of I, the scale steps 0, 2 and 4 of each octave (rungs of a ladder, three to an
@@ -89,6 +91,13 @@ bool motive_random_already_made(const Motive *made, size_t count, const Motive *
 
 /* How close a full candidate is to the style, of the category the form keeps. False on allocation failure. */
 bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const Motive *full, Rational *out);
+
+/*
+ * How far apart two motives sound (R-673): 1 - (rhythm similarity + contour similarity) / 2, from the library's similarity
+ * scores of their durations and of the directions of their intervals; 0 for the same, up to 1. A motive of fewer than two
+ * notes has no contour: two such motives agree on it, one such and one longer do not.
+ */
+double motive_random_distance(const Motive *a, const Motive *b);
 
 /* One candidate of the SEGMENTS strategy (motive_random_segments.c), as the DRAWN one: *found is false when the draw did
    not pass (try again); the result is false only when the check itself could not run. */

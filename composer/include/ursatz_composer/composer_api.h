@@ -44,7 +44,8 @@
  * 3.2 adds the output "layers" (R-634): a request that asks for it also gets "realization" and "reading" in its response document.
  * 4.0 answers with the common status set (R-639): UrsatzStatus, UrsatzError and UrsatzJob (<common/status.h>, <common/job.h>) replace the
  * Composer's own, and the versions response gives "producer_key" in place of "ursatz_commit".
- * 4.3 adds waive and reverse to the melody group of the preferences, and preference_keys and rules to the vocabulary (R-672).
+ * 4.3 adds waive and reverse to the melody group of the preferences, and preference_keys and rules to the vocabulary (R-672),
+ * the candidates group of the preferences and the random motive's avoid (R-673).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4

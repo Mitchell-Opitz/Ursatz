@@ -184,6 +184,16 @@ typedef struct {
     unsigned long seed;
     /* The SEGMENTS strategy's settings. NULL for the defaults; not owned. */
     const MotiveRandomPreferences *preferences;
+    /*
+     * Variety (R-673). 0, the zero value, draws as it always did and reads neither pool nor avoid. Above 0 (at most 20) each motive
+     * is chosen among `pool` candidates (2 to 8; at least the candidates a style asks for) for being unlike the avoid motives and
+     * the motives already made: the farthest wins, or the one with the best mix of closeness to the style and distance.
+     */
+    unsigned variety;
+    size_t pool;
+    /* Motives the result should not repeat nor resemble; avoid_count of them, not owned. */
+    const Motive *avoid;
+    size_t avoid_count;
 } MotiveRandomOptions;
 
 /* "ok", "meter" and so on. */

@@ -73,6 +73,14 @@
     "preferences": {
       "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
       "description": "The settings; the motif group steers the segments strategy."
+    },
+    "avoid": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object"
+      },
+      "description": "Motives (the motive JSON format) the result should not repeat nor resemble (API 4.3, R-673). Read only when preferences.candidates.variety is above 0."
     }
   },
   "anyOf": [
