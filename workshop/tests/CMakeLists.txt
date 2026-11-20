@@ -194,3 +194,11 @@ endif()
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
 ursatz_test(workshop_command_text SOURCES test_command_text.c LIBS ursatz_workshop ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
+
+# The section commands (P65 B7): the pure edits of a piece request on the game loop fixture, then the commands on a migrated copy of the layout 0
+# fixture folder (a version made and journaled, a stale base, the schema's limits, the Composer's refusal at its path, an overlay on a form piece).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_section_commands)
+ursatz_test(workshop_section_commands SOURCES test_section_commands.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
+                TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_section_commands)
