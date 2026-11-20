@@ -76,7 +76,7 @@ static void test_refusals(void) {
 
     for (int i = 0; i < 2; i++) {
         const char *name = i == 0 ? "item.update" : "item.delete";
-        status = command(name, g_motif, "{\"name\":\"Renamed\"}", 1, &reply, &error);
+        status = command(name, g_motif, i == 0 ? "{\"name\":\"Renamed\"}" : "{}", 1, &reply, &error);
         check(status == URSATZ_ERR_CONFLICT && num(reply.json, "current_version") == 2, "a stale rename or delete is refused with the current version");
         workshop_reply_destroy(&reply);
     }

@@ -90,10 +90,9 @@ static void test_check_kinds(void) {
         check(status == URSATZ_ERR_REQUEST && strcmp(error.path, cases[i].path) == 0 && strcmp(error.message, cases[i].message) == 0, cases[i].message);
         cJSON_Delete(params);
     }
-    cJSON *good = cJSON_Parse("{\"word\":\"abcd\",\"count\":8,\"floor\":2,\"flag\":true,\"pick\":\"c\",\"pickup\":\"-3/4\",\"extra\":{},\"ids\":[1,2],\"before\":\"y\","
-                              "\"undeclared\":[1]}");
+    cJSON *good = cJSON_Parse("{\"word\":\"abcd\",\"count\":8,\"floor\":2,\"flag\":true,\"pick\":\"c\",\"pickup\":\"-3/4\",\"extra\":{},\"ids\":[1,2],\"before\":\"y\"}");
     memset(&error, 0, sizeof error);
-    check(workshop_command_check(schema, "item:x", good, &error) == URSATZ_OK, "a command that meets its schema is accepted (an undeclared member passes)");
+    check(workshop_command_check(schema, "item:x", good, &error) == URSATZ_OK, "a command that meets its schema is accepted");
     cJSON_Delete(good);
     cJSON *whole = cJSON_Parse("{\"word\":\"ab\",\"pickup\":3,\"after\":\"x\"}");
     check(workshop_command_check(schema, "item:x", whole, &error) == URSATZ_OK, "a whole number is a rational");
@@ -141,8 +140,9 @@ static void test_through_command(void) {
         check(status == URSATZ_ERR_REQUEST && strcmp(error.path, cases[i].path) == 0 && strcmp(error.message, cases[i].message) == 0, cases[i].message);
         workshop_reply_destroy(&reply);
     }
-    /* a params member no schema declares passes until the GUI sends exactly the schemas' params (B9) */
-    check(command("project.create", NULL, "{\"name\":\"Quiet\",\"undeclared\":1}", -1, &reply, &error) == URSATZ_OK, "an undeclared member passes");
+    UrsatzStatus undeclared = command("project.create", NULL, "{\"name\":\"Quiet\",\"undeclared\":1}", -1, &reply, &error);
+    check(undeclared == URSATZ_ERR_REQUEST && strcmp(error.path, "/params/undeclared") == 0 && strcmp(error.message, "project.create takes no param 'undeclared'") == 0,
+          "a params member no schema declares is refused at its path");
     workshop_reply_destroy(&reply);
 }
 

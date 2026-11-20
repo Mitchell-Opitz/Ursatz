@@ -248,8 +248,25 @@ UrsatzStatus workshop_command_check(const cJSON *schema, const char *target, con
     if (!wants_target && target[0] != '\0') {
         return refuse(error, "/target", "%s takes no target", name);
     }
+    const cJSON *declared = cJSON_GetObjectItemCaseSensitive(schema, "params");
+    const cJSON *member;
+    cJSON_ArrayForEach(member, params) {
+        bool known = false;
+        const cJSON *entry;
+        cJSON_ArrayForEach(entry, declared) {
+            if (member->string && strcmp(cJSON_GetObjectItemCaseSensitive(entry, "name")->valuestring, member->string) == 0) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            char path[160];
+            snprintf(path, sizeof path, "/params/%s", member->string ? member->string : "");
+            return refuse(error, path, "%s takes no param '%s'", name, member->string ? member->string : "");
+        }
+    }
     const cJSON *param;
-    cJSON_ArrayForEach(param, cJSON_GetObjectItemCaseSensitive(schema, "params")) {
+    cJSON_ArrayForEach(param, declared) {
         const char *param_name = cJSON_GetObjectItemCaseSensitive(param, "name")->valuestring;
         const char *type = cJSON_GetObjectItemCaseSensitive(param, "type")->valuestring;
         char path[160];

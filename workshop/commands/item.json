@@ -86,7 +86,14 @@
       "base": true,
       "journaled": true,
       "bytes": false,
-      "params": [],
+      "params": [
+        {
+          "name": "force",
+          "type": "boolean",
+          "required": false,
+          "help": "Delete the item although other items use it."
+        }
+      ],
       "one_of": [],
       "reply": "An empty object; used_by lists the items that use it when the delete is refused.",
       "job": null,

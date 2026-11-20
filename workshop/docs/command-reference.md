@@ -33,7 +33,7 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 |---|---|---|---|
 | `item.create` | none | `type motif\|theme\|piece name string project_id string body object [note string]` | Make a motif, theme or piece with its first version |
 | `item.update` | `item:<id>@v<n>` | `[name string] [project_id string]` | Rename an item or move it to another project |
-| `item.delete` | `item:<id>@v<n>` | none | Delete an item and its variants |
+| `item.delete` | `item:<id>@v<n>` | `[force bool]` | Delete an item and its variants |
 | `item.save` | `item:<id>@v<n>` | `body object [note string]` | Save the next version of an item |
 | `item.reanalyze` | `item:<id>@v<n>` | none | Analyze a motif again and save the result as a version |
 | `item.compose` | `item:<id>@v<n>` | `[seed int] [update_uses bool]` | Compose a theme or piece into a new version |
