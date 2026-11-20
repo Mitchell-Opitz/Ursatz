@@ -1,0 +1,29 @@
+{
+	"kind":	"piece",
+	"body":	{
+		"uses":	[],
+		"piece":	{
+			"structure":	{
+				"form":	"variations",
+				"key":	"C",
+				"material":	"omt.material.major",
+				"meter":	"4/4",
+				"count":	3
+			}
+		}
+	},
+	"request":	{
+		"schema":	"ursatz-piece-request",
+		"schema_version":	2,
+		"form":	"variations",
+		"key":	"C",
+		"material":	"omt.material.major",
+		"meter":	"4/4",
+		"motive":	null,
+		"bars":	0,
+		"count":	3,
+		"modulate":	false,
+		"accompaniment":	null,
+		"tempo":	null
+	}
+}

@@ -175,6 +175,44 @@ void workshop_compose_stage_discard(const WorkshopComposeStage *stage) {
     common_dir_remove(stage->path, NULL);
 }
 
+/* The test hook (P63 B15): when URSATZ_DUMP_REQUESTS names a folder, each request a compose builds is written there with the
+   body it was built from, as <kind>-<hash>.json {kind, body, request}; the folder of the version's files reads "@STAGE@" and
+   the data folder "@DATA@", so the file does not depend on where the test ran. */
+static void dump_request(const WorkshopComposeKind *kind, const cJSON *body, const cJSON *request, const char *stage) {
+    const char *folder = getenv("URSATZ_DUMP_REQUESTS");
+    if (!folder || folder[0] == '\0') {
+        return;
+    }
+    cJSON *copy = cJSON_Duplicate(request, 1);
+    cJSON *record = cJSON_CreateObject();
+    const char *items = strstr(stage, "/items/");
+    if (copy && record) {
+        workshop_compose_rebase(copy, stage, "@STAGE@");
+        if (items) {
+            char data[PATH_BYTES];
+            snprintf(data, sizeof(data), "%.*s", (int)(items - stage), stage);
+            workshop_compose_rebase(copy, data, "@DATA@");
+        }
+        cJSON_AddStringToObject(record, "kind", kind->member);
+        cJSON_AddItemToObject(record, "body", cJSON_Duplicate(body, 1));
+        cJSON_AddItemToObject(record, "request", copy);
+        copy = NULL;
+        char *text = cJSON_Print(record);
+        if (text) {
+            unsigned long hash = 5381;
+            for (const char *p = text; *p; p++) {
+                hash = hash * 33 + (unsigned char)*p;
+            }
+            char path[PATH_BYTES + 64];
+            snprintf(path, sizeof(path), "%s/%s-%08lx.json", folder, kind->member, hash & 0xffffffffUL);
+            common_file_write_atomic(path, text, strlen(text), NULL);
+        }
+        free(text);
+    }
+    cJSON_Delete(copy);
+    cJSON_Delete(record);
+}
+
 UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *id, bool has_seed,
                                              long long seed, bool update_uses, const UrsatzJob *job,
                                              cJSON **out_item, UrsatzError *error) {
@@ -224,6 +262,9 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
     }
     if (result == URSATZ_OK) {
         result = kind->build_request(body, stage.absolute, has_brief ? style_path : NULL, &request, error);
+        if (result == URSATZ_OK) {
+            dump_request(kind, body, request, stage.absolute);
+        }
     }
     char request_path[PATH_BYTES + 64];
     snprintf(request_path, sizeof(request_path), "%s/request.json", made ? stage.absolute : "");
