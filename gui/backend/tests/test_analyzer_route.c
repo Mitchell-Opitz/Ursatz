@@ -296,11 +296,39 @@ static void check_playback(const char *id, const char *label) {
   free(detail_response);
 }
 
-/* PATCHes a piece with a JSON body; returns the whole response. */
+/* The answer of a command as the tests read a response: a status line and the reply as the body (copied; the caller frees it). With
+ * wait, a command that runs as a job is waited for. */
+static char *answer_text(bool answered, int status, cJSON *reply) {
+  char *text = reply ? cJSON_PrintUnformatted(reply) : NULL;
+  size_t size = (text ? strlen(text) : 0) + 64;
+  char *response = answered || status != 0 ? malloc(size) : NULL;
+  if (response) {
+    snprintf(response, size, "HTTP/1.1 %d Answer\r\n\r\n%s", status, text ? text : "");
+  }
+  cJSON_free(text);
+  cJSON_Delete(reply);
+  return response;
+}
+
+static char *command_response(const char *name, const char *target, const char *params, bool wait) {
+  int status = 0;
+  cJSON *reply = NULL;
+  bool answered = wait ? test_gui_command_finish(PORT, name, target, -1, params, &status, &reply)
+                       : test_gui_command(PORT, name, target, -1, params, &status, &reply);
+  return answer_text(answered, status, reply);
+}
+
+/* library.import of the bytes with the upload name (percent-encoded), waited for. */
+static char *import_response(const char *encoded_name, const char *data, size_t size) {
+  int status = 0;
+  cJSON *reply = NULL;
+  bool answered = test_gui_command_file(PORT, "library.import", "", -1, "{}", encoded_name, data, size, &status, &reply);
+  return answer_text(answered, status, reply);
+}
+
+/* Updates a piece with library.update, body being its params; returns the answer as a response. */
 static char *patch_piece(const char *id, const char *body) {
-  char path[256];
-  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
-  return test_http_exchange(PORT, "PATCH", path, "application/json", body, strlen(body));
+  return command_response("library.update", id, body, false);
 }
 
 /* The parsed body of GET path (caller deletes). */
@@ -837,8 +865,7 @@ static void check_import_cache(const char *id) {
   free(response);
   check(workshop_import_cache_imports() == 2, "the open after a PATCH imports once more");
 
-  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", id);
-  char *reanalyzed = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, "", 0));
+  char *reanalyzed = command_response("library.reanalyze", id, NULL, true);
   check(test_http_status(reanalyzed) == 200, "re-analyze answers 200");
   free(reanalyzed);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
@@ -1047,12 +1074,12 @@ int main(int argc, char **argv) {
   free(unknown_playback);
 
   /* Bodies the Analyzer cannot read. */
-  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "just some text", 14));
+  response = import_response("", "just some text", 14);
   check(test_http_status(response) == 415, "a .txt body gives 415");
   check(strstr(test_http_body(response), "\"error\":\"unsupported format\"") != NULL,
         "the 415 body is {\"error\": \"unsupported format\"}");
   free(response);
-  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "MThd\0\0\0\6", 8));
+  response = import_response("", "MThd\0\0\0\6", 8);
   check(test_http_status(response) == 422, "a truncated MIDI file gives 422");
   free(response);
 
@@ -1100,9 +1127,7 @@ int main(int argc, char **argv) {
     }
     test_write_file(analysis_path, "{}", 2);
 
-    char path[256];
-    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", mozart_id);
-    response = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, NULL, 0));
+    response = command_response("library.reanalyze", mozart_id, NULL, true);
     check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL,
           "POST reanalyze is 200 OK");
     free(response);
@@ -1130,7 +1155,7 @@ int main(int argc, char **argv) {
           "re-running the analysis keeps the filename and uploaded_at");
     cJSON_Delete(meta);
   }
-  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0));
+  response = command_response("library.reanalyze", "no-such-piece", NULL, true);
   check(test_http_status(response) == 404, "reanalyze of an unknown id gives 404");
   free(response);
 
@@ -1143,7 +1168,7 @@ int main(int argc, char **argv) {
     char path[256];
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", mozart_id);
     const char *body = "{\"filename\":\"Renamed.mid\"}";
-    response = test_http_exchange(PORT, "PATCH", path, "application/json", body, strlen(body));
+    response = patch_piece(mozart_id, body);
     check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"filename\":\"Renamed.mid\"") != NULL,
           "PATCH renames a piece");
     free(response);
@@ -1164,7 +1189,7 @@ int main(int argc, char **argv) {
           "the subject links the piece");
     char dir[256];
     snprintf(dir, sizeof(dir), "library/pieces/%s", mozart_id);
-    response = test_http_exchange(PORT, "DELETE", path, NULL, NULL, 0);
+    response = command_response("library.delete", mozart_id, NULL, false);
     check(test_http_status(response) == 200, "DELETE removes a piece");
     free(response);
     check(subject_id && workshop_subject_get(subject_id, &subject) == URSATZ_OK &&

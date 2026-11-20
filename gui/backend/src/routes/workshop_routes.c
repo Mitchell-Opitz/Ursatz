@@ -57,7 +57,9 @@ static int send_refusal(struct mg_connection *conn, UrsatzStatus status, const U
     cJSON_Delete(object);
     return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return ursatz_gui_send_object(conn, ursatz_gui_http_status(status, is_call_path(error->path) ? NULL : error), object);
+  /* A body past the limit is 413 (R-647), whatever member it was read as. */
+  bool call = is_call_path(error->path) && strcmp(error->path, "/body/size") != 0;
+  return ursatz_gui_send_object(conn, ursatz_gui_http_status(status, call ? NULL : error), object);
 }
 
 static int send_request_refusal(struct mg_connection *conn, const char *path, const char *message) {

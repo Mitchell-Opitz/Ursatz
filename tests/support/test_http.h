@@ -36,7 +36,12 @@ char *test_http_finish(const char *port, char *response);
 /* test_http_json for a request that may be accepted as a job: the job's status goes to *status and its answer is parsed. */
 cJSON *test_http_json_finish(const char *port, const char *method, const char *path, const char *json_body, int *status);
 
-/* POSTs the file to /api/analyzer/pieces with the upload name (already URL encoded) in X-Filename. Waits for the import job and returns the new
+/* POSTs the command object (JSON text) with a file to /api/workshop/command as the command line does: the file is the body
+ * (application/octet-stream), the command is percent-encoded in X-Ursatz-Command and the upload name (already percent-encoded) is in
+ * X-Filename. The whole response as a string the caller frees, or NULL when the connection failed. */
+char *test_http_command_file(const char *port, const char *command_json, const char *encoded_name, const char *data, size_t size);
+
+/* Sends library.import of the file (as actor michelle, the upload name already URL encoded) as test_http_command_file does. Waits for the import job and returns the new
  * piece's id (the caller frees), or NULL. When response is not NULL it gets the whole response (the caller frees). */
 char *test_http_upload(const char *port, const char *file_path, const char *encoded_name, char **response);
 

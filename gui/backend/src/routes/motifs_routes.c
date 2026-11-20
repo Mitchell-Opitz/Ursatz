@@ -49,18 +49,6 @@ static int motifs_each_op(struct mg_connection *conn, const char *id) {
   return query_with_body(conn, "item.each-op", ursatz_gui_failed, false, id);
 }
 
-/* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and stores the
-   result as a new version. Runs on the job queue. */
-static int motifs_reroll(struct mg_connection *conn, const char *id) {
-  return command_with_optional_body(conn, "item.reroll", id, ursatz_gui_failed);
-}
-
-/* POST .../items/<id>/{variants/save, flag, promote, link-form}: a body in, the item out. */
-
-static int motifs_item_command(struct mg_connection *conn, const char *id, const char *command) {
-  return command_with_body(conn, command, id, ursatz_gui_failed);
-}
-
 /* POST /api/materials/recognize {source: {item, version}, target: {item, version}}: how the target derives from the source. */
 static int motifs_recognize(struct mg_connection *conn) {
   return query_with_body(conn, "composer.recognize", ursatz_gui_failed, true, NULL);
@@ -74,16 +62,6 @@ static int motifs_variant_tree(struct mg_connection *conn, const char *id) {
 /* GET /api/materials/items/<id>/op-checks: the marks of a motif from Try every operation, {"checks": {...}} (R-190). */
 static int motifs_op_checks_get(struct mg_connection *conn, const char *id) {
   return QUERY(conn, "item.op-checks", ursatz_gui_failed, false, "id", id);
-}
-
-/* The failures of the op-checks write: the store's message with the status of the table, the path of a refusal counted (422). */
-static int failed_op_checks(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_failure(conn, ursatz_gui_http_status(status, error), error->message);
-}
-
-/* PUT /api/materials/items/<id>/op-checks {checks}: replaces the marks. The file is not a version. */
-static int motifs_op_checks_put(struct mg_connection *conn, const char *id) {
-  return command_with_body(conn, "item.set-op-checks", id, failed_op_checks);
 }
 
 /* POST /api/materials/motifs/random {material, meter, key?, form?, style_id?, count?, seed?}: random motives from the Composer; nothing
@@ -116,14 +94,8 @@ static int route_random(struct mg_connection *conn, const UrsatzGuiRouteArgs *ar
 static int route_validate(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return motifs_validate(conn); }
 static int route_variants(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_variants(conn, ARG(args, 0)); }
 static int route_each_op(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_each_op(conn, ARG(args, 0)); }
-static int route_reroll(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_reroll(conn, ARG(args, 0)); }
 static int route_tree(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_variant_tree(conn, ARG(args, 0)); }
 static int route_checks_get(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_op_checks_get(conn, ARG(args, 0)); }
-static int route_checks_put(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_op_checks_put(conn, ARG(args, 0)); }
-static int route_save_variant(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_item_command(conn, ARG(args, 0), "item.save-variant"); }
-static int route_link_form(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_item_command(conn, ARG(args, 0), "item.link-form"); }
-static int route_promote(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_item_command(conn, ARG(args, 0), "item.promote"); }
-static int route_flag(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return motifs_item_command(conn, ARG(args, 0), "item.flag"); }
 
 static const UrsatzGuiRoute kRoutes[] = {
     {"GET", "/api/materials/variant-operations", route_operations},
@@ -135,14 +107,8 @@ static const UrsatzGuiRoute kRoutes[] = {
     {"GET", "/api/materials/items/validate", route_validate_only_post},
     {"POST", "/api/materials/items/<id>/variants", route_variants},
     {"POST", "/api/materials/items/<id>/each-op", route_each_op},
-    {"POST", "/api/materials/items/<id>/reroll", route_reroll},
     {"GET", "/api/materials/items/<id>/variant-tree", route_tree},
     {"GET", "/api/materials/items/<id>/op-checks", route_checks_get},
-    {"PUT", "/api/materials/items/<id>/op-checks", route_checks_put},
-    {"POST", "/api/materials/items/<id>/variants/save", route_save_variant},
-    {"POST", "/api/materials/items/<id>/link-form", route_link_form},
-    {"POST", "/api/materials/items/<id>/promote", route_promote},
-    {"POST", "/api/materials/items/<id>/flag", route_flag},
 };
 
 const UrsatzGuiRoute *ursatz_gui_motifs_routes(size_t *count) {

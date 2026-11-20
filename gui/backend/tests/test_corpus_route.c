@@ -5,6 +5,7 @@
  * pieces/ are created there). */
 
 #include <civetweb.h>
+#include <cJSON.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +37,18 @@ static bool exchange_into(const char *method, const char *path, const char *body
   bool answered = received && received[0] != '\0';
   snprintf(response, response_capacity, "%s", received ? received : "");
   free(received);
+  return answered;
+}
+
+/* One command through test_gui_command; the response is made as exchange_into makes it: a status line and the reply's JSON. */
+static bool command_into(const char *name, const char *target, const char *params, char *response, size_t response_capacity) {
+  int status = 0;
+  cJSON *reply = NULL;
+  bool answered = test_gui_command(PORT, name, target, -1, params, &status, &reply);
+  char *text = reply ? cJSON_PrintUnformatted(reply) : NULL;
+  snprintf(response, response_capacity, "HTTP/1.1 %d Answer\r\n\r\n%s", status, text ? text : "");
+  cJSON_free(text);
+  cJSON_Delete(reply);
   return answered;
 }
 
@@ -104,7 +117,7 @@ int main(void) {
   char response[8192];
 
   /* Create with an id, a name and a description (R-098: the id is still accepted). */
-  check(exchange_into("POST", "/api/corpus",
+  check(command_into("collection.create", "",
                      "{\"id\":\"test-corpus\",\"name\":\"Test  Corpus \",\"description\":\" First   collection \"}",
                      response, sizeof(response)),
         "create: got a response");
@@ -114,33 +127,33 @@ int main(void) {
   check(has(response, "\"piece_count\":0"), "create starts with no pieces");
 
   /* Duplicate id fails. */
-  check(exchange_into("POST", "/api/corpus", "{\"id\":\"test-corpus\",\"name\":\"Again\"}", response, sizeof(response)),
+  check(command_into("collection.create", "", "{\"id\":\"test-corpus\",\"name\":\"Again\"}", response, sizeof(response)),
         "duplicate create: got a response");
   check(has(response, "\"ok\":false"), "duplicate create fails");
 
   /* An empty name and a bad id fail. */
-  check(exchange_into("POST", "/api/corpus", "{\"name\":\"   \"}", response, sizeof(response)),
+  check(command_into("collection.create", "", "{\"name\":\"   \"}", response, sizeof(response)),
         "empty name: got a response");
   check(has(response, "\"ok\":false") && has(response, "invalid name"), "empty name fails");
-  check(exchange_into("POST", "/api/corpus", "{\"id\":\"bad!id\",\"name\":\"x\"}", response, sizeof(response)),
+  check(command_into("collection.create", "", "{\"id\":\"bad!id\",\"name\":\"x\"}", response, sizeof(response)),
         "bad id: got a response");
   check(has(response, "\"ok\":false") && has(response, "invalid id"), "bad id fails");
 
   /* Name only: the id is generated and returned. */
-  check(exchange_into("POST", "/api/corpus", "{\"name\":\"beta collection\"}", response, sizeof(response)),
+  check(command_into("collection.create", "", "{\"name\":\"beta collection\"}", response, sizeof(response)),
         "name-only create: got a response");
   check(has(response, "\"ok\":true"), "name-only create succeeds");
   check(has(response, "\"id\":\"col-"), "name-only create returns a generated col- id");
   char second_id[64] = "";
   check(extract_id(response, second_id, sizeof(second_id)), "name-only create: id read");
 
-  check(exchange_into("POST", "/api/corpus", "{\"name\":\"Alpha collection\",\"description\":\"d\"}", response,
+  check(command_into("collection.create", "", "{\"name\":\"Alpha collection\",\"description\":\"d\"}", response,
                      sizeof(response)),
         "third create: got a response");
   check(has(response, "\"ok\":true"), "third create succeeds");
 
   /* A quote in a name round-trips as valid JSON. */
-  check(exchange_into("POST", "/api/corpus", "{\"name\":\"The \\\"Quoted\\\" one\"}", response, sizeof(response)),
+  check(command_into("collection.create", "", "{\"name\":\"The \\\"Quoted\\\" one\"}", response, sizeof(response)),
         "quoted name: got a response");
   check(has(response, "\"name\":\"The \\\"Quoted\\\" one\""), "quote in a name is escaped in the answer");
 
@@ -165,44 +178,44 @@ int main(void) {
   check(test_http_status(response) == 404 && has(response, "\"ok\":false"), "get unknown collection is 404");
 
   /* Rename and describe. */
-  check(exchange_into("PATCH", "/api/corpus/test-corpus", "{\"name\":\"Renamed   One\"}", response, sizeof(response)),
+  check(command_into("collection.update", "test-corpus", "{\"name\":\"Renamed   One\"}", response, sizeof(response)),
         "rename: got a response");
   check(has(response, "\"ok\":true") && has(response, "\"name\":\"Renamed One\""), "rename normalizes and answers");
   check(has(response, "\"description\":\"First collection\""), "rename leaves the description");
-  check(exchange_into("PATCH", "/api/corpus/test-corpus", "{\"description\":\"\"}", response, sizeof(response)),
+  check(command_into("collection.update", "test-corpus", "{\"description\":\"\"}", response, sizeof(response)),
         "clear description: got a response");
   check(has(response, "\"ok\":true") && has(response, "\"description\":\"\""), "an empty description clears it");
-  check(exchange_into("PATCH", "/api/corpus/test-corpus", "{\"name\":\"  \"}", response, sizeof(response)),
+  check(command_into("collection.update", "test-corpus", "{\"name\":\"  \"}", response, sizeof(response)),
         "empty rename: got a response");
   check(has(response, "\"ok\":false") && has(response, "invalid name"), "an empty name is rejected");
-  check(exchange_into("PATCH", "/api/corpus/test-corpus", "{}", response, sizeof(response)),
+  check(command_into("collection.update", "test-corpus", "{}", response, sizeof(response)),
         "empty patch: got a response");
   check(has(response, "\"ok\":false") && has(response, "nothing to update"), "nothing to update");
-  check(exchange_into("PATCH", "/api/corpus/no-such", "{\"name\":\"x\"}", response, sizeof(response)),
+  check(command_into("collection.update", "no-such", "{\"name\":\"x\"}", response, sizeof(response)),
         "rename unknown: got a response");
   check(test_http_status(response) == 404, "rename unknown collection is 404");
 
   /* Add one piece, then several. */
-  check(exchange_into("POST", "/api/corpus/test-corpus/pieces", "{\"piece_id\":\"piece-1\"}", response,
+  check(command_into("collection.add-pieces", "test-corpus", "{\"piece_id\":\"piece-1\"}", response,
                      sizeof(response)),
         "add piece: got a response");
   check(has(response, "\"ok\":true") && has(response, "\"added\":1") && has(response, "\"already\":0"),
         "add piece succeeds");
-  check(exchange_into("POST", "/api/corpus/test-corpus/pieces",
+  check(command_into("collection.add-pieces", "test-corpus",
                      "{\"piece_ids\":[\"piece-1\",\"piece-2\",\"piece-3\",\"piece-2\"]}", response, sizeof(response)),
         "bulk add: got a response");
   check(has(response, "\"ok\":true") && has(response, "\"added\":2") && has(response, "\"already\":2"),
         "bulk add counts added and already-members (a repeat in the request too)");
 
   /* An unknown piece is a 400 naming it. */
-  check(exchange_into("POST", "/api/corpus/test-corpus/pieces", "{\"piece_ids\":[\"piece-3\",\"no-such-piece\"]}",
+  check(command_into("collection.add-pieces", "test-corpus", "{\"piece_ids\":[\"piece-3\",\"no-such-piece\"]}",
                      response, sizeof(response)),
         "unknown piece: got a response");
   check(test_http_status(response) == 400 && has(response, "unknown piece: no-such-piece"), "unknown piece is 400 and named");
-  check(exchange_into("POST", "/api/corpus/no-such/pieces", "{\"piece_id\":\"piece-1\"}", response, sizeof(response)),
+  check(command_into("collection.add-pieces", "no-such", "{\"piece_id\":\"piece-1\"}", response, sizeof(response)),
         "add to unknown collection: got a response");
   check(test_http_status(response) == 404, "adding to an unknown collection is 404");
-  check(exchange_into("POST", "/api/corpus/test-corpus/pieces", "{\"piece_id\":\"bad!piece\"}", response,
+  check(command_into("collection.add-pieces", "test-corpus", "{\"piece_id\":\"bad!piece\"}", response,
                      sizeof(response)),
         "bad piece id: got a response");
   check(has(response, "\"ok\":false") && has(response, "invalid piece_id"), "bad piece id rejected");
@@ -218,25 +231,25 @@ int main(void) {
         "get returns the piece ids");
 
   /* Invalid piece id in the path is rejected before reaching the service. */
-  check(exchange_into("DELETE", "/api/corpus/test-corpus/pieces/bad!piece", NULL, response, sizeof(response)),
+  check(command_into("collection.remove-piece", "test-corpus", "{\"piece_id\":\"bad!piece\"}", response, sizeof(response)),
         "invalid piece id: got a response");
   check(has(response, "\"ok\":false"), "invalid piece id in path rejected");
 
   /* Remove a member; removing it again fails. */
-  check(exchange_into("DELETE", "/api/corpus/test-corpus/pieces/piece-1", NULL, response, sizeof(response)),
+  check(command_into("collection.remove-piece", "test-corpus", "{\"piece_id\":\"piece-1\"}", response, sizeof(response)),
         "remove piece: got a response");
   check(has(response, "\"ok\":true"), "remove piece succeeds");
-  check(exchange_into("DELETE", "/api/corpus/test-corpus/pieces/piece-1", NULL, response, sizeof(response)),
+  check(command_into("collection.remove-piece", "test-corpus", "{\"piece_id\":\"piece-1\"}", response, sizeof(response)),
         "remove non-member: got a response");
   check(has(response, "\"ok\":false"), "remove non-member piece fails");
 
   /* Deleting a piece removes it from every collection that holds it. */
   char path[128];
   snprintf(path, sizeof(path), "/api/corpus/%s/pieces", second_id);
-  check(exchange_into("POST", path, "{\"piece_ids\":[\"piece-2\",\"piece-3\"]}", response, sizeof(response)),
+  check(command_into("collection.add-pieces", second_id, "{\"piece_ids\":[\"piece-2\",\"piece-3\"]}", response, sizeof(response)),
         "second collection: add got a response");
   check(has(response, "\"added\":2"), "second collection holds piece-2 and piece-3");
-  check(exchange_into("DELETE", "/api/analyzer/pieces/piece-2", NULL, response, sizeof(response)),
+  check(command_into("library.delete", "piece-2", NULL, response, sizeof(response)),
         "delete piece: got a response");
   check(has(response, "\"ok\":true"), "delete piece succeeds");
   check(exchange_into("GET", "/api/corpus/test-corpus/pieces", NULL, response, sizeof(response)),
@@ -261,12 +274,12 @@ int main(void) {
         "a collection is read back after a restart");
 
   /* Delete a collection. Its pieces stay. */
-  check(exchange_into("DELETE", "/api/corpus/test-corpus", NULL, response, sizeof(response)), "delete: got a response");
+  check(command_into("collection.delete", "test-corpus", NULL, response, sizeof(response)), "delete: got a response");
   check(has(response, "\"ok\":true"), "delete collection succeeds");
   check(exchange_into("GET", "/api/corpus/test-corpus", NULL, response, sizeof(response)),
         "get deleted: got a response");
   check(test_http_status(response) == 404, "a deleted collection is 404");
-  check(exchange_into("DELETE", "/api/corpus/test-corpus", NULL, response, sizeof(response)),
+  check(command_into("collection.delete", "test-corpus", NULL, response, sizeof(response)),
         "delete again: got a response");
   check(test_http_status(response) == 404, "deleting a deleted collection is 404");
   check(exchange_into("GET", "/api/corpus", NULL, response, sizeof(response)), "list after delete: got a response");

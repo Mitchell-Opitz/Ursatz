@@ -81,7 +81,7 @@ int main(void) {
   close(ninth);
 
   int status = 0;
-  cJSON *made = test_http_json(PORT, "POST", "/api/subjects", "{\"name\":\"Anna\",\"kind\":\"idea\"}", &status);
+  cJSON *made = test_gui_send(PORT, "subject.create", "", "{\"name\":\"Anna\",\"kind\":\"idea\"}", &status);
   cJSON_Delete(made);
   check(status == 200 && read_until(streams[0], buffers[0], sizeof(buffers[0]), "event: subject-changed\ndata: {\"subject_id\":", 3000),
         "making a subject is an event on the stream");

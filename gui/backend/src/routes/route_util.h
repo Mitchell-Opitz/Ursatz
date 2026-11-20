@@ -67,17 +67,6 @@ typedef int (*UrsatzGuiFailureFn)(struct mg_connection *conn, UrsatzStatus statu
 int ursatz_gui_answer_query(struct mg_connection *conn, const char *name, cJSON *params, const WorkshopBytes *bytes,
                             UrsatzGuiFailureFn failed, bool bare);
 
-/* Runs the command name on target ("" for none) as the GUI's one person (actor "michelle") with params (consumed; NULL for none) and the file a
- * few commands take, and answers it as ursatz_gui_answer_query does (the journal_seq of the reply is not sent). With success_json, the
- * reply is sent bare. */
-int ursatz_gui_answer_command(struct mg_connection *conn, const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes,
-                              UrsatzGuiFailureFn failed, bool bare);
-
-/* Runs the command name as ursatz_gui_answer_command does, without answering: the reply (its journal_seq removed) and the failure are the
- * caller's. */
-UrsatzStatus ursatz_gui_run_command(const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
-                                    UrsatzError *error);
-
 /* The failure envelope (R-647): {"ok": false, "error": <message>, "code": <status name>, "path": <pointer, when set>}. code is the name of the status
  * a failure with that HTTP status stands for when NULL; path may be NULL. Returns status. */
 int ursatz_gui_send_failure_at(struct mg_connection *conn, int status, const char *message, const char *code, const char *path);

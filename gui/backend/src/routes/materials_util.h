@@ -95,23 +95,4 @@ static inline int query_with_body(struct mg_connection *conn, const char *name, 
   return ursatz_gui_answer_query(conn, name, body, NULL, failed, bare);
 }
 
-/* Runs the command name on target with the request's JSON body as params. The body's failures are answered here (400, or 413 past
- * URSATZ_GUI_JSON_BODY_MAX_BYTES). */
-static inline int command_with_body(struct mg_connection *conn, const char *name, const char *target, UrsatzGuiFailureFn failed) {
-  int status = 0;
-  cJSON *body = ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, &status);
-  if (!body) {
-    return status;
-  }
-  return ursatz_gui_answer_command(conn, name, target, body, NULL, failed, false);
-}
-
-/* command_with_body for a command whose body is optional: no body is an empty one (the page sends the version it read in it). */
-static inline int command_with_optional_body(struct mg_connection *conn, const char *name, const char *target, UrsatzGuiFailureFn failed) {
-  if (mg_get_request_info(conn)->content_length <= 0) {
-    return ursatz_gui_answer_command(conn, name, target, cJSON_CreateObject(), NULL, failed, false);
-  }
-  return command_with_body(conn, name, target, failed);
-}
-
 #endif /* URSATZ_GUI_ROUTE_MATERIALS_UTIL_H */

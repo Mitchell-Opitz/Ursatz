@@ -50,12 +50,14 @@ static const char *kMotifBody =
     "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[{\"label\":\"a\",\"first\":0,\"last\":2}],"
     "\"analysis\":null,\"derived\":null}}";
 
+#define cmd(name, target, params, status) test_gui_send(PORT, (name), (target), (params), (status))
+
 /* Creates a subject and returns its id (caller frees), or NULL. */
 static char *create_subject(const char *name, const char *kind) {
   char request[512];
   int status = 0;
   snprintf(request, sizeof(request), "{\"name\":\"%s\",\"kind\":\"%s\",\"note\":\"n\"}", name, kind);
-  cJSON *answer = test_http_json(PORT, "POST", "/api/subjects", request, &status);
+  cJSON *answer = cmd("subject.create", "", request, &status);
   char *id = status == 200 ? strdup(string_of(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "id")) : NULL;
   cJSON_Delete(answer);
   return id;
@@ -73,10 +75,10 @@ static bool array_has(const cJSON *array, const char *text) {
 
 static void test_subject_crud(char **out_id) {
   int status = 0;
-  cJSON *answer = test_http_json(PORT, "POST", "/api/subjects", "{\"name\":\"Anna\",\"kind\":\"robot\"}", &status);
+  cJSON *answer = cmd("subject.create", "", "{\"name\":\"Anna\",\"kind\":\"robot\"}", &status);
   check(status == 400 && !ok_true(answer), "a subject with an unknown kind is 400");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "POST", "/api/subjects", "{\"kind\":\"idea\"}", &status);
+  answer = cmd("subject.create", "", "{\"kind\":\"idea\"}", &status);
   check(status == 400, "a subject without a name is 400");
   cJSON_Delete(answer);
 
@@ -92,11 +94,11 @@ static void test_subject_crud(char **out_id) {
   check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "name"), "Anna") == 0,
         "a subject is read by id");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "PATCH", path, "{\"name\":\"Anna K\",\"kind\":\"idea\"}", &status);
+  answer = cmd("subject.update", anna, "{\"name\":\"Anna K\",\"kind\":\"idea\"}", &status);
   check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "kind"), "idea") == 0,
         "a subject is renamed and re-kinded");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "PATCH", path, "{}", &status);
+  answer = cmd("subject.update", anna, "{}", &status);
   check(status == 400, "a patch with nothing to change is 400");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "GET", "/api/subjects/sub-0000000000000000", NULL, &status);
@@ -106,22 +108,22 @@ static void test_subject_crud(char **out_id) {
   check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "subjects")) == 1,
         "the list holds the subject");
   cJSON_Delete(answer);
-  cJSON_Delete(test_http_json(PORT, "PATCH", path, "{\"kind\":\"character\"}", &status));
+  cJSON_Delete(cmd("subject.update", anna, "{\"kind\":\"character\"}", &status));
   *out_id = anna;
 }
 
 static void test_relations(const char *anna) {
   int status = 0;
   char *tower = create_subject("The tower", "place");
-  char path[400];
-  snprintf(path, sizeof(path), "/api/subjects/%s/related/%s", anna, tower);
+  char related[128];
+  snprintf(related, sizeof(related), "{\"other_id\":\"%s\"}", tower);
 
-  cJSON *answer = test_http_json(PORT, "POST", path, NULL, &status);
+  cJSON *answer = cmd("subject.relate", anna, related, &status);
   check(status == 200 && !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "already")) &&
             array_has(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "related"), tower),
         "two subjects are related");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "POST", path, NULL, &status);
+  answer = cmd("subject.relate", anna, related, &status);
   check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "already")), "relating twice reports already");
   cJSON_Delete(answer);
 
@@ -132,16 +134,16 @@ static void test_relations(const char *anna) {
         "the relation is stored on both sides");
   cJSON_Delete(answer);
 
-  char self_path[400];
-  snprintf(self_path, sizeof(self_path), "/api/subjects/%s/related/%s", anna, anna);
-  answer = test_http_json(PORT, "POST", self_path, NULL, &status);
+  char self_params[128];
+  snprintf(self_params, sizeof(self_params), "{\"other_id\":\"%s\"}", anna);
+  answer = cmd("subject.relate", anna, self_params, &status);
   check(status == 400, "relating a subject to itself is 400");
   cJSON_Delete(answer);
 
-  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
+  answer = cmd("subject.unrelate", anna, related, &status);
   check(status == 200 && ok_true(answer), "a relation is removed");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
+  answer = cmd("subject.unrelate", anna, related, &status);
   check(status == 404, "removing it again is 404");
   cJSON_Delete(answer);
 
@@ -156,8 +158,7 @@ static void test_relations(const char *anna) {
         "a place subject is in the place group");
   cJSON_Delete(answer);
 
-  snprintf(path, sizeof(path), "/api/subjects/%s", tower);
-  cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
+  cJSON_Delete(cmd("subject.delete", tower, NULL, &status));
   check(status == 200, "a subject is deleted");
   free(tower);
 }
@@ -173,24 +174,23 @@ static void test_links(const char *anna, const char *piece) {
   char request[1024];
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"name\":\"Opening\",\"project_id\":\"%s\",\"body\":%s}", project,
            kMotifBody);
-  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
+  answer = cmd("item.create", "", request, &status);
   char item[64];
   snprintf(item, sizeof(item), "%s", string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "id"));
   cJSON_Delete(answer);
 
   char path[400];
-  snprintf(path, sizeof(path), "/api/subjects/%s/items/%s", anna, item);
-  answer = test_http_json(PORT, "POST", path, NULL, &status);
+  char link[128];
+  snprintf(link, sizeof(link), "{\"item_id\":\"%s\"}", item);
+  answer = cmd("subject.link-item", anna, link, &status);
   check(status == 200 && !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "already")) &&
             array_has(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "items"), item),
         "an item is linked to a subject");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "POST", path, NULL, &status);
+  answer = cmd("subject.link-item", anna, link, &status);
   check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "already")), "linking an item twice reports already");
   cJSON_Delete(answer);
-  char missing[400];
-  snprintf(missing, sizeof(missing), "/api/subjects/%s/items/mot-0000000000000000", anna);
-  answer = test_http_json(PORT, "POST", missing, NULL, &status);
+  answer = cmd("subject.link-item", anna, "{\"item_id\":\"mot-0000000000000000\"}", &status);
   check(status == 404, "linking an unknown item is 404");
   cJSON_Delete(answer);
 
@@ -203,19 +203,18 @@ static void test_links(const char *anna, const char *piece) {
            "\"derived\":{\"source_item\":\"%s\",\"source_version\":1,\"operations\":[],\"seed\":1,\"kind\":\"variant\","
            "\"kept\":[],\"changed\":[],\"harmony\":null,\"functions\":[],\"flag\":\"unflagged\"}}}}",
            project, item);
-  answer = test_http_json(PORT, "POST", "/api/materials/items", variant_request, &status);
+  answer = cmd("item.create", "", variant_request, &status);
   char variant[64];
   snprintf(variant, sizeof(variant), "%s", string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "id"));
   cJSON_Delete(answer);
   check(status == 200 && variant[0] != '\0', "a variant is created");
-  char variant_path[400];
-  snprintf(variant_path, sizeof(variant_path), "/api/subjects/%s/items/%s", anna, variant);
-  answer = test_http_json(PORT, "POST", variant_path, NULL, &status);
+  char variant_link[128];
+  snprintf(variant_link, sizeof(variant_link), "{\"item_id\":\"%s\"}", variant);
+  answer = cmd("subject.link-item", anna, variant_link, &status);
   check(status == 400 && strcmp(string_of(answer, "error"), "variants have no subjects; save it as a new motif first") == 0,
         "linking a variant to a subject is refused with 400");
   cJSON_Delete(answer);
-  snprintf(path, sizeof(path), "/api/materials/items/%s", variant);
-  cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
+  cJSON_Delete(cmd("item.delete", variant, NULL, &status));
   check(status == 200, "the variant is deleted again");
 
   snprintf(path, sizeof(path), "/api/materials/items/%s", item);
@@ -226,14 +225,13 @@ static void test_links(const char *anna, const char *piece) {
         "the item answer lists the subject that links it");
   cJSON_Delete(answer);
 
-  char piece_link[400];
-  snprintf(piece_link, sizeof(piece_link), "/api/subjects/%s/pieces/%s", anna, piece);
-  answer = test_http_json(PORT, "POST", piece_link, NULL, &status);
+  char piece_link[128];
+  snprintf(piece_link, sizeof(piece_link), "{\"piece_id\":\"%s\"}", piece);
+  answer = cmd("subject.link-piece", anna, piece_link, &status);
   check(status == 200 && array_has(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "pieces"), piece),
         "a Library piece is linked to a subject");
   cJSON_Delete(answer);
-  snprintf(missing, sizeof(missing), "/api/subjects/%s/pieces/nope", anna);
-  answer = test_http_json(PORT, "POST", missing, NULL, &status);
+  answer = cmd("subject.link-piece", anna, "{\"piece_id\":\"nope\"}", &status);
   check(status == 404 || status == 400, "linking an unknown piece is refused");
   cJSON_Delete(answer);
 
@@ -245,11 +243,11 @@ static void test_links(const char *anna, const char *piece) {
         "the piece detail lists the subject that links it");
   cJSON_Delete(answer);
 
-  answer = test_http_json(PORT, "DELETE", piece_link, NULL, &status);
+  answer = cmd("subject.unlink-piece", anna, piece_link, &status);
   check(status == 200 && !array_has(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "subject"), "pieces"), piece),
         "a piece link is removed");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "DELETE", piece_link, NULL, &status);
+  answer = cmd("subject.unlink-piece", anna, piece_link, &status);
   check(status == 404, "removing a link that is not there is 404");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "GET", piece_path, NULL, &status);
@@ -257,7 +255,7 @@ static void test_links(const char *anna, const char *piece) {
   cJSON_Delete(answer);
 
   /* Deleting an item takes it out of the subject's links. */
-  cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
+  cJSON_Delete(cmd("item.delete", item, NULL, &status));
   char subject_path[300];
   snprintf(subject_path, sizeof(subject_path), "/api/subjects/%s", anna);
   answer = test_http_json(PORT, "GET", subject_path, NULL, &status);
