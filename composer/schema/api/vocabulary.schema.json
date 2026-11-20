@@ -774,7 +774,9 @@
         "ratio_denominator_max",
         "fidelity_denominator_max",
         "attempts_max",
-        "keep_max"
+        "keep_max",
+        "pool_min",
+        "pool_max"
       ],
       "additionalProperties": false,
       "properties": {
@@ -871,6 +873,14 @@
           "minimum": 1
         },
         "rhythm_repeat_bars_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pool_min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pool_max": {
           "type": "integer",
           "minimum": 1
         }

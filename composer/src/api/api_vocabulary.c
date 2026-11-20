@@ -570,7 +570,9 @@ static bool add_preference_limits(cJSON *limits) {
            cJSON_AddNumberToObject(item, "fidelity_denominator_max", COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX) &&
            cJSON_AddNumberToObject(item, "attempts_max", COMPOSER_PREFERENCES_ATTEMPTS_MAX) &&
            cJSON_AddNumberToObject(item, "keep_max", MELODY_KEEP_MAX) &&
-           cJSON_AddNumberToObject(item, "rhythm_repeat_bars_max", COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX);
+           cJSON_AddNumberToObject(item, "rhythm_repeat_bars_max", COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX) &&
+           cJSON_AddNumberToObject(item, "pool_min", COMPOSER_PREFERENCES_POOL_MIN) &&
+           cJSON_AddNumberToObject(item, "pool_max", COMPOSER_PREFERENCES_POOL_MAX);
 }
 
 /* The default preferences, the document a listening session edits. */

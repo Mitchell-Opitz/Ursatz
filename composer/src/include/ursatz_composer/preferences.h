@@ -15,13 +15,23 @@
  * optional and its default is the value the Composer used before the document existed, so with no preferences every
  * output is byte-identical to what it was (R-413). docs/preferences.md lists every key, its default and its limit.
  *
- * ComposerPreferences holds the melody group, the settings of the melody stage (MelodyFillParams): the range, the
+ * ComposerPreferences holds the candidates group (CandidatePreferences, R-673) and the melody group, the settings of the melody stage (MelodyFillParams): the range, the
  * non-chord tones, the density, where the climax falls and how it is rated, the search (attempts and keep), and the
  * weight each group of soft rules counts in a melody's score. The motif group is the settings of the segments motive
  * generator (MotiveRandomPreferences): the bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and
  * durations it draws from. The development group is the fidelity minimum table of the theme's development
  * (GrowFidelityTable), the continuation settings (GrowContinuation), basic_as_written and the contrast settings (GrowContrast).
  */
+/*
+ * The candidates group (R-673): how a set of random motives is chosen. variety 0 to 20 (default 0) is how much a motive
+ * is chosen for being unlike the ones before it (0 leaves the draw as it was); pool 2 to 8 (default 4) is how many
+ * candidates are drawn for each motive that is chosen among. Off by default.
+ */
+typedef struct {
+    unsigned variety;
+    unsigned pool;
+} CandidatePreferences;
+
 typedef struct {
     MelodyFillParams melody;
     MotiveRandomPreferences motif;
@@ -29,6 +39,7 @@ typedef struct {
     GrowContinuation continuation; /* the development group's continuation settings (phase L3, off by default) */
     bool basic_as_written;         /* the development group's basic_as_written (phase L3, off by default) */
     GrowContrast contrast;         /* the development group's contrast settings (phase L4, R-475: similar 1, the rest 0) */
+    CandidatePreferences candidates; /* the candidates group (R-673, variety 0 and pool 4 by default) */
 } ComposerPreferences;
 
 /*
@@ -65,6 +76,8 @@ typedef struct {
 #define COMPOSER_PREFERENCES_LEAP_MAX 12
 #define COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX 1000
 #define COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX 16
+#define COMPOSER_PREFERENCES_POOL_MIN 2
+#define COMPOSER_PREFERENCES_POOL_MAX 8
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
 #define COMPOSER_PREFERENCES_MESSAGE_MAX 256

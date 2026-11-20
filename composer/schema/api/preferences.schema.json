@@ -874,6 +874,25 @@
           }
         }
       }
+    },
+    "candidates": {
+      "type": "object",
+      "description": "How a set of random motives is chosen (R-673). Off by default.",
+      "additionalProperties": false,
+      "properties": {
+        "variety": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "How much a motive is chosen for being unlike the ones before it. 0 leaves the draw as it was."
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "description": "How many candidates are drawn for each motive that is chosen among. Default 4."
+        }
+      }
     }
   }
 }

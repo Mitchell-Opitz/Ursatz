@@ -30,6 +30,8 @@
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
 #define FIDELITY_DENOMINATOR_MAX COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX
 #define RHYTHM_REPEAT_BARS_MAX COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX
+#define POOL_MIN COMPOSER_PREFERENCES_POOL_MIN
+#define POOL_MAX COMPOSER_PREFERENCES_POOL_MAX
 
 /* The non-chord tones nct_types may name, in the order the document writes them. */
 static const struct {
@@ -65,6 +67,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     grow_fidelity_table_default(&out->development);
     out->continuation.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
     out->contrast.distance[GROW_CONTRAST_SIMILAR] = 1;
+    out->candidates.pool = 4;
 }
 
 /* Where a refusal goes: the path and the message of the caller, which may both be absent. */
@@ -973,6 +976,29 @@ static bool read_development(const cJSON *group, ComposerPreferences *preference
     return true;
 }
 
+/* ---------------------------------------------------------- the candidates group (R-673) */
+
+static bool read_candidates(const cJSON *group, CandidatePreferences *candidates, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(group)) {
+        return refuse(refusal, "candidates", "must be an object");
+    }
+    cJSON_ArrayForEach(item, group) {
+        if (strcmp(item->string, "variety") == 0) {
+            if (!read_unsigned_in(item, "candidates", "variety", 0, WEIGHT_MAX, &candidates->variety, refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "pool") == 0) {
+            if (!read_unsigned_in(item, "candidates", "pool", POOL_MIN, POOL_MAX, &candidates->pool, refusal)) {
+                return false;
+            }
+        } else {
+            return refuse_in(refusal, "candidates", item->string, "unknown member");
+        }
+    }
+    return true;
+}
+
 bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
                                size_t message_size) {
     Refusal refusal = {path, path_size, message, message_size};
@@ -998,6 +1024,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             }
         } else if (strcmp(item->string, "development") == 0) {
             if (!read_development(item, out, &refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "candidates") == 0) {
+            if (!read_candidates(item, &out->candidates, &refusal)) {
                 return false;
             }
         } else {
@@ -1233,6 +1263,12 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *candidates = cJSON_AddObjectToObject(document, "candidates");
+    if (!candidates || !add_number(candidates, "variety", preferences->candidates.variety) ||
+        !add_number(candidates, "pool", preferences->candidates.pool)) {
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -1371,7 +1407,9 @@ static const ComposerPreferenceKey KEYS[] = {
     {"development.basic_as_written", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
     {"development.contrast.distance.similar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"development.contrast.distance.distant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
-    {"development.contrast.new_material", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL}};
+    {"development.contrast.new_material", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"candidates.variety", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"candidates.pool", COMPOSER_KEY_INTEGER, POOL_MIN, POOL_MAX, false, NULL}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {

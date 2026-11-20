@@ -47,6 +47,8 @@ static const char *DEFAULT_DEVELOPMENT =
     "\"diminish\":false,\"liquidate\":false,\"faster_harmony\":false},\"basic_as_written\":false,"
     "\"contrast\":{\"distance\":{\"similar\":1,\"distant\":0},\"new_material\":0}}";
 
+static const char *DEFAULT_CANDIDATES = "{\"variety\":0,\"pool\":4}";
+
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
     assert(object);
@@ -136,11 +138,14 @@ static void defaults_round_trip(void) {
     text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "development"));
     assert(text && strcmp(text, DEFAULT_DEVELOPMENT) == 0);
     cJSON_free(text);
-    /* The whole document is the three groups, in this order. */
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "candidates"));
+    assert(text && strcmp(text, DEFAULT_CANDIDATES) == 0);
+    cJSON_free(text);
+    /* The whole document is the four groups, in this order. */
     text = cJSON_PrintUnformatted(document);
     char whole[8192];
-    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s}", DEFAULT_MELODY, DEFAULT_MOTIF,
-             DEFAULT_DEVELOPMENT);
+    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s}", DEFAULT_MELODY,
+             DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES);
     assert(text && strcmp(text, whole) == 0);
     cJSON_free(text);
 
@@ -501,7 +506,7 @@ static void key_and_rule_tables(void) {
     cJSON_Delete(document);
     size_t key_count = 0;
     const ComposerPreferenceKey *keys = composer_preferences_keys(&key_count);
-    assert(keys && leaf_count == 121 && key_count == leaf_count + 1);
+    assert(keys && leaf_count == 123 && key_count == leaf_count + 1);
     size_t at = 0;
     for (size_t i = 0; i < key_count; i++) {
         if (strcmp(keys[i].key, "motif.plan") == 0) {
@@ -592,6 +597,29 @@ static void waive_and_reverse(void) {
     assert(strstr(message, "is not a soft rule group: melodic, against_bass") && strstr(message, "leaps, register"));
 }
 
+/* The candidates group (R-673): read, written back as read, each member a change, and refused at its path. */
+static void candidates_group(void) {
+    ComposerPreferences read;
+    ComposerPreferences again;
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    assert(read_text("{\"candidates\":{\"variety\":12,\"pool\":7}}", &read, path, message));
+    assert(read.candidates.variety == 12 && read.candidates.pool == 7 && !test_preferences_are_default(&read));
+    cJSON *document = composer_preferences_write(&read);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(again.candidates.variety == 12 && again.candidates.pool == 7);
+    cJSON_Delete(document);
+    assert(read_text("{\"candidates\":{\"variety\":1}}", &read, path, message) && read.candidates.pool == 4 &&
+           !test_preferences_are_default(&read));
+    assert(read_text("{\"candidates\":{\"pool\":2}}", &read, path, message) && !test_preferences_are_default(&read));
+    assert(read_text("{\"candidates\":{\"variety\":0,\"pool\":4}}", &read, path, message) && test_preferences_are_default(&read));
+    refused("{\"candidates\":{\"variety\":21}}", "/candidates/variety");
+    refused("{\"candidates\":{\"pool\":1}}", "/candidates/pool");
+    refused("{\"candidates\":{\"pool\":9}}", "/candidates/pool");
+    refused("{\"candidates\":{\"extra\":1}}", "/candidates/extra");
+    refused("{\"candidates\":3}", "/candidates");
+}
+
 int main(void) {
     defaults_round_trip();
     l4_members_round_trip();
@@ -599,6 +627,7 @@ int main(void) {
     limits_are_refused();
     key_and_rule_tables();
     waive_and_reverse();
+    candidates_group();
     printf("test_preferences: ok\n");
     return 0;
 }
