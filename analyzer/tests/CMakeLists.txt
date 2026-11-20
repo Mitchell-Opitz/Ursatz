@@ -19,6 +19,8 @@ ursatz_test(test_analysis_document LIBS ursatz_analyzer_engine analyzer_test_sup
 ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz>
                  -DFIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 "-DBACH_114=${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Bach 114.mid"
+                 -DEXPORT_GOLDEN=${CMAKE_CURRENT_SOURCE_DIR}/snapshots/bach-114.export.txt
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
 
