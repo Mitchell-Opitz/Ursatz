@@ -288,7 +288,7 @@ cJSON *cli_corpus_passages(const char *corpus_dir, const char *like_path, const 
         return NULL;
     }
     if (searched == URSATZ_ERR_NOT_FOUND) {
-        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the corpus '%s' (the output directory of ursatz-analyzer --corpus)",
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the corpus '%s' (the output directory of ursatz corpus)",
                            corpus_dir);
         return NULL;
     }

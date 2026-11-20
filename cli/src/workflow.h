@@ -131,7 +131,7 @@ void cli_print_corpus_notices(cJSON *document, const char *corpus_dir);
 const char *cli_corpus_notice_text(const char *notice, const char *corpus_dir, char *out, size_t size);
 
 /*
- * The passages of the corpus (the output directory of `ursatz-analyzer --corpus`) that look like the passage file like_path
+ * The passages of the corpus (the output directory of `ursatz corpus`) that look like the passage file like_path
  * (numerals NULL: ten of them) or like the progression numerals (like_path NULL: a hundred), as the Composer API's
  * "corpus_passages" member, found by the Analyzer. NULL after printing the error, with *status the exit status: the passage
  * or the numerals cannot be read (CLI_EXIT_USAGE), the corpus cannot be read, or no passage of it is similar enough

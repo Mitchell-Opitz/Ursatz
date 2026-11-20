@@ -5,6 +5,7 @@
 
 #include "render.h"
 #include "analyze.h"
+#include "corpus.h"
 #include "counterpoint.h"
 #include "develop.h"
 #include "fill.h"
@@ -25,6 +26,8 @@
 
 
 static const char *const FLAGS_ANALYZE[] = {"--input-format", "--layers", "--measures", "--meter", "--model-plan", "--pickup", "--title", "--value-scale", "--view", NULL};
+static const char *const FLAGS_CORPUS[] = {"--out", "--resume", NULL};
+static const char *const FLAGS_STYLE_PROFILE[] = {"--name", "--out", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
@@ -543,6 +546,31 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz analyze song.mid\n"
     "  ursatz analyze song.mid --view text --measures 1-4",
      FLAGS_ANALYZE, 1, 1, run_analyze},
+    {"corpus",
+    "corpus <dir> [--out <dir>] [--resume]",
+     "Analyze every piece of a folder into a corpus of analysis documents",
+    "Analyzes every MIDI and MusicXML file of <dir> (found recursively, in path order) with the Ursatz Analyzer and writes one analysis document for each, and the corpus index, into the output folder: <dir>/.ursatz-corpus unless --out names another. A piece that cannot be read or analyzed is counted as failed; that does not fail the run. Each piece is printed as analyzed, skipped or failed with its path (and, for a failed one, why), the importer's messages and warnings on stderr, then the three counts.\n"
+    "\n"
+    "With --resume a piece whose file did not change since the last run is skipped.\n"
+    "\n"
+    "Exit status: 0 the run finished (also with failed pieces); 1 usage or an unknown option; 2 the run could not be made (a folder that does not read, an output that cannot be written).\n"
+    "\n"
+    "Example:\n"
+    "  ursatz corpus sonatinas --out sonatinas-analyzed\n"
+    "  ursatz corpus sonatinas --out sonatinas-analyzed --resume",
+     FLAGS_CORPUS, 1, 1, run_corpus},
+    {"style-profile",
+    "style-profile <corpus output> --name <name> [--out <file>]",
+     "Count the styles of a corpus into a style model file",
+    "Reads the output folder of a corpus run (its corpus-index.json and the documents) and writes a style model: the harmony, rhythm, melody and form the corpus uses, counted. The model is written to --out, by default <corpus output>/style-model.json, under the name given. The style commands (grow, plan, fill, listen, random-motive) read it with --style.\n"
+    "\n"
+    "A document another version of the Analyzer wrote is used as it is, and a warning says how many there are.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage (the name is required); 2 the corpus cannot be read or the model cannot be written.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz style-profile sonatinas-analyzed --name Sonatinas --out sonatinas.style.json",
+     FLAGS_STYLE_PROFILE, 1, 1, run_style_profile},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);

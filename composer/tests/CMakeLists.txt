@@ -413,7 +413,7 @@ foreach(case smoke style_folder)
         set(labels slow)
     endif()
     ursatz_test(test_listen_cli_${case}
-        COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DANALYZER=$<TARGET_FILE:ursatz-analyzer>
+        COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DANALYZER=$<TARGET_FILE:ursatz>
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/listen_cli_${case} -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
                 -DSTYLE_FOLDER=${folder} -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listen.cmake
         LABELS ${labels} TIMEOUT 300)

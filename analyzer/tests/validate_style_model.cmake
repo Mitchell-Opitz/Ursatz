@@ -3,12 +3,12 @@
 # python3 with jsonschema was found at configure time (-DPYTHON is that python3).
 
 file(REMOVE_RECURSE "${WORK_DIR}")
-execute_process(COMMAND "${CLI}" --corpus "${CORPORA_DIR}/reference" --out "${WORK_DIR}"
+execute_process(COMMAND "${CLI}" corpus "${CORPORA_DIR}/reference" --out "${WORK_DIR}"
                 RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if(NOT result EQUAL 0)
     message(FATAL_ERROR "corpus run exited ${result}")
 endif()
-execute_process(COMMAND "${CLI}" --style-profile "${WORK_DIR}" --name reference
+execute_process(COMMAND "${CLI}" style-profile "${WORK_DIR}" --name reference
                 RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if(NOT result EQUAL 0)
     message(FATAL_ERROR "style profile exited ${result}")

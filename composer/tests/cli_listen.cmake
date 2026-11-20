@@ -1,5 +1,5 @@
 # The listen command, run as a process (docs/cli-listen.md).
-# Run with: cmake -DCOMPOSER=<ursatz> -DANALYZER=<ursatz-analyzer> -DWORK=<empty working directory>
+# Run with: cmake -DCOMPOSER=<ursatz> -DANALYZER=<ursatz> -DWORK=<empty working directory>
 #           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] -P cli_listen.cmake
 
 file(REMOVE_RECURSE "${WORK}")
@@ -267,13 +267,13 @@ expect_samples(motifs-style-file 1)
 
 # A style folder made into a model by the Analyzer, end to end (slow: the corpus is analyzed; STYLE_FOLDER is ON).
 if(STYLE_FOLDER)
-    run("${ANALYZER}" --corpus "${FIXTURES}/corpus-sonatinas" --out analyzed)
+    run("${ANALYZER}" corpus "${FIXTURES}/corpus-sonatinas" --out analyzed)
     if(NOT STATUS EQUAL 0)
-        message(FATAL_ERROR "ursatz-analyzer --corpus: exit ${STATUS}\n${OUT}\n${ERR}")
+        message(FATAL_ERROR "ursatz corpus: exit ${STATUS}\n${OUT}\n${ERR}")
     endif()
-    run("${ANALYZER}" --style-profile analyzed --name sonatinas --out sonatinas.style.json)
+    run("${ANALYZER}" style-profile analyzed --name sonatinas --out sonatinas.style.json)
     if(NOT STATUS EQUAL 0)
-        message(FATAL_ERROR "ursatz-analyzer --style-profile: exit ${STATUS}\n${OUT}\n${ERR}")
+        message(FATAL_ERROR "ursatz style-profile: exit ${STATUS}\n${OUT}\n${ERR}")
     endif()
     expect_status(0 listen --what themes --count 1 --seed 1 --style sonatinas.style.json --out-dir themes-style)
     expect_samples(themes-style 1)

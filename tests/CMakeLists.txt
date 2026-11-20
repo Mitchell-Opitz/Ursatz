@@ -43,7 +43,7 @@ endif()
 # Seeding from a corpus (composer/docs/style.md; R-619). The Analyzer finds the passages of a corpus like a passage or like numerals and the
 # Composer seeds from them given inline, so this test needs both apps. "sonatinas" is Clementi 36 from the root reference corpus and the
 # Composer's own Mozart 545 (composer/tests/fixtures/corpus-sonatinas), copied into the build tree at configure time and analyzed by
-# the Analyzer CLI at build time; "empty" holds one file the Analyzer cannot import, so nothing in its output is analyzed.
+# ursatz corpus at build time; "empty" holds one file the Analyzer cannot import, so nothing in its output is analyzed.
 set(SEED_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
 set(SEED_REFERENCE ${PROJECT_SOURCE_DIR}/composer/tests/fixtures/corpus-sonatinas)
 file(COPY "${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Clementi 36.mid" "${SEED_REFERENCE}/Mozart 545.mid"
@@ -51,9 +51,9 @@ file(COPY "${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Clementi 36.mid" "${SEED_R
 file(WRITE ${SEED_CORPORA_DIR}/empty/broken.mid "not a midi file")
 add_custom_command(
     OUTPUT ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json ${SEED_CORPORA_DIR}/empty-analyzed/corpus-index.json
-    COMMAND ursatz-analyzer --corpus ${SEED_CORPORA_DIR}/sonatinas --out ${SEED_CORPORA_DIR}/sonatinas-analyzed
-    COMMAND ursatz-analyzer --corpus ${SEED_CORPORA_DIR}/empty --out ${SEED_CORPORA_DIR}/empty-analyzed
-    DEPENDS ursatz-analyzer
+    COMMAND ursatz corpus ${SEED_CORPORA_DIR}/sonatinas --out ${SEED_CORPORA_DIR}/sonatinas-analyzed
+    COMMAND ursatz corpus ${SEED_CORPORA_DIR}/empty --out ${SEED_CORPORA_DIR}/empty-analyzed
+    DEPENDS ursatz
     COMMENT "Analyzing the test corpora for corpus seeding"
     VERBATIM)
 add_custom_target(seed_corpora DEPENDS ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json)

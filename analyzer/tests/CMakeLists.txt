@@ -278,7 +278,7 @@ ursatz_test(test_analyzer_corpus SOURCES test_corpus.c LIBS ursatz_analyzer_engi
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK corpus_work)
 
 ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DFIXTURE=${URSATZ_REFERENCE_FIXTURES}/Field\ 1.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_corpus
@@ -287,7 +287,7 @@ ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
 # Over 10 s in the fast set (about 41 s of CPU measured): runs nightly.
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_corpus_index_schema COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
@@ -311,7 +311,7 @@ ursatz_test(test_style_profile LIBS ursatz_analyzer_engine analyzer_test_support
 
 # The smoke profiles the corpus "small" (Bach 114 and Clementi 36).
 ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
@@ -321,7 +321,7 @@ ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake)
 # Over 10 s in the fast set (about 85 s of CPU measured): runs nightly.
 ursatz_test(test_cli_style_profile COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_style_profile
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake
@@ -330,7 +330,7 @@ ursatz_test(test_cli_style_profile COMMAND ${CMAKE_COMMAND}
 # Over 10 s in the fast set (about 43 s of CPU measured): runs nightly.
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_style_model_schema COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
