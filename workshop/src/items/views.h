@@ -33,13 +33,13 @@ UrsatzStatus workshop_view_input(const char *path, const char *text, const char 
 UrsatzStatus workshop_view_item(const char *id, int version, const char *view, const TextViewLimits *limits, char **text, UrsatzError *error);
 
 /*
- * The views of a library piece: summary, structure, harmony and part:<name> read the piece's readings/analyzer.json and realization.json
- * (R-644), full gives their texts joined by a blank line, and reading is the Analyzer's text export framed as a view (`first` and `last`
- * its measure range, 0 and 0 for the whole piece; `title` its title, NULL for the file name). A piece analyzed before the layers were stored
- * refuses the others with URSATZ_ERR_NOT_FOUND at "/params/view": "re-analyze the piece to store its layers".
+ * The views of the layers a folder holds: plan.json (when with_plan), realization.json and `reading_file` (a path in the folder, such as
+ * "readings/composer.json"), the ones present. `view` is a view of text_view.h or "full" (each present layer's text, plan first, joined by a blank
+ * line). *none is true, with OK and no text, when the folder holds no layer. The callers make the answer: workshop_view_item here, the piece's
+ * in analysis/piece_view.h.
  */
-UrsatzStatus workshop_view_piece(const char *id, const char *view, const TextViewLimits *limits, const char *title, char **text,
-                                 UrsatzError *error);
+UrsatzStatus workshop_view_folder(const char *folder, bool with_plan, const char *reading_file, const char *address, const char *view,
+                                  const TextViewLimits *limits, char **text, bool *none, UrsatzError *error);
 
 /* The range params of a view call: `measures` ({first, last}, either may be absent) and `section`. */
 UrsatzStatus workshop_view_limits(const cJSON *params, TextViewLimits *out, UrsatzError *error);

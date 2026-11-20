@@ -4,6 +4,7 @@
 
 #include "base/events_hub.h"
 #include "coordinator/dispatch.h"
+#include "analysis/piece_view.h"
 #include "items/views.h"
 
 /* The Library queries (R-646): the pieces a person uploaded, as the GUI lists, opens, exports and plays them. */

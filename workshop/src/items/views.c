@@ -12,11 +12,8 @@
 #include <text/text_layers.h>
 #include <text/text_tree.h>
 
-#include "analysis/analysis.h"
 #include "base/knowledge.h"
 #include "items/layers.h"
-#include "items/layout.h"
-#include "items/library_pieces.h"
 #include "items/store.h"
 
 UrsatzStatus workshop_view_fail(UrsatzError *error, const TextError *text_error) {
@@ -313,6 +310,25 @@ static UrsatzStatus files_view(const Files *f, const char *address, const char *
     return status;
 }
 
+UrsatzStatus workshop_view_folder(const char *folder, bool with_plan, const char *reading_file, const char *address, const char *view,
+                                  const TextViewLimits *limits, char **text, bool *none, UrsatzError *error) {
+    *text = NULL;
+    Files files;
+    files_read(folder, with_plan, reading_file, &files);
+    *none = !files.plan && !files.realization && !files.reading;
+    UrsatzStatus status = URSATZ_OK;
+    if (*none) {
+        status = URSATZ_OK;
+    } else if (strcmp(view, "full") == 0) {
+        *text = files_full(&files, error);
+        status = *text ? URSATZ_OK : URSATZ_ERR_INTERNAL;
+    } else {
+        status = files_view(&files, address, view, limits, text, error);
+    }
+    files_free(&files);
+    return status;
+}
+
 UrsatzStatus workshop_view_item(const char *id, int version, const char *view, const TextViewLimits *limits, char **text, UrsatzError *error) {
     *text = NULL;
     cJSON *meta = NULL;
@@ -330,16 +346,13 @@ UrsatzStatus workshop_view_item(const char *id, int version, const char *view, c
     if (!in_range || !workshop_material_version_dir(id, version, dir, sizeof dir) || !common_path_is_dir(dir)) {
         return ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, "/params/version", "version not found");
     }
-    Files files;
-    files_read(dir, true, WORKSHOP_DIR_READINGS "/composer.json", &files);
-    bool any = files.plan || files.realization || files.reading;
     char address[160];
     snprintf(address, sizeof address, "item:%s@v%d", id, version);
-    if (strcmp(view, "full") == 0) {
-        if (any) {
-            *text = files_full(&files, error);
-            status = *text ? URSATZ_OK : URSATZ_ERR_INTERNAL;
-        } else {
+    bool none = false;
+    status = workshop_view_folder(dir, true, WORKSHOP_DIR_READINGS "/composer.json", address, view, limits, text, &none, error);
+    if (status == URSATZ_OK && none) {
+        if (strcmp(view, "full") == 0) {
+            /* no layer: the version's body, as a json document */
             cJSON *body = NULL;
             TextError failure = {0, ""};
             status = workshop_material_item_get_version(id, version, &body);
@@ -348,61 +361,9 @@ UrsatzStatus workshop_view_item(const char *id, int version, const char *view, c
             *text = json ? text_from_json(json, TEXT_KIND_JSON, &failure) : NULL;
             free(json);
             status = *text ? URSATZ_OK : ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, "/params/version", "version not found");
-        }
-    } else if (!any) {
-        status = ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, "/params/view", "this version holds no plan, realization or reading");
-    } else {
-        status = files_view(&files, address, view, limits, text, error);
-    }
-    files_free(&files);
-    return status;
-}
-
-UrsatzStatus workshop_view_piece(const char *id, const char *view, const TextViewLimits *limits, const char *title, char **text, UrsatzError *error) {
-    *text = NULL;
-    char dir[320];
-    if (!workshop_library_piece_dir(WORKSHOP_DIR_PIECES, id, dir, sizeof dir)) {
-        return ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, "/params/id", "piece not found");
-    }
-    char address[160];
-    snprintf(address, sizeof address, "piece:%s", id);
-    if (strcmp(view, "reading") == 0) {
-        char *export_text = NULL;
-        UrsatzStatus status = workshop_analysis_get_piece_export(WORKSHOP_DIR_PIECES, id, limits->first_measure, limits->last_measure, title, &export_text);
-        if (status != URSATZ_OK) {
-            switch (status) {
-                case URSATZ_ERR_NOT_FOUND:
-                    return ursatz_error_set(error, status, "/params/id", "piece not found");
-                case URSATZ_ERR_FORMAT:
-                    return ursatz_error_set(error, status, "", "could not import the stored source");
-                case URSATZ_ERR_REQUEST:
-                    return ursatz_error_set(error, status, "/params/measures", "no measure in that range");
-                default:
-                    return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "failed to export the analysis");
-            }
-        }
-        char expand[256];
-        if (limits->first_measure > 0 || limits->last_measure > 0) {
-            snprintf(expand, sizeof expand, "ursatz show %s --view reading --measures %d-%d", address, limits->first_measure > 0 ? limits->first_measure : 1,
-                     limits->last_measure);
         } else {
-            snprintf(expand, sizeof expand, "ursatz show %s --view reading --measures a-b", address);
+            status = ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, "/params/view", "this version holds no plan, realization or reading");
         }
-        *text = text_view_frame("reading", address, export_text, "nothing the analysis document holds; the notes are the import's", expand);
-        free(export_text);
-        return *text ? URSATZ_OK : ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
-    Files files;
-    files_read(dir, false, WORKSHOP_DIR_READINGS "/analyzer.json", &files);
-    UrsatzStatus status = URSATZ_OK;
-    if (!files.realization && !files.reading) {
-        status = ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, "/params/view", "re-analyze the piece to store its layers");
-    } else if (strcmp(view, "full") == 0) {
-        *text = files_full(&files, error);
-        status = *text ? URSATZ_OK : URSATZ_ERR_INTERNAL;
-    } else {
-        status = files_view(&files, address, view, limits, text, error);
-    }
-    files_free(&files);
     return status;
 }
