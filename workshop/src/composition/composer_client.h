@@ -67,10 +67,6 @@ WorkshopComposerBuild workshop_composer_build(void);
  * limits.seed_max; -1 when the Composer does not give it. */
 double workshop_composer_seed_max(const char *kind);
 
-/* The number the vocabulary's limits give under name ("piece_beats", "piece_sections"...); -1 when the Composer does not
- * give it. */
-double workshop_composer_limit(const char *name);
-
 /* The position of value in the vocabulary list called list ("theme_slots", "theme_ideas", "functions"...), from 0; -1 when
  * the list has no such value or the Composer gave no vocabulary. */
 int workshop_composer_vocabulary_index(const char *list, const char *value);
@@ -81,10 +77,6 @@ bool workshop_composer_vocabulary_has(const char *list, const char *value);
 /* The vocabulary list called name ("theme_slots", "theme_ideas"...) as the Composer gave it, owned by the client and kept for
  * the process; NULL when the list is missing or the Composer gave no vocabulary. */
 const cJSON *workshop_composer_vocabulary_list(const char *name);
-
-/* The position, from 0, of the entry of the vocabulary list called list whose required is true (the theme_slots entry every
- * theme needs); -1 when there is none. */
-int workshop_composer_vocabulary_required_index(const char *list);
 
 /* The spelling of the tonic of pitch_class (0 to 11) in a key of the material (its id, "omt.material.major") in the vocabulary's
  * pitch_class_names; false when it has none. */

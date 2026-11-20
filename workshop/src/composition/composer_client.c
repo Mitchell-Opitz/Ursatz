@@ -148,15 +148,6 @@ double workshop_composer_seed_max(const char *kind) {
   return cJSON_IsNumber(value) ? value->valuedouble : -1;
 }
 
-double workshop_composer_limit(const char *name) {
-  if (!name || !workshop_composer_vocabulary() || !g_vocabulary_tree) {
-    return -1;
-  }
-  const cJSON *limits = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "limits");
-  const cJSON *value = cJSON_GetObjectItemCaseSensitive(limits, name);
-  return cJSON_IsNumber(value) ? value->valuedouble : -1;
-}
-
 int workshop_composer_vocabulary_index(const char *list, const char *value) {
   if (!list || !value || !workshop_composer_vocabulary() || !g_vocabulary_tree) {
     return -1;
@@ -183,18 +174,6 @@ const cJSON *workshop_composer_vocabulary_list(const char *name) {
   }
   const cJSON *list = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, name);
   return cJSON_IsArray(list) ? list : NULL;
-}
-
-int workshop_composer_vocabulary_required_index(const char *list) {
-  int index = 0;
-  const cJSON *entry = NULL;
-  cJSON_ArrayForEach(entry, workshop_composer_vocabulary_list(list)) {
-    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(entry, "required"))) {
-      return index;
-    }
-    index++;
-  }
-  return -1;
 }
 
 bool workshop_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size) {
