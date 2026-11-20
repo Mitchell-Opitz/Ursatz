@@ -6,11 +6,23 @@
 
 /* The process's one workshop: a command line process has no caller to hold it. */
 static Workshop *g_workshop = NULL;
+static bool g_owned = false; /* the tools workshop is ours to close; a session's is not */
 static bool g_opened = false;
 
 static void release(void) {
-    workshop_close(g_workshop);
+    if (g_owned) {
+        workshop_close(g_workshop);
+    }
     g_workshop = NULL;
+}
+
+void cli_tools_use(Workshop *workshop) {
+    if (g_owned) {
+        workshop_close(g_workshop); /* the process holds one workshop at a time */
+        g_owned = false;
+    }
+    g_workshop = workshop;
+    g_opened = workshop != NULL;
 }
 
 Workshop *cli_tools(void) {
@@ -22,6 +34,7 @@ Workshop *cli_tools(void) {
             fprintf(stderr, "Error: cannot read the knowledge: %s\n", error.message);
             g_workshop = NULL;
         } else {
+            g_owned = true;
             atexit(release);
         }
     }

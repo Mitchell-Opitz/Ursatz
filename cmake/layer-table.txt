@@ -200,7 +200,7 @@ uses composer-candidates model theory realization plan reading analysis chain io
 uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core common
 uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
 # The command line calls the workshop and nothing else (R-656, R-657).
-uses cli           workshop-api common cjson
+uses cli           workshop-api common cjson civetweb
 uses workshop-api common cjson
 uses workshop-base common composer-api analyzer-api theory pitch cjson
 uses workshop-jobs workshop-base common composer-api cjson

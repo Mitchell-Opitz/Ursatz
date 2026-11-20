@@ -49,6 +49,9 @@ static void test_the_table(void) {
         }
     }
     for (size_t i = 0; i < CLI_FLAG_COUNT; i++) {
+        if (!named[i] && cli_flag_global(CLI_FLAGS[i].name)) {
+            continue; /* --data, --port and --actor stand before the command */
+        }
         if (!named[i]) {
             fprintf(stderr, "the flag %s is named by no command\n", CLI_FLAGS[i].name);
         }

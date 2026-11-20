@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <cJSON.h>
@@ -6,6 +7,7 @@
 #include "cli_tools.h"
 #include "commands.h"
 #include "flags.h"
+#include "session.h"
 
 /* The list of commands: the usage line and one line for each command. */
 static void print_commands(FILE *out) {
@@ -47,7 +49,48 @@ static int run_command(const CliCommand *command, int argc, char **argv) {
     return command->run(&args);
 }
 
+/* The global flags before the command (--data, --port, --actor), taken out of argv: *out is what they say and *shift how many arguments they took. A
+ * failure is printed and false. */
+static bool read_global_flags(int argc, char **argv, CliGlobal *out, int *shift) {
+    int i = 1;
+    memset(out, 0, sizeof *out);
+    while (i < argc && cli_flag_global(argv[i])) {
+        if (i + 1 >= argc) {
+            fprintf(stderr, "Error: %s needs a value\n", argv[i]);
+            return false;
+        }
+        if (strcmp(argv[i], "--data") == 0) {
+            out->data = argv[i + 1];
+        } else if (strcmp(argv[i], "--actor") == 0) {
+            out->actor = argv[i + 1];
+        } else {
+            char *end = NULL;
+            long port = strtol(argv[i + 1], &end, 10);
+            if (end == argv[i + 1] || *end != '\0' || port < 1 || port > 65535) {
+                fprintf(stderr, "Error: --port takes a whole number from 1 to 65535, not '%s'\n", argv[i + 1]);
+                return false;
+            }
+            out->port = (int)port;
+        }
+        i += 2;
+    }
+    *shift = i - 1;
+    return true;
+}
+
 int main(int argc, char **argv) {
+    CliGlobal global;
+    int shift = 0;
+    if (!read_global_flags(argc, argv, &global, &shift)) {
+        return 1;
+    }
+    cli_global_set(&global);
+    if (shift > 0) {
+        /* argv[0] stays the program; the command and its arguments follow the global flags. */
+        argv[shift] = argv[0];
+        argv += shift;
+        argc -= shift;
+    }
     if (argc == 1) {
         print_commands(stderr);
         return 0;

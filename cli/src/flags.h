@@ -32,6 +32,9 @@ extern const size_t CLI_FLAG_COUNT;
 /* The flag named name (or whose alias it is); NULL when the table has none. */
 const CliFlag *cli_flag_find(const char *name);
 
+/* Whether name is a global flag: --data, --port or --actor stand before the subcommand and no command row names them. */
+bool cli_flag_global(const char *name);
+
 #define CLI_MAX_REPEATS 64 /* repeated values of all the flags of one command line */
 #define CLI_MAX_INPUTS 4
 #define CLI_FLAG_CAPACITY 128 /* at least CLI_FLAG_COUNT */

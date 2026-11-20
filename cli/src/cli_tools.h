@@ -17,6 +17,10 @@
  */
 Workshop *cli_tools(void);
 
+/* Makes workshop (a session's, opened on a data folder) the one cli_tools answers: one workshop per process (R-656). NULL gives it up; the tools
+ * workshop is opened again on the next call. The session owns the workshop and closes it. */
+void cli_tools_use(Workshop *workshop);
+
 /*
  * What a call of the composer tool answers (the members of the workshop's reply, as the Composer API's response had them): the json, the plan
  * file and the MusicXML as the Composer wrote them, the MIDI file, and, for a refusal, the error unchanged (its path points into the request).

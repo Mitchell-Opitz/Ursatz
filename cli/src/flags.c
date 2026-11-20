@@ -9,6 +9,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--accompaniment-format", NULL, CLI_FLAG_VALUE, "<format>", "the format of the accompaniment motive's file, as --input-format"},
     {"--accompaniment-motive", NULL, CLI_FLAG_VALUE, "<file>", "a saved accompaniment motive, restated on each chord in chord tones"},
     {"--accompaniment-pickup", NULL, CLI_FLAG_VALUE, "<beats>", "the pickup of the accompaniment motive, as 1 or 1/2"},
+    {"--actor", NULL, CLI_FLAG_VALUE, "<name>", "global: who a command is journaled as (default claude); stands before the subcommand"},
     {"--amount", NULL, CLI_FLAG_VALUE, "<n>", "interval: change the interval by n semitones, negative to narrow it"},
     {"--at", NULL, CLI_FLAG_REPEAT, "<L>[:<bar>]", "where the --given-* before it goes: a section letter and the bar of it the material starts in"},
     {"--axis", NULL, CLI_FLAG_VALUE, "<pitch>", "invert: the pitch to mirror around, D4 or a MIDI number"},
@@ -29,6 +30,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--chain", NULL, CLI_FLAG_VALUE, "<file>", "a JSON file of steps, the same chain of operations for every variant"},
     {"--check", NULL, CLI_FLAG_SWITCH, NULL, "analyze the result with the Ursatz Analyzer and pass over a seed whose analysis contradicts the plan"},
     {"--count", NULL, CLI_FLAG_VALUE, "<n>", "how many to make"},
+    {"--data", NULL, CLI_FLAG_VALUE, "<dir>", "global: the data folder (or the environment variable URSATZ_DATA); stands before the subcommand"},
     {"--degree", NULL, CLI_FLAG_VALUE, "<n>", "restate: move the first note to scale degree n"},
     {"--depth", NULL, CLI_FLAG_VALUE, "<n>", "the most operations in the chain, 1 to 4"},
     {"--development", NULL, CLI_FLAG_VALUE, "<name>", "how a theme develops: melody, balanced or theme"},
@@ -83,6 +85,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--out-dir", NULL, CLI_FLAG_VALUE, "<dir>", "where the files are written; created if missing"},
     {"--pickup", NULL, CLI_FLAG_VALUE, "<beats>", "the beats before the first barline, as 1 or 1/2"},
     {"--plain-midi", NULL, CLI_FLAG_SWITCH, NULL, "MIDI: no track names and no section markers"},
+    {"--port", NULL, CLI_FLAG_VALUE, "<n>", "global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand"},
     {"--position", NULL, CLI_FLAG_VALUE, "<where>", "fragment: leading, trailing or middle"},
     {"--print-settings", NULL, CLI_FLAG_SWITCH, NULL, "print the default preferences document and exit"},
     {"--ratio", NULL, CLI_FLAG_VALUE, "<n:m>", "augment or diminish: the ratio of the new durations to the old"},
@@ -267,4 +270,8 @@ const char *cli_repeat_value(const CliArgs *args, const char *flag, size_t n, in
         }
     }
     return NULL;
+}
+
+bool cli_flag_global(const char *name) {
+    return name && (strcmp(name, "--actor") == 0 || strcmp(name, "--data") == 0 || strcmp(name, "--port") == 0);
 }
