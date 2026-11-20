@@ -246,6 +246,8 @@ cJSON *api_piece_time_json(Rational time);
 void api_piece_planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t size, bool *flats);
 size_t api_piece_collect_rows(const PieceSpec *request, const PieceVersion *version, ApiPieceRow *rows);
 double api_piece_span_beats(const PieceSpec *request, Rational length);
+/* Adds start_text, end_text and length_text (API 4.2) to the loop region {"start", "end"}; false when it has no times. */
+bool api_piece_loop_texts(const PieceSpec *request, cJSON *loop);
 cJSON *api_piece_document(const PieceSpec *request, const PieceMade *piece, const PieceEdit *edit,
                              const cJSON *regenerate_section, bool from);
 UrsatzStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,

@@ -126,6 +126,9 @@ cJSON *api_piece_document(const PieceSpec *request, const PieceMade *piece, cons
     snprintf(meter, sizeof meter, "%d/%d", request->request.meter.beats_per_bar, request->request.meter.beat_unit);
     cJSON *document = cJSON_CreateObject();
     cJSON *loop_region = api_piece_loop_json(piece->versions[0].plan);
+    if (loop_region) {
+        api_piece_loop_texts(request, loop_region);
+    }
     bool ok = document && cJSON_AddStringToObject(document, "schema", "ursatz-piece") &&
               cJSON_AddNumberToObject(document, "seed", (double)piece->seed) && cJSON_AddStringToObject(document, "key", key) &&
               cJSON_AddStringToObject(document, "meter", meter) && api_add(document, "brief", api_brief_json(&brief)) &&

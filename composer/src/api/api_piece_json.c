@@ -206,6 +206,33 @@ static void length_text(double beats, int per_bar, char *out, size_t size) {
     }
 }
 
+/* start_text, end_text and length_text of the loop region {"start": "n/d", "end": "n/d"} (whole notes), in the request's meter. */
+bool api_piece_loop_texts(const PieceSpec *request, cJSON *loop) {
+    long start_num = 0;
+    long start_den = 0;
+    long end_num = 0;
+    long end_den = 0;
+    const cJSON *start = cJSON_GetObjectItemCaseSensitive(loop, "start");
+    const cJSON *end = cJSON_GetObjectItemCaseSensitive(loop, "end");
+    if (!cJSON_IsString(start) || !cJSON_IsString(end) || sscanf(start->valuestring, "%ld/%ld", &start_num, &start_den) != 2 ||
+        sscanf(end->valuestring, "%ld/%ld", &end_num, &end_den) != 2 || start_den <= 0 || end_den <= 0) {
+        return false;
+    }
+    int per_bar = (int)request->request.meter.beats_per_bar;
+    double unit = (double)request->request.meter.beat_unit;
+    double from = (double)start_num * unit / (double)start_den;
+    double to = (double)end_num * unit / (double)end_den;
+    char first[48];
+    char last[48];
+    char length[48];
+    position_text(from, per_bar, first, sizeof first);
+    position_text(to, per_bar, last, sizeof last);
+    length_text(to - from, per_bar, length, sizeof length);
+    char text[112];
+    snprintf(text, sizeof text, "%s to %s", first, last);
+    return cJSON_AddStringToObject(loop, "text", text) && cJSON_AddStringToObject(loop, "length_text", length);
+}
+
 /* start_text and length_text of a row, in the request's meter. */
 static bool add_time_texts(cJSON *entry, const PieceSpec *request, const ApiPieceRow *row, double beats) {
     char start[48];
