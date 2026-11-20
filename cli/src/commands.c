@@ -276,7 +276,10 @@ const CliCommand CLI_COMMANDS[] = {
     "  accompaniment (the tempo of the brief). --format json prints the theme with the slots and the brief.\n"
     "\n"
     "Exit status: 0 success; 1 usage or an invalid request; 2 the request cannot be satisfied; 3 an output file\n"
-    "could not be written.",
+    "could not be written.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz theme request.json --seed 7 --out theme.json --midi theme.mid",
      FLAGS_THEME, 1, 1, run_theme},
     {"piece",
     "piece <request.json> [--seed <n>] [--check] [--out <file>] [--layers <dir>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format <text|json>]\n"
@@ -309,7 +312,10 @@ const CliCommand CLI_COMMANDS[] = {
     "  candidate was chosen or rejected, in both versions.\n"
     "\n"
     "Exit status: 0 success; 1 usage or an invalid request; 2 the request cannot be satisfied; 3 an output file\n"
-    "could not be written.",
+    "could not be written.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz piece request.json --seed 7 --out loop.json --midi loop.mid",
      FLAGS_PIECE, 0, 1, run_piece},
     {"plan",
     "plan --form <name> --key <key> --meter <n/m> --out <file> [--material <word>] [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--like-progression <numerals>]... [--accompaniment <pattern>] [--texture <name>] [--given-melody <file>]... [--given-progression <numerals>]... [--given-bass <file>]... [--at <L>[:<bar>]]... [--cells <n>]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--format <text|json>]",

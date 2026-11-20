@@ -363,6 +363,7 @@ module composer-tests     composer/tests            root composer/tests composer
 module composer-consumer  composer/tests/consumer
 module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src workshop/src
 module workshop-tests     workshop/tests            root workshop/tests workshop/src workshop/include
+module cli-tests          cli/tests                 root cli/tests cli/src
 uses analyzer-tests test-support
 like analyzer-tests analyzer
 like analyzer-tests analyzer-util
@@ -378,6 +379,8 @@ uses composer-tests test-support
 like composer-tests composer-request
 uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
 uses workshop-tests test-support
+uses cli-tests test-support
+like cli-tests cli
 like workshop-tests workshop-coordinator
 like workshop-tests workshop-base
 like workshop-tests workshop-jobs
