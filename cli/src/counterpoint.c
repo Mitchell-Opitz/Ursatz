@@ -69,62 +69,27 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--above") == 0) {
-            options->above = true;
-        } else if (strcmp(arg, "--below") == 0) {
-            options->below = true;
-        } else if (strcmp(arg, "--species") == 0) {
-            target = &options->species_text;
-        } else if (strcmp(arg, "--key") == 0) {
-            target = &options->key_text;
-        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
-            target = &options->material_text;
-        } else if (strcmp(arg, "--meter") == 0) {
-            target = &options->meter_text;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--suggest") == 0) {
-            target = &options->suggest_text;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out_path;
-        } else if (strcmp(arg, "--midi") == 0) {
-            target = &options->midi_path;
-        } else if (strcmp(arg, "--musicxml") == 0) {
-            target = &options->musicxml_path;
-        } else if (strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz counterpoint --help)", arg);
-        } else if (!options->input) {
-            options->input = arg;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one file", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->above = cli_switch(args, "--above");
+    options->below = cli_switch(args, "--below");
+    options->species_text = cli_value(args, "--species");
+    options->key_text = cli_value(args, "--key");
+    options->material_text = cli_value(args, "--material");
+    options->meter_text = cli_value(args, "--meter");
+    options->seed_text = cli_value(args, "--seed");
+    options->suggest_text = cli_value(args, "--suggest");
+    options->out_path = cli_value(args, "--out");
+    options->midi_path = cli_value(args, "--midi");
+    options->musicxml_path = cli_value(args, "--musicxml");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->format_text = cli_value(args, "--format");
     return 0;
 }
 
-/* The checks of the command line itself; the values are checked by the composer API. */
 static int check_options(Options *options) {
     if (!options->input) {
         return cli_fail(CLI_EXIT_USAGE, "counterpoint needs a line\n%s", COUNTERPOINT_USAGE_LINE);
@@ -135,10 +100,10 @@ static int check_options(Options *options) {
     if (options->above && options->below) {
         return cli_fail(CLI_EXIT_USAGE, "--above and --below cannot both be given");
     }
-    if (options->format_text && strcmp(options->format_text, "text") != 0 && strcmp(options->format_text, "json") != 0) {
+    if (options->format_text && !cli_equals_ignore_case(options->format_text, "text") && !cli_equals_ignore_case(options->format_text, "json")) {
         return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
     }
-    options->json = options->format_text && strcmp(options->format_text, "json") == 0;
+    options->json = options->format_text && cli_equals_ignore_case(options->format_text, "json");
     return 0;
 }
 
@@ -284,9 +249,9 @@ static void print_result_text(const Options *options, const cJSON *document, con
 
 /* --- the command ---------------------------------------------------------------------------------- */
 
-int run_counterpoint(int argc, char **argv) {
+int run_counterpoint(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

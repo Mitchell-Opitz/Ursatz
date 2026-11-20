@@ -25,13 +25,6 @@
 #define WRAP(name, function) \
     static int name(const CliArgs *args) { return function(args->argc, args->argv); }
 
-WRAP(wrap_progression, run_progression)
-WRAP(wrap_motive, run_motive)
-WRAP(wrap_develop, run_develop)
-WRAP(wrap_variants, run_variants)
-WRAP(wrap_recognize, run_recognize)
-WRAP(wrap_random_motive, run_random_motive)
-WRAP(wrap_counterpoint, run_counterpoint)
 WRAP(wrap_grow, run_grow)
 WRAP(wrap_theme, run_theme)
 WRAP(wrap_piece, run_piece)
@@ -64,13 +57,13 @@ static const char *const FLAGS_EXPORT[] = {"--midi", "--musicxml", "--plain-midi
 static const char *const FLAGS_LISTEN[] = {"--bars", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--seed", "--settings", "--strategy", "--style", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
-    {"progression", "Write a chord progression with a bass line for one phrase", FLAGS_PROGRESSION, 0, 0, false, wrap_progression},
-    {"motive", "Analyze a motive: its intervals, contour, rhythm, range and harmony", FLAGS_MOTIVE, 1, 1, false, wrap_motive},
-    {"develop", "Make motives related to a motive by one operation", FLAGS_DEVELOP, 1, 1, false, wrap_develop},
-    {"variants", "Make variants of a motive, or list the operations", FLAGS_VARIANTS, 0, 1, false, wrap_variants},
-    {"recognize", "Name the operations that turn one motive into another", FLAGS_RECOGNIZE, 2, 2, false, wrap_recognize},
-    {"random-motive", "Make random motives that keep the hard melodic rules", FLAGS_RANDOM_MOTIVE, 0, 0, false, wrap_random_motive},
-    {"counterpoint", "Write a counter-melody against a line", FLAGS_COUNTERPOINT, 1, 1, false, wrap_counterpoint},
+    {"progression", "Write a chord progression with a bass line for one phrase", FLAGS_PROGRESSION, 0, 0, true, run_progression},
+    {"motive", "Analyze a motive: its intervals, contour, rhythm, range and harmony", FLAGS_MOTIVE, 1, 1, true, run_motive},
+    {"develop", "Make motives related to a motive by one operation", FLAGS_DEVELOP, 1, 1, true, run_develop},
+    {"variants", "Make variants of a motive, or list the operations", FLAGS_VARIANTS, 0, 1, true, run_variants},
+    {"recognize", "Name the operations that turn one motive into another", FLAGS_RECOGNIZE, 2, 2, true, run_recognize},
+    {"random-motive", "Make random motives that keep the hard melodic rules", FLAGS_RANDOM_MOTIVE, 0, 0, true, run_random_motive},
+    {"counterpoint", "Write a counter-melody against a line", FLAGS_COUNTERPOINT, 1, 1, true, run_counterpoint},
     {"grow", "Grow a motive into a sentence, a period or a hybrid theme", FLAGS_GROW, 0, 1, false, wrap_grow},
     {"theme", "Grow a theme from the motives of a request", FLAGS_THEME, 1, 1, false, wrap_theme},
     {"piece", "Compose a piece from a request, or work on one section of it", FLAGS_PIECE, 0, 1, false, wrap_piece},

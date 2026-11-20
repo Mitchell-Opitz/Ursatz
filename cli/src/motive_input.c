@@ -108,6 +108,13 @@ bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *inde
     return true;
 }
 
+void motive_input_read_basic(BasicInput *basic, const CliArgs *args) {
+    basic->path = cli_value(args, "--basic");
+    basic->format_text = cli_value(args, "--basic-format");
+    basic->pickup_text = cli_value(args, "--basic-pickup");
+    basic->harmony_text = cli_value(args, "--basic-harmony");
+}
+
 bool motive_input_basic_given(const BasicInput *basic) {
     return basic->path || basic->format_text || basic->pickup_text || basic->harmony_text;
 }

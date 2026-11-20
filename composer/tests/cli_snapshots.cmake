@@ -184,9 +184,9 @@ endforeach()
 
 # --- motive commands -----------------------------------------------------------------
 
-run_case(motive json motive "${FIXTURES}/motive_d_minor.json" --json)
-run_case(variants-each-op json variants "${FIXTURES}/motive_d_minor.json" --each-op --seed 1 --json)
-run_case(random-motive json random-motive --mode minor --meter 3/4 --strategy drawn --count 3 --seed 1 --json)
+run_case(motive json motive "${FIXTURES}/motive_d_minor.json" --format json)
+run_case(variants-each-op json variants "${FIXTURES}/motive_d_minor.json" --each-op --seed 1 --format json)
+run_case(random-motive json random-motive --mode minor --meter 3/4 --strategy drawn --count 3 --seed 1 --format json)
 
 # --- GUI shapes ----------------------------------------------------------------------
 # The calls the GUI backend makes (Ursatz-GUI routes/materials.c, service/theme_service.c, service/piece_service.c), with the
@@ -196,35 +196,35 @@ run_case(random-motive json random-motive --mode minor --meter 3/4 --strategy dr
 set(gui "${FIXTURES}/gui")
 
 # Motive analysis of notes: meter, key, pickup, own harmony, a feature, a role and one tone override.
-run_case(motive-notes json motive "${gui}/motive-notes.txt" --format notes --meter 4/4 --key "D minor" --pickup 0
-         --harmony "I V@3" --feature a:0-2 --role melodic --tone 2=passing --json)
+run_case(motive-notes json motive "${gui}/motive-notes.txt" --input-format notes --meter 4/4 --key "D minor" --pickup 0
+         --harmony "I V@3" --feature a:0-2 --role melodic --tone 2=passing --format json)
 # Motive analysis of a rhythm.
-run_case(motive-form-rhythm json motive "${gui}/motive-rhythm.txt" --form rhythm --meter 3/4 --pickup 1/4 --json)
+run_case(motive-form-rhythm json motive "${gui}/motive-rhythm.txt" --form rhythm --meter 3/4 --pickup 1/4 --format json)
 # Degrees to notes.
-run_case(motive-degrees json motive "${gui}/motive-degrees.txt" --format degrees --key "C minor" --meter 6/8 --pickup 0 --json)
+run_case(motive-degrees json motive "${gui}/motive-degrees.txt" --input-format degrees --key "C minor" --meter 6/8 --pickup 0 --format json)
 # MIDI to motive.
-run_case(motive-midi json motive "${FIXTURES}/motive_d_minor.mid" --format midi --meter 4/4 --key "C major" --json)
+run_case(motive-midi json motive "${FIXTURES}/motive_d_minor.mid" --input-format midi --meter 4/4 --key "C major" --format json)
 # Motive render in another key, with the MusicXML.
-run_case(motive-render json motive "${gui}/motive-degrees.txt" --format degrees --form full --meter 4/4 --key "C major" --pickup 0
-         --render-key "Eb major" --musicxml motive-render.musicxml --tempo 96 --json)
+run_case(motive-render json motive "${gui}/motive-degrees.txt" --input-format degrees --form full --meter 4/4 --key "C major" --pickup 0
+         --render-key "Eb major" --musicxml motive-render.musicxml --tempo 96 --format json)
 
 # The operation list.
-run_case(variants-list-ops json variants --list-ops --json)
+run_case(variants-list-ops json variants --list-ops --format json)
 # Variants of a degree list against a basic motive, two functions, a distance, a count and a seed.
-run_case(variants-basic json variants "${gui}/variants-source.txt" --format degrees --meter 4/4 --key "C major" --pickup 0
+run_case(variants-basic json variants "${gui}/variants-source.txt" --input-format degrees --meter 4/4 --key "C major" --pickup 0
          --basic "${gui}/variants-basic.txt" --basic-format degrees --function beginning --function continuation
-         --distance medium --count 4 --seed 3 --json)
+         --distance medium --count 4 --seed 3 --format json)
 # Recognize: the target is the source moved up one step of the scale.
-run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recognize-target.txt" --format degrees
-         --target-format degrees --meter 4/4 --key "C major" --pickup 0 --json)
+run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recognize-target.txt" --input-format degrees
+         --target-format degrees --meter 4/4 --key "C major" --pickup 0 --format json)
 # Random motives with a role (the style variant is covered by the API tests).
 run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
-         --strategy drawn --count 2 --seed 5 --json)
+         --strategy drawn --count 2 --seed 5 --format json)
 
 # Random motives of the default strategy: segments, a harmony plan and the segment labels.
-run_case(random-motive-segments json random-motive --mode minor --meter 4/4 --count 3 --seed 2 --json)
+run_case(random-motive-segments json random-motive --mode minor --meter 4/4 --count 3 --seed 2 --format json)
 
-# The theme case the GUI runs (--format json --out --midi --musicxml) is the theme-* cases above, which write all three files.
+# The theme case the GUI runs (--input-format json --out --midi --musicxml) is the theme-* cases above, which write all three files.
 
 # Piece regenerate of the theme-filled section, one lane (the plan from piece-theme-fill above).
 run_case(piece-regenerate-lane json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
@@ -264,7 +264,7 @@ function(run_error_case name expected_status)
 endfunction()
 
 # A bad meter to motive.
-run_error_case(error-motive-meter 1 motive "${gui}/motive-notes.txt" --format notes --meter 5/3 --json)
+run_error_case(error-motive-meter 1 motive "${gui}/motive-notes.txt" --input-format notes --meter 5/3 --format json)
 # An unknown key in a theme request.
 run_error_case(error-theme-key 1 theme "${gui}/theme-unknown-key.json" --seed 1)
 # A request member of the wrong type in a piece request (beats as text).

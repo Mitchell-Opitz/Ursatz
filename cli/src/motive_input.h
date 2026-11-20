@@ -55,6 +55,9 @@ typedef struct {
  */
 bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status);
 
+/* Reads --basic, --basic-format, --basic-pickup and --basic-harmony of the parsed arguments. */
+void motive_input_read_basic(BasicInput *basic, const CliArgs *args);
+
 /* Whether any of the basic options was given. */
 bool motive_input_basic_given(const BasicInput *basic);
 

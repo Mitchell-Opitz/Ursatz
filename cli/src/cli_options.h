@@ -6,6 +6,7 @@
 
 #include <cJSON.h>
 #include "cli_tools.h"
+#include "flags.h"
 
 
 /* The exit statuses every command shares. */
@@ -67,6 +68,9 @@ typedef struct {
 
 /* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than the CLI has room for). */
 int cli_style_without_add(CliStyleWithout *list, const char *name);
+
+/* Reads the --style-without values of the parsed arguments. Returns 0, or the status of the usage error it printed (more than the CLI has room for). */
+int cli_style_without_read(CliStyleWithout *list, const CliArgs *args);
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size);

@@ -27,6 +27,12 @@ typedef struct {
  */
 bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index, bool role_only, int *status);
 
+/*
+ * Reads --harmony, --feature and --role (only --role when role_only) of the parsed arguments into extras. Returns 0, or the status of the
+ * usage error printed (more features than the API allows).
+ */
+int motive_extras_read(MotiveExtras *extras, const CliArgs *args, bool role_only);
+
 /* Whether any of the options was given. */
 bool motive_extras_given(const MotiveExtras *extras);
 

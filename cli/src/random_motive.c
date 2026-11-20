@@ -51,48 +51,30 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz random-motive --material minor --meter 3/4 --count 4 --seed 7\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    int extras_status = 0;
-    for (int i = 2; i < argc; i++) {
-        const char *argument = argv[i];
-        if (strcmp(argument, "--help") == 0) {
-            options->help = true;
-        } else if (motive_extras_take(&options->extras, argc, argv, &i, true, &extras_status)) {
-            if (extras_status != 0) {
-                return extras_status;
-            }
-        } else if (strcmp(argument, "--json") == 0) {
-            options->json = true;
-        } else if (strcmp(argument, "--style-without") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
-            }
-            int added = cli_style_without_add(&options->without, argv[++i]);
-            if (added != 0) {
-                return added;
-            }
-        } else if (strcmp(argument, "--material") == 0 || strcmp(argument, "--mode") == 0 || strcmp(argument, "--meter") == 0 ||
-                   strcmp(argument, "--key") == 0 || strcmp(argument, "--form") == 0 || strcmp(argument, "--strategy") == 0 ||
-                   strcmp(argument, "--style") == 0 || strcmp(argument, "--count") == 0 ||
-                   strcmp(argument, "--seed") == 0) {
-            const char **slot = strcmp(argument, "--material") == 0 || strcmp(argument, "--mode") == 0 ? &options->material_text
-                                : strcmp(argument, "--meter") == 0 ? &options->meter_text
-                                : strcmp(argument, "--key") == 0   ? &options->key_text
-                                : strcmp(argument, "--form") == 0  ? &options->form_text
-                                : strcmp(argument, "--strategy") == 0 ? &options->strategy_text
-                                : strcmp(argument, "--style") == 0 ? &options->style_path
-                                : strcmp(argument, "--count") == 0 ? &options->count_text
-                                                                   : &options->seed_text;
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
-            }
-            if (*slot) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", argument);
-            }
-            *slot = argv[++i];
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s'", argument);
+    options->help = args->help;
+    int extras_status = motive_extras_read(&options->extras, args, true);
+    if (extras_status != 0) {
+        return extras_status;
+    }
+    int added = cli_style_without_read(&options->without, args);
+    if (added != 0) {
+        return added;
+    }
+    options->material_text = cli_value(args, "--material");
+    options->meter_text = cli_value(args, "--meter");
+    options->key_text = cli_value(args, "--key");
+    options->form_text = cli_value(args, "--form");
+    options->strategy_text = cli_value(args, "--strategy");
+    options->style_path = cli_value(args, "--style");
+    options->count_text = cli_value(args, "--count");
+    options->seed_text = cli_value(args, "--seed");
+    const char *print_format = cli_value(args, "--format");
+    if (print_format) {
+        options->json = cli_equals_ignore_case(print_format, "json");
+        if (!options->json && !cli_equals_ignore_case(print_format, "text")) {
+            return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", print_format);
         }
     }
     return 0;
@@ -149,9 +131,9 @@ static bool add_members(cJSON *request, const Options *options) {
     return ok;
 }
 
-int run_random_motive(int argc, char **argv) {
+int run_random_motive(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

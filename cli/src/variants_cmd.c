@@ -69,63 +69,37 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz variants theme.txt --meter 4/4 --key \"D minor\" --count 4 --seed 7\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    int extras_status = 0;
-    for (int i = 2; i < argc; i++) {
-        const char *argument = argv[i];
-        if (strcmp(argument, "--help") == 0) {
-            options->help = true;
-        } else if (motive_extras_take(&options->in.extras, argc, argv, &i, false, &extras_status)) {
-            if (extras_status != 0) {
-                return extras_status;
-            }
-        } else if (motive_input_take_basic(&options->basic, argc, argv, &i, &extras_status)) {
-            if (extras_status != 0) {
-                return extras_status;
-            }
-        } else if (strcmp(argument, "--json") == 0) {
-            options->json = true;
-        } else if (strcmp(argument, "--list-ops") == 0) {
-            options->list_ops = true;
-        } else if (strcmp(argument, "--each-op") == 0) {
-            options->each_op = true;
-        } else if (strcmp(argument, "--function") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "--function needs a value");
-            }
-            const char *name = argv[++i];
-            if (cli_list_full(options->function_count, "variant_functions")) {
-                return cli_fail(CLI_EXIT_USAGE, "--function is given at most %ld times", cli_limit("variant_functions"));
-            }
-            options->function_texts[options->function_count++] = name;
-        } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
-                   strcmp(argument, "--format") == 0 || strcmp(argument, "--form") == 0 ||
-                   strcmp(argument, "--pickup") == 0 || strcmp(argument, "--chain") == 0 ||
-                   strcmp(argument, "--count") == 0 || strcmp(argument, "--seed") == 0 ||
-                   strcmp(argument, "--distance") == 0) {
-            const char **slot = strcmp(argument, "--meter") == 0    ? &options->in.meter_text
-                                : strcmp(argument, "--key") == 0    ? &options->in.key_text
-                                : strcmp(argument, "--format") == 0 ? &options->in.format_text
-                                : strcmp(argument, "--form") == 0   ? &options->in.form_text
-                                : strcmp(argument, "--pickup") == 0 ? &options->in.pickup_text
-                                : strcmp(argument, "--chain") == 0  ? &options->chain_path
-                                : strcmp(argument, "--count") == 0  ? &options->count_text
-                                : strcmp(argument, "--distance") == 0 ? &options->distance_text
-                                                                    : &options->seed_text;
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
-            }
-            if (*slot) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", argument);
-            }
-            *slot = argv[++i];
-        } else if (argument[0] == '-' && argument[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s'", argument);
-        } else if (!options->in.path) {
-            options->in.path = argument;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
+    options->help = args->help;
+    options->in.path = args->input_count > 0 ? args->inputs[0] : NULL;
+    int extras_status = motive_extras_read(&options->in.extras, args, false);
+    if (extras_status != 0) {
+        return extras_status;
+    }
+    motive_input_read_basic(&options->basic, args);
+    options->list_ops = cli_switch(args, "--list-ops");
+    options->each_op = cli_switch(args, "--each-op");
+    for (size_t i = 0; i < cli_repeat_count(args, "--function"); i++) {
+        if (cli_list_full(options->function_count, "variant_functions")) {
+            return cli_fail(CLI_EXIT_USAGE, "--function is given at most %ld times", cli_limit("variant_functions"));
+        }
+        options->function_texts[options->function_count++] = cli_repeat_value(args, "--function", i, NULL);
+    }
+    options->in.meter_text = cli_value(args, "--meter");
+    options->in.key_text = cli_value(args, "--key");
+    options->in.format_text = cli_value(args, "--input-format");
+    options->in.form_text = cli_value(args, "--form");
+    options->in.pickup_text = cli_value(args, "--pickup");
+    options->chain_path = cli_value(args, "--chain");
+    options->count_text = cli_value(args, "--count");
+    options->seed_text = cli_value(args, "--seed");
+    options->distance_text = cli_value(args, "--distance");
+    const char *print_format = cli_value(args, "--format");
+    if (print_format) {
+        options->json = cli_equals_ignore_case(print_format, "json");
+        if (!options->json && !cli_equals_ignore_case(print_format, "text")) {
+            return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", print_format);
         }
     }
     return 0;
@@ -334,9 +308,9 @@ static int make_variants(const Options *options) {
     return 0;
 }
 
-int run_variants(int argc, char **argv) {
+int run_variants(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

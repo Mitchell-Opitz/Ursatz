@@ -33,6 +33,21 @@ bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index,
     return true;
 }
 
+int motive_extras_read(MotiveExtras *extras, const CliArgs *args, bool role_only) {
+    extras->role_text = cli_value(args, "--role");
+    if (role_only) {
+        return 0;
+    }
+    extras->harmony_text = cli_value(args, "--harmony");
+    for (size_t i = 0; i < cli_repeat_count(args, "--feature"); i++) {
+        if (cli_list_full(extras->feature_count, "motive_features")) {
+            return cli_fail(CLI_EXIT_USAGE, "a motive has at most %ld features", cli_limit("motive_features"));
+        }
+        extras->feature_texts[extras->feature_count++] = cli_repeat_value(args, "--feature", i, NULL);
+    }
+    return 0;
+}
+
 bool motive_extras_given(const MotiveExtras *extras) {
     return extras->harmony_text || extras->feature_count > 0 || extras->role_text;
 }

@@ -50,62 +50,42 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz recognize theme.txt variant.txt --meter 4/4 --key \"D minor\" --json\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    int extras_status = 0;
-    for (int i = 2; i < argc; i++) {
-        const char *argument = argv[i];
-        if (strcmp(argument, "--help") == 0) {
-            options->help = true;
-        } else if (motive_extras_take(&options->source.extras, argc, argv, &i, false, &extras_status)) {
-            if (extras_status != 0) {
-                return extras_status;
-            }
-        } else if (motive_input_take_basic(&options->basic, argc, argv, &i, &extras_status)) {
-            if (extras_status != 0) {
-                return extras_status;
-            }
-        } else if (strcmp(argument, "--target-feature") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "--target-feature needs a value");
-            }
-            if (cli_list_full(options->target.extras.feature_count, "motive_features")) {
-                return cli_fail(CLI_EXIT_USAGE, "a motive has at most %ld features", cli_limit("motive_features"));
-            }
-            options->target.extras.feature_texts[options->target.extras.feature_count++] = argv[++i];
-        } else if (strcmp(argument, "--json") == 0) {
-            options->json = true;
-        } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
-                   strcmp(argument, "--format") == 0 || strcmp(argument, "--form") == 0 ||
-                   strcmp(argument, "--pickup") == 0 || strcmp(argument, "--target-format") == 0 ||
-                   strcmp(argument, "--target-pickup") == 0 || strcmp(argument, "--target-harmony") == 0 ||
-                   strcmp(argument, "--depth") == 0) {
-            const char **slot = strcmp(argument, "--meter") == 0            ? &options->source.meter_text
-                                : strcmp(argument, "--key") == 0            ? &options->source.key_text
-                                : strcmp(argument, "--format") == 0         ? &options->source.format_text
-                                : strcmp(argument, "--form") == 0           ? &options->source.form_text
-                                : strcmp(argument, "--pickup") == 0         ? &options->source.pickup_text
-                                : strcmp(argument, "--target-format") == 0  ? &options->target_format_text
-                                : strcmp(argument, "--target-pickup") == 0  ? &options->target_pickup_text
-                                : strcmp(argument, "--target-harmony") == 0 ? &options->target_harmony_text
-                                                                            : &options->depth_text;
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
-            }
-            if (*slot) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", argument);
-            }
-            *slot = argv[++i];
-        } else if (argument[0] == '-' && argument[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s'", argument);
-        } else if (!options->have_source) {
-            options->source.path = argument;
-            options->have_source = true;
-        } else if (!options->have_target) {
-            options->target.path = argument;
-            options->have_target = true;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; recognize takes a source and a target", argument);
+    options->help = args->help;
+    if (args->input_count > 0) {
+        options->source.path = args->inputs[0];
+        options->have_source = true;
+    }
+    if (args->input_count > 1) {
+        options->target.path = args->inputs[1];
+        options->have_target = true;
+    }
+    int extras_status = motive_extras_read(&options->source.extras, args, false);
+    if (extras_status != 0) {
+        return extras_status;
+    }
+    motive_input_read_basic(&options->basic, args);
+    for (size_t i = 0; i < cli_repeat_count(args, "--target-feature"); i++) {
+        if (cli_list_full(options->target.extras.feature_count, "motive_features")) {
+            return cli_fail(CLI_EXIT_USAGE, "a motive has at most %ld features", cli_limit("motive_features"));
+        }
+        options->target.extras.feature_texts[options->target.extras.feature_count++] = cli_repeat_value(args, "--target-feature", i, NULL);
+    }
+    options->source.meter_text = cli_value(args, "--meter");
+    options->source.key_text = cli_value(args, "--key");
+    options->source.format_text = cli_value(args, "--input-format");
+    options->source.form_text = cli_value(args, "--form");
+    options->source.pickup_text = cli_value(args, "--pickup");
+    options->target_format_text = cli_value(args, "--target-format");
+    options->target_pickup_text = cli_value(args, "--target-pickup");
+    options->target_harmony_text = cli_value(args, "--target-harmony");
+    options->depth_text = cli_value(args, "--depth");
+    const char *print_format = cli_value(args, "--format");
+    if (print_format) {
+        options->json = cli_equals_ignore_case(print_format, "json");
+        if (!options->json && !cli_equals_ignore_case(print_format, "text")) {
+            return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", print_format);
         }
     }
     return 0;
@@ -210,9 +190,9 @@ static int build_request(const Options *options, cJSON **out, MotiveFile *file) 
     return 0;
 }
 
-int run_recognize(int argc, char **argv) {
+int run_recognize(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

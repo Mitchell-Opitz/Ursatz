@@ -66,16 +66,16 @@ static void test_text_output(void) {
 }
 
 static void test_json_output(void) {
-    assert(run(FIXTURE("motive_d_minor.json") " --json", "motive_cli_json.txt", "motive_cli_err.txt") == 0);
+    assert(run(FIXTURE("motive_d_minor.json") " --format json", "motive_cli_json.txt", "motive_cli_err.txt") == 0);
     char *json = test_must_read_file("motive_cli_json.txt", NULL);
     assert(strstr(json, "\"analysis\"") != NULL && strstr(json, "\"shape\": \"ascending\"") != NULL);
     assert(strstr(json, "\"roman_numeral\": \"i\"") != NULL);
     assert(json[strlen(json) - 1] == '\n');
 
     /* The same motive from every format gives the same bytes. */
-    const char *others[] = {FIXTURE("motive_d_minor.mid") " --json", FIXTURE("motive_d_minor.musicxml") " --json",
-                            FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json",
-                            FIXTURE("motive_d_minor.mid") " --format midi --json"};
+    const char *others[] = {FIXTURE("motive_d_minor.mid") " --format json", FIXTURE("motive_d_minor.musicxml") " --format json",
+                            FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --format json",
+                            FIXTURE("motive_d_minor.mid") " --input-format midi --format json"};
     for (size_t i = 0; i < sizeof(others) / sizeof(others[0]); i++) {
         assert(run(others[i], "motive_cli_other.txt", "motive_cli_err.txt") == 0);
         char *other = test_must_read_file("motive_cli_other.txt", NULL);
@@ -89,10 +89,10 @@ static void test_bad_arguments(void) {
     expect_failure("", 1, "needs an input file");
     expect_failure(FIXTURE("motive_d_minor.mid") " --meter 9/5", 1, "meter '9/5'");
     expect_failure(FIXTURE("motive_d_minor.mid") " --key \"H major\"", 1, "unknown key 'H major'");
-    expect_failure(FIXTURE("motive_d_minor.mid") " --format xml", 1, "--format must be");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --input-format xml", 1, "--input-format must be");
     expect_failure(FIXTURE("motive_d_minor.mid") " --nope", 1, "unknown option '--nope'");
     expect_failure(FIXTURE("motive_d_minor.mid") " --meter", 1, "--meter needs a value");
-    expect_failure(FIXTURE("motive_d_minor.mid") " " FIXTURE("motive_d_minor.txt"), 1, "unexpected argument");
+    expect_failure(FIXTURE("motive_d_minor.mid") " " FIXTURE("motive_d_minor.txt"), 1, "motive takes 1 input");
 }
 
 static void test_bad_input(void) {
@@ -102,7 +102,7 @@ static void test_bad_input(void) {
     expect_failure(FIXTURE("motive_polyphonic.musicxml"), 2, "one voice");
     expect_failure(FIXTURE("motive_truncated.mid"), 2, "midi");
     expect_failure(FIXTURE("motive_malformed.musicxml"), 2, "musicxml");
-    expect_failure(FIXTURE("motive_d_minor.txt") " --format midi", 2, "cannot load");
+    expect_failure(FIXTURE("motive_d_minor.txt") " --input-format midi", 2, "cannot load");
     expect_failure(FIXTURE("no_such_file.mid"), 2, "cannot open");
 }
 
@@ -125,7 +125,7 @@ static void test_forms_and_pickup(void) {
 
     /* A degree list. */
     write_input("1:q b3:e 5:e 1':h");
-    out = run_json("motive_cli_in.txt --format degrees --meter 4/4 --key \"D minor\" --json");
+    out = run_json("motive_cli_in.txt --input-format degrees --meter 4/4 --key \"D minor\" --format json");
     assert(strstr(out, "\"form\": \"full\"") && strstr(out, "\"pickup\": \"0\""));
     assert(strstr(out, "\"notes_text\": \"D4:q E4:e A4:e D5:h\"") && strstr(out, "\"degrees_text\": \"1:q 2:e 5:e 1':h\""));
     assert(!strstr(out, "\"rhythm_text\"") && !strstr(out, "\"contour_text\""));
@@ -133,13 +133,13 @@ static void test_forms_and_pickup(void) {
 
     /* Without a key there is no degree text. */
     write_input("D4:q F4:q");
-    out = run_json("motive_cli_in.txt --meter 4/4 --json");
+    out = run_json("motive_cli_in.txt --meter 4/4 --format json");
     assert(strstr(out, "\"degrees_text\": null") && strstr(out, "\"notes_text\": \"D4:q F4:q\""));
     free(out);
 
     /* --form rhythm reads a rhythm; the pickup is in beats of the meter. */
     write_input("x:q x:h.");
-    out = run_json("motive_cli_in.txt --form rhythm --meter 3/4 --pickup 1 --json");
+    out = run_json("motive_cli_in.txt --form rhythm --meter 3/4 --pickup 1 --format json");
     assert(strstr(out, "\"form\": \"rhythm\"") && strstr(out, "\"pickup\": \"1\"") &&
            strstr(out, "\"rhythm_text\": \"x:q x:h.\"") && strstr(out, "\"intervals\": null"));
     assert(strstr(out, "\"bar\": -1"));
@@ -151,31 +151,31 @@ static void test_forms_and_pickup(void) {
 
     /* --form contour reads a contour; a half beat pickup is "1/2". */
     write_input("0 2 1 3");
-    out = run_json("motive_cli_in.txt --form contour --meter 4/4 --pickup 1/2 --key \"C major\" --json");
+    out = run_json("motive_cli_in.txt --form contour --meter 4/4 --pickup 1/2 --key \"C major\" --format json");
     assert(strstr(out, "\"form\": \"contour\"") && strstr(out, "\"pickup\": \"1/2\"") &&
            strstr(out, "\"contour_text\": \"0 2 1 3\"") && strstr(out, "\"rhythm\": null"));
     free(out);
 
-    /* --format rhythm and --form rhythm are the same; full leaves the format alone. */
+    /* --input-format rhythm and --form rhythm are the same; full leaves the format alone. */
     write_input("x:q x:q");
-    out = run_json("motive_cli_in.txt --format rhythm --meter 4/4 --json");
+    out = run_json("motive_cli_in.txt --input-format rhythm --meter 4/4 --format json");
     assert(strstr(out, "\"form\": \"rhythm\""));
     free(out);
     write_input("D4:q F4:q");
-    out = run_json("motive_cli_in.txt --form full --meter 4/4 --json");
+    out = run_json("motive_cli_in.txt --form full --meter 4/4 --format json");
     assert(strstr(out, "\"form\": \"full\""));
     free(out);
 
     /* A file that declares its own meter takes the pickup in that meter's beats. */
-    out = run_json(FIXTURE("motive_d_minor.mid") " --pickup 1/2 --json");
+    out = run_json(FIXTURE("motive_d_minor.mid") " --pickup 1/2 --format json");
     assert(strstr(out, "\"pickup\": \"1/2\""));
     free(out);
 }
 
 static void test_forms_and_pickup_errors(void) {
     expect_failure(FIXTURE("motive_d_minor.mid") " --form chord", 1, "--form must be");
-    expect_failure(FIXTURE("motive_d_minor.mid") " --form rhythm --format contour", 1, "--form rhythm reads a rhythm");
-    expect_failure(FIXTURE("motive_d_minor.mid") " --form full --format rhythm", 1, "--form full does not read");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --form rhythm --input-format contour", 1, "--form rhythm reads a rhythm");
+    expect_failure(FIXTURE("motive_d_minor.mid") " --form full --input-format rhythm", 1, "--form full does not read");
     expect_failure(FIXTURE("motive_d_minor.mid") " --pickup x", 1, "pickup 'x'");
     expect_failure(FIXTURE("motive_d_minor.mid") " --pickup -1", 1, "pickup '-1'");
     expect_failure(FIXTURE("motive_d_minor.mid") " --pickup 1/0", 1, "pickup '1/0'");
@@ -184,7 +184,7 @@ static void test_forms_and_pickup_errors(void) {
     write_input("0 a");
     expect_failure("motive_cli_in.txt --form contour --meter 4/4", 2, "not a rank");
     write_input("1:q 9:q");
-    expect_failure("motive_cli_in.txt --format degrees --meter 4/4", 2, "not a scale degree");
+    expect_failure("motive_cli_in.txt --input-format degrees --meter 4/4", 2, "not a scale degree");
 }
 
 static void test_render(void) {
@@ -192,8 +192,8 @@ static void test_render(void) {
     remove("motive_cli_out.xml");
     remove("motive_cli_out.mid");
     write_input("1:q 3:h.");
-    char *out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --pickup 1 "
-                         "--musicxml motive_cli_out.xml --midi motive_cli_out.mid --tempo 90 --json");
+    char *out = run_json("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --pickup 1 "
+                         "--musicxml motive_cli_out.xml --midi motive_cli_out.mid --tempo 90 --format json");
     assert(strstr(out, "\"rendered\"") && strstr(out, "\"key\": \"D minor\""));
     assert(strstr(out, "\"midi_pitch\": 62") && strstr(out, "\"midi_pitch\": 65"));
     free(out);
@@ -215,7 +215,7 @@ static void test_render(void) {
 
     /* No pickup: no implicit measure. */
     write_input("1:q 3:h.");
-    out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --musicxml motive_cli_out.xml --json");
+    out = run_json("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --musicxml motive_cli_out.xml --format json");
     assert(strstr(out, "\"rendered\""));
     free(out);
     xml = test_must_read_file("motive_cli_out.xml", NULL);
@@ -223,23 +223,23 @@ static void test_render(void) {
     free(xml);
 
     /* The rendered notes are in the render key, with offsets from the first note; the analysis stays in the source's. */
-    out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --render-key \"G minor\" --json");
+    out = run_json("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --render-key \"G minor\" --format json");
     assert(strstr(out, "\"key\": \"G minor\"") && strstr(out, "\"midi_pitch\": 67") && strstr(out, "\"midi_pitch\": 70"));
     assert(strstr(out, "\"tonic_pitch_class\": 2"));
     free(out);
 
     /* Without a render option there is no rendered object. */
-    out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --json");
+    out = run_json("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --format json");
     assert(!strstr(out, "\"rendered\""));
     free(out);
 
-    expect_failure("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --render-key H", 1, "unknown key");
-    expect_failure("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --tempo 5 --midi motive_cli_out.mid", 1,
+    expect_failure("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --render-key H", 1, "unknown key");
+    expect_failure("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --tempo 5 --midi motive_cli_out.mid", 1,
                    "--tempo");
     write_input("D4:q F4:q");
     expect_failure("motive_cli_in.txt --meter 4/4 --render-key \"G minor\"", 2, "it has no key");
     write_input("1:q 3:h.");
-    expect_failure("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --midi /nonexistent/dir/o.mid", 3,
+    expect_failure("motive_cli_in.txt --input-format degrees --meter 3/4 --key \"D minor\" --midi /nonexistent/dir/o.mid", 3,
                    "cannot write");
 }
 
@@ -286,7 +286,7 @@ static void test_extras_in_motive(void) {
     assert(strstr(out, "Role: accompaniment") != NULL);
     free(out);
 
-    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json" EXTRAS, "motive_cli_out.txt",
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --format json" EXTRAS, "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
     out = test_must_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "\"harmony\": \"I V6@2\"") != NULL && strstr(out, "\"harmony_text\": \"I V6@2\"") != NULL);
@@ -294,7 +294,7 @@ static void test_extras_in_motive(void) {
     free(out);
 
     /* Nothing asked, nothing printed. */
-    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json", "motive_cli_out.txt",
+    assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --format json", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
     out = test_must_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "harmony_text") == NULL && strstr(out, "\"role\": \"accompaniment\"") == NULL && strstr(out, "\"features\"") == NULL);
@@ -355,7 +355,7 @@ static void test_extras_in_variants(void) {
     const char *input = FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"" EXTRAS;
     char arguments[1024];
     write_chain("{\"steps\": [{\"op\": \"fragment\", \"params\": {\"position\": \"trailing\", \"length\": 2}}]}");
-    snprintf(arguments, sizeof(arguments), "%s --chain motive_cli_chain.json --count 1 --seed 3 --json", input);
+    snprintf(arguments, sizeof(arguments), "%s --chain motive_cli_chain.json --count 1 --seed 3 --format json", input);
     assert(run_sub("variants", arguments) == 0);
     char *out = test_must_read_file("motive_cli_out.txt", NULL);
     /* The source keeps all of it. The fragment keeps the feature it holds whole, the chords that land on its notes (the
@@ -386,12 +386,12 @@ static void test_extras_in_grow_and_random_motive(void) {
     snprintf(arguments, sizeof(arguments), "%s --feature a:0-9", grow);
     expect_sub_failure("grow", arguments, 2, "features[0]");
 
-    assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --count 2 --role accompaniment --json") == 0);
+    assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --count 2 --role accompaniment --format json") == 0);
     char *out = test_must_read_file("motive_cli_out.txt", NULL);
     const char *first = strstr(out, "\"role\": \"accompaniment\"");
     assert(first != NULL && strstr(first + 1, "\"role\": \"accompaniment\"") != NULL);
     free(out);
-    assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --role melodic --json") == 0);
+    assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --role melodic --format json") == 0);
     out = test_must_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "\"role\": \"accompaniment\"") == NULL);
     free(out);
@@ -434,7 +434,7 @@ static void test_base_harmony_and_tones(void) {
     assert(strstr(out, "Warning: Note 1 (A5) does not resolve") != NULL);
     free(out);
 
-    out = run_and_read(HOLLOW_ARGS " --json");
+    out = run_and_read(HOLLOW_ARGS " --format json");
     assert(strstr(out, "\"base_harmony\": {\n      \"text\": \"V\",\n      \"given\": false") != NULL);
     assert(strstr(out, "\"warnings\": [\"Note 1 (A5) does not resolve\"]") != NULL);
     assert(strstr(out, "\"type\": \"neighbor\",\n        \"resolves_to\": 5,\n        \"unresolved\": false,\n        \"overridden\": false") != NULL);
@@ -447,7 +447,7 @@ static void test_base_harmony_and_tones(void) {
     assert(strstr(out, "Tones: 1 A5 chord, 2 A5 chord, 3 B5 passing, 4 C6 chord, 5 B5 unclassified") != NULL);
     assert(strstr(out, "Warning: Note 5 (B5) does not resolve") != NULL);
     free(out);
-    out = run_and_read(HOLLOW_ARGS " --harmony VI --json");
+    out = run_and_read(HOLLOW_ARGS " --harmony VI --format json");
     assert(strstr(out, "\"text\": \"VI\",\n      \"given\": true") != NULL);
     assert(strstr(out, "\"warnings\": [\"Note 5 (B5) does not resolve\"]") != NULL);
     free(out);
@@ -471,7 +471,7 @@ static void test_base_harmony_and_tones(void) {
     out = run_and_read("motive_cli_rhythm.txt --meter 4/4 --form rhythm");
     assert(strstr(out, "Base harmony: none") != NULL && strstr(out, "Tones: none") != NULL);
     free(out);
-    out = run_and_read("motive_cli_rhythm.txt --meter 4/4 --form rhythm --json");
+    out = run_and_read("motive_cli_rhythm.txt --meter 4/4 --form rhythm --format json");
     assert(strstr(out, "\"base_harmony\": null") != NULL && strstr(out, "\"tones\": []") != NULL);
     free(out);
 }
@@ -493,7 +493,7 @@ static void test_tone_overrides(void) {
     char *out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 5=pedal");
     assert(strstr(out, "Tones: 1 A5 chord, 2 A5 chord, 3 B5 chord, 4 C6 chord, 5 B5 pedal") != NULL);
     free(out);
-    out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 5=escape --json");
+    out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 5=escape --format json");
     assert(strstr(out, "\"role\": \"chord\",\n        \"type\": null,\n        \"resolves_to\": null,\n        \"unresolved\": false,\n        \"overridden\": true") != NULL);
     assert(strstr(out, "\"type\": \"escape\"") != NULL);
     free(out);

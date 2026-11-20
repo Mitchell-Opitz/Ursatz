@@ -8,6 +8,7 @@
 #include "cli_tools.h"
 
 #include "cli_options.h"
+#include "flags.h"
 #include "workflow.h"
 
 #define EXIT_USAGE CLI_EXIT_USAGE
@@ -86,64 +87,27 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-/* Splits argv into options; returns 0, or the exit status. The values are checked by the composer API. */
-static int read_options(int argc, char **argv, Options *options) {
+/* Reads the options from the parsed arguments; returns 0, or the exit status. The values are checked by the composer API. */
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->bass = true;
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--bass") == 0) {
-            options->bass = true;
-        } else if (strcmp(arg, "--no-bass") == 0) {
-            options->bass = false;
-        } else if (strcmp(arg, "--key") == 0) {
-            target = &options->key_text;
-        } else if (strcmp(arg, "--meter") == 0) {
-            target = &options->meter_text;
-        } else if (strcmp(arg, "--bars") == 0) {
-            target = &options->bars_text;
-        } else if (strcmp(arg, "--cadence") == 0) {
-            target = &options->cadence_text;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--embellish") == 0) {
-            target = &options->embellish_text;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (strcmp(arg, "--list-schemas") == 0) {
-            options->list_schemas = true;
-        } else if (strcmp(arg, "--schema") == 0) {
-            target = &options->schema_text;
-        } else if (strcmp(arg, "--sequence") == 0) {
-            target = &options->sequence_text;
-        } else if (strcmp(arg, "--suggest") == 0) {
-            target = &options->suggest_text;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out_path;
-        } else if (strcmp(arg, "--midi") == 0) {
-            target = &options->midi_path;
-        } else if (strcmp(arg, "--musicxml") == 0) {
-            target = &options->musicxml_path;
-        } else if (strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else {
-            return cli_fail(EXIT_USAGE, "unexpected argument '%s' (see ursatz progression --help)", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
+    options->help = args->help;
+    options->bass = !cli_switch(args, "--no-bass"); /* --bass is the default; --no-bass wins when both are given */
+    options->key_text = cli_value(args, "--key");
+    options->meter_text = cli_value(args, "--meter");
+    options->bars_text = cli_value(args, "--bars");
+    options->cadence_text = cli_value(args, "--cadence");
+    options->seed_text = cli_value(args, "--seed");
+    options->embellish_text = cli_value(args, "--embellish");
+    options->format_text = cli_value(args, "--format");
+    options->list_schemas = cli_switch(args, "--list-schemas");
+    options->schema_text = cli_value(args, "--schema");
+    options->sequence_text = cli_value(args, "--sequence");
+    options->suggest_text = cli_value(args, "--suggest");
+    options->out_path = cli_value(args, "--out");
+    options->midi_path = cli_value(args, "--midi");
+    options->musicxml_path = cli_value(args, "--musicxml");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->plain_midi = cli_switch(args, "--plain-midi");
     if (options->help || options->list_schemas) {
         return 0;
     }
@@ -241,9 +205,9 @@ static void print_names(const cJSON *document) {
 
 /* --- the command ---------------------------------------------------------------------------------- */
 
-int run_progression(int argc, char **argv) {
+int run_progression(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

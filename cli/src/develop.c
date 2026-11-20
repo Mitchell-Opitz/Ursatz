@@ -75,69 +75,33 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-typedef struct {
-    const char *flag;
-    const char **slot; /* NULL for a flag with no value */
-    bool *toggle;      /* set by a flag with no value */
-} FlagSpec;
-
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    const FlagSpec specs[] = {
-        {"--op", &options->op_text, NULL},
-        {"--seed", &options->seed_text, NULL},
-        {"--suggest", &options->suggest_text, NULL},
-        {"--meter", &options->meter_text, NULL},
-        {"--key", &options->key_text, NULL},
-        {"--format", &options->format_text, NULL},
-        {"--midi", &options->midi_path, NULL},
-        {"--musicxml", &options->musicxml_path, NULL},
-        {"--tempo", &options->tempo_text, NULL},
-        {"--plain-midi", NULL, &options->plain_midi},
-        {"--by", &options->by_text, NULL},
-        {"--degree", &options->degree_text, NULL},
-        {"--axis", &options->axis_text, NULL},
-        {"--interval", &options->interval_text, NULL},
-        {"--amount", &options->amount_text, NULL},
-        {"--position", &options->position_text, NULL},
-        {"--length", &options->length_text, NULL},
-        {"--min", &options->min_text, NULL},
-        {"--drop", &options->drop_text, NULL},
-        {"--ratio", &options->ratio_text, NULL},
-        {"--tonal", NULL, &options->tonal},
-        {"--keep-contour", NULL, &options->keep_contour},
-        {"--keep-rhythm", NULL, &options->keep_rhythm},
-    };
-    for (int i = 2; i < argc; i++) {
-        const char *argument = argv[i];
-        if (strcmp(argument, "--help") == 0) {
-            options->help = true;
-            continue;
-        }
-        const FlagSpec *spec = NULL;
-        for (size_t k = 0; k < sizeof(specs) / sizeof(specs[0]); k++) {
-            if (strcmp(argument, specs[k].flag) == 0) {
-                spec = &specs[k];
-            }
-        }
-        if (spec) {
-            if (!spec->slot) {
-                *spec->toggle = true;
-            } else if (i + 1 >= argc) {
-                return cli_fail(EXIT_USAGE, "%s needs a value", argument);
-            } else if (*spec->slot) {
-                return cli_fail(EXIT_USAGE, "%s given twice", argument);
-            } else {
-                *spec->slot = argv[++i];
-            }
-        } else if (argument[0] == '-' && argument[1] != '\0') {
-            return cli_fail(EXIT_USAGE, "unknown option '%s'", argument);
-        } else if (!options->input) {
-            options->input = argument;
-        } else {
-            return cli_fail(EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
-        }
-    }
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->op_text = cli_value(args, "--op");
+    options->seed_text = cli_value(args, "--seed");
+    options->suggest_text = cli_value(args, "--suggest");
+    options->meter_text = cli_value(args, "--meter");
+    options->key_text = cli_value(args, "--key");
+    options->format_text = cli_value(args, "--input-format");
+    options->midi_path = cli_value(args, "--midi");
+    options->musicxml_path = cli_value(args, "--musicxml");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->by_text = cli_value(args, "--by");
+    options->degree_text = cli_value(args, "--degree");
+    options->axis_text = cli_value(args, "--axis");
+    options->interval_text = cli_value(args, "--interval");
+    options->amount_text = cli_value(args, "--amount");
+    options->position_text = cli_value(args, "--position");
+    options->length_text = cli_value(args, "--length");
+    options->min_text = cli_value(args, "--min");
+    options->drop_text = cli_value(args, "--drop");
+    options->ratio_text = cli_value(args, "--ratio");
+    options->tonal = cli_switch(args, "--tonal");
+    options->keep_contour = cli_switch(args, "--keep-contour");
+    options->keep_rhythm = cli_switch(args, "--keep-rhythm");
     return 0;
 }
 
@@ -179,9 +143,9 @@ static int write_file(const char *what, const char *path, const void *data, size
     return 0;
 }
 
-int run_develop(int argc, char **argv) {
+int run_develop(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

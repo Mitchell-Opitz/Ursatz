@@ -107,7 +107,8 @@ int cli_fail_api(UrsatzStatus status, const UrsatzError *error, const char *inpu
     for (size_t i = 0; i < sizeof OPTIONS / sizeof OPTIONS[0]; i++) {
         size_t length = strlen(OPTIONS[i]);
         if (strncmp(source, OPTIONS[i], length) == 0 && (source[length] == ' ' || source[length] == ':')) {
-            used += (size_t)snprintf(message + used, sizeof message - used, "--");
+            /* the Composer's input "format" is the command line's --input-format (the print format is the command line's own) */
+            used += (size_t)snprintf(message + used, sizeof message - used, strcmp(OPTIONS[i], "format") == 0 ? "--input-" : "--");
             for (size_t c = 0; c < length; c++) {
                 message[used++] = source[c] == '_' ? '-' : source[c];
             }
@@ -124,7 +125,7 @@ int cli_fail_api(UrsatzStatus status, const UrsatzError *error, const char *inpu
                    source[-1] == ' ') {
             size_t length = strncmp(source, "format", 6) == 0 ? 6 : 4;
             if (source[length] == ' ' || source[length] == '\0') {
-                used += (size_t)snprintf(message + used, sizeof message - used, "--%.*s", (int)length, source);
+                used += (size_t)snprintf(message + used, sizeof message - used, "%s%.*s", length == 6 ? "--input-" : "--", (int)length, source);
                 source += length;
             } else {
                 message[used++] = *source++;
@@ -194,6 +195,16 @@ int cli_style_without_add(CliStyleWithout *list, const char *name) {
         return cli_fail(CLI_EXIT_USAGE, "--style-without is given at most %d times", CLI_LIST_CAPACITY);
     }
     list->names[list->count++] = name;
+    return 0;
+}
+
+int cli_style_without_read(CliStyleWithout *list, const CliArgs *args) {
+    for (size_t i = 0; i < cli_repeat_count(args, "--style-without"); i++) {
+        if (list->count >= CLI_LIST_CAPACITY) {
+            return cli_fail(CLI_EXIT_USAGE, "--style-without is given at most %d times", CLI_LIST_CAPACITY);
+        }
+        list->names[list->count++] = cli_repeat_value(args, "--style-without", i, NULL);
+    }
     return 0;
 }
 
