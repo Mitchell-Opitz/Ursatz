@@ -202,3 +202,9 @@ ursatz_test(workshop_section_commands SOURCES test_section_commands.c LIBS ursat
     DEFINITIONS TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
                 TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_section_commands)
+
+# Restore a version (P65 B8): the next version a copy of an older one, with its files, an envelope that says restored_from, and the refusals.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)
+ursatz_test(workshop_restore SOURCES test_restore.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)

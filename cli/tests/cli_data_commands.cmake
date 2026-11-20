@@ -132,4 +132,12 @@ ursatz(--data "${DATA}" apply "${WORK}/actor.jsonl")
 expect_status(1 "apply with an actor")
 expect_text("the actor comes from --actor" "apply with an actor")
 
+# Restore: the next version is a copy of an older one.
+ursatz(--data "${DATA}" restore "item:${theme}@v1")
+expect_status(0 "restore")
+expect_text("item ${theme} version [0-9]+ [(]restored v1[)]" "restore")
+ursatz(--data "${DATA}" restore "item:${theme}")
+expect_status(1 "restore without a version")
+expect_text("restore needs the version to copy" "restore without a version")
+
 message(STATUS "ok")
