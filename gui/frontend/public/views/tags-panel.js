@@ -3,6 +3,8 @@
  * from the groups route and reports which group was picked. groupRows and
  * isActiveFilter are pure; mount renders into the page. */
 
+import GroupedPanel from "./grouped-panel.js";
+
 const DEFAULT_LIMIT = 12;
 const OPEN_KEY = "ursatz.tagsPanel.open";
 const KINDS = [
@@ -77,44 +79,9 @@ function isActiveFilter(rowFilter, current) {
   );
 }
 
-function readOpenState() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(OPEN_KEY));
-    if (Array.isArray(saved)) {
-      return new Set(saved);
-    }
-  } catch (err) {
-    // No storage or bad JSON: fall back to all groups open.
-  }
-  return new Set(KINDS.map((entry) => entry.kind));
-}
-
-function writeOpenState(open) {
-  try {
-    localStorage.setItem(OPEN_KEY, JSON.stringify([...open]));
-  } catch (err) {
-    // Storage unavailable: the state just is not remembered.
-  }
-}
-
+/* The row of one value: its button and, when onBuildStyle is given, the Build style button beside it. */
 function buildRow(row, active, onSelect, onBuildStyle) {
-  const li = document.createElement("li");
-  li.className = "tags-panel-item";
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "tags-panel-row";
-  if (active) {
-    button.setAttribute("aria-current", "true");
-  }
-  const label = document.createElement("span");
-  label.className = "tags-panel-label";
-  label.textContent = row.label;
-  const count = document.createElement("span");
-  count.className = "tags-panel-count";
-  count.textContent = String(row.count);
-  button.append(label, count);
-  button.addEventListener("click", () => onSelect(row.filter));
-  li.appendChild(button);
+  const li = GroupedPanel.buildPanelRow(row.label, row.count, () => onSelect(row.filter), active);
   if (onBuildStyle) {
     const build = document.createElement("button");
     build.type = "button";
@@ -136,90 +103,40 @@ function mount(el, options) {
   const opts = options || {};
   const onSelect = opts.onSelect || function () {};
   const onBuildStyle = opts.onBuildStyle || null;
-  const open = readOpenState();
   const showAll = new Set();
-  let body = el.querySelector(".tags-panel-body");
-  if (!body) {
-    body = document.createElement("div");
-    body.className = "tags-panel-body";
-    el.appendChild(body);
-  }
-  let groups = null;
   let active = null;
-
-  function render() {
-    body.innerHTML = "";
-    if (!groups) {
-      const note = document.createElement("p");
-      note.className = "tags-panel-note";
-      note.textContent = "Tags unavailable";
-      body.appendChild(note);
-      return;
-    }
-    for (const entry of KINDS) {
-      const details = document.createElement("details");
-      details.className = "tags-panel-group";
-      details.open = open.has(entry.kind);
-      details.addEventListener("toggle", () => {
-        if (details.open) {
-          open.add(entry.kind);
-        } else {
-          open.delete(entry.kind);
-        }
-        writeOpenState(open);
+  const panel = GroupedPanel.mount(el, {
+    openKey: OPEN_KEY,
+    kinds: KINDS,
+    unavailable: "Tags unavailable",
+    fetchGroups: opts.fetchGroups,
+    rows: (groups, kind) => groupRows(groups, kind, { showAll: showAll.has(kind) }),
+    buildRow: (row) => buildRow(row, isActiveFilter(row.filter, active), onSelect, onBuildStyle),
+    footer(groups, kind, render) {
+      const total = valueCount(groups, kind);
+      if (total <= DEFAULT_LIMIT || showAll.has(kind)) {
+        return null;
+      }
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "tags-panel-more";
+      more.textContent = `Show all (${total})`;
+      more.addEventListener("click", () => {
+        showAll.add(kind);
+        render();
       });
-      const summary = document.createElement("summary");
-      summary.textContent = entry.title;
-      details.appendChild(summary);
-
-      const rows = groupRows(groups, entry.kind, { showAll: showAll.has(entry.kind) });
-      if (rows.length === 0) {
-        const none = document.createElement("p");
-        none.className = "tags-panel-note";
-        none.textContent = "None yet";
-        details.appendChild(none);
-      } else {
-        const list = document.createElement("ul");
-        list.className = "tags-panel-list";
-        for (const row of rows) {
-          list.appendChild(buildRow(row, isActiveFilter(row.filter, active), onSelect, onBuildStyle));
-        }
-        details.appendChild(list);
-      }
-
-      const total = valueCount(groups, entry.kind);
-      if (total > DEFAULT_LIMIT && !showAll.has(entry.kind)) {
-        const more = document.createElement("button");
-        more.type = "button";
-        more.className = "tags-panel-more";
-        more.textContent = `Show all (${total})`;
-        more.addEventListener("click", () => {
-          showAll.add(entry.kind);
-          render();
-        });
-        details.appendChild(more);
-      }
-      body.appendChild(details);
-    }
-  }
-
-  async function refresh() {
-    try {
-      groups = (await opts.fetchGroups()) || null;
-    } catch (err) {
-      groups = null;
-    }
-    render();
-  }
+      return more;
+    },
+  });
 
   function setActive(filter) {
     active = filter || null;
-    if (groups) {
-      render();
+    if (panel.loaded()) {
+      panel.render();
     }
   }
 
-  return { refresh, setActive };
+  return { refresh: panel.refresh, setActive };
 }
 
 const api = { groupRows, valueCount, isActiveFilter, mount };
