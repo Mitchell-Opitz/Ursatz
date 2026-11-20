@@ -14,7 +14,7 @@ foreach(kind IN LISTS KINDS)
     if(NOT written)
         message(FATAL_ERROR "no ${kind} responses were written to ${WRITTEN_DIR}")
     endif()
-    execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" --ref "${REALIZATION_SCHEMA}" --ref "${READING_SCHEMA}" "${response_schema}" ${written}
+    execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" --ref "${REALIZATION_SCHEMA}" --ref "${READING_SCHEMA}" --ref "${SCHEMA_DIR}/preferences.schema.json" "${response_schema}" ${written}
                     RESULT_VARIABLE result)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "a ${kind} response does not match ${response_schema}")
@@ -26,7 +26,7 @@ foreach(kind IN LISTS KINDS)
         if(NOT requests)
             message(FATAL_ERROR "no ${kind} requests were written to ${WRITTEN_DIR}")
         endif()
-        execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" --ref "${FRAGMENT}" --ref "${SCHEMA_DIR}/corpus-passages.schema.json" "${SCHEMA_DIR}/${kind}.request.schema.json" ${requests}
+        execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" --ref "${FRAGMENT}" --ref "${SCHEMA_DIR}/corpus-passages.schema.json" --ref "${SCHEMA_DIR}/preferences.schema.json" "${SCHEMA_DIR}/${kind}.request.schema.json" ${requests}
                         RESULT_VARIABLE result)
         if(NOT result EQUAL 0)
             message(FATAL_ERROR "a ${kind} request does not match schema/api/${kind}.request.schema.json")
