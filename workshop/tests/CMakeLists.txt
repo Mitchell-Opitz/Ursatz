@@ -189,3 +189,8 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      ${PROJECT_SOURCE_DIR}/workshop/schema/ursatz-commands.v1.schema.json ${URSATZ_COMMAND_FILES}
         LABELS schema)
 endif()
+
+# Commands in Ursatz Text (P65 B6): the tool commands-parse on a tools workshop, every rule with its line and message.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
+ursatz_test(workshop_command_text SOURCES test_command_text.c LIBS ursatz_workshop ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
