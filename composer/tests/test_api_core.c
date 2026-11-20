@@ -37,7 +37,7 @@ static char *export_request(const char *plan_text, const char *options) {
 }
 
 static void test_versions(void) {
-    assert(strcmp(composer_api_version(), "4.1") == 0);
+    assert(strcmp(composer_api_version(), "4.2") == 0);
     assert(strcmp(test_status_name(URSATZ_OK), "ok") == 0);
     assert(strcmp(test_status_name(URSATZ_ERR_REQUEST), "request") == 0);
     assert(strcmp(test_status_name(URSATZ_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
@@ -52,7 +52,7 @@ static void test_versions(void) {
     char expected[64];
     snprintf(expected, sizeof expected, "\"composer_version\":\"%s\"", composer_version());
     assert(strstr(response.json, expected));
-    assert(strstr(response.json, "\"api_version\":\"4.1\""));
+    assert(strstr(response.json, "\"api_version\":\"4.2\""));
     assert(strstr(response.json, "\"analyzer_version\"") == NULL); /* R-620: the Composer knows no Analyzer */
     assert(strstr(response.json, "\"producer_key\":\""));
     snprintf(expected, sizeof expected, "\"composition_key\":\"%s\"", composer_composition_key());

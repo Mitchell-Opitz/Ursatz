@@ -56,8 +56,8 @@ JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"sta
   `heard` the cadence the Analyzer heard at the section's end (`null` without `--check`), `source` where the material came
   from (`basic motive`, `own motive`, the theme plan's path, the numerals); a section that `--regenerate` kept (outside the
   scope of the hearing, see [regenerate.md](regenerate.md)) also has `"in_scope": false`, and the text line ends `(kept)`
-  where it would show the cadence heard;
-- `score`: `{"numerator", "denominator"}`; `seam`: the four rules and how many held, for the loop, else `null`;
+  where it would show the cadence heard; a row also has `start_text` (`"bar 3"`, `"bar 3 beat 2"`) and `length_text` (`"2 bars"`, `"1 bar 2 beats"`), written in the meter (API 4.2);
+- `score`: `{"numerator", "denominator"}`; `seam`: the four rules and how many held, for the loop, else `null`; it has `rules` `[{"id", "label", "ok"}]` (API 4.2);
 - `analyzer_check`: `{"planned", "agreed", "contradicts", "items"}` or `null`; `style_distance`: or `null`.
 
 ## Regenerate

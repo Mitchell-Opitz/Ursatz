@@ -95,6 +95,21 @@ static cJSON *seam_json(const ComposeOutcome *outcome) {
         cJSON_Delete(object);
         return NULL;
     }
+    /* the four rules with the sentence each is shown as (API 4.2) */
+    static const char *const kRuleIds[] = {"progression", "no_parallels", "step", "leading_tone"};
+    static const char *const kRuleLabels[] = {"The chords lead back", "No parallel perfect intervals across the seam",
+                                              "The melody leaps no further than it can recover", "The leading tone resolves"};
+    const bool held[] = {outcome->seam.progression, outcome->seam.no_parallels, outcome->seam.step, outcome->seam.leading_tone};
+    cJSON *rules = cJSON_AddArrayToObject(object, "rules");
+    for (size_t i = 0; i < 4; i++) {
+        cJSON *rule = rules ? cJSON_CreateObject() : NULL;
+        if (!rule || !cJSON_AddStringToObject(rule, "id", kRuleIds[i]) || !cJSON_AddStringToObject(rule, "label", kRuleLabels[i]) ||
+            !cJSON_AddBoolToObject(rule, "ok", held[i]) || !cJSON_AddItemToArray(rules, rule)) {
+            cJSON_Delete(rule);
+            cJSON_Delete(object);
+            return NULL;
+        }
+    }
     return object;
 }
 
@@ -166,8 +181,44 @@ static cJSON *function_json(const ApiPieceRow *row) {
     return entry;
 }
 
+/* "bar 3" at a bar's first beat, else "bar 3 beat 2": where a section starts, in the meter's beats (counted from 0). */
+static void position_text(double beats, int per_bar, char *out, size_t size) {
+    int bar = per_bar > 0 ? (int)(beats / per_bar) + 1 : 1;
+    double beat = beats - (double)(bar - 1) * per_bar;
+    if (beat < 1e-9) {
+        snprintf(out, size, "bar %d", bar);
+    } else {
+        snprintf(out, size, "bar %d beat %.15g", bar, (double)(long long)((beat + 1) * 100 + 0.5) / 100);
+    }
+}
+
+/* "2 bars", "6 beats", "1 bar 2 beats": a length in the meter's beats. */
+static void length_text(double beats, int per_bar, char *out, size_t size) {
+    int bars = per_bar > 0 ? (int)(beats / per_bar) : 0;
+    double rest = beats - (double)bars * per_bar;
+    size_t used = 0;
+    out[0] = '\0';
+    if (bars > 0) {
+        used += (size_t)snprintf(out, size, "%d %s", bars, bars == 1 ? "bar" : "bars");
+    }
+    if ((rest > 1e-9 || bars == 0) && used < size) {
+        snprintf(out + used, size - used, "%s%.15g %s", used ? " " : "", rest, rest == 1 ? "beat" : "beats");
+    }
+}
+
+/* start_text and length_text of a row, in the request's meter. */
+static bool add_time_texts(cJSON *entry, const PieceSpec *request, const ApiPieceRow *row, double beats) {
+    char start[48];
+    char length[48];
+    int per_bar = (int)request->request.meter.beats_per_bar;
+    double start_beats = row->start.den != 0 ? (double)row->start.num * (double)request->request.meter.beat_unit / (double)row->start.den : 0;
+    position_text(start_beats, per_bar, start, sizeof start);
+    length_text(beats, per_bar, length, sizeof length);
+    return cJSON_AddStringToObject(entry, "start_text", start) && cJSON_AddStringToObject(entry, "length_text", length);
+}
+
 /* A row of a form whose sections the request gives: {id, part, function, letter, start, beats, cadence, heard, [in_scope], fill, source, [construction_text]}. */
-static cJSON *loop_row_json(const ApiPieceRow *row) {
+static cJSON *loop_row_json(const PieceSpec *request, const ApiPieceRow *row) {
     cJSON *entry = cJSON_CreateObject();
     bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->description.id) &&
               cJSON_AddStringToObject(entry, "part", piece_part_name(piece_section_part(row->section))) &&
@@ -179,7 +230,8 @@ static cJSON *loop_row_json(const ApiPieceRow *row) {
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
               cJSON_AddStringToObject(entry, "source", row->source) &&
               api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) &&
-              api_add(entry, "harmony", string_or_null(row->harmony[0] ? row->harmony : NULL)) && add_construction_text(entry, row);
+              api_add(entry, "harmony", string_or_null(row->harmony[0] ? row->harmony : NULL)) && add_construction_text(entry, row) &&
+              add_time_texts(entry, request, row, (double)row->section->description.beats);
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
@@ -437,7 +489,7 @@ static cJSON *size_row_json(const PieceSpec *request, const ApiPieceRow *row) {
               api_add(entry, "function", function_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
               api_add(entry, "repeat_of", string_or_null(row->repeat_of)) && api_add(entry, "upbeat", upbeat_json(row)) &&
               api_add(entry, "connective", row->connective < 0 ? cJSON_CreateNull() : cJSON_CreateBool(row->connective > 0)) &&
-              add_construction_text(entry, row);
+              add_construction_text(entry, row) && add_time_texts(entry, request, row, api_piece_span_beats(request, row->length));
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
@@ -453,7 +505,7 @@ cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *vers
     cJSON *sections = cJSON_CreateArray();
     bool ok = api_add(object, "plan", cJSON_CreateNull()) && api_add(object, "sections", sections);
     for (size_t i = 0; ok && i < count; i++) {
-        cJSON *entry = rows[i].spec ? size_row_json(request, &rows[i]) : loop_row_json(&rows[i]);
+        cJSON *entry = rows[i].spec ? size_row_json(request, &rows[i]) : loop_row_json(request, &rows[i]);
         if (!entry || !cJSON_AddItemToArray(sections, entry)) {
             cJSON_Delete(entry);
             ok = false;

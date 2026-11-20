@@ -192,6 +192,83 @@ static bool add_key_member(cJSON *keys, const cJSON *base_keys, const char *name
     return cJSON_AddStringToObject(keys, name, cJSON_IsString(item) ? item->valuestring : "home") != NULL;
 }
 
+/* The text of a member of a section object, or "" when it is not text. */
+static const char *text_of(const cJSON *object, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    return cJSON_IsString(item) ? item->valuestring : "";
+}
+
+static bool flag_of(const cJSON *object, const char *name) {
+    return cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(object, name));
+}
+
+/* The sentence of a section's figure: the kind and the rhythm, then reharmonized, the root change at a bar and the climax as they apply, and the
+   parallel mode when the section is in it; "" for a section with no figure. */
+static void figure_label(const cJSON *section, char *out, size_t size) {
+    const cJSON *figure = cJSON_GetObjectItemCaseSensitive(section, "figure");
+    out[0] = '\0';
+    if (!cJSON_IsObject(figure)) {
+        return;
+    }
+    const char *kind = text_of(figure, "kind");
+    const char *rhythm = text_of(figure, "rhythm");
+    size_t used = (size_t)snprintf(out, size, "%s", strcmp(kind, "neighbor") == 0 ? "neighbor tones" : strcmp(kind, "scale") == 0 ? "scale line" : strcmp(kind, "broken-chord") == 0 ? "broken chord" : kind);
+    if (rhythm[0] != '\0' && used < size) {
+        used += (size_t)snprintf(out + used, size - used, " in %s", rhythm);
+    }
+    const cJSON *change = cJSON_GetObjectItemCaseSensitive(figure, "change_at");
+    if (strcmp(text_of(figure, "harmony"), "reharmonized") == 0 && used < size) {
+        used += (size_t)snprintf(out + used, size - used, ", reharmonized");
+    }
+    if (cJSON_IsNumber(change) && used < size) {
+        used += (size_t)snprintf(out + used, size - used, ", root changed at bar %d", change->valueint);
+    }
+    if (flag_of(figure, "climax") && used < size) {
+        used += (size_t)snprintf(out + used, size - used, ", climax");
+    }
+    if (strcmp(text_of(section, "mode"), "parallel") == 0 && used < size) {
+        snprintf(out + used, size - used, ", parallel mode");
+    }
+}
+
+/*
+ * The sentences a section is shown as (API 4.2): labels {role, return, keys, figure}. role is the role's label, then " (independent)" for an
+ * independent transition and " (lyric)" for a lyric subordinate theme; return is "" for a section that returns none, else the returned name,
+ * then " (<variation>)" or " (setting: <setting>)"; keys is "<start> to <end>" then " (tonic major)" or " (home mode)"; figure is the figure in words.
+ */
+static bool add_labels(cJSON *section) {
+    cJSON *labels = cJSON_CreateObject();
+    if (!labels || !cJSON_AddItemToObject(section, "labels", labels)) {
+        cJSON_Delete(labels);
+        return false;
+    }
+    char text[256];
+    const cJSON *role = cJSON_GetObjectItemCaseSensitive(section, "role");
+    snprintf(text, sizeof text, "%s%s%s", text_of(role, "label"), flag_of(section, "independent") ? " (independent)" : "",
+             flag_of(section, "lyric") ? " (lyric)" : "");
+    bool ok = cJSON_AddStringToObject(labels, "role", text) != NULL;
+    const char *returns = text_of(section, "returns");
+    const char *variation = text_of(section, "variation");
+    const char *setting = text_of(section, "setting");
+    if (returns[0] == '\0') {
+        text[0] = '\0';
+    } else if (variation[0] == '\0') {
+        snprintf(text, sizeof text, "%s", returns);
+    } else if (strcmp(variation, "setting") == 0 && setting[0] != '\0') {
+        snprintf(text, sizeof text, "%s (setting: %s)", returns, setting);
+    } else {
+        snprintf(text, sizeof text, "%s (%s)", returns, variation);
+    }
+    ok = ok && cJSON_AddStringToObject(labels, "return", text);
+    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(section, "keys");
+    const char *mode = text_of(section, "mode");
+    snprintf(text, sizeof text, "%s to %s%s", text_of(keys, "start"), text_of(keys, "end"),
+             strcmp(mode, "major") == 0 ? " (tonic major)" : strcmp(mode, "home") == 0 ? " (home mode)" : "");
+    ok = ok && cJSON_AddStringToObject(labels, "keys", text);
+    figure_label(section, text, sizeof text);
+    return ok && cJSON_AddStringToObject(labels, "figure", text);
+}
+
 /*
  * A form's section as the Pieces view needs it: the members of the section codec (the document's own, written by
  * section_to_json for a form), then the choices as {"value", "label"} and the members that always have a value. bars and
@@ -231,7 +308,7 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
          add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
          add_choice_row(section, base, spec, choice_row("connective")) && add_figure(section, spec) &&
          copy_or_null(section, base, "mode") && cJSON_AddBoolToObject(section, "independent", spec->function.independent) &&
-         cJSON_AddBoolToObject(section, "lyric", spec->function.lyric);
+         cJSON_AddBoolToObject(section, "lyric", spec->function.lyric) && add_labels(section);
     cJSON_Delete(base);
     (void)form;
     return ok;
@@ -257,6 +334,26 @@ static bool add_sizes(cJSON *form_json, const FormSpec *form) {
             if (!add_section(sections, form, size, &size->sections[k])) {
                 return false;
             }
+        }
+        /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars" */
+        const cJSON *last = cJSON_GetArrayItem(sections, (int)size->section_count - 1);
+        char noun[64] = "section";
+        const char *role_text = text_of(cJSON_GetObjectItemCaseSensitive(last, "role"), "label");
+        if (role_text[0] != '\0') {
+            size_t n = 0;
+            for (; role_text[n] && n < sizeof(noun) - 1; n++) {
+                noun[n] = (char)((role_text[n] >= 'A' && role_text[n] <= 'Z') ? role_text[n] + 32 : role_text[n]);
+            }
+            noun[n] = '\0';
+        }
+        char label[128];
+        if (size->count > 0) {
+            snprintf(label, sizeof label, "%d %s%s, %d bars", (int)size->count, noun, size->count == 1 ? "" : "s", (int)size->bars);
+        } else {
+            snprintf(label, sizeof label, "%d bars", (int)size->bars);
+        }
+        if (!cJSON_AddStringToObject(entry, "label", label)) {
+            return false;
         }
     }
     return sizes != NULL;
