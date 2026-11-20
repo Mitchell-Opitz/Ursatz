@@ -5,6 +5,7 @@ add_library(ursatz_text
     text.c
     text_layers.c
     text_tree.c
+    text_view.c
 )
 ursatz_public_headers(ursatz_text
     BASE ${PROJECT_SOURCE_DIR}
