@@ -792,8 +792,8 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
  *   modeHidden     true to leave out the chosen/given select (the host has its own).
  * Returns {element, refresh()}; refresh re-reads the host (bars, pairing, state) and opens the block when the bars need one. */
 export function buildConstructionBlock(host) {
-  const element = element("details", "theme-construction");
-  element.appendChild(element("summary", "section-title", "Construction"));
+  const block = element("details", "theme-construction");
+  block.appendChild(element("summary", "section-title", "Construction"));
   const body = element("div");
   const modeRow = element("div", "upload-controls");
   body.appendChild(modeRow);
@@ -815,8 +815,8 @@ export function buildConstructionBlock(host) {
   const hint = element("div", "materials-hint");
   body.appendChild(ideasRow);
   body.appendChild(extensionsRow);
-  element.appendChild(body);
-  element.appendChild(hint);
+  block.appendChild(body);
+  block.appendChild(hint);
 
   function change() {
     host.changed();
@@ -912,7 +912,7 @@ export function buildConstructionBlock(host) {
       renderExtensions(construction);
     }
     if (ThemesModel.needsConstruction(host.bars()) || construction) {
-      element.open = true;
+      block.open = true;
     }
   }
 
@@ -922,13 +922,13 @@ export function buildConstructionBlock(host) {
     change();
   });
   refresh();
-  return { element, refresh };
+  return { element: block, refresh };
 }
 
 /* The chord row: one text field per bar of the theme, empty bars left to the Composer. Returns {element, refresh()}. */
 function buildThemeChordRow(state) {
-  const element = element("div", "theme-chords");
-  element.appendChild(element("h3", "section-title", "Chords"));
+  const block = element("div", "theme-chords");
+  block.appendChild(element("h3", "section-title", "Chords"));
   const row = element("div", "upload-controls");
   const fields = [];
   for (let bar = 0; bar < ThemesModel.chordBars(); bar++) {
@@ -938,9 +938,9 @@ function buildThemeChordRow(state) {
     });
     fields.push(themeField(row, `Bar ${bar + 1}`, input).parentElement);
   }
-  element.appendChild(row);
+  block.appendChild(row);
   const hint = element("div", "materials-hint");
-  element.appendChild(hint);
+  block.appendChild(hint);
   /* Marks the field of one bar (from 0) a refusal names; no bar clears the mark. */
   function mark(bar) {
     fields.forEach((field, at) => field.classList.toggle("field-invalid", at === bar));
@@ -953,7 +953,7 @@ function buildThemeChordRow(state) {
     hint.textContent = ThemesModel.chordHint(state.meter);
   }
   refresh();
-  return { element, refresh, mark };
+  return { element: block, refresh, mark };
 }
 
 function buildThemeAdvancedSection(state, itemsOf) {
