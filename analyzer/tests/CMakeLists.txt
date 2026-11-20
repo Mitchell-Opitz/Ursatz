@@ -353,34 +353,6 @@ ursatz_test(test_similar_material_smoke TARGET test_similar_material ARGS smoke 
 # Over 10 s in the fast set (about 44 s of CPU measured): runs nightly.
 ursatz_test(test_similar_material TARGET test_similar_material LABELS golden slow PROPERTIES RESOURCE_LOCK similar_work)
 
-# The --similar flag: the motive file comes from the test program, which writes it.
-ursatz_test(test_cli_similar_motive_file TARGET test_similar_material ARGS --write-motive
-    ${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid PROPERTIES FIXTURES_SETUP similar_motive_file)
-# The smoke searches the corpus "small" (Bach 114 and Clementi 36).
-ursatz_test(test_cli_similar_smoke COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
-                 -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
-                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
-                 -DSMOKE=1
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_smoke
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
-    PROPERTIES FIXTURES_REQUIRED similar_motive_file)
-# Over 10 s in the fast set (about 46 s of CPU measured): runs nightly.
-ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
-                 -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
-                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
-    LABELS slow
-    PROPERTIES FIXTURES_REQUIRED similar_motive_file)
-
 ursatz_test_executable(test_meter_check LIBS ursatz_analyzer_engine analyzer_test_support cjson m
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 ursatz_test(test_meter_check_smoke TARGET test_meter_check ARGS smoke)
@@ -395,15 +367,6 @@ if(URSATZ_VALGRIND)
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_links> LABELS slow valgrind
         PROPERTIES RESOURCE_LOCK motive_links_work)
 endif()
-ursatz_test(test_cli_link_motives COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/links
-                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                 -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
-                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v2.schema.json
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 
 ursatz_test(test_staleness LIBS ursatz_test_support ursatz_analyzer_engine cjson
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")

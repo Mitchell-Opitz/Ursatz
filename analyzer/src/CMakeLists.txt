@@ -69,9 +69,5 @@ target_link_libraries(ursatz_analyzer_engine
     PRIVATE cjson
 )
 
-# The library consumers link exports only the API (exports.txt); the command line and the tests use the internals, so they link the engine.
+# The library consumers link exports only the API (exports.txt); the tests use the internals, so they link the engine.
 ursatz_localize_exports(ursatz_analyzer ENGINE ursatz_analyzer_engine KEEP ${CMAKE_CURRENT_SOURCE_DIR}/exports.txt)
-
-add_executable(ursatz-analyzer cli/main.c)
-target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer_engine)
