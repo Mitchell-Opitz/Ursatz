@@ -204,7 +204,7 @@ uses composer-request model theory realization plan reading analysis chain io cj
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
 uses composer-cli  composer-api analyzer-api cjson common
 uses workshop-api common cjson
-uses workshop-base common composer-api analyzer-api theory cjson
+uses workshop-base common composer-api analyzer-api theory pitch cjson
 uses workshop-jobs workshop-base common composer-api cjson
 uses workshop-items workshop-api workshop-base workshop-jobs common composer-api analyzer-api realization reading cjson
 uses workshop-analysis workshop-base workshop-items workshop-jobs common composer-api analyzer-api theory-style realization reading cjson

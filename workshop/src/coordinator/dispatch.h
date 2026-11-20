@@ -133,6 +133,9 @@ WORKSHOP_HANDLER(workshop_q_item_variants);
 WORKSHOP_HANDLER(workshop_q_item_each_op);
 
 /* tools (tools.c): the third call, on files the params name (R-656) */
+WORKSHOP_HANDLER(workshop_t_composer);
+WORKSHOP_HANDLER(workshop_t_corpus_passages);
+WORKSHOP_HANDLER(workshop_t_pitch_names);
 WORKSHOP_HANDLER(workshop_t_versions);
 
 /* subjects (api_subjects.c) */
