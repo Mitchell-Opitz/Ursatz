@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -617,6 +618,14 @@ static bool add_lanes(cJSON *root) {
     return list != NULL;
 }
 
+/* The bars a theme may have with a construction, 3 to 16 (API_THEME_BARS), and whether it may have a pickup (it may not). */
+static bool add_construction_limits(cJSON *limits) {
+    cJSON *bars = cJSON_AddObjectToObject(limits, "construction_bars");
+    size_t count = api_choice_count(API_THEME_BARS);
+    return bars && count > 0 && cJSON_AddNumberToObject(bars, "min", atoi(API_THEME_BARS[0].value)) &&
+           cJSON_AddNumberToObject(bars, "max", atoi(API_THEME_BARS[count - 1].value)) && cJSON_AddBoolToObject(limits, "construction_pickup", 0);
+}
+
 static bool add_limits(cJSON *root) {
     cJSON *limits = cJSON_AddObjectToObject(root, "limits");
     return limits && cJSON_AddNumberToObject(limits, "motive_notes", MOTIVE_MAX_NOTES) &&
@@ -632,7 +641,7 @@ static bool add_limits(cJSON *root) {
            cJSON_AddNumberToObject(limits, "theme_motives", API_THEME_MOTIVES_MAX) &&
            cJSON_AddNumberToObject(limits, "theme_extensions", SECTION_CONSTRUCTION_EXTENSIONS) &&
            cJSON_AddNumberToObject(limits, "piece_variations", PIECE_VARIATIONS_MAX) &&
-           cJSON_AddNumberToObject(limits, "harmony_cells", API_HARMONY_CELLS_MAX) && add_seed_max(limits) &&
+           cJSON_AddNumberToObject(limits, "harmony_cells", API_HARMONY_CELLS_MAX) && add_construction_limits(limits) && add_seed_max(limits) &&
            add_preference_limits(limits);
 }
 

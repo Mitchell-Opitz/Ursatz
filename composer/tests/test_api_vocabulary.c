@@ -575,6 +575,10 @@ static void test_theme_form_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(limits, "theme_extensions")->valuedouble == SECTION_CONSTRUCTION_EXTENSIONS);
     assert(cJSON_GetObjectItemCaseSensitive(limits, "piece_variations")->valuedouble == 8);
     assert(cJSON_GetObjectItemCaseSensitive(limits, "harmony_cells")->valuedouble == 8);
+    /* since 4.2: the bars a theme may have with a construction, and no pickup */
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(limits, "construction_bars"), "min")->valuedouble == 3);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(limits, "construction_bars"), "max")->valuedouble == 16);
+    assert(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(limits, "construction_pickup")));
     {
         const cJSON *developments = cJSON_GetObjectItemCaseSensitive(vocabulary, "theme_developments");
         assert(cJSON_GetArraySize(developments) == 3);

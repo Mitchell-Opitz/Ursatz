@@ -4,7 +4,7 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 ## Unreleased (phase P62)
 
-API 4.2 (R-651, P63 B16): each section of a form in `forms` has `labels` (`role`, `return`, `keys`, `figure`) and each size a `label`; each row of a piece version has `start_text` (`"bar 3"`, `"bar 3 beat 2"`) and `length_text` (`"2 bars"`, `"1 bar 2 beats"`) in the request's meter, and the seam has `rules` (`id`, `label`, `ok`). The members are additions: a plan and every composed file are as before.
+API 4.2 (R-651, P63 B16): each section of a form in `forms` has `labels` (`role`, `return`, `keys`, `figure`) and each size a `label`; each row of a piece version has `start_text` (`"bar 3"`, `"bar 3 beat 2"`) and `length_text` (`"2 bars"`, `"1 bar 2 beats"`) in the request's meter, and the seam has `rules` (`id`, `label`, `ok`). The vocabulary's limits have `construction_bars` (`{"min": 3, "max": 16}`) and `construction_pickup` (`false`). The members are additions: a plan and every composed file are as before.
 
 API 4.1 (R-649, P63 B14): the vocabulary lists `theme_developments` (`value`, `label`, `help`) and `lanes` and the limits `theme_motives` (16), `theme_extensions` (3), `piece_variations` (8) and `harmony_cells` (8), so a client holds no copy of them.
 
