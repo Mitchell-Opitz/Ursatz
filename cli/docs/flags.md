@@ -1,11 +1,12 @@
 # Flags
 
-The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in every command that takes it. `ursatz <command> --help` prints the flags of one command; this page lists them all with the commands that take each. Back to the [cli docs](README.md).
+The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in every command that takes it. `ursatz <command> --help` prints the flags of one command; this page lists them all with the commands that take each. It is the output of `ursatz help flags --format markdown`: do not edit. Back to the [cli docs](README.md).
 
 | Flag | Meaning | Commands |
 | --- | --- | --- |
 | `--above` | the line is the bass and the counter-melody sings above it | `counterpoint` |
 | `--accompaniment <pattern>` | write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any | `grow`, `plan` |
+| `--accompaniment-format <format>` | the format of the accompaniment motive's file, as --input-format | `grow` |
 | `--accompaniment-motive <file>` | a saved accompaniment motive, restated on each chord in chord tones | `grow` |
 | `--accompaniment-pickup <beats>` | the pickup of the accompaniment motive, as 1 or 1/2 | `grow` |
 | `--actor <name>` | global: who a command is journaled as (default claude); stands before the subcommand | every command (stands before it) |
@@ -70,7 +71,8 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--limit <n>` | how many records or results at most | `history` |
 | `--list-ops` | print every operation, with its parameters and the forms it applies to | `variants` |
 | `--list-schemas` | list the schema and sequence names and exit | `progression` |
-| `--measures <first>-<last>` | the measures to export, as written in the score, inclusive (with --view text) | `analyze` |
+| `--material <word>` | major or minor (style, where the style names one) | `random-motive`, `counterpoint`, `grow`, `plan`, `listen` |
+| `--measures <first>-<last>` | the measures to show, <first>-<last>, inclusive: as written in the score for analyze --view reading, bars from 1 for show | `analyze`, `show` |
 | `--meter <n/m>` | the meter, for example 4/4 | `progression`, `motive`, `develop`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `plan`, `listen`, `analyze` |
 | `--midi <file>` | write the result as a MIDI file | `progression`, `motive`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `render` |
 | `--min <n>` | fragment or liquidate: the fewest notes that stay | `develop` |
@@ -117,13 +119,14 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--tempo <bpm>` | the tempo of the files in quarter notes per minute, 20 to 400, a whole number or a fraction like 195/2 | `progression`, `motive`, `develop`, `counterpoint`, `grow`, `fill`, `regenerate`, `variations`, `harmonize`, `render`, `listen` |
 | `--texture <name>` | the texture the accompaniment is to be heard as | `grow`, `plan` |
 | `--theme-request <file>` | the theme request every theme of the batch is made from | `listen` |
-| `--title <text>` | the title of the text export (with --view text) | `analyze` |
+| `--title <text>` | the title of the text export (with --view reading) | `analyze` |
 | `--tonal` | work in scale steps of the key and not in semitones | `develop` |
 | `--tone <n>=<role>` | label note n (1-based) as chord or as a non-chord tone; repeatable | `motive` |
 | `--update-uses` | compose: move every updated use to its source's current version first | `compose` |
+| `--value-scale <n or n/d>` | read the note values of the file scaled by this factor (a notation reading) | `analyze` |
 | `--variations <id>` | make --count different versions of the section with that id | `piece` |
 | `--version <n>` | regenerate of an item: the version of the piece the section is written again from (default: the current one) | `regenerate` |
-| `--view <view>` | a view of the result: text is the measure-addressed text export of analyze, json what show prints | `analyze`, `show` |
+| `--view <view>` | a view of the result: reading is the measure-addressed text export of analyze, framed as a view; show takes summary, structure, harmony, line:<name>, part:<name>, reading, full or json | `analyze`, `show` |
 | `--voicing` | keep the grown melody as the soprano and add an alto and a tenor under it | `grow` |
 | `--wait` | wait for the job a command starts, and say how it ended | `apply` |
 | `--what <what>` | motifs or themes | `listen` |

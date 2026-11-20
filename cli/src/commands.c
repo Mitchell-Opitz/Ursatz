@@ -524,7 +524,7 @@ const CliCommand CLI_COMMANDS[] = {
      "Make batches of motifs or themes from fixed seeds for listening",
     "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n"
     "session plays and reads. Sample i (from 0) uses the seed --seed + i, so the same options, settings and seed\n"
-    "give the same files. See docs/cli-listen.md.\n"
+    "give the same files. See cli/docs/cli-listen.md.\n"
     "\n"
     "Files, i from 01: <i>.mid, <i>.musicxml, <i>.json (the API response) and one line per sample in listen.jsonl.\n"
     "Notes on options:\n"
