@@ -840,6 +840,12 @@ static bool lex_key(const char *text, int number, char **key, const char **rest,
         if (*key) {
             memcpy(*key, p, (size_t)(q - p));
             (*key)[q - p] = '\0';
+            if (!is_bare_key(*key)) {
+                set_error(error, number, "a key is a name or a quoted string");
+                free(*key);
+                *key = NULL;
+                return false;
+            }
         }
         p = q;
     }
