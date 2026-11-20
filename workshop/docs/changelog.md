@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P64: tools (2026-11)
+
+- **Tools.** A third call, `workshop_tool`, works on the files its params name and never on the data folder (R-656). `workshop_tools_open` opens a workshop with no data folder; `workshop_api.h` has 21 exported names. The tools: `composer` (every Composer API entry), `corpus-passages`, `pitch-names` and `versions` ([tools](tools.md)).
+
 ## P63: the workshop (2026-11)
 
 - **The part.** `workshop/` is a new part with one API header, `workshop_api.h` (19 exported names), and the services the GUI backend held before: the store, the Library piece store, styles, motive links, motifs, themes, pieces, the variant engine, playback and export, and the job queue. The GUI backend hosts it (R-641).

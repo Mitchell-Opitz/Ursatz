@@ -1,6 +1,6 @@
 # Queries and commands
 
-The two calls a program makes to the workshop, the names they take and what each answers. [Docs index](README.md).
+The two calls a program makes to the workshop, the names they take and what each answers. A third call, `workshop_tool`, works on files and not on the data folder: see [tools](tools.md). [Docs index](README.md).
 
 ## The calls
 
