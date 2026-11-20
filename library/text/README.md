@@ -70,11 +70,40 @@ For a plan, reading or realization `x`, the codec's JSON of `parse(print(x))` is
 
 ### Views
 
-A view is a printed summary of a layer, not a copy: it starts `ursatz-text 1 view <name> <address>` and ends with `# leaves out: ...` and `# expand: ...` lines, so a reader knows what is missing and how to ask for it. The views come with the next section of the phase (P65 B2).
+A view is a printed summary of a layer for a reader, not a copy: it starts `ursatz-text 1 view <view> <address>` and ends with `# leaves out: ...` and `# expand: ...` lines, so a reader knows what is missing and how to ask for it. `text_view_print` prints them from a plan, a realization and a reading (any may be missing); it reads each through its codec document, so a view shows what the layer's file holds. Bars count from 1 over the plan's meter lane (else the realization's meter, else the reading's meters); a span is `bars a-b`, a position inside a bar `@<beat>` (beats from 1, `@2.5` for a fraction).
+
+| View | Needs | Prints |
+|---|---|---|
+| `summary` | a plan or a reading | a header (form, home region, meter, bars), a row a section (bars, role, letter, function, a region that is not the home, the numerals of each bar), then the lines and the parts |
+| `structure` | a plan or a reading | the form tree, a node a line, two spaces a level, the section description's members; a reading's groups by parent |
+| `harmony` | a plan or a reading | `key <region> from bar <n>` at each region and a line a bar with its chords |
+| `line:<name>` | a realization or a plan | a realization line by id, else a plan lane (`melody`, `bass`, `inner-<n>`): a line a bar of notes |
+| `part:<name>` | a realization | a performer part by id: a bar, and a line a staff and voice (`S1 V2`) |
+| `reading` | a reading | per bar, the claims that start there: key, group, cadence, chord, motive, meter, line, fault |
+
+```
+ursatz-text 1 view summary loop
+loop  form game-loop  home D major  4/4  bars 1-68
+  intro  bars 1-2  role intro  letter I  harmony I IV | V
+  a  bars 3-10  role body  letter A  harmony I | viio6 I6 | I | viio6 I6 | I | IV | V | I
+lines melody | bass
+parts piano: melody bass
+# leaves out: notes, constraints, ids, spans (--view full)
+# expand: ursatz show <address>/<section> --view structure
+```
+
+Notes are `<spelling or sharp name><octave>:<duration>` (MIDI 60 is C4), a chord's notes at one onset joined by `+` (`C4+E4+G4:q`), a gap `r:<duration>`, a bar a note sounds through `-`. Durations are `w h q e s t` (1 to 1/32 of a whole note), one or two dots (3/2 and 7/4 of the value), a triplet `3` (2/3 of the value), else `n/d` of a whole note.
+
+```
+bar 1  F#5:q A5:e F#5:e B5:q G5:q
+bar 10  F#4:w
+```
+
+A view takes a measure range and a section (its label or id, else a reading group's label): rows, nodes and bars outside are left out, the header keeps the full address, and `# leaves out` adds `bars outside a-b`. `full` and `json` are not views of this library: the caller joins the layers' texts (`text_layers.h`) or their JSON. A refusal names the view, the layer it needs or the unknown line, part or section.
 
 ## API
 
-Headers `text/text.h`, `text/text_tree.h` and `text/text_layers.h`. Every function that answers a string answers one the caller frees; every failure fills a `TextError` (`line`, 1-based, 0 for the document as a whole, and `message`).
+Headers `text/text.h`, `text/text_tree.h`, `text/text_layers.h` and `text/text_view.h`. Every function that answers a string answers one the caller frees; every failure fills a `TextError` (`line`, 1-based, 0 for the document as a whole, and `message`).
 
 | Function | What it does |
 |---|---|
@@ -88,6 +117,8 @@ Headers `text/text.h`, `text/text_tree.h` and `text/text_layers.h`. Every functi
 | `text_from_json(json, kind, &error)` | a document of a kind from JSON text; "this is not a <kind>" when the JSON is not that kind |
 | `text_to_json(knowledge, text, &kind, &error)` | the JSON of a document: a plan, a reading or a realization through its codec (a refusal reads "<path>: <message>"), anything else as the tree |
 | `text_plan_producer(document, &producer)` | the `PlanProducer` a plan document's `metadata` names |
+| `text_view_print(&source, view, &limits, &error)` | a framed view of the layers in `source` |
+| `text_view_frame(view, address, body, leaves_out, expand)` | a body framed as a view (the Analyzer's export is one, P65 B3) |
 
 The kinds `plan`, `reading` and `realization` need the knowledge snapshot the codecs read with. `knowledge` and `knowledge-entry` have no snapshot check: `tools/ci/check-knowledge.py` checks entries.
 
