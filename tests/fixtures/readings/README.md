@@ -7,7 +7,7 @@ regions and 5 cadences, no evidence and no detail. It names the realization the 
 It was made with
 
 ```bash
-build/analyzer/src/ursatz-analyzer --layers <dir> "tests/fixtures/framework-v1-corpus/Mozart 545.mid"
+build/cli/ursatz analyze --layers <dir> "tests/fixtures/framework-v1-corpus/Mozart 545.mid"
 python3 tools/annotations/annotation_to_reading.py tests/fixtures/annotations/mozart545_v1_expected.txt <dir>/readings/analyzer.json \
     tests/fixtures/readings/mozart-545.michelle.json --person michelle
 ```

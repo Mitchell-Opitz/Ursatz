@@ -23,7 +23,7 @@ and skips them (`-DURSATZ_REQUIRE=node` makes it fail instead). The frontend tes
 `analysis-view.test.js` loads `analysis-tabs.js` and checks it against the Analyzer's snapshot of Mozart 545
 (`analyzer/tests/snapshots/mozart-545.analysis.json`), and that each tab loaded per section equals the tab built
 from the whole document.
-`test_analyzer_route` uploads Mozart 545 and a MusicXML score, checks the stored analysis by section and by detail (it does not run the Analyzer CLI: the Analyzer's own tests own the CLI's output), and
+`test_analyzer_route` uploads Mozart 545 and a MusicXML score, checks the stored analysis by section and by detail (it does not run `ursatz analyze`: the Analyzer's own tests own its output), and
 covers list, detail, metadata editing, filtering and groups, rename,
 re-run and delete; the summary and the `/document` route; and, through a counter in the import cache, that the
 detail, score, meta and playback of one piece import it once and a PATCH or re-analyze makes the next open import
@@ -48,7 +48,7 @@ jobs at once, and stop joining the workers. `backend-jobs.test.js` covers the jo
 writes (slots, a pool of approved and unflagged forms without the rejected, the brief, `without`, read back from the
 version's `request.json`), the version it writes with its files, the files route, a stuck run writing nothing and
 leaving no staging folder, `update_uses`, two composes of one theme at once, the jobs routes, and one compose over a
-brief of fixture pieces whose `plan.json`, `theme.mid` and `theme.musicxml` are what they claim to be (`backend/tests/version_check.h`: a plan with `"format": "ursatz-composer-plan"`, a MIDI file starting `MThd`, a score with `<score-partwise`) and whose served playback equals the playback service's for the stored MIDI file. `test_piece_route` does the same for a piece: each stored plan, MIDI and MusicXML file of its compose, regenerate and choose passes those checks, the summary names the stored plans, and the sections of the loop and ending versions follow the request the version was composed from (a chosen variation's ending is made from a seed read from the clock, so only its loop version is checked).
+brief of fixture pieces whose `plan.json`, `theme.mid` and `theme.musicxml` are what they claim to be (`backend/tests/version_check.h`: a plan with `"format": "ursatz-plan"`, a MIDI file starting `MThd`, a score with `<score-partwise`) and whose served playback equals the playback service's for the stored MIDI file. `test_piece_route` does the same for a piece: each stored plan, MIDI and MusicXML file of its compose, regenerate and choose passes those checks, the summary names the stored plans, and the sections of the loop and ending versions follow the request the version was composed from (a chosen variation's ending is made from a seed read from the clock, so only its loop version is checked).
 
 CI (`.github/workflows/ci.yml`) builds the whole repository once and runs the checks and the fast set on every push and
 pull request; no secret is needed.

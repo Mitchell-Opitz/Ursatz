@@ -7,8 +7,8 @@ Source: Mitchell-Opitz/Ursatz-Composer at commit `987e0a5`, a Debug build of its
 
 | File | How it was made |
 |---|---|
-| `sentence-c-major.mid` | `ursatz-composer export tests/fixtures/sentence_c_major.json --midi sentence-c-major.mid` |
-| `period-a-minor.mid` | `ursatz-composer export tests/fixtures/period_a_minor.json --midi period-a-minor.mid` |
+| `sentence-c-major.mid` | `ursatz render tests/fixtures/sentence_c_major.json --midi sentence-c-major.mid` |
+| `period-a-minor.mid` | `ursatz render tests/fixtures/period_a_minor.json --midi period-a-minor.mid` |
 | `fill.mid` | a copy of the Composer's `tests/snapshots/fill.mid` |
 
-To regenerate, build `ursatz-composer` from the repository root (`build/composer/cli/ursatz-composer`).
+To regenerate, build `ursatz` from the repository root (`build/cli/ursatz`).

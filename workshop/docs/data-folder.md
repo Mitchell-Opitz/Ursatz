@@ -4,7 +4,7 @@ Where the workshop keeps what a person made, which format each file has and how 
 
 ## Layout 2
 
-The folder is a plain directory; `ursatz-gui-backend --data <dir>` (or `URSATZ_DATA`, or `data_dir` of the settings) names it, and the process runs inside it. `data-folder.json` (format `ursatz-data-folder`, `format_version` 2 is the layout) marks a folder the workshop may open. The path of every file is built in `workshop/src/items/layout.c`.
+The folder is a plain directory; `ursatz-gui-backend --data <dir>` or `ursatz --data <dir> <command>` (or `URSATZ_DATA`, or `data_dir` of the settings) names it, and the process runs inside it. `data-folder.json` (format `ursatz-data-folder`, `format_version` 2 is the layout) marks a folder the workshop may open. The path of every file is built in `workshop/src/items/layout.c`.
 
 ```
 data-folder.json                                   the layout marker, written last by a migration
@@ -78,11 +78,11 @@ The lock file has two forms (R-659): `<pid>\n` while the process serves nothing,
 
 ## Older folders and migration
 
-A folder from before the workshop (layout 0: `pieces/`, `materials/`, `subjects/`, `collections/`, `styles/`, `links/`) and a layout 1 folder are refused when opened, with the commands to run:
+A folder from before the workshop (layout 0: `pieces/`, `materials/`, `subjects/`, `collections/`, `styles/`, `links/`) and a layout 1 folder are refused when opened, with the commands to run ([`ursatz migrate`](../../cli/docs/data-folder.md#migrate); the GUI backend no longer migrates):
 
 ```
-ursatz-gui-backend --data <dir> --migrate --dry-run          # reads, writes nothing, prints every planned move and rewrite
-ursatz-gui-backend --data <dir> --migrate [--backup <dir>]   # the same, for real
+ursatz --data <dir> migrate --dry-run          # reads, writes nothing, prints every planned move and rewrite
+ursatz --data <dir> migrate [--backup <dir>]   # the same, for real
 ```
 
 A real run first runs the read-only data check (a folder the one-time migrations of the old GUI never ran on is refused with the check's message), copies the whole folder to the backup (`<dir>-backup-<UTC time>` beside it unless `--backup` names one) and compares file count and bytes, builds the new layout in `.migrate-1/`, renames a piece's `ursatz_commit` to `producer_key`, moves the motif render caches to `cache/renders` (rendered again once), rewrites every body in its current format, moves the old top-level entries to `.pre-1/` and the new ones into place, and writes `data-folder.json` last. A run that stopped before the last moves leaves `.migrate-1/` without its `.complete` marker and starts again; one that stopped during them is finished from where it stopped. A layout 1 folder takes the same backup, then each theme and piece body of format 1 is rewritten in place as format 2 and the marker last; a body already in format 2 is left, so an interrupted run is run again. Delete `.pre-1/` once the GUI works. The report is JSON (`from_layout`, `to_layout`, counts, `moves`). Readers of the old layouts live only in the migration (`items/migrate.c`, `body_migrate.c`, `body_requests.c`); the test `workshop_migrate` runs it on `workshop/tests/fixtures/data-v0` (every kind of item and body the GUI ever stored) and `migrated_routes` plays the GUI over the migrated copy.

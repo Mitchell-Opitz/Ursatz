@@ -1,6 +1,6 @@
 /* Covers the pure theme helpers (public/themes-model.js): the body round trip, the form problems, the without list
  * of the motive switches, the brief from picks, the compose request, the result rows and the MIDI playback.
- * theme-summary.json is the output of `ursatz-composer theme --format json` for a sentence with two slot motives,
+ * theme-summary.json is the output of `ursatz theme --format json` for a sentence with two slot motives,
  * a style, `without: ["motive-nct-figure"]`, mode style, tempo 132 and --check.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
 import fs from "fs";
