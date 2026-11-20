@@ -2,6 +2,11 @@
 
 Newest first. [Docs index](README.md).
 
+## P65 B5: command schemas (2026-11)
+
+- **Commands as schemas.** Each of the 43 commands is defined once in `workshop/commands/<family>.json` (meta-schema `workshop/schema/ursatz-commands.v1.schema.json`), embedded in the build by `cmake/embed_json.py`. `workshop_command` checks the target and the declared params from the schema (R-664; the messages are in [commands](commands.md#commands)), and `workshop_open` refuses a schema with no command or a command with no schema. The tool `commands` prints the generated [command reference](command-reference.md), the grammar and the help of each command ([tools](tools.md#commands)).
+- **The actor of a version.** The envelope of a version records the actor of the command that made it (it was always `michelle`); `item.get`'s versions and `item.version` answer `actor` and `lineage`.
+
 ## P65 B3: Ursatz Text (2026-11)
 
 - **The text tool and the view queries.** The tool `text` ([tools](tools.md)) prints a layer file or a text as Ursatz Text, a view of it or its JSON. The queries `item.view` and `library.view` print the layers a version or a library piece holds ([commands](commands.md#views-of-ursatz-text)); `library.view` replaces `library.export`, whose text export is its `reading` view, framed. The `analyze` tool's `text` answer is framed the same way.

@@ -27,6 +27,7 @@ An unknown name is `URSATZ_ERR_REQUEST`, path `/name`, `unknown tool '<name>'`.
 
 | Tool | Params | Reply |
 |---|---|---|
+| `commands` | `format`, `name` | `{format, text}` |
 | `composer` | `entry`, `request`, `kind` | `{json, plan_json, musicxml}`; MIDI as the bytes |
 | `corpus-passages` | `dir`, `like` or `numerals`, `limit` | `{passages: [...]}` |
 | `pitch-names` | `midi` | `{names: [...]}` |
@@ -83,3 +84,7 @@ A file or a text of any layer kind as Ursatz Text, a view of it, or its JSON ([t
 The input is JSON when its first non-space character is `{`, its kind from `format` or `schema` (`plan`, `reading`, `realization`, `knowledge`, else `json`); otherwise it is Ursatz Text and its kind is the header's (a plan, reading or realization text is read through its codec first). The reply is `{"kind": "<kind>", "text": "<the view>"}`, or for `json` `{"kind", "json": "<the codec's JSON text>"}`. `full` prints the layer; the other views read the one layer the file is.
 
 Failures: both or neither of `path` and `text` is `URSATZ_ERR_REQUEST`, path `/params`; a file that does not read is `URSATZ_ERR_NOT_FOUND`, path `/params/path`; a text that does not parse is `URSATZ_ERR_REQUEST`, path `/params/text` (`/params/path` for a file), `line <n>: <message>`; a layer a codec refuses is refused at the same path with the codec's `<path>: <message>`; a view the layer cannot give is `URSATZ_ERR_REQUEST`, path `/params/view` (`harmony needs a plan or a reading`, `unknown view '<v>'`); an unknown section is refused at `/params/section` and a measure range outside the piece at `/params/measures`.
+
+### commands
+
+The command reference generated from the schemas in `workshop/commands/` ([command reference](command-reference.md)). `format` is `sheet` (the rules of the text form and a line a command, at most 120 lines; the default), `markdown` (the page `command-reference.md`), `grammar` (an EBNF of the text form: the generic productions and one a command), `json` (every command's schema as one array) or `help` (with `name`: the usage line, the summary, each param with its type, limits and help, the reply, the job, the base version and the example of one command). The reply is `{format, text}`. An unknown `name` is `URSATZ_ERR_NOT_FOUND`, path `/params/name`; an unknown `format` is `URSATZ_ERR_REQUEST`, path `/params/format`.
