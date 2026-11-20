@@ -63,6 +63,10 @@ A round makes a batch, listens, changes one setting and makes the same batch aga
 
 Seed 2 of [`tests/fixtures/theme/one-motive.json`](../../composer/tests/fixtures/theme/one-motive.json) is a theme whose heard text changes with `melody.attempts` 1, `keep` 1 and `weights.against_bass` 20 (`--what themes --theme-request tests/fixtures/theme/one-motive.json --seed 2 --settings settings.json`).
 
+## A varied batch
+
+With `candidates.variety` above 0 in the settings file (`{"candidates": {"variety": 20}}`, [preferences](../../composer/docs/preferences.md#the-candidates-group-r-673)) a motif batch is chosen for being different: each sample's request carries `avoid`, the motives of the earlier samples that were written (the last 64), so each motif is the farthest of its candidates from the ones before it. Samples are still made from `--seed` plus their number, and a batch with no variety sends no `avoid` and is as it was. Themes take no `avoid`.
+
 ## A settings file for the L4 settings
 
 Every L4 setting is off by default, so a settings file turns on only the ones a round compares (R-422). This file weighs the closure of every cadence, caps the bars in a row with one rhythm at 3, weighs against leaps and for a steady register, and lets a period's contrasting idea be a distant rhythm or new material as often as a similar one:

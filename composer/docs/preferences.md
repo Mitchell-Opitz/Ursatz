@@ -87,6 +87,17 @@ What a waived rule leaves out of the checker: `strong-beat-chord-tone` the chord
 
 `start_cell` stays a parameter of the stage and is not a preference. The first melody attempt of a compose run uses `climax_position` and a retry uses its own position (`CLIMAX_RETRIES`, `compose_run.c`); the other melody settings apply to every attempt.
 
+## The candidates group (R-673)
+
+How a set of random motives is chosen, in `CandidatePreferences`. Off by default.
+
+| Key | Default | Limit | What it shapes |
+| --- | --- | --- | --- |
+| `variety` | 0 | 0 to 20 | How much each random motive is chosen for being unlike the ones before it. 0 draws as it always did. With a style the choice mixes closeness to the style (counted 20 - `variety` times) and distance from the other motives (`variety` times). |
+| `pool` | 4 | 2 to 8 | The candidates drawn for each motive that is chosen among (at least the 8 a style asks for, when there is one). Read only when `variety` is above 0. |
+
+The distance of a candidate is the least, over the motives of the request's `avoid` list and those already chosen, of 1 - (rhythm similarity + contour similarity) / 2 (the library's `similarity_rhythm_score` and `similarity_contour_score`, the contour from the directions of the intervals); a tie keeps the first candidate drawn. A candidate equal to a motive of `avoid` is never kept. A value outside its limit is refused at `/candidates/variety` or `/candidates/pool`. The document's four groups are `melody`, `motif`, `development` and `candidates`, in that order; the key table lists the two keys last.
+
 ## The key and rule tables (R-672)
 
 `composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.skips_per_motif`: 122 rows. A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
@@ -153,7 +164,7 @@ The random motive and theme requests take the document as an optional `preferenc
 
 | Request | Groups that apply |
 |---|---|
-| `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants). `melody` and `development` are accepted and echoed. |
+| `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants), and `candidates`. `melody` and `development` are accepted and echoed. |
 | `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item, from 1.17 the continuation settings and `basic_as_written`, and from 1.19 the L4 settings: `melody.closure`, `rhythm_repeat_bars`, `leaps`, `register` and `development.contrast`). `motif` shapes a theme's drawn rhythms and new material (1.19) and nothing else: a theme's motives come from the request. |
 
 `composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `long_nct_one_in_max`, `leaps_per_motif_max`, `syncopation_one_in_max`, `skips_per_motif_max`, `plan_chords_max`, `plan_beat_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`, and from 1.19 `rhythm_repeat_bars_max`). API 1.19 adds the L4 settings (closure, the cap on bars with one rhythm, leaps, register, the contrast distance and new material; every one off by default, R-422). API 1.17 adds the L3 settings (syncopation, skips, a given chord plan, the continuation settings and `basic_as_written`; every one off by default, R-422). A given `motif.plan` that does not fit the meter, bars, shapes or endings allowed is refused by a random motive run as `URSATZ_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that meter-dependent refusal to the run; its syntax refusals come from the reader). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.
