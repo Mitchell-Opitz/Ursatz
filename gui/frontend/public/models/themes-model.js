@@ -9,6 +9,7 @@
  * {ideas: {<idea>: bars}, extensions: [{kind, idea, bars, varied}]} (P47, R-468). */
 
 import Req from "../core/request.js";
+import { commandRequest } from "../core/commands.js";
 import Vocab from "../core/vocabulary.js";
 import { itemUrl, text, wholeNumber } from "../core/values.js";
 
@@ -824,7 +825,7 @@ function saveRequest(state, note) {
   if (text(note)) {
     request.note = text(note);
   }
-  return Req.jsonRequest("POST", itemUrl(state.id, "/versions"), request);
+  return commandRequest("item.save", { target: state.id, params: request });
 }
 
 /* POST compose for the form state. options: {seed, update_uses}; a seed in
@@ -839,7 +840,7 @@ function composeRequest(state, options) {
   if (o.update_uses) {
     body.update_uses = true;
   }
-  return Object.assign(Req.jsonRequest("POST", itemUrl(state.id, "/compose"), body), { job: true });
+  return Object.assign(commandRequest("item.compose", { target: state.id, params: body }), { job: true });
 }
 
 function versionFileUrl(id, number, name) {

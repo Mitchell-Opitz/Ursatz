@@ -5,11 +5,13 @@ import Vocabulary from "../public/core/vocabulary.js";
 import { buildPieceEditor } from "../public/views/pieces-view.js";
 import { check, finish } from "./support/check.js";
 import { byText } from "./support/dom.js";
-import { openPage } from "./support/page.js";
+import { byCommand, openPage } from "./support/page.js";
 
 const page = await openPage({
-  "POST /api/materials/items/mat-3/versions": { ok: true, item: { id: "mat-3", current_version: 2 }, version: 2 },
-  "POST /api/materials/items/mat-3/compose": { ok: true, version: 3 },
+  "POST /api/workshop/command": byCommand({
+    "item.save": { ok: true, item: { id: "mat-3", current_version: 2 }, version: 2 },
+    "item.compose": { ok: true, version: 3 },
+  }),
 });
 const statusEl = page.document.createElement("div");
 const saved = [];
@@ -38,11 +40,11 @@ if (add) {
 
 byText(editor.el, "button", "Save as new version")[0].click();
 await page.settle();
-const version = page.callsTo("POST", "/api/materials/items/mat-3/versions")[0];
-check(version !== undefined && version.body.body !== undefined && saved.length === 1, "Save as new version sends the body and tells the page it is done");
+const version = page.commands("item.save")[0];
+check(version !== undefined && version.target === "mat-3" && version.params.body !== undefined && saved.length === 1, "Save as new version sends the body and tells the page it is done");
 
 byText(editor.el, "button", "Compose")[0].click();
 await page.settle();
-check(page.callsTo("POST", "/api/materials/items/mat-3/compose").length === 1 && saved.length === 2, "Compose composes the saved form and tells the page it is done");
+check(page.commands("item.compose").length === 1 && saved.length === 2, "Compose composes the saved form and tells the page it is done");
 
 finish();

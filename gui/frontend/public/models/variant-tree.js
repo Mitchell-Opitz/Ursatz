@@ -6,6 +6,7 @@
  * kind, kept, changed, derivation, recognizability, motive}. */
 
 import Req from "../core/request.js";
+import { commandRequest } from "../core/commands.js";
 import Vocab from "../core/vocabulary.js";
 
 /* The Composer's words (R-270): the phrase functions and the distances are read from the vocabulary when asked. */
@@ -306,7 +307,7 @@ function opChecksRequest(id) {
 }
 
 function opChecksPutRequest(id, checks) {
-  return Req.jsonRequest("PUT", itemUrl(id, "op-checks"), { checks });
+  return commandRequest("item.set-op-checks", { target: id, params: { checks } });
 }
 
 /* The operations of GET /api/materials/variant-operations by category, in
@@ -499,12 +500,12 @@ function saveRequest(id, candidate, flag, name) {
   if (name && String(name).trim() !== "") {
     body.name = String(name).trim();
   }
-  return Req.jsonRequest("POST", itemUrl(id, "variants/save"), body);
+  return commandRequest("item.save-variant", { target: id, params: body });
 }
 
 /* The promote request: the variant becomes a motif of its own, named and in a project. */
 function promoteRequest(id, name, projectId) {
-  return Req.jsonRequest("POST", itemUrl(id, "promote"), { name: String(name || "").trim(), project_id: projectId });
+  return commandRequest("item.promote", { target: id, params: { name: String(name || "").trim(), project_id: projectId } });
 }
 
 /* The promoted list line: "<name> (opens it)" with the derivation under it. */
@@ -517,11 +518,11 @@ function flagRequest(id, flag, kind) {
   if (kind) {
     body.kind = kind;
   }
-  return Req.jsonRequest("POST", itemUrl(id, "flag"), body);
+  return commandRequest("item.flag", { target: id, params: body });
 }
 
 function rerollRequest(id) {
-  return jobRequest("POST", itemUrl(id, "reroll"));
+  return Object.assign(commandRequest("item.reroll", { target: id }), { job: true });
 }
 
 function treeRequest(id) {
@@ -542,9 +543,9 @@ function compareRequest(source, target) {
 
 /* The link-form request: the target item becomes a form of the source, from the recognition the compare gave. */
 function linkFormRequest(targetId, source, recognition) {
-  return Req.jsonRequest("POST", itemUrl(targetId, "link-form"), {
-    source: { item: source.item, version: source.version },
-    recognition,
+  return commandRequest("item.link-form", {
+    target: targetId,
+    params: { source: { item: source.item, version: source.version }, recognition },
   });
 }
 

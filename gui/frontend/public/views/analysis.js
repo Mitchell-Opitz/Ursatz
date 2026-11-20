@@ -6,7 +6,8 @@ import ExportControl from "./export-control.js";
 import ScoreWorkspace from "../score/score-workspace.js";
 import NotationPanel from "../models/notation-panel.js";
 import { shell } from "./shell-context.js";
-import { fetchJsonResult } from "../core/api.js";
+import { commandResult, fetchJsonResult } from "../core/api.js";
+import { commandRequest } from "../core/commands.js";
 import { ANALYSIS_TABS, buildAnalysisHeader, buildProvenanceFields, buildTabState, createDocumentCache, loadDocumentSections, loadTabState } from "../models/analysis-tabs.js";
 
 /* The Analysis tool: a piece opened in the score workspace, its Data mode with the claim tabs, the provenance list and the text export. */
@@ -118,7 +119,7 @@ async function loadAnalysisPiece(id) {
   if (data.ok && data.stale) {
     /* The backend answers the stored analysis and says it is stale (R-645): a re-analysis job makes it current, then the piece is read
      * again. When the job fails the stored analysis is shown as it is. */
-    const run = await BackendJobs.runJob({ url: `/api/analyzer/pieces/${encodeURIComponent(id)}/reanalyze`, method: "POST" });
+    const run = await BackendJobs.runJob(commandRequest("library.reanalyze", { target: id }));
     if (run.status === 200) {
       const fresh = await fetchAnalysisPiece(id);
       if (fresh.ok) {
@@ -231,11 +232,7 @@ function buildNotationRow(data) {
 
   async function save(body) {
     message.textContent = "Saving...";
-    const result = await fetchJsonResult(`/api/analyzer/pieces/${data.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const result = await commandResult("library.update", { target: data.id, params: body });
     if (!result.ok || !result.data || !result.data.ok) {
       message.textContent = (result.data && result.data.error) || "Save failed.";
       return;
@@ -551,11 +548,11 @@ function buildClaimRows(rows, noteXmlIds, pieceId, pieceLinks) {
 }
 
 /* Runs the Analyzer again on the piece's stored source
- * (POST /api/analyzer/pieces/<id>/reanalyze). Resolves to an error message,
+ * (library.reanalyze). Resolves to an error message,
  * or null on success. */
 export async function reanalyzePiece(id) {
   try {
-    const res = await BackendJobs.runJob({ url: `/api/analyzer/pieces/${id}/reanalyze`, method: "POST" });
+    const res = await BackendJobs.runJob(commandRequest("library.reanalyze", { target: id }));
     const data = res.body || {};
     if (res.status === 404) {
       return "Piece not found.";

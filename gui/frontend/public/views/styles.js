@@ -3,7 +3,7 @@ import StyleView from "../models/style-view.js";
 import { buildActionButton, collectionResultError, renderCorpusBackLink } from "./library-parts.js";
 import { showAnalysisView } from "./analysis.js";
 import { shell } from "./shell-context.js";
-import { fetchJsonResult, jobJsonResult } from "../core/api.js";
+import { commandJobResult, commandResult, fetchJsonResult } from "../core/api.js";
 
 /* The styles of the Library sidebar: the style list, its build, a style's statistics and its name prompt. */
 /* The Styles section of the Collections view: name, source, piece count and
@@ -89,11 +89,7 @@ function buildStyleRow(style, collectionNames) {
 
 async function rebuildStyle(style) {
   setStylesStatus(`Rebuilding ${style.name}...`, false);
-  const result = await jobJsonResult(`/api/styles/${style.id}/rebuild`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
-  });
+  const result = await commandJobResult("style.rebuild", { target: style.id });
   if (result.ok && result.data && result.data.ok) {
     const skipped = result.data.skipped || [];
     await loadStylesSection();
@@ -107,7 +103,7 @@ async function deleteStyle(style) {
   if (!window.confirm(`Delete the style "${style.name}"? Compositions that use it can no longer fill or regenerate.`)) {
     return;
   }
-  const result = await fetchJsonResult(`/api/styles/${style.id}`, { method: "DELETE" });
+  const result = await commandResult("style.delete", { target: style.id });
   if (result.ok && result.data && result.data.ok) {
     await loadStylesSection();
   } else {
@@ -309,11 +305,7 @@ export function startStyleBuild({ source, host, trigger, resultEl }) {
     trigger.disabled = true;
     resultEl.classList.remove("error");
     resultEl.textContent = "";
-    const result = await jobJsonResult("/api/styles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(PieceMetadata.styleRequestBody(source, name)),
-    });
+    const result = await commandJobResult("style.build", { params: PieceMetadata.styleRequestBody(source, name) });
     trigger.textContent = label;
     trigger.disabled = false;
     if (result.ok && result.data && result.data.ok) {

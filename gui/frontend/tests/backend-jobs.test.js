@@ -52,7 +52,7 @@ const instant = () => Promise.resolve();
   result = await J.runJob(request, { fetch: fake.fetch, wait: instant });
   check(result.status === 499 && result.cancelled === true, "a cancelled job gives 499 and cancelled");
 
-  // An aborted signal sends DELETE once.
+  // An aborted signal sends the job.cancel command once.
   fake = fakeFetch([
     [202, { ok: true, job: { id: "job-4", kind: "theme", state: "queued" } }],
     [204, null],
@@ -68,8 +68,9 @@ const instant = () => Promise.resolve();
     return Promise.resolve();
   };
   result = await J.runJob(request, { fetch: fake.fetch, wait: abortAfterFirstPoll, signal: controller.signal });
-  const deletes = fake.calls.filter((call) => call.method === "DELETE");
-  check(deletes.length === 1 && deletes[0].url === "/api/jobs/job-4", "an aborted signal asks the backend to cancel, once");
+  const cancels = fake.calls.filter((call) => call.method === "POST" && call.url === "/api/workshop/command");
+  const cancelled = cancels.length === 1 ? JSON.parse(cancels[0].body) : {};
+  check(cancels.length === 1 && cancelled.command === "job.cancel" && cancelled.target === "job-4", "an aborted signal asks the backend to cancel, once, with the job.cancel command");
   check(result.cancelled === true, "the aborted job ends cancelled");
 
   // A job that is gone and a backend that cannot be reached.

@@ -11,6 +11,7 @@ import Vocabulary from "../public/core/vocabulary.js";
 import { generated, readJson } from "./support/fixtures.js";
 import P from "../public/models/pieces-model.js";
 import { check, same, finish } from "./support/check.js";
+import { params, isCommand } from "./support/command.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -147,22 +148,22 @@ edit = P.removeSection(edit, second);
 check(edit.sections.length === 3, "a section is removed");
 
 /* requests */
-check(same(P.composeRequest(state, {}), { method: "POST", url: "/api/materials/items/pce-1/compose", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seed: 7 }), job: true }), "compose takes the seed of the form, as a job");
-check(JSON.parse(P.composeRequest(state, { seed: "12", update_uses: true }).body).seed === 12 && JSON.parse(P.composeRequest(state, { update_uses: true }).body).update_uses === true, "an option seed wins and update_uses is sent");
+check(isCommand(P.composeRequest(state, {}), "item.compose", "pce-1") && same(params(P.composeRequest(state, {})), { seed: 7 }) && P.composeRequest(state, {}).job === true, "compose takes the seed of the form, as a job");
+check(params(P.composeRequest(state, { seed: "12", update_uses: true })).seed === 12 && params(P.composeRequest(state, { update_uses: true })).update_uses === true, "an option seed wins and update_uses is sent");
 const blank = P.emptyState("pce-3");
-check(P.composeRequest(blank, {}).body === "{}", "no seed gives an empty body");
+check(same(params(P.composeRequest(blank, {})), {}), "no seed gives an empty body");
 const save = P.saveRequest(state, " first ");
-check(save.url === "/api/materials/items/pce-1/versions" && JSON.parse(save.body).note === "first" && P.pieceOfBody(JSON.parse(save.body).body).structure.sections.length === 5, "save posts a version with the body and the note");
+check(isCommand(save, "item.save", "pce-1") && params(save).note === "first" && P.pieceOfBody(params(save).body).structure.sections.length === 5, "save is item.save with the body and the note");
 check(P.versionFileUrl("pce-1", 3, "loop.mid") === "/api/materials/items/pce-1/versions/3/files/loop.mid", "version file url");
 const regenerate = P.regenerateRequest("pce-1", 2, { section_id: "s1", lane: "melody", seed: "9" });
-check(regenerate.request.url.endsWith("/versions/2/regenerate") && same(JSON.parse(regenerate.request.body), { section_id: "s1", lane: "melody", seed: 9 }), "regenerate request");
-check(same(JSON.parse(P.regenerateRequest("pce-1", 2, { section_id: "s1", lane: "" }).request.body), { section_id: "s1" }), "regenerate without a lane or seed");
+check(isCommand(regenerate.request, "item.regenerate", "pce-1") && same(params(regenerate.request), { version: 2, section_id: "s1", lane: "melody", seed: 9 }), "regenerate request");
+check(same(params(P.regenerateRequest("pce-1", 2, { section_id: "s1", lane: "" }).request), { version: 2, section_id: "s1" }), "regenerate without a lane or seed");
 check(P.regenerateRequest("pce-1", 2, { section_id: "s1", seed: "x" }).error && P.regenerateRequest("pce-1", 2, {}).error, "regenerate refuses a bad seed or no section");
 const variations = P.variationsRequest("pce-1", 2, { section_id: "s1", lane: "harmony", count: "3", seed: "" });
-check(variations.request.url.endsWith("/versions/2/variations") && same(JSON.parse(variations.request.body), { section_id: "s1", lane: "harmony", count: 3 }), "variations request");
+check(isCommand(variations.request, "item.variations", "pce-1") && same(params(variations.request), { version: 2, section_id: "s1", lane: "harmony", count: 3 }), "variations request");
 check(P.variationsRequest("pce-1", 2, { section_id: "s1", lane: "harmony", count: "9" }).error && P.variationsRequest("pce-1", 2, { section_id: "s1", lane: "", count: "2" }).error, "variations refuse a count over 8 or no lane");
 check(P.regenerateRequest("pce-1", 2, { section_id: "s1" }).request.job === true && P.variationsRequest("pce-1", 2, { section_id: "s1", lane: "harmony", count: "3" }).request.job === true && P.chooseRequest("pce-1", 2, 4, 1).job === true, "regenerate, variations and choose are jobs");
-check(same(JSON.parse(P.chooseRequest("pce-1", 2, 4, 1).body), { index: 1 }) && P.chooseRequest("pce-1", 2, 4, 1).url.endsWith("/versions/2/variations/4/choose"), "choose request");
+check(isCommand(P.chooseRequest("pce-1", 2, 4, 1), "item.choose", "pce-1") && same(params(P.chooseRequest("pce-1", 2, 4, 1)), { version: 2, set: 4, index: 1 }), "choose request");
 check(P.variationFileUrl("pce-1", 2, 4, "variation-1.musicxml").endsWith("/versions/2/variations/4/variation-1.musicxml"), "variation file url");
 check(same(P.lanesFor(section("s", "body", "A", 8)), ["harmony", "bass", "melody", "inner"]) && same(P.lanesFor(section("s", "body", "A", 8, { kind: "theme" })), ["harmony", "bass"]) && P.lanesFor(section("e", "ending", "E", 8), [{ id: "s" }]).length === 0, "lanes by section");
 const cards = P.variationCards({ set: 1, variations: [{ index: 2, seed: 5, score: { numerator: 8, denominator: 12 }, seam: { held: 3 }, heard: "half" }] });

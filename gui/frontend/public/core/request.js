@@ -68,59 +68,6 @@ function forgetVersions() {
   knownVersions.clear();
 }
 
-/* The item a write changes the versions of, or null: PATCH and DELETE of an item, and the POSTs that save, compose, regenerate or choose a
- * version, reanalyze, reroll, flag, promote, link a form or update a use. */
-function writtenItemId(method, url) {
-  const match = /^\/api\/materials\/items\/([^/?]+)([^?]*)/.exec(String(url || ""));
-  if (!match || !match[1].includes("-")) {
-    return null;
-  }
-  const tail = match[2];
-  const verb = String(method || "GET").toUpperCase();
-  if (verb === "PATCH" || verb === "DELETE") {
-    return tail === "" ? decodeURIComponent(match[1]) : null;
-  }
-  if (verb !== "POST") {
-    return null;
-  }
-  const whole = ["/versions", "/compose", "/reanalyze", "/reroll", "/flag", "/promote", "/link-form"];
-  if (
-    whole.includes(tail) ||
-    /^\/uses\/[^/]+\/update$/.test(tail) ||
-    /^\/versions\/\d+\/regenerate$/.test(tail) ||
-    /^\/versions\/\d+\/variations\/\d+\/choose$/.test(tail)
-  ) {
-    return decodeURIComponent(match[1]);
-  }
-  return null;
-}
-
-/* The request with the version the page holds for the item it writes; a request for any other item, a request that gives base_version already
- * and one for an item the page has not read go as they are. */
-function withBaseVersion(request) {
-  const id = writtenItemId(request.method, request.url);
-  const version = id === null ? null : knownVersion(id);
-  if (version === null || String(request.url).includes("base_version=")) {
-    return request;
-  }
-  if (String(request.method).toUpperCase() === "DELETE") {
-    const joiner = String(request.url).includes("?") ? "&" : "?";
-    return { ...request, url: `${request.url}${joiner}base_version=${version}` };
-  }
-  let body = {};
-  if (typeof request.body === "string" && request.body !== "") {
-    try {
-      body = JSON.parse(request.body);
-    } catch (error) {
-      return request;
-    }
-  }
-  if (!body || typeof body !== "object" || Array.isArray(body) || "base_version" in body) {
-    return request;
-  }
-  return { ...request, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, base_version: version }) };
-}
-
 /*
  * The one fetch of JSON (R-647). Every route answers {"ok": true, ...} or {"ok": false, "error", "code", "path"?}: this resolves to {ok, status, data},
  * data null for an answer that is not JSON, ok false for an error status or {"ok": false}. A network failure is {ok: false, status: 0, data: {ok: false,
@@ -147,5 +94,5 @@ function apiRequest(method, url, body, fetchFn) {
   return sendRequest(jsonRequest(method, url, body), fetchFn);
 }
 
-const api = { sendRequest, apiRequest, jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions, withBaseVersion };
+const api = { sendRequest, apiRequest, jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions };
 export default api;

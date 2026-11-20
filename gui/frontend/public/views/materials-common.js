@@ -67,10 +67,9 @@ async function sendJobRequest(request) {
   }
 }
 
-/* Sends a materials request: a write to an item carries the version the page holds (ApiRequest.withBaseVersion), and every answer that holds
+/* Sends a materials request: a command carries the version the page holds as its base_version (core/commands.js), and every answer that holds
  * an item records its current version. */
-export async function sendMaterialsRequest(original) {
-  const request = ApiRequest.withBaseVersion(original);
+export async function sendMaterialsRequest(request) {
   const answer = request.job
     ? await sendJobRequest(request)
     : await ApiRequest.sendRequest(request);

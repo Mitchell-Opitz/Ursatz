@@ -4,6 +4,7 @@
 import S from "../public/views/subjects-panel.js";
 import { check, same, finish } from "./support/check.js";
 import { installDom } from "./support/dom.js";
+import { params, isCommand } from "./support/command.js";
 
 const groups = [
   { kind: "character", subjects: [{ id: "sub-1", name: "Hero", item_count: 2, piece_count: 1, link_count: 3 }] },
@@ -48,19 +49,19 @@ const pieceRows = S.pieceLinkRows(["p1", "p2"], [{ id: "p1", filename: "Nocturne
 check(pieceRows[0].name === "Nocturne" && pieceRows[1].name === "p2", "linked piece rows fall back to the id");
 
 const create = S.buildCreateSubjectRequest({ name: " Hero ", kind: "character", note: " " });
-check(create.method === "POST" && create.url === "/api/subjects", "create posts to subjects");
-check(same(JSON.parse(create.body), { name: "Hero", kind: "character" }), "create trims and leaves out an empty note");
-check(JSON.parse(S.buildCreateSubjectRequest({ name: "a", kind: "idea", note: " x " }).body).note === "x", "create keeps a note");
+check(isCommand(create, "subject.create"), "create is subject.create");
+check(same(params(create), { name: "Hero", kind: "character" }), "create trims and leaves out an empty note");
+check(params(S.buildCreateSubjectRequest({ name: "a", kind: "idea", note: " x " })).note === "x", "create keeps a note");
 const update = S.buildUpdateSubjectRequest("sub-1", { name: " B ", kind: "place", note: "" });
-check(update.method === "PATCH" && update.url === "/api/subjects/sub-1", "update patches the subject");
-check(same(JSON.parse(update.body), { name: "B", kind: "place", note: "" }), "update sends an empty note to clear it");
-check(!("name" in JSON.parse(S.buildUpdateSubjectRequest("sub-1", { name: " " }).body)), "update skips an empty name");
-check(S.buildDeleteSubjectRequest("sub-1").method === "DELETE", "delete");
+check(isCommand(update, "subject.update", "sub-1"), "update is subject.update of the subject");
+check(same(params(update), { name: "B", kind: "place", note: "" }), "update sends an empty note to clear it");
+check(!("name" in params(S.buildUpdateSubjectRequest("sub-1", { name: " " }))), "update skips an empty name");
+check(isCommand(S.buildDeleteSubjectRequest("sub-1"), "subject.delete", "sub-1"), "delete");
 check(S.buildSubjectGetRequest("sub-1").url === "/api/subjects/sub-1" && S.buildSubjectListRequest().url === "/api/subjects", "get and list");
 const add = S.buildLinkRequest("sub-1", "items", "mot-1", true);
-check(add.method === "POST" && add.url === "/api/subjects/sub-1/items/mot-1", "link posts");
+check(isCommand(add, "subject.link-item", "sub-1") && same(params(add), { item_id: "mot-1" }), "link is subject.link-item");
 const drop = S.buildLinkRequest("sub-1", "related", "sub-2", false);
-check(drop.method === "DELETE" && drop.url === "/api/subjects/sub-1/related/sub-2", "unlink deletes");
+check(isCommand(drop, "subject.unrelate", "sub-1") && same(params(drop), { other_id: "sub-2" }), "unlink is subject.unrelate");
 check(S.errorText({ error: "not linked" }) === "not linked" && S.errorText(null, "x") === "x", "error text");
 
 const pending = S.withSubject([], { id: "sub-1", name: "Hero", kind: "character", item_count: 4 });

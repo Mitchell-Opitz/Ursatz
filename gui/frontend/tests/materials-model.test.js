@@ -7,6 +7,7 @@ import Vocabulary from "../public/core/vocabulary.js";
 import { generated, readJson } from "./support/fixtures.js";
 import M from "../public/models/materials-model.js";
 import { check, same, finish } from "./support/check.js";
+import { params, isCommand } from "./support/command.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,13 +23,13 @@ check(same(M.TYPES.map((t) => t.label), ["Motifs", "Themes", "Pieces"]), "three 
 check(M.typeInfo("theme").singular === "theme" && M.typeInfo("x") === null, "typeInfo finds a type or null");
 
 const create = M.buildCreateProjectRequest("  Sonata ", "first");
-check(create.method === "POST" && create.url === "/api/materials/projects", "create project posts to the projects route");
-check(same(JSON.parse(create.body), { name: "Sonata", description: "first" }), "create project trims the name");
-check(!("description" in JSON.parse(M.buildCreateProjectRequest("a").body)), "create project leaves out an empty description");
+check(isCommand(create, "project.create"), "create project is the project.create command");
+check(same(params(create), { name: "Sonata", description: "first" }), "create project trims the name");
+check(!("description" in params(M.buildCreateProjectRequest("a"))), "create project leaves out an empty description");
 const rename = M.buildRenameProjectRequest("prj-a", " Op. 1 ");
-check(rename.method === "PATCH" && rename.url === "/api/materials/projects/prj-a", "rename project patches the project");
-check(same(JSON.parse(rename.body), { name: "Op. 1" }), "rename project sends the trimmed name");
-check(M.buildDeleteProjectRequest("prj-a").method === "DELETE" && !M.buildDeleteProjectRequest("prj-a").body, "delete project has no body");
+check(isCommand(rename, "project.update", "prj-a"), "rename project is project.update of the project");
+check(same(params(rename), { name: "Op. 1" }), "rename project sends the trimmed name");
+check(isCommand(M.buildDeleteProjectRequest("prj-a"), "project.delete", "prj-a") && same(params(M.buildDeleteProjectRequest("prj-a")), {}), "delete project is project.delete without params");
 
 check(M.buildItemListRequest("motif", "all").url === "/api/materials/items?type=motif", "item list for all projects has no project");
 check(
@@ -41,9 +42,9 @@ const motif = M.newItemBody("motif").motif;
 check(motif.notes !== "" && motif.pickup === "0" && same(motif.features, []) && motif.derived === null, "new motif body is valid");
 check(same(M.newItemBody("theme"), { uses: [], request: {} }), "new theme body");
 check(same(M.newItemBody("piece"), { uses: [], request: {} }), "new piece body");
-const item = JSON.parse(M.buildCreateItemRequest("theme", " Main ", "prj-a").body);
+const item = params(M.buildCreateItemRequest("theme", " Main ", "prj-a"));
 check(item.type === "theme" && item.name === "Main" && item.project_id === "prj-a" && item.body.request, "create item body");
-check(same(JSON.parse(M.buildUpdateItemRequest("x", { name: " B ", project_id: "" }).body), { name: "B" }), "update item skips empty fields");
+check(same(params(M.buildUpdateItemRequest("x", { name: " B ", project_id: "" })), { name: "B" }), "update item skips empty fields");
 
 check(M.errorText({ error: "project is not empty" }) === "project is not empty", "error text from the answer");
 check(M.errorText(null, "fallback") === "fallback", "error text fallback");
@@ -123,11 +124,11 @@ check(M.buildMotifBody(blank, null).uses.length === 0 && M.buildMotifBody(blank,
 check(M.motifForms().map((f) => f.value).join() === "full,rhythm,contour" && M.motifRoles().map((r) => r.value).join() === "melodic,accompaniment", "the roles and forms are the vocabulary's");
 
 const saveNew = M.buildSaveMotifRequest({ name: " Hook ", project_id: "prj-a", body: rebuilt });
-check(saveNew.url === "/api/materials/items" && JSON.parse(saveNew.body).type === "motif", "a new motif posts an item");
-check(JSON.parse(saveNew.body).name === "Hook", "new motif name is trimmed");
+check(isCommand(saveNew, "item.create") && params(saveNew).type === "motif", "a new motif is item.create");
+check(params(saveNew).name === "Hook", "new motif name is trimmed");
 const saveVersion = M.buildSaveMotifRequest({ id: "mot-1", note: " tweak ", body: rebuilt });
-check(saveVersion.url === "/api/materials/items/mot-1/versions" && JSON.parse(saveVersion.body).note === "tweak", "an existing motif posts a version with its note");
-check(!("note" in JSON.parse(M.buildSaveMotifRequest({ id: "mot-1", note: " ", body: rebuilt }).body)), "an empty note is left out");
+check(isCommand(saveVersion, "item.save", "mot-1") && params(saveVersion).note === "tweak", "an existing motif is item.save with its note");
+check(!("note" in params(M.buildSaveMotifRequest({ id: "mot-1", note: " ", body: rebuilt }))), "an empty note is left out");
 
 // Features.
 check(M.newFeatureRow([]).label === "a" && M.newFeatureRow([{ label: "a" }]).label === "b", "a new feature row takes the next free letter");
@@ -212,7 +213,7 @@ check(useInfo[2].missing && !useInfo[2].stale && useInfo[2].note === "source del
 check(useInfo[0].project === "Sonata" && useInfo[0].type === "motif", "use rows carry project and type");
 check(M.hasUpdatedUse(statuses) && !M.hasUpdatedUse([statuses[1], statuses[2]]) && !M.hasUpdatedUse(null), "badge only for a newer source");
 const upd = M.buildUpdateUseRequest("thm-1", "mot-1");
-check(upd.method === "POST" && upd.url === "/api/materials/items/thm-1/uses/mot-1/update", "update use route");
+check(isCommand(upd, "item.update-use", "thm-1") && same(params(upd), { source_id: "mot-1" }), "update use is item.update-use with the source");
 
 const all = [
   { id: "mot-1", type: "motif", name: "Hook", project_id: "prj-a", current_version: 3 },
@@ -237,16 +238,15 @@ check(M.bodyWithUse(base, "mot-1", 1, false).uses.length === 0, "removing a use 
 check(M.bodyWithUse(base, "mot-1", 1, false).motif.notes === "x", "the rest of the body is kept");
 check(M.bodyWithUse(null, "mot-1", 1, true).uses.length === 1, "a missing body gets a uses array");
 const vreq = M.buildAddVersionRequest("thm-1", added, " Added use ");
-check(vreq.url === "/api/materials/items/thm-1/versions" && JSON.parse(vreq.body).note === "Added use", "version request with note");
-check(!("note" in JSON.parse(M.buildAddVersionRequest("thm-1", added).body)), "version request without note");
+check(isCommand(vreq, "item.save", "thm-1") && params(vreq).note === "Added use", "version request with note");
+check(!("note" in params(M.buildAddVersionRequest("thm-1", added))), "version request without note");
 
 const users = M.usedByRows([{ id: "thm-1", name: "Main", type: "theme", project_id: "prj-b", version: 2 }], projects);
 check(users[0].label === "Main (theme) uses v2" && users[0].project === "Etudes", "used by rows");
 check(M.usedByRows(null, projects).length === 0, "no users, no rows");
 
-check(M.buildDeleteItemRequest("mot-1", false).url === "/api/materials/items/mot-1", "delete without force");
-check(M.buildDeleteItemRequest("mot-1", true).url === "/api/materials/items/mot-1?force=1", "delete with force");
-check(M.buildDeleteItemRequest("mot-1", true).method === "DELETE", "delete uses DELETE");
+check(isCommand(M.buildDeleteItemRequest("mot-1", false), "item.delete", "mot-1") && same(params(M.buildDeleteItemRequest("mot-1", false)), {}), "delete without force");
+check(same(params(M.buildDeleteItemRequest("mot-1", true)), { force: true }), "delete with force");
 const warn = M.deleteWarning("Hook", 409, { ok: false, error: "item is used", used_by: [{ id: "a", name: "Main" }, { id: "b" }] });
 check(warn && warn.users.join() === "Main,b" && warn.message.includes("used by 2 items: Main, b"), "warning names the users");
 check(M.deleteWarning("Hook", 409, { used_by: [{ id: "a", name: "Main" }] }).message.includes("1 item:"), "warning uses the singular");
@@ -330,7 +330,7 @@ check(M.analysisRows({ analysis: null, analysis_error: "composer not found" }).m
 check(M.analysisRows({ analysis: null, analysis_error: "stored" }, "given").message === "Not analyzed: given", "an argument wins over the stored reason");
 check(M.analysisRows({ analysis: null, analysis_error: null }).message === "Not analyzed", "no stored reason gives a bare status");
 check(M.analysisRows(heard).message === "Analyzed", "an analyzed motif reads Analyzed");
-check(M.buildReanalyzeRequest("mot-1").url === "/api/materials/items/mot-1/reanalyze" && M.buildReanalyzeRequest("mot-1").method === "POST", "re-analyze posts to the item's reanalyze route");
+check(isCommand(M.buildReanalyzeRequest("mot-1"), "item.reanalyze", "mot-1"), "re-analyze is the item.reanalyze command");
 check(M.composerAvailable({ ok: true, data: { available: true } }) && !M.composerAvailable({ ok: true, data: { available: false } }) && !M.composerAvailable({ ok: false }), "the Composer counts as available only when the status says so");
 
 /* The motif tabs, the single Save and the Used by table (P18 B3). */
@@ -392,8 +392,8 @@ check(M.motifSaveDecision({ name: true }, "").kind === "save" && M.motifSaveDeci
 check(M.motifSaveDecision({ nothing: true }, "note").kind === "none", "a note alone is not a change");
 
 const createdRequest = M.buildSaveMotifRequest({ name: " New ", project_id: "prj-a", note: "Created", body: stored });
-check(createdRequest.url === "/api/materials/items" && JSON.parse(createdRequest.body).note === "Created", "a new motif sends the Created note");
-check(!("note" in JSON.parse(M.buildSaveMotifRequest({ name: "n", project_id: "prj-a", body: stored }).body)), "a new motif without a note sends none");
+check(isCommand(createdRequest, "item.create") && params(createdRequest).note === "Created", "a new motif sends the Created note");
+check(!("note" in params(M.buildSaveMotifRequest({ name: "n", project_id: "prj-a", body: stored }))), "a new motif without a note sends none");
 
 const usedByUsers = [
   { id: "t1", name: "Theme", type: "theme", project_id: "prj-a", version: 1 },

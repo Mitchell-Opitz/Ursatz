@@ -4,7 +4,7 @@
 import { renderMaterialsView } from "../public/views/materials-view.js";
 import { check, finish } from "./support/check.js";
 import { byText } from "./support/dom.js";
-import { openPage } from "./support/page.js";
+import { byCommand, openPage } from "./support/page.js";
 
 const projects = [{ id: "prj-1", name: "Work", item_count: 1, description: "", created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z" }];
 const themes = [{ id: "mat-1", type: "theme", name: "Sentence", project_id: "prj-1", current_version: 2, updated_at: "2026-11-02T10:00:00Z", variant_of: null }];
@@ -12,10 +12,12 @@ let made = false;
 const page = await openPage({
   "GET /api/materials/projects": { ok: true, projects },
   "GET /api/materials/items": () => ({ ok: true, items: made ? [...themes, { ...themes[0], id: "mat-2", name: "Period", updated_at: "2026-11-03T10:00:00Z" }] : themes }),
-  "POST /api/materials/items": () => {
-    made = true;
-    return { ok: true, item: { id: "mat-2", type: "theme", name: "Period", project_id: "prj-1", current_version: 1 } };
-  },
+  "POST /api/workshop/command": byCommand({
+    "item.create": () => {
+      made = true;
+      return { ok: true, item: { id: "mat-2", type: "theme", name: "Period", project_id: "prj-1", current_version: 1 } };
+    },
+  }),
   "POST /api/materials/items/uses": { ok: true, uses: [] },
 });
 page.setShell({ activeToolId: () => "themes", openItem() {} });
@@ -33,8 +35,8 @@ const name = page.content.querySelector("input");
 name.value = "Period";
 byText(page.content, "button", "New")[0].click();
 await page.settle();
-const post = page.callsTo("POST", "/api/materials/items")[0];
-check(post && post.body.type === "theme" && post.body.name === "Period" && post.body.project_id === "prj-1", "New sends the typed name and the project");
+const post = page.commands("item.create")[0];
+check(post && post.params.type === "theme" && post.params.name === "Period" && post.params.project_id === "prj-1", "New sends the typed name and the project");
 check(page.content.querySelectorAll("table tr").length === 3, "the list is drawn again with the new theme");
 
 /* A motif opens its page instead of making the item at once. */
