@@ -4,16 +4,33 @@ Ursatz is a computational music platform in C11: a theory-neutral library, an an
 
 ## Parts
 
-Each part builds on the library. The Analyzer and the Composer are siblings: neither includes or links the other (the Composer hears through the library chain), and only the command lines and the GUI call both.
+Each part builds on the library, and every part builds on `common/`. The Analyzer and the Composer are siblings: neither includes or links the other (the Composer hears through the library chain). The workshop sits above both and holds the data folder; the GUI sits on the workshop only.
 
 | Folder | Part | Docs |
 |---|---|---|
+| `common/` | The helpers every part shares: one status set, files, strings, JSON, the hash, the job handle and the event bus | [docs](common/docs/README.md) |
 | `library/` | The music theory library (`libursatz`): a canonical representation of musical material | [README](library/README.md), [docs](library/docs/README.md) |
 | `analyzer/` | The Analyzer: a library and the `ursatz-analyzer` command that write the JSON analysis document and its text export | [README](analyzer/README.md), [docs](analyzer/docs/README.md) |
 | `composer/` | The Composer: a seeded, reproducible composing partner and the `ursatz-composer` command | [README](composer/README.md), [docs](composer/docs/README.md) |
-| `gui/` | The GUI: a local web UI over the other parts (the `ursatz-gui-backend` server and its frontend) | [README](gui/README.md), [docs](gui/docs/README.md) |
+| `workshop/` | The workshop: the one process that holds the data folder (projects, items and their versions, the Library, styles, links), its transactions, the job queue and the events, and answers every query and command | [docs](workshop/docs/README.md) |
+| `gui/` | The GUI: a local web UI that is a client of the workshop (the `ursatz-gui-backend` server and its frontend) | [README](gui/README.md), [docs](gui/docs/README.md) |
 
 `third_party/` holds the vendored cJSON, ezxml and civetweb. Nothing is fetched at configure time.
+
+## Running the GUI
+
+```
+build/gui/backend/ursatz-gui-backend --data <folder> [--port <n>]
+```
+
+`--data` names the data folder (`URSATZ_DATA`, or `data_dir` of `<folder>/ursatz.json`; the default is the current directory) and the port defaults to 8765. The folder is created when it is absent; a second process on one folder is refused. A folder from before the workshop (or in layout 1) is refused with what to run:
+
+```
+build/gui/backend/ursatz-gui-backend --data <folder> --migrate --dry-run   # writes nothing, prints every planned move
+build/gui/backend/ursatz-gui-backend --data <folder> --migrate [--backup <dir>]
+```
+
+A migration copies the whole folder to the backup first (beside it unless `--backup` names a folder) and checks the copy. See [the data folder](workshop/docs/data-folder.md).
 
 ## The three layers
 
@@ -62,10 +79,10 @@ Options (both ON by default):
 
 ## Test support
 
-`tests/support/` holds what every part's tests share: `ursatz_test.h` (library `ursatz_test_support`: `CHECK`, `CHECKF`, `test_finish`, file reading and writing, temp paths, JSON helpers) and `test_http.h` (library `ursatz_test_http`: a plain HTTP client, linked only by the GUI backend tests). Helpers that belong to one part (the Analyzer's MIDI builders, the Composer's oracles, the GUI's `gui_check.h`) stay in that part's `tests/support` or `tests/` folder. The frontend tests share `gui/frontend/tests/support/check.js`.
+`tests/support/` holds what every part's tests share: `ursatz_test.h` (library `ursatz_test_support`: `CHECK`, `CHECKF`, `test_finish`, file reading and writing, temp paths, JSON helpers) and `test_http.h` (library `ursatz_test_http`: a plain HTTP client, linked only by the GUI backend tests). Helpers that belong to one part (the Analyzer's MIDI builders, the Composer's oracles, the GUI's `gui_check.h`) stay in that part's `tests/support` or `tests/` folder. The frontend tests share `gui/frontend/tests/support/` (`check.js`, the fixtures and the fake DOM).
 
 ## Checks
 
 Every include follows the layer table, `cmake/layer-table.txt` (test `layer_table`, in the fast set): the module of every C file, what each module may include, and a few rules that are not include edges.
 
-`tools/ci/` holds the boundary, docs and test-timing scripts that CI runs, each runnable from anywhere in the repository after the build: `check-docs.sh <part>`, `check-statics.sh <part>...`, `check-hearing.sh`, `check-primitives.sh`, `check-frontend-theory.sh`, `check-reach.sh [<scan build dir>]` and `slowest-tests.sh build`. `check-primitives.sh` (test `primitive_owners`, in the fast set) refuses a copy of a shared primitive outside its owner (R-622): a gcd function, `__int128`, a type named `*Rational`, `*Fraction` or `*Ratio`, a table of the twelve pitch names, a scale-step table or a table of Roman numeral names in `library/`, `analyzer/`, `composer/` or `gui/backend/src`; the owners are `library/model/core/rational.{c,h}`, `library/model/pitch/`, `library/theory/tonality/` and `knowledge/`, and `tools/ci/primitive-allow.txt` lists what stays with a reason and the phase that removes it. `check-reach.sh` builds its own scan tree (`build-reach` by default, tests off) and lists every function in the repository's own C code that no application main (`ursatz-analyzer`, `ursatz-composer`, `ursatz-gui-backend`) reaches, in `<scan build dir>/reach/unreached.txt`. CI runs it with `tools/ci/reach-allow.txt`: a function no application reaches fails CI unless it is listed there with a reason, and a listed one that is reached or gone fails too. Delete such a function, or list it.
+`tools/ci/` holds the boundary, docs and test-timing scripts that CI runs, each runnable from anywhere in the repository after the build: `check-docs.sh <part>`, `check-statics.sh <part>...`, `check-hearing.sh`, `check-primitives.sh`, `check-frontend-theory.sh`, `check-reach.sh [<scan build dir>]` and `slowest-tests.sh build`. `check-primitives.sh` (test `primitive_owners`, in the fast set) refuses a copy of a shared primitive outside its owner (R-622): a gcd function, `__int128`, a type named `*Rational`, `*Fraction` or `*Ratio`, a table of the twelve pitch names, a scale-step table or a table of Roman numeral names in `common/`, `library/`, `analyzer/`, `composer/` or `gui/backend/src`; the owners are `library/model/core/rational.{c,h}`, `library/model/pitch/`, `library/theory/tonality/` and `knowledge/`, and `tools/ci/primitive-allow.txt` lists what stays with a reason and the phase that removes it. `check-reach.sh` builds its own scan tree (`build-reach` by default, tests off) and lists every function in the repository's own C code that no application main (`ursatz-analyzer`, `ursatz-composer`, `ursatz-gui-backend`) reaches, in `<scan build dir>/reach/unreached.txt`. CI runs it with `tools/ci/reach-allow.txt`: a function no application reaches fails CI unless it is listed there with a reason, and a listed one that is reached or gone fails too. Delete such a function, or list it.
