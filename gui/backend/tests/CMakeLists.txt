@@ -126,3 +126,10 @@ ursatz_test(migrated_routes SOURCES test_migrated_routes.c LIBS ursatz_gui_core_
 
 # The one parser of the route table (R-647); no server is started.
 ursatz_test(route_table SOURCES test_route_table.c LIBS ursatz_gui_core ursatz_test_support)
+
+# The event stream (P63 B13): a raw socket reads GET /api/events while a subject is made and an import runs; a ninth stream is refused; the server stops with
+# the streams open.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/events_route)
+ursatz_test(gui_events_route SOURCES test_events_route.c LIBS ursatz_gui_core ursatz_test_http gui_server_support
+    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/events_route)

@@ -114,3 +114,9 @@ ursatz_test(workshop_queries SOURCES test_queries.c LIBS ursatz_workshop_interna
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
 ursatz_test(workshop_base_version SOURCES test_base_version.c LIBS ursatz_workshop_internal ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
+
+# The workshop's events (P63 B13): what a command and a job publish, in order, and the reset of a subscriber that did not read.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_events)
+ursatz_test(workshop_events SOURCES test_events.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_events)
