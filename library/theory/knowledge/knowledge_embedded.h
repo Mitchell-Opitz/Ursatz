@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 /*
- * The knowledge files of knowledge/ as the build embedded them (cmake/embed_knowledge.py): every *.json except the schemas, sorted by
+ * The knowledge files of knowledge/ as the build embedded them (cmake/embed_json.py): every *.json except the schemas, sorted by
  * path. `text` ends in a NUL byte that `size` does not count. Only the snapshot (knowledge_snapshot.c) reads them.
  */
 typedef struct {
