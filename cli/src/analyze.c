@@ -82,14 +82,14 @@ int run_analyze(const CliArgs *args) {
     const char *title = cli_value(args, "--title");
     const char *layers_dir = cli_value(args, "--layers");
     const char *model_plan = cli_value(args, "--model-plan");
-    if (view && strcmp(view, "text") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--view must be text, not '%s'", view);
+    if (view && strcmp(view, "reading") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--view must be reading, not '%s'", view);
     }
     if (!view && (measures || title)) {
-        return cli_fail(CLI_EXIT_USAGE, "--measures and --title need --view text");
+        return cli_fail(CLI_EXIT_USAGE, "--measures and --title need --view reading");
     }
     if (view && (layers_dir || model_plan)) {
-        return cli_fail(CLI_EXIT_USAGE, "--layers and --model-plan write files, so they do not go with --view text");
+        return cli_fail(CLI_EXIT_USAGE, "--layers and --model-plan write files, so they do not go with --view reading");
     }
     int first = 0;
     int last = 0;

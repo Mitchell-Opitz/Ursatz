@@ -548,20 +548,20 @@ const CliCommand CLI_COMMANDS[] = {
      FLAGS_LISTEN, 0, 0, run_listen},
     {"analyze",
     "analyze <input> [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>] [--layers <dir>] [--model-plan <file>]\n"
-    "analyze <input> --view text [--measures <first>-<last>] [--title <text>] [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>]",
+    "analyze <input> --view reading [--measures <first>-<last>] [--title <text>] [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>]",
      "Analyze a MIDI or MusicXML file into an analysis document, or print its text export",
     "Analyzes a MIDI or MusicXML file with the Ursatz Analyzer and writes the analysis document, <stem>.analysis.json,\n"
-    "next to the input (a JSON document: the form, phrases, cadences, harmony, keys and motives it hears). With --view text\n"
+    "next to the input (a JSON document: the form, phrases, cadences, harmony, keys and motives it hears). With --view reading\n"
     "it prints the measure-addressed text export of the piece instead, the text a person can paste into a conversation to\n"
     "say \"measure 27 is flagged as X, I read it as Y\", and writes nothing.\n"
     "\n"
     "--layers <dir> also writes the layers of the analysis: realization.json and readings/analyzer.json. --model-plan <file>\n"
-    "also writes the minimal plan of the Analyzer's reading (its sections, keys and chords). Neither goes with --view text.\n"
+    "also writes the minimal plan of the Analyzer's reading (its sections, keys and chords). Neither goes with --view reading.\n"
     "\n"
     "Notes on options:\n"
     "  --input-format is auto (the default), midi or musicxml. --meter, --value-scale and --pickup are a notation reading\n"
     "  for a file whose meter or note values are not what it means: --meter 3/4, --value-scale 2 or 1/2, --pickup 1/4 (the\n"
-    "  pickup must be shorter than one measure of the meter). --measures and --title need --view text: --measures 12-16\n"
+    "  pickup must be shorter than one measure of the meter). --measures and --title need --view reading: --measures 12-16\n"
     "  exports those measure numbers as written in the score (a pickup measure is number 0).\n"
     "\n"
     "Exit status: 0 success; 1 usage, an input that cannot be read, a notation reading that cannot be applied or an analysis\n"
@@ -569,7 +569,7 @@ const CliCommand CLI_COMMANDS[] = {
     "\n"
     "Example:\n"
     "  ursatz analyze song.mid\n"
-    "  ursatz analyze song.mid --view text --measures 1-4",
+    "  ursatz analyze song.mid --view reading --measures 1-4",
      FLAGS_ANALYZE, 1, 1, run_analyze},
     {"corpus",
     "corpus <dir> [--out <dir>] [--resume]",
