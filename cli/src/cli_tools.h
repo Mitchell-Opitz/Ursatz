@@ -45,4 +45,16 @@ UrsatzStatus cli_composer(const char *entry, const cJSON *request, const Worksho
 /* The same for the entry "validate" of kind ("motive", "theme", "piece", "random_motive"...). */
 UrsatzStatus cli_composer_validate(const char *kind, const cJSON *request, CliResponse *out);
 
+/*
+ * The names of MIDI numbers ("C4", "C#4"), one pitch-names call for the whole list (a printer gathers its numbers first). names[i] is the name of
+ * midi[i]; a number the tool refuses, or a tool that cannot be called, gives "?" and false.
+ */
+bool cli_pitch_names(const int *midi, size_t count, char (*names)[8]);
+
+/*
+ * The fraction {"num", "den"} that object holds as the member name: false when it is not there. A denominator of 0 reads as 1, so a missing
+ * or null denominator never divides.
+ */
+bool cli_fraction(const cJSON *object, const char *name, long long *num, long long *den);
+
 #endif

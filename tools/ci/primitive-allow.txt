@@ -1,6 +1,3 @@
 # Copies of shared primitives that stay (tools/ci/check-primitives.sh, R-622).
 # One "<path> <pattern>  # reason, phase" per line; patterns: gcd, int128, type, pitch-names, scale-steps, numerals, fnv.
-cli/src/motive_text.c type  # a local Rational of the motive text printer; P64 (one CLI)
-cli/src/motive_text.c pitch-names  # the CLI's name table of the motive text; P64 (one CLI)
-cli/src/counterpoint.c pitch-names  # the CLI's name table of the counterpoint text; P64 (one CLI)
 library/io/musicxml_score.c int128  # kept: a widened product comparison of a notated value, not a number type

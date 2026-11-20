@@ -88,3 +88,53 @@ UrsatzStatus cli_composer(const char *entry, const cJSON *request, const Worksho
 UrsatzStatus cli_composer_validate(const char *kind, const cJSON *request, CliResponse *out) {
     return call("validate", kind, request, NULL, out);
 }
+
+#define PITCH_NAMES_CHUNK 4096 /* what one pitch-names call takes */
+
+bool cli_pitch_names(const int *midi, size_t count, char (*names)[8]) {
+    for (size_t i = 0; i < count; i++) {
+        snprintf(names[i], 8, "?");
+    }
+    Workshop *workshop = cli_tools();
+    for (size_t start = 0; workshop && start < count; start += PITCH_NAMES_CHUNK) {
+        size_t chunk = count - start < PITCH_NAMES_CHUNK ? count - start : PITCH_NAMES_CHUNK;
+        cJSON *params = cJSON_CreateObject();
+        cJSON *numbers = params ? cJSON_AddArrayToObject(params, "midi") : NULL;
+        for (size_t i = 0; numbers && i < chunk; i++) {
+            cJSON *number = cJSON_CreateNumber(midi[start + i]);
+            if (number) {
+                cJSON_AddItemToArray(numbers, number);
+            }
+        }
+        WorkshopReply reply;
+        UrsatzError error;
+        memset(&error, 0, sizeof error);
+        if (!numbers || cJSON_GetArraySize(numbers) != (int)chunk ||
+            workshop_tool(workshop, "pitch-names", params, NULL, &reply, &error) != URSATZ_OK) {
+            cJSON_Delete(params);
+            return false;
+        }
+        cJSON_Delete(params);
+        const cJSON *answered = cJSON_GetObjectItemCaseSensitive(reply.json, "names");
+        for (size_t i = 0; i < chunk; i++) {
+            const cJSON *name = cJSON_GetArrayItem(answered, (int)i);
+            if (cJSON_IsString(name)) {
+                snprintf(names[start + i], 8, "%s", name->valuestring);
+            }
+        }
+        workshop_reply_destroy(&reply);
+    }
+    return workshop != NULL;
+}
+
+bool cli_fraction(const cJSON *object, const char *name, long long *num, long long *den) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    const cJSON *top = cJSON_GetObjectItemCaseSensitive(item, "num");
+    const cJSON *bottom = cJSON_GetObjectItemCaseSensitive(item, "den");
+    *num = cJSON_IsNumber(top) ? (long long)top->valuedouble : 0;
+    *den = cJSON_IsNumber(bottom) ? (long long)bottom->valuedouble : 0;
+    if (*den == 0) {
+        *den = 1;
+    }
+    return item != NULL;
+}

@@ -182,22 +182,10 @@ static void duration_name(long long num, long long den, char *out, size_t size) 
     snprintf(out, size, "%lld/%lld", num, den);
 }
 
-static void pitch_name(int pitch, char *out, size_t size) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    snprintf(out, size, "%s%d", NAMES[((pitch % 12) + 12) % 12], pitch / 12 - 1);
-}
-
-static long long greatest_common_divisor(long long a, long long b) {
-    while (b != 0) {
-        long long rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a < 0 ? -a : a;
-}
-
-/* The notes of a line as a note list, gaps as rests, a bar line between bars. bar is the length of a bar. */
-static void print_line(const cJSON *notes, long long bar_num, long long bar_den) {
+/* The notes of a line as a note list, gaps as rests, a bar line between bars. bar is the length of a bar. names are the pitch names of the
+ * notes, in order, from the one pitch-names call of the document. */
+static void print_line(const cJSON *notes, const char (*names)[8], long long bar_num, long long bar_den) {
+    size_t index = 0;
     long long at_num = 0;
     long long at_den = 1;
     const cJSON *note = NULL;
@@ -208,23 +196,18 @@ static void print_line(const cJSON *notes, long long bar_num, long long bar_den)
         long long start_den = (long long)cli_json_number(offset, "den");
         long long length_num = (long long)cli_json_number(duration, "num");
         long long length_den = (long long)cli_json_number(duration, "den");
-        char pitch[16];
         char length[24];
         if (start_num * at_den > at_num * start_den) {
             long long gap_num = start_num * at_den - at_num * start_den;
             long long gap_den = start_den * at_den;
-            long long divisor = greatest_common_divisor(gap_num, gap_den);
-            gap_num /= divisor;
-            gap_den /= divisor;
             duration_name(gap_num, gap_den, length, sizeof(length));
             printf(" r:%s", length);
         }
         if (bar_num > 0 && start_num * bar_den % (bar_num * start_den) == 0 && start_num > 0) {
             printf(" |");
         }
-        pitch_name((int)cli_json_number(note, "midi_pitch"), pitch, sizeof(pitch));
         duration_name(length_num, length_den, length, sizeof(length));
-        printf(" %s:%s", pitch, length);
+        printf(" %s:%s", names[index++], length);
         at_num = start_num * length_den + length_num * start_den;
         at_den = start_den * length_den;
     }
@@ -240,8 +223,35 @@ static void print_result_text(const Options *options, const cJSON *document, con
     sscanf(cli_json_string(document, "meter"), "%ld/%ld", &beats, &unit);
     printf("species %d counterpoint %s the line, key %s, meter %s\n", species, cli_json_string(document, "position"),
            cli_json_string(document, "key"), cli_json_string(document, "meter"));
-    size_t k = 0;
+    /* The names of every note of the document, line then counter-melody of each result: one pitch-names call. */
+    size_t total = 0;
     const cJSON *result = NULL;
+    cJSON_ArrayForEach(result, results) {
+        total += (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(result, "line")) +
+                 (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(result, "counter_melody"));
+    }
+    int *midi = calloc(total ? total : 1, sizeof *midi);
+    char(*names)[8] = calloc(total ? total : 1, sizeof *names);
+    size_t at = 0;
+    cJSON_ArrayForEach(result, results) {
+        static const char *const LINES[2] = {"line", "counter_melody"};
+        for (int l = 0; midi && l < 2; l++) {
+            const cJSON *note = NULL;
+            cJSON_ArrayForEach(note, cJSON_GetObjectItemCaseSensitive(result, LINES[l])) {
+                midi[at++] = (int)cli_json_number(note, "midi_pitch");
+            }
+        }
+    }
+    if (!midi || !names) {
+        free(midi);
+        free(names);
+        cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        return;
+    }
+    cli_pitch_names(midi, total, names);
+    free(midi);
+    const char(*next)[8] = names;
+    size_t k = 0;
     cJSON_ArrayForEach(result, results) {
         if (options->suggest_text) {
             printf("\ncounter-melody %zu of %zu, seed %.0f\n", k + 1, count, cli_json_number(result, "seed"));
@@ -249,9 +259,13 @@ static void print_result_text(const Options *options, const cJSON *document, con
             printf("\nseed %.0f\n", cli_json_number(result, "seed"));
         }
         printf("line:          ");
-        print_line(cJSON_GetObjectItemCaseSensitive(result, "line"), beats, unit);
+        const cJSON *line = cJSON_GetObjectItemCaseSensitive(result, "line");
+        const cJSON *counter_melody = cJSON_GetObjectItemCaseSensitive(result, "counter_melody");
+        print_line(line, next, beats, unit);
+        next += cJSON_GetArraySize(line);
         printf("counter-melody:");
-        print_line(cJSON_GetObjectItemCaseSensitive(result, "counter_melody"), beats, unit);
+        print_line(counter_melody, next, beats, unit);
+        next += cJSON_GetArraySize(counter_melody);
         printf("rules (standard-counterpoint, species %d):\n", species);
         const cJSON *group = NULL;
         cJSON_ArrayForEach(group, cJSON_GetObjectItemCaseSensitive(result, "groups")) {
@@ -262,6 +276,7 @@ static void print_result_text(const Options *options, const cJSON *document, con
         }
         k++;
     }
+    free(names);
     for (size_t i = 0; i < written->count; i++) {
         printf("wrote %s\n", written->paths[i]);
     }

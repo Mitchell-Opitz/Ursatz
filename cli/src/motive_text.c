@@ -27,20 +27,6 @@ static bool flag(const cJSON *object, const char *name) {
     return cJSON_IsTrue(member(object, name));
 }
 
-typedef struct {
-    long long num;
-    long long den;
-} Rational;
-
-static Rational rational(const cJSON *object, const char *name) {
-    const cJSON *item = member(object, name);
-    Rational value = {number(item, "num"), number(item, "den")};
-    if (value.den == 0) {
-        value.den = 1;
-    }
-    return value;
-}
-
 /* ------------------------------------------------------------------- texts */
 
 /* The key's name, "D minor": the tonic's spelling and the key word of the material, both from the Composer's vocabulary. */
@@ -71,13 +57,13 @@ static void key_text(long tonic, const char *material, char *out, size_t size) {
 }
 
 /* A position in beats, counting from 1: "1", "2+1/2". */
-static void beat_text(Rational beat, char *out, size_t size) {
-    long whole = (long)(beat.num / beat.den);
-    long rest = (long)(beat.num - whole * beat.den);
+static void beat_text(long long num, long long den, char *out, size_t size) {
+    long whole = (long)(num / den);
+    long rest = (long)(num - whole * den);
     if (rest == 0) {
         snprintf(out, size, "%ld", whole + 1);
     } else {
-        snprintf(out, size, "%ld+%ld/%lld", whole + 1, rest, beat.den);
+        snprintf(out, size, "%ld+%ld/%lld", whole + 1, rest, den);
     }
 }
 
@@ -86,36 +72,56 @@ static void degree_text(const cJSON *degree, char *out, size_t size) {
 }
 
 /* The name of a duration as the analysis writes it: w h q e s t with up to two dots, else "n/d". */
-static void duration_name(Rational duration, char *out, size_t size) {
+static void duration_name(long long num, long long den, char *out, size_t size) {
     static const char LETTERS[] = {'w', 'h', 'q', 'e', 's', 't'};
     for (unsigned k = 0; k < sizeof LETTERS; k++) {
         for (unsigned dots = 0; dots < 3; dots++) {
             long long numerator = dots == 0 ? 1 : (dots == 1 ? 3 : 7);
             long long denominator = (1LL << k) * (dots == 0 ? 1 : (dots == 1 ? 2 : 4));
-            if (duration.num * denominator == numerator * duration.den) {
+            if (num * denominator == numerator * den) {
                 snprintf(out, size, "%c%.*s", LETTERS[k], (int)dots, "..");
                 return;
             }
         }
     }
-    snprintf(out, size, "%lld/%lld", duration.num, duration.den);
+    snprintf(out, size, "%lld/%lld", num, den);
 }
 
-/* A MIDI pitch as a name with sharps and the octave number where middle C is C4. */
-static void pitch_name(int midi, char *out, size_t size) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    snprintf(out, size, "%s%d", NAMES[((midi % 12) + 12) % 12], midi / 12 - 1);
+/* The names of the notes of the document and of the two ends of its range: one pitch-names call (cli_tools.h) gives them, the printers read them. */
+typedef struct {
+    char (*names)[8]; /* the notes in order, then the lowest and the highest pitch of the range */
+    size_t notes;
+} PitchNames;
+
+static bool gather_names(const cJSON *notes, const cJSON *range, PitchNames *out) {
+    size_t count = (size_t)cJSON_GetArraySize(notes);
+    int *midi = calloc(count + 2, sizeof *midi);
+    out->names = calloc(count + 2, sizeof *out->names);
+    out->notes = count;
+    if (!midi || !out->names) {
+        free(midi);
+        free(out->names);
+        out->names = NULL;
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        midi[i] = (int)number(cJSON_GetArrayItem(notes, (int)i), "midi_pitch");
+    }
+    midi[count] = (int)number(range, "lowest");
+    midi[count + 1] = (int)number(range, "highest");
+    cli_pitch_names(midi, count + 2, out->names);
+    free(midi);
+    return true;
 }
 
-static void note_name(const cJSON *notes, size_t index, char *out, size_t size) {
-    pitch_name((int)number(cJSON_GetArrayItem(notes, (int)index), "midi_pitch"), out, size);
+static const char *note_name(const PitchNames *names, size_t index) {
+    return index < names->notes ? names->names[index] : "?";
 }
 
 /* ------------------------------------------------------------------- parts */
 
-static void print_tones(const cJSON *analysis, const cJSON *notes, FILE *out) {
+static void print_tones(const cJSON *analysis, const PitchNames *names, FILE *out) {
     const cJSON *tones = member(analysis, "tones");
-    char text[64];
     if (cJSON_GetArraySize(tones) == 0) {
         fprintf(out, "Tones: none\n");
         return;
@@ -129,8 +135,7 @@ static void print_tones(const cJSON *analysis, const cJSON *notes, FILE *out) {
         const char *name = strcmp(role, "chord") == 0 || strcmp(role, "unclassified") == 0 ? role
                            : cJSON_IsString(type)                                             ? type->valuestring
                                                                                               : role;
-        note_name(notes, i, text, sizeof(text));
-        fprintf(out, "%s %zu %s %s", i == 0 ? "" : ",", i + 1, text, name);
+        fprintf(out, "%s %zu %s %s", i == 0 ? "" : ",", i + 1, note_name(names, i), name);
         i++;
     }
     fprintf(out, "\n");
@@ -186,27 +191,28 @@ static void print_contour(const cJSON *analysis, FILE *out) {
     fprintf(out, "\n");
 }
 
-static void print_rhythm(const cJSON *analysis, const cJSON *notes, FILE *out) {
+static void print_rhythm(const cJSON *analysis, const PitchNames *names, FILE *out) {
     const cJSON *rhythm = member(analysis, "rhythm");
     if (!cJSON_IsArray(rhythm)) {
         return;
     }
     fprintf(out, "Rhythm:\n");
-    char text[64];
     char duration[64];
     char beat[32];
     size_t i = 0;
     const cJSON *note = NULL;
     cJSON_ArrayForEach(note, rhythm) {
-        note_name(notes, i++, text, sizeof(text));
-        duration_name(rational(note, "duration"), duration, sizeof(duration));
-        beat_text(rational(note, "beat"), beat, sizeof(beat));
-        fprintf(out, "  %-4s %-4s bar %ld beat %s%s", text, duration, number(note, "bar") + 1, beat,
+        long long numerator, denominator;
+        cli_fraction(note, "duration", &numerator, &denominator);
+        duration_name(numerator, denominator, duration, sizeof(duration));
+        cli_fraction(note, "beat", &numerator, &denominator);
+        beat_text(numerator, denominator, beat, sizeof(beat));
+        fprintf(out, "  %-4s %-4s bar %ld beat %s%s", note_name(names, i++), duration, number(note, "bar") + 1, beat,
                 flag(note, "on_beat") ? "" : " (off the beat)");
-        Rational rest_before = rational(note, "rest_before");
-        if (rest_before.num > 0) {
+        cli_fraction(note, "rest_before", &numerator, &denominator);
+        if (numerator > 0) {
             char rest[32];
-            duration_name(rest_before, rest, sizeof(rest));
+            duration_name(numerator, denominator, rest, sizeof(rest));
             fprintf(out, ", rest %s before", rest);
         }
         fprintf(out, "\n");
@@ -262,10 +268,14 @@ bool motive_text_print(const char *response_json, FILE *out) {
     }
     const cJSON *notes = member(motive, "notes");
     char text[64];
+    PitchNames names;
+    if (!gather_names(notes, member(analysis, "range"), &names)) {
+        cJSON_Delete(document);
+        return false;
+    }
     fprintf(out, "Notes:");
-    for (int i = 0; i < cJSON_GetArraySize(notes); i++) {
-        note_name(notes, (size_t)i, text, sizeof(text));
-        fprintf(out, " %s", text);
+    for (size_t i = 0; i < names.notes; i++) {
+        fprintf(out, " %s", note_name(&names, i));
     }
     fprintf(out, "\n");
     const cJSON *meter = member(motive, "meter");
@@ -280,11 +290,12 @@ bool motive_text_print(const char *response_json, FILE *out) {
     } else {
         fprintf(out, "Key: unspecified (no key was given and the pitches do not settle on one)\n");
     }
-    Rational bars = rational(analysis, "bars");
-    if (bars.den == 1 && bars.num == 1) {
+    long long bars_num, bars_den;
+    cli_fraction(analysis, "bars", &bars_num, &bars_den);
+    if (bars_den == 1 && bars_num == 1) {
         fprintf(out, "Length: 1 bar\n");
     } else {
-        fprintf(out, "Length: %lld/%lld bars\n", bars.num, bars.den);
+        fprintf(out, "Length: %lld/%lld bars\n", bars_num, bars_den);
     }
     if (cJSON_IsString(member(analysis, "harmony_text"))) {
         fprintf(out, "Own harmony: %s\n", string(analysis, "harmony_text"));
@@ -295,7 +306,7 @@ bool motive_text_print(const char *response_json, FILE *out) {
     } else {
         fprintf(out, "Base harmony: none\n");
     }
-    print_tones(analysis, notes, out);
+    print_tones(analysis, &names, out);
     const cJSON *feature = NULL;
     size_t i = 0;
     cJSON_ArrayForEach(feature, member(motive, "features")) {
@@ -307,15 +318,14 @@ bool motive_text_print(const char *response_json, FILE *out) {
     }
     print_intervals(analysis, cJSON_IsObject(key), out);
     print_contour(analysis, out);
-    print_rhythm(analysis, notes, out);
+    print_rhythm(analysis, &names, out);
     if (cJSON_IsObject(member(analysis, "range"))) {
         const cJSON *range = member(analysis, "range");
-        char text2[64];
-        pitch_name((int)number(range, "lowest"), text, sizeof(text));
-        pitch_name((int)number(range, "highest"), text2, sizeof(text2));
-        fprintf(out, "Range: %s to %s (%ld semitones)\n", text, text2, number(range, "semitones"));
+        fprintf(out, "Range: %s to %s (%ld semitones)\n", names.names[names.notes], names.names[names.notes + 1],
+                number(range, "semitones"));
         print_harmony(analysis, out);
     }
+    free(names.names);
     cJSON_Delete(document);
     return true;
 }
