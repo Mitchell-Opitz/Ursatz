@@ -36,6 +36,9 @@
 #define PIECE_ROWS_MAX (PIECE_STRUCTURE_MAX_SECTIONS + 1)
 #define PIECE_LANES_MAX 4
 #define PIECE_VARIATIONS_MAX 8
+/* The cells a section's progression harmony may name, and the motives a theme request may list (the vocabulary's limits.harmony_cells and limits.theme_motives). */
+#define API_HARMONY_CELLS_MAX 8
+#define API_THEME_MOTIVES_MAX 16
 /* As many seeds are tried as it takes to find the variations asked for, at most this many for each. */
 #define PIECE_SEEDS_PER_VARIATION 4
 

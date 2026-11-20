@@ -570,6 +570,21 @@ static void test_theme_form_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(limits, "tempo_max")->valuedouble == 400);
     assert(cJSON_GetObjectItemCaseSensitive(limits, "piece_sections")->valuedouble == 32);
     assert(cJSON_GetObjectItemCaseSensitive(limits, "piece_beats")->valuedouble == 4096);
+    /* since 4.1: the limits the GUI held its own copies of */
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "theme_motives")->valuedouble == 16);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "theme_extensions")->valuedouble == SECTION_CONSTRUCTION_EXTENSIONS);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "piece_variations")->valuedouble == 8);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "harmony_cells")->valuedouble == 8);
+    {
+        const cJSON *developments = cJSON_GetObjectItemCaseSensitive(vocabulary, "theme_developments");
+        assert(cJSON_GetArraySize(developments) == 3);
+        const cJSON *first = cJSON_GetArrayItem(developments, 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(first, "word")->valuestring, "melody") == 0);
+        assert(cJSON_GetObjectItemCaseSensitive(first, "label") && cJSON_GetObjectItemCaseSensitive(first, "help"));
+        const cJSON *lanes = cJSON_GetObjectItemCaseSensitive(vocabulary, "lanes");
+        assert(cJSON_GetArraySize(lanes) == 5);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(lanes, 4), "value")->valuestring, "all") == 0);
+    }
     const cJSON *seed_max = cJSON_GetObjectItemCaseSensitive(limits, "seed_max");
     assert(cJSON_GetObjectItemCaseSensitive(seed_max, "variants")->valuedouble == 4294967231.0);
     assert(cJSON_GetObjectItemCaseSensitive(seed_max, "random_motive")->valuedouble == 4294967295.0);
@@ -788,7 +803,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "4.0") == 0);
+    assert(strcmp(composer_api_version(), "4.1") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

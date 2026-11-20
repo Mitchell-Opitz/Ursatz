@@ -611,7 +611,7 @@ static void test_cancel(void) {
 }
 
 static void test_version(void) {
-    assert(strcmp(composer_api_version(), "4.0") == 0);
+    assert(strcmp(composer_api_version(), "4.1") == 0);
 }
 
 int main(int argc, char **argv) {

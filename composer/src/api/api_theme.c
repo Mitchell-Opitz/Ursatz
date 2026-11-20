@@ -20,6 +20,8 @@
 #include "api_construction.h"
 #include "api_style.h"
 #include "api_internal.h"
+#include "api_piece.h"
+#include "api_piece.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
 #include "structure/plan_util.h"
@@ -33,7 +35,7 @@
  * result document, the MIDI file and the MusicXML are made in memory.
  */
 
-#define THEME_MOTIVES 16
+#define THEME_MOTIVES API_THEME_MOTIVES_MAX
 #define SCHEMA_NAME "ursatz-theme-request"
 
 typedef struct {
