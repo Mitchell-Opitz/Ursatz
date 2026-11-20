@@ -42,8 +42,8 @@ static void print_harmonize_help(FILE *out) {
     fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", VARIATIONS_MAX);
     fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock\n");
     fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
-    fprintf(out, "  --midi               also write variation-<i>.mid\n");
-    fprintf(out, "  --musicxml           also write variation-<i>.musicxml\n");
+    fprintf(out, "  --write-midi         also write variation-<i>.mid\n");
+    fprintf(out, "  --write-musicxml     also write variation-<i>.musicxml\n");
     fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
     fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
     fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
@@ -53,7 +53,7 @@ static void print_harmonize_help(FILE *out) {
     fprintf(out, "cannot be read, the section is not found or has no given melody (nothing is written); 3 an output file\n");
     fprintf(out, "could not be written.\n\n");
     fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz harmonize piece.json --section A --count 4 --seed 3 --out-dir harmonizations --midi\n");
+    fprintf(out, "  ursatz harmonize piece.json --section A --count 4 --seed 3 --out-dir harmonizations --write-midi\n");
 }
 
 static void print_help(FILE *out) {
@@ -70,8 +70,8 @@ static void print_help(FILE *out) {
     fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock. The seed of\n");
     fprintf(out, "                       every version is printed\n");
     fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
-    fprintf(out, "  --midi               also write variation-<i>.mid\n");
-    fprintf(out, "  --musicxml           also write variation-<i>.musicxml\n");
+    fprintf(out, "  --write-midi         also write variation-<i>.mid\n");
+    fprintf(out, "  --write-musicxml     also write variation-<i>.musicxml\n");
     fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: write a tempo, quarter notes per minute from 20 to 400 (a whole number or\n");
     fprintf(out, "                       a fraction like 195/2). Default: none, the file default of 120 applies\n");
     fprintf(out, "  --plain-midi         MIDI: no track names and no section markers\n");
@@ -81,56 +81,24 @@ static void print_help(FILE *out) {
     fprintf(out, "cannot be read, the node is not found, is Given or cannot be regenerated (nothing is written); 3 an output\n");
     fprintf(out, "file could not be written.\n\n");
     fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz variations piece.json --section B --count 4 --seed 3 --out-dir variations --midi\n");
+    fprintf(out, "  ursatz variations piece.json --section B --count 4 --seed 3 --out-dir variations --write-midi\n");
 }
 
-static int read_options(int argc, char **argv, Options *options, bool harmonize) {
-    const char *command = harmonize ? "harmonize" : "variations";
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--midi") == 0) {
-            options->midi = true;
-        } else if (strcmp(arg, "--musicxml") == 0) {
-            options->musicxml = true;
-        } else if (strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else if (strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (!harmonize && strcmp(arg, "--node") == 0) {
-            target = &options->target.node_text;
-        } else if (strcmp(arg, "--section") == 0) {
-            target = &options->target.section_text;
-        } else if (!harmonize && strcmp(arg, "--lane") == 0) {
-            target = &options->target.lane_text;
-        } else if (strcmp(arg, "--count") == 0) {
-            target = &options->count_text;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--out-dir") == 0) {
-            target = &options->out_dir;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz %s --help)", arg, command);
-        } else if (!options->input) {
-            options->input = arg;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one plan file", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->midi = cli_switch(args, "--write-midi");
+    options->musicxml = cli_switch(args, "--write-musicxml");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->target.node_text = cli_value(args, "--node");
+    options->target.section_text = cli_value(args, "--section");
+    options->target.lane_text = cli_value(args, "--lane");
+    options->count_text = cli_value(args, "--count");
+    options->seed_text = cli_value(args, "--seed");
+    options->out_dir = cli_value(args, "--out-dir");
+    options->format_text = cli_value(args, "--format");
     return 0;
 }
 
@@ -270,9 +238,9 @@ static void print_result(const Options *options, cJSON *document, const char (*p
 }
 
 /* The shared body of the two commands. */
-static int run_command(int argc, char **argv, bool harmonize) {
+static int run_command(const CliArgs *args, bool harmonize) {
     Options options;
-    int status = read_options(argc, argv, &options, harmonize);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }
@@ -312,10 +280,10 @@ static int run_command(int argc, char **argv, bool harmonize) {
     return status;
 }
 
-int run_variations(int argc, char **argv) {
-    return run_command(argc, argv, false);
+int run_variations(const CliArgs *args) {
+    return run_command(args, false);
 }
 
-int run_harmonize(int argc, char **argv) {
-    return run_command(argc, argv, true);
+int run_harmonize(const CliArgs *args) {
+    return run_command(args, true);
 }

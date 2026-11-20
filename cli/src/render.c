@@ -1,4 +1,4 @@
-#include "export.h"
+#include "render.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -52,32 +52,19 @@ static int report_export_error(const UrsatzError *error, const char *plan_path, 
     return 1;
 }
 
-int run_export(int argc, char **argv) {
-    const char *plan_path = NULL;
-    const char *midi_path = NULL;
-    const char *musicxml_path = NULL;
-    const char *tempo_text = NULL;
-    bool plain_midi = false;
-    for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--tempo") == 0 && i + 1 < argc && !tempo_text) {
-            tempo_text = argv[++i];
-        } else if (strcmp(argv[i], "--plain-midi") == 0) {
-            plain_midi = true;
-        } else if (strcmp(argv[i], "--midi") == 0 && i + 1 < argc && !midi_path) {
-            midi_path = argv[++i];
-        } else if (strcmp(argv[i], "--musicxml") == 0 && i + 1 < argc && !musicxml_path) {
-            musicxml_path = argv[++i];
-        } else if (argv[i][0] != '-' && !plan_path) {
-            plan_path = argv[i];
-        } else {
-            fprintf(stderr, "Error: unexpected argument '%s'\n", argv[i]);
-            fprintf(stderr, "%s\n", EXPORT_USAGE_LINE);
-            return 1;
-        }
+int run_render(const CliArgs *args) {
+    const char *plan_path = args->input_count > 0 ? args->inputs[0] : NULL;
+    const char *midi_path = cli_value(args, "--midi");
+    const char *musicxml_path = cli_value(args, "--musicxml");
+    const char *tempo_text = cli_value(args, "--tempo");
+    bool plain_midi = cli_switch(args, "--plain-midi");
+    if (args->help) {
+        fprintf(stdout, "%s\n", RENDER_USAGE_LINE);
+        return 0;
     }
     if (!plan_path || (!midi_path && !musicxml_path)) {
-        fprintf(stderr, "Error: export needs a plan file and at least one of --midi or --musicxml\n");
-        fprintf(stderr, "%s\n", EXPORT_USAGE_LINE);
+        fprintf(stderr, "Error: render needs a plan file and at least one of --midi or --musicxml\n");
+        fprintf(stderr, "%s\n", RENDER_USAGE_LINE);
         return 1;
     }
 

@@ -119,103 +119,59 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--modulate") == 0) {
-            options->modulate = true;
-        } else if (strcmp(arg, "--form") == 0) {
-            target = &options->form_text;
-        } else if (strcmp(arg, "--key") == 0) {
-            target = &options->key_text;
-        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
-            target = &options->material_text;
-        } else if (strcmp(arg, "--meter") == 0) {
-            target = &options->meter_text;
-        } else if (strcmp(arg, "--bars") == 0) {
-            target = &options->bars_text;
-        } else if (strcmp(arg, "--count") == 0) {
-            target = &options->count_text;
-        } else if (strcmp(arg, "--motive") == 0) {
-            target = &options->motive_path;
-        } else if (strcmp(arg, "--from-corpus") == 0) {
-            target = &options->from_corpus;
-        } else if (strcmp(arg, "--like") == 0) {
-            target = &options->like_path;
-        } else if (strcmp(arg, "--accompaniment") == 0) {
-            target = &options->accompaniment_text;
-        } else if (strcmp(arg, "--texture") == 0) {
-            target = &options->texture_text;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--style") == 0) {
-            target = &options->style_path;
-        } else if (strcmp(arg, "--style-without") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            int added = cli_style_without_add(&options->without, argv[++i]);
-            if (added != 0) {
-                return added;
-            }
-        } else if (strcmp(arg, "--style-weight") == 0) {
-            target = &options->style_weight_text;
-        } else if (strcmp(arg, "--blend") == 0) {
-            target = &options->blend_path;
-        } else if (strcmp(arg, "--blend-weight") == 0) {
-            target = &options->blend_weight_text;
-        } else if (strcmp(arg, "--blend-weights") == 0) {
-            target = &options->blend_weights_text;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out_path;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (strcmp(arg, "--given-melody") == 0 || strcmp(arg, "--given-progression") == 0 ||
-                   strcmp(arg, "--given-bass") == 0 || strcmp(arg, "--like-progression") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
+    options->help = args->help;
+    options->form_text = cli_value(args, "--form");
+    options->key_text = cli_value(args, "--key");
+    options->material_text = cli_value(args, "--material");
+    options->meter_text = cli_value(args, "--meter");
+    options->bars_text = cli_value(args, "--bars");
+    options->count_text = cli_value(args, "--count");
+    options->modulate = cli_switch(args, "--modulate");
+    options->motive_path = cli_value(args, "--motive");
+    options->from_corpus = cli_value(args, "--from-corpus");
+    options->like_path = cli_value(args, "--like");
+    options->accompaniment_text = cli_value(args, "--accompaniment");
+    options->texture_text = cli_value(args, "--texture");
+    options->seed_text = cli_value(args, "--seed");
+    options->style_path = cli_value(args, "--style");
+    options->style_weight_text = cli_value(args, "--style-weight");
+    options->blend_path = cli_value(args, "--blend");
+    options->blend_weight_text = cli_value(args, "--blend-weight");
+    options->blend_weights_text = cli_value(args, "--blend-weights");
+    options->out_path = cli_value(args, "--out");
+    options->format_text = cli_value(args, "--format");
+    int added = cli_style_without_read(&options->without, args);
+    if (added != 0) {
+        return added;
+    }
+    /* The given material in argv order (the repeated flags keep it); --at and --cells go to the --given-* before them. */
+    for (size_t k = 0; k < args->repeat_count; k++) {
+        const CliRepeat *repeat = &args->repeats[k];
+        const char *name = CLI_FLAGS[repeat->flag].name;
+        if (strcmp(name, "--given-melody") == 0 || strcmp(name, "--given-progression") == 0 || strcmp(name, "--given-bass") == 0 ||
+            strcmp(name, "--like-progression") == 0) {
             if (options->given_count == MAX_GIVEN) {
                 return cli_fail(CLI_EXIT_USAGE, "plan takes %d given phrases, progressions and bass lines at most", MAX_GIVEN);
             }
             GivenOption *given = &options->given[options->given_count++];
-            given->from_corpus = arg[2] == 'l';
-            given->kind = given->from_corpus ? GIVEN_PROGRESSION
-                          : arg[8] == 'm'    ? GIVEN_MELODY
-                          : arg[8] == 'p'    ? GIVEN_PROGRESSION
-                                             : GIVEN_BASS;
-            given->source = argv[++i];
-        } else if (strcmp(arg, "--at") == 0 || strcmp(arg, "--cells") == 0) {
-            bool at = arg[2] == 'a';
+            given->from_corpus = strcmp(name, "--like-progression") == 0;
+            given->kind = given->from_corpus                          ? GIVEN_PROGRESSION
+                          : strcmp(name, "--given-melody") == 0       ? GIVEN_MELODY
+                          : strcmp(name, "--given-progression") == 0  ? GIVEN_PROGRESSION
+                                                                      : GIVEN_BASS;
+            given->source = repeat->value;
+        } else if (strcmp(name, "--at") == 0 || strcmp(name, "--cells") == 0) {
             if (options->given_count == 0) {
-                return cli_fail(CLI_EXIT_USAGE, "%s goes after a --given-melody, --given-progression or --given-bass", arg);
+                return cli_fail(CLI_EXIT_USAGE, "%s goes after a --given-melody, --given-progression or --given-bass", name);
             }
             GivenOption *given = &options->given[options->given_count - 1];
-            const char **slot = at ? &given->at_text : &given->cells_text;
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
+            const char **slot = strcmp(name, "--at") == 0 ? &given->at_text : &given->cells_text;
             if (*slot) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice for the same --given-*", arg);
+                return cli_fail(CLI_EXIT_USAGE, "%s given twice for the same --given-*", name);
             }
-            *slot = argv[++i];
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz plan --help)", arg);
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; plan takes options only", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
+            *slot = repeat->value;
         }
     }
     return 0;
@@ -500,9 +456,9 @@ static const char *input_name(const Options *options, const char *path) {
 
 static int request_plan(Options *options_in);
 
-int run_plan(int argc, char **argv) {
+int run_plan(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

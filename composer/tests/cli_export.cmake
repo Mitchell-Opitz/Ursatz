@@ -73,14 +73,14 @@ expect_match("${fill_tempo}" "^098968$")
 file(READ "${WORK}/tempo.musicxml" tempo_xml)
 expect_match("${tempo_xml}" "<sound tempo=\"96\"/>")
 
-expect_status(0 export filled.json --midi export.mid --musicxml export.musicxml --tempo 96)
+expect_status(0 render filled.json --midi export.mid --musicxml export.musicxml --tempo 96)
 tempo_of(export.mid export_tempo)
 expect_match("${export_tempo}" "^098968$")
 file(READ "${WORK}/export.musicxml" export_xml)
 expect_match("${export_xml}" "<sound tempo=\"96\"/>")
 
 # A fraction: 195/2 = 97.5 quarter notes per minute, 615385 microseconds (0x0963d9).
-expect_status(0 export filled.json --midi fraction.mid --tempo 195/2)
+expect_status(0 render filled.json --midi fraction.mid --tempo 195/2)
 tempo_of(fraction.mid fraction_tempo)
 expect_match("${fraction_tempo}" "^0963d9$")
 
@@ -88,7 +88,7 @@ expect_status(0 regenerate filled.json --section B --seed 5 --out regenerated.js
 tempo_of(regenerated.mid regenerate_tempo)
 expect_match("${regenerate_tempo}" "^0f4240$")
 
-expect_status(0 variations filled.json --section B --count 2 --seed 3 --out-dir variations --midi --musicxml --tempo 150)
+expect_status(0 variations filled.json --section B --count 2 --seed 3 --out-dir variations --write-midi --write-musicxml --tempo 150)
 expect_file(variations/variation-1.mid)
 tempo_of(variations/variation-1.mid variation_tempo)
 expect_match("${variation_tempo}" "^061a80$")
@@ -114,18 +114,18 @@ if(NOT plain_meta_count EQUAL 0)
     message(FATAL_ERROR "the plain MIDI file has track name or marker events")
 endif()
 
-expect_status(0 export filled.json --midi plain-export.mid --plain-midi)
+expect_status(0 render filled.json --midi plain-export.mid --plain-midi)
 file(SIZE "${WORK}/plain-export.mid" plain_export_size)
 if(NOT plain_export_size EQUAL plain_size)
-    message(FATAL_ERROR "export --plain-midi and fill --plain-midi differ in size")
+    message(FATAL_ERROR "render --plain-midi and fill --plain-midi differ in size")
 endif()
 
 # --- usage errors -------------------------------------------------------------------------
 
 foreach(bad 19 401 0 abc 96/0 -5)
-    composer(export filled.json --midi bad.mid --tempo "${bad}")
+    composer(render filled.json --midi bad.mid --tempo "${bad}")
     if(NOT STATUS EQUAL 1)
-        message(FATAL_ERROR "export --tempo '${bad}': exit ${STATUS}, expected 1\n${OUT}\n${ERR}")
+        message(FATAL_ERROR "render --tempo '${bad}': exit ${STATUS}, expected 1\n${OUT}\n${ERR}")
     endif()
     expect_match("${ERR}" "--tempo must be from 20 to 400")
     expect_no_file(bad.mid)
@@ -134,15 +134,15 @@ expect_status(1 fill plan.json --seed 3 --out bad.json --tempo 500)
 expect_no_file(bad.json)
 expect_status(1 regenerate filled.json --section B --out bad.json --tempo fast)
 expect_no_file(bad.json)
-expect_status(1 variations filled.json --section B --count 2 --out-dir bad --midi --tempo 10)
+expect_status(1 variations filled.json --section B --count 2 --out-dir bad --write-midi --tempo 10)
 expect_no_file(bad)
-expect_status(1 export filled.json --midi bad.mid --tempo 96 --tempo 97)
+expect_status(1 render filled.json --midi bad.mid --tempo 96 --tempo 97)
 expect_no_file(bad.mid)
 
 # 20 and 400 are the limits.
-expect_status(0 export filled.json --midi low.mid --tempo 20)
-expect_status(0 export filled.json --midi high.mid --tempo 400)
+expect_status(0 render filled.json --midi low.mid --tempo 20)
+expect_status(0 render filled.json --midi high.mid --tempo 400)
 
 # --tempo needs a value.
-expect_status(1 export filled.json --midi bad.mid --tempo)
+expect_status(1 render filled.json --midi bad.mid --tempo)
 expect_no_file(bad.mid)

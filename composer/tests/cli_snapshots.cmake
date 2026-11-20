@@ -151,10 +151,10 @@ run_case(fill-given json fill plan-given.plan.json --seed 5 --format json --out 
 run_case(lock json lock fill.plan.json --section A --format json --out lock.plan.json)
 run_case(regenerate json regenerate fill.plan.json --section B --seed 3 --format json --out regenerate.plan.json
          --midi regenerate.mid --musicxml regenerate.musicxml)
-run_case(variations json variations fill.plan.json --section B --count 2 --seed 3 --out-dir variations --format json --midi
-         --musicxml)
+run_case(variations json variations fill.plan.json --section B --count 2 --seed 3 --out-dir variations --format json --write-midi
+         --write-musicxml)
 run_case(harmonize json harmonize fill-given.plan.json --section B --count 2 --seed 3 --out-dir harmonizations --format json
-         --midi --musicxml)
+         --write-midi --write-musicxml)
 if(UPDATE)
     foreach(index 1 2)
         foreach(ext json mid musicxml)

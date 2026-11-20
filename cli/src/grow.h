@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_CLI_GROW_H
 #define URSATZ_COMPOSER_CLI_GROW_H
 
+#include "commands.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -13,7 +15,7 @@
  *   2  the request cannot be satisfied (the motive cannot be loaded or is too long, no seed works)
  *   3  an output file could not be written
  */
-int run_grow(int argc, char **argv);
+int run_grow(const CliArgs *args);
 
 /* The line of the usage text that names the subcommand. */
 #define GROW_USAGE_LINE                                                                                          \

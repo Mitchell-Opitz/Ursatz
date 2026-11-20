@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "export.h"
+#include "render.h"
 #include "counterpoint.h"
 #include "develop.h"
 #include "fill.h"
@@ -25,16 +25,6 @@
 #define WRAP(name, function) \
     static int name(const CliArgs *args) { return function(args->argc, args->argv); }
 
-WRAP(wrap_grow, run_grow)
-WRAP(wrap_theme, run_theme)
-WRAP(wrap_piece, run_piece)
-WRAP(wrap_plan, run_plan)
-WRAP(wrap_fill, run_fill)
-WRAP(wrap_lock, run_lock)
-WRAP(wrap_regenerate, run_regenerate)
-WRAP(wrap_variations, run_variations)
-WRAP(wrap_harmonize, run_harmonize)
-WRAP(wrap_export, run_export)
 WRAP(wrap_listen, run_listen)
 
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
@@ -53,7 +43,7 @@ static const char *const FLAGS_LOCK[] = {"--format", "--lane", "--node", "--out"
 static const char *const FLAGS_REGENERATE[] = {"--format", "--lane", "--midi", "--musicxml", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
-static const char *const FLAGS_EXPORT[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
+static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
 static const char *const FLAGS_LISTEN[] = {"--bars", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--seed", "--settings", "--strategy", "--style", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
@@ -64,16 +54,16 @@ const CliCommand CLI_COMMANDS[] = {
     {"recognize", "Name the operations that turn one motive into another", FLAGS_RECOGNIZE, 2, 2, true, run_recognize},
     {"random-motive", "Make random motives that keep the hard melodic rules", FLAGS_RANDOM_MOTIVE, 0, 0, true, run_random_motive},
     {"counterpoint", "Write a counter-melody against a line", FLAGS_COUNTERPOINT, 1, 1, true, run_counterpoint},
-    {"grow", "Grow a motive into a sentence, a period or a hybrid theme", FLAGS_GROW, 0, 1, false, wrap_grow},
-    {"theme", "Grow a theme from the motives of a request", FLAGS_THEME, 1, 1, false, wrap_theme},
-    {"piece", "Compose a piece from a request, or work on one section of it", FLAGS_PIECE, 0, 1, false, wrap_piece},
-    {"plan", "Write the plan of a whole short piece from a form template", FLAGS_PLAN, 0, 0, false, wrap_plan},
-    {"fill", "Realize a plan: compose every open theme section", FLAGS_FILL, 1, 1, false, wrap_fill},
-    {"lock", "Lock material of a plan as given", FLAGS_LOCK, 1, 1, false, wrap_lock},
-    {"regenerate", "Write one node of a filled plan again", FLAGS_REGENERATE, 1, 1, false, wrap_regenerate},
-    {"variations", "Write several versions of one node of a plan", FLAGS_VARIATIONS, 1, 1, false, wrap_variations},
-    {"harmonize", "Write several harmonizations of a melody that is given", FLAGS_HARMONIZE, 1, 1, false, wrap_harmonize},
-    {"export", "Render a plan to a MIDI or MusicXML file", FLAGS_EXPORT, 1, 1, false, wrap_export},
+    {"grow", "Grow a motive into a sentence, a period or a hybrid theme", FLAGS_GROW, 0, 1, true, run_grow},
+    {"theme", "Grow a theme from the motives of a request", FLAGS_THEME, 1, 1, true, run_theme},
+    {"piece", "Compose a piece from a request, or work on one section of it", FLAGS_PIECE, 0, 1, true, run_piece},
+    {"plan", "Write the plan of a whole short piece from a form template", FLAGS_PLAN, 0, 0, true, run_plan},
+    {"fill", "Realize a plan: compose every open theme section", FLAGS_FILL, 1, 1, true, run_fill},
+    {"lock", "Lock material of a plan as given", FLAGS_LOCK, 1, 1, true, run_lock},
+    {"regenerate", "Write one node of a filled plan again", FLAGS_REGENERATE, 1, 1, true, run_regenerate},
+    {"variations", "Write several versions of one node of a plan", FLAGS_VARIATIONS, 1, 1, true, run_variations},
+    {"harmonize", "Write several harmonizations of a melody that is given", FLAGS_HARMONIZE, 1, 1, true, run_harmonize},
+    {"render", "Render a plan to a MIDI or MusicXML file", FLAGS_RENDER, 1, 1, true, run_render},
     {"listen", "Make batches of motifs or themes from fixed seeds for listening", FLAGS_LISTEN, 0, 0, false, wrap_listen},
 };
 

@@ -81,73 +81,28 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz fill piece.json --seed 7 --midi piece.mid --musicxml piece.xml\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--check") == 0) {
-            options->check = true;
-        } else if (strcmp(arg, "--candidates") == 0) {
-            target = &options->candidates_text;
-        } else if (strcmp(arg, "--style") == 0) {
-            target = &options->style_path;
-        } else if (strcmp(arg, "--style-without") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            int added = cli_style_without_add(&options->without, argv[++i]);
-            if (added != 0) {
-                return added;
-            }
-        } else if (strcmp(arg, "--style-weight") == 0) {
-            target = &options->style_weight_text;
-        } else if (strcmp(arg, "--blend") == 0) {
-            target = &options->blend_path;
-        } else if (strcmp(arg, "--blend-weight") == 0) {
-            target = &options->blend_weight_text;
-        } else if (strcmp(arg, "--blend-weights") == 0) {
-            target = &options->blend_weights_text;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out_path;
-        } else if (strcmp(arg, "--layers") == 0) {
-            target = &options->layers_path;
-        } else if (strcmp(arg, "--midi") == 0) {
-            target = &options->midi_path;
-        } else if (strcmp(arg, "--musicxml") == 0) {
-            target = &options->musicxml_path;
-        } else if (strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else if (strcmp(arg, "--record") == 0) {
-            target = &options->record_path;
-        } else if (strcmp(arg, "--explain") == 0) {
-            target = &options->explain_path;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz fill --help)", arg);
-        } else if (!options->input) {
-            options->input = arg;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one plan file", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
-    return 0;
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->seed_text = cli_value(args, "--seed");
+    options->check = cli_switch(args, "--check");
+    options->candidates_text = cli_value(args, "--candidates");
+    options->style_path = cli_value(args, "--style");
+    options->style_weight_text = cli_value(args, "--style-weight");
+    options->blend_path = cli_value(args, "--blend");
+    options->blend_weight_text = cli_value(args, "--blend-weight");
+    options->blend_weights_text = cli_value(args, "--blend-weights");
+    options->out_path = cli_value(args, "--out");
+    options->layers_path = cli_value(args, "--layers");
+    options->midi_path = cli_value(args, "--midi");
+    options->musicxml_path = cli_value(args, "--musicxml");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->record_path = cli_value(args, "--record");
+    options->explain_path = cli_value(args, "--explain");
+    options->format_text = cli_value(args, "--format");
+    return cli_style_without_read(&options->without, args);
 }
 
 static int check_options(Options *options) {
@@ -240,9 +195,9 @@ static int write_outputs(const Options *options, const CliResponse *response, co
     return status;
 }
 
-int run_fill(int argc, char **argv) {
+int run_fill(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

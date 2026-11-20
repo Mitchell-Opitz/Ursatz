@@ -244,7 +244,7 @@ static void test_plan_errors(void) {
 static void test_fill_errors(void) {
     expect_failure("fill", "", 1, "fill needs a plan file");
     expect_failure("fill", "plan_cli_binary.json --bogus", 1, "unknown option '--bogus'");
-    expect_failure("fill", "plan_cli_binary.json plan_cli_ternary.json", 1, "unexpected argument");
+    expect_failure("fill", "plan_cli_binary.json plan_cli_ternary.json", 1, "fill takes 1 input");
     expect_failure("fill", "plan_cli_binary.json --seed -1", 1, "--seed must be");
     expect_failure("fill", "plan_cli_missing.json", 2, "cannot read plan 'plan_cli_missing.json'");
     test_write_text("plan_cli_malformed.json", "{\"schema_version\":");

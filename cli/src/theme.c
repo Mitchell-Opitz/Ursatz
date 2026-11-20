@@ -57,50 +57,20 @@ static void print_help(FILE *out) {
     fprintf(out, "could not be written.\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--check") == 0) {
-            options->check = true;
-        } else if (strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed;
-        } else if (strcmp(arg, "--suggest") == 0) {
-            target = &options->suggest;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out;
-        } else if (strcmp(arg, "--layers") == 0) {
-            target = &options->layers;
-        } else if (strcmp(arg, "--midi") == 0) {
-            target = &options->midi;
-        } else if (strcmp(arg, "--musicxml") == 0) {
-            target = &options->musicxml;
-        } else if (strcmp(arg, "--explain") == 0) {
-            target = &options->explain;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format;
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz theme --help)", arg);
-        } else if (!options->input) {
-            options->input = arg;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one request file", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->check = cli_switch(args, "--check");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->seed = cli_value(args, "--seed");
+    options->suggest = cli_value(args, "--suggest");
+    options->out = cli_value(args, "--out");
+    options->layers = cli_value(args, "--layers");
+    options->midi = cli_value(args, "--midi");
+    options->musicxml = cli_value(args, "--musicxml");
+    options->explain = cli_value(args, "--explain");
+    options->format = cli_value(args, "--format");
     return 0;
 }
 
@@ -244,9 +214,9 @@ static void print_json(cJSON *document, const CliPendingFile *pending, size_t pe
     cJSON_free(text);
 }
 
-int run_theme(int argc, char **argv) {
+int run_theme(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

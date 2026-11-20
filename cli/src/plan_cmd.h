@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_CLI_PLAN_CMD_H
 #define URSATZ_COMPOSER_CLI_PLAN_CMD_H
 
+#include "commands.h"
+
 #define PLAN_USAGE_LINE                                                                                                \
     "Usage: ursatz plan --form <name> --key <K> [--mode major|minor] --meter <m> [--bars N] [--count N] "     \
     "[--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <p>] [--texture <t>] [--given-melody <f> | --given-progression "   \
@@ -8,6 +10,6 @@
     "[--format text|json]"
 
 /* "ursatz plan ..."; argv[1] is "plan". Returns the exit status. */
-int run_plan(int argc, char **argv);
+int run_plan(const CliArgs *args);
 
 #endif

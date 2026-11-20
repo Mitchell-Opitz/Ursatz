@@ -309,7 +309,7 @@ static void test_bad_arguments(void) {
     expect_failure(BASE " --into sentence --nope", 1, "unknown option '--nope'");
     expect_failure(BASE " --into sentence --seed", 1, "--seed needs a value");
     expect_failure(BASE " --into sentence --seed 1 --seed 2", 1, "--seed given twice");
-    expect_failure(BASE " " BASE " --into sentence", 1, "unexpected argument");
+    expect_failure(BASE " " BASE " --into sentence", 1, "grow takes at most 1 input");
 }
 
 static void test_cannot_be_satisfied(void) {

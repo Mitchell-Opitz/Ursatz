@@ -73,51 +73,20 @@ static void print_regenerate_help(FILE *out) {
     fprintf(out, "  ursatz regenerate piece.json --section B --seed 3 --out piece-2.json --midi piece-2.mid\n");
 }
 
-static int read_options(int argc, char **argv, Options *options, bool regenerate) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    const char *command = regenerate ? "regenerate" : "lock";
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--node") == 0) {
-            target = &options->target.node_text;
-        } else if (strcmp(arg, "--section") == 0) {
-            target = &options->target.section_text;
-        } else if (strcmp(arg, "--lane") == 0) {
-            target = &options->target.lane_text;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out_path;
-        } else if (regenerate && strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (regenerate && strcmp(arg, "--midi") == 0) {
-            target = &options->midi_path;
-        } else if (regenerate && strcmp(arg, "--musicxml") == 0) {
-            target = &options->musicxml_path;
-        } else if (regenerate && strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (regenerate && strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz %s --help)", arg, command);
-        } else if (!options->input) {
-            options->input = arg;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one plan file", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->target.node_text = cli_value(args, "--node");
+    options->target.section_text = cli_value(args, "--section");
+    options->target.lane_text = cli_value(args, "--lane");
+    options->out_path = cli_value(args, "--out");
+    options->seed_text = cli_value(args, "--seed");
+    options->midi_path = cli_value(args, "--midi");
+    options->musicxml_path = cli_value(args, "--musicxml");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->format_text = cli_value(args, "--format");
     return 0;
 }
 
@@ -162,9 +131,9 @@ static cJSON *build_request(const Options *options, cJSON *plan) {
 
 /* --- lock ------------------------------------------------------------------------ */
 
-int run_lock(int argc, char **argv) {
+int run_lock(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options, false);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }
@@ -246,9 +215,9 @@ static void print_reopened_text(const cJSON *reopened) {
     }
 }
 
-int run_regenerate(int argc, char **argv) {
+int run_regenerate(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options, true);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

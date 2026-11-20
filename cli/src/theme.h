@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_CLI_THEME_H
 #define URSATZ_COMPOSER_CLI_THEME_H
 
+#include "commands.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -16,7 +18,7 @@
  *   2  the request cannot be satisfied (a motive that cannot be used, no seed works)
  *   3  an output file could not be written
  */
-int run_theme(int argc, char **argv);
+int run_theme(const CliArgs *args);
 
 /* The line of the usage text that names the subcommand. */
 #define THEME_USAGE_LINE                                                                                          \

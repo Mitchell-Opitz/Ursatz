@@ -50,7 +50,7 @@ expect_status(0 fill given.json --seed 1 --out given-filled.json)
 
 # --- variations: files and text --------------------------------------------------------
 
-expect_status(0 variations filled.json --section B --count 3 --seed 3 --out-dir out --midi --musicxml)
+expect_status(0 variations filled.json --section B --count 3 --seed 3 --out-dir out --write-midi --write-musicxml)
 foreach(i 1 2 3)
     expect_file(out/variation-${i}.json)
     expect_file(out/variation-${i}.mid)
@@ -69,12 +69,12 @@ expect_no_file(plain/variation-1.mid)
 expect_no_file(plain/variation-1.musicxml)
 
 # A variation is a plan file the other commands read.
-expect_status(0 export out/variation-1.json --midi again.mid)
+expect_status(0 render out/variation-1.json --midi again.mid)
 expect_file(again.mid)
 
 # --- variations: JSON --------------------------------------------------------------------
 
-expect_status(0 variations filled.json --section B --count 2 --seed 3 --out-dir json --midi --format json)
+expect_status(0 variations filled.json --section B --count 2 --seed 3 --out-dir json --write-midi --format json)
 string(JSON kept GET "${OUT}" kept)
 string(JSON requested GET "${OUT}" requested)
 string(JSON tried GET "${OUT}" seeds_tried)
@@ -135,7 +135,7 @@ expect_file(after-lock/variation-2.json)
 
 # --- harmonize --------------------------------------------------------------------------
 
-expect_status(0 harmonize given-filled.json --section B --count 3 --seed 1 --out-dir harm --midi --musicxml)
+expect_status(0 harmonize given-filled.json --section B --count 3 --seed 1 --out-dir harm --write-midi --write-musicxml)
 foreach(i 1 2 3)
     expect_file(harm/variation-${i}.json)
     expect_file(harm/variation-${i}.mid)

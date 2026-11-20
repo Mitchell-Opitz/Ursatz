@@ -132,106 +132,46 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    int extras_status = 0;
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (motive_extras_take(&options->extras, argc, argv, &i, false, &extras_status)) {
-            if (extras_status != 0) {
-                return extras_status;
-            }
-        } else if (strcmp(arg, "--from-corpus") == 0) {
-            target = &options->from_corpus;
-        } else if (strcmp(arg, "--like") == 0) {
-            target = &options->like_path;
-        } else if (strcmp(arg, "--into") == 0) {
-            target = &options->into;
-        } else if (strcmp(arg, "--hybrid") == 0) {
-            target = &options->hybrid;
-        } else if (strcmp(arg, "--key") == 0) {
-            target = &options->key;
-        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
-            target = &options->material;
-        } else if (strcmp(arg, "--meter") == 0) {
-            target = &options->meter;
-        } else if (strcmp(arg, "--bars") == 0) {
-            target = &options->bars;
-        } else if (strcmp(arg, "--cadence") == 0) {
-            target = &options->cadence;
-        } else if (strcmp(arg, "--first-cadence") == 0) {
-            target = &options->first_cadence;
-        } else if (strcmp(arg, "--accompaniment") == 0) {
-            target = &options->accompaniment;
-        } else if (strcmp(arg, "--accompaniment-motive") == 0) {
-            target = &options->accompaniment_motive_path;
-        } else if (strcmp(arg, "--accompaniment-format") == 0) {
-            target = &options->accompaniment_format_text;
-        } else if (strcmp(arg, "--accompaniment-pickup") == 0) {
-            target = &options->accompaniment_pickup_text;
-        } else if (strcmp(arg, "--texture") == 0) {
-            target = &options->texture;
-        } else if (strcmp(arg, "--voicing") == 0) {
-            options->voicing = true;
-        } else if (strcmp(arg, "--check") == 0) {
-            options->check = true;
-        } else if (strcmp(arg, "--style") == 0) {
-            target = &options->style_path;
-        } else if (strcmp(arg, "--style-without") == 0) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            int added = cli_style_without_add(&options->without, argv[++i]);
-            if (added != 0) {
-                return added;
-            }
-        } else if (strcmp(arg, "--style-weight") == 0) {
-            target = &options->style_weight;
-        } else if (strcmp(arg, "--blend") == 0) {
-            target = &options->blend_path;
-        } else if (strcmp(arg, "--blend-weight") == 0) {
-            target = &options->blend_weight_text;
-        } else if (strcmp(arg, "--blend-weights") == 0) {
-            target = &options->blend_weights_text;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--suggest") == 0) {
-            target = &options->suggest_text;
-        } else if (strcmp(arg, "--out") == 0) {
-            target = &options->out_path;
-        } else if (strcmp(arg, "--midi") == 0) {
-            target = &options->midi_path;
-        } else if (strcmp(arg, "--musicxml") == 0) {
-            target = &options->musicxml_path;
-        } else if (strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (strcmp(arg, "--plain-midi") == 0) {
-            options->plain_midi = true;
-        } else if (strcmp(arg, "--explain") == 0) {
-            target = &options->explain_path;
-        } else if (strcmp(arg, "--format") == 0) {
-            target = &options->format_text;
-        } else if (arg[0] == '-' && arg[1] != '\0') {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz grow --help)", arg);
-        } else if (!options->input) {
-            options->input = arg;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unexpected argument '%s'; the input is one file", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
+    options->help = args->help;
+    options->input = args->input_count > 0 ? args->inputs[0] : NULL;
+    options->from_corpus = cli_value(args, "--from-corpus");
+    options->like_path = cli_value(args, "--like");
+    options->into = cli_value(args, "--into");
+    options->hybrid = cli_value(args, "--hybrid");
+    options->key = cli_value(args, "--key");
+    options->material = cli_value(args, "--material");
+    options->meter = cli_value(args, "--meter");
+    options->bars = cli_value(args, "--bars");
+    options->cadence = cli_value(args, "--cadence");
+    options->first_cadence = cli_value(args, "--first-cadence");
+    options->accompaniment = cli_value(args, "--accompaniment");
+    options->accompaniment_motive_path = cli_value(args, "--accompaniment-motive");
+    options->accompaniment_format_text = cli_value(args, "--accompaniment-format");
+    options->accompaniment_pickup_text = cli_value(args, "--accompaniment-pickup");
+    options->texture = cli_value(args, "--texture");
+    options->voicing = cli_switch(args, "--voicing");
+    options->check = cli_switch(args, "--check");
+    options->style_path = cli_value(args, "--style");
+    options->style_weight = cli_value(args, "--style-weight");
+    options->blend_path = cli_value(args, "--blend");
+    options->blend_weight_text = cli_value(args, "--blend-weight");
+    options->blend_weights_text = cli_value(args, "--blend-weights");
+    options->seed_text = cli_value(args, "--seed");
+    options->suggest_text = cli_value(args, "--suggest");
+    options->out_path = cli_value(args, "--out");
+    options->midi_path = cli_value(args, "--midi");
+    options->musicxml_path = cli_value(args, "--musicxml");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->plain_midi = cli_switch(args, "--plain-midi");
+    options->explain_path = cli_value(args, "--explain");
+    options->format_text = cli_value(args, "--format");
+    int extras_status = motive_extras_read(&options->extras, args, false);
+    if (extras_status != 0) {
+        return extras_status;
     }
-    return 0;
+    return cli_style_without_read(&options->without, args);
 }
 
 /* The checks of the command line itself; the values are checked by the composer API. */
@@ -308,9 +248,9 @@ static bool add_members(const Options *options, cJSON *request) {
 
 /* --- the command ---------------------------------------------------------------------------------- */
 
-int run_grow(int argc, char **argv) {
+int run_grow(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

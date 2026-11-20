@@ -1,11 +1,13 @@
 #ifndef URSATZ_COMPOSER_CLI_FILL_H
 #define URSATZ_COMPOSER_CLI_FILL_H
 
+#include "commands.h"
+
 #define FILL_USAGE_LINE                                                                                                \
     "Usage: ursatz fill <plan.json> [--seed N] [--check] [--candidates N] [--style <file>] [--style-weight N/D] [--style-without <category>]... [--blend <file>] [--blend-weight N/D | --blend-weights D=N/D,...] [--out <plan.json>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] "       \
     "[--record <file.json>] [--explain <file>] [--format text|json]"
 
 /* "ursatz fill ..."; argv[1] is "fill". Returns the exit status. */
-int run_fill(int argc, char **argv);
+int run_fill(const CliArgs *args);
 
 #endif
