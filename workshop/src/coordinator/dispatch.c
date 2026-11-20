@@ -106,6 +106,7 @@ static const CommandEntry kCommands[] = {
     {"item.promote", workshop_c_item_promote},
     {"item.link-form", workshop_c_item_link_form},
     {"item.reroll", workshop_c_item_reroll},
+    {"item.restore", workshop_c_item_restore},
     {"item.update-use", workshop_c_item_update_use},
     {"subject.create", workshop_c_subject_create},
     {"subject.update", workshop_c_subject_update},

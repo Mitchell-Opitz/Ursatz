@@ -510,7 +510,7 @@ UrsatzStatus workshop_material_update_use(const char *id, const char *source_id,
         }
     }
     if (result == URSATZ_OK) {
-        result = store_commit_version_locked(txn, id, item, stored, note, NULL);
+        result = store_commit_version_locked(txn, id, item, stored, note, NULL, 0);
     }
     UNLOCK();
     result = store_txn_end(txn, result);

@@ -46,6 +46,7 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 | `item.promote` | `item:<id>@v<n>` | `name string project_id string [note string]` | Save a variant as a motif of its own |
 | `item.link-form` | `item:<id>@v<n>` | `source object recognition object` | Record a motif as a form of another motif |
 | `item.reroll` | `item:<id>@v<n>` | none | Run a derived motif's chain again with a new seed |
+| `item.restore` | `item:<id>@v<n>` | `version int [note string]` | Make the next version a copy of an older one |
 | `item.update-use` | `item:<id>@v<n>` | `source_id string` | Move an item's use of a source to the source's current version |
 
 ## Job

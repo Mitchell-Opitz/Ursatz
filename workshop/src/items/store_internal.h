@@ -91,7 +91,8 @@ bool store_annotate_variant_of_locked(cJSON *item, const cJSON *known_body);
 
 /* Stages body as the next version of item and its header with it made current, in txn; stage (NULL for none) is a folder of the version's
  * files that becomes the version folder. */
-UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage);
+UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage,
+                                        int restored_from);
 
 const char *store_prefix_for_type(const char *type);
 

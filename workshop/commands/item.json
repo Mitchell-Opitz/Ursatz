@@ -446,6 +446,32 @@
       "example": "item.reroll item:mot-2@v1"
     },
     {
+      "name": "item.restore",
+      "summary": "Make the next version a copy of an older one",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The older version to copy, from 1; the current version is refused and a number that names no version is not found."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note (default: restore v<version>)."
+        }
+      ],
+      "one_of": [],
+      "reply": "The new version number and the version it restores: {version, restored_from}.",
+      "job": null,
+      "example": "item.restore item:pce-2c8d54834a9c499f@v3 version 1"
+    },
+    {
       "name": "item.update-use",
       "summary": "Move an item's use of a source to the source's current version",
       "target": "item",

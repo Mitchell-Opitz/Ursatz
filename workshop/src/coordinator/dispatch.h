@@ -194,6 +194,7 @@ WORKSHOP_HANDLER(workshop_c_item_flag);
 WORKSHOP_HANDLER(workshop_c_item_promote);
 WORKSHOP_HANDLER(workshop_c_item_link_form);
 WORKSHOP_HANDLER(workshop_c_item_reroll);
+WORKSHOP_HANDLER(workshop_c_item_restore);
 WORKSHOP_HANDLER(workshop_c_item_update_use);
 WORKSHOP_HANDLER(workshop_c_subject_create);
 WORKSHOP_HANDLER(workshop_c_subject_update);

@@ -5,6 +5,7 @@
 
 #include <common/json.h>
 
+#include "composition/restore.h"
 #include "coordinator/dispatch.h"
 
 /* The commands over projects, items and subjects (R-646). */
@@ -423,6 +424,22 @@ WORKSHOP_HANDLER(workshop_c_item_promote) {
 
 WORKSHOP_HANDLER(workshop_c_item_link_form) {
     return variant_command(call, reply, error, workshop_variants_link_form);
+}
+
+/* Makes the next version a copy of an older one (R-667): params version and note?. The reply is {version, restored_from}. */
+WORKSHOP_HANDLER(workshop_c_item_restore) {
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(call->params, "version");
+    bool bad = false;
+    const char *note = workshop_param_string(call->params, "note", &bad);
+    int number = 0;
+    UrsatzStatus status = workshop_material_item_restore(call->target, (int)version->valuedouble, note, &number, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    cJSON *answer = workshop_reply_object(reply);
+    return answer && cJSON_AddNumberToObject(answer, "version", number) && cJSON_AddNumberToObject(answer, "restored_from", version->valuedouble)
+               ? URSATZ_OK
+               : workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 
 /* Replaces the marks of Try every operation (the file is not a version): params checks. */

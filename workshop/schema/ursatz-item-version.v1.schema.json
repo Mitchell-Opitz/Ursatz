@@ -71,6 +71,10 @@
               }
             }
           ]
+        },
+        "restored_from": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
