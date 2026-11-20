@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "query.h"
 #include "render.h"
+#include "status.h"
 #include "analyze.h"
 #include "corpus.h"
 #include "counterpoint.h"
@@ -28,6 +30,8 @@
 static const char *const FLAGS_ANALYZE[] = {"--input-format", "--layers", "--measures", "--meter", "--model-plan", "--pickup", "--title", "--value-scale", "--view", NULL};
 static const char *const FLAGS_CORPUS[] = {"--out", "--resume", NULL};
 static const char *const FLAGS_STYLE_PROFILE[] = {"--name", "--out", NULL};
+static const char *const FLAGS_STATUS[] = {"--format", NULL};
+static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
@@ -571,6 +575,32 @@ const CliCommand CLI_COMMANDS[] = {
     "Example:\n"
     "  ursatz style-profile sonatinas-analyzed --name Sonatinas --out sonatinas.style.json",
      FLAGS_STYLE_PROFILE, 1, 1, run_style_profile},
+    {"status",
+    "status [--format <text|json>]",
+     "Say how the data folder is reached and what runs there",
+    "Says how this command reaches the data folder and what runs there: the folder, whether this command opened it (and with how many job workers) or another Ursatz process serves it (its process id and port), and the versions of the Composer and the Analyzer. A folder the last process stopped in the middle of a change is recovered when it opens, and the recovery line says what was done.\n"
+    "\n"
+    "The data folder is named before the subcommand: ursatz --data <dir> status (or the environment variable URSATZ_DATA). The folder is locked to one process: when a process holds it and serves HTTP (the GUI backend), this command connects to it; when it serves none, this command fails and says so.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage (no data folder named); 2 the folder cannot be opened or reached.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data status\n"
+    "  ursatz --data ~/ursatz-data status --format json",
+     FLAGS_STATUS, 0, 0, run_status},
+    {"query",
+    "query <name> [--params <file>] [--out <file>] [--format <text|json>]",
+     "Call a query of the workshop on the data folder",
+    "Calls a query of the workshop by its name (project.list, item.get, job.get, ...) on the data folder, opened by this command or served by another Ursatz process, and prints the answer as JSON: indented by default, on one line with --format json. A query changes nothing.\n"
+    "\n"
+    "--params names a JSON file holding the params object ({\"id\": \"...\"}), or - for standard input; without it the params are {}. A query that answers a file (an export, a playback file) needs --out <file>, which receives the file.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, params that are not a JSON object, or a query the workshop refuses as a request (its message, and its path when it names one); 2 any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data query project.list\n"
+    "  echo '{\"id\": \"item-1\"}' | ursatz --data ~/ursatz-data query item.get --params -",
+     FLAGS_QUERY, 1, 1, run_query},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);

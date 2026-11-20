@@ -83,6 +83,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--op", NULL, CLI_FLAG_VALUE, "<name>", "the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish"},
     {"--out", NULL, CLI_FLAG_VALUE, "<file>", "where the output is written: a plan, a corpus output folder or a style model"},
     {"--out-dir", NULL, CLI_FLAG_VALUE, "<dir>", "where the files are written; created if missing"},
+    {"--params", NULL, CLI_FLAG_VALUE, "<file>", "a JSON file with the params object, or - for standard input"},
     {"--pickup", NULL, CLI_FLAG_VALUE, "<beats>", "the beats before the first barline, as 1 or 1/2"},
     {"--plain-midi", NULL, CLI_FLAG_SWITCH, NULL, "MIDI: no track names and no section markers"},
     {"--port", NULL, CLI_FLAG_VALUE, "<n>", "global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand"},
