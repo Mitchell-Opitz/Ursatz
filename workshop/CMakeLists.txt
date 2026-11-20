@@ -76,6 +76,7 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_journal.c
     src/coordinator/api_library.c
     src/coordinator/command_schemas.c
+    src/coordinator/command_text.c
     src/coordinator/command_sheet.c
     ${CMAKE_CURRENT_BINARY_DIR}/command_files.c
     src/coordinator/data_lock.c

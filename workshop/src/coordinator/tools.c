@@ -7,6 +7,7 @@
 #include "base/names.h"
 #include "composition/composer_tool.h"
 #include "coordinator/command_schemas.h"
+#include "coordinator/command_text.h"
 #include "coordinator/command_sheet.h"
 #include "items/views.h"
 #include "coordinator/dispatch.h"
@@ -256,4 +257,16 @@ WORKSHOP_HANDLER(workshop_t_commands) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     return workshop_reply_tree(reply, answer, error);
+}
+
+/* Commands written in Ursatz Text as the command objects `ursatz apply` sends (coordinator/command_text.h): param text. */
+WORKSHOP_HANDLER(workshop_t_commands_parse) {
+    bool bad = false;
+    const char *text = workshop_param_string(call->params, "text", &bad);
+    if (!text || bad) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/text", "text is required and a string");
+    }
+    cJSON *answer = NULL;
+    UrsatzStatus status = workshop_command_text_parse(text, &answer, error);
+    return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
 }
