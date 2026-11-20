@@ -100,3 +100,17 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_layers)
 ursatz_test(workshop_layers SOURCES test_layers.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS URSATZ_WORKSHOP_TEST_MOZART="${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Mozart 545.mid"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_layers)
+
+# The query and command API (P63 B11): every command through workshop_command with its effect and its journal record, every query
+# against what its route answers, and the version a command was made against. Each runs in its own working directory, which it clears.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_commands)
+ursatz_test(workshop_commands SOURCES test_commands.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_commands)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_queries)
+ursatz_test(workshop_queries SOURCES test_queries.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_queries)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
+ursatz_test(workshop_base_version SOURCES test_base_version.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
