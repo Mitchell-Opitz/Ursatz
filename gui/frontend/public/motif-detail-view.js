@@ -132,13 +132,6 @@ const MotifDetailView = (function () {
         status.show(decision.message, true);
         return;
       }
-      if (bodyChanged) {
-        const problems = MaterialsModel.motifFormProblems(values);
-        editor.showProblems(problems);
-        if (problems.length > 0) {
-          return;
-        }
-      }
       save.disabled = true;
       status.show("Saving...");
       let reason;
@@ -150,7 +143,7 @@ const MotifDetailView = (function () {
           save.disabled = false;
           const text = MaterialsModel.errorText(saved.data, "Could not save the motif");
           status.show(text, true);
-          editor.showError(text, MaterialsModel.errorField(text));
+          editor.showError(text, MaterialsModel.fieldForPath(saved.data.path));
           return;
         }
         reason = saved.data.item.analysis_error;

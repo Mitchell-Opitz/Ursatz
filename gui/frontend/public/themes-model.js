@@ -29,15 +29,9 @@
   const barChoices = () => Vocab.values("theme_bars").map(Number);
   const cadences = () => Vocab.values("theme_cadences");
   const firstCadences = () => Vocab.values("theme_first_cadences");
-  /* How far the theme strays from the motif (Composer API 1.9); balanced is the default and what a body without the
-   * member reads as. */
-  const DEVELOPMENTS = [
-    { value: "melody", label: "Melody" },
-    { value: "balanced", label: "Balanced" },
-    { value: "theme", label: "Theme" },
-  ];
-  const DEVELOPMENT_HELP =
-    "How far the theme strays from the motif: Melody repeats, Theme develops (Schoenberg ch. XI).";
+  /* How far the theme strays from the motif: [{value, label, help}] (Composer API 4.1); balanced is the default and what a body
+   * without the member reads as. */
+  const developmentChoices = () => Vocab.list("theme_developments");
   const pools = () => Vocab.list("theme_pools");
   const patterns = () => Vocab.list("accompaniment_patterns");
   const weights = () => Vocab.list("style_weights");
@@ -52,11 +46,9 @@
   const tempoMin = () => Vocab.limit("tempo_min");
   const tempoMax = () => Vocab.limit("tempo_max");
   const maxSeed = () => Vocab.seedMax("theme");
-  /* UI limits the Composer does not hold (R-276). */
-  const CHORD_BARS = 16;
-  /* Extensions a given construction may carry (the Composer's SECTION_CONSTRUCTION_EXTENSIONS). */
-  const MAX_EXTENSIONS = 3;
-  const CHORD_TEXT_MAX = 64;
+  /* The chord row reaches the longest theme the Composer offers, and a construction carries the extensions it allows. */
+  const chordBars = () => Math.max(0, ...barChoices());
+  const maxExtensions = () => Vocab.limit("theme_extensions", 0);
   const SWITCH_TEXT = "Use the brief's motive degrees, intervals, rhythm, non-chord figures";
   const THEME_TABS = [
     { id: "theme", label: "Theme" },
@@ -102,7 +94,7 @@
       construction: null,
       slots: [],
       ideas: [],
-      chords: Array(CHORD_BARS).fill(""),
+      chords: Array(chordBars()).fill(""),
       accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
       picks: [],
       switches: allSwitches(true),
@@ -301,7 +293,7 @@
   function chordEntries(state) {
     const list = Array.isArray(state.chords) ? state.chords : [];
     const entries = [];
-    for (let bar = 0; bar < Math.min(CHORD_BARS, Number(state.bars)); bar++) {
+    for (let bar = 0; bar < Math.min(chordBars(), Number(state.bars)); bar++) {
       const value = text(list[bar]);
       if (value !== "") {
         entries.push({ bar, text: value });
@@ -320,7 +312,7 @@
   /* Clears the chords of the bars the theme no longer has; the bar numbers (from 1) that held one. */
   function dropChords(state) {
     const dropped = [];
-    for (let bar = Number(state.bars); bar < CHORD_BARS; bar++) {
+    for (let bar = Number(state.bars); bar < chordBars(); bar++) {
       if (text(state.chords[bar]) !== "") {
         dropped.push(bar + 1);
       }
@@ -387,7 +379,7 @@
     }
     const extensions = (Array.isArray(construction.extensions) ? construction.extensions : [])
       .filter((entry) => entry && Vocab.entry("theme_extensions", entry.kind))
-      .slice(0, MAX_EXTENSIONS)
+      .slice(0, maxExtensions())
       .map((entry) => {
         const kind = Vocab.entry("theme_extensions", entry.kind);
         const out = { kind: entry.kind };
@@ -458,7 +450,7 @@
         bars: Number(s.bars),
         cadence: s.cadence,
         first_cadence: firstCadence,
-        development: DEVELOPMENTS.some((entry) => entry.value === s.development) ? s.development : "balanced",
+        development: developmentChoices().some((entry) => entry.value === s.development) ? s.development : "balanced",
         construction: constructionBody(s.construction, pairingIdeaNames(pairing(s))),
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
@@ -503,7 +495,7 @@
     if (firstCadences().includes(form.first_cadence)) {
       state.firstCadence = form.first_cadence;
     }
-    if (DEVELOPMENTS.some((entry) => entry.value === form.development)) {
+    if (developmentChoices().some((entry) => entry.value === form.development)) {
       state.development = form.development;
     }
     state.construction = constructionFromBody(form.construction);
@@ -512,7 +504,7 @@
       .filter((entry) => entry && typeof entry === "object")
       .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
     for (const entry of Array.isArray(theme.chords) ? theme.chords : []) {
-      if (entry && Number.isInteger(entry.bar) && entry.bar >= 0 && entry.bar < CHORD_BARS && typeof entry.text === "string") {
+      if (entry && Number.isInteger(entry.bar) && entry.bar >= 0 && entry.bar < chordBars() && typeof entry.text === "string") {
         state.chords[entry.bar] = entry.text;
       }
     }
@@ -605,31 +597,6 @@
         label: `${"- ".repeat(Math.max(0, row.depth - 1))}${row.name}`,
         title: row.derivation || "",
       }));
-  }
-
-  /* What stops Compose before the Composer is asked, as a list of sentences: what the form lacks to be a request. The
-   * Composer's own checks of the values (meter, bars, hybrid, tempo, seed, chords) come from the validate route. */
-  function formProblems(state) {
-    const s = state || emptyState();
-    const problems = [];
-    const slots = Array.isArray(s.slots) ? s.slots : [];
-    if (slots.length > maxSlots()) {
-      problems.push(`A theme has at most ${maxSlots()} slot motifs.`);
-    }
-    if (!slots.some((entry) => entry && entry.slot === requiredSlot() && text(entry.item_id))) {
-      problems.push("The basic idea needs a motif.");
-    }
-    if (s.material === "style" && briefFromPicks(s.picks) === null) {
-      problems.push("The mode from the brief needs a brief.");
-    }
-    if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
-      problems.push("Each idea with its own motif needs one.");
-    }
-    const acc = s.accompaniment || {};
-    if (acc.kind === "motive" && !text(acc.item_id)) {
-      problems.push("The accompaniment needs a motif.");
-    }
-    return problems;
   }
 
   /* The form fields the Composer's request paths name (a prefix of the path), for marking the field a refusal is
@@ -974,8 +941,8 @@
     get BARS() {
       return barChoices();
     },
-    CHORD_BARS,
-    MAX_EXTENSIONS,
+    chordBars,
+    maxExtensions,
     needsConstruction,
     get REGULAR_BARS() {
       return regularBars();
@@ -1001,8 +968,7 @@
     get FIRST_CADENCES() {
       return firstCadences();
     },
-    DEVELOPMENTS,
-    DEVELOPMENT_HELP,
+    developmentChoices,
     get POOLS() {
       return pools();
     },
@@ -1027,7 +993,6 @@
     emptyState,
     bodyFromForm,
     formFromBody,
-    formProblems,
     formSlots,
     formIdeas,
     rootMotif,

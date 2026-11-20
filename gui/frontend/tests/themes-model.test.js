@@ -61,7 +61,6 @@ const odd = JSON.parse(JSON.stringify(developed));
 odd.theme.form.development = "wild";
 check(T.formFromBody(odd, "thm-1").development === "balanced", "an unknown stored development reads as balanced");
 check(T.bodyFromForm({ ...filled(), development: "wild" }).theme.form.development === "balanced", "an unknown development is written as balanced");
-check(same(T.DEVELOPMENTS.map((entry) => entry.value), ["melody", "balanced", "theme"]), "the development choices");
 check(T.fieldForPath("/development") === "development", "/development marks the development");
 check(T.tabOfField("development") === "structure", "the development is on the structure tab");
 const devView = T.resultView({
@@ -96,18 +95,13 @@ check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").ma
 check(T.bodyFromForm(T.emptyState("x")).theme.brief === null && T.bodyFromForm(T.emptyState("x")).theme.accompaniment === null, "the defaults have no brief and no accompaniment");
 
 /* problems */
-check(same(T.formProblems(filled()), []), "a filled form has no problems");
-check(T.formProblems(T.emptyState("x")).some((p) => /basic/.test(p)), "a missing basic slot is a problem");
 const twice = filled();
 twice.slots = [{ slot: "basic", item_id: "mot-1", version: 1 }, { slot: "continuation", item_id: "mot-1", version: 1 }];
-check(same(T.formProblems(twice), []), "one motif in two slots is allowed");
 const many = filled();
 many.slots = [1, 2, 3, 4, 5].map((n) => ({ slot: "basic", item_id: `mot-${n}`, version: 1 }));
-check(T.formProblems(many).some((p) => /at most 4/.test(p)), "more than 4 slots is a problem");
 const fiveSlots = JSON.parse(JSON.stringify(require(generated("vocabulary.json"))));
 fiveSlots.theme_slots.push({ value: "coda", label: "Coda", required: false });
 Vocabulary.set(fiveSlots);
-check(!T.formProblems(many).some((p) => /at most/.test(p)), "a vocabulary with a fifth slot allows five slots");
 check(T.REQUIRED_SLOT === "basic" && T.SLOT_NAMES.length === 5, "the required slot and the slot names are the vocabulary's");
 Vocabulary.set(require(generated("vocabulary.json")));
 const keyed = T.bodyFromForm({ ...filled(), key: "D", pool: "approved" });
@@ -117,17 +111,14 @@ const old = T.formFromBody({ uses: [], theme: { form: { into: "sentence", key: "
 check(!("key" in old) && !("pool" in old), "an old key and pool are not read");
 const edge = filled();
 edge.tempo = "400";
-check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 400, "the tempo 400 is sent");
+check(T.bodyFromForm(edge).theme.tempo === 400, "the tempo 400 is sent");
 edge.tempo = "19";
-check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 19, "a tempo out of range is sent for the Composer to refuse");
+check(T.bodyFromForm(edge).theme.tempo === 19, "a tempo out of range is sent for the Composer to refuse");
 const noBrief = filled();
 noBrief.material = "style";
-check(T.formProblems(noBrief).some((p) => /brief/.test(p)), "the mode from the brief needs a brief");
 noBrief.picks = [{ kind: "style", id: "sty-1" }];
-check(T.formProblems(noBrief).length === 0, "the mode from the brief works with a brief");
 const noAcc = filled();
 noAcc.accompaniment = { kind: "motive", pattern: "any", item_id: "", version: 0 };
-check(T.formProblems(noAcc).some((p) => /accompaniment/.test(p)), "a motif accompaniment without a motif is a problem");
 
 /* switches */
 check(same(T.withoutFromSwitches(T.emptyState("x").switches), []), "all switches on give an empty without list");
@@ -320,7 +311,6 @@ check(
   ]),
   "a variant and the same motif in two slots are kept",
 );
-check(T.formProblems(shared).length === 0, "the same motif in two slots is not a problem");
 check(
   T.rootMotif([{ id: "var-7", variant_of: "var-6" }, { id: "var-6", variant_of: "mot-1" }, { id: "mot-1" }], "var-7") === "mot-1",
   "a variant's motif is the end of its variant_of chain",
@@ -362,7 +352,6 @@ withIdeas.into = "sentence";
 const loaded = T.formFromBody(T.bodyFromForm(withIdeas), "thm-1");
 check(same(loaded.ideas.map((entry) => entry.idea), ["repetition", "fragment 2"]), "the ideas come back from the body");
 check(same(T.bodyFromForm(formOf("sentence")).theme.ideas, []), "a form without ideas has an empty list");
-check(T.formProblems({ ...withIdeas, ideas: [{ idea: "repetition", item_id: "", version: 1 }] }).length > 0, "an idea without a motif is a problem");
 check(
   same(T.motiveNames(withIdeas, (id) => `n-${id}`), { M1: "n-mot-1", M2: "n-mot-2", M3: "n-mot-3" }),
   "motive ids go over the slots, then the ideas, one per distinct motif",
@@ -452,7 +441,6 @@ check(readBack.construction.ideas["basic idea"] === 3 && readBack.construction.e
 check(same(T.bodyFromForm(readBack), T.bodyFromForm(givenState)), "the construction round trips through the body");
 check(T.fieldForPath("/construction/extensions/0/bars") === "construction" && T.tabOfField("construction") === "structure", "a refusal under /construction marks the construction on the Structure tab");
 check(T.extensionIdeas("repeat", sentenceIdeas).join() === "repetition,fragment 1,fragment 2" && T.extensionIdeas("addition", sentenceIdeas).length === 0, "an extension offers the ideas of its kind that the form has");
-check(T.CHORD_BARS === 16, "the chord row reaches 16 bars");
 const longChords = T.emptyState("l");
 longChords.bars = 16;
 longChords.chords[15] = "I";

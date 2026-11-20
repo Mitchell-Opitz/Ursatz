@@ -723,7 +723,7 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
 /*
  * The piece editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer), version and title (the
  * current version number and the item name, for Export)}.
- * Returns {el, state, problems(), save(note)}.
+ * Returns {el, state, save(note)}.
  */
 function buildPieceEditor(ctx) {
   const state = PiecesModel.stateFromBody(ctx.body, ctx.id);
@@ -735,16 +735,11 @@ function buildPieceEditor(ctx) {
     const found = ctx.items.find((item) => item.id === itemId);
     return found ? found.name : itemId;
   };
-  const problemsEl = materialsElement("div", "materials-field-error");
   let selected = state.sections.length > 0 ? state.sections[0].id : "";
   let served = [];
   let showDefaultCadence = () => {};
   let poolRefresh = () => {};
   let savedJson = JSON.stringify(PiecesModel.bodyFromState(state));
-  const themeLengths = {};
-  const structureOptions = {
-    themeBeats: (fill) => (Number.isFinite(themeLengths[PiecesModel.fillKey(fill)]) ? themeLengths[PiecesModel.fillKey(fill)] : null),
-  };
 
   /* Sources (motifs and themes) with a newer version */
   const notices = materialsElement("div");
@@ -800,7 +795,6 @@ function buildPieceEditor(ctx) {
     state.tempo = tempo.value;
     drawStrip();
     drawSectionEditor();
-    problems();
   }
   for (const control of [key, mode, meter, tempo]) {
     control.addEventListener("input", syncHeader);
@@ -844,11 +838,9 @@ function buildPieceEditor(ctx) {
     state.bars = bars;
     state.count = count;
     drawStrip();
-    problems();
   });
   modulateBox.addEventListener("input", () => {
     state.modulate = modulateBox.checked;
-    problems();
   });
   formSelect.addEventListener("input", () => {
     Object.assign(state, PiecesModel.withForm(state, formSelect.value));
@@ -895,7 +887,6 @@ function buildPieceEditor(ctx) {
   function redraw() {
     drawStrip();
     drawSectionEditor();
-    problems();
   }
 
   function drawSectionEditor() {
@@ -963,7 +954,6 @@ function buildPieceEditor(ctx) {
       showDefaultCadence();
       drawStrip();
       drawInto();
-      problems();
     }
     /* Sets the length from outside the length inputs (a theme fill takes its theme's). */
     function applyBeats(beats) {
@@ -1012,7 +1002,6 @@ function buildPieceEditor(ctx) {
           onChange: (value) => {
             fill.item_id = value ? value.item_id : "";
             fill.version = value ? value.version : 0;
-            problems();
             poolRefresh();
           },
         });
@@ -1060,7 +1049,6 @@ function buildPieceEditor(ctx) {
               fill.construction = null;
             }
             drawInto();
-            problems();
           });
           if (free) {
             return;
@@ -1090,7 +1078,7 @@ function buildPieceEditor(ctx) {
               set: (value) => {
                 fill.construction = value;
               },
-              changed: () => problems(),
+              changed: () => {},
               modeHidden: true,
             });
             block.element.open = true;
@@ -1103,17 +1091,13 @@ function buildPieceEditor(ctx) {
       } else if (fill.kind === "theme") {
         const picker = buildPieceThemePicker({
           items: () => ctx.items,
-          onInfo: (value) => {
-            themeLengths[PiecesModel.fillKey(value)] = value.beats;
-            problems();
-          },
+          onInfo: () => {},
           onChange: (value) => {
             fill.item_id = value ? value.item_id : "";
             fill.version = value ? value.version : 0;
             if (value && Number.isFinite(value.beats)) {
               applyBeats(value.beats);
             }
-            problems();
           },
         });
         picker.setValue(fill);
@@ -1125,7 +1109,6 @@ function buildPieceEditor(ctx) {
     kind.addEventListener("input", () => {
       section.fill = pieceNewFill(kind.value);
       drawFill();
-      problems();
     });
     drawFill();
     editorEl.appendChild(fillBox);
@@ -1137,8 +1120,8 @@ function buildPieceEditor(ctx) {
       .slice(0, index)
       .map((entry) => ({ value: entry.id, label: `Section ${entry.letter || entry.id}` }));
     placeBox.append(
-      pieceRegionControl(section, earlier, () => problems()),
-      pieceHarmonyControl(section, () => problems()),
+      pieceRegionControl(section, earlier, () => {}),
+      pieceHarmonyControl(section, () => {}),
     );
     editorEl.appendChild(placeBox);
   }
@@ -1163,13 +1146,13 @@ function buildPieceEditor(ctx) {
       details.appendChild(materialsElement("summary", "", `${planned.letter || name} · ${name}`));
       const fixed = Boolean(planned.returns);
       const earlier = sections.slice(0, at).map((entry) => ({ value: String(entry.name), label: String(entry.name) }));
-      details.appendChild(pieceRegionControl(overlay, earlier, () => problems()));
+      details.appendChild(pieceRegionControl(overlay, earlier, () => {}));
       if (fixed) {
         details.appendChild(
           materialsElement("div", "piece-list-status", "This section returns another: give its fill and harmony to the section it returns."),
         );
       } else {
-        details.appendChild(pieceHarmonyControl(overlay, () => problems()));
+        details.appendChild(pieceHarmonyControl(overlay, () => {}));
         const fillBody = materialsElement("div");
         const kind = themeField(details, "Fill with", themeSelect(PiecesModel.FILL_KINDS, overlay.fill.kind));
         details.appendChild(fillBody);
@@ -1179,7 +1162,6 @@ function buildPieceEditor(ctx) {
           const pick = (value) => {
             fill.item_id = value ? value.item_id : "";
             fill.version = value ? value.version : 0;
-            problems();
             poolRefresh();
           };
           if (fill.kind === "motif") {
@@ -1197,7 +1179,6 @@ function buildPieceEditor(ctx) {
         kind.addEventListener("input", () => {
           overlay.fill = pieceOverlayFill(kind.value);
           drawOverlayFill();
-          problems();
         });
         drawOverlayFill();
       }
@@ -1242,8 +1223,6 @@ function buildPieceEditor(ctx) {
     }),
   );
 
-  el.appendChild(problemsEl);
-
   /* The Composer's checks of the values (key, meter, tempo, seed, pickups, numerals, sizes) come from the validate route. */
   const validation = attachFormValidation({
     roots: [el],
@@ -1257,17 +1236,8 @@ function buildPieceEditor(ctx) {
   });
   el.appendChild(validation.element);
 
-  function problems() {
-    const list = PiecesModel.formProblems(state, structureOptions);
-    problemsEl.textContent = list.join(" ");
-    return list;
-  }
-
-  /* Saves the form as a new version; the answer or null when the form has problems. */
+  /* Saves the form as a new version; the answer or null when the Composer refuses it. */
   async function save(note) {
-    if (problems().length > 0) {
-      return null;
-    }
     const answer = await sendMaterialsRequest(PiecesModel.saveRequest(state, note));
     if (!answer.ok) {
       ctx.statusEl.classList.add("error");
@@ -1302,9 +1272,6 @@ function buildPieceEditor(ctx) {
 
   /* Saves the form first when it changed, then composes it into a new version. options: {update_uses}. */
   async function compose(options) {
-    if (problems().length > 0) {
-      return;
-    }
     setBusy(true);
     const structure = ctx.body && ctx.body.piece ? ctx.body.piece.structure : null;
     const changed =
@@ -1333,5 +1300,5 @@ function buildPieceEditor(ctx) {
   }
 
   redraw();
-  return { el, state, problems, save, compose };
+  return { el, state, save, compose };
 }

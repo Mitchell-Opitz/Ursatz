@@ -421,7 +421,6 @@
   const SEGMENTS_HINT =
     "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them. When none are set, the Composer proposes them from the rhythm.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
-  const HARMONY_MAX_CHARS = 200;
   const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
 
   /* The tone label abbreviations (R-195): CT is a chord tone, ? an unclassified note. */
@@ -571,32 +570,6 @@
     return a.key_found === false ? "No key found: read as C major." : "Filled from the MIDI file.";
   }
 
-  /* Problems with the form values as {field, message}; empty when it can be
-   * sent. The Composer judges the values itself (notes, meter, pickup, harmony), through the validate route. */
-  function motifFormProblems(values) {
-    const problems = [];
-    if (String(values.notes || "").trim() === "") {
-      problems.push({ field: "notes", message: "Enter at least one note." });
-    }
-    if (Array.from(String(values.harmony || "")).length > HARMONY_MAX_CHARS) {
-      problems.push({ field: "harmony", message: `Harmony is at most ${HARMONY_MAX_CHARS} characters.` });
-    }
-    for (const message of featureProblems(values.features)) {
-      problems.push({ field: "features", message });
-    }
-    return problems;
-  }
-
-  /* The editor field a Composer refusal belongs to: harmony for a chord problem, features for a feature one, else the
-   * note list. */
-  function errorField(message) {
-    const text = String(message || "");
-    if (/harmony|chord|numeral|token \d+ \(column/i.test(text)) {
-      return "harmony";
-    }
-    return /feature|segment/i.test(text) ? "features" : "notes";
-  }
-
   /* The editor field a request path of the Composer belongs to (R-276): the note list for /input and /tones. */
   function fieldForPath(path) {
     const table = [["/meter", "meter"], ["/pickup", "pickup"], ["/harmony", "harmony"], ["/features", "features"], ["/key", "material"]];
@@ -607,28 +580,6 @@
    * /api/materials/items/validate); previous is the body being edited, or null for a new motif. */
   function validateRequest(values, previous) {
     return Req.validateRequest("motif", buildMotifBody(values, previous));
-  }
-
-  /* Messages for the feature rows (1-based first and last note). */
-  function featureProblems(features) {
-    const messages = [];
-    const seen = new Set();
-    (features || []).forEach((feature, index) => {
-      const row = `Segment ${index + 1}`;
-      const label = String(feature.label || "").trim();
-      if (label === "" || Array.from(label).length > 8) {
-        messages.push(`${row}: the label is 1 to 8 characters.`);
-      } else if (seen.has(label)) {
-        messages.push(`${row}: the label ${label} is used twice.`);
-      }
-      seen.add(label);
-      const first = Number(feature.first);
-      const last = Number(feature.last);
-      if (!Number.isInteger(first) || !Number.isInteger(last) || first < 1 || last < first) {
-        messages.push(`${row}: first and last are note numbers from 1, first not after last.`);
-      }
-    });
-    return messages;
   }
 
   /* An empty feature row to add. */
@@ -962,7 +913,6 @@
     composerAvailable,
     NOTE_HINT,
     formHint,
-    errorField,
     HARMONY_HINT,
     harmonyPlaceholder,
     toneChips,
@@ -987,8 +937,6 @@
     motifRoles,
     motifForms,
     motifFormValues,
-    motifFormProblems,
-    featureProblems,
     newFeatureRow,
     buildMotifBody,
     buildSaveMotifRequest,

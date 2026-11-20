@@ -821,13 +821,6 @@
     return Boolean(body && body.theme && body.theme.result && typeof body.theme.result === "object");
   }
 
-  /* The key of a theme fill in a themeBeats table. */
-  function fillKey(fill) {
-    return `${fill.item_id}@${fill.version}`;
-  }
-
-  /* --- problems -------------------------------------------------------- */
-
   /* True when the section is whole bars (3 to 16) with no pickup: it may be a theme with a construction. */
   function constructionPossible(section, meter) {
     const bars = Number(section.beats) / barBeats(meter);
@@ -854,65 +847,6 @@
       return "auto";
     }
     return construction && typeof construction === "object" ? "given" : "default";
-  }
-
-  /* What stops Compose or Save, as a list of sentences. options.themeBeats(fill) gives the length in beats of the
-   * theme a theme fill names, or null when it is not known. */
-  function structureProblems(state, options) {
-    const s = state || emptyState();
-    const o = options || {};
-    const problems = [];
-    const form = formOf(s.form);
-    if (!form) {
-      return [`The Composer has no form called ${s.form}.`];
-    }
-    if (isSized(form)) {
-      return problems;
-    }
-    const sections = Array.isArray(s.sections) ? s.sections : [];
-    for (const role of rolesOf(form)) {
-      if (role.required === true && !sections.some((section) => section.part === role.value)) {
-        problems.push(`The piece needs a section in the ${role.label}.`);
-      }
-    }
-    let last = -1;
-    let ordered = true;
-    for (const section of sections) {
-      const at = partIndex(section.part, form);
-      if (at < last) {
-        ordered = false;
-      }
-      last = Math.max(last, at);
-    }
-    if (!ordered) {
-      problems.push(`The parts must come in the order ${rolesOf(form).map((role) => role.label).join(", ")}.`);
-    }
-    for (const section of sections) {
-      const name = section.letter ? `Section ${section.letter}` : `Section ${section.id}`;
-      const beats = Number(section.beats);
-      if (!Number.isInteger(beats) || beats < 1) {
-        problems.push(`${name} must be at least a beat long.`);
-      }
-      const fill = section.fill || {};
-      if (fill.kind === "theme" && typeof o.themeBeats === "function") {
-        const themeBeats = o.themeBeats(fill);
-        if (Number.isFinite(themeBeats) && themeBeats !== beats) {
-          problems.push(`${name} is ${beatsLabel(beats, s.meter)} but its theme is ${beatsLabel(themeBeats, s.meter)}.`);
-        }
-      }
-    }
-    return problems;
-  }
-
-  /* What stops Compose beyond the structure: the mode from the brief needs a brief. The Composer's own checks of the
-   * values (key, meter, tempo, seed, pickups, numerals, sizes) come from the validate route. */
-  function formProblems(state, options) {
-    const s = state || emptyState();
-    const problems = structureProblems(s, options);
-    if (s.material === "style" && Themes.briefFromPicks(s.picks) === null) {
-      problems.push("The mode from the brief needs a brief.");
-    }
-    return problems;
   }
 
   /* The form fields the Composer's request paths name (a prefix of the path), for marking the field a refusal is
@@ -1401,9 +1335,6 @@
     themeLengthBeats,
     themeFormText,
     themeComposed,
-    fillKey,
-    structureProblems,
-    formProblems,
     saveRequest,
     composeRequest,
     versionFileUrl,

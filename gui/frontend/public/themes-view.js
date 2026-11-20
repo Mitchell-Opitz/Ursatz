@@ -868,7 +868,7 @@ function buildConstructionBlock(host) {
       sync();
       extensionsRow.appendChild(row);
     });
-    if (construction.extensions.length < ThemesModel.MAX_EXTENSIONS) {
+    if (construction.extensions.length < ThemesModel.maxExtensions()) {
       extensionsRow.appendChild(
         themeButton("Add extension", () => {
           const first = ThemesModel.EXTENSIONS[0];
@@ -921,7 +921,7 @@ function buildThemeChordRow(state) {
   element.appendChild(materialsElement("h3", "section-title", "Chords"));
   const row = materialsElement("div", "upload-controls");
   const fields = [];
-  for (let bar = 0; bar < ThemesModel.CHORD_BARS; bar++) {
+  for (let bar = 0; bar < ThemesModel.chordBars(); bar++) {
     const input = themeInput("Composer", state.chords[bar]);
     input.addEventListener("input", () => {
       state.chords[bar] = input.value;
@@ -957,14 +957,13 @@ function buildThemeAdvancedSection(state, itemsOf) {
 /*
  * The theme editor, in the sections the tabs mount. ctx: {id, item, body, subjects, usesStatus, items (all items),
  * status (the page status line writer), openTab() (the id of the open tab), statusText() (what the line shows), nameInput, projectSelect, saved()}.
- * Returns {state, problems(), save(note), compose(options), sections: {notices, theme, structure, slots, result
+ * Returns {state, save(note), compose(options), sections: {notices, theme, structure, slots, result
  * (the save row, mounted by the page above the tabs)}}.
  */
 function buildThemeEditor(ctx) {
   const state = ThemesModel.formFromBody(ctx.body, ctx.id);
   const initialJson = JSON.stringify(ThemesModel.bodyFromForm(state));
   const status = ctx.status;
-  const problemsEl = materialsElement("div", "materials-field-error");
   const itemsOf = () => ctx.items;
   const sections = {};
 
@@ -1007,8 +1006,9 @@ function buildThemeEditor(ctx) {
     "First cadence",
     themeSelect([{ value: "", label: "Default" }, ...ThemesModel.FIRST_CADENCES], state.firstCadence),
   );
-  const development = themeField(form, "Development", themeSelect(ThemesModel.DEVELOPMENTS, state.development));
-  form.appendChild(materialsElement("div", "materials-hint", ThemesModel.DEVELOPMENT_HELP));
+  const development = themeField(form, "Development", themeSelect(ThemesModel.developmentChoices(), state.development));
+  const developmentHint = materialsElement("div", "materials-hint");
+  form.appendChild(developmentHint);
   function syncForm() {
     state.into = into.value;
     state.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
@@ -1022,6 +1022,8 @@ function buildThemeEditor(ctx) {
     state.cadence = cadence.value;
     state.firstCadence = firstCadence.value;
     state.development = development.value;
+    const chosen = ThemesModel.developmentChoices().find((entry) => entry.value === state.development);
+    developmentHint.textContent = chosen ? chosen.help : "";
     beginningSelect.parentElement.hidden = state.into !== "hybrid";
     endingSelect.parentElement.hidden = state.into !== "hybrid";
     firstCadence.parentElement.hidden = state.into === "sentence";
@@ -1111,23 +1113,14 @@ function buildThemeEditor(ctx) {
     }
   }
 
-  function problems() {
-    const list = ThemesModel.formProblems(state);
-    problemsEl.textContent = list.join(" ");
-    return list;
-  }
-
   /* Whether the form differs from the stored version, or the theme has no stored form yet. */
   function bodyChanged() {
     const stored = ctx.body && ctx.body.theme ? ctx.body.theme.form : null;
     return JSON.stringify(ThemesModel.bodyFromForm(state)) !== initialJson || !stored || typeof stored !== "object";
   }
 
-  /* Saves the form as a new version; the answer or null when the form has problems. */
+  /* Saves the form as a new version; the answer. */
   async function save(note) {
-    if (problems().length > 0) {
-      return null;
-    }
     const answer = await sendMaterialsRequest(ThemesModel.saveRequest(state, note));
     if (!answer.ok) {
       status.show(MaterialsModel.errorText(answer.data, "Could not save the theme"), true);
@@ -1144,7 +1137,7 @@ function buildThemeEditor(ctx) {
   const composeButton = themeButton("Compose", () => compose({}));
   const spinner = materialsElement("span", "theme-spinner");
   spinner.hidden = true;
-  saveRow.append(problemsEl, validation.element, noteInput, saveButton, composeButton, spinner);
+  saveRow.append(validation.element, noteInput, saveButton, composeButton, spinner);
   sections.result = saveRow;
 
   function setBusy(busy) {
@@ -1173,10 +1166,6 @@ function buildThemeEditor(ctx) {
       status.show(decision.message, true);
       return;
     }
-    if (changed && problems().length > 0) {
-      status.show(problems().join(" "), true);
-      return;
-    }
     setBusy(true);
     status.show("Saving...");
     if (changed) {
@@ -1201,10 +1190,6 @@ function buildThemeEditor(ctx) {
    * options: {update_uses}. */
   async function compose(options) {
     status.clear();
-    if (problems().length > 0) {
-      status.show(problems().join(" "), true);
-      return;
-    }
     const changed = bodyChanged();
     if (changed && noteInput.value.trim() === "") {
       status.show("Give a version note.", true);
@@ -1231,5 +1216,5 @@ function buildThemeEditor(ctx) {
     }
     ctx.saved();
   }
-  return { state, problems, save, compose, sections };
+  return { state, save, compose, sections };
 }

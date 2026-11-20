@@ -696,7 +696,7 @@ function buildVersionsList(item, viewEl, statusEl, renderBody) {
   return section;
 }
 
-/* The motif form. Returns {el, values(), showProblems(problems), showError(text)}.
+/* The motif form. Returns {el, values(), fill, showError(text, field)}.
  * body is the version body being edited, or null for a new motif. */
 function buildMotifEditor(body, tabStatus) {
   const initial = MaterialsModel.motifFormValues(body);
@@ -987,14 +987,6 @@ function buildMotifEditor(body, tabStatus) {
     }
   }
 
-  function showProblems(problems) {
-    showError("");
-    for (const problem of problems) {
-      const holder = errors[problem.field];
-      holder.textContent = holder.textContent ? `${holder.textContent} ${problem.message}` : problem.message;
-    }
-  }
-
   /* The Composer reads the values while they are edited (R-276): its refusal shows under the field its path names. */
   const validator = Vocabulary.createValidator({
     build: () => MaterialsModel.validateRequest(values(), body),
@@ -1012,7 +1004,7 @@ function buildMotifEditor(body, tabStatus) {
   }
   validator.check();
 
-  return { el, values, fill, showProblems, showError };
+  return { el, values, fill, showError };
 }
 
 /* The Save controls of a motif editor: an optional version note and a
@@ -1027,19 +1019,13 @@ function buildMotifSaveControls(editor, statusEl, label, withNote, onSave) {
   save.type = "button";
   save.addEventListener("click", async () => {
     const values = editor.values();
-    const problems = MaterialsModel.motifFormProblems(values);
-    editor.showProblems(problems);
-    if (problems.length > 0) {
-      return;
-    }
     save.disabled = true;
     statusEl.textContent = "";
     statusEl.classList.remove("error");
     const answer = await onSave(values, note.value);
     save.disabled = false;
     if (answer && !answer.ok) {
-      const message = MaterialsModel.errorText(answer.data, "Could not save the motif");
-      editor.showError(message, MaterialsModel.errorField(message));
+      editor.showError(MaterialsModel.errorText(answer.data, "Could not save the motif"), MaterialsModel.fieldForPath(answer.data.path));
     }
   });
   if (withNote) {
