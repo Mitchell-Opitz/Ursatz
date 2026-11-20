@@ -411,6 +411,11 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
     snprintf(context.target, sizeof(context.target), "%s", call.target);
     context.base_version = base_version;
     const cJSON *schema = workshop_command_schema(entry->name);
+    UrsatzStatus invalid = workshop_command_check(schema, call.target, call.params, error);
+    if (invalid != URSATZ_OK) {
+        cJSON_Delete(empty);
+        return invalid;
+    }
     if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(schema, "base"))) {
         UrsatzStatus refused = check_base_version(&call, reply, error);
         if (refused != URSATZ_OK) {

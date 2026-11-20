@@ -96,7 +96,8 @@ static void test_refusals(void) {
     status = command("project.update", g_project, "[1]", -1, &reply, &error);
     check(status == URSATZ_ERR_REQUEST && strcmp(error.path, "/params") == 0, "params of the wrong type are refused at /params");
     status = command("project.update", g_project, "{\"description\":5}", -1, &reply, &error);
-    check(status == URSATZ_ERR_REQUEST && strcmp(error.path, "/params") == 0, "a params member of the wrong type is refused at its path");
+    check(status == URSATZ_ERR_REQUEST && strcmp(error.path, "/params/description") == 0 && strcmp(error.message, "description must be a string") == 0,
+          "a params member of the wrong type is refused at its path, by the schema");
 }
 
 static bool make_theme(void) {

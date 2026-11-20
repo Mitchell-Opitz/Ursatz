@@ -21,6 +21,16 @@ UrsatzStatus workshop_command_schemas_open(UrsatzError *error);
 /* The schema of a command by name, or NULL for an unknown name (or before the open). */
 const cJSON *workshop_command_schema(const char *name);
 
+/*
+ * Checks a command's target and params against its schema (R-664), after the envelope checks: a schema with a target needs one ("<command> needs
+ * a target", /target) and one without takes none ("<command> takes no target"); each declared param is checked in schema order, at
+ * /params/<name>: required ("<name> is required"; a null is absent), its type ("<name> must be a string, a whole number, true or false, one of
+ * a, b, c, a rational like 3/4, an object, a list"), `minimum` and `maximum` ("<name> must be from <min> to <max>"), `max_length` ("<name> is longer
+ * than <n> characters") and the type of a list's items (at /params/<name>/<i>); then each `one_of` group ("give exactly one of a, b", at the first
+ * name). A member no param declares passes. URSATZ_ERR_REQUEST with the first failure, else URSATZ_OK.
+ */
+UrsatzStatus workshop_command_check(const cJSON *schema, const char *target, const cJSON *params, UrsatzError *error);
+
 /* The families in file order, each {schema, schema_version, family, summary, commands}; NULL out of range. */
 size_t workshop_command_family_count(void);
 const cJSON *workshop_command_family_at(size_t index);

@@ -171,9 +171,7 @@
           "name": "version",
           "type": "integer",
           "required": true,
-          "help": "The composed version to work from.",
-          "minimum": 1,
-          "maximum": 1000000
+          "help": "The composed version to work from; a number that names no version is not found."
         },
         {
           "name": "section_id",
@@ -213,9 +211,7 @@
           "name": "version",
           "type": "integer",
           "required": true,
-          "help": "The composed version to work from.",
-          "minimum": 1,
-          "maximum": 1000000
+          "help": "The composed version to work from; a number that names no version is not found."
         },
         {
           "name": "section_id",
@@ -263,17 +259,13 @@
           "name": "version",
           "type": "integer",
           "required": true,
-          "help": "The composed version the set belongs to.",
-          "minimum": 1,
-          "maximum": 1000000
+          "help": "The composed version the set belongs to; a number that names no version is not found."
         },
         {
           "name": "set",
           "type": "integer",
           "required": true,
-          "help": "The set of variations.",
-          "minimum": 1,
-          "maximum": 1000000
+          "help": "The set of variations; a number that names no set is not found."
         },
         {
           "name": "index",
