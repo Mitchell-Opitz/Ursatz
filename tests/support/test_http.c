@@ -149,6 +149,10 @@ char *test_http_exchange(const char *port, const char *method, const char *path,
     return response;
 }
 
+char *test_http_exchange_headers(const char *port, const char *method, const char *path, const char *headers, const char *body, size_t body_size) {
+    return exchange_with(port, method, path, headers ? headers : "", body, body_size);
+}
+
 int test_http_status(const char *response) {
     int status = 0;
     if (response && sscanf(response, "HTTP/1.1 %d", &status) == 1) {
