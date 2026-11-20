@@ -1,0 +1,3382 @@
+{
+  "format": "ursatz-reading",
+  "format_version": 1,
+  "source": {
+    "kind": "analyzer",
+    "name": "ursatz-analyzer",
+    "producer_key": "0d46c5361de0fa1d",
+    "stages": 262143,
+    "knowledge_hash": "4e5764f2fc6e2592"
+  },
+  "target": {
+    "work": "w1",
+    "movement": "m1",
+    "digest": "690fae0a775c6983"
+  },
+  "regions": [{
+      "id": "region-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-2", "midi-note-1", "midi-note-0", "midi-note-3", "midi-note-4", "midi-note-5", "midi-note-7", "midi-note-6", "midi-note-8", "midi-note-10", "midi-note-9", "midi-note-11", "midi-note-12", "midi-note-13", "midi-note-14", "midi-note-15", "midi-note-16", "midi-note-17", "midi-note-18", "midi-note-19", "midi-note-20", "midi-note-22", "midi-note-21", "midi-note-23", "midi-note-24", "midi-note-25", "midi-note-26", "midi-note-27", "midi-note-28", "midi-note-29", "midi-note-30", "midi-note-31", "midi-note-32", "midi-note-34", "midi-note-33", "midi-note-35", "midi-note-36", "midi-note-37", "midi-note-38", "midi-note-40", "midi-note-39", "midi-note-42", "midi-note-41", "midi-note-43", "midi-note-45", "midi-note-44", "midi-note-46", "midi-note-48", "midi-note-47", "midi-note-50", "midi-note-49", "midi-note-51", "midi-note-52", "midi-note-53", "midi-note-54", "midi-note-55", "midi-note-56", "midi-note-57", "midi-note-59", "midi-note-58", "midi-note-60", "midi-note-62", "midi-note-61", "midi-note-63", "midi-note-64", "midi-note-65", "midi-note-66", "midi-note-67", "midi-note-68", "midi-note-69", "midi-note-70", "midi-note-71", "midi-note-72", "midi-note-73", "midi-note-74", "midi-note-76", "midi-note-75", "midi-note-77", "midi-note-78", "midi-note-79", "midi-note-80", "midi-note-81", "midi-note-82", "midi-note-83", "midi-note-84", "midi-note-85", "midi-note-86", "midi-note-87", "midi-note-88", "midi-note-90", "midi-note-89", "midi-note-91", "midi-note-93", "midi-note-92", "midi-note-94", "midi-note-95", "midi-note-97", "midi-note-96", "midi-note-98", "midi-note-100", "midi-note-99", "midi-note-102", "midi-note-101", "midi-note-103", "midi-note-105", "midi-note-104", "midi-note-106", "midi-note-108", "midi-note-107", "midi-note-109", "midi-note-112", "midi-note-111", "midi-note-110", "midi-note-113", "midi-note-114", "midi-note-115", "midi-note-117", "midi-note-116", "midi-note-118", "midi-note-120", "midi-note-119", "midi-note-121", "midi-note-122", "midi-note-123", "midi-note-124", "midi-note-125", "midi-note-126", "midi-note-127", "midi-note-128", "midi-note-129", "midi-note-130", "midi-note-132", "midi-note-131", "midi-note-133", "midi-note-134", "midi-note-135", "midi-note-136", "midi-note-137", "midi-note-138", "midi-note-139", "midi-note-140", "midi-note-141", "midi-note-142", "midi-note-144", "midi-note-143", "midi-note-145", "midi-note-146", "midi-note-147", "midi-note-148", "midi-note-150", "midi-note-149", "midi-note-152", "midi-note-151", "midi-note-153", "midi-note-155", "midi-note-154", "midi-note-156", "midi-note-158", "midi-note-157", "midi-note-160", "midi-note-159", "midi-note-161", "midi-note-162", "midi-note-163", "midi-note-164", "midi-note-165", "midi-note-166", "midi-note-167", "midi-note-169", "midi-note-168", "midi-note-170", "midi-note-172", "midi-note-171", "midi-note-173", "midi-note-174", "midi-note-175", "midi-note-176", "midi-note-177", "midi-note-178", "midi-note-179", "midi-note-180", "midi-note-181", "midi-note-182", "midi-note-183", "midi-note-184", "midi-note-186", "midi-note-185", "midi-note-187", "midi-note-188", "midi-note-189", "midi-note-190", "midi-note-191", "midi-note-192", "midi-note-193", "midi-note-194", "midi-note-195", "midi-note-196", "midi-note-197", "midi-note-198", "midi-note-200", "midi-note-199", "midi-note-201", "midi-note-203", "midi-note-202", "midi-note-204", "midi-note-205", "midi-note-207", "midi-note-206", "midi-note-208", "midi-note-210", "midi-note-209", "midi-note-212", "midi-note-211", "midi-note-213", "midi-note-215", "midi-note-214", "midi-note-216", "midi-note-218", "midi-note-217", "midi-note-219", "midi-note-221", "midi-note-220", "midi-note-222", "midi-note-223", "midi-note-224", "midi-note-225", "midi-note-227", "midi-note-226", "midi-note-228", "midi-note-229", "midi-note-230", "midi-note-231", "midi-note-233", "midi-note-232", "midi-note-235", "midi-note-234", "midi-note-236", "midi-note-238", "midi-note-237", "midi-note-239", "midi-note-241", "midi-note-240", "midi-note-242", "midi-note-243", "midi-note-245", "midi-note-244", "midi-note-247", "midi-note-246", "midi-note-248", "midi-note-249", "midi-note-250", "midi-note-251", "midi-note-252", "midi-note-254", "midi-note-253", "midi-note-256", "midi-note-255", "midi-note-258", "midi-note-257", "midi-note-260", "midi-note-259", "midi-note-262", "midi-note-261", "midi-note-264", "midi-note-263", "midi-note-266", "midi-note-265", "midi-note-267", "midi-note-268", "midi-note-270", "midi-note-269", "midi-note-272", "midi-note-271", "midi-note-273", "midi-note-275", "midi-note-274", "midi-note-277", "midi-note-276", "midi-note-279", "midi-note-278", "midi-note-280", "midi-note-282", "midi-note-281", "midi-note-284", "midi-note-283", "midi-note-286", "midi-note-285", "midi-note-288", "midi-note-287", "midi-note-290", "midi-note-289", "midi-note-291", "midi-note-292", "midi-note-293", "midi-note-294", "midi-note-296", "midi-note-295", "midi-note-297", "midi-note-298", "midi-note-299", "midi-note-301", "midi-note-300", "midi-note-302", "midi-note-304", "midi-note-303", "midi-note-305", "midi-note-306", "midi-note-307", "midi-note-308", "midi-note-309", "midi-note-311", "midi-note-310", "midi-note-313", "midi-note-312", "midi-note-314", "midi-note-316", "midi-note-315", "midi-note-318", "midi-note-317", "midi-note-322", "midi-note-321", "midi-note-320", "midi-note-319", "midi-note-323", "midi-note-324", "midi-note-326", "midi-note-325", "midi-note-327", "midi-note-328", "midi-note-329", "midi-note-330", "midi-note-332", "midi-note-331", "midi-note-333", "midi-note-334", "midi-note-335", "midi-note-336", "midi-note-338", "midi-note-337", "midi-note-340", "midi-note-339", "midi-note-341", "midi-note-343", "midi-note-342", "midi-note-344", "midi-note-346", "midi-note-345", "midi-note-347", "midi-note-348", "midi-note-350", "midi-note-349", "midi-note-352", "midi-note-351", "midi-note-353", "midi-note-354", "midi-note-355", "midi-note-356", "midi-note-357", "midi-note-359", "midi-note-358", "midi-note-361", "midi-note-360", "midi-note-363", "midi-note-362", "midi-note-365", "midi-note-364", "midi-note-367", "midi-note-366", "midi-note-369", "midi-note-368", "midi-note-371", "midi-note-370", "midi-note-372", "midi-note-373", "midi-note-375", "midi-note-374", "midi-note-377", "midi-note-376", "midi-note-378", "midi-note-380", "midi-note-379", "midi-note-382", "midi-note-381", "midi-note-384", "midi-note-383", "midi-note-385", "midi-note-387", "midi-note-386", "midi-note-389", "midi-note-388", "midi-note-391", "midi-note-390", "midi-note-393", "midi-note-392", "midi-note-395", "midi-note-394", "midi-note-396", "midi-note-397", "midi-note-398", "midi-note-399", "midi-note-401", "midi-note-400", "midi-note-402", "midi-note-403", "midi-note-404", "midi-note-406", "midi-note-405", "midi-note-407", "midi-note-409", "midi-note-408", "midi-note-410", "midi-note-411", "midi-note-412", "midi-note-413", "midi-note-414", "midi-note-416", "midi-note-415", "midi-note-418", "midi-note-417", "midi-note-419", "midi-note-421", "midi-note-420", "midi-note-423", "midi-note-422", "midi-note-427", "midi-note-426", "midi-note-425", "midi-note-424", "midi-note-428", "midi-note-429"],
+      "center": 7,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "G major"
+    }],
+  "chords": [{
+      "id": "chord-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 3,
+        "den": 4
+      },
+      "confidence": {
+        "num": 152509,
+        "den": 250000
+      },
+      "evidence": ["midi-note-2", "midi-note-1", "midi-note-0", "midi-note-3", "midi-note-4", "midi-note-5", "midi-note-7", "midi-note-6", "midi-note-8", "midi-note-10", "midi-note-9", "midi-note-11", "midi-note-12"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-2",
+      "start": {
+        "num": 3,
+        "den": 4
+      },
+      "end": {
+        "num": 1,
+        "den": 1
+      },
+      "confidence": {
+        "num": 450691,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-13", "midi-note-14", "midi-note-15", "midi-note-16", "midi-note-17", "midi-note-18"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 0,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-3",
+      "start": {
+        "num": 1,
+        "den": 1
+      },
+      "end": {
+        "num": 3,
+        "den": 2
+      },
+      "confidence": {
+        "num": 8603,
+        "den": 62500
+      },
+      "evidence": ["midi-note-19", "midi-note-20", "midi-note-22", "midi-note-21", "midi-note-23", "midi-note-24", "midi-note-25", "midi-note-26"],
+      "reading": {
+        "root": 4,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2192,
+        "bass": 4,
+        "members": [16, 128, 2048, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-4",
+      "start": {
+        "num": 3,
+        "den": 2
+      },
+      "end": {
+        "num": 7,
+        "den": 4
+      },
+      "confidence": {
+        "num": 230171,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-27", "midi-note-28", "midi-note-29", "midi-note-30"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 529,
+        "bass": 9,
+        "members": [512, 1, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "ii",
+      "function": "predominant",
+      "label": "ii"
+    }, {
+      "id": "chord-5",
+      "start": {
+        "num": 7,
+        "den": 4
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": {
+        "num": 10946,
+        "den": 15625
+      },
+      "evidence": ["midi-note-31", "midi-note-32", "midi-note-34", "midi-note-33"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-6",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 9,
+        "den": 4
+      },
+      "confidence": {
+        "num": 20979,
+        "den": 62500
+      },
+      "evidence": ["midi-note-34", "midi-note-35", "midi-note-36", "midi-note-37", "midi-note-38"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-7",
+      "start": {
+        "num": 9,
+        "den": 4
+      },
+      "end": {
+        "num": 5,
+        "den": 2
+      },
+      "confidence": {
+        "num": 8699,
+        "den": 250000
+      },
+      "evidence": ["midi-note-40", "midi-note-39", "midi-note-42", "midi-note-41", "midi-note-43"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 2,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "iii6",
+      "function": "predominant",
+      "label": "iii"
+    }, {
+      "id": "chord-8",
+      "start": {
+        "num": 5,
+        "den": 2
+      },
+      "end": {
+        "num": 3,
+        "den": 1
+      },
+      "confidence": {
+        "num": 334067,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-45", "midi-note-44", "midi-note-46", "midi-note-48", "midi-note-47", "midi-note-50", "midi-note-49", "midi-note-51", "midi-note-52", "midi-note-53"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-9",
+      "start": {
+        "num": 3,
+        "den": 1
+      },
+      "end": {
+        "num": 15,
+        "den": 4
+      },
+      "confidence": {
+        "num": 297261,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-54", "midi-note-55", "midi-note-56", "midi-note-57", "midi-note-59", "midi-note-58", "midi-note-60", "midi-note-62", "midi-note-61", "midi-note-63", "midi-note-64", "midi-note-65", "midi-note-66"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 11,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I6",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-10",
+      "start": {
+        "num": 15,
+        "den": 4
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": {
+        "num": 450691,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-67", "midi-note-68", "midi-note-69", "midi-note-70", "midi-note-71", "midi-note-72"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 0,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-11",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 17,
+        "den": 4
+      },
+      "confidence": {
+        "num": 37303,
+        "den": 50000
+      },
+      "evidence": ["midi-note-73", "midi-note-74", "midi-note-76", "midi-note-75"],
+      "reading": {
+        "root": 4,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2192,
+        "bass": 4,
+        "members": [16, 128, 2048, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-12",
+      "start": {
+        "num": 17,
+        "den": 4
+      },
+      "end": {
+        "num": 19,
+        "den": 4
+      },
+      "confidence": {
+        "num": 421509,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-77", "midi-note-78", "midi-note-79", "midi-note-80", "midi-note-81", "midi-note-82", "midi-note-83", "midi-note-84", "midi-note-85", "midi-note-86", "midi-note-87", "midi-note-88"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.minor-seventh",
+        "pitch_classes": 657,
+        "bass": 0,
+        "members": [512, 1, 16, 128, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "ii6/5",
+      "function": "predominant",
+      "label": "minor7"
+    }, {
+      "id": "chord-13",
+      "start": {
+        "num": 19,
+        "den": 4
+      },
+      "end": {
+        "num": 39,
+        "den": 8
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-90", "midi-note-89", "midi-note-91"],
+      "reading": {
+        "root": 6,
+        "type": "omt.chord-type.diminished-triad",
+        "pitch_classes": 577,
+        "bass": 6,
+        "members": [64, 512, 1, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vii°",
+      "function": "dominant",
+      "label": "vii°"
+    }, {
+      "id": "chord-14",
+      "start": {
+        "num": 39,
+        "den": 8
+      },
+      "end": {
+        "num": 5,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-93", "midi-note-92"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-15",
+      "start": {
+        "num": 5,
+        "den": 1
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": {
+        "num": 438833,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-94", "midi-note-95", "midi-note-97", "midi-note-96", "midi-note-98", "midi-note-100", "midi-note-99", "midi-note-102", "midi-note-101", "midi-note-103", "midi-note-105", "midi-note-104", "midi-note-106", "midi-note-108", "midi-note-107", "midi-note-109"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 11,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I6",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-16",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 2
+      },
+      "confidence": {
+        "num": 671771,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-112", "midi-note-111", "midi-note-110", "midi-note-113", "midi-note-114", "midi-note-115", "midi-note-117", "midi-note-116", "midi-note-118", "midi-note-120", "midi-note-119"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-17",
+      "start": {
+        "num": 13,
+        "den": 2
+      },
+      "end": {
+        "num": 7,
+        "den": 1
+      },
+      "confidence": {
+        "num": 356443,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-121", "midi-note-122", "midi-note-123", "midi-note-124", "midi-note-125", "midi-note-126", "midi-note-127", "midi-note-128"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 7,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV6/4",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-18",
+      "start": {
+        "num": 7,
+        "den": 1
+      },
+      "end": {
+        "num": 15,
+        "den": 2
+      },
+      "confidence": {
+        "num": 8603,
+        "den": 62500
+      },
+      "evidence": ["midi-note-129", "midi-note-130", "midi-note-132", "midi-note-131", "midi-note-133", "midi-note-134", "midi-note-135", "midi-note-136"],
+      "reading": {
+        "root": 4,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2192,
+        "bass": 4,
+        "members": [16, 128, 2048, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-19",
+      "start": {
+        "num": 15,
+        "den": 2
+      },
+      "end": {
+        "num": 31,
+        "den": 4
+      },
+      "confidence": {
+        "num": 230171,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-137", "midi-note-138", "midi-note-139", "midi-note-140"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 529,
+        "bass": 9,
+        "members": [512, 1, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "ii",
+      "function": "predominant",
+      "label": "ii"
+    }, {
+      "id": "chord-20",
+      "start": {
+        "num": 31,
+        "den": 4
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": {
+        "num": 10946,
+        "den": 15625
+      },
+      "evidence": ["midi-note-141", "midi-note-142", "midi-note-144", "midi-note-143"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-21",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 33,
+        "den": 4
+      },
+      "confidence": {
+        "num": 20979,
+        "den": 62500
+      },
+      "evidence": ["midi-note-144", "midi-note-145", "midi-note-146", "midi-note-147", "midi-note-148"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-22",
+      "start": {
+        "num": 33,
+        "den": 4
+      },
+      "end": {
+        "num": 17,
+        "den": 2
+      },
+      "confidence": {
+        "num": 8699,
+        "den": 250000
+      },
+      "evidence": ["midi-note-150", "midi-note-149", "midi-note-152", "midi-note-151", "midi-note-153"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 2,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "iii6",
+      "function": "predominant",
+      "label": "iii"
+    }, {
+      "id": "chord-23",
+      "start": {
+        "num": 17,
+        "den": 2
+      },
+      "end": {
+        "num": 9,
+        "den": 1
+      },
+      "confidence": {
+        "num": 334067,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-155", "midi-note-154", "midi-note-156", "midi-note-158", "midi-note-157", "midi-note-160", "midi-note-159", "midi-note-161", "midi-note-162", "midi-note-163"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-24",
+      "start": {
+        "num": 9,
+        "den": 1
+      },
+      "end": {
+        "num": 39,
+        "den": 4
+      },
+      "confidence": {
+        "num": 297261,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-164", "midi-note-165", "midi-note-166", "midi-note-167", "midi-note-169", "midi-note-168", "midi-note-170", "midi-note-172", "midi-note-171", "midi-note-173", "midi-note-174", "midi-note-175", "midi-note-176"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 11,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I6",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-25",
+      "start": {
+        "num": 39,
+        "den": 4
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": {
+        "num": 450691,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-177", "midi-note-178", "midi-note-179", "midi-note-180", "midi-note-181", "midi-note-182"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 0,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-26",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 41,
+        "den": 4
+      },
+      "confidence": {
+        "num": 37303,
+        "den": 50000
+      },
+      "evidence": ["midi-note-183", "midi-note-184", "midi-note-186", "midi-note-185"],
+      "reading": {
+        "root": 4,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2192,
+        "bass": 4,
+        "members": [16, 128, 2048, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-27",
+      "start": {
+        "num": 41,
+        "den": 4
+      },
+      "end": {
+        "num": 43,
+        "den": 4
+      },
+      "confidence": {
+        "num": 421509,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-187", "midi-note-188", "midi-note-189", "midi-note-190", "midi-note-191", "midi-note-192", "midi-note-193", "midi-note-194", "midi-note-195", "midi-note-196", "midi-note-197", "midi-note-198"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.minor-seventh",
+        "pitch_classes": 657,
+        "bass": 0,
+        "members": [512, 1, 16, 128, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "ii6/5",
+      "function": "predominant",
+      "label": "minor7"
+    }, {
+      "id": "chord-28",
+      "start": {
+        "num": 43,
+        "den": 4
+      },
+      "end": {
+        "num": 87,
+        "den": 8
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-200", "midi-note-199", "midi-note-201"],
+      "reading": {
+        "root": 6,
+        "type": "omt.chord-type.diminished-triad",
+        "pitch_classes": 577,
+        "bass": 6,
+        "members": [64, 512, 1, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vii°",
+      "function": "dominant",
+      "label": "vii°"
+    }, {
+      "id": "chord-29",
+      "start": {
+        "num": 87,
+        "den": 8
+      },
+      "end": {
+        "num": 11,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-203", "midi-note-202"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-30",
+      "start": {
+        "num": 11,
+        "den": 1
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": {
+        "num": 438833,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-204", "midi-note-205", "midi-note-207", "midi-note-206", "midi-note-208", "midi-note-210", "midi-note-209", "midi-note-212", "midi-note-211", "midi-note-213", "midi-note-215", "midi-note-214", "midi-note-216", "midi-note-218", "midi-note-217", "midi-note-219"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 11,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I6",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-31",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 51,
+        "den": 4
+      },
+      "confidence": {
+        "num": 97451,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-221", "midi-note-220", "midi-note-222", "midi-note-223", "midi-note-224", "midi-note-225", "midi-note-227", "midi-note-226", "midi-note-228", "midi-note-229", "midi-note-230", "midi-note-231"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-seventh",
+        "pitch_classes": 2244,
+        "bass": 7,
+        "members": [128, 2048, 4, 64, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I7",
+      "function": "tonic",
+      "label": "major7"
+    }, {
+      "id": "chord-32",
+      "start": {
+        "num": 51,
+        "den": 4
+      },
+      "end": {
+        "num": 13,
+        "den": 1
+      },
+      "confidence": {
+        "num": 711601,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-233", "midi-note-232", "midi-note-235", "midi-note-234", "midi-note-236"],
+      "reading": {
+        "root": 4,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2192,
+        "bass": 4,
+        "members": [16, 128, 2048, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-33",
+      "start": {
+        "num": 13,
+        "den": 1
+      },
+      "end": {
+        "num": 14,
+        "den": 1
+      },
+      "confidence": {
+        "num": 35461,
+        "den": 125000
+      },
+      "evidence": ["midi-note-238", "midi-note-237", "midi-note-239", "midi-note-241", "midi-note-240", "midi-note-242", "midi-note-243", "midi-note-245", "midi-note-244", "midi-note-247", "midi-note-246", "midi-note-248", "midi-note-249", "midi-note-250", "midi-note-251", "midi-note-252", "midi-note-254", "midi-note-253"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 530,
+        "bass": 4,
+        "members": [512, 2, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V6/4/V",
+      "function": "dominant",
+      "label": "major"
+    }, {
+      "id": "chord-34",
+      "start": {
+        "num": 14,
+        "den": 1
+      },
+      "end": {
+        "num": 15,
+        "den": 1
+      },
+      "confidence": {
+        "num": 195263,
+        "den": 250000
+      },
+      "evidence": ["midi-note-256", "midi-note-255", "midi-note-258", "midi-note-257", "midi-note-260", "midi-note-259", "midi-note-262", "midi-note-261", "midi-note-264", "midi-note-263", "midi-note-266", "midi-note-265", "midi-note-267", "midi-note-268"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }, {
+      "id": "chord-35",
+      "start": {
+        "num": 15,
+        "den": 1
+      },
+      "end": {
+        "num": 121,
+        "den": 8
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-270", "midi-note-269"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 11,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "iii",
+      "function": "predominant",
+      "label": "iii"
+    }, {
+      "id": "chord-36",
+      "start": {
+        "num": 121,
+        "den": 8
+      },
+      "end": {
+        "num": 61,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-272", "midi-note-271", "midi-note-273"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }, {
+      "id": "chord-37",
+      "start": {
+        "num": 61,
+        "den": 4
+      },
+      "end": {
+        "num": 63,
+        "den": 4
+      },
+      "confidence": {
+        "num": 12477,
+        "den": 20000
+      },
+      "evidence": ["midi-note-275", "midi-note-274", "midi-note-277", "midi-note-276", "midi-note-279", "midi-note-278", "midi-note-280", "midi-note-282", "midi-note-281"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 0,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-38",
+      "start": {
+        "num": 63,
+        "den": 4
+      },
+      "end": {
+        "num": 127,
+        "den": 8
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-284", "midi-note-283"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 11,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "iii",
+      "function": "predominant",
+      "label": "iii"
+    }, {
+      "id": "chord-39",
+      "start": {
+        "num": 127,
+        "den": 8
+      },
+      "end": {
+        "num": 16,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-286", "midi-note-285"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 529,
+        "bass": 9,
+        "members": [512, 1, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "ii",
+      "function": "predominant",
+      "label": "ii"
+    }, {
+      "id": "chord-40",
+      "start": {
+        "num": 16,
+        "den": 1
+      },
+      "end": {
+        "num": 67,
+        "den": 4
+      },
+      "confidence": {
+        "num": 137787,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-288", "midi-note-287", "midi-note-290", "midi-note-289", "midi-note-291", "midi-note-292", "midi-note-293", "midi-note-294", "midi-note-296", "midi-note-295", "midi-note-297", "midi-note-298", "midi-note-299"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-41",
+      "start": {
+        "num": 67,
+        "den": 4
+      },
+      "end": {
+        "num": 17,
+        "den": 1
+      },
+      "confidence": {
+        "num": 109489,
+        "den": 200000
+      },
+      "evidence": ["midi-note-301", "midi-note-300", "midi-note-302", "midi-note-304", "midi-note-303"],
+      "reading": {
+        "root": 6,
+        "type": "omt.chord-type.half-diminished-seventh",
+        "pitch_classes": 593,
+        "bass": 6,
+        "members": [64, 512, 1, 16, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vii∅7",
+      "function": "dominant",
+      "label": "half-diminished7"
+    }, {
+      "id": "chord-42",
+      "start": {
+        "num": 17,
+        "den": 1
+      },
+      "end": {
+        "num": 18,
+        "den": 1
+      },
+      "confidence": {
+        "num": 899,
+        "den": 1600
+      },
+      "evidence": ["midi-note-305", "midi-note-306", "midi-note-307", "midi-note-308", "midi-note-309", "midi-note-311", "midi-note-310", "midi-note-313", "midi-note-312", "midi-note-314", "midi-note-316", "midi-note-315", "midi-note-318", "midi-note-317", "midi-note-322", "midi-note-321", "midi-note-320", "midi-note-319", "midi-note-323", "midi-note-324"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-43",
+      "start": {
+        "num": 18,
+        "den": 1
+      },
+      "end": {
+        "num": 75,
+        "den": 4
+      },
+      "confidence": {
+        "num": 97451,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-326", "midi-note-325", "midi-note-327", "midi-note-328", "midi-note-329", "midi-note-330", "midi-note-332", "midi-note-331", "midi-note-333", "midi-note-334", "midi-note-335", "midi-note-336"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-seventh",
+        "pitch_classes": 2244,
+        "bass": 7,
+        "members": [128, 2048, 4, 64, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I7",
+      "function": "tonic",
+      "label": "major7"
+    }, {
+      "id": "chord-44",
+      "start": {
+        "num": 75,
+        "den": 4
+      },
+      "end": {
+        "num": 19,
+        "den": 1
+      },
+      "confidence": {
+        "num": 711601,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-338", "midi-note-337", "midi-note-340", "midi-note-339", "midi-note-341"],
+      "reading": {
+        "root": 4,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2192,
+        "bass": 4,
+        "members": [16, 128, 2048, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-45",
+      "start": {
+        "num": 19,
+        "den": 1
+      },
+      "end": {
+        "num": 20,
+        "den": 1
+      },
+      "confidence": {
+        "num": 35461,
+        "den": 125000
+      },
+      "evidence": ["midi-note-343", "midi-note-342", "midi-note-344", "midi-note-346", "midi-note-345", "midi-note-347", "midi-note-348", "midi-note-350", "midi-note-349", "midi-note-352", "midi-note-351", "midi-note-353", "midi-note-354", "midi-note-355", "midi-note-356", "midi-note-357", "midi-note-359", "midi-note-358"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 530,
+        "bass": 4,
+        "members": [512, 2, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V6/4/V",
+      "function": "dominant",
+      "label": "major"
+    }, {
+      "id": "chord-46",
+      "start": {
+        "num": 20,
+        "den": 1
+      },
+      "end": {
+        "num": 21,
+        "den": 1
+      },
+      "confidence": {
+        "num": 195263,
+        "den": 250000
+      },
+      "evidence": ["midi-note-361", "midi-note-360", "midi-note-363", "midi-note-362", "midi-note-365", "midi-note-364", "midi-note-367", "midi-note-366", "midi-note-369", "midi-note-368", "midi-note-371", "midi-note-370", "midi-note-372", "midi-note-373"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }, {
+      "id": "chord-47",
+      "start": {
+        "num": 21,
+        "den": 1
+      },
+      "end": {
+        "num": 169,
+        "den": 8
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-375", "midi-note-374"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 11,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "iii",
+      "function": "predominant",
+      "label": "iii"
+    }, {
+      "id": "chord-48",
+      "start": {
+        "num": 169,
+        "den": 8
+      },
+      "end": {
+        "num": 85,
+        "den": 4
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-377", "midi-note-376", "midi-note-378"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }, {
+      "id": "chord-49",
+      "start": {
+        "num": 85,
+        "den": 4
+      },
+      "end": {
+        "num": 87,
+        "den": 4
+      },
+      "confidence": {
+        "num": 12477,
+        "den": 20000
+      },
+      "evidence": ["midi-note-380", "midi-note-379", "midi-note-382", "midi-note-381", "midi-note-384", "midi-note-383", "midi-note-385", "midi-note-387", "midi-note-386"],
+      "reading": {
+        "root": 0,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 145,
+        "bass": 0,
+        "members": [1, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-50",
+      "start": {
+        "num": 87,
+        "den": 4
+      },
+      "end": {
+        "num": 175,
+        "den": 8
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-389", "midi-note-388"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 11,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "iii",
+      "function": "predominant",
+      "label": "iii"
+    }, {
+      "id": "chord-51",
+      "start": {
+        "num": 175,
+        "den": 8
+      },
+      "end": {
+        "num": 22,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["midi-note-391", "midi-note-390"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 529,
+        "bass": 9,
+        "members": [512, 1, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "ii",
+      "function": "predominant",
+      "label": "ii"
+    }, {
+      "id": "chord-52",
+      "start": {
+        "num": 22,
+        "den": 1
+      },
+      "end": {
+        "num": 91,
+        "den": 4
+      },
+      "confidence": {
+        "num": 137787,
+        "den": 1000000
+      },
+      "evidence": ["midi-note-393", "midi-note-392", "midi-note-395", "midi-note-394", "midi-note-396", "midi-note-397", "midi-note-398", "midi-note-399", "midi-note-401", "midi-note-400", "midi-note-402", "midi-note-403", "midi-note-404"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-53",
+      "start": {
+        "num": 91,
+        "den": 4
+      },
+      "end": {
+        "num": 23,
+        "den": 1
+      },
+      "confidence": {
+        "num": 109489,
+        "den": 200000
+      },
+      "evidence": ["midi-note-406", "midi-note-405", "midi-note-407", "midi-note-409", "midi-note-408"],
+      "reading": {
+        "root": 6,
+        "type": "omt.chord-type.half-diminished-seventh",
+        "pitch_classes": 593,
+        "bass": 6,
+        "members": [64, 512, 1, 16, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vii∅7",
+      "function": "dominant",
+      "label": "half-diminished7"
+    }, {
+      "id": "chord-54",
+      "start": {
+        "num": 23,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": {
+        "num": 899,
+        "den": 1600
+      },
+      "evidence": ["midi-note-410", "midi-note-411", "midi-note-412", "midi-note-413", "midi-note-414", "midi-note-416", "midi-note-415", "midi-note-418", "midi-note-417", "midi-note-419", "midi-note-421", "midi-note-420", "midi-note-423", "midi-note-422", "midi-note-427", "midi-note-426", "midi-note-425", "midi-note-424", "midi-note-428", "midi-note-429"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }],
+  "cadences": [],
+  "groups": [{
+      "id": "group-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "section",
+      "parent": null,
+      "label": "A",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 24,
+      "phrase_count": 2,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-2",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "phrase",
+      "parent": 0,
+      "label": "beginning",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 8,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-3",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "phrase",
+      "parent": 0,
+      "label": "ending",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 9,
+      "last_measure": 24,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-4",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-3", "midi-note-8", "midi-note-9", "midi-note-11", "midi-note-12", "midi-note-14", "midi-note-20", "midi-note-21", "midi-note-25", "midi-note-29", "midi-note-31", "midi-note-33", "midi-note-35", "midi-note-39", "midi-note-43", "midi-note-44", "midi-note-47", "midi-note-49", "midi-note-55", "midi-note-60", "midi-note-61", "midi-note-64", "midi-note-66", "midi-note-68"],
+      "kind": "subphrase",
+      "parent": 0,
+      "label": "subphrase-1",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 4,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-5",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-74", "midi-note-75", "midi-note-83", "midi-note-87", "midi-note-89", "midi-note-92", "midi-note-94", "midi-note-95", "midi-note-99", "midi-note-101", "midi-note-104", "midi-note-107", "midi-note-113", "midi-note-118", "midi-note-119", "midi-note-122", "midi-note-124", "midi-note-130", "midi-note-131", "midi-note-135", "midi-note-139", "midi-note-141", "midi-note-143"],
+      "kind": "subphrase",
+      "parent": 0,
+      "label": "subphrase-2",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 5,
+      "last_measure": 8,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-6",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-145", "midi-note-149", "midi-note-153", "midi-note-154", "midi-note-157", "midi-note-159", "midi-note-165", "midi-note-170", "midi-note-171", "midi-note-174", "midi-note-176", "midi-note-178", "midi-note-184", "midi-note-185", "midi-note-193", "midi-note-197", "midi-note-199", "midi-note-202", "midi-note-204", "midi-note-205", "midi-note-209", "midi-note-211", "midi-note-214", "midi-note-217"],
+      "kind": "subphrase",
+      "parent": 0,
+      "label": "subphrase-1",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 9,
+      "last_measure": 12,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-7",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-220", "midi-note-224", "midi-note-226", "midi-note-230", "midi-note-232", "midi-note-236", "midi-note-237", "midi-note-240", "midi-note-243", "midi-note-250", "midi-note-252", "midi-note-253", "midi-note-255", "midi-note-257", "midi-note-259", "midi-note-261", "midi-note-263", "midi-note-265", "midi-note-269", "midi-note-271", "midi-note-274", "midi-note-276", "midi-note-278", "midi-note-281", "midi-note-283", "midi-note-285", "midi-note-287", "midi-note-289", "midi-note-293", "midi-note-294", "midi-note-299", "midi-note-302", "midi-note-303", "midi-note-308", "midi-note-310", "midi-note-314", "midi-note-315", "midi-note-317", "midi-note-319", "midi-note-325", "midi-note-329", "midi-note-331", "midi-note-335", "midi-note-337", "midi-note-341", "midi-note-342", "midi-note-345", "midi-note-348", "midi-note-355", "midi-note-357", "midi-note-358", "midi-note-360", "midi-note-362", "midi-note-364", "midi-note-366", "midi-note-368", "midi-note-370", "midi-note-374", "midi-note-376", "midi-note-379", "midi-note-381", "midi-note-383", "midi-note-386", "midi-note-388", "midi-note-390", "midi-note-392", "midi-note-394", "midi-note-398", "midi-note-399", "midi-note-404", "midi-note-407", "midi-note-408", "midi-note-413", "midi-note-415", "midi-note-419", "midi-note-420", "midi-note-422", "midi-note-424"],
+      "kind": "subphrase",
+      "parent": 0,
+      "label": "subphrase-2",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 13,
+      "last_measure": 24,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-8",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-3", "midi-note-8", "midi-note-9", "midi-note-11", "midi-note-12", "midi-note-14", "midi-note-20", "midi-note-21", "midi-note-25", "midi-note-29", "midi-note-31", "midi-note-33"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "basic-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 2,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-9",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-35", "midi-note-39", "midi-note-43", "midi-note-44", "midi-note-47", "midi-note-49", "midi-note-55", "midi-note-60", "midi-note-61", "midi-note-64", "midi-note-66", "midi-note-68"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 3,
+      "last_measure": 4,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-10",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-74", "midi-note-75", "midi-note-83", "midi-note-87", "midi-note-89", "midi-note-92", "midi-note-94", "midi-note-95", "midi-note-99", "midi-note-101", "midi-note-104", "midi-note-107"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 5,
+      "last_measure": 6,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-11",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-113", "midi-note-118", "midi-note-119", "midi-note-122", "midi-note-124", "midi-note-130", "midi-note-131", "midi-note-135", "midi-note-139", "midi-note-141", "midi-note-143"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 7,
+      "last_measure": 8,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-12",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-145", "midi-note-149", "midi-note-153", "midi-note-154", "midi-note-157", "midi-note-159", "midi-note-165", "midi-note-170", "midi-note-171", "midi-note-174", "midi-note-176", "midi-note-178"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "basic-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 9,
+      "last_measure": 10,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-13",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-184", "midi-note-185", "midi-note-193", "midi-note-197", "midi-note-199", "midi-note-202", "midi-note-204", "midi-note-205", "midi-note-209", "midi-note-211", "midi-note-214", "midi-note-217"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 11,
+      "last_measure": 12,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-14",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 14,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-220", "midi-note-224", "midi-note-226", "midi-note-230", "midi-note-232", "midi-note-236", "midi-note-237", "midi-note-240", "midi-note-243", "midi-note-250", "midi-note-252", "midi-note-253"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 13,
+      "last_measure": 14,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-15",
+      "start": {
+        "num": 14,
+        "den": 1
+      },
+      "end": {
+        "num": 16,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-255", "midi-note-257", "midi-note-259", "midi-note-261", "midi-note-263", "midi-note-265", "midi-note-269", "midi-note-271", "midi-note-274", "midi-note-276", "midi-note-278", "midi-note-281", "midi-note-283", "midi-note-285"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 15,
+      "last_measure": 16,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-16",
+      "start": {
+        "num": 16,
+        "den": 1
+      },
+      "end": {
+        "num": 18,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-287", "midi-note-289", "midi-note-293", "midi-note-294", "midi-note-299", "midi-note-302", "midi-note-303", "midi-note-308", "midi-note-310", "midi-note-314", "midi-note-315", "midi-note-317", "midi-note-319"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 17,
+      "last_measure": 18,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-17",
+      "start": {
+        "num": 18,
+        "den": 1
+      },
+      "end": {
+        "num": 20,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-325", "midi-note-329", "midi-note-331", "midi-note-335", "midi-note-337", "midi-note-341", "midi-note-342", "midi-note-345", "midi-note-348", "midi-note-355", "midi-note-357", "midi-note-358"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 19,
+      "last_measure": 20,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-18",
+      "start": {
+        "num": 20,
+        "den": 1
+      },
+      "end": {
+        "num": 22,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-360", "midi-note-362", "midi-note-364", "midi-note-366", "midi-note-368", "midi-note-370", "midi-note-374", "midi-note-376", "midi-note-379", "midi-note-381", "midi-note-383", "midi-note-386", "midi-note-388", "midi-note-390"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 21,
+      "last_measure": 22,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-19",
+      "start": {
+        "num": 22,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-392", "midi-note-394", "midi-note-398", "midi-note-399", "midi-note-404", "midi-note-407", "midi-note-408", "midi-note-413", "midi-note-415", "midi-note-419", "midi-note-420", "midi-note-422", "midi-note-424"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 23,
+      "last_measure": 24,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }],
+  "motive_occurrences": [{
+      "id": "motive-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 3,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-3", "midi-note-4", "midi-note-5", "midi-note-6", "midi-note-8", "midi-note-9", "midi-note-11", "midi-note-12"],
+      "motive": 0,
+      "kind": "exact"
+    }, {
+      "id": "motive-2",
+      "start": {
+        "num": 3,
+        "den": 1
+      },
+      "end": {
+        "num": 15,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-55", "midi-note-56", "midi-note-57", "midi-note-58", "midi-note-60", "midi-note-61", "midi-note-64", "midi-note-66"],
+      "motive": 0,
+      "kind": "exact"
+    }, {
+      "id": "motive-3",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 27,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-113", "midi-note-114", "midi-note-115", "midi-note-116", "midi-note-118", "midi-note-119", "midi-note-121", "midi-note-122"],
+      "motive": 0,
+      "kind": "exact"
+    }, {
+      "id": "motive-4",
+      "start": {
+        "num": 9,
+        "den": 1
+      },
+      "end": {
+        "num": 39,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-165", "midi-note-166", "midi-note-167", "midi-note-168", "midi-note-170", "midi-note-171", "midi-note-174", "midi-note-176"],
+      "motive": 0,
+      "kind": "exact"
+    }, {
+      "id": "motive-5",
+      "start": {
+        "num": 1,
+        "den": 4
+      },
+      "end": {
+        "num": 1,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-6", "midi-note-8", "midi-note-9", "midi-note-11", "midi-note-12", "midi-note-14", "midi-note-17", "midi-note-18"],
+      "motive": 1,
+      "kind": "exact"
+    }, {
+      "id": "motive-6",
+      "start": {
+        "num": 13,
+        "den": 4
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-58", "midi-note-60", "midi-note-61", "midi-note-64", "midi-note-66", "midi-note-68", "midi-note-71", "midi-note-72"],
+      "motive": 1,
+      "kind": "exact"
+    }, {
+      "id": "motive-7",
+      "start": {
+        "num": 25,
+        "den": 4
+      },
+      "end": {
+        "num": 7,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-116", "midi-note-118", "midi-note-119", "midi-note-121", "midi-note-122", "midi-note-124", "midi-note-127", "midi-note-128"],
+      "motive": 1,
+      "kind": "exact"
+    }, {
+      "id": "motive-8",
+      "start": {
+        "num": 37,
+        "den": 4
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-168", "midi-note-170", "midi-note-171", "midi-note-174", "midi-note-176", "midi-note-178", "midi-note-181", "midi-note-182"],
+      "motive": 1,
+      "kind": "exact"
+    }, {
+      "id": "motive-9",
+      "start": {
+        "num": 1,
+        "den": 2
+      },
+      "end": {
+        "num": 5,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-11", "midi-note-12", "midi-note-14", "midi-note-17", "midi-note-18", "midi-note-19", "midi-note-20", "midi-note-21"],
+      "motive": 2,
+      "kind": "exact"
+    }, {
+      "id": "motive-10",
+      "start": {
+        "num": 7,
+        "den": 2
+      },
+      "end": {
+        "num": 17,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-64", "midi-note-66", "midi-note-68", "midi-note-71", "midi-note-72", "midi-note-73", "midi-note-74", "midi-note-75"],
+      "motive": 2,
+      "kind": "exact"
+    }, {
+      "id": "motive-11",
+      "start": {
+        "num": 13,
+        "den": 2
+      },
+      "end": {
+        "num": 29,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-121", "midi-note-122", "midi-note-124", "midi-note-127", "midi-note-128", "midi-note-129", "midi-note-130", "midi-note-131"],
+      "motive": 2,
+      "kind": "exact"
+    }, {
+      "id": "motive-12",
+      "start": {
+        "num": 19,
+        "den": 2
+      },
+      "end": {
+        "num": 41,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-174", "midi-note-176", "midi-note-178", "midi-note-181", "midi-note-182", "midi-note-183", "midi-note-184", "midi-note-185"],
+      "motive": 2,
+      "kind": "exact"
+    }, {
+      "id": "motive-13",
+      "start": {
+        "num": 3,
+        "den": 4
+      },
+      "end": {
+        "num": 3,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["midi-note-14", "midi-note-17", "midi-note-18", "midi-note-19", "midi-note-20", "midi-note-21", "midi-note-23", "midi-note-24"],
+      "motive": 3,
+      "kind": "exact"
+    }, {
+      "id": "motive-14",
+      "start": {
+        "num": 15,
+        "den": 4
+      },
+      "end": {
+        "num": 9,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["midi-note-68", "midi-note-71", "midi-note-72", "midi-note-73", "midi-note-74", "midi-note-75", "midi-note-78", "midi-note-81"],
+      "motive": 3,
+      "kind": "exact"
+    }, {
+      "id": "motive-15",
+      "start": {
+        "num": 27,
+        "den": 4
+      },
+      "end": {
+        "num": 15,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["midi-note-124", "midi-note-127", "midi-note-128", "midi-note-129", "midi-note-130", "midi-note-131", "midi-note-133", "midi-note-134"],
+      "motive": 3,
+      "kind": "exact"
+    }, {
+      "id": "motive-16",
+      "start": {
+        "num": 39,
+        "den": 4
+      },
+      "end": {
+        "num": 21,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["midi-note-178", "midi-note-181", "midi-note-182", "midi-note-183", "midi-note-184", "midi-note-185", "midi-note-188", "midi-note-191"],
+      "motive": 3,
+      "kind": "exact"
+    }, {
+      "id": "motive-17",
+      "start": {
+        "num": 1,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-19", "midi-note-20", "midi-note-21", "midi-note-23", "midi-note-24", "midi-note-25", "midi-note-26", "midi-note-28"],
+      "motive": 4,
+      "kind": "exact"
+    }, {
+      "id": "motive-18",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 37,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-73", "midi-note-74", "midi-note-75", "midi-note-78", "midi-note-81", "midi-note-83", "midi-note-84", "midi-note-86"],
+      "motive": 4,
+      "kind": "exact"
+    }, {
+      "id": "motive-19",
+      "start": {
+        "num": 7,
+        "den": 1
+      },
+      "end": {
+        "num": 61,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-129", "midi-note-130", "midi-note-131", "midi-note-133", "midi-note-134", "midi-note-135", "midi-note-136", "midi-note-138"],
+      "motive": 4,
+      "kind": "exact"
+    }, {
+      "id": "motive-20",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 85,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-183", "midi-note-184", "midi-note-185", "midi-note-188", "midi-note-191", "midi-note-193", "midi-note-194", "midi-note-196"],
+      "motive": 4,
+      "kind": "exact"
+    }, {
+      "id": "motive-21",
+      "start": {
+        "num": 5,
+        "den": 4
+      },
+      "end": {
+        "num": 29,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-23", "midi-note-24", "midi-note-25", "midi-note-26", "midi-note-28", "midi-note-29", "midi-note-30", "midi-note-31"],
+      "motive": 5,
+      "kind": "exact"
+    }, {
+      "id": "motive-22",
+      "start": {
+        "num": 17,
+        "den": 4
+      },
+      "end": {
+        "num": 77,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-78", "midi-note-81", "midi-note-83", "midi-note-84", "midi-note-86", "midi-note-87", "midi-note-88", "midi-note-89"],
+      "motive": 5,
+      "kind": "exact"
+    }, {
+      "id": "motive-23",
+      "start": {
+        "num": 29,
+        "den": 4
+      },
+      "end": {
+        "num": 125,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-133", "midi-note-134", "midi-note-135", "midi-note-136", "midi-note-138", "midi-note-139", "midi-note-140", "midi-note-141"],
+      "motive": 5,
+      "kind": "exact"
+    }, {
+      "id": "motive-24",
+      "start": {
+        "num": 41,
+        "den": 4
+      },
+      "end": {
+        "num": 173,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-188", "midi-note-191", "midi-note-193", "midi-note-194", "midi-note-196", "midi-note-197", "midi-note-198", "midi-note-199"],
+      "motive": 5,
+      "kind": "exact"
+    }, {
+      "id": "motive-25",
+      "start": {
+        "num": 3,
+        "den": 2
+      },
+      "end": {
+        "num": 17,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-28", "midi-note-29", "midi-note-30", "midi-note-31", "midi-note-32", "midi-note-33", "midi-note-35", "midi-note-36"],
+      "motive": 6,
+      "kind": "exact"
+    }, {
+      "id": "motive-26",
+      "start": {
+        "num": 9,
+        "den": 2
+      },
+      "end": {
+        "num": 41,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-86", "midi-note-87", "midi-note-88", "midi-note-89", "midi-note-91", "midi-note-92", "midi-note-94", "midi-note-95"],
+      "motive": 6,
+      "kind": "exact"
+    }, {
+      "id": "motive-27",
+      "start": {
+        "num": 15,
+        "den": 2
+      },
+      "end": {
+        "num": 65,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-138", "midi-note-139", "midi-note-140", "midi-note-141", "midi-note-142", "midi-note-143", "midi-note-145", "midi-note-146"],
+      "motive": 6,
+      "kind": "exact"
+    }, {
+      "id": "motive-28",
+      "start": {
+        "num": 21,
+        "den": 2
+      },
+      "end": {
+        "num": 89,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-196", "midi-note-197", "midi-note-198", "midi-note-199", "midi-note-201", "midi-note-202", "midi-note-204", "midi-note-205"],
+      "motive": 6,
+      "kind": "exact"
+    }, {
+      "id": "motive-29",
+      "start": {
+        "num": 7,
+        "den": 4
+      },
+      "end": {
+        "num": 19,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-31", "midi-note-32", "midi-note-33", "midi-note-35", "midi-note-36", "midi-note-37", "midi-note-38", "midi-note-39"],
+      "motive": 7,
+      "kind": "exact"
+    }, {
+      "id": "motive-30",
+      "start": {
+        "num": 19,
+        "den": 4
+      },
+      "end": {
+        "num": 21,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-89", "midi-note-91", "midi-note-92", "midi-note-94", "midi-note-95", "midi-note-96", "midi-note-98"],
+      "motive": 7,
+      "kind": "fragmented"
+    }, {
+      "id": "motive-31",
+      "start": {
+        "num": 31,
+        "den": 4
+      },
+      "end": {
+        "num": 67,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-141", "midi-note-142", "midi-note-143", "midi-note-145", "midi-note-146", "midi-note-147", "midi-note-148", "midi-note-149"],
+      "motive": 7,
+      "kind": "exact"
+    }, {
+      "id": "motive-32",
+      "start": {
+        "num": 43,
+        "den": 4
+      },
+      "end": {
+        "num": 45,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-199", "midi-note-201", "midi-note-202", "midi-note-204", "midi-note-205", "midi-note-206", "midi-note-208"],
+      "motive": 7,
+      "kind": "fragmented"
+    }, {
+      "id": "motive-33",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 41,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-35", "midi-note-36", "midi-note-37", "midi-note-38", "midi-note-39", "midi-note-41", "midi-note-43", "midi-note-44"],
+      "motive": 8,
+      "kind": "exact"
+    }, {
+      "id": "motive-34",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 137,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-145", "midi-note-146", "midi-note-147", "midi-note-148", "midi-note-149", "midi-note-151", "midi-note-153", "midi-note-154"],
+      "motive": 8,
+      "kind": "exact"
+    }, {
+      "id": "motive-35",
+      "start": {
+        "num": 9,
+        "den": 4
+      },
+      "end": {
+        "num": 25,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-39", "midi-note-41", "midi-note-43", "midi-note-44", "midi-note-46", "midi-note-47", "midi-note-49", "midi-note-55"],
+      "motive": 9,
+      "kind": "exact"
+    }, {
+      "id": "motive-36",
+      "start": {
+        "num": 33,
+        "den": 4
+      },
+      "end": {
+        "num": 73,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-149", "midi-note-151", "midi-note-153", "midi-note-154", "midi-note-156", "midi-note-157", "midi-note-159", "midi-note-165"],
+      "motive": 9,
+      "kind": "exact"
+    }, {
+      "id": "motive-37",
+      "start": {
+        "num": 5,
+        "den": 2
+      },
+      "end": {
+        "num": 53,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-44", "midi-note-46", "midi-note-47", "midi-note-49", "midi-note-55", "midi-note-56", "midi-note-57", "midi-note-58"],
+      "motive": 10,
+      "kind": "exact"
+    }, {
+      "id": "motive-38",
+      "start": {
+        "num": 17,
+        "den": 2
+      },
+      "end": {
+        "num": 149,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-154", "midi-note-156", "midi-note-157", "midi-note-159", "midi-note-165", "midi-note-166", "midi-note-167", "midi-note-168"],
+      "motive": 10,
+      "kind": "exact"
+    }, {
+      "id": "motive-39",
+      "start": {
+        "num": 11,
+        "den": 4
+      },
+      "end": {
+        "num": 29,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-49", "midi-note-55", "midi-note-56", "midi-note-57", "midi-note-58", "midi-note-60", "midi-note-61", "midi-note-64"],
+      "motive": 11,
+      "kind": "exact"
+    }, {
+      "id": "motive-40",
+      "start": {
+        "num": 35,
+        "den": 4
+      },
+      "end": {
+        "num": 77,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-159", "midi-note-165", "midi-note-166", "midi-note-167", "midi-note-168", "midi-note-170", "midi-note-171", "midi-note-174"],
+      "motive": 11,
+      "kind": "exact"
+    }, {
+      "id": "motive-41",
+      "start": {
+        "num": 19,
+        "den": 4
+      },
+      "end": {
+        "num": 43,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-89", "midi-note-91", "midi-note-92", "midi-note-94", "midi-note-95", "midi-note-96", "midi-note-98", "midi-note-99"],
+      "motive": 12,
+      "kind": "exact"
+    }, {
+      "id": "motive-42",
+      "start": {
+        "num": 43,
+        "den": 4
+      },
+      "end": {
+        "num": 91,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-199", "midi-note-201", "midi-note-202", "midi-note-204", "midi-note-205", "midi-note-206", "midi-note-208", "midi-note-209"],
+      "motive": 12,
+      "kind": "exact"
+    }, {
+      "id": "motive-43",
+      "start": {
+        "num": 5,
+        "den": 1
+      },
+      "end": {
+        "num": 89,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-94", "midi-note-95", "midi-note-96", "midi-note-98", "midi-note-99", "midi-note-101", "midi-note-103", "midi-note-104"],
+      "motive": 13,
+      "kind": "exact"
+    }, {
+      "id": "motive-44",
+      "start": {
+        "num": 11,
+        "den": 1
+      },
+      "end": {
+        "num": 185,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-204", "midi-note-205", "midi-note-206", "midi-note-208", "midi-note-209", "midi-note-211", "midi-note-213", "midi-note-214"],
+      "motive": 13,
+      "kind": "exact"
+    }, {
+      "id": "motive-45",
+      "start": {
+        "num": 21,
+        "den": 4
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-99", "midi-note-101", "midi-note-103", "midi-note-104", "midi-note-106", "midi-note-107", "midi-note-109"],
+      "motive": 14,
+      "kind": "exact"
+    }, {
+      "id": "motive-46",
+      "start": {
+        "num": 3,
+        "den": 2
+      },
+      "end": {
+        "num": 33,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-28", "midi-note-29", "midi-note-30", "midi-note-31", "midi-note-32", "midi-note-33", "midi-note-35"],
+      "motive": 14,
+      "kind": "varied"
+    }, {
+      "id": "motive-47",
+      "start": {
+        "num": 9,
+        "den": 2
+      },
+      "end": {
+        "num": 81,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-86", "midi-note-87", "midi-note-88", "midi-note-89", "midi-note-91", "midi-note-92", "midi-note-94"],
+      "motive": 14,
+      "kind": "varied"
+    }, {
+      "id": "motive-48",
+      "start": {
+        "num": 15,
+        "den": 2
+      },
+      "end": {
+        "num": 129,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-138", "midi-note-139", "midi-note-140", "midi-note-141", "midi-note-142", "midi-note-143", "midi-note-145"],
+      "motive": 14,
+      "kind": "varied"
+    }, {
+      "id": "motive-49",
+      "start": {
+        "num": 21,
+        "den": 2
+      },
+      "end": {
+        "num": 177,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-196", "midi-note-197", "midi-note-198", "midi-note-199", "midi-note-201", "midi-note-202", "midi-note-204"],
+      "motive": 14,
+      "kind": "varied"
+    }, {
+      "id": "motive-50",
+      "start": {
+        "num": 45,
+        "den": 4
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-209", "midi-note-211", "midi-note-213", "midi-note-214", "midi-note-216", "midi-note-217", "midi-note-219"],
+      "motive": 14,
+      "kind": "exact"
+    }, {
+      "id": "motive-51",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 101,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-220", "midi-note-222", "midi-note-223", "midi-note-224", "midi-note-225", "midi-note-226", "midi-note-228", "midi-note-229"],
+      "motive": 15,
+      "kind": "exact"
+    }, {
+      "id": "motive-52",
+      "start": {
+        "num": 18,
+        "den": 1
+      },
+      "end": {
+        "num": 149,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-325", "midi-note-327", "midi-note-328", "midi-note-329", "midi-note-330", "midi-note-331", "midi-note-333", "midi-note-334"],
+      "motive": 15,
+      "kind": "exact"
+    }, {
+      "id": "motive-53",
+      "start": {
+        "num": 49,
+        "den": 4
+      },
+      "end": {
+        "num": 103,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-224", "midi-note-225", "midi-note-226", "midi-note-228", "midi-note-229", "midi-note-230", "midi-note-231", "midi-note-232"],
+      "motive": 16,
+      "kind": "exact"
+    }, {
+      "id": "motive-54",
+      "start": {
+        "num": 73,
+        "den": 4
+      },
+      "end": {
+        "num": 151,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-329", "midi-note-330", "midi-note-331", "midi-note-333", "midi-note-334", "midi-note-335", "midi-note-336", "midi-note-337"],
+      "motive": 16,
+      "kind": "exact"
+    }, {
+      "id": "motive-55",
+      "start": {
+        "num": 25,
+        "den": 2
+      },
+      "end": {
+        "num": 209,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-228", "midi-note-229", "midi-note-230", "midi-note-231", "midi-note-232", "midi-note-234", "midi-note-236", "midi-note-237"],
+      "motive": 17,
+      "kind": "exact"
+    }, {
+      "id": "motive-56",
+      "start": {
+        "num": 37,
+        "den": 2
+      },
+      "end": {
+        "num": 305,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-333", "midi-note-334", "midi-note-335", "midi-note-336", "midi-note-337", "midi-note-339", "midi-note-341", "midi-note-342"],
+      "motive": 17,
+      "kind": "exact"
+    }, {
+      "id": "motive-57",
+      "start": {
+        "num": 51,
+        "den": 4
+      },
+      "end": {
+        "num": 107,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-232", "midi-note-234", "midi-note-236", "midi-note-237", "midi-note-239", "midi-note-240", "midi-note-242", "midi-note-243"],
+      "motive": 18,
+      "kind": "exact"
+    }, {
+      "id": "motive-58",
+      "start": {
+        "num": 75,
+        "den": 4
+      },
+      "end": {
+        "num": 155,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-337", "midi-note-339", "midi-note-341", "midi-note-342", "midi-note-344", "midi-note-345", "midi-note-347", "midi-note-348"],
+      "motive": 18,
+      "kind": "exact"
+    }, {
+      "id": "motive-59",
+      "start": {
+        "num": 13,
+        "den": 1
+      },
+      "end": {
+        "num": 109,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-237", "midi-note-239", "midi-note-240", "midi-note-242", "midi-note-243", "midi-note-244", "midi-note-246", "midi-note-248"],
+      "motive": 19,
+      "kind": "exact"
+    }, {
+      "id": "motive-60",
+      "start": {
+        "num": 19,
+        "den": 1
+      },
+      "end": {
+        "num": 157,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-342", "midi-note-344", "midi-note-345", "midi-note-347", "midi-note-348", "midi-note-349", "midi-note-351", "midi-note-353"],
+      "motive": 19,
+      "kind": "exact"
+    }, {
+      "id": "motive-61",
+      "start": {
+        "num": 53,
+        "den": 4
+      },
+      "end": {
+        "num": 221,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-242", "midi-note-243", "midi-note-244", "midi-note-246", "midi-note-248", "midi-note-249", "midi-note-250", "midi-note-251"],
+      "motive": 20,
+      "kind": "exact"
+    }, {
+      "id": "motive-62",
+      "start": {
+        "num": 77,
+        "den": 4
+      },
+      "end": {
+        "num": 317,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-347", "midi-note-348", "midi-note-349", "midi-note-351", "midi-note-353", "midi-note-354", "midi-note-355", "midi-note-356"],
+      "motive": 20,
+      "kind": "exact"
+    }, {
+      "id": "motive-63",
+      "start": {
+        "num": 27,
+        "den": 2
+      },
+      "end": {
+        "num": 113,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-246", "midi-note-248", "midi-note-249", "midi-note-250", "midi-note-251", "midi-note-252", "midi-note-253", "midi-note-255"],
+      "motive": 21,
+      "kind": "exact"
+    }, {
+      "id": "motive-64",
+      "start": {
+        "num": 39,
+        "den": 2
+      },
+      "end": {
+        "num": 161,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-351", "midi-note-353", "midi-note-354", "midi-note-355", "midi-note-356", "midi-note-357", "midi-note-358", "midi-note-360"],
+      "motive": 21,
+      "kind": "exact"
+    }, {
+      "id": "motive-65",
+      "start": {
+        "num": 27,
+        "den": 2
+      },
+      "end": {
+        "num": 14,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-246", "midi-note-248", "midi-note-249", "midi-note-250", "midi-note-251", "midi-note-252", "midi-note-253"],
+      "motive": 22,
+      "kind": "exact"
+    }, {
+      "id": "motive-66",
+      "start": {
+        "num": 33,
+        "den": 2
+      },
+      "end": {
+        "num": 271,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-295", "midi-note-297", "midi-note-298", "midi-note-299", "midi-note-300", "midi-note-302", "midi-note-303"],
+      "motive": 22,
+      "kind": "real-transposed"
+    }, {
+      "id": "motive-67",
+      "start": {
+        "num": 39,
+        "den": 2
+      },
+      "end": {
+        "num": 20,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-351", "midi-note-353", "midi-note-354", "midi-note-355", "midi-note-356", "midi-note-357", "midi-note-358"],
+      "motive": 22,
+      "kind": "exact"
+    }, {
+      "id": "motive-68",
+      "start": {
+        "num": 45,
+        "den": 2
+      },
+      "end": {
+        "num": 367,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-400", "midi-note-402", "midi-note-403", "midi-note-404", "midi-note-405", "midi-note-407", "midi-note-408"],
+      "motive": 22,
+      "kind": "real-transposed"
+    }, {
+      "id": "motive-69",
+      "start": {
+        "num": 55,
+        "den": 4
+      },
+      "end": {
+        "num": 117,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-251", "midi-note-252", "midi-note-253", "midi-note-255", "midi-note-257", "midi-note-259", "midi-note-261", "midi-note-263"],
+      "motive": 23,
+      "kind": "exact"
+    }, {
+      "id": "motive-70",
+      "start": {
+        "num": 79,
+        "den": 4
+      },
+      "end": {
+        "num": 165,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-356", "midi-note-357", "midi-note-358", "midi-note-360", "midi-note-362", "midi-note-364", "midi-note-366", "midi-note-368"],
+      "motive": 23,
+      "kind": "exact"
+    }, {
+      "id": "motive-71",
+      "start": {
+        "num": 14,
+        "den": 1
+      },
+      "end": {
+        "num": 15,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-255", "midi-note-257", "midi-note-259", "midi-note-261", "midi-note-263", "midi-note-265", "midi-note-267", "midi-note-268"],
+      "motive": 24,
+      "kind": "exact"
+    }, {
+      "id": "motive-72",
+      "start": {
+        "num": 20,
+        "den": 1
+      },
+      "end": {
+        "num": 21,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-360", "midi-note-362", "midi-note-364", "midi-note-366", "midi-note-368", "midi-note-370", "midi-note-372", "midi-note-373"],
+      "motive": 24,
+      "kind": "exact"
+    }, {
+      "id": "motive-73",
+      "start": {
+        "num": 57,
+        "den": 4
+      },
+      "end": {
+        "num": 243,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-259", "midi-note-261", "midi-note-263", "midi-note-265", "midi-note-267", "midi-note-268", "midi-note-269", "midi-note-271"],
+      "motive": 25,
+      "kind": "exact"
+    }, {
+      "id": "motive-74",
+      "start": {
+        "num": 81,
+        "den": 4
+      },
+      "end": {
+        "num": 339,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-364", "midi-note-366", "midi-note-368", "midi-note-370", "midi-note-372", "midi-note-373", "midi-note-374", "midi-note-376"],
+      "motive": 25,
+      "kind": "exact"
+    }, {
+      "id": "motive-75",
+      "start": {
+        "num": 29,
+        "den": 2
+      },
+      "end": {
+        "num": 123,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-263", "midi-note-265", "midi-note-267", "midi-note-268", "midi-note-269", "midi-note-271", "midi-note-273", "midi-note-274"],
+      "motive": 26,
+      "kind": "exact"
+    }, {
+      "id": "motive-76",
+      "start": {
+        "num": 41,
+        "den": 2
+      },
+      "end": {
+        "num": 171,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-368", "midi-note-370", "midi-note-372", "midi-note-373", "midi-note-374", "midi-note-376", "midi-note-378", "midi-note-379"],
+      "motive": 26,
+      "kind": "exact"
+    }, {
+      "id": "motive-77",
+      "start": {
+        "num": 59,
+        "den": 4
+      },
+      "end": {
+        "num": 249,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-267", "midi-note-268", "midi-note-269", "midi-note-271", "midi-note-273", "midi-note-274", "midi-note-276", "midi-note-278"],
+      "motive": 27,
+      "kind": "exact"
+    }, {
+      "id": "motive-78",
+      "start": {
+        "num": 83,
+        "den": 4
+      },
+      "end": {
+        "num": 345,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-372", "midi-note-373", "midi-note-374", "midi-note-376", "midi-note-378", "midi-note-379", "midi-note-381", "midi-note-383"],
+      "motive": 27,
+      "kind": "exact"
+    }, {
+      "id": "motive-79",
+      "start": {
+        "num": 15,
+        "den": 1
+      },
+      "end": {
+        "num": 63,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-269", "midi-note-271", "midi-note-273", "midi-note-274", "midi-note-276", "midi-note-278", "midi-note-280", "midi-note-281"],
+      "motive": 28,
+      "kind": "exact"
+    }, {
+      "id": "motive-80",
+      "start": {
+        "num": 21,
+        "den": 1
+      },
+      "end": {
+        "num": 87,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-374", "midi-note-376", "midi-note-378", "midi-note-379", "midi-note-381", "midi-note-383", "midi-note-385", "midi-note-386"],
+      "motive": 28,
+      "kind": "exact"
+    }, {
+      "id": "motive-81",
+      "start": {
+        "num": 61,
+        "den": 4
+      },
+      "end": {
+        "num": 129,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-274", "midi-note-276", "midi-note-278", "midi-note-280", "midi-note-281", "midi-note-283", "midi-note-285", "midi-note-287"],
+      "motive": 29,
+      "kind": "exact"
+    }, {
+      "id": "motive-82",
+      "start": {
+        "num": 85,
+        "den": 4
+      },
+      "end": {
+        "num": 177,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-379", "midi-note-381", "midi-note-383", "midi-note-385", "midi-note-386", "midi-note-388", "midi-note-390", "midi-note-392"],
+      "motive": 29,
+      "kind": "exact"
+    }, {
+      "id": "motive-83",
+      "start": {
+        "num": 31,
+        "den": 2
+      },
+      "end": {
+        "num": 65,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-278", "midi-note-280", "midi-note-281", "midi-note-283", "midi-note-285", "midi-note-287", "midi-note-289", "midi-note-291"],
+      "motive": 30,
+      "kind": "exact"
+    }, {
+      "id": "motive-84",
+      "start": {
+        "num": 43,
+        "den": 2
+      },
+      "end": {
+        "num": 89,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-383", "midi-note-385", "midi-note-386", "midi-note-388", "midi-note-390", "midi-note-392", "midi-note-394", "midi-note-396"],
+      "motive": 30,
+      "kind": "exact"
+    }, {
+      "id": "motive-85",
+      "start": {
+        "num": 63,
+        "den": 4
+      },
+      "end": {
+        "num": 33,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["midi-note-283", "midi-note-285", "midi-note-287", "midi-note-289", "midi-note-291", "midi-note-292", "midi-note-293", "midi-note-294"],
+      "motive": 31,
+      "kind": "exact"
+    }, {
+      "id": "motive-86",
+      "start": {
+        "num": 87,
+        "den": 4
+      },
+      "end": {
+        "num": 45,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["midi-note-388", "midi-note-390", "midi-note-392", "midi-note-394", "midi-note-396", "midi-note-397", "midi-note-398", "midi-note-399"],
+      "motive": 31,
+      "kind": "exact"
+    }, {
+      "id": "motive-87",
+      "start": {
+        "num": 16,
+        "den": 1
+      },
+      "end": {
+        "num": 133,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-287", "midi-note-289", "midi-note-291", "midi-note-292", "midi-note-293", "midi-note-294", "midi-note-295", "midi-note-297"],
+      "motive": 32,
+      "kind": "exact"
+    }, {
+      "id": "motive-88",
+      "start": {
+        "num": 22,
+        "den": 1
+      },
+      "end": {
+        "num": 181,
+        "den": 8
+      },
+      "confidence": null,
+      "evidence": ["midi-note-392", "midi-note-394", "midi-note-396", "midi-note-397", "midi-note-398", "midi-note-399", "midi-note-400", "midi-note-402"],
+      "motive": 32,
+      "kind": "exact"
+    }, {
+      "id": "motive-89",
+      "start": {
+        "num": 65,
+        "den": 4
+      },
+      "end": {
+        "num": 269,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-292", "midi-note-293", "midi-note-294", "midi-note-295", "midi-note-297", "midi-note-298", "midi-note-299", "midi-note-300"],
+      "motive": 33,
+      "kind": "exact"
+    }, {
+      "id": "motive-90",
+      "start": {
+        "num": 89,
+        "den": 4
+      },
+      "end": {
+        "num": 365,
+        "den": 16
+      },
+      "confidence": null,
+      "evidence": ["midi-note-397", "midi-note-398", "midi-note-399", "midi-note-400", "midi-note-402", "midi-note-403", "midi-note-404", "midi-note-405"],
+      "motive": 33,
+      "kind": "exact"
+    }, {
+      "id": "motive-91",
+      "start": {
+        "num": 17,
+        "den": 1
+      },
+      "end": {
+        "num": 1095,
+        "den": 64
+      },
+      "confidence": null,
+      "evidence": ["midi-note-306", "midi-note-307", "midi-note-308", "midi-note-309"],
+      "motive": 34,
+      "kind": "exact"
+    }, {
+      "id": "motive-92",
+      "start": {
+        "num": 23,
+        "den": 1
+      },
+      "end": {
+        "num": 1479,
+        "den": 64
+      },
+      "confidence": null,
+      "evidence": ["midi-note-411", "midi-note-412", "midi-note-413", "midi-note-414"],
+      "motive": 34,
+      "kind": "exact"
+    }, {
+      "id": "motive-93",
+      "start": {
+        "num": 69,
+        "den": 4
+      },
+      "end": {
+        "num": 18,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-312", "midi-note-314", "midi-note-315", "midi-note-317", "midi-note-319", "midi-note-324"],
+      "motive": 35,
+      "kind": "exact"
+    }, {
+      "id": "motive-94",
+      "start": {
+        "num": 93,
+        "den": 4
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-417", "midi-note-419", "midi-note-420", "midi-note-422", "midi-note-424", "midi-note-429"],
+      "motive": 35,
+      "kind": "exact"
+    }],
+  "meters": [{
+      "id": "meter-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "time_signature": "4/4"
+    }],
+  "lines": [{
+      "id": "line-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 95,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["midi-note-3", "midi-note-8", "midi-note-9", "midi-note-11", "midi-note-12", "midi-note-14", "midi-note-20", "midi-note-21", "midi-note-25", "midi-note-29", "midi-note-31", "midi-note-33", "midi-note-35", "midi-note-39", "midi-note-43", "midi-note-44", "midi-note-47", "midi-note-49", "midi-note-55", "midi-note-60", "midi-note-61", "midi-note-64", "midi-note-66", "midi-note-68", "midi-note-74", "midi-note-75", "midi-note-83", "midi-note-87", "midi-note-89", "midi-note-92", "midi-note-94", "midi-note-95", "midi-note-99", "midi-note-101", "midi-note-104", "midi-note-107", "midi-note-113", "midi-note-118", "midi-note-119", "midi-note-122", "midi-note-124", "midi-note-130", "midi-note-131", "midi-note-135", "midi-note-139", "midi-note-141", "midi-note-143", "midi-note-145", "midi-note-149", "midi-note-153", "midi-note-154", "midi-note-157", "midi-note-159", "midi-note-165", "midi-note-170", "midi-note-171", "midi-note-174", "midi-note-176", "midi-note-178", "midi-note-184", "midi-note-185", "midi-note-193", "midi-note-197", "midi-note-199", "midi-note-202", "midi-note-204", "midi-note-205", "midi-note-209", "midi-note-211", "midi-note-214", "midi-note-217", "midi-note-220", "midi-note-224", "midi-note-226", "midi-note-230", "midi-note-232", "midi-note-236", "midi-note-237", "midi-note-240", "midi-note-243", "midi-note-250", "midi-note-252", "midi-note-253", "midi-note-255", "midi-note-257", "midi-note-259", "midi-note-261", "midi-note-263", "midi-note-265", "midi-note-269", "midi-note-271", "midi-note-274", "midi-note-276", "midi-note-278", "midi-note-281", "midi-note-283", "midi-note-285", "midi-note-287", "midi-note-289", "midi-note-293", "midi-note-294", "midi-note-299", "midi-note-302", "midi-note-303", "midi-note-308", "midi-note-310", "midi-note-314", "midi-note-315", "midi-note-317", "midi-note-319", "midi-note-325", "midi-note-329", "midi-note-331", "midi-note-335", "midi-note-337", "midi-note-341", "midi-note-342", "midi-note-345", "midi-note-348", "midi-note-355", "midi-note-357", "midi-note-358", "midi-note-360", "midi-note-362", "midi-note-364", "midi-note-366", "midi-note-368", "midi-note-370", "midi-note-374", "midi-note-376", "midi-note-379", "midi-note-381", "midi-note-383", "midi-note-386", "midi-note-388", "midi-note-390", "midi-note-392", "midi-note-394", "midi-note-398", "midi-note-399", "midi-note-404", "midi-note-407", "midi-note-408", "midi-note-413", "midi-note-415", "midi-note-419", "midi-note-420", "midi-note-422", "midi-note-424"],
+      "role": "melody"
+    }, {
+      "id": "line-2",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 24,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["midi-note-2", "midi-note-7", "midi-note-10", "midi-note-12", "midi-note-13", "midi-note-22", "midi-note-24", "midi-note-27", "midi-note-32", "midi-note-34", "midi-note-40", "midi-note-42", "midi-note-45", "midi-note-48", "midi-note-50", "midi-note-54", "midi-note-59", "midi-note-62", "midi-note-63", "midi-note-65", "midi-note-67", "midi-note-76", "midi-note-82", "midi-note-85", "midi-note-90", "midi-note-93", "midi-note-97", "midi-note-100", "midi-note-102", "midi-note-105", "midi-note-109", "midi-note-112", "midi-note-117", "midi-note-120", "midi-note-122", "midi-note-123", "midi-note-132", "midi-note-134", "midi-note-137", "midi-note-142", "midi-note-144", "midi-note-150", "midi-note-152", "midi-note-155", "midi-note-158", "midi-note-160", "midi-note-164", "midi-note-169", "midi-note-172", "midi-note-173", "midi-note-175", "midi-note-177", "midi-note-186", "midi-note-192", "midi-note-195", "midi-note-200", "midi-note-203", "midi-note-207", "midi-note-210", "midi-note-212", "midi-note-215", "midi-note-219", "midi-note-221", "midi-note-227", "midi-note-233", "midi-note-235", "midi-note-238", "midi-note-241", "midi-note-245", "midi-note-247", "midi-note-254", "midi-note-256", "midi-note-258", "midi-note-260", "midi-note-262", "midi-note-264", "midi-note-267", "midi-note-268", "midi-note-270", "midi-note-272", "midi-note-275", "midi-note-277", "midi-note-279", "midi-note-282", "midi-note-284", "midi-note-286", "midi-note-288", "midi-note-290", "midi-note-294", "midi-note-296", "midi-note-301", "midi-note-304", "midi-note-305", "midi-note-311", "midi-note-313", "midi-note-316", "midi-note-318", "midi-note-322", "midi-note-323", "midi-note-324", "midi-note-326", "midi-note-332", "midi-note-338", "midi-note-340", "midi-note-343", "midi-note-346", "midi-note-350", "midi-note-352", "midi-note-359", "midi-note-361", "midi-note-363", "midi-note-365", "midi-note-367", "midi-note-369", "midi-note-372", "midi-note-373", "midi-note-375", "midi-note-377", "midi-note-380", "midi-note-382", "midi-note-384", "midi-note-387", "midi-note-389", "midi-note-391", "midi-note-393", "midi-note-395", "midi-note-399", "midi-note-401", "midi-note-406", "midi-note-409", "midi-note-410", "midi-note-416", "midi-note-418", "midi-note-421", "midi-note-423", "midi-note-427", "midi-note-428", "midi-note-429"],
+      "role": "bass"
+    }],
+  "voice_faults": []
+}

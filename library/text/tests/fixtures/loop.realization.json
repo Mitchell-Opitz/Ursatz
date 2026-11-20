@@ -1,0 +1,3086 @@
+{
+  "format": "ursatz-realization",
+  "format_version": 1,
+  "work": {
+    "id": "w1",
+    "title": null,
+    "composer": null,
+    "ensemble": "omt.instrument.solo-piano",
+    "material": [],
+    "movements": [{
+        "id": "m1",
+        "title": "structure",
+        "meter": [{
+            "position": {
+              "num": 0,
+              "den": 1
+            },
+            "time_signature": "4/4"
+          }],
+        "tempo": [],
+        "home": {
+          "kind": "tonal",
+          "center": 2,
+          "material": "omt.material.major"
+        },
+        "ensemble": null,
+        "key_signatures": [{
+            "position": {
+              "num": 0,
+              "den": 1
+            },
+            "sharps_flats": 2,
+            "mode": "major"
+          }],
+        "markers": [{
+            "position": {
+              "num": 0,
+              "den": 1
+            },
+            "text": "I"
+          }, {
+            "position": {
+              "num": 2,
+              "den": 1
+            },
+            "text": "A"
+          }, {
+            "position": {
+              "num": 10,
+              "den": 1
+            },
+            "text": "B"
+          }, {
+            "position": {
+              "num": 23,
+              "den": 2
+            },
+            "text": "T"
+          }],
+        "played": [],
+        "compound_parts": [],
+        "lines": [{
+            "id": "melody",
+            "role": "melody",
+            "name": "melody",
+            "relations": [],
+            "notes": [{
+                "id": "n64",
+                "onset": {
+                  "num": 0,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n2"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n65",
+                "onset": {
+                  "num": 1,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 81,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n3"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n66",
+                "onset": {
+                  "num": 3,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n4"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n67",
+                "onset": {
+                  "num": 1,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 83,
+                "spelling": "B",
+                "derivation": {
+                  "sources": ["n5"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n68",
+                "onset": {
+                  "num": 3,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 79,
+                "spelling": "G",
+                "derivation": {
+                  "sources": ["n6"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n69",
+                "onset": {
+                  "num": 1,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": {
+                  "sources": ["n37"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n70",
+                "onset": {
+                  "num": 5,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n38"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n71",
+                "onset": {
+                  "num": 11,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 73,
+                "spelling": "C#",
+                "derivation": {
+                  "sources": ["n39"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n72",
+                "onset": {
+                  "num": 13,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "derivation": null
+              }, {
+                "id": "n73",
+                "onset": {
+                  "num": 15,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": null
+              }, {
+                "id": "n74",
+                "onset": {
+                  "num": 2,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n2"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n75",
+                "onset": {
+                  "num": 9,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n3"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n76",
+                "onset": {
+                  "num": 19,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 67,
+                "spelling": "G",
+                "derivation": {
+                  "sources": ["n4"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n77",
+                "onset": {
+                  "num": 5,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "derivation": {
+                  "sources": ["n5"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n78",
+                "onset": {
+                  "num": 11,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n6"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n79",
+                "onset": {
+                  "num": 3,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 73,
+                "spelling": "C#",
+                "derivation": null
+              }, {
+                "id": "n80",
+                "onset": {
+                  "num": 13,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 61,
+                "spelling": "C#",
+                "derivation": null
+              }, {
+                "id": "n81",
+                "onset": {
+                  "num": 27,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": null
+              }, {
+                "id": "n82",
+                "onset": {
+                  "num": 7,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": null
+              }, {
+                "id": "n83",
+                "onset": {
+                  "num": 15,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 62,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n84",
+                "onset": {
+                  "num": 4,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n74"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n85",
+                "onset": {
+                  "num": 17,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n75"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n86",
+                "onset": {
+                  "num": 35,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 67,
+                "spelling": "G",
+                "derivation": {
+                  "sources": ["n76"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n87",
+                "onset": {
+                  "num": 9,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "derivation": {
+                  "sources": ["n77"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n88",
+                "onset": {
+                  "num": 19,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n78"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n89",
+                "onset": {
+                  "num": 5,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 73,
+                "spelling": "C#",
+                "derivation": {
+                  "sources": ["n79"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n90",
+                "onset": {
+                  "num": 21,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 61,
+                "spelling": "C#",
+                "derivation": {
+                  "sources": ["n80"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n91",
+                "onset": {
+                  "num": 43,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": {
+                  "sources": ["n81"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n92",
+                "onset": {
+                  "num": 11,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n82"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n93",
+                "onset": {
+                  "num": 23,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 62,
+                "spelling": "D",
+                "derivation": {
+                  "sources": ["n83"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n94",
+                "onset": {
+                  "num": 6,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n29"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n95",
+                "onset": {
+                  "num": 25,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 81,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n30"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n96",
+                "onset": {
+                  "num": 51,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 79,
+                "spelling": "G",
+                "derivation": null
+              }, {
+                "id": "n97",
+                "onset": {
+                  "num": 53,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n98",
+                "onset": {
+                  "num": 27,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 74,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n99",
+                "onset": {
+                  "num": 7,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 79,
+                "spelling": "G",
+                "derivation": {
+                  "sources": ["n31"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n100",
+                "onset": {
+                  "num": 29,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 83,
+                "spelling": "B",
+                "derivation": {
+                  "sources": ["n32"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n101",
+                "onset": {
+                  "num": 59,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 81,
+                "spelling": "A",
+                "derivation": null
+              }, {
+                "id": "n102",
+                "onset": {
+                  "num": 61,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 79,
+                "spelling": "G",
+                "derivation": null
+              }, {
+                "id": "n103",
+                "onset": {
+                  "num": 31,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 74,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n104",
+                "onset": {
+                  "num": 8,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": {
+                  "sources": ["n33"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n105",
+                "onset": {
+                  "num": 65,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n34"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n106",
+                "onset": {
+                  "num": 131,
+                  "den": 16
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n35"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n107",
+                "onset": {
+                  "num": 33,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": {
+                  "sources": ["n36"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n108",
+                "onset": {
+                  "num": 17,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 61,
+                "spelling": "C#",
+                "derivation": null
+              }, {
+                "id": "n109",
+                "onset": {
+                  "num": 69,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 62,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n110",
+                "onset": {
+                  "num": 139,
+                  "den": 16
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": null
+              }, {
+                "id": "n111",
+                "onset": {
+                  "num": 35,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 64,
+                "spelling": "E",
+                "derivation": null
+              }, {
+                "id": "n112",
+                "onset": {
+                  "num": 9,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n56",
+                "onset": {
+                  "num": 10,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n2"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n57",
+                "onset": {
+                  "num": 41,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 81,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n3"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n58",
+                "onset": {
+                  "num": 83,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 79,
+                "spelling": "G",
+                "derivation": {
+                  "sources": ["n4"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n59",
+                "onset": {
+                  "num": 21,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 83,
+                "spelling": "B",
+                "derivation": {
+                  "sources": ["n5"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n60",
+                "onset": {
+                  "num": 43,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 81,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n6"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n61",
+                "onset": {
+                  "num": 11,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n62",
+                "onset": {
+                  "num": 45,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n63",
+                "onset": {
+                  "num": 91,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n123",
+                "onset": {
+                  "num": 23,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "derivation": {
+                  "sources": ["n2"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n124",
+                "onset": {
+                  "num": 47,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n3"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n125",
+                "onset": {
+                  "num": 95,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 67,
+                "spelling": "G",
+                "derivation": {
+                  "sources": ["n4"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n126",
+                "onset": {
+                  "num": 12,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "derivation": {
+                  "sources": ["n5"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }, {
+                "id": "n127",
+                "onset": {
+                  "num": 49,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "derivation": {
+                  "sources": ["n6"],
+                  "operation": "motive",
+                  "run": ""
+                }
+              }]
+          }, {
+            "id": "bass",
+            "role": "bass",
+            "name": "bass",
+            "relations": [],
+            "notes": [{
+                "id": "n40",
+                "onset": {
+                  "num": 0,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n41",
+                "onset": {
+                  "num": 1,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 43,
+                "spelling": "G",
+                "derivation": null
+              }, {
+                "id": "n42",
+                "onset": {
+                  "num": 1,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 45,
+                "spelling": "A",
+                "derivation": null
+              }, {
+                "id": "n43",
+                "onset": {
+                  "num": 2,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n44",
+                "onset": {
+                  "num": 3,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 52,
+                "spelling": "E",
+                "derivation": null
+              }, {
+                "id": "n45",
+                "onset": {
+                  "num": 7,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 54,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n46",
+                "onset": {
+                  "num": 4,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n47",
+                "onset": {
+                  "num": 5,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 52,
+                "spelling": "E",
+                "derivation": null
+              }, {
+                "id": "n48",
+                "onset": {
+                  "num": 11,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 54,
+                "spelling": "F#",
+                "derivation": null
+              }, {
+                "id": "n49",
+                "onset": {
+                  "num": 6,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n50",
+                "onset": {
+                  "num": 7,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 55,
+                "spelling": "G",
+                "derivation": null
+              }, {
+                "id": "n51",
+                "onset": {
+                  "num": 8,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 57,
+                "spelling": "A",
+                "derivation": null
+              }, {
+                "id": "n52",
+                "onset": {
+                  "num": 9,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n53",
+                "onset": {
+                  "num": 10,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n54",
+                "onset": {
+                  "num": 21,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 57,
+                "spelling": "A",
+                "derivation": null
+              }, {
+                "id": "n55",
+                "onset": {
+                  "num": 11,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n121",
+                "onset": {
+                  "num": 23,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "derivation": null
+              }, {
+                "id": "n122",
+                "onset": {
+                  "num": 12,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 45,
+                "spelling": "A",
+                "derivation": null
+              }]
+          }],
+        "assignments": [{
+            "id": "a-melody",
+            "line": "melody",
+            "part": "piano",
+            "whole": true,
+            "start": null,
+            "end": null,
+            "staff": 1,
+            "voice": 1,
+            "transform": {
+              "kind": "none",
+              "octaves": 0,
+              "semitones": 0,
+              "steps": 0
+            },
+            "divisi": false
+          }, {
+            "id": "a-bass",
+            "line": "bass",
+            "part": "piano",
+            "whole": true,
+            "start": null,
+            "end": null,
+            "staff": 2,
+            "voice": 2,
+            "transform": {
+              "kind": "none",
+              "octaves": 0,
+              "semitones": 0,
+              "steps": 0
+            },
+            "divisi": false
+          }],
+        "parts": [{
+            "id": "piano",
+            "instrument": "omt.instrument.piano",
+            "name": "Piano",
+            "number": 1,
+            "players": 1,
+            "staves": 2,
+            "program": 0,
+            "local_meter": [],
+            "pedals": [],
+            "notes": [{
+                "id": "piano-n64",
+                "onset": {
+                  "num": 0,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n64"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n40",
+                "onset": {
+                  "num": 0,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n40"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n65",
+                "onset": {
+                  "num": 1,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 81,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n65"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n66",
+                "onset": {
+                  "num": 3,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n66"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n67",
+                "onset": {
+                  "num": 1,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 83,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n67"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n41",
+                "onset": {
+                  "num": 1,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 43,
+                "spelling": "G",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n41"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n68",
+                "onset": {
+                  "num": 3,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 79,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n68"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n69",
+                "onset": {
+                  "num": 1,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n69"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n42",
+                "onset": {
+                  "num": 1,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 45,
+                "spelling": "A",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n42"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n70",
+                "onset": {
+                  "num": 5,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n70"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n71",
+                "onset": {
+                  "num": 11,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 73,
+                "spelling": "C#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n71"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n72",
+                "onset": {
+                  "num": 13,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n72"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n73",
+                "onset": {
+                  "num": 15,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n73"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n74",
+                "onset": {
+                  "num": 2,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n74"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n43",
+                "onset": {
+                  "num": 2,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n43"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n75",
+                "onset": {
+                  "num": 9,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n75"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n76",
+                "onset": {
+                  "num": 19,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 67,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n76"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n77",
+                "onset": {
+                  "num": 5,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n77"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n78",
+                "onset": {
+                  "num": 11,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n78"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n79",
+                "onset": {
+                  "num": 3,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 73,
+                "spelling": "C#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n79"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n44",
+                "onset": {
+                  "num": 3,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 52,
+                "spelling": "E",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n44"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n80",
+                "onset": {
+                  "num": 13,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 61,
+                "spelling": "C#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n80"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n81",
+                "onset": {
+                  "num": 27,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n81"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n82",
+                "onset": {
+                  "num": 7,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n82"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n45",
+                "onset": {
+                  "num": 7,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 54,
+                "spelling": "F#",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n45"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n83",
+                "onset": {
+                  "num": 15,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 62,
+                "spelling": "D",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n83"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n84",
+                "onset": {
+                  "num": 4,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n84"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n46",
+                "onset": {
+                  "num": 4,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n46"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n85",
+                "onset": {
+                  "num": 17,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n85"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n86",
+                "onset": {
+                  "num": 35,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 67,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n86"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n87",
+                "onset": {
+                  "num": 9,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n87"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n88",
+                "onset": {
+                  "num": 19,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n88"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n89",
+                "onset": {
+                  "num": 5,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 73,
+                "spelling": "C#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n89"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n47",
+                "onset": {
+                  "num": 5,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 52,
+                "spelling": "E",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n47"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n90",
+                "onset": {
+                  "num": 21,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 61,
+                "spelling": "C#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n90"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n91",
+                "onset": {
+                  "num": 43,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n91"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n92",
+                "onset": {
+                  "num": 11,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n92"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n48",
+                "onset": {
+                  "num": 11,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 54,
+                "spelling": "F#",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n48"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n93",
+                "onset": {
+                  "num": 23,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 62,
+                "spelling": "D",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n93"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n94",
+                "onset": {
+                  "num": 6,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n94"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n49",
+                "onset": {
+                  "num": 6,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n49"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n95",
+                "onset": {
+                  "num": 25,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 81,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n95"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n96",
+                "onset": {
+                  "num": 51,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 79,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n96"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n97",
+                "onset": {
+                  "num": 53,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n97"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n98",
+                "onset": {
+                  "num": 27,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 74,
+                "spelling": "D",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n98"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n99",
+                "onset": {
+                  "num": 7,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 79,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n99"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n50",
+                "onset": {
+                  "num": 7,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 55,
+                "spelling": "G",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n50"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n100",
+                "onset": {
+                  "num": 29,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 83,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n100"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n101",
+                "onset": {
+                  "num": 59,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 81,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n101"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n102",
+                "onset": {
+                  "num": 61,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 79,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n102"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n103",
+                "onset": {
+                  "num": 31,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 74,
+                "spelling": "D",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n103"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n104",
+                "onset": {
+                  "num": 8,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n104"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n51",
+                "onset": {
+                  "num": 8,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 57,
+                "spelling": "A",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n51"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n105",
+                "onset": {
+                  "num": 65,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n105"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n106",
+                "onset": {
+                  "num": 131,
+                  "den": 16
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n106"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n107",
+                "onset": {
+                  "num": 33,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n107"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n108",
+                "onset": {
+                  "num": 17,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 61,
+                "spelling": "C#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n108"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n109",
+                "onset": {
+                  "num": 69,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 62,
+                "spelling": "D",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n109"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n110",
+                "onset": {
+                  "num": 139,
+                  "den": 16
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 16
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n110"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n111",
+                "onset": {
+                  "num": 35,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 64,
+                "spelling": "E",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n111"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n112",
+                "onset": {
+                  "num": 9,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n112"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n52",
+                "onset": {
+                  "num": 9,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 1
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n52"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n56",
+                "onset": {
+                  "num": 10,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n56"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n53",
+                "onset": {
+                  "num": 10,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n53"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n57",
+                "onset": {
+                  "num": 41,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 81,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n57"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n58",
+                "onset": {
+                  "num": 83,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 79,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n58"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n59",
+                "onset": {
+                  "num": 21,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 83,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n59"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n54",
+                "onset": {
+                  "num": 21,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 57,
+                "spelling": "A",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n54"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n60",
+                "onset": {
+                  "num": 43,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 81,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n60"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n61",
+                "onset": {
+                  "num": 11,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n61"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n55",
+                "onset": {
+                  "num": 11,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n55"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n62",
+                "onset": {
+                  "num": 45,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 78,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n62"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n63",
+                "onset": {
+                  "num": 91,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n63"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n123",
+                "onset": {
+                  "num": 23,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 66,
+                "spelling": "F#",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n123"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n121",
+                "onset": {
+                  "num": 23,
+                  "den": 2
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 50,
+                "spelling": "D",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n121"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n124",
+                "onset": {
+                  "num": 47,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n124"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n125",
+                "onset": {
+                  "num": 95,
+                  "den": 8
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 8
+                },
+                "midi": 67,
+                "spelling": "G",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n125"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n126",
+                "onset": {
+                  "num": 12,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 71,
+                "spelling": "B",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n126"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n122",
+                "onset": {
+                  "num": 12,
+                  "den": 1
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 2
+                },
+                "midi": 45,
+                "spelling": "A",
+                "staff": 2,
+                "voice": 2,
+                "derivation": {
+                  "sources": ["n122"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }, {
+                "id": "piano-n127",
+                "onset": {
+                  "num": 49,
+                  "den": 4
+                },
+                "duration": {
+                  "num": 1,
+                  "den": 4
+                },
+                "midi": 69,
+                "spelling": "A",
+                "staff": 1,
+                "voice": 1,
+                "derivation": {
+                  "sources": ["n127"],
+                  "operation": "score",
+                  "run": ""
+                },
+                "edited": false,
+                "detached": false,
+                "review": false
+              }]
+          }]
+      }]
+  }
+}

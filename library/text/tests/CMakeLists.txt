@@ -30,3 +30,30 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/text_tree_files.txt" "${_text_tree_list}
 # The tree form: every JSON object of the list prints and parses back equal, with the member order kept; the hand cases and every error.
 ursatz_test(text_tree LIBS ursatz_text ursatz_test_support VALGRIND
     DEFINITIONS TEXT_TREE_FILES="${CMAKE_CURRENT_BINARY_DIR}/text_tree_files.txt")
+
+# The layer codecs: every plan, reading and realization fixture, and the knowledge files and entries, through Ursatz Text and back. The
+# lists are written at configure, one absolute path a line.
+file(GLOB _text_plans CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/composer/tests/snapshots/*.plan.json"
+    "${CMAKE_SOURCE_DIR}/composer/tests/snapshots/*.variation-*.json"
+    "${CMAKE_SOURCE_DIR}/library/plan/tests/fixtures/*.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/loop.plan.json")
+file(GLOB_RECURSE _text_data_plans CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0/*/plan.json")
+list(APPEND _text_plans ${_text_data_plans})
+list(SORT _text_plans)
+list(JOIN _text_plans "\n" _text_plans_text)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/text_plan_files.txt" "${_text_plans_text}\n")
+file(GLOB _text_knowledge CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/knowledge/*/omt.json"
+    "${CMAKE_SOURCE_DIR}/tests/fixtures/knowledge/valid/*.json"
+    "${CMAKE_SOURCE_DIR}/tests/fixtures/knowledge/valid/*/omt.json")
+list(SORT _text_knowledge)
+list(JOIN _text_knowledge "\n" _text_knowledge_text)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/text_knowledge_files.txt" "${_text_knowledge_text}\n")
+
+ursatz_test(text_layers LIBS ursatz_text ursatz_test_support VALGRIND
+    DEFINITIONS
+        TEXT_PLAN_FILES="${CMAKE_CURRENT_BINARY_DIR}/text_plan_files.txt"
+        TEXT_KNOWLEDGE_FILES="${CMAKE_CURRENT_BINARY_DIR}/text_knowledge_files.txt"
+        TEXT_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+        TEXT_READING_MOZART="${CMAKE_SOURCE_DIR}/tests/fixtures/readings/mozart-545.michelle.json")
