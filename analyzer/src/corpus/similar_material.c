@@ -1,4 +1,7 @@
-#include <ursatz_analyzer/similar_material.h>
+#include <ursatz_analyzer_internal/similar_material.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/chord_sequence.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include <stdbool.h>
 #include <limits.h>
@@ -8,9 +11,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/chord_sequence.h>
-#include <ursatz_analyzer/input_pipeline.h>
 #include "theory/style/style_labels.h"
 
 #include "model/core/rational.h"
@@ -20,14 +20,13 @@
 #include "analysis/similarity/similarity_model.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
-#include "util/json_util.h"
+#include <common/json.h>
 
 /* ---- reading the document ---- */
 
 static bool fraction_member(const cJSON *object, const char *name, unsigned long *numerator, unsigned long *denominator) {
-    const cJSON *fraction = json_member(object, name);
-    long n, d;
-    if (!json_number_member(fraction, "num", &n) || !json_number_member(fraction, "den", &d) || d <= 0 || n < 0) {
+    long long n, d;
+    if (!common_json_rational_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d) || n < 0) {
         return false;
     }
     *numerator = (unsigned long)n;
@@ -37,11 +36,10 @@ static bool fraction_member(const cJSON *object, const char *name, unsigned long
 
 /* A position as a measure and a beat (the beat plus the fraction of it). */
 static bool location_member(const cJSON *entry, const char *edge, int *measure, double *beat) {
-    const cJSON *position = json_member(json_member(entry, "location"), edge);
-    long m, b, n, d;
-    if (!json_number_member(position, "measure", &m) || !json_number_member(position, "beat", &b) ||
-        !json_number_member(json_member(position, "subdivision"), "num", &n) ||
-        !json_number_member(json_member(position, "subdivision"), "den", &d) || d <= 0) {
+    const cJSON *position = common_json_member(common_json_member(entry, "location"), edge);
+    long long m, b, n, d;
+    if (!common_json_long(position, "measure", &m) || !common_json_long(position, "beat", &b) ||
+        !common_json_rational_read(common_json_member(position, "subdivision"), COMMON_RATIONAL_OBJECT, &n, &d)) {
         return false;
     }
     *measure = (int)m;
@@ -79,7 +77,7 @@ typedef struct {
  * *out is NULL when *count is 0. false on allocation failure or an entry that cannot be read.
  */
 static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
-    const cJSON *soprano = json_member(json_member(document, "outer_voices"), "soprano");
+    const cJSON *soprano = common_json_member(common_json_member(document, "outer_voices"), "soprano");
     size_t capacity = cJSON_IsArray(soprano) ? (size_t)cJSON_GetArraySize(soprano) : 0;
     *out = NULL;
     *count = 0;
@@ -95,10 +93,10 @@ static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
     long previous_id = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, soprano) {
-        const cJSON *status = json_member(entry, "status");
-        long id, pitch;
-        if (!cJSON_IsString(status) || strcmp(status->valuestring, "present") != 0 || !json_number_member(entry, "note_id", &id) ||
-            !json_number_member(json_member(entry, "pitch"), "midi", &pitch)) {
+        const cJSON *status = common_json_member(entry, "status");
+        long long id, pitch;
+        if (!cJSON_IsString(status) || strcmp(status->valuestring, "present") != 0 || !common_json_long(entry, "note_id", &id) ||
+            !common_json_long(common_json_member(entry, "pitch"), "midi", &pitch)) {
             continue;
         }
         if (have_previous && id == previous_id) {
@@ -109,9 +107,9 @@ static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
             continue;
         }
         DocNote *note = &notes[n];
-        const cJSON *onset = json_member(entry, "onset");
+        const cJSON *onset = common_json_member(entry, "onset");
         if (!fraction_member(onset, "time", &note->onset_n, &note->onset_d) ||
-            !fraction_member(json_member(entry, "duration"), "whole_notes", &note->duration_n, &note->duration_d) ||
+            !fraction_member(common_json_member(entry, "duration"), "whole_notes", &note->duration_n, &note->duration_d) ||
             note->duration_n == 0 || !location_member(entry, "start", &note->start_measure, &note->start_beat) ||
             !location_member(entry, "end", &note->end_measure, &note->end_beat)) {
             free(notes);
@@ -171,58 +169,66 @@ void similar_query_destroy(SimilarQuery *query) {
     *query = (SimilarQuery){0};
 }
 
-SimilarResult similar_query_from_file(const char *path, const KnowledgeSnapshot *knowledge, SimilarQuery *query) {
+UrsatzStatus similar_query_from_file(const char *path, const KnowledgeSnapshot *knowledge, SimilarQuery *query) {
     if (!path || !knowledge || !query) {
-        return SIMILAR_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     ImportedScore imported;
     AnalyzerResult *result = NULL;
-    RunFileResult ran = analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &imported, &result, NULL, NULL);
+    UrsatzStatus analyzed = URSATZ_ERR_ALLOC;
+    UrsatzError import_error = {{0}};
+    RunFileResult ran = analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &imported, &result, NULL, NULL, &analyzed, &import_error);
     if (ran != RUN_FILE_OK) {
-        return ran == RUN_FILE_ERR_IMPORT ? SIMILAR_ERR_IO : SIMILAR_ERR_ALLOC;
+        if (ran == RUN_FILE_ERR_IMPORT) {
+            fprintf(stderr, "%s\n", import_error.message);
+        }
+        return ran == RUN_FILE_ERR_IMPORT ? URSATZ_ERR_IO : analyzed;
+    }
+    for (size_t i = 0; i < imported.source.warning_line_count; i++) {
+        fprintf(stderr, "%s\n", imported.source.warnings[i]);
     }
     AnalysisDocument *built = analyzer_run_file_document(path, &imported, result);
-    char *json = built ? analysis_document_to_json(built) : NULL;
-    analysis_document_destroy(built);
+    char *json = built ? analyzer_document_to_json(built) : NULL;
+    analyzer_document_destroy(built);
     if (!json) {
-        return SIMILAR_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     cJSON *document = cJSON_Parse(json);
     free(json);
-    long version;
-    if (!document || !json_number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+    long long version;
+    if (!document || !common_json_long(document, "schema_version", &version) || version != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
-        return SIMILAR_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
     DocNote *notes;
     size_t count;
     bool read = read_notes(document, &notes, &count);
     cJSON_Delete(document);
     if (!read) {
-        return SIMILAR_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     if (count < 2) {
         free(notes);
-        return SIMILAR_ERR_QUERY;
+        return URSATZ_ERR_REQUEST;
     }
     SimilarNote *line = passage_notes(notes, 0, count);
     free(notes);
     if (!line) {
-        return SIMILAR_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     *query = (SimilarQuery){SIMILAR_QUERY_MOTIVE, line, count, NULL, 0};
-    return SIMILAR_OK;
+    return URSATZ_OK;
 }
 
-SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query) {
+UrsatzStatus similar_query_from_numerals(const char *text, SimilarQuery *query) {
     if (!text || !query) {
-        return SIMILAR_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     char **numerals = NULL;
     size_t count = 0;
-    SimilarResult result = SIMILAR_OK;
+    UrsatzStatus result = URSATZ_OK;
     const char *cursor = text;
-    while (*cursor && result == SIMILAR_OK) {
+    while (*cursor && result == URSATZ_OK) {
         size_t length = strcspn(cursor, " \t-");
         if (length > 0) {
             char *token = strndup(cursor, length);
@@ -230,10 +236,10 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
             free(token);
             char **grown = label ? realloc(numerals, (count + 1) * sizeof *numerals) : NULL;
             if (!label) {
-                result = token ? SIMILAR_ERR_QUERY : SIMILAR_ERR_ALLOC;
+                result = token ? URSATZ_ERR_REQUEST : URSATZ_ERR_ALLOC;
             } else if (!grown) {
                 free(label);
-                result = SIMILAR_ERR_ALLOC;
+                result = URSATZ_ERR_ALLOC;
             } else {
                 numerals = grown;
                 numerals[count++] = label;
@@ -244,10 +250,10 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
             cursor++;
         }
     }
-    if (result == SIMILAR_OK && count < 2) {
-        result = SIMILAR_ERR_QUERY;
+    if (result == URSATZ_OK && count < 2) {
+        result = URSATZ_ERR_REQUEST;
     }
-    if (result != SIMILAR_OK) {
+    if (result != URSATZ_OK) {
         for (size_t i = 0; i < count; i++) {
             free(numerals[i]);
         }
@@ -255,7 +261,7 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
         return result;
     }
     *query = (SimilarQuery){SIMILAR_QUERY_PROGRESSION, NULL, 0, numerals, count};
-    return SIMILAR_OK;
+    return URSATZ_OK;
 }
 
 /* ---- chords ---- */
@@ -299,7 +305,7 @@ static bool read_chords(const KnowledgeSnapshot *knowledge, const cJSON *documen
     size_t sequence_count = 0;
     *out = NULL;
     *count = 0;
-    if (chord_sequence_from_tree(document, &sequence, &sequence_count) != ANALYZER_OK) {
+    if (chord_sequence_from_tree(document, &sequence, &sequence_count) != URSATZ_OK) {
         return false;
     }
     if (sequence_count == 0) {
@@ -310,7 +316,7 @@ static bool read_chords(const KnowledgeSnapshot *knowledge, const cJSON *documen
         analyzer_chord_sequence_free(sequence, sequence_count);
         return false;
     }
-    const cJSON *entries = json_member(document, "chords");
+    const cJSON *entries = common_json_member(document, "chords");
     const cJSON *first_cursor = NULL, *last_cursor = NULL;
     size_t first_index = 0, last_index = 0;
     long run = 0;
@@ -323,7 +329,7 @@ static bool read_chords(const KnowledgeSnapshot *knowledge, const cJSON *documen
         }
         const cJSON *first = entry_at(entries, &first_cursor, &first_index, chord->first_entry);
         const cJSON *last = entry_at(entries, &last_cursor, &last_index, chord->last_entry);
-        const cJSON *key = json_member(first, "key_label");
+        const cJSON *key = common_json_member(first, "key_label");
         int start_measure, end_measure;
         double start_beat, end_beat;
         if (!location_member(first, "start", &start_measure, &start_beat) ||
@@ -431,11 +437,11 @@ static void search_free(Search *search) {
     free(search->durations);
 }
 
-static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+static UrsatzStatus search_prepare(Search *search, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
                                     const SimilarOptions *options) {
     *search = (Search){.query = query, .options = options, .knowledge = knowledge};
     if (!common_practice_materials_resolve(knowledge, &search->materials, NULL, 0)) {
-        return SIMILAR_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     SimilarityDimensionWeight weights[3];
     size_t weight_count = 0;
@@ -450,7 +456,7 @@ static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *kno
         weights[weight_count++] = (SimilarityDimensionWeight){SIMILARITY_DIMENSION_RHYTHM, (long)options->weights.rhythm, 1};
     }
     if (similarity_model_create(weights, weight_count, &search->model) != SIMILARITY_MODEL_OK) {
-        return SIMILAR_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     search->size = motive ? query->note_count : query->numeral_count;
     search->durations = malloc(search->size * sizeof *search->durations);
@@ -460,13 +466,13 @@ static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *kno
         search->directions = malloc(search->size * sizeof *search->directions);
     }
     if (!search->durations || !search->intervals[0] || !search->intervals[1] || (motive && !search->directions)) {
-        return SIMILAR_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     if (motive) {
         for (size_t i = 0; i < search->size; i++) {
             const SimilarNote *note = &query->notes[i];
             if (note->duration_numerator == 0 || note->duration_denominator == 0) {
-                return SIMILAR_ERR_QUERY;
+                return URSATZ_ERR_REQUEST;
             }
             search->durations[i] = (SimilarityDuration){note->duration_numerator, note->duration_denominator};
             if (i > 0) {
@@ -474,7 +480,7 @@ static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *kno
             }
         }
         similarity_directions_from_intervals(search->intervals[0], search->size - 1, search->directions);
-        return SIMILAR_OK;
+        return URSATZ_OK;
     }
     for (int mode = 0; mode < 2; mode++) {
         int previous = 0;
@@ -484,7 +490,7 @@ static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *kno
                                      common_practice_material(&search->materials, mode == 1 ? COMMON_PRACTICE_KEY_MINOR
                                                                                               : COMMON_PRACTICE_KEY_MAJOR),
                                      &search->materials, &offset)) {
-                return SIMILAR_ERR_QUERY;
+                return URSATZ_ERR_REQUEST;
             }
             if (i > 0) {
                 search->intervals[mode][i - 1] = root_step(previous, offset);
@@ -495,7 +501,7 @@ static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *kno
     for (size_t i = 0; i < search->size; i++) {
         search->durations[i] = (SimilarityDuration){1, 1};
     }
-    return SIMILAR_OK;
+    return URSATZ_OK;
 }
 
 typedef struct {
@@ -661,26 +667,26 @@ static void match_destroy(SimilarMatch *match) {
 }
 
 /* Searches one analysis document and adds its best non-overlapping windows (at most max_results) to matches. */
-static SimilarResult search_document(const Search *search, const char *piece, const char *document_path, const cJSON *document,
+static UrsatzStatus search_document(const Search *search, const char *piece, const char *document_path, const cJSON *document,
                                      Matches *matches) {
     bool motive = search->query->kind == SIMILAR_QUERY_MOTIVE;
     DocNote *notes = NULL;
     DocChord *chords = NULL;
     size_t note_count = 0, chord_count = 0;
     Candidates candidates = {0};
-    SimilarResult result = SIMILAR_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (!read_notes(document, &notes, &note_count) || (!motive && !read_chords(search->knowledge, document, &chords, &chord_count))) {
-        result = SIMILAR_ERR_FORMAT;
+        result = URSATZ_ERR_FORMAT;
     } else if (!(motive ? motive_windows(search, notes, note_count, &candidates)
                         : progression_windows(search, chords, chord_count, &candidates))) {
-        result = SIMILAR_ERR_ALLOC;
+        result = URSATZ_ERR_ALLOC;
     }
-    if (result == SIMILAR_OK && candidates.count > 1) {
+    if (result == URSATZ_OK && candidates.count > 1) {
         qsort(candidates.items, candidates.count, sizeof *candidates.items, compare_candidates);
     }
     size_t n = search->size;
     size_t kept = 0;
-    for (size_t c = 0; result == SIMILAR_OK && c < candidates.count && kept < search->options->max_results; c++) {
+    for (size_t c = 0; result == URSATZ_OK && c < candidates.count && kept < search->options->max_results; c++) {
         size_t first = candidates.items[c].first;
         bool overlaps = false;
         for (size_t k = 0; k < kept && !overlaps; k++) {
@@ -702,7 +708,7 @@ static SimilarResult search_document(const Search *search, const char *piece, co
             match.notes = passage_notes(notes, first, n);
             match.note_count = n;
             if (!match.notes) {
-                result = SIMILAR_ERR_ALLOC;
+                result = URSATZ_ERR_ALLOC;
             }
         } else {
             const DocChord *begin = &chords[first], *end = &chords[first + n - 1];
@@ -712,15 +718,15 @@ static SimilarResult search_document(const Search *search, const char *piece, co
             match.end_beat = end->end_beat;
             if (!notes_between(notes, note_count, begin->start_n, begin->start_d, end->end_n, end->end_d, &match.notes,
                                &match.note_count)) {
-                result = SIMILAR_ERR_ALLOC;
+                result = URSATZ_ERR_ALLOC;
             }
         }
         match.piece = strdup(piece);
         match.document = strdup(document_path);
-        if (result == SIMILAR_OK && (!match.piece || !match.document || !matches_add(matches, match))) {
-            result = SIMILAR_ERR_ALLOC;
+        if (result == URSATZ_OK && (!match.piece || !match.document || !matches_add(matches, match))) {
+            result = URSATZ_ERR_ALLOC;
         }
-        if (result != SIMILAR_OK) {
+        if (result != URSATZ_OK) {
             match_destroy(&match);
         }
     }
@@ -734,7 +740,7 @@ typedef struct {
     Search *search;
     Matches matches;
     size_t searched;
-    SimilarResult result;
+    UrsatzStatus result;
 } SearchWalk;
 
 static bool search_walk_document(const char *piece_path, const char *document, const char *json,
@@ -742,26 +748,26 @@ static bool search_walk_document(const char *piece_path, const char *document, c
     (void)status;
     SearchWalk *walk = context;
     cJSON *parsed = cJSON_Parse(json);
-    long version;
-    if (!parsed || !json_number_member(parsed, "schema_version", &version) ||
-        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+    long long version;
+    if (!parsed || !common_json_long(parsed, "schema_version", &version) ||
+        version != ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(parsed);
-        walk->result = SIMILAR_ERR_FORMAT;
+        walk->result = URSATZ_ERR_FORMAT;
         return false;
     }
     walk->result = search_document(walk->search, piece_path, document, parsed, &walk->matches);
     cJSON_Delete(parsed);
-    if (walk->result != SIMILAR_OK) {
+    if (walk->result != URSATZ_OK) {
         return false;
     }
     walk->searched++;
     return true;
 }
 
-SimilarResult similar_material_find(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+UrsatzStatus similar_material_find(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
                                     const SimilarOptions *options, SimilarResults *results) {
     if (!corpus_output_dir || !knowledge || !query || !results) {
-        return SIMILAR_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     SimilarOptions defaults = similar_options_default();
     if (!options) {
@@ -769,25 +775,25 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Knowled
     }
     size_t size = query->kind == SIMILAR_QUERY_MOTIVE ? query->note_count : query->numeral_count;
     if (size < 2 || (query->kind == SIMILAR_QUERY_MOTIVE ? query->notes == NULL : query->numerals == NULL)) {
-        return SIMILAR_ERR_QUERY;
+        return URSATZ_ERR_REQUEST;
     }
     if (options->minimum_denominator == 0 || options->minimum_numerator > options->minimum_denominator ||
         options->max_results == 0) {
-        return SIMILAR_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     Search search;
-    SimilarResult result = search_prepare(&search, knowledge, query, options);
-    if (result != SIMILAR_OK) {
+    UrsatzStatus result = search_prepare(&search, knowledge, query, options);
+    if (result != URSATZ_OK) {
         search_free(&search);
         return result;
     }
     char *index_path = malloc(strlen(corpus_output_dir) + 24);
     if (!index_path) {
         search_free(&search);
-        return SIMILAR_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
-    SearchWalk walk = {&search, {0}, 0, SIMILAR_OK};
+    SearchWalk walk = {&search, {0}, 0, URSATZ_OK};
     CorpusWalkResult walked = corpus_walk_documents(index_path, search_walk_document, &walk, NULL);
     free(index_path);
     Matches matches = walk.matches;
@@ -796,20 +802,20 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Knowled
     case CORPUS_WALK_OK:
         break;
     case CORPUS_WALK_ERR_ALLOC:
-        result = SIMILAR_ERR_ALLOC;
+        result = URSATZ_ERR_ALLOC;
         break;
     case CORPUS_WALK_ERR_IO:
-        result = SIMILAR_ERR_IO;
+        result = URSATZ_ERR_IO;
         break;
     case CORPUS_WALK_ERR_FORMAT:
-        result = SIMILAR_ERR_FORMAT;
+        result = URSATZ_ERR_FORMAT;
         break;
     case CORPUS_WALK_ERR_VISIT:
         result = walk.result;
         break;
     }
     search_free(&search);
-    if (result != SIMILAR_OK) {
+    if (result != URSATZ_OK) {
         for (size_t i = 0; i < matches.count; i++) {
             match_destroy(&matches.items[i]);
         }
@@ -826,5 +832,5 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Knowled
         matches.count = options->max_results;
     }
     *results = (SimilarResults){matches.items, matches.count, searched};
-    return SIMILAR_OK;
+    return URSATZ_OK;
 }

@@ -6,7 +6,7 @@ The similar material search over a corpus, by motive or by progression. Back to 
 ursatz-analyzer --similar <corpus output dir> (--motive <file> | --progression "<numerals>") [--min <n/d>] [--max <n>] [--format text|json]
 ```
 
-Library: `include/ursatz_analyzer/similar_material.h`. Output schema: `schema/similar-material.v1.schema.json`.
+Library: `src/include/ursatz_analyzer_internal/similar_material.h`. Output schema: `schema/similar-material.v1.schema.json`.
 
 The search finds passages of an analyzed corpus that look like a motive or a progression. It reads only the analysis
 documents of a corpus run (see [corpus.md](corpus.md)), never the scores. A match says how much two passages agree on

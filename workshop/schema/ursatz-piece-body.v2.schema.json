@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-piece-body.v2.schema.json",
+  "title": "Piece body, format version 2",
+  "description": "projects/<prj>/items/<id>/v<n>/body.json: the body of a piece version is the Composer request it composes with (ursatz-piece-request, version 2), with {\"$item\": {item_id, version[, file]}} in place of a motif version or a stored plan the store would inline and {\"$pool\": {item_id, pool}} in place of the saved forms of a motif (R-650); brief is the style brief (or null) and result what the last compose left (or null).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "uses",
+    "request"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "format": {
+      "const": "ursatz-piece-body"
+    },
+    "format_version": {
+      "const": 2
+    },
+    "uses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item_id",
+          "version"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "copy": {}
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "required": [
+        "schema",
+        "schema_version"
+      ],
+      "properties": {
+        "schema": {
+          "const": "ursatz-piece-request"
+        },
+        "schema_version": {
+          "const": 2
+        }
+      }
+    },
+    "brief": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

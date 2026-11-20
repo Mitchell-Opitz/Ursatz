@@ -5,9 +5,9 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -64,10 +64,10 @@ static unsigned long long fnv1a(const char *data, size_t length) {
     return hash;
 }
 
-static CorpusRunSummary run(const char *input, const char *output, bool resume, CorpusRunResult *result) {
+static CorpusRunSummary run(const char *input, const char *output, bool resume, UrsatzStatus *result) {
     CorpusRunOptions options = {input, output, resume, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    *result = corpus_run(&options, &summary);
+    *result = corpus_run(&options, &summary, NULL);
     return summary;
 }
 
@@ -147,9 +147,9 @@ static void test_reference(const char *work) {
     snprintf(input, sizeof(input), "%s/reference", URSATZ_CORPORA_DIR);
     snprintf(output, sizeof(output), "%s/reference", work);
 
-    CorpusRunResult result;
+    UrsatzStatus result;
     CorpusRunSummary summary = run(input, output, false, &result);
-    CHECKF(result == CORPUS_RUN_OK, "reference run result %d", (int)result);
+    CHECKF(result == URSATZ_OK, "reference run result %d", (int)result);
     CHECKF(summary.analyzed == 5 && summary.skipped == 0 && summary.failed == 0, "reference summary %zu/%zu/%zu",
            summary.analyzed, summary.skipped, summary.failed);
 
@@ -193,13 +193,13 @@ static void test_reference(const char *work) {
 
     /* Resume: nothing changed, then one document deleted. */
     summary = run(input, output, true, &result);
-    CHECKF(result == CORPUS_RUN_OK && summary.analyzed == 0 && summary.skipped == 5 && summary.failed == 0,
+    CHECKF(result == URSATZ_OK && summary.analyzed == 0 && summary.skipped == 5 && summary.failed == 0,
            "resume unchanged: %zu/%zu/%zu", summary.analyzed, summary.skipped, summary.failed);
     char deleted[1200];
     snprintf(deleted, sizeof(deleted), "%s/Field 1.mid.analysis.json", output);
     CHECKF(remove(deleted) == 0, "cannot delete %s", deleted);
     summary = run(input, output, true, &result);
-    CHECKF(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 4 && summary.failed == 0,
+    CHECKF(result == URSATZ_OK && summary.analyzed == 1 && summary.skipped == 4 && summary.failed == 0,
            "resume after deleting a document: %zu/%zu/%zu", summary.analyzed, summary.skipped, summary.failed);
     CHECKF(exists(deleted), "the deleted document was not written again");
 
@@ -214,9 +214,9 @@ static void test_mixed(const char *work) {
     snprintf(input, sizeof(input), "%s/mixed", URSATZ_CORPORA_DIR);
     snprintf(output, sizeof(output), "%s/mixed", work);
 
-    CorpusRunResult result;
+    UrsatzStatus result;
     CorpusRunSummary summary = run(input, output, false, &result);
-    CHECKF(result == CORPUS_RUN_OK, "mixed run result %d (one failed piece is not a failed run)", (int)result);
+    CHECKF(result == URSATZ_OK, "mixed run result %d (one failed piece is not a failed run)", (int)result);
     CHECKF(summary.analyzed == 2 && summary.skipped == 0 && summary.failed == 1, "mixed summary %zu/%zu/%zu",
            summary.analyzed, summary.skipped, summary.failed);
 
@@ -267,7 +267,7 @@ static void test_resume_changes(const char *work) {
     snprintf(path, sizeof(path), "%s/sub/field-1.musicxml", input);
     CHECKF(copy_file(from, path), "cannot copy the MusicXML");
 
-    CorpusRunResult result;
+    UrsatzStatus result;
     CorpusRunSummary summary = run(input, output, false, &result);
     CHECKF(summary.analyzed == 2, "first run analyzed %zu", summary.analyzed);
 
@@ -275,7 +275,7 @@ static void test_resume_changes(const char *work) {
     const char *comment = "\n<!-- touched -->\n";
     CHECKF(append_text(path, comment), "cannot touch the MusicXML");
     summary = run(input, output, true, &result);
-    CHECKF(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 1 && summary.failed == 0,
+    CHECKF(result == URSATZ_OK && summary.analyzed == 1 && summary.skipped == 1 && summary.failed == 0,
            "resume after touching a file: %zu/%zu/%zu", summary.analyzed, summary.skipped, summary.failed);
 
     /* A piece no longer in the folder is dropped from the index. */
@@ -342,7 +342,7 @@ static void test_resume_changes(const char *work) {
             CHECKF(test_write_file(path, v1, strlen(v1)), "cannot rewrite the index as version 1");
             free(v1);
             summary = run(input, output, true, &result);
-            CHECKF(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 0,
+            CHECKF(result == URSATZ_OK && summary.analyzed == 1 && summary.skipped == 0,
                    "resume over a version 1 index: %zu analyzed, %zu skipped", summary.analyzed, summary.skipped);
             cJSON *rewritten = read_index(output);
             const cJSON *rewritten_version = cJSON_GetObjectItemCaseSensitive(rewritten, "schema_version");
@@ -356,25 +356,69 @@ static void test_resume_changes(const char *work) {
     /* An index that cannot be read is a run error, not a silent restart. */
     CHECKF(test_write_file(path, "{", 1), "cannot corrupt the index");
     summary = run(input, output, true, &result);
-    CHECKF(result == CORPUS_RUN_ERR_INDEX, "unreadable index gave result %d", (int)result);
+    CHECKF(result == URSATZ_ERR_FORMAT, "unreadable index gave result %d", (int)result);
 }
 
 static void test_arguments(const char *work) {
-    CorpusRunResult result;
+    UrsatzStatus result;
     CorpusRunOptions options = {NULL, NULL, false, NULL, NULL, test_knowledge()};
-    CHECKF(corpus_run(&options, NULL) == CORPUS_RUN_ERR_ARGUMENT, "NULL input_dir");
-    CHECKF(corpus_run(NULL, NULL) == CORPUS_RUN_ERR_ARGUMENT, "NULL options");
+    CHECKF(corpus_run(&options, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL input_dir");
+    CHECKF(corpus_run(NULL, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL options");
     char missing[1024];
     snprintf(missing, sizeof(missing), "%s/does-not-exist", work);
     run(missing, work, false, &result);
-    CHECKF(result == CORPUS_RUN_ERR_INPUT_DIR, "missing input dir gave %d", (int)result);
+    CHECKF(result == URSATZ_ERR_NOT_FOUND, "missing input dir gave %d", (int)result);
     char blocker[1024];
     snprintf(blocker, sizeof(blocker), "%s/blocker", work);
     CHECKF(test_write_file(blocker, "x", 1), "cannot write the blocker file");
     char input[1024];
     snprintf(input, sizeof(input), "%s/reference", URSATZ_CORPORA_DIR);
     run(input, blocker, false, &result);
-    CHECKF(result == CORPUS_RUN_ERR_OUTPUT_DIR, "output dir that is a file gave %d", (int)result);
+    CHECKF(result == URSATZ_ERR_IO, "output dir that is a file gave %d", (int)result);
+}
+
+/* The run prints nothing: its failures come back in the error, and what a piece said (the importer's text of a failed import) in the report
+   the callback gets. */
+typedef struct {
+    size_t pieces;
+    size_t with_message;
+    char message[256];
+} Reports;
+
+static void collect_report(const char *path, CorpusPieceStatus status, const char *error, const CorpusPieceReport *report, void *user) {
+    (void)path;
+    (void)error;
+    Reports *reports = user;
+    reports->pieces++;
+    if (status == CORPUS_PIECE_FAILED && report->message) {
+        reports->with_message++;
+        snprintf(reports->message, sizeof(reports->message), "%s", report->message);
+    }
+}
+
+static void test_messages(const char *work) {
+    UrsatzError error = {{0}};
+    char missing[1024];
+    snprintf(missing, sizeof(missing), "%s/no-such-input", work);
+    CorpusRunOptions options = {missing, work, false, NULL, NULL, test_knowledge()};
+    CHECKF(corpus_run(&options, NULL, &error) == URSATZ_ERR_NOT_FOUND, "a missing input folder");
+    CHECKF(strstr(error.message, "cannot read input directory") != NULL && strcmp(error.path, missing) == 0,
+           "the error names the input folder: '%s' at '%s'", error.message, error.path);
+
+    CorpusRunOptions no_knowledge = {work, work, false, NULL, NULL, NULL};
+    CHECKF(corpus_run(&no_knowledge, NULL, &error) == URSATZ_ERR_REQUEST && strstr(error.message, "knowledge snapshot") != NULL,
+           "no knowledge snapshot is a request error with its message");
+
+    char output[1024];
+    char input[1024];
+    snprintf(output, sizeof(output), "%s/messages-out", work);
+    snprintf(input, sizeof(input), "%s/mixed", URSATZ_CORPORA_DIR);
+    Reports reports = {0};
+    CorpusRunOptions mixed = {input, output, false, collect_report, &reports, test_knowledge()};
+    CorpusRunSummary summary;
+    CHECKF(corpus_run(&mixed, &summary, &error) == URSATZ_OK && summary.failed == 1 && reports.pieces == 3,
+           "the mixed corpus runs: %zu pieces, %zu failed", reports.pieces, summary.failed);
+    CHECKF(reports.with_message == 1 && reports.message[0] != '\0', "the failed piece's importer text reaches the callback: '%s'", reports.message);
 }
 
 int main(void) {
@@ -386,6 +430,7 @@ int main(void) {
     test_mixed(work);
     test_resume_changes(work);
     test_arguments(work);
+    test_messages(work);
 
     if (test_failure_count == 0) {
         remove_tree(work);

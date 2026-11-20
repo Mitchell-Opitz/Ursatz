@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/text_export.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -46,7 +46,7 @@ static char *export_piece(const char *fixture) {
         return NULL;
     }
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(&notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
+    if (analyzer_analyze(&notes, test_analyzer_defaults(), &result) != URSATZ_OK) {
         imported_score_destroy(&notes);
         return NULL;
     }
@@ -55,7 +55,7 @@ static char *export_piece(const char *fixture) {
     char *text = NULL;
     if (document) {
         AnalyzerTextExportOptions options = analyzer_text_export_options_default();
-        if (analyzer_text_export_piece(&notes, document, &options, &text) != ANALYZER_OK) {
+        if (analyzer_text_export_piece(&notes, document, &options, &text, NULL) != URSATZ_OK) {
             text = NULL;
         }
     }

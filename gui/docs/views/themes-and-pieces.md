@@ -4,10 +4,10 @@ The Themes view, the Pieces view and item references in the GUI. [Docs index](..
 
 ## Themes view
 
-A theme's detail is a page in four tabs at the full width (`theme-detail-view.js`,
-`ThemeDetailView`; the editor is in `themes-view.js`, the helpers in
-`themes-model.js`, global `ThemesModel`). The open tab is remembered. It edits
-the theme body the backend composes (see [Theme bodies and version files](../storage.md#theme-bodies-and-version-files)).
+A theme's detail is a page in four tabs at the full width (`views/theme-detail-view.js`,
+`ThemeDetailView`; the editor is in `views/themes-view.js`, the helpers in
+`models/themes-model.js`, `ThemesModel`). The open tab is remembered. It edits
+the theme body the backend composes (see [Theme bodies and version files](../../../workshop/docs/data-folder.md#items-and-versions)).
 
 - Theme tab: subjects, mode (major, minor, From the brief; the first basic
   motif sets it to that motif's mode unless it was changed by hand), meter and
@@ -106,10 +106,10 @@ MIDI download. Playback is served by the backend, built by the Analyzer from
 
 ## Pieces view
 
-A piece's detail holds the piece editor (`pieces-view.js`; the helpers are in
-`pieces-model.js`, global `PiecesModel`). It edits the piece body the backend
-composes (see [Piece bodies and version files](../storage.md#piece-bodies-and-version-files)) and reuses the Themes view's
-builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
+A piece's detail holds the piece editor (`views/pieces-view.js`; the helpers are in
+`models/pieces-model.js`, `PiecesModel`). It edits the piece body the backend
+composes (see [Piece bodies and version files](../../../workshop/docs/data-folder.md#items-and-versions)) and reuses the Themes view's
+builders (motif picker, pool, accompaniment and brief in `views/themes-view.js`).
 
 - Header: form (the Composer's forms by label: Binary, Rounded binary, Ternary, Theme and variations, Loop, Layered, Minuet,
   Trio, Minuet and trio, Scherzo, Scherzo and trio, Game loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no

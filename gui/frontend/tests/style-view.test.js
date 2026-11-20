@@ -1,9 +1,8 @@
 /* Covers the pure style detail helper (public/style-view.js): rows by
  * dimension and category, order by count, "and n more" and the fraction
  * text. Plain Node script: `node frontend/tests/style-view.test.js`. */
-const V = require("../public/style-view.js");
-
-const { check, same, finish } = require("./support/check.js");
+import V from "../public/models/style-view.js";
+import { check, same, finish } from "./support/check.js";
 
 const statistics = {
   harmony: {

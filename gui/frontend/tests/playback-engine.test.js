@@ -4,11 +4,8 @@
  * mid-piece, range end and onEnd, a start mid-piece, a loop region that
  * repeats at exact positions, and the switch to an ending. Plain Node script,
  * no dependencies. Run directly: `node frontend/tests/playback-engine.test.js`. */
-
-const PlaybackEngine = require("../public/playback-engine.js");
-
-const { check, near, finish } = require("./support/check.js");
-
+import PlaybackEngine from "../public/score/playback-engine.js";
+import { check, near, finish } from "./support/check.js";
 
 /* Two tempo regions: 120 qpm for the first whole note, 60 qpm after. */
 const playback = {

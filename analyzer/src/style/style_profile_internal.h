@@ -3,7 +3,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer_internal/style_profile.h>
 
 /*
  * Fills *piece from one analysis document tree (schema version 13): the members a style profile counts, read as

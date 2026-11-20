@@ -1,0 +1,1707 @@
+{
+	"kind":	"piece",
+	"body":	{
+		"piece":	{
+			"structure":	{
+				"key":	"D",
+				"material":	"omt.material.natural-minor",
+				"meter":	"4/4",
+				"sections":	[{
+						"id":	"s0",
+						"part":	"intro",
+						"letter":	"S",
+						"beats":	8,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	{
+							"kind":	"empty"
+						}
+					}, {
+						"id":	"s1",
+						"part":	"body",
+						"letter":	"S",
+						"beats":	32,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	{
+							"kind":	"motif",
+							"item_id":	"mot-8dc88f20a2e299c3",
+							"version":	1,
+							"into":	"sentence"
+						}
+					}, {
+						"id":	"s2",
+						"part":	"body",
+						"letter":	"S",
+						"beats":	32,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	{
+							"kind":	"theme",
+							"item_id":	"thm-09a8f10f8c00e030",
+							"version":	2
+						}
+					}, {
+						"id":	"s3",
+						"part":	"body",
+						"letter":	"S",
+						"beats":	16,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	{
+							"kind":	"empty"
+						},
+						"harmony":	{
+							"progression":	"i iv V i",
+							"cells":	2
+						}
+					}, {
+						"id":	"s4",
+						"part":	"turnaround",
+						"letter":	"S",
+						"beats":	8,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	null
+					}, {
+						"id":	"end",
+						"part":	"ending",
+						"letter":	"E",
+						"beats":	8,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	{
+							"kind":	"empty"
+						}
+					}]
+			},
+			"motive":	{
+				"item_id":	"mot-8dc88f20a2e299c3",
+				"version":	1
+			},
+			"pool":	"approved-and-unflagged",
+			"check":	true,
+			"tempo":	96,
+			"result":	{
+				"seed":	97,
+				"loop":	{
+					"start":	"2/1",
+					"end":	"24/1"
+				},
+				"summary":	{
+					"schema":	"ursatz-piece",
+					"seed":	97,
+					"key":	"D minor",
+					"meter":	"4/4",
+					"brief":	{
+						"tempo":	{
+							"qpm":	96,
+							"from":	"option"
+						},
+						"material":	{
+							"material":	"omt.material.natural-minor",
+							"from":	"request"
+						},
+						"density":	null,
+						"without":	[]
+					},
+					"loop":	{
+						"start":	"2/1",
+						"end":	"24/1"
+					},
+					"versions":	{
+						"loop":	{
+							"sections":	[{
+									"id":	"s0",
+									"part":	"intro",
+									"function":	null,
+									"letter":	"S",
+									"start":	"0/1",
+									"beats":	8,
+									"cadence":	"HC",
+									"heard":	"half",
+									"fill":	"empty",
+									"source":	"basic motive",
+									"region":	null,
+									"harmony":	null
+								}, {
+									"id":	"s1",
+									"part":	"body",
+									"function":	null,
+									"letter":	"S",
+									"start":	"2/1",
+									"beats":	32,
+									"cadence":	"IAC",
+									"heard":	"authentic-unspecified",
+									"fill":	"motif",
+									"source":	"own motive",
+									"region":	null,
+									"harmony":	null
+								}, {
+									"id":	"s2",
+									"part":	"body",
+									"function":	null,
+									"letter":	"S",
+									"start":	"10/1",
+									"beats":	32,
+									"cadence":	"PAC",
+									"heard":	"perfect-authentic",
+									"fill":	"theme",
+									"source":	"/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/theme-s2.plan.json",
+									"region":	null,
+									"harmony":	null
+								}, {
+									"id":	"s3",
+									"part":	"body",
+									"function":	null,
+									"letter":	"S",
+									"start":	"18/1",
+									"beats":	16,
+									"cadence":	"IAC",
+									"heard":	"imperfect-authentic",
+									"fill":	"empty",
+									"source":	"basic motive",
+									"region":	null,
+									"harmony":	"i iv V i (2 cells each)"
+								}, {
+									"id":	"s4",
+									"part":	"turnaround",
+									"function":	null,
+									"letter":	"S",
+									"start":	"22/1",
+									"beats":	8,
+									"cadence":	"HC",
+									"heard":	"half",
+									"fill":	"empty",
+									"source":	"basic motive",
+									"region":	null,
+									"harmony":	null
+								}],
+							"score":	{
+								"numerator":	17,
+								"denominator":	22
+							},
+							"seam":	{
+								"progression":	true,
+								"no_parallels":	true,
+								"step":	false,
+								"leading_tone":	true,
+								"held":	3
+							},
+							"analyzer_check":	{
+								"planned":	6,
+								"agreed":	6,
+								"contradicts":	false,
+								"items":	[{
+										"kind":	"cadence",
+										"bar":	1,
+										"planned":	"half",
+										"heard":	"half",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	9,
+										"planned":	"imperfect-authentic",
+										"heard":	"authentic-unspecified",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	17,
+										"planned":	"perfect-authentic",
+										"heard":	"perfect-authentic",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	21,
+										"planned":	"imperfect-authentic",
+										"heard":	"imperfect-authentic",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	23,
+										"planned":	"half",
+										"heard":	"half",
+										"agreed":	true
+									}, {
+										"kind":	"key",
+										"bar":	0,
+										"planned":	"D minor",
+										"heard":	"D minor",
+										"agreed":	true
+									}, {
+										"kind":	"violation",
+										"bar":	18,
+										"planned":	"none",
+										"heard":	"parallel-octaves",
+										"agreed":	false
+									}]
+							},
+							"style_distance":	null,
+							"plan":	"/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/plan.json"
+						},
+						"ending":	{
+							"sections":	[{
+									"id":	"s0",
+									"part":	"intro",
+									"function":	null,
+									"letter":	"S",
+									"start":	"0/1",
+									"beats":	8,
+									"cadence":	"HC",
+									"heard":	"half",
+									"fill":	"empty",
+									"source":	"basic motive",
+									"region":	null,
+									"harmony":	null
+								}, {
+									"id":	"s1",
+									"part":	"body",
+									"function":	null,
+									"letter":	"S",
+									"start":	"2/1",
+									"beats":	32,
+									"cadence":	"IAC",
+									"heard":	"authentic-unspecified",
+									"fill":	"motif",
+									"source":	"own motive",
+									"region":	null,
+									"harmony":	null
+								}, {
+									"id":	"s2",
+									"part":	"body",
+									"function":	null,
+									"letter":	"S",
+									"start":	"10/1",
+									"beats":	32,
+									"cadence":	"PAC",
+									"heard":	"perfect-authentic",
+									"fill":	"theme",
+									"source":	"/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/theme-s2.plan.json",
+									"region":	null,
+									"harmony":	null
+								}, {
+									"id":	"s3",
+									"part":	"body",
+									"function":	null,
+									"letter":	"S",
+									"start":	"18/1",
+									"beats":	16,
+									"cadence":	"IAC",
+									"heard":	"imperfect-authentic",
+									"fill":	"empty",
+									"source":	"basic motive",
+									"region":	null,
+									"harmony":	"i iv V i (2 cells each)"
+								}, {
+									"id":	"end",
+									"part":	"ending",
+									"function":	null,
+									"letter":	"E",
+									"start":	"22/1",
+									"beats":	8,
+									"cadence":	"PAC",
+									"heard":	"authentic-unspecified",
+									"fill":	"empty",
+									"source":	"basic motive",
+									"region":	null,
+									"harmony":	null
+								}],
+							"score":	{
+								"numerator":	7,
+								"denominator":	7
+							},
+							"seam":	null,
+							"analyzer_check":	{
+								"planned":	6,
+								"agreed":	6,
+								"contradicts":	false,
+								"items":	[{
+										"kind":	"cadence",
+										"bar":	1,
+										"planned":	"half",
+										"heard":	"half",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	9,
+										"planned":	"imperfect-authentic",
+										"heard":	"authentic-unspecified",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	17,
+										"planned":	"perfect-authentic",
+										"heard":	"perfect-authentic",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	21,
+										"planned":	"imperfect-authentic",
+										"heard":	"imperfect-authentic",
+										"agreed":	true
+									}, {
+										"kind":	"cadence",
+										"bar":	23,
+										"planned":	"perfect-authentic",
+										"heard":	"authentic-unspecified",
+										"agreed":	true
+									}, {
+										"kind":	"key",
+										"bar":	0,
+										"planned":	"D minor",
+										"heard":	"D minor",
+										"agreed":	true
+									}]
+							},
+							"style_distance":	null,
+							"plan":	"/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/ending-plan.json"
+						}
+					},
+					"files":	["/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/plan.json", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/loop.mid", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/loop.musicxml", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/ending-plan.json", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/ending.mid", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/pce-8168a5344c378601/v2/ending.musicxml"]
+				},
+				"brief":	{
+					"piece_count":	0,
+					"skipped":	[]
+				},
+				"files":	["request.json", "plan.json", "loop.mid", "loop.musicxml", "ending-plan.json", "ending.mid", "ending.musicxml", "theme-s2.plan.json"]
+			}
+		},
+		"uses":	[{
+				"item_id":	"mot-8dc88f20a2e299c3",
+				"version":	1,
+				"copy":	{
+					"uses":	[],
+					"motif":	{
+						"role":	"melodic",
+						"form":	"full",
+						"notes":	"C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e",
+						"meter":	"4/4",
+						"material":	"omt.material.natural-minor",
+						"pickup":	"0",
+						"analysis":	{
+							"motive":	{
+								"meter":	{
+									"beats_per_bar":	4,
+									"beat_unit":	4,
+									"bars_per_hyperbar":	0
+								},
+								"key":	{
+									"tonic_pitch_class":	0,
+									"material":	"omt.material.natural-minor"
+								},
+								"notes":	[{
+										"midi_pitch":	60,
+										"offset":	{
+											"num":	0,
+											"den":	1
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	63,
+										"offset":	{
+											"num":	1,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	67,
+										"offset":	{
+											"num":	1,
+											"den":	4
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	63,
+										"offset":	{
+											"num":	3,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	60,
+										"offset":	{
+											"num":	1,
+											"den":	2
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	63,
+										"offset":	{
+											"num":	5,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	67,
+										"offset":	{
+											"num":	3,
+											"den":	4
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}, {
+										"midi_pitch":	72,
+										"offset":	{
+											"num":	7,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										}
+									}]
+							},
+							"analysis":	{
+								"form":	"full",
+								"pickup":	"0",
+								"notes_text":	"C4:e D#4:e G4:e D#4:e C4:e D#4:e G4:e C5:e",
+								"degrees_text":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+								"note_count":	8,
+								"length":	{
+									"num":	1,
+									"den":	1
+								},
+								"bars":	{
+									"num":	1,
+									"den":	1
+								},
+								"key":	{
+									"tonic_pitch_class":	0,
+									"material":	"omt.material.natural-minor",
+									"source":	"given"
+								},
+								"intervals":	[{
+										"semitones":	3,
+										"steps":	2
+									}, {
+										"semitones":	4,
+										"steps":	2
+									}, {
+										"semitones":	-4,
+										"steps":	-2
+									}, {
+										"semitones":	-3,
+										"steps":	-2
+									}, {
+										"semitones":	3,
+										"steps":	2
+									}, {
+										"semitones":	4,
+										"steps":	2
+									}, {
+										"semitones":	5,
+										"steps":	3
+									}],
+								"contour":	{
+									"shape":	"wave",
+									"directions":	["up", "up", "down", "down", "up", "up", "up"]
+								},
+								"rhythm":	[{
+										"onset":	{
+											"num":	0,
+											"den":	1
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	0,
+											"den":	1
+										},
+										"on_beat":	true,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	1,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	1,
+											"den":	2
+										},
+										"on_beat":	false,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	1,
+											"den":	4
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	1,
+											"den":	1
+										},
+										"on_beat":	true,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	3,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	3,
+											"den":	2
+										},
+										"on_beat":	false,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	1,
+											"den":	2
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	2,
+											"den":	1
+										},
+										"on_beat":	true,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	5,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	5,
+											"den":	2
+										},
+										"on_beat":	false,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	3,
+											"den":	4
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	3,
+											"den":	1
+										},
+										"on_beat":	true,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}, {
+										"onset":	{
+											"num":	7,
+											"den":	8
+										},
+										"duration":	{
+											"num":	1,
+											"den":	8
+										},
+										"bar":	0,
+										"beat":	{
+											"num":	7,
+											"den":	2
+										},
+										"on_beat":	false,
+										"dotted":	false,
+										"rest_before":	{
+											"num":	0,
+											"den":	1
+										}
+									}],
+								"range":	{
+									"lowest":	60,
+									"highest":	72,
+									"semitones":	12
+								},
+								"scale_degrees":	{
+									"start":	{
+										"degree":	1,
+										"alteration":	0
+									},
+									"end":	{
+										"degree":	1,
+										"alteration":	0
+									},
+									"all":	[{
+											"degree":	1,
+											"alteration":	0
+										}, {
+											"degree":	3,
+											"alteration":	0
+										}, {
+											"degree":	5,
+											"alteration":	0
+										}, {
+											"degree":	3,
+											"alteration":	0
+										}, {
+											"degree":	1,
+											"alteration":	0
+										}, {
+											"degree":	3,
+											"alteration":	0
+										}, {
+											"degree":	5,
+											"alteration":	0
+										}, {
+											"degree":	1,
+											"alteration":	0
+										}]
+								},
+								"implied_harmony":	{
+									"key_known":	true,
+									"candidates":	[{
+											"roman_numeral":	"i",
+											"function":	"tonic",
+											"fit":	1,
+											"chord_tones":	8,
+											"non_chord_tones":	0
+										}, {
+											"roman_numeral":	"VI",
+											"function":	"predominant",
+											"fit":	0.7778,
+											"chord_tones":	6,
+											"non_chord_tones":	2
+										}, {
+											"roman_numeral":	"III",
+											"function":	"predominant",
+											"fit":	0.5556,
+											"chord_tones":	5,
+											"non_chord_tones":	3
+										}, {
+											"roman_numeral":	"iv",
+											"function":	"predominant",
+											"fit":	0.4444,
+											"chord_tones":	3,
+											"non_chord_tones":	5
+										}, {
+											"roman_numeral":	"V",
+											"function":	"dominant",
+											"fit":	0.2222,
+											"chord_tones":	2,
+											"non_chord_tones":	6
+										}, {
+											"roman_numeral":	"V7",
+											"function":	"dominant",
+											"fit":	0.2222,
+											"chord_tones":	2,
+											"non_chord_tones":	6
+										}]
+								},
+								"base_harmony":	{
+									"text":	"I",
+									"given":	false
+								},
+								"segments":	{
+									"given":	false,
+									"items":	[{
+											"label":	"a",
+											"first":	0,
+											"last":	7
+										}]
+								},
+								"tones":	[{
+										"note":	1,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	2,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	3,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	4,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	5,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	6,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	7,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}, {
+										"note":	8,
+										"role":	"chord",
+										"type":	null,
+										"resolves_to":	null,
+										"unresolved":	false,
+										"overridden":	false
+									}],
+								"warnings":	[]
+							}
+						},
+						"derived":	null,
+						"features":	[{
+								"label":	"a",
+								"first":	0,
+								"last":	7
+							}],
+						"segments_proposed":	true,
+						"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+						"analysis_error":	null
+					}
+				}
+			}, {
+				"item_id":	"thm-09a8f10f8c00e030",
+				"version":	2,
+				"copy":	{
+					"theme":	{
+						"form":	{
+							"into":	"sentence",
+							"hybrid":	null,
+							"material":	"omt.material.natural-minor",
+							"meter":	"4/4",
+							"bars":	8,
+							"cadence":	"PAC",
+							"first_cadence":	null
+						},
+						"slots":	[{
+								"slot":	"basic",
+								"item_id":	"mot-8dc88f20a2e299c3",
+								"version":	1
+							}],
+						"result":	{
+							"seed":	1,
+							"summary":	{
+								"key":	"C minor",
+								"meter":	"4/4",
+								"bars":	8,
+								"into":	"sentence",
+								"pairing":	"presentation + continuation",
+								"cadence":	"PAC",
+								"tempo":	{
+									"qpm":	null,
+									"from":	"none"
+								},
+								"brief":	{
+									"tempo":	{
+										"qpm":	null,
+										"from":	"none"
+									},
+									"material":	{
+										"material":	"omt.material.natural-minor",
+										"from":	"request"
+									},
+									"density":	null,
+									"without":	[],
+									"development":	"balanced"
+								},
+								"chords":	[],
+								"themes":	[{
+										"seed":	1,
+										"structure":	[{
+												"name":	"theme",
+												"kind":	"section",
+												"start":	0,
+												"end":	8
+											}, {
+												"name":	"phrase",
+												"kind":	"phrase",
+												"start":	0,
+												"end":	8
+											}, {
+												"name":	"presentation",
+												"kind":	"subphrase",
+												"start":	0,
+												"end":	4
+											}, {
+												"name":	"basic idea",
+												"kind":	"idea",
+												"start":	0,
+												"end":	2
+											}, {
+												"name":	"repetition",
+												"kind":	"idea",
+												"start":	2,
+												"end":	4
+											}, {
+												"name":	"continuation",
+												"kind":	"subphrase",
+												"start":	4,
+												"end":	8
+											}, {
+												"name":	"fragment 1",
+												"kind":	"idea",
+												"start":	4,
+												"end":	5
+											}, {
+												"name":	"fragment 2",
+												"kind":	"idea",
+												"start":	5,
+												"end":	6
+											}, {
+												"name":	"cadential",
+												"kind":	"idea",
+												"start":	6,
+												"end":	8
+											}],
+										"construction":	null,
+										"chords":	[{
+												"bar":	1,
+												"beat":	1,
+												"chord":	"i",
+												"function":	"tonic",
+												"bass":	"C3 C4 C3"
+											}, {
+												"bar":	3,
+												"beat":	1,
+												"chord":	"i",
+												"function":	"tonic",
+												"bass":	"C3 C4"
+											}, {
+												"bar":	5,
+												"beat":	1,
+												"chord":	"i",
+												"function":	"tonic",
+												"bass":	"C3"
+											}, {
+												"bar":	6,
+												"beat":	1,
+												"chord":	"i",
+												"function":	"tonic",
+												"bass":	"C4"
+											}, {
+												"bar":	7,
+												"beat":	1,
+												"chord":	"i",
+												"function":	"tonic",
+												"bass":	"C4"
+											}, {
+												"bar":	7,
+												"beat":	3,
+												"chord":	"V7",
+												"function":	"dominant",
+												"bass":	"G3"
+											}, {
+												"bar":	8,
+												"beat":	1,
+												"chord":	"i",
+												"function":	"tonic",
+												"bass":	"C4"
+											}],
+										"developments":	[{
+												"motive":	"m1",
+												"idea":	"repetition",
+												"development":	"restated, exact",
+												"segment":	null,
+												"summary":	"repetition = basic idea, exact",
+												"fidelity":	1,
+												"minimum":	0.55,
+												"heard":	"exact",
+												"heard_agrees":	true
+											}, {
+												"motive":	"m2",
+												"idea":	"fragment 1",
+												"development":	"fragmented, leading, 2 notes",
+												"segment":	null,
+												"summary":	"fragment 1 = basic idea, fragmented, leading, 2 notes",
+												"fidelity":	0.156,
+												"minimum":	0,
+												"heard":	"cut to the leading 2 notes",
+												"heard_agrees":	true
+											}, {
+												"motive":	"m3",
+												"idea":	"fragment 2",
+												"development":	"fragmented, leading, 2 notes",
+												"segment":	null,
+												"summary":	"fragment 2 = basic idea, fragmented, leading, 2 notes",
+												"fidelity":	0.156,
+												"minimum":	0,
+												"heard":	"cut to the leading 2 notes",
+												"heard_agrees":	true
+											}, {
+												"motive":	"m4",
+												"idea":	"cadential",
+												"development":	"restated, exact",
+												"segment":	"a",
+												"summary":	"cadential = segment a, segments liquidated, 1 step",
+												"fidelity":	0.734,
+												"minimum":	0,
+												"heard":	"not recognized",
+												"heard_agrees":	false
+											}],
+										"slots":	[{
+												"idea":	"basic idea",
+												"slot":	"basic",
+												"motive":	"M1",
+												"source":	"motive",
+												"item":	null,
+												"chain":	null,
+												"connection":	null
+											}, {
+												"idea":	"repetition",
+												"slot":	"basic",
+												"motive":	"M1",
+												"source":	"motive",
+												"item":	null,
+												"chain":	null,
+												"connection":	87
+											}, {
+												"idea":	"fragment 1",
+												"slot":	"continuation",
+												"motive":	"M1",
+												"source":	"registry",
+												"item":	null,
+												"chain":	"fragment",
+												"connection":	49
+											}, {
+												"idea":	"fragment 2",
+												"slot":	"continuation",
+												"motive":	"M1",
+												"source":	"registry",
+												"item":	null,
+												"chain":	"fragment",
+												"connection":	70
+											}, {
+												"idea":	"cadential",
+												"slot":	"cadential",
+												"motive":	"M1",
+												"source":	"motive",
+												"item":	null,
+												"chain":	null,
+												"connection":	66
+											}],
+										"score":	{
+											"numerator":	5,
+											"denominator":	5
+										},
+										"requested":	"sentence",
+										"heard":	"sentence",
+										"heard_as_requested":	true,
+										"heard_text":	"heard as sentence"
+									}],
+								"files":	["/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/thm-09a8f10f8c00e030/v2/plan.json", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/thm-09a8f10f8c00e030/v2/theme.mid", "/home/user/ursatz/build/gui/backend/tests/piece_route/projects/prj-7dda9214e9e6fd10/items/thm-09a8f10f8c00e030/v2/theme.musicxml"]
+							},
+							"brief":	{
+								"piece_count":	0,
+								"skipped":	[]
+							},
+							"files":	["request.json", "plan.json", "theme.mid", "theme.musicxml"]
+						}
+					},
+					"uses":	[{
+							"item_id":	"mot-8dc88f20a2e299c3",
+							"version":	1,
+							"copy":	{
+								"uses":	[],
+								"motif":	{
+									"role":	"melodic",
+									"form":	"full",
+									"notes":	"C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e",
+									"meter":	"4/4",
+									"material":	"omt.material.natural-minor",
+									"pickup":	"0",
+									"analysis":	{
+										"motive":	{
+											"meter":	{
+												"beats_per_bar":	4,
+												"beat_unit":	4,
+												"bars_per_hyperbar":	0
+											},
+											"key":	{
+												"tonic_pitch_class":	0,
+												"material":	"omt.material.natural-minor"
+											},
+											"notes":	[{
+													"midi_pitch":	60,
+													"offset":	{
+														"num":	0,
+														"den":	1
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	63,
+													"offset":	{
+														"num":	1,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	67,
+													"offset":	{
+														"num":	1,
+														"den":	4
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	63,
+													"offset":	{
+														"num":	3,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	60,
+													"offset":	{
+														"num":	1,
+														"den":	2
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	63,
+													"offset":	{
+														"num":	5,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	67,
+													"offset":	{
+														"num":	3,
+														"den":	4
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}, {
+													"midi_pitch":	72,
+													"offset":	{
+														"num":	7,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													}
+												}]
+										},
+										"analysis":	{
+											"form":	"full",
+											"pickup":	"0",
+											"notes_text":	"C4:e D#4:e G4:e D#4:e C4:e D#4:e G4:e C5:e",
+											"degrees_text":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+											"note_count":	8,
+											"length":	{
+												"num":	1,
+												"den":	1
+											},
+											"bars":	{
+												"num":	1,
+												"den":	1
+											},
+											"key":	{
+												"tonic_pitch_class":	0,
+												"material":	"omt.material.natural-minor",
+												"source":	"given"
+											},
+											"intervals":	[{
+													"semitones":	3,
+													"steps":	2
+												}, {
+													"semitones":	4,
+													"steps":	2
+												}, {
+													"semitones":	-4,
+													"steps":	-2
+												}, {
+													"semitones":	-3,
+													"steps":	-2
+												}, {
+													"semitones":	3,
+													"steps":	2
+												}, {
+													"semitones":	4,
+													"steps":	2
+												}, {
+													"semitones":	5,
+													"steps":	3
+												}],
+											"contour":	{
+												"shape":	"wave",
+												"directions":	["up", "up", "down", "down", "up", "up", "up"]
+											},
+											"rhythm":	[{
+													"onset":	{
+														"num":	0,
+														"den":	1
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	0,
+														"den":	1
+													},
+													"on_beat":	true,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	1,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	1,
+														"den":	2
+													},
+													"on_beat":	false,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	1,
+														"den":	4
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	1,
+														"den":	1
+													},
+													"on_beat":	true,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	3,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	3,
+														"den":	2
+													},
+													"on_beat":	false,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	1,
+														"den":	2
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	2,
+														"den":	1
+													},
+													"on_beat":	true,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	5,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	5,
+														"den":	2
+													},
+													"on_beat":	false,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	3,
+														"den":	4
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	3,
+														"den":	1
+													},
+													"on_beat":	true,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}, {
+													"onset":	{
+														"num":	7,
+														"den":	8
+													},
+													"duration":	{
+														"num":	1,
+														"den":	8
+													},
+													"bar":	0,
+													"beat":	{
+														"num":	7,
+														"den":	2
+													},
+													"on_beat":	false,
+													"dotted":	false,
+													"rest_before":	{
+														"num":	0,
+														"den":	1
+													}
+												}],
+											"range":	{
+												"lowest":	60,
+												"highest":	72,
+												"semitones":	12
+											},
+											"scale_degrees":	{
+												"start":	{
+													"degree":	1,
+													"alteration":	0
+												},
+												"end":	{
+													"degree":	1,
+													"alteration":	0
+												},
+												"all":	[{
+														"degree":	1,
+														"alteration":	0
+													}, {
+														"degree":	3,
+														"alteration":	0
+													}, {
+														"degree":	5,
+														"alteration":	0
+													}, {
+														"degree":	3,
+														"alteration":	0
+													}, {
+														"degree":	1,
+														"alteration":	0
+													}, {
+														"degree":	3,
+														"alteration":	0
+													}, {
+														"degree":	5,
+														"alteration":	0
+													}, {
+														"degree":	1,
+														"alteration":	0
+													}]
+											},
+											"implied_harmony":	{
+												"key_known":	true,
+												"candidates":	[{
+														"roman_numeral":	"i",
+														"function":	"tonic",
+														"fit":	1,
+														"chord_tones":	8,
+														"non_chord_tones":	0
+													}, {
+														"roman_numeral":	"VI",
+														"function":	"predominant",
+														"fit":	0.7778,
+														"chord_tones":	6,
+														"non_chord_tones":	2
+													}, {
+														"roman_numeral":	"III",
+														"function":	"predominant",
+														"fit":	0.5556,
+														"chord_tones":	5,
+														"non_chord_tones":	3
+													}, {
+														"roman_numeral":	"iv",
+														"function":	"predominant",
+														"fit":	0.4444,
+														"chord_tones":	3,
+														"non_chord_tones":	5
+													}, {
+														"roman_numeral":	"V",
+														"function":	"dominant",
+														"fit":	0.2222,
+														"chord_tones":	2,
+														"non_chord_tones":	6
+													}, {
+														"roman_numeral":	"V7",
+														"function":	"dominant",
+														"fit":	0.2222,
+														"chord_tones":	2,
+														"non_chord_tones":	6
+													}]
+											},
+											"base_harmony":	{
+												"text":	"I",
+												"given":	false
+											},
+											"segments":	{
+												"given":	false,
+												"items":	[{
+														"label":	"a",
+														"first":	0,
+														"last":	7
+													}]
+											},
+											"tones":	[{
+													"note":	1,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	2,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	3,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	4,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	5,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	6,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	7,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}, {
+													"note":	8,
+													"role":	"chord",
+													"type":	null,
+													"resolves_to":	null,
+													"unresolved":	false,
+													"overridden":	false
+												}],
+											"warnings":	[]
+										}
+									},
+									"derived":	null,
+									"features":	[{
+											"label":	"a",
+											"first":	0,
+											"last":	7
+										}],
+									"segments_proposed":	true,
+									"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+									"analysis_error":	null
+								}
+							}
+						}]
+				}
+			}]
+	},
+	"request":	{
+		"schema":	"ursatz-piece-request",
+		"schema_version":	2,
+		"form":	"game-loop",
+		"key":	"D",
+		"material":	"omt.material.natural-minor",
+		"meter":	"4/4",
+		"motive":	{
+			"form":	"full",
+			"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+			"pickup":	"0",
+			"harmony":	null,
+			"features":	[{
+					"label":	"a",
+					"first":	0,
+					"last":	7
+				}],
+			"role":	"melodic"
+		},
+		"sections":	[{
+				"id":	"s0",
+				"part":	"intro",
+				"letter":	"S",
+				"beats":	8,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}, {
+				"id":	"s1",
+				"part":	"body",
+				"letter":	"S",
+				"beats":	32,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"motif",
+					"motive":	{
+						"form":	"full",
+						"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+						"pickup":	"0",
+						"harmony":	null,
+						"features":	[{
+								"label":	"a",
+								"first":	0,
+								"last":	7
+							}],
+						"role":	"melodic"
+					},
+					"forms":	[{
+							"item":	"mot-a35e5aa8ed8a90e3",
+							"form":	"full",
+							"degrees":	"2:e 4:e #6:e 4:e 2:e 4:e #6:e 2':e",
+							"pickup":	"0",
+							"harmony":	null,
+							"features":	[{
+									"label":	"a",
+									"first":	0,
+									"last":	7
+								}],
+							"role":	"melodic",
+							"chain":	"transpose tonal=1 by=1",
+							"functions":	["beginning"],
+							"flag":	"approved"
+						}, {
+							"item":	"mot-a6d2a3a0b7b7f2a6",
+							"form":	"full",
+							"degrees":	"3:e 5:e 1':e 5:e 3:e 5:e 1':e 3':e",
+							"pickup":	"0",
+							"harmony":	null,
+							"features":	[{
+									"label":	"a",
+									"first":	0,
+									"last":	7
+								}],
+							"role":	"melodic",
+							"chain":	"transpose tonal=1 by=1",
+							"functions":	["beginning"],
+							"flag":	"unflagged"
+						}, {
+							"item":	"mot-d6696dab2b0f13dd",
+							"form":	"full",
+							"degrees":	"3:e 5:e 7:e 5:e 3:e 5:e 7:e 3':e",
+							"pickup":	"0",
+							"harmony":	null,
+							"features":	[{
+									"label":	"a",
+									"first":	0,
+									"last":	7
+								}],
+							"role":	"melodic",
+							"chain":	"transpose tonal=1 by=1",
+							"functions":	["beginning"],
+							"flag":	"unflagged"
+						}],
+					"into":	"sentence"
+				}
+			}, {
+				"id":	"s2",
+				"part":	"body",
+				"letter":	"S",
+				"beats":	32,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"theme",
+					"plan":	"@STAGE@/theme-s2.plan.json"
+				}
+			}, {
+				"id":	"s3",
+				"part":	"body",
+				"letter":	"S",
+				"beats":	16,
+				"pickup":	"0",
+				"cadence":	null,
+				"harmony":	{
+					"progression":	"i iv V i",
+					"cells":	2
+				},
+				"fill":	{
+					"kind":	"empty"
+				}
+			}, {
+				"id":	"s4",
+				"part":	"turnaround",
+				"letter":	"S",
+				"beats":	8,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}, {
+				"id":	"end",
+				"part":	"ending",
+				"letter":	"E",
+				"beats":	8,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}],
+		"accompaniment":	null,
+		"voicing":	null,
+		"tempo":	96
+	}
+}

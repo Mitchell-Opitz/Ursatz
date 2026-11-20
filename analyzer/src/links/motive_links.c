@@ -1,4 +1,5 @@
-#include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer_internal/motive_links.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -7,12 +8,11 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
 
 #include "analysis/motive/motive_link.h"
 #include "links_internal.h"
 #include "chain/chain_motive_sketch.h"
-#include "util/json_util.h"
+#include <common/json.h>
 #include "store/corpus_walk.h"
 #include "util/misc_util.h"
 
@@ -29,7 +29,7 @@ static bool number_value(const cJSON *item, double *out) {
 
 static bool int_member(const cJSON *object, const char *name, int *out) {
     double value;
-    if (!number_value(json_member(object, name), &value) || value < -2147483647.0 || value > 2147483647.0 ||
+    if (!number_value(common_json_member(object, name), &value) || value < -2147483647.0 || value > 2147483647.0 ||
         value != (double)(int)value) {
         return false;
     }
@@ -39,39 +39,34 @@ static bool int_member(const cJSON *object, const char *name, int *out) {
 
 /* "n/d" with d above zero. */
 static bool fraction_value(const cJSON *item, unsigned long long *numerator, unsigned long long *denominator) {
-    if (!cJSON_IsString(item)) {
+    long long n, d;
+    if (!common_json_rational_read(item, COMMON_RATIONAL_TEXT, &n, &d) || n < 0) {
         return false;
     }
-    unsigned long long n;
-    unsigned long long d;
-    char tail;
-    if (sscanf(item->valuestring, "%llu/%llu%c", &n, &d, &tail) != 2 || d == 0) {
-        return false;
-    }
-    *numerator = n;
-    *denominator = d;
+    *numerator = (unsigned long long)n;
+    *denominator = (unsigned long long)d;
     return true;
 }
 
 static bool fraction_member(const cJSON *object, const char *name, Rational *out) {
     unsigned long long numerator;
     unsigned long long denominator;
-    return fraction_value(json_member(object, name), &numerator, &denominator) && numerator <= LLONG_MAX &&
+    return fraction_value(common_json_member(object, name), &numerator, &denominator) && numerator <= LLONG_MAX &&
            denominator <= LLONG_MAX && rational_make((long long)numerator, (long long)denominator, out) == RATIONAL_OK;
 }
 
 /* The prototype's sketch from a family's "features": the document side of motive_features_to_sketch. */
-static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, const cJSON *features, MotiveSketch *sketch) {
-    const cJSON *notes = json_member(features, "notes");
+static UrsatzStatus features_sketch(const KnowledgeSnapshot *knowledge, const cJSON *features, MotiveSketch *sketch) {
+    const cJSON *notes = common_json_member(features, "notes");
     int count = cJSON_IsArray(notes) ? cJSON_GetArraySize(notes) : 0;
     if (count <= 0 || count > MOTIVE_SKETCH_MAX_NOTES) {
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
     AnalysisMotiveFeatures read;
     memset(&read, 0, sizeof read);
     read.notes = calloc((size_t)count, sizeof *read.notes);
     if (!read.notes) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     read.note_count = (size_t)count;
     bool ok = true;
@@ -83,17 +78,17 @@ static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, con
     }
     int tonic;
     ok = ok && int_member(features, "tonic_pc", &tonic) && tonic >= 0 && tonic < 12 &&
-         cJSON_IsString(json_member(features, "material")) &&
+         cJSON_IsString(common_json_member(features, "material")) &&
          fraction_member(features, "bar", &read.bar) && fraction_member(features, "beat", &read.beat) &&
          fraction_member(features, "pickup", &read.pickup);
     if (ok) {
         read.tonic_pc = tonic;
-        read.material = knowledge_snapshot_material(knowledge, json_member(features, "material")->valuestring);
+        read.material = knowledge_snapshot_material(knowledge, common_json_member(features, "material")->valuestring);
         ok = read.material != NULL;
     }
     ok = ok && motive_features_to_sketch(&read, sketch);
     free(read.notes);
-    return ok ? MOTIVE_LINKS_OK : MOTIVE_LINKS_ERR_FORMAT;
+    return ok ? URSATZ_OK : URSATZ_ERR_FORMAT;
 }
 
 /*
@@ -148,40 +143,40 @@ static void family_clear(Family *family) {
 }
 
 /* The family of one motive claim: where its prototype sits and its sketch. */
-static MotiveLinksResult read_family(const KnowledgeSnapshot *knowledge, const cJSON *motive, size_t piece, Family *family) {
+static UrsatzStatus read_family(const KnowledgeSnapshot *knowledge, const cJSON *motive, size_t piece, Family *family) {
     memset(family, 0, sizeof *family);
-    const cJSON *features = json_member(motive, "features");
+    const cJSON *features = common_json_member(motive, "features");
     if (!cJSON_IsObject(features)) {
-        return MOTIVE_LINKS_ERR_NO_FEATURES;
+        return URSATZ_ERR_UNSATISFIABLE;
     }
     family->piece = piece;
-    const cJSON *index = json_member(motive, "index");
-    const cJSON *occurrences = json_member(motive, "occurrences");
+    const cJSON *index = common_json_member(motive, "index");
+    const cJSON *occurrences = common_json_member(motive, "occurrences");
     const cJSON *prototype = cJSON_IsArray(occurrences) ? cJSON_GetArrayItem(occurrences, 0) : NULL;
-    const cJSON *measures = json_member(prototype, "measures");
+    const cJSON *measures = common_json_member(prototype, "measures");
     double beat;
     if (!cJSON_IsNumber(index) || index->valuedouble < 0 || !int_member(measures, "first", &family->first_measure) ||
-        !int_member(measures, "last", &family->last_measure) || !number_value(json_member(prototype, "beat"), &beat)) {
-        return MOTIVE_LINKS_ERR_FORMAT;
+        !int_member(measures, "last", &family->last_measure) || !number_value(common_json_member(prototype, "beat"), &beat)) {
+        return URSATZ_ERR_FORMAT;
     }
     family->family = (size_t)index->valuedouble;
     family->beat = beat;
-    MotiveLinksResult result = features_sketch(knowledge, features, &family->sketch);
-    if (result != MOTIVE_LINKS_OK) {
+    UrsatzStatus result = features_sketch(knowledge, features, &family->sketch);
+    if (result != URSATZ_OK) {
         return result;
     }
     if (!normalize_key(&family->sketch)) {
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
-    family->degrees = join_degrees(json_member(features, "degrees"));
+    family->degrees = join_degrees(common_json_member(features, "degrees"));
     if (!family->degrees) {
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
     family->fingerprint = motive_sketch_fingerprint(&family->sketch);
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
-MotiveLinkScope *motive_link_scope_create(const KnowledgeSnapshot *knowledge) {
+MotiveLinkScope *analyzer_links_scope_create(const KnowledgeSnapshot *knowledge) {
     if (!knowledge) {
         return NULL;
     }
@@ -192,7 +187,7 @@ MotiveLinkScope *motive_link_scope_create(const KnowledgeSnapshot *knowledge) {
     return scope;
 }
 
-void motive_link_scope_destroy(MotiveLinkScope *scope) {
+void analyzer_links_scope_destroy(MotiveLinkScope *scope) {
     if (!scope) {
         return;
     }
@@ -226,7 +221,7 @@ static bool grow(void **items, size_t *capacity, size_t needed, size_t size) {
 }
 
 /* Remembers the id of a piece that was not added; a failure to remember it is not worth failing the add for. */
-static MotiveLinksResult add_failed(MotiveLinkScope *scope, const char *piece_id, MotiveLinksResult result) {
+static UrsatzStatus add_failed(MotiveLinkScope *scope, const char *piece_id, UrsatzStatus result) {
     char *copy = text_copy(piece_id);
     if (copy) {
         free(scope->failed);
@@ -235,43 +230,43 @@ static MotiveLinksResult add_failed(MotiveLinkScope *scope, const char *piece_id
     return result;
 }
 
-static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_id, const char *json) {
+static UrsatzStatus add_document(MotiveLinkScope *scope, const char *piece_id, const char *json) {
     if (!scope || !piece_id || !piece_id[0] || !json) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     for (size_t i = 0; i < scope->piece_count; i++) {
         if (strcmp(scope->pieces[i].id, piece_id) == 0) {
-            return MOTIVE_LINKS_ERR_ARGUMENT;
+            return URSATZ_ERR_REQUEST;
         }
     }
     cJSON *document = cJSON_Parse(json);
-    const cJSON *version = json_member(document, "schema_version");
-    const cJSON *motives = json_member(document, "motives");
-    if (!cJSON_IsNumber(version) || version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
+    const cJSON *version = common_json_member(document, "schema_version");
+    const cJSON *motives = common_json_member(document, "motives");
+    if (!cJSON_IsNumber(version) || version->valuedouble != ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
         cJSON_Delete(document);
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
     size_t count = (size_t)cJSON_GetArraySize(motives);
     Family *read = count ? calloc(count, sizeof *read) : NULL;
-    MotiveLinksResult result = count && !read ? MOTIVE_LINKS_ERR_ALLOC : MOTIVE_LINKS_OK;
+    UrsatzStatus result = count && !read ? URSATZ_ERR_ALLOC : URSATZ_OK;
     size_t made = 0;
-    for (; result == MOTIVE_LINKS_OK && made < count; made++) {
+    for (; result == URSATZ_OK && made < count; made++) {
         result = read_family(scope->knowledge, cJSON_GetArrayItem(motives, (int)made), scope->piece_count, &read[made]);
-        if (result != MOTIVE_LINKS_OK) {
+        if (result != URSATZ_OK) {
             family_clear(&read[made]);
             break;
         }
     }
     cJSON_Delete(document);
     char *id = NULL;
-    if (result == MOTIVE_LINKS_OK) {
+    if (result == URSATZ_OK) {
         id = text_copy(piece_id);
         if (!id || !grow((void **)&scope->pieces, &scope->piece_capacity, scope->piece_count + 1, sizeof(Piece)) ||
             !grow((void **)&scope->families, &scope->family_capacity, scope->family_count + count, sizeof(Family))) {
-            result = MOTIVE_LINKS_ERR_ALLOC;
+            result = URSATZ_ERR_ALLOC;
         }
     }
-    if (result != MOTIVE_LINKS_OK) {
+    if (result != URSATZ_OK) {
         for (size_t i = 0; i < made; i++) {
             family_clear(&read[i]);
         }
@@ -285,12 +280,12 @@ static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_
         scope->family_count += count;
     }
     free(read);
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
-MotiveLinksResult motive_link_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json) {
-    MotiveLinksResult result = add_document(scope, piece_id, json);
-    if (scope && piece_id && result != MOTIVE_LINKS_OK && result != MOTIVE_LINKS_ERR_ARGUMENT) {
+UrsatzStatus analyzer_links_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json) {
+    UrsatzStatus result = add_document(scope, piece_id, json);
+    if (scope && piece_id && result != URSATZ_OK && result != URSATZ_ERR_REQUEST) {
         return add_failed(scope, piece_id, result);
     }
     return result;
@@ -302,7 +297,7 @@ const char *motive_link_scope_failed_piece(const MotiveLinkScope *scope) {
 
 typedef struct {
     MotiveLinkScope *scope;
-    MotiveLinksResult result;
+    UrsatzStatus result;
 } ScopeAdd;
 
 static bool add_scope_document(const char *piece_path, const char *document, const char *json,
@@ -310,32 +305,32 @@ static bool add_scope_document(const char *piece_path, const char *document, con
     (void)document;
     (void)status;
     ScopeAdd *add = context;
-    add->result = motive_link_scope_add_document(add->scope, piece_path, json);
-    return add->result == MOTIVE_LINKS_OK;
+    add->result = analyzer_links_scope_add_document(add->scope, piece_path, json);
+    return add->result == URSATZ_OK;
 }
 
-MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const char *output_dir) {
+UrsatzStatus motive_link_scope_add_corpus(MotiveLinkScope *scope, const char *output_dir) {
     if (!scope || !output_dir) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     size_t directory = strlen(output_dir);
     char *index_path = malloc(directory + 24);
     if (!index_path) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", output_dir);
-    ScopeAdd add = {scope, MOTIVE_LINKS_OK};
+    ScopeAdd add = {scope, URSATZ_OK};
     CorpusWalkResult walked = corpus_walk_documents(index_path, add_scope_document, &add, NULL);
     free(index_path);
     switch (walked) {
     case CORPUS_WALK_OK:
-        return MOTIVE_LINKS_OK;
+        return URSATZ_OK;
     case CORPUS_WALK_ERR_ALLOC:
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     case CORPUS_WALK_ERR_IO:
-        return MOTIVE_LINKS_ERR_IO;
+        return URSATZ_ERR_IO;
     case CORPUS_WALK_ERR_FORMAT:
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     case CORPUS_WALK_ERR_VISIT:
         break;
     }
@@ -344,7 +339,7 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
 
 /* ---- Run ---- */
 
-void motive_links_options_default(MotiveLinksOptions *options) {
+void analyzer_links_options_default(MotiveLinksOptions *options) {
     memset(options, 0, sizeof *options);
     motive_link_options_default(&options->link);
     options->candidates = 4;
@@ -352,20 +347,20 @@ void motive_links_options_default(MotiveLinksOptions *options) {
 
 /* The pairs to compare: for each family its nearest candidates in other pieces, as the kernel's unordered pairs
    (motive_link_candidates), sorted and unique. *out is owned by the caller (free). */
-static MotiveLinksResult collect_pairs(const MotiveLinkScope *scope, const MotiveLinksOptions *options,
+static UrsatzStatus collect_pairs(const MotiveLinkScope *scope, const MotiveLinksOptions *options,
                                        MotiveLinkPair **out, size_t *count) {
     *out = NULL;
     *count = 0;
     size_t families = scope->family_count;
     if (families == 0) {
-        return MOTIVE_LINKS_OK;
+        return URSATZ_OK;
     }
     MotiveSketch *sketches = malloc(families * sizeof *sketches);
     size_t *pieces = malloc(families * sizeof *pieces);
     if (!sketches || !pieces) {
         free(sketches);
         free(pieces);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     for (size_t f = 0; f < families; f++) {
         sketches[f] = scope->families[f].sketch;
@@ -376,9 +371,9 @@ static MotiveLinksResult collect_pairs(const MotiveLinkScope *scope, const Motiv
     free(sketches);
     free(pieces);
     if (found != MOTIVE_LINK_OK) {
-        return found == MOTIVE_LINK_NO_MEMORY ? MOTIVE_LINKS_ERR_ALLOC : MOTIVE_LINKS_ERR_FORMAT;
+        return found == MOTIVE_LINK_NO_MEMORY ? URSATZ_ERR_ALLOC : URSATZ_ERR_FORMAT;
     }
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
 static bool options_valid(const MotiveLinksOptions *options) {
@@ -532,7 +527,7 @@ static bool build_groups(const MotiveLinkScope *scope, const MotiveLinkPair *pai
     return true;
 }
 
-void motive_links_destroy(MotiveLinks *links) {
+void analyzer_links_destroy(MotiveLinks *links) {
     if (!links) {
         return;
     }
@@ -550,10 +545,10 @@ void motive_links_destroy(MotiveLinks *links) {
     memset(links, 0, sizeof *links);
 }
 
-MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cache,
+UrsatzStatus analyzer_links_run(const MotiveLinkScope *scope, MotiveLinkCache *cache,
                                    const MotiveLinksOptions *options, MotiveLinks *out) {
     if (!scope || !options || !out || !options_valid(options)) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     memset(out, 0, sizeof *out);
     out->pieces = scope->piece_count;
@@ -562,12 +557,12 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
     MotiveLinkCache *use = cache ? cache : &local;
     bool reset = false;
     if (!motive_link_cache_prepare(use, &options->link, &reset)) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     MotiveLinkPair *pairs;
     size_t pair_count;
-    MotiveLinksResult result = collect_pairs(scope, options, &pairs, &pair_count);
-    if (result != MOTIVE_LINKS_OK) {
+    UrsatzStatus result = collect_pairs(scope, options, &pairs, &pair_count);
+    if (result != URSATZ_OK) {
         return result;
     }
     bool *linked = calloc(pair_count ? pair_count : 1, sizeof *linked);
@@ -576,7 +571,7 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
         free(pairs);
         free(linked);
         free(links);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     out->pairs = pair_count;
     out->cache_reset = reset;
@@ -584,7 +579,11 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
         options->progress(0, pair_count, options->progress_context);
     }
     size_t link_count = 0;
-    for (size_t p = 0; result == MOTIVE_LINKS_OK && p < pair_count; p++) {
+    for (size_t p = 0; result == URSATZ_OK && p < pair_count; p++) {
+        if (options->cancelled && options->cancelled(options->cancel_user)) {
+            result = URSATZ_ERR_CANCELLED;
+            break;
+        }
         const Family *earlier = &scope->families[pairs[p].low];
         const Family *later = &scope->families[pairs[p].high];
         const MotiveLinkCachePair *pair = motive_link_cache_find(use, earlier->fingerprint, later->fingerprint);
@@ -595,12 +594,12 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
             MotiveLink link;
             MotiveLinkResult compared = motive_link_pair(&earlier->sketch, &later->sketch, &options->link, &link);
             if (compared != MOTIVE_LINK_OK) {
-                result = compared == MOTIVE_LINK_NO_MEMORY ? MOTIVE_LINKS_ERR_ALLOC : MOTIVE_LINKS_ERR_FORMAT;
+                result = compared == MOTIVE_LINK_NO_MEMORY ? URSATZ_ERR_ALLOC : URSATZ_ERR_FORMAT;
                 break;
             }
             fresh = cache_pair_of(earlier, later, &link);
             if (!motive_link_cache_insert(use, &fresh)) {
-                result = MOTIVE_LINKS_ERR_ALLOC;
+                result = URSATZ_ERR_ALLOC;
                 break;
             }
             pair = &fresh;
@@ -608,7 +607,7 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
         }
         if (pair->linked) {
             if (!found_fill(&links[link_count], scope, earlier, later, pair)) {
-                result = MOTIVE_LINKS_ERR_ALLOC;
+                result = URSATZ_ERR_ALLOC;
                 break;
             }
             linked[p] = true;
@@ -618,17 +617,17 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
             options->progress(p + 1, pair_count, options->progress_context);
         }
     }
-    if (result == MOTIVE_LINKS_OK) {
+    if (result == URSATZ_OK) {
         out->links = links;
         out->link_count = link_count;
         if (!build_groups(scope, pairs, linked, pair_count, out)) {
-            result = MOTIVE_LINKS_ERR_ALLOC;
+            result = URSATZ_ERR_ALLOC;
         }
     }
-    if (result != MOTIVE_LINKS_OK) {
+    if (result != URSATZ_OK) {
         out->links = links;
         out->link_count = link_count;
-        motive_links_destroy(out);
+        analyzer_links_destroy(out);
         links = NULL;
     }
     free(pairs);

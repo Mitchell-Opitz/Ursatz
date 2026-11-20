@@ -3,14 +3,19 @@
  * theme-summary.json is the output of `ursatz-composer theme --format json` for a sentence with two slot motives,
  * a style, `without: ["motive-nct-figure"]`, mode style, tempo 132 and --check.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
-const fs = require("fs");
-const path = require("path");
-const Vocabulary = require("../public/vocabulary.js");
-const { generated } = require("./support/fixtures.js");
-Vocabulary.set(require(generated("vocabulary.json")));
-const T = require("../public/themes-model.js");
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import T from "../public/models/themes-model.js";
+import { check, same, finish } from "./support/check.js";
+import M from "../public/models/materials-model.js";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")));
+
 
 function filled() {
   const state = T.emptyState("thm-1");
@@ -36,32 +41,33 @@ state.check = true;
 state.seed = "97";
 state.uses = [{ item_id: "mot-1", version: 2 }];
 const body = T.bodyFromForm(state);
-check(body.theme.form.hybrid === "antecedent+continuation" && body.theme.form.first_cadence === "IAC", "a hybrid keeps its pairing and first cadence");
-check(same(body.theme.slots.map((s) => s.slot), ["basic", "cadential"]), "slots are written in slot order");
-check(same(body.theme.accompaniment, { pattern: "motive", item_id: "mot-9", version: 1 }), "a motif accompaniment names the item and version");
-check(body.theme.tempo === 132 && body.theme.seed === 97 && body.theme.check === true, "tempo, seed and check are written");
-check(!("result" in body.theme), "a saved body has no result");
+check(T.themeOfBody(body).form.hybrid === "antecedent+continuation" && T.themeOfBody(body).form.first_cadence === "IAC", "a hybrid keeps its pairing and first cadence");
+check(same(T.themeOfBody(body).slots.map((s) => s.slot), ["basic", "cadential"]), "slots are written in slot order");
+check(same(T.themeOfBody(body).accompaniment, { pattern: "motive", item_id: "mot-9", version: 1 }), "a motif accompaniment names the item and version");
+check(T.themeOfBody(body).tempo === 132 && T.themeOfBody(body).seed === 97 && T.themeOfBody(body).check === true, "tempo, seed and check are written");
+check(!("result" in body), "a saved body has no result");
 const back = T.formFromBody(body, "thm-1");
 const again = T.bodyFromForm(back);
 check(same(again, body), "form to body to form to body is stable");
 check(back.slots.length === 2 && back.accompaniment.kind === "motive" && back.picks.length === 2, "the form reads slots, accompaniment and picks back");
 check(back.switches["motive-rhythm"] === false && back.switches["motive-degrees"] === true, "the form reads the switches back");
 const sentence = T.bodyFromForm({ ...filled(), into: "sentence", hybrid: "cbi+cadential", firstCadence: "HC" });
-check(sentence.theme.form.hybrid === null && sentence.theme.form.first_cadence === null, "a sentence has no pairing and no first cadence");
+check(!("hybrid" in sentence.request) && !("first_cadence" in sentence.request), "a sentence has no pairing and no first cadence");
 
 /* development setting */
-check(T.emptyState("x").development === "balanced" && body.theme.form.development === "balanced", "the default development is balanced");
+check(T.emptyState("x").development === "balanced" && T.themeOfBody(body).form.development === "balanced", "the default development is balanced");
 const developed = T.bodyFromForm({ ...filled(), development: "theme" });
-check(developed.theme.form.development === "theme", "bodyFromForm writes the development");
+check(T.themeOfBody(developed).form.development === "theme", "bodyFromForm writes the development");
 check(T.formFromBody(developed, "thm-1").development === "theme", "a stored body with a development reads it back");
 const older = JSON.parse(JSON.stringify(developed));
-delete older.theme.form.development;
+delete older.request.development;
 check(T.formFromBody(older, "thm-1").development === "balanced", "a stored body without a development reads as balanced");
 const odd = JSON.parse(JSON.stringify(developed));
-odd.theme.form.development = "wild";
+odd.request.development = "wild";
 check(T.formFromBody(odd, "thm-1").development === "balanced", "an unknown stored development reads as balanced");
-check(T.bodyFromForm({ ...filled(), development: "wild" }).theme.form.development === "balanced", "an unknown development is written as balanced");
-check(same(T.DEVELOPMENTS.map((entry) => entry.value), ["melody", "balanced", "theme"]), "the development choices");
+check(T.themeOfBody(T.bodyFromForm({ ...filled(), development: "wild" })).form.development === "balanced", "an unknown development is written as balanced");
+check(same(T.developmentChoices().map((entry) => entry.value), ["melody", "balanced", "theme"]) && T.developmentChoices().every((entry) => entry.label && entry.help), "the development choices come from the vocabulary");
+check(T.chordBars() === 16 && T.maxExtensions() === 3, "the chord row and the extensions follow the vocabulary");
 check(T.fieldForPath("/development") === "development", "/development marks the development");
 check(T.tabOfField("development") === "structure", "the development is on the structure tab");
 const devView = T.resultView({
@@ -92,42 +98,34 @@ const unmeasured = fidelityOf({ fidelity: null, minimum: null, heard: null, hear
 check(unmeasured.heard === "" && unmeasured.fidelity === "" && unmeasured.minimum === "" && unmeasured.mismatch === false, "an idea that was not measured shows no score and no mismatch");
 check(unmeasured.text === "repetition: restates the basic idea", "an idea without a heard keeps its single line");
 check(oldView.developments[0].heard === "" && oldView.developments[0].mismatch === false, "a version composed before API 1.10 has no heard and no mismatch");
-check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").material === "omt.material.major", "a placeholder theme gives the defaults");
-check(T.bodyFromForm(T.emptyState("x")).theme.brief === null && T.bodyFromForm(T.emptyState("x")).theme.accompaniment === null, "the defaults have no brief and no accompaniment");
+check(T.formFromBody(T.requestBodyOf([], { form: null, slots: [] }), "thm-2").material === "omt.material.major", "a placeholder theme gives the defaults");
+check(T.themeOfBody(T.bodyFromForm(T.emptyState("x"))).brief === null && T.themeOfBody(T.bodyFromForm(T.emptyState("x"))).accompaniment === null, "the defaults have no brief and no accompaniment");
 
 /* problems */
-check(same(T.formProblems(filled()), []), "a filled form has no problems");
-check(T.formProblems(T.emptyState("x")).some((p) => /basic/.test(p)), "a missing basic slot is a problem");
 const twice = filled();
 twice.slots = [{ slot: "basic", item_id: "mot-1", version: 1 }, { slot: "continuation", item_id: "mot-1", version: 1 }];
-check(same(T.formProblems(twice), []), "one motif in two slots is allowed");
 const many = filled();
 many.slots = [1, 2, 3, 4, 5].map((n) => ({ slot: "basic", item_id: `mot-${n}`, version: 1 }));
-check(T.formProblems(many).some((p) => /at most 4/.test(p)), "more than 4 slots is a problem");
-const fiveSlots = JSON.parse(JSON.stringify(require(generated("vocabulary.json"))));
+const fiveSlots = JSON.parse(JSON.stringify(readJson(generated("vocabulary.json"))));
 fiveSlots.theme_slots.push({ value: "coda", label: "Coda", required: false });
 Vocabulary.set(fiveSlots);
-check(!T.formProblems(many).some((p) => /at most/.test(p)), "a vocabulary with a fifth slot allows five slots");
 check(T.REQUIRED_SLOT === "basic" && T.SLOT_NAMES.length === 5, "the required slot and the slot names are the vocabulary's");
-Vocabulary.set(require(generated("vocabulary.json")));
+Vocabulary.set(readJson(generated("vocabulary.json")));
 const keyed = T.bodyFromForm({ ...filled(), key: "D", pool: "approved" });
-check(!("key" in keyed.theme.form) && !("pool" in keyed.theme), "the body has no key and no pool");
+check(!("key" in T.themeOfBody(keyed).form) && !("pool" in T.themeOfBody(keyed)), "the body has no key and no pool");
 check(!("key" in T.emptyState("x")) && !("pool" in T.emptyState("x")), "the form has no key and no pool");
-const old = T.formFromBody({ uses: [], theme: { form: { into: "sentence", key: "D" }, pool: "approved", slots: [] } }, "thm-3");
+const old = T.formFromBody(T.requestBodyOf([], { form: { into: "sentence", key: "D" }, pool: "approved", slots: [] }), "thm-3");
 check(!("key" in old) && !("pool" in old), "an old key and pool are not read");
 const edge = filled();
 edge.tempo = "400";
-check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 400, "the tempo 400 is sent");
+check(T.themeOfBody(T.bodyFromForm(edge)).tempo === 400, "the tempo 400 is sent");
 edge.tempo = "19";
-check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 19, "a tempo out of range is sent for the Composer to refuse");
+check(T.themeOfBody(T.bodyFromForm(edge)).tempo === 19, "a tempo out of range is sent for the Composer to refuse");
 const noBrief = filled();
 noBrief.material = "style";
-check(T.formProblems(noBrief).some((p) => /brief/.test(p)), "the mode from the brief needs a brief");
 noBrief.picks = [{ kind: "style", id: "sty-1" }];
-check(T.formProblems(noBrief).length === 0, "the mode from the brief works with a brief");
 const noAcc = filled();
 noAcc.accompaniment = { kind: "motive", pattern: "any", item_id: "", version: 0 };
-check(T.formProblems(noAcc).some((p) => /accompaniment/.test(p)), "a motif accompaniment without a motif is a problem");
 
 /* switches */
 check(same(T.withoutFromSwitches(T.emptyState("x").switches), []), "all switches on give an empty without list");
@@ -143,7 +141,7 @@ check(same(T.switchesFromWithout(["motive-intervals"]), { "motive-degrees": true
 const off = filled();
 off.picks = [{ kind: "style", id: "sty-1" }];
 off.switches = { "motive-degrees": true, "motive-intervals": false, "motive-rhythm": true, "motive-nct-figure": false };
-check(same(T.bodyFromForm(off).theme.without, ["motive-intervals", "motive-nct-figure"]), "the body carries the without list");
+check(same(T.themeOfBody(T.bodyFromForm(off)).without, ["motive-intervals", "motive-nct-figure"]), "the body carries the without list");
 
 /* brief */
 check(T.briefFromPicks([]) === null && T.briefFromPicks(undefined) === null, "no picks give no brief");
@@ -188,7 +186,7 @@ check(same(JSON.parse(T.composeRequest(seeded, {}).body), { seed: 97 }), "the fo
 check(same(JSON.parse(T.composeRequest(seeded, { seed: 5, update_uses: true }).body), { seed: 5, update_uses: true }), "an option seed wins and update_uses is sent");
 check(same(JSON.parse(T.composeRequest(filled(), { seed: "x" }).body), {}), "a seed that is not a number is left out");
 const save = T.saveRequest(filled(), " note ");
-check(save.url === "/api/materials/items/thm-1/versions" && JSON.parse(save.body).note === "note" && !("key" in JSON.parse(save.body).body.theme.form), "save posts a new version");
+check(save.url === "/api/materials/items/thm-1/versions" && JSON.parse(save.body).note === "note" && !("key" in T.themeOfBody(JSON.parse(save.body).body).form), "save posts a new version");
 check(T.versionFileUrl("thm-1", 3, "theme.musicxml") === "/api/materials/items/thm-1/versions/3/files/theme.musicxml", "version file route");
 
 /* pool */
@@ -256,7 +254,6 @@ delete globalThis.localStorage;
 check(T.readThemeTab() === "theme", "no storage gives Theme");
 
 /* The one Save reuses the motif decision */
-const M = require("../public/materials-model.js");
 check(M.motifSaveDecision({ body: true }, "").kind === "blocked", "a changed theme body without a note is blocked");
 check(M.motifSaveDecision({ name: true }, "").kind === "save", "a rename alone saves without a note");
 check(M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change says Nothing to save.");
@@ -274,7 +271,7 @@ const second = T.emptyState("thm-2");
 check(!T.applyBasicMaterial(second, true, minorBody) && second.material === "omt.material.major", "a second basic motif leaves the material");
 check(!T.applyBasicMaterial(T.emptyState("x"), false, { motif: {} }), "a motif without a material leaves the material");
 check(T.formFromBody(T.bodyFromForm(filled()), "thm-1").materialChosen === true, "a saved theme with a basic motif keeps its material");
-check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-3").materialChosen === false, "a new theme has not chosen its material");
+check(T.formFromBody(T.requestBodyOf([], { form: null, slots: [] }), "thm-3").materialChosen === false, "a new theme has not chosen its material");
 
 /* slots and ideas of each form */
 function formOf(into, hybrid) {
@@ -313,14 +310,13 @@ shared.slots = [
 ];
 const sharedBody = T.bodyFromForm(shared);
 check(
-  same(sharedBody.theme.slots, [
+  same(T.themeOfBody(sharedBody).slots, [
     { slot: "basic", item_id: "mot-1", version: 2 },
     { slot: "continuation", item_id: "var-7", version: 4 },
     { slot: "cadential", item_id: "mot-1", version: 2 },
   ]),
   "a variant and the same motif in two slots are kept",
 );
-check(T.formProblems(shared).length === 0, "the same motif in two slots is not a problem");
 check(
   T.rootMotif([{ id: "var-7", variant_of: "var-6" }, { id: "var-6", variant_of: "mot-1" }, { id: "mot-1" }], "var-7") === "mot-1",
   "a variant's motif is the end of its variant_of chain",
@@ -350,19 +346,18 @@ withIdeas.ideas = [
   { idea: "basic idea", item_id: "mot-9", version: 1 },
 ];
 check(
-  same(T.bodyFromForm(withIdeas).theme.ideas, [
+  same(T.themeOfBody(T.bodyFromForm(withIdeas)).ideas, [
     { idea: "repetition", item_id: "mot-2", version: 5 },
     { idea: "fragment 2", item_id: "mot-3", version: 1 },
   ]),
   "the body holds the ideas of the form in order, without the basic idea or other forms' ideas",
 );
 withIdeas.into = "period";
-check(same(T.bodyFromForm(withIdeas).theme.ideas, [{ idea: "consequent basic idea", item_id: "mot-4", version: 1 }]), "changing the form drops the ideas it does not have");
+check(same(T.themeOfBody(T.bodyFromForm(withIdeas)).ideas, [{ idea: "consequent basic idea", item_id: "mot-4", version: 1 }]), "changing the form drops the ideas it does not have");
 withIdeas.into = "sentence";
 const loaded = T.formFromBody(T.bodyFromForm(withIdeas), "thm-1");
 check(same(loaded.ideas.map((entry) => entry.idea), ["repetition", "fragment 2"]), "the ideas come back from the body");
-check(same(T.bodyFromForm(formOf("sentence")).theme.ideas, []), "a form without ideas has an empty list");
-check(T.formProblems({ ...withIdeas, ideas: [{ idea: "repetition", item_id: "", version: 1 }] }).length > 0, "an idea without a motif is a problem");
+check(same(T.themeOfBody(T.bodyFromForm(formOf("sentence"))).ideas, []), "a form without ideas has an empty list");
 check(
   same(T.motiveNames(withIdeas, (id) => `n-${id}`), { M1: "n-mot-1", M2: "n-mot-2", M3: "n-mot-3" }),
   "motive ids go over the slots, then the ideas, one per distinct motif",
@@ -386,10 +381,10 @@ const eightToFour = chordState({ 1: "IV", 5: "V", 7: "I" });
 eightToFour.bars = 4;
 check(T.dropChords(eightToFour).join() === "6,8", "bars 8 to 4 drops the chords of bars 6 and 8");
 check(eightToFour.chords.slice(4).every((value) => value === ""), "the dropped bars are blank");
-check(JSON.stringify(T.bodyFromForm(eightToFour).theme.chords) === '[{"bar":1,"text":"IV"}]', "the body keeps the chords of the bars left");
+check(JSON.stringify(T.themeOfBody(T.bodyFromForm(eightToFour)).chords) === '[{"bar":1,"text":"IV"}]', "the body keeps the chords of the bars left");
 const chordBody = T.bodyFromForm(chordState({ 0: "I V@2", 2: " IV " }));
-check(JSON.stringify(chordBody.theme.chords) === '[{"bar":0,"text":"I V@2"},{"bar":2,"text":"IV"}]', "the body chords are {bar, text} for filled bars only");
-check(T.bodyFromForm(T.emptyState("c")).theme.chords.length === 0, "no chords typed gives an empty list");
+check(JSON.stringify(T.themeOfBody(chordBody).chords) === '[{"bar":0,"text":"I V@2"},{"bar":2,"text":"IV"}]', "the body chords are {bar, text} for filled bars only");
+check(T.themeOfBody(T.bodyFromForm(T.emptyState("c"))).chords.length === 0, "no chords typed gives an empty list");
 check(T.formFromBody(chordBody, "c").chords[2] === "IV", "the chords round trip through the body");
 check(T.chordsText(T.formFromBody(chordBody, "c")) === "Bar 1: I V@2; Bar 3: IV", "the facts row lists the given chords");
 
@@ -415,10 +410,10 @@ check(T.refusalText("no", "", "theme") === "no" && T.refusalText("no", "/unknown
 /* the construction (P47, R-468) */
 check(T.BARS.length === 14 && T.BARS[0] === 3 && T.BARS[13] === 16, "the bars offered are the vocabulary's 3 to 16");
 check(same(T.REGULAR_BARS, [4, 8]) && !T.needsConstruction(8) && T.needsConstruction(6), "only 4 and 8 bars need no construction");
-check(T.emptyState("c").construction === null && T.bodyFromForm(T.emptyState("c")).theme.form.construction === null, "a form has no construction by default and sends null");
-const oldBody = { uses: [], theme: { form: { into: "sentence", hybrid: null, mode: "minor", meter: "4/4", bars: 8, cadence: "PAC", first_cadence: null }, slots: [] } };
+check(T.emptyState("c").construction === null && !("construction" in T.bodyFromForm(T.emptyState("c")).request), "a form has no construction by default and sends none");
+const oldBody = T.requestBodyOf([], { form: { into: "sentence", hybrid: null, mode: "minor", meter: "4/4", bars: 8, cadence: "PAC", first_cadence: null }, slots: [] });
 check(T.formFromBody(oldBody, "c").construction === null, "a body without a construction reads as null");
-check(T.formFromBody({ uses: [], theme: { form: { construction: "auto" } } }, "c").construction === null, "a construction that is not an object reads as null");
+check(T.formFromBody(T.requestBodyOf([], { form: { construction: "auto" } }), "c").construction === null, "a construction that is not an object reads as null");
 const sentenceIdeas = T.pairingIdeaNames(["presentation", "continuation"]);
 check(same(sentenceIdeas, ["basic idea", "repetition", "fragment 1", "fragment 2", "cadential"]), "a sentence has five ideas in order");
 check(same(T.pairingIdeaNames(["antecedent", "consequent"]), ["basic idea", "contrasting idea", "consequent basic idea", "consequent contrasting idea"]), "a period has four ideas in order");
@@ -438,7 +433,7 @@ givenState.construction = {
     { kind: "nonsense", idea: "", bars: 1, varied: false },
   ],
 };
-const given = T.bodyFromForm(givenState).theme.form.construction;
+const given = T.themeOfBody(T.bodyFromForm(givenState)).form.construction;
 check(same(Object.keys(given.ideas), ["basic idea", "contrasting idea", "consequent basic idea", "consequent contrasting idea"]), "the construction sends the ideas of the pairing only, in order");
 check(given.ideas["basic idea"] === 3 && given.ideas["consequent contrasting idea"] === 2, "the construction sends the bars of each idea");
 check(given.extensions.length === 3, "at most 3 extensions are sent");
@@ -446,13 +441,12 @@ check(same(given.extensions[0], { kind: "repeat", idea: "contrasting idea", bars
 check(same(given.extensions[1], { kind: "stretch", idea: "cadential 2", bars: 2 }), "a stretch sends its idea and no varied");
 check(same(given.extensions[2], { kind: "addition", bars: 1 }), "an addition sends neither idea nor varied");
 givenState.construction.extensions = [{ kind: "evaded", idea: "", bars: 0, varied: false }];
-check(same(T.bodyFromForm(givenState).theme.form.construction.extensions, [{ kind: "evaded", bars: 0 }]), "an evaded cadence sends only its kind and bars");
+check(same(T.themeOfBody(T.bodyFromForm(givenState)).form.construction.extensions, [{ kind: "evaded", bars: 0 }]), "an evaded cadence sends only its kind and bars");
 const readBack = T.formFromBody(T.bodyFromForm(givenState), "g");
 check(readBack.construction.ideas["basic idea"] === 3 && readBack.construction.extensions[0].kind === "evaded", "the construction reads back from the body");
 check(same(T.bodyFromForm(readBack), T.bodyFromForm(givenState)), "the construction round trips through the body");
 check(T.fieldForPath("/construction/extensions/0/bars") === "construction" && T.tabOfField("construction") === "structure", "a refusal under /construction marks the construction on the Structure tab");
 check(T.extensionIdeas("repeat", sentenceIdeas).join() === "repetition,fragment 1,fragment 2" && T.extensionIdeas("addition", sentenceIdeas).length === 0, "an extension offers the ideas of its kind that the form has");
-check(T.CHORD_BARS === 16, "the chord row reaches 16 bars");
 const longChords = T.emptyState("l");
 longChords.bars = 16;
 longChords.chords[15] = "I";

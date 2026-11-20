@@ -90,7 +90,7 @@ typedef struct {
  * The status and message of a failed entry that read files: the file's own read error unless the request itself was at
  * fault, else the API error with the name of the file its path points at. Returns the exit status.
  */
-int motive_input_fail(const MotiveFile *file, ComposerStatus status, const ComposerError *error,
+int motive_input_fail(const MotiveFile *file, UrsatzStatus status, const UrsatzError *error,
                       const MotiveInputNames *names);
 
 /* The help lines of the basic options. */

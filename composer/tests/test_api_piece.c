@@ -54,7 +54,7 @@ static char *theme_plan(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     char *plan = strdup(response.plan_json);
     composer_response_destroy(&response);
@@ -245,11 +245,11 @@ static void run_case(const char *name, const char *fixture, const char *plan, bo
     assert(cJSON_AddBoolToObject(request, "midi", true));
     char *printed = print(request);
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(test_context(), printed, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), printed, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "%s: %s: %s\n", name, test_status_name(status), response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     expect_case(name, &response, true);
     if (keep_plan) {
         loop_plan_of_theme_fill = strdup(response.plan_json);
@@ -265,11 +265,11 @@ static void run_regenerate(const char *name, const char *plan, const char *secti
     add_edit(request, loop_plan_of_theme_fill, section, lane);
     char *printed = print(request);
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(test_context(), printed, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), printed, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "%s: %s: %s\n", name, test_status_name(status), response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     expect_case(name, &response, false);
     cJSON *document = cJSON_Parse(response.json);
     const cJSON *regenerated = cJSON_GetObjectItemCaseSensitive(document, "regenerated");
@@ -301,11 +301,11 @@ static void test_variations(char *plan) {
     assert(cJSON_AddItemToObject(request, "variations", variations) && cJSON_AddBoolToObject(request, "musicxml", true));
     char *printed = print(request);
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece_variations(test_context(), printed, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece_variations(test_context(), printed, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "piece-variations: %s: %s\n", test_status_name(status), response.error.message);
     }
-    assert(status == COMPOSER_OK && response.json && !response.midi && !response.musicxml);
+    assert(status == URSATZ_OK && response.json && !response.midi && !response.musicxml);
     cJSON *actual = cJSON_Parse(response.json);
     cJSON *expected = load_json(SNAPSHOT("piece-variations.result.json"));
     assert(actual);
@@ -331,7 +331,7 @@ static void test_variations(char *plan) {
                                      cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(item, "loop_markers"), true)));
         char *export_text = print(export_request);
         ComposerResponse exported;
-        assert(composer_api_export(test_context(), export_text, NULL, &exported) == COMPOSER_OK);
+        assert(composer_api_export(test_context(), export_text, NULL, &exported) == URSATZ_OK);
         snprintf(path, sizeof path, SNAPSHOT("piece-variations.variation-%d.mid"), index);
         expect_file(exported.midi, exported.midi_size, path);
         composer_response_destroy(&exported);
@@ -363,7 +363,7 @@ static void test_outputs(char *plan) {
            cJSON_AddStringToObject(request, "explain", "text"));
     char *printed = print(request);
     ComposerResponse response;
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
@@ -380,7 +380,7 @@ static void test_outputs(char *plan) {
     request = api_request(piece_fixture("progression-fill.json", plan), 2);
     cJSON *first = api_request(piece_fixture("progression-fill.json", plan), 1);
     printed = print(first);
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     char *loop = strdup(response.plan_json);
     composer_response_destroy(&response);
@@ -388,7 +388,7 @@ static void test_outputs(char *plan) {
     cJSON_AddItemToArray(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(request, "regenerate"), "lanes"),
                          cJSON_CreateString("harmony"));
     printed = print(request);
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     document = cJSON_Parse(response.json);
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "regenerated"), "lane")->valuestring,
@@ -399,7 +399,7 @@ static void test_outputs(char *plan) {
     request = api_request(piece_fixture("progression-fill.json", plan), 2);
     add_edit(request, loop, NULL, NULL);
     printed = print(request);
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     document = cJSON_Parse(response.json);
     assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(document, "regenerated")));
@@ -420,14 +420,14 @@ static void test_kept_sections(char *plan) {
     cJSON *first = api_request(piece_fixture("loop-and-ending.json", plan), 1);
     char *printed = print(first);
     ComposerResponse response;
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     char *loop = strdup(response.plan_json);
     composer_response_destroy(&response);
     cJSON *request = api_request(piece_fixture("loop-and-ending.json", plan), 2);
     add_edit(request, loop, "b", "harmony");
     printed = print(request);
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
@@ -482,9 +482,9 @@ static void test_cancel(char *plan, bool quick) {
         Watch watch;
         memset(&watch, 0, sizeof(watch));
         watch.cancel_at = cancel_at;
-        ComposerJob job = {on_progress, on_cancelled, &watch};
+        UrsatzJob job = {on_progress, on_cancelled, &watch};
         ComposerResponse response;
-        assert(composer_api_piece(test_context(), printed, &job, &response) == COMPOSER_ERR_CANCELLED);
+        assert(composer_api_piece(test_context(), printed, &job, &response) == URSATZ_ERR_CANCELLED);
         assert(watch.steps >= cancel_at && watch.seed_reported);
         assert(response.error.message[0]);
         expect_nothing(&response);
@@ -501,9 +501,9 @@ static void test_cancel_edit(char *plan) {
     Watch watch;
     memset(&watch, 0, sizeof(watch));
     watch.cancel_at = 2;
-    ComposerJob job = {on_progress, on_cancelled, &watch};
+    UrsatzJob job = {on_progress, on_cancelled, &watch};
     ComposerResponse response;
-    assert(composer_api_piece(test_context(), printed, &job, &response) == COMPOSER_ERR_CANCELLED);
+    assert(composer_api_piece(test_context(), printed, &job, &response) == URSATZ_ERR_CANCELLED);
     expect_nothing(&response);
     composer_response_destroy(&response);
     free(printed);
@@ -517,7 +517,7 @@ static void test_cancel_edit(char *plan) {
     printed = print(request);
     memset(&watch, 0, sizeof(watch));
     watch.cancel_at = 1;
-    assert(composer_api_piece_variations(test_context(), printed, &job, &response) == COMPOSER_ERR_CANCELLED);
+    assert(composer_api_piece_variations(test_context(), printed, &job, &response) == URSATZ_ERR_CANCELLED);
     assert(watch.seed_reported);
     expect_nothing(&response);
     composer_response_destroy(&response);
@@ -526,13 +526,13 @@ static void test_cancel_edit(char *plan) {
 
 /* --- refused requests ------------------------------------------------------------------------------- */
 
-static ComposerStatus run_text(const char *text, ComposerResponse *response, bool variations) {
+static UrsatzStatus run_text(const char *text, ComposerResponse *response, bool variations) {
     return variations ? composer_api_piece_variations(test_context(), text, NULL, response) : composer_api_piece(test_context(), text, NULL, response);
 }
 
-static void expect_refusal(const char *text, bool variations, ComposerStatus status, const char *path, const char *message) {
+static void expect_refusal(const char *text, bool variations, UrsatzStatus status, const char *path, const char *message) {
     ComposerResponse response;
-    ComposerStatus got = run_text(text, &response, variations);
+    UrsatzStatus got = run_text(text, &response, variations);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
         fprintf(stderr, "%s '%s' at '%s', expected %s '%s' at '%s'\n", test_status_name(got), response.error.message,
                 response.error.path, test_status_name(status), message, path);
@@ -569,111 +569,111 @@ static void test_refused(char *plan) {
     cJSON *fill = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(piece, "sections"), 1), "fill");
     assert(cJSON_ReplaceItemInObject(fill, "plan", cJSON_CreateString("theme.plan.json")));
     text = print(api_request(piece, 1));
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/1/fill/plan", "not a path");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections/1/fill/plan", "not a path");
     free(text);
     piece = piece_fixture("theme-fill.json", plan);
     fill = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(piece, "sections"), 1), "fill");
     assert(cJSON_ReplaceItemInObject(fill, "plan", cJSON_Parse("{\"format\": \"nothing\"}")));
     text = print(api_request(piece, 1));
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/1/fill/plan", "cannot read the theme plan");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections/1/fill/plan", "cannot read the theme plan");
     free(text);
 
     text = with_section_member(plan, 0, "beats", "\"8\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/beats", "must be a whole number");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections/0/beats", "must be a whole number");
     free(text);
     text = with_section_member(plan, 0, "cadence", "\"XX\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/cadence", "unknown cadence");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections/0/cadence", "unknown cadence");
     free(text);
     text = with_section_member(plan, 2, "part", "\"coda\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/2/part", "a request names intro, body, turnaround or ending");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections/2/part", "a request names intro, body, turnaround or ending");
     free(text);
     text = with_section_member(plan, 0, "pickup", "\"half\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/pickup", "must be a whole number or a fraction");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections/0/pickup", "must be a whole number or a fraction");
     free(text);
     text = with_piece_member(plan, "meter", "\"5/4\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/meter", "is not supported");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/meter", "is not supported");
     free(text);
     text = with_piece_member(plan, "key", "\"H\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/key", "unknown key 'H'");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/key", "unknown key 'H'");
     free(text);
     text = with_piece_member(plan, "schema", "\"ursatz-theme-request\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request", "ursatz-piece-request");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request", "ursatz-piece-request");
     free(text);
     text = with_piece_member(plan, "style", "\"no-such-style.json\"");
-    expect_refusal(text, false, COMPOSER_ERR_UNSATISFIABLE, "/request/style", "cannot read style");
+    expect_refusal(text, false, URSATZ_ERR_UNSATISFIABLE, "/request/style", "cannot read style");
     free(text);
     text = with_piece_member(plan, "tempo", "500");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/tempo", "tempo must be from 20 to 400");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/tempo", "tempo must be from 20 to 400");
     free(text);
     text = with_piece_member(plan, "sections", "[]");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections", "a list with a body");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/sections", "a list with a body");
     free(text);
     text = with_piece_member(plan, "voicing", "\"trio\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/voicing", "satb or chorale");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request/voicing", "satb or chorale");
     free(text);
 
     /* The members around the piece request. */
     cJSON *request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddStringToObject(request, "corpus", "corpus-dir"));
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/corpus", "takes no corpus");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/corpus", "takes no corpus");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddStringToObject(request, "explain", "xml"));
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/explain", "explain must be");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/explain", "explain must be");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     cJSON_ReplaceItemInObject(request, "seed", cJSON_CreateString("many"));
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/seed", "seed must be a whole number");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/seed", "seed must be a whole number");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     cJSON_DeleteItemFromObjectCaseSensitive(request, "request");
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request", "needs \"request\"");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/request", "needs \"request\"");
     free(text);
-    expect_refusal("{\"api_version\": 7}", false, COMPOSER_ERR_REQUEST, "/api_version", "api_version");
-    expect_refusal("not json", false, COMPOSER_ERR_REQUEST, "", "not valid JSON");
+    expect_refusal("{\"api_version\": 7}", false, URSATZ_ERR_REQUEST, "/api_version", "api_version");
+    expect_refusal("not json", false, URSATZ_ERR_REQUEST, "", "not valid JSON");
 
     /* The edits: a section the plan lacks, a lane that is none, a theme section without a lane, a regenerate without a plan. */
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     add_edit(request, loop_plan_of_theme_fill, "intro", "tenor");
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate/lanes/0", "lane must be");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/regenerate/lanes/0", "lane must be");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddItemToObject(request, "regenerate", cJSON_Parse("{\"section\": \"intro\"}")));
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate", "goes with \"from\"");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/regenerate", "goes with \"from\"");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddStringToObject(request, "from", "loop.json"));
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/from", "plan object");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/from", "plan object");
     free(text);
 
     /* The variations: no plan, no count, a count out of range. */
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddItemToObject(request, "variations", cJSON_Parse("{\"section\": \"intro\", \"count\": 2}")));
     text = print(request);
-    expect_refusal(text, true, COMPOSER_ERR_REQUEST, "/from", "needs \"from\"");
+    expect_refusal(text, true, URSATZ_ERR_REQUEST, "/from", "needs \"from\"");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddItemToObject(request, "variations", cJSON_Parse("{\"section\": \"intro\", \"count\": 9}")));
     text = print(request);
-    expect_refusal(text, true, COMPOSER_ERR_REQUEST, "/variations/count", "count must be a whole number from 1 to 8");
+    expect_refusal(text, true, URSATZ_ERR_REQUEST, "/variations/count", "count must be a whole number from 1 to 8");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     assert(cJSON_AddItemToObject(request, "variations", cJSON_Parse("{\"section\": \"intro\"}")));
     text = print(request);
-    expect_refusal(text, true, COMPOSER_ERR_REQUEST, "/variations/count", "needs \"count\"");
+    expect_refusal(text, true, URSATZ_ERR_REQUEST, "/variations/count", "needs \"count\"");
     free(text);
 
     /* A loop of the export entry that is not a time. */
     ComposerResponse response;
     char *export_request = strdup("{\"plan\": {}, \"midi\": true, \"loop\": {\"start\": \"two\", \"end\": \"3/1\"}}");
-    assert(composer_api_export(test_context(), export_request, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_export(test_context(), export_request, NULL, &response) == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/loop/start") == 0);
     composer_response_destroy(&response);
     free(export_request);
@@ -686,24 +686,24 @@ static void test_refused_edits(char *plan) {
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     add_edit(request, loop_plan_of_theme_fill, "nowhere", NULL);
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate/section", "has no section 'nowhere'");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/regenerate/section", "has no section 'nowhere'");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     add_edit(request, loop_plan_of_theme_fill, "a", NULL);
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate/lanes", "filled with a theme");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/regenerate/lanes", "filled with a theme");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     add_edit(request, loop_plan_of_theme_fill, "a", "melody");
     text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate/lanes", "filled with a theme");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/regenerate/lanes", "filled with a theme");
     free(text);
     request = api_request(piece_fixture("theme-fill.json", plan), 1);
     add_edit(request, loop_plan_of_theme_fill, NULL, NULL);
     cJSON_DeleteItemFromObjectCaseSensitive(request, "regenerate");
     assert(cJSON_AddItemToObject(request, "variations", cJSON_Parse("{\"section\": \"nowhere\", \"count\": 2}")));
     text = print(request);
-    expect_refusal(text, true, COMPOSER_ERR_REQUEST, "/variations/section", "has no section 'nowhere'");
+    expect_refusal(text, true, URSATZ_ERR_REQUEST, "/variations/section", "has no section 'nowhere'");
     free(text);
 }
 
@@ -746,7 +746,7 @@ static void test_regenerate_theme_harmony(void) {
         char *printed = cJSON_PrintUnformatted(theme_request);
         cJSON_Delete(theme_request);
         ComposerResponse theme;
-        assert(composer_api_theme(test_context(), printed, NULL, &theme) == COMPOSER_OK);
+        assert(composer_api_theme(test_context(), printed, NULL, &theme) == URSATZ_OK);
         free(printed);
         char *plan = strdup(theme.plan_json);
         composer_response_destroy(&theme);
@@ -754,11 +754,11 @@ static void test_regenerate_theme_harmony(void) {
 
         printed = print(api_request(piece_fixture("theme-fill.json", plan), 1));
         ComposerResponse composed;
-        ComposerStatus status = composer_api_piece(test_context(), printed, NULL, &composed);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = composer_api_piece(test_context(), printed, NULL, &composed);
+        if (status != URSATZ_OK) {
             fprintf(stderr, "theme seed %u: %s: %s\n", theme_seeds[t], test_status_name(status), composed.error.message);
         }
-        assert(status == COMPOSER_OK);
+        assert(status == URSATZ_OK);
         free(printed);
         char *loop = strdup(composed.plan_json);
         composer_response_destroy(&composed);
@@ -773,11 +773,11 @@ static void test_regenerate_theme_harmony(void) {
             printed = print(request);
             ComposerResponse again;
             status = composer_api_piece(test_context(), printed, NULL, &again);
-            if (status != COMPOSER_OK) {
+            if (status != URSATZ_OK) {
                 fprintf(stderr, "theme seed %u, regenerate seed %u: %s: %s\n", theme_seeds[t], seed, test_status_name(status),
                         again.error.message);
             }
-            assert(status == COMPOSER_OK);
+            assert(status == URSATZ_OK);
             free(printed);
             cJSON *document = cJSON_Parse(again.json);
             const cJSON *regenerated = cJSON_GetObjectItemCaseSensitive(document, "regenerated");
@@ -816,11 +816,11 @@ static char *form_request(const char *fixture, const char *plan, const char *con
 }
 
 static cJSON *composed_document(const char *printed, ComposerResponse *response) {
-    ComposerStatus status = composer_api_piece(test_context(), printed, NULL, response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), printed, NULL, response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "any form: %s: %s\n", test_status_name(status), response->error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *document = cJSON_Parse(response->json);
     assert(document);
     return document;
@@ -845,6 +845,43 @@ static void expect_one_version(const cJSON *document, const char *const *ids, co
     }
 }
 
+/* Every row of the version has the position and the length as text in the meter (API 4.2): "bar 3" or "bar 3 beat 2", "2 bars" or "1 bar 2 beats". */
+static void expect_row_texts(const cJSON *document, const char *version, int per_bar, int unit) {
+    const cJSON *sections =
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), version), "sections");
+    assert(cJSON_GetArraySize(sections) > 0);
+    const cJSON *row = NULL;
+    cJSON_ArrayForEach(row, sections) {
+        long num = 0;
+        long den = 1;
+        assert(sscanf(cJSON_GetObjectItemCaseSensitive(row, "start")->valuestring, "%ld/%ld", &num, &den) == 2 && den > 0);
+        double start = (double)num * unit / (double)den;
+        double beats = cJSON_GetObjectItemCaseSensitive(row, "beats")->valuedouble;
+        char start_text[48];
+        char length[48] = "";
+        int bar = (int)(start / per_bar) + 1;
+        double beat = start - (double)(bar - 1) * per_bar;
+        if (beat < 1e-9) {
+            snprintf(start_text, sizeof start_text, "bar %d", bar);
+        } else {
+            snprintf(start_text, sizeof start_text, "bar %d beat %.15g", bar, (double)(long long)((beat + 1) * 100 + 0.5) / 100);
+        }
+        int bars = (int)(beats / per_bar);
+        double rest = beats - (double)bars * per_bar;
+        if (bars > 0) {
+            snprintf(length, sizeof length, "%d %s", bars, bars == 1 ? "bar" : "bars");
+        }
+        if (rest > 1e-9 || bars == 0) {
+            size_t used = strlen(length);
+            snprintf(length + used, sizeof length - used, "%s%.15g %s", used ? " " : "", rest, rest == 1 ? "beat" : "beats");
+        }
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(row, "start_text")->valuestring, start_text) == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(row, "length_text")->valuestring, length) == 0);
+    }
+    const cJSON *first = cJSON_GetArrayItem(sections, 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(first, "start_text")->valuestring, "bar 1") == 0);
+}
+
 static void expect_figure_rows(const cJSON *document);
 
 static void test_composed_forms(char **rounded_plan) {
@@ -857,6 +894,7 @@ static void test_composed_forms(char **rounded_plan) {
     char *printed = form_request("rounded-binary.json", NULL, NULL, 0, true);
     cJSON *document = composed_document(printed, &response);
     expect_one_version(document, RB_IDS, RB_ROLES, 3);
+    expect_row_texts(document, "piece", 4, 4);
     assert(response.midi && response.midi_size > 4 && memcmp(response.midi, "MThd", 4) == 0);
     cJSON_Delete(composed_document(printed, &again));
     assert(response.plan_json && again.plan_json && strcmp(response.plan_json, again.plan_json) == 0);
@@ -902,6 +940,20 @@ static void test_composed_forms(char **rounded_plan) {
     printed = form_request("rounded-binary.json", NULL, EDITS, 5, false);
     document = composed_document(printed, &response);
     expect_one_version(document, RB_IDS, RB_ROLES, 3);
+    expect_row_texts(document, "piece", 3, 4);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+    /* A game loop: the rows of its loop version say where they start and how long they are, and the seam names its four rules. */
+    printed = form_request("loop-and-ending.json", NULL, NULL, 0, false);
+    document = composed_document(printed, &response);
+    expect_row_texts(document, "loop", 4, 4);
+    const cJSON *seam = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "loop"), "seam");
+    const cJSON *rules = cJSON_GetObjectItemCaseSensitive(seam, "rules");
+    assert(cJSON_IsObject(seam) && cJSON_GetArraySize(rules) == 4);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(rules, 3), "id")->valuestring, "leading_tone") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(rules, 0), "label")->valuestring, "The chords lead back") == 0);
+    assert(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "loop"), "text")));
     cJSON_Delete(document);
     composer_response_destroy(&response);
     free(printed);
@@ -937,11 +989,11 @@ static void test_edited_forms(const char *rounded_plan) {
     assert(cJSON_AddStringToObject(variations, "section", "B") && cJSON_AddNumberToObject(variations, "count", 2));
     assert(cJSON_AddItemToObject(request, "variations", variations));
     printed = print(request);
-    ComposerStatus status = composer_api_piece_variations(test_context(), printed, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece_variations(test_context(), printed, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "variations of a rounded binary: %s: %s\n", test_status_name(status), response.error.message);
     }
-    assert(status == COMPOSER_OK && response.json);
+    assert(status == URSATZ_OK && response.json);
     document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(document, "variations");
@@ -984,7 +1036,7 @@ static void test_game_loop_version_two(const char *plan) {
 static void expect_form_refusal(const char *fixture, const char *plan, const char *const edits[][2], size_t count, const char *path,
                                 const char *message) {
     char *text = form_request(fixture, plan, edits, count, false);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, path, message);
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, path, message);
     free(text);
 }
 
@@ -1012,7 +1064,7 @@ static void test_refused_forms(const char *plan) {
     cJSON *request = api_request(piece_fixture("rounded-binary.json", NULL), 1);
     assert(cJSON_AddBoolToObject(request, "ending_musicxml", true));
     char *text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/ending_musicxml", "the rounded-binary form has no ending version");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/ending_musicxml", "the rounded-binary form has no ending version");
     free(text);
 }
 
@@ -1021,7 +1073,7 @@ static void test_refused_form_edit(const char *rounded_plan) {
     cJSON *request = api_request(piece_fixture("rounded-binary.json", NULL), 1);
     add_edit(request, rounded_plan, "C", "melody");
     char *text = print(request);
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate/section", "the plan has no section 'C'");
+    expect_refusal(text, false, URSATZ_ERR_REQUEST, "/regenerate/section", "the plan has no section 'C'");
     free(text);
 }
 
@@ -1293,7 +1345,7 @@ static void test_minuet_and_trio(void) {
     cJSON *request = api_request(form_piece("rounded-binary.json", NULL, EDITS, 2), 1);
     add_edit(request, response.plan_json, "A", "melody");
     char *edit = print(request);
-    expect_refusal(edit, false, COMPOSER_ERR_REQUEST, "/request/form", "are Later: it is composed whole");
+    expect_refusal(edit, false, URSATZ_ERR_REQUEST, "/request/form", "are Later: it is composed whole");
     free(edit);
     cJSON_Delete(document);
     composer_response_destroy(&response);
@@ -1381,7 +1433,7 @@ static void test_scherzo(void) {
     cJSON *request = api_request(form_piece("rounded-binary.json", NULL, BOTH, 2), 1);
     add_edit(request, response.plan_json, "A", "melody");
     char *edit = print(request);
-    expect_refusal(edit, false, COMPOSER_ERR_REQUEST, "/request/form", "are Later: it is composed whole");
+    expect_refusal(edit, false, URSATZ_ERR_REQUEST, "/request/form", "are Later: it is composed whole");
     free(edit);
     cJSON_Delete(document);
     composer_response_destroy(&response);

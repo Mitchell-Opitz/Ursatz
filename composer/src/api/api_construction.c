@@ -31,8 +31,8 @@ const char *api_accompaniment_name(PlanAccompanimentPattern pattern) {
     return API_ACCOMPANIMENT_PATTERNS[pattern].value;
 }
 
-ComposerStatus api_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text,
-                                      const PlanMeter *meter, PlanAccompaniment *out, ComposerError *error) {
+UrsatzStatus api_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text,
+                                      const PlanMeter *meter, PlanAccompaniment *out, UrsatzError *error) {
     out->pattern = PLAN_ACCOMPANIMENT_ANY;
     out->texture = -1;
     if (pattern_text) {
@@ -42,7 +42,7 @@ ComposerStatus api_read_accompaniment(const char *pattern_text, const char *text
             out->pattern = found ? (PlanAccompanimentPattern)p : out->pattern;
         }
         if (!found) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/accompaniment",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment",
                             "accompaniment must be block, arpeggiated, alberti, oom-pah or any, not '%s'", pattern_text);
         }
     }
@@ -53,23 +53,23 @@ ComposerStatus api_read_accompaniment(const char *pattern_text, const char *text
             out->texture = found ? t : out->texture;
         }
         if (!found) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/texture",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/texture",
                             "texture must be a texture name of standard-texture, for example \"melody and accompaniment\", "
                             "not '%s'",
                             texture_text);
         }
         if (!standard_texture_is_homophonic((StandardTexture)out->texture)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/texture",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/texture",
                             "texture '%s' is not one an accompaniment can have; use homophony, homorhythm or \"melody and "
                             "accompaniment\"",
                             texture_text);
         }
     }
     if (out->pattern == PLAN_ACCOMPANIMENT_ALBERTI && meter->beat_unit == 8) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/accompaniment", "accompaniment alberti needs a simple meter, not %s",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment", "accompaniment alberti needs a simple meter, not %s",
                         meter_text);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* "antecedent+continuation": a beginning, a plus sign and an ending. */
@@ -100,11 +100,11 @@ bool api_parse_hybrid(const char *text, SectionPairing *pairing) {
     return beginning_found && ending_found;
 }
 
-static ComposerStatus read_extension(const cJSON *item, const char *base, size_t index, SectionExtension *out, ComposerError *error) {
+static UrsatzStatus read_extension(const cJSON *item, const char *base, size_t index, SectionExtension *out, UrsatzError *error) {
     char path[192];
     snprintf(path, sizeof path, "%s/extensions/%zu", base, index);
     if (!cJSON_IsObject(item)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "each extension must be {\"kind\", \"idea\", \"bars\", \"varied\"}");
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "each extension must be {\"kind\", \"idea\", \"bars\", \"varied\"}");
     }
     memset(out, 0, sizeof(*out));
     const char *kind;
@@ -112,7 +112,7 @@ static ComposerStatus read_extension(const cJSON *item, const char *base, size_t
     bool found;
     if (!api_request_string(item, path, "kind", true, &kind, error) || !api_request_string(item, path, "idea", false, &idea, error) ||
         !api_member_bool(item, "varied", &out->varied, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     int kind_at = -1;
     for (int k = 0; k < 4; k++) {
@@ -123,41 +123,41 @@ static ComposerStatus read_extension(const cJSON *item, const char *base, size_t
     char member[224];
     if (kind_at < 0) {
         snprintf(member, sizeof member, "%s/kind", path);
-        return api_fail(error, COMPOSER_ERR_REQUEST, member, "kind must be repeat, stretch, addition or evaded, not '%s'", kind);
+        return api_fail(error, URSATZ_ERR_REQUEST, member, "kind must be repeat, stretch, addition or evaded, not '%s'", kind);
     }
     out->kind = (SectionExtensionKind)kind_at;
     if (idea) {
         const ThemeShapeIdea *row = theme_shape_idea_find(idea);
         if (!row) {
             snprintf(member, sizeof member, "%s/idea", path);
-            return api_fail(error, COMPOSER_ERR_REQUEST, member, "unknown idea '%s'", idea);
+            return api_fail(error, URSATZ_ERR_REQUEST, member, "unknown idea '%s'", idea);
         }
         out->idea = (unsigned char)row->idea;
     } else if (out->kind == SECTION_EXTENSION_REPEAT || out->kind == SECTION_EXTENSION_STRETCH) {
         snprintf(member, sizeof member, "%s/idea", path);
-        return api_fail(error, COMPOSER_ERR_REQUEST, member, "a %s needs the idea it follows", kind);
+        return api_fail(error, URSATZ_ERR_REQUEST, member, "a %s needs the idea it follows", kind);
     }
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(item, "bars");
     if (bars && !cJSON_IsNull(bars)) {
         if (!cJSON_IsNumber(bars) || bars->valuedouble != (double)(int)bars->valuedouble || bars->valuedouble < 0 ||
             bars->valuedouble > 4) {
             snprintf(member, sizeof member, "%s/bars", path);
-            return api_fail(error, COMPOSER_ERR_REQUEST, member, "an extension's bars must be a whole number from 0 to 4");
+            return api_fail(error, URSATZ_ERR_REQUEST, member, "an extension's bars must be a whole number from 0 to 4");
         }
         out->bars = (unsigned char)bars->valuedouble;
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, SectionConstruction *construction,
-                                                 ComposerError *error) {
+UrsatzStatus api_grow_read_construction_object(const cJSON *item, const char *base, SectionConstruction *construction,
+                                                 UrsatzError *error) {
     char ideas_path[192];
     snprintf(ideas_path, sizeof ideas_path, "%s/ideas", base);
     memset(construction, 0, sizeof(*construction));
     construction->reason = SECTION_CONSTRUCTION_GIVEN;
     const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(item, "ideas");
     if (!cJSON_IsObject(ideas)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, ideas_path,
+        return api_fail(error, URSATZ_ERR_REQUEST, ideas_path,
                         "\"ideas\" must be an object of idea names and bars, for example {\"basic idea\": 2}");
     }
     for (const cJSON *member = ideas->child; member; member = member->next) {
@@ -165,11 +165,11 @@ ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *
         snprintf(path, sizeof path, "%s/%.80s", ideas_path, member->string);
         const ThemeShapeIdea *row = theme_shape_idea_find(member->string);
         if (!row) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "unknown idea '%.60s'", member->string);
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "unknown idea '%.60s'", member->string);
         }
         if (!cJSON_IsNumber(member) || member->valuedouble != (double)(int)member->valuedouble || member->valuedouble < 0 ||
             member->valuedouble > 16) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "the bars of an idea must be a whole number from 0 to 16");
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "the bars of an idea must be a whole number from 0 to 16");
         }
         construction->idea_bars[row->idea] = (unsigned char)member->valuedouble;
     }
@@ -178,38 +178,38 @@ ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *
         char extensions_path[192];
         snprintf(extensions_path, sizeof extensions_path, "%s/extensions", base);
         if (!cJSON_IsArray(extensions)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, extensions_path, "\"extensions\" must be a list");
+            return api_fail(error, URSATZ_ERR_REQUEST, extensions_path, "\"extensions\" must be a list");
         }
         if ((size_t)cJSON_GetArraySize(extensions) > SECTION_CONSTRUCTION_EXTENSIONS) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, extensions_path, "a construction has at most %d extensions",
+            return api_fail(error, URSATZ_ERR_REQUEST, extensions_path, "a construction has at most %d extensions",
                             SECTION_CONSTRUCTION_EXTENSIONS);
         }
         const cJSON *extension = NULL;
         cJSON_ArrayForEach(extension, extensions) {
-            ComposerStatus read = read_extension(extension, base, construction->extension_count,
+            UrsatzStatus read = read_extension(extension, base, construction->extension_count,
                                                  &construction->extensions[construction->extension_count], error);
-            if (read != COMPOSER_OK) {
+            if (read != URSATZ_OK) {
                 return read;
             }
             construction->extension_count++;
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, ComposerError *error) {
+UrsatzStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, UrsatzError *error) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "construction");
     out->has_construction = false;
     if (!item || cJSON_IsNull(item)) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsObject(item)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/construction",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/construction",
                         "\"construction\" must be null or {\"ideas\": {...}, \"extensions\": [...]}");
     }
     SectionConstruction *construction = &out->construction;
-    ComposerStatus read = api_grow_read_construction_object(item, "/construction", construction, error);
-    if (read != COMPOSER_OK) {
+    UrsatzStatus read = api_grow_read_construction_object(item, "/construction", construction, error);
+    if (read != URSATZ_OK) {
         return read;
     }
     out->has_construction = true;
@@ -223,13 +223,13 @@ ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, 
             out->bars = total;
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, ComposerError *error) {
+UrsatzStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, UrsatzError *error) {
     out->text = text;
     if (!text->into || !text->key || !text->meter) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "the request needs into, key and meter");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "the request needs into, key and meter");
     }
     if (request_equals_ignore_case(text->into, "sentence")) {
         out->into = GROW_INTO_SENTENCE;
@@ -244,15 +244,15 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     } else {
         char intos[64];
         api_choice_list(API_PIECE_INTOS, intos, sizeof intos);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/into", "into must be %s, not '%s'", intos, text->into);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/into", "into must be %s, not '%s'", intos, text->into);
     }
     if (out->into == GROW_INTO_HYBRID) {
         if (!text->hybrid) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/hybrid",
                             "into hybrid needs hybrid <beginning>+<ending>, for example antecedent+continuation");
         }
         if (!api_parse_hybrid(text->hybrid, &out->pairing)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/hybrid",
                             "hybrid must be a beginning (presentation, antecedent or cbi), a plus sign and an ending "
                             "(continuation, consequent or cadential), not '%s'",
                             text->hybrid);
@@ -262,24 +262,24 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         bool period = out->pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
                       out->pairing.ending == SECTION_ENDING_CONSEQUENT;
         if (sentence || period) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid", "%s is a %s, not a hybrid; use into %s", text->hybrid,
+            return api_fail(error, URSATZ_ERR_REQUEST, "/hybrid", "%s is a %s, not a hybrid; use into %s", text->hybrid,
                             sentence ? "sentence" : "period", sentence ? "sentence" : "period");
         }
     } else if (text->hybrid) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid", "hybrid applies only to into hybrid");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/hybrid", "hybrid applies only to into hybrid");
     }
     const PitchMaterial *picked = NULL;
     char member_path[32];
     if (text->material) {
         ApiMaterialKind kind;
         snprintf(member_path, sizeof member_path, "/%s", text->material_member);
-        ComposerStatus resolved = api_resolve_material(out->knowledge, text->material_member, member_path, text->material,
+        UrsatzStatus resolved = api_resolve_material(out->knowledge, text->material_member, member_path, text->material,
                                                        API_MATERIAL_ALLOW_STYLE, &picked, &kind, error);
-        if (resolved != COMPOSER_OK) {
+        if (resolved != URSATZ_OK) {
             return resolved;
         }
         if (kind == API_MATERIAL_STYLE && !text->has_style) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "%s style needs style", text->material_member);
+            return api_fail(error, URSATZ_ERR_REQUEST, member_path, "%s style needs style", text->material_member);
         }
     }
     /* With a material the key may be a tonic alone: the material is the one the member gives. */
@@ -291,9 +291,9 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     }
     if (!request_parse_key(key_text, out->knowledge, &out->key)) {
         if (api_fail_unsupported_key(error, "/key", out->knowledge, key_text)) {
-            return COMPOSER_ERR_REQUEST;
+            return URSATZ_ERR_REQUEST;
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
                         text->key);
@@ -308,14 +308,14 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     if (text->bars) {
         unsigned long bars;
         if (!request_parse_whole_number(text->bars, 16, &bars) || bars < 3) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '%s'", text->bars);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '%s'", text->bars);
         }
         out->bars = bars;
     }
     out->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (text->cadence &&
         (!request_parse_cadence(text->cadence, &out->cadence) || !api_theme_cadence_ok(out->cadence))) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/cadence", "cadence must be PAC, IAC or HC, not '%s'", text->cadence);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/cadence", "cadence must be PAC, IAC or HC, not '%s'", text->cadence);
     }
     out->development = GROW_DEVELOP_BALANCED;
     if (text->development) {
@@ -324,19 +324,19 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         } else if (strcmp(text->development, "theme") == 0) {
             out->development = GROW_DEVELOP_THEME;
         } else if (strcmp(text->development, "balanced") != 0) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/development", "development must be melody, balanced or theme, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/development", "development must be melody, balanced or theme, not '%s'",
                             text->development);
         }
     }
     out->first_cadence = CADENCE_TYPE_HALF;
     if (text->first_cadence) {
         if (out->pairing.beginning != SECTION_BEGINNING_ANTECEDENT) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/first_cadence",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/first_cadence",
                             "first_cadence applies only to a period or a hybrid that begins with an antecedent");
         }
         if (!request_parse_cadence(text->first_cadence, &out->first_cadence) ||
             (out->first_cadence != CADENCE_TYPE_HALF && out->first_cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/first_cadence", "first_cadence must be HC or IAC, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/first_cadence", "first_cadence must be HC or IAC, not '%s'",
                             text->first_cadence);
         }
     }
@@ -344,12 +344,12 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     bool chorale = text->texture && request_equals_ignore_case(text->texture, "chorale");
     if (chorale || text->voicing) {
         if (text->accompaniment || (text->texture && !chorale)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/voicing",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/voicing",
                             "voicing and texture chorale write the inner voices themselves; they cannot be combined with "
                             "accompaniment or another texture");
         }
         if (chorale && text->voicing) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/voicing",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/voicing",
                             "texture chorale writes the melody, voicing keeps the grown one; use one");
         }
         out->has_voicing = true;
@@ -358,19 +358,19 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         /* The word "motive" names the accompaniment motive's pattern, which api_read_accompaniment does not read. */
         bool motive_word = text->accompaniment && request_equals_ignore_case(text->accompaniment, "motive");
         if (motive_word && !text->accompaniment_motive) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/accompaniment",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment",
                             "accompaniment motive needs an accompaniment motive");
         }
         if (text->accompaniment_motive && text->accompaniment && !motive_word) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/accompaniment",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment",
                             "the accompaniment motive is the accompaniment pattern; it cannot be combined with "
                             "accompaniment %s",
                             text->accompaniment);
         }
         out->has_accompaniment = true;
-        ComposerStatus read = api_read_accompaniment(motive_word ? NULL : text->accompaniment, text->texture, text->meter,
+        UrsatzStatus read = api_read_accompaniment(motive_word ? NULL : text->accompaniment, text->texture, text->meter,
                                                      &out->meter, &out->accompaniment, error);
-        if (read != COMPOSER_OK) {
+        if (read != URSATZ_OK) {
             return read;
         }
         if (text->accompaniment_motive) {
@@ -378,20 +378,20 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         }
     }
     if (text->accompaniment_motive && (chorale || text->voicing)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/accompaniment",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment",
                         "an accompaniment motive cannot be combined with voicing or texture chorale");
     }
     if (text->style_weight && !text->has_style) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_weight", "style_weight needs style");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_weight", "style_weight needs style");
     }
     if (text->without_count > 0 && !text->has_style) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/without", "style_without needs style");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/without", "style_without needs style");
     }
     if (text->style_weight && !request_parse_ratio(text->style_weight, &out->style_weight)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_weight",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_weight",
                         "style_weight must be a fraction like 1/2 or a whole number, not '%s'", text->style_weight);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 cJSON *api_grow_construction_json(const SectionConstruction *given, const SectionPairing *pairing, const char *text) {
@@ -442,11 +442,11 @@ cJSON *api_grow_construction_json(const SectionConstruction *given, const Sectio
     return object;
 }
 
-ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const Motive *motive, const PlanMeter *meter,
+UrsatzStatus api_fail_motif_long(UrsatzError *error, const char *path, const Motive *motive, const PlanMeter *meter,
                                    size_t theme_bars, size_t idea_bars) {
     Rational bar;
     plan_meter_bar_length(meter, &bar);
     size_t bars = motive ? grow_motive_layout_bars(motive, bar) : 0;
-    return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "the motif is %zu bars; the basic idea of a %zu-bar theme is %zu",
+    return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "the motif is %zu bars; the basic idea of a %zu-bar theme is %zu",
                     bars, theme_bars, idea_bars);
 }

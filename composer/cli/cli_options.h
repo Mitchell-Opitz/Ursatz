@@ -47,7 +47,7 @@ int cli_fail(int status, const char *format, ...);
  * put back in the command's words: a message that starts with a member (format, form, harmony, feature, role, tone,
  * tempo) starts with the option "--format" and so on, and "the input" becomes the quoted input_name when it is not NULL.
  */
-int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name);
+int cli_fail_api(UrsatzStatus status, const UrsatzError *error, const char *input_name);
 
 /* Prints the document with 2-space indent and one space after each colon, as the commands write JSON. */
 void cli_print_json(const cJSON *document);

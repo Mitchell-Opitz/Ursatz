@@ -18,12 +18,17 @@ set(URSATZ_COMPOSER_BUILD_CLI ON)
 enable_testing()
 include(cmake/UrsatzTools.cmake)
 include(cmake/UrsatzTest.cmake)
+include(cmake/UrsatzExports.cmake)
 
 # Dependencies first; each later part reuses the targets the earlier ones define.
 add_subdirectory(third_party)
+# common/ stages its headers with the library's ursatz_public_headers helper, so the helper is defined first.
+include(library/cmake/UrsatzPublicHeaders.cmake)
+add_subdirectory(common)
 add_subdirectory(library)
 add_subdirectory(analyzer)
 add_subdirectory(composer)
+add_subdirectory(workshop)
 if(URSATZ_GUI)
     add_subdirectory(gui)
 endif()

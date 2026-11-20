@@ -1,0 +1,72 @@
+{
+	"schema":	"ursatz-theme-request",
+	"schema_version":	2,
+	"key":	"C",
+	"into":	"sentence",
+	"material":	"omt.material.natural-minor",
+	"meter":	"4/4",
+	"bars":	8,
+	"cadence":	"PAC",
+	"motives":	[{
+			"id":	"M1",
+			"form":	"full",
+			"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+			"pickup":	"0",
+			"harmony":	"I",
+			"features":	[{
+					"label":	"a",
+					"first":	0,
+					"last":	7
+				}],
+			"role":	"melodic"
+		}, {
+			"id":	"M2",
+			"form":	"full",
+			"degrees":	"5:e 4:e 3:e 2:e 4:e 3:e 2:e 1:e",
+			"pickup":	"0",
+			"harmony":	"I II@2",
+			"features":	[{
+					"label":	"a",
+					"first":	0,
+					"last":	7
+				}],
+			"role":	"melodic"
+		}],
+	"slots":	{
+		"basic":	"M1",
+		"cadential":	"M2",
+		"contrasting":	null,
+		"continuation":	null
+	},
+	"ideas":	{
+	},
+	"chords":	[{
+			"bar":	0,
+			"text":	"I"
+		}, {
+			"bar":	6,
+			"text":	"V"
+		}, {
+			"bar":	7,
+			"text":	"I"
+		}],
+	"accompaniment":	{
+		"pattern":	"motive",
+		"motive":	{
+			"form":	"full",
+			"degrees":	"1,:q 5,:q 3,:q 5,:q",
+			"pickup":	"0",
+			"harmony":	null,
+			"features":	[{
+					"label":	"a",
+					"first":	0,
+					"last":	3
+				}],
+			"role":	"accompaniment"
+		}
+	},
+	"voicing":	null,
+	"style":	"/home/user/ursatz/workshop/tests/fixtures/data-v0/materials/items/thm-b15d03ee8478605b/v2/brief.style.json",
+	"style_weight":	"1/2",
+	"tempo":	null
+}

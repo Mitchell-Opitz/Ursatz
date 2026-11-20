@@ -48,7 +48,7 @@ AnalyzerCheckResult test_analyzer_check_piece(const Plan *plan, AnalyzerCheck *o
 ComposerMeasureResult test_style_measure(const Plan *plan, const ComposerStyle *style, StyleComparison *out);
 
 /* The name of a Composer API status, for a message. */
-const char *test_status_name(ComposerStatus status);
+const char *test_status_name(UrsatzStatus status);
 
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *test_motive_json(const Motive *motive);

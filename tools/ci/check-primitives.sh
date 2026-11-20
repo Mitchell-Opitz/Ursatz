@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Fails when a shared primitive is copied outside its owner (R-622): a gcd function, __int128, a type named *Rational, *Fraction
 # or *Ratio, a table of the twelve pitch-class names, a scale-step table of integers, a Roman numeral table, or the FNV-1a 64 prime.
-# Scans library/, analyzer/, composer/ and gui/backend/src (C and H files, no tests/ folder). The owners are
-# library/model/core/rational.{c,h}, library/model/core/content_hash.c (the FNV prime), library/model/pitch/, library/theory/tonality/
+# Scans common/, library/, analyzer/, composer/ and gui/backend/src (C and H files, no tests/ folder). The owners are
+# library/model/core/rational.{c,h}, common/hash.c (the FNV prime), library/model/pitch/, library/theory/tonality/
 # and knowledge/. A hit that stays is listed in tools/ci/primitive-allow.txt as "<path> <pattern>  # reason, phase" (patterns: gcd,
 # int128, type, pitch-names, scale-steps, numerals, fnv). Prints each other hit as
 # "FAIL <file>:<line> <pattern>: <text>".
@@ -15,8 +15,8 @@ python3 - "$root" <<'PY'
 import os, re, sys
 
 root = sys.argv[1]
-scan = ["library", "analyzer", "composer", "gui/backend/src"]
-owners = ["library/model/core/rational.c", "library/model/core/rational.h", "library/model/core/content_hash.c", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
+scan = ["common", "library", "analyzer", "composer", "gui/backend/src"]
+owners = ["library/model/core/rational.c", "library/model/core/rational.h", "common/hash.c", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
 
 allowed = set()
 with open(os.path.join(root, "tools/ci/primitive-allow.txt"), encoding="utf-8") as handle:

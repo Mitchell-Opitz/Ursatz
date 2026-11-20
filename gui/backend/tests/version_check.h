@@ -14,8 +14,8 @@
 
 #include <cJSON.h>
 
-#include "gui_check.h"
-#include "service/playback_service.h"
+#include "ursatz_check.h"
+#include "coordinator/services.h"
 
 /* An exchange with a JSON body: the answer's body parsed as JSON (the caller deletes it), its status in *status. */
 typedef cJSON *(*VersionCheckExchange)(const char *method, const char *path, const char *body, int *status);
@@ -53,7 +53,7 @@ static void check_playback_of(VersionCheckExchange exchange, const char *url, co
   int status = 0;
   char *json = NULL;
   cJSON *want = NULL;
-  if (ursatz_gui_playback_of_midi(midi_path, &json) == URSATZ_GUI_PLAYBACK_OK && json) {
+  if (workshop_playback_of_midi(midi_path, &json) == URSATZ_OK && json) {
     want = cJSON_Parse(json);
   }
   free(json);

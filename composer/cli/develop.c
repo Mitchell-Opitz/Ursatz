@@ -215,8 +215,8 @@ int run_develop(int argc, char **argv) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus called = cli_call(composer_api_develop, request, &response);
-    if (called != COMPOSER_OK) {
+    UrsatzStatus called = cli_call(composer_api_develop, request, &response);
+    if (called != URSATZ_OK) {
         MotiveInputNames names = {options.input, NULL, NULL, NULL};
         status = motive_input_fail(&file, called, &response.error, &names);
         composer_response_destroy(&response);

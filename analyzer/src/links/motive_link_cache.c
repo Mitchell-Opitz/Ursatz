@@ -5,16 +5,15 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/motive_links.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/motive_links.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include "links_internal.h"
-#include "util/json_util.h"
-#include "util/file_util.h"
+#include <common/json.h>
+#include <common/files.h>
 #include "util/misc_util.h"
 
 #define CACHE_SCHEMA "ursatz-motive-link-cache"
-#define CACHE_SCHEMA_VERSION 2
 
 static const char *const dimension_keys[MOTIVE_DIMENSION_COUNT] = {"rhythm", "intervals", "contour", "harmony"};
 
@@ -83,11 +82,11 @@ static bool options_equal(const MotiveLinkOptions *a, const MotiveLinkOptions *b
 bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *options, bool *reset) {
     *reset = false;
     if (cache->keyed && cache->producer_key && cache->analyzer_version &&
-        strcmp(cache->producer_key, ursatz_analyzer_producer_key()) == 0 &&
+        strcmp(cache->producer_key, analyzer_producer_key()) == 0 &&
         strcmp(cache->analyzer_version, URSATZ_ANALYZER_VERSION) == 0 && options_equal(&cache->options, options)) {
         return true;
     }
-    char *commit = text_copy(ursatz_analyzer_producer_key());
+    char *commit = text_copy(analyzer_producer_key());
     char *version = text_copy(URSATZ_ANALYZER_VERSION);
     if (!commit || !version) {
         free(commit);
@@ -107,7 +106,7 @@ bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *
     return true;
 }
 
-void motive_link_cache_destroy(MotiveLinkCache *cache) {
+void analyzer_links_cache_destroy(MotiveLinkCache *cache) {
     if (!cache) {
         return;
     }
@@ -139,22 +138,26 @@ static bool fingerprint_value(const cJSON *item, unsigned long long *out) {
 }
 
 static bool distance_value(const cJSON *item, unsigned long long *numerator, unsigned long long *denominator) {
-    char tail;
-    return cJSON_IsString(item) && sscanf(item->valuestring, "%llu/%llu%c", numerator, denominator, &tail) == 2 &&
-           *denominator != 0;
+    long long n, d;
+    if (!common_json_rational_read(item, COMMON_RATIONAL_TEXT, &n, &d) || n < 0) {
+        return false;
+    }
+    *numerator = (unsigned long long)n;
+    *denominator = (unsigned long long)d;
+    return true;
 }
 
 static bool read_pair(const cJSON *entry, MotiveLinkCachePair *pair) {
     memset(pair, 0, sizeof *pair);
-    const cJSON *gated = json_member(entry, "gated");
-    const cJSON *linked = json_member(entry, "linked");
-    const cJSON *reversed = json_member(entry, "reversed");
-    const cJSON *steps = json_member(entry, "steps");
-    const cJSON *similarity = json_member(entry, "similarity");
-    if (!fingerprint_value(json_member(entry, "a"), &pair->a) || !fingerprint_value(json_member(entry, "b"), &pair->b) ||
+    const cJSON *gated = common_json_member(entry, "gated");
+    const cJSON *linked = common_json_member(entry, "linked");
+    const cJSON *reversed = common_json_member(entry, "reversed");
+    const cJSON *steps = common_json_member(entry, "steps");
+    const cJSON *similarity = common_json_member(entry, "similarity");
+    if (!fingerprint_value(common_json_member(entry, "a"), &pair->a) || !fingerprint_value(common_json_member(entry, "b"), &pair->b) ||
         pair->a > pair->b || !cJSON_IsBool(gated) || !cJSON_IsBool(linked) || !cJSON_IsBool(reversed) ||
         !cJSON_IsArray(steps) || cJSON_GetArraySize(steps) > MOTIVE_LINK_MAX_STEPS ||
-        !distance_value(json_member(entry, "distance"), &pair->distance_numerator, &pair->distance_denominator)) {
+        !distance_value(common_json_member(entry, "distance"), &pair->distance_numerator, &pair->distance_denominator)) {
         return false;
     }
     pair->gated = cJSON_IsTrue(gated);
@@ -168,7 +171,7 @@ static bool read_pair(const cJSON *entry, MotiveLinkCachePair *pair) {
         pair->step_count++;
     }
     for (int d = 0; d < MOTIVE_DIMENSION_COUNT; d++) {
-        const cJSON *value = json_member(similarity, dimension_keys[d]);
+        const cJSON *value = common_json_member(similarity, dimension_keys[d]);
         if (!cJSON_IsNumber(value)) {
             return false;
         }
@@ -177,87 +180,87 @@ static bool read_pair(const cJSON *entry, MotiveLinkCachePair *pair) {
     return true;
 }
 
-static MotiveLinksResult read_cache(const cJSON *root, MotiveLinkCache *cache) {
-    const cJSON *schema = json_member(root, "schema");
-    const cJSON *version = json_member(root, "schema_version");
-    const cJSON *commit = json_member(root, "producer_key");
-    const cJSON *analyzer = json_member(root, "analyzer_version");
-    const cJSON *options = json_member(root, "options");
-    const cJSON *pairs = json_member(root, "pairs");
-    const cJSON *contour = json_member(options, "contour");
-    const cJSON *nearness = json_member(options, "min_nearness");
+static UrsatzStatus read_cache(const cJSON *root, MotiveLinkCache *cache) {
+    const cJSON *schema = common_json_member(root, "schema");
+    const cJSON *version = common_json_member(root, "schema_version");
+    const cJSON *commit = common_json_member(root, "producer_key");
+    const cJSON *analyzer = common_json_member(root, "analyzer_version");
+    const cJSON *options = common_json_member(root, "options");
+    const cJSON *pairs = common_json_member(root, "pairs");
+    const cJSON *contour = common_json_member(options, "contour");
+    const cJSON *nearness = common_json_member(options, "min_nearness");
     if (cJSON_IsString(schema) && strcmp(schema->valuestring, CACHE_SCHEMA) == 0 && cJSON_IsNumber(version) &&
-        version->valuedouble < CACHE_SCHEMA_VERSION) {
+        version->valuedouble < ANALYZER_LINK_CACHE_VERSION) {
         /* A cache of an older schema version (it keys itself by ursatz_commit) reads as an empty cache keyed with
            nothing, so the next run starts it again and reports cache_reset. */
         cache->producer_key = text_copy("");
         cache->analyzer_version = text_copy("");
         motive_link_options_default(&cache->options);
         if (!cache->producer_key || !cache->analyzer_version) {
-            return MOTIVE_LINKS_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
         cache->keyed = true;
-        return MOTIVE_LINKS_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsString(schema) || strcmp(schema->valuestring, CACHE_SCHEMA) != 0 || !cJSON_IsNumber(version) ||
-        version->valuedouble != CACHE_SCHEMA_VERSION || !cJSON_IsString(commit) || !cJSON_IsString(analyzer) ||
-        !whole_number(json_member(options, "max_depth"), &cache->options.max_depth) ||
-        !whole_number(json_member(options, "beam"), &cache->options.beam) || !cJSON_IsNumber(nearness) ||
+        version->valuedouble != ANALYZER_LINK_CACHE_VERSION || !cJSON_IsString(commit) || !cJSON_IsString(analyzer) ||
+        !whole_number(common_json_member(options, "max_depth"), &cache->options.max_depth) ||
+        !whole_number(common_json_member(options, "beam"), &cache->options.beam) || !cJSON_IsNumber(nearness) ||
         !cJSON_IsBool(contour) || !cJSON_IsArray(pairs)) {
-        return MOTIVE_LINKS_ERR_FORMAT;
+        return URSATZ_ERR_FORMAT;
     }
     cache->options.min_nearness = nearness->valuedouble;
     cache->options.contour = cJSON_IsTrue(contour);
     cache->producer_key = text_copy(commit->valuestring);
     cache->analyzer_version = text_copy(analyzer->valuestring);
     if (!cache->producer_key || !cache->analyzer_version) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     cache->keyed = true;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, pairs) {
         MotiveLinkCachePair pair;
         if (!read_pair(entry, &pair)) {
-            return MOTIVE_LINKS_ERR_FORMAT;
+            return URSATZ_ERR_FORMAT;
         }
         if (!motive_link_cache_insert(cache, &pair)) {
-            return MOTIVE_LINKS_ERR_ALLOC;
+            return URSATZ_ERR_ALLOC;
         }
     }
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
-MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out) {
+UrsatzStatus analyzer_links_cache_load(const char *path, MotiveLinkCache **out) {
     if (!path || !out) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     MotiveLinkCache *cache = calloc(1, sizeof *cache);
     if (!cache) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     FILE *probe = fopen(path, "rb");
     if (!probe) {
         if (errno == ENOENT) {
             *out = cache;
-            return MOTIVE_LINKS_OK;
+            return URSATZ_OK;
         }
         free(cache);
-        return MOTIVE_LINKS_ERR_IO;
+        return URSATZ_ERR_IO;
     }
     fclose(probe);
     char *text = NULL;
-    file_read_all(path, &text, NULL);
+    common_file_read(path, &text, NULL, NULL);
     cJSON *root = text ? cJSON_Parse(text) : NULL;
-    MotiveLinksResult result = !text ? MOTIVE_LINKS_ERR_IO : (root ? read_cache(root, cache) : MOTIVE_LINKS_ERR_FORMAT);
+    UrsatzStatus result = !text ? URSATZ_ERR_IO : (root ? read_cache(root, cache) : URSATZ_ERR_FORMAT);
     free(text);
     cJSON_Delete(root);
-    if (result != MOTIVE_LINKS_OK) {
-        motive_link_cache_destroy(cache);
+    if (result != URSATZ_OK) {
+        analyzer_links_cache_destroy(cache);
         return result;
     }
     *out = cache;
-    return MOTIVE_LINKS_OK;
+    return URSATZ_OK;
 }
 
 static cJSON *pair_json(const MotiveLinkCachePair *pair) {
@@ -307,9 +310,9 @@ static cJSON *pair_json(const MotiveLinkCachePair *pair) {
     return entry;
 }
 
-MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path) {
+UrsatzStatus analyzer_links_cache_save(const MotiveLinkCache *cache, const char *path) {
     if (!cache || !path) {
-        return MOTIVE_LINKS_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     MotiveLinkOptions defaults;
     motive_link_options_default(&defaults);
@@ -321,12 +324,12 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
         cJSON_Delete(root);
         cJSON_Delete(object);
         cJSON_Delete(pairs);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     bool ok = cJSON_AddStringToObject(root, "schema", CACHE_SCHEMA) &&
-              cJSON_AddNumberToObject(root, "schema_version", CACHE_SCHEMA_VERSION) &&
+              cJSON_AddNumberToObject(root, "schema_version", ANALYZER_LINK_CACHE_VERSION) &&
               cJSON_AddStringToObject(root, "producer_key",
-                                      cache->keyed ? cache->producer_key : ursatz_analyzer_producer_key()) &&
+                                      cache->keyed ? cache->producer_key : analyzer_producer_key()) &&
               cJSON_AddStringToObject(root, "analyzer_version",
                                       cache->keyed ? cache->analyzer_version : URSATZ_ANALYZER_VERSION) &&
               cJSON_AddNumberToObject(object, "max_depth", (double)options->max_depth) &&
@@ -353,18 +356,18 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
     char *text = ok ? cJSON_Print(root) : NULL;
     cJSON_Delete(root);
     if (!text) {
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     size_t text_length = strlen(text);
     char *terminated = malloc(text_length + 2);
     if (!terminated) {
         cJSON_free(text);
-        return MOTIVE_LINKS_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     memcpy(terminated, text, text_length);
     memcpy(terminated + text_length, "\n", 2);
-    bool wrote = file_write_atomic(path, terminated);
+    bool wrote = (common_file_write_atomic(path, terminated, strlen(terminated), NULL) == URSATZ_OK);
     free(terminated);
     cJSON_free(text);
-    return wrote ? MOTIVE_LINKS_OK : MOTIVE_LINKS_ERR_IO;
+    return wrote ? URSATZ_OK : URSATZ_ERR_IO;
 }

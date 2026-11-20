@@ -80,8 +80,8 @@ void doc_notes_span(DocBuild *build, const ImportedScore *notes, const size_t *i
 /* Adds item under key, taking ownership; false (item freed) on failure. */
 cJSON *doc_rational_json(Rational value) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "num", cJSON_CreateNumber((double)value.num)) &&
-                    json_add(object, "den", cJSON_CreateNumber((double)value.den)))) {
+    if (object && !(common_json_add(object, "num", cJSON_CreateNumber((double)value.num)) &&
+                    common_json_add(object, "den", cJSON_CreateNumber((double)value.den)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -90,7 +90,7 @@ cJSON *doc_rational_json(Rational value) {
 
 cJSON *doc_span_json(Rational start, Rational end) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "start", doc_rational_json(start)) && json_add(object, "end", doc_rational_json(end)))) {
+    if (object && !(common_json_add(object, "start", doc_rational_json(start)) && common_json_add(object, "end", doc_rational_json(end)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -103,7 +103,7 @@ cJSON *doc_note_ids_json(const size_t *ids, size_t id_count) {
         return NULL;
     }
     for (size_t i = 0; i < id_count; i++) {
-        if (!json_append(array, cJSON_CreateNumber((double)(ids ? ids[i] : i)))) {
+        if (!common_json_append(array, cJSON_CreateNumber((double)(ids ? ids[i] : i)))) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -143,9 +143,9 @@ cJSON *doc_position_json(DocBuild *build, const MeterMap *map, Rational time) {
     }
 
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "measure", cJSON_CreateNumber((double)measure)) &&
-                    json_add(object, "beat", cJSON_CreateNumber((double)beat.beat)) &&
-                    json_add(object, "subdivision",
+    if (object && !(common_json_add(object, "measure", cJSON_CreateNumber((double)measure)) &&
+                    common_json_add(object, "beat", cJSON_CreateNumber((double)beat.beat)) &&
+                    common_json_add(object, "subdivision",
                              doc_rational_json(doc_rational(build, beat.subdivision_numerator, beat.subdivision_denominator))))) {
         cJSON_Delete(object);
         return NULL;
@@ -159,7 +159,7 @@ cJSON *doc_position_json(DocBuild *build, const MeterMap *map, Rational time) {
 cJSON *doc_location_json(DocBuild *build, const MeterMap *map, Rational start, Rational end) {
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "start", doc_position_json(build, map, start)) && json_add(object, "end", doc_position_json(build, map, end)))) {
+        !(common_json_add(object, "start", doc_position_json(build, map, start)) && common_json_add(object, "end", doc_position_json(build, map, end)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -171,13 +171,13 @@ cJSON *doc_location_json(DocBuild *build, const MeterMap *map, Rational start, R
 cJSON *doc_claim_json_with(DocBuild *build, const char *framework, const ImportedScore *notes, const size_t *ids, size_t id_count,
                               Rational start, Rational end, const char *label, cJSON *uncertainty) {
     cJSON *claim = cJSON_CreateObject();
-    bool consumed = false; /* json_add() takes the uncertainty over, and frees it itself when it fails */
-    if (claim && !(json_add(claim, "framework", cJSON_CreateString(framework)) &&
-                   json_add(claim, "span", doc_span_json(start, end)) &&
-                   json_add(claim, "location", doc_location_json(build, notes->meter.meter_map, start, end)) &&
-                   json_add(claim, "note_ids", doc_note_ids_json(ids, id_count)) &&
-                   json_add(claim, "label", cJSON_CreateString(label)) &&
-                   (consumed = true, json_add(claim, "uncertainty", uncertainty)))) {
+    bool consumed = false; /* common_json_add() takes the uncertainty over, and frees it itself when it fails */
+    if (claim && !(common_json_add(claim, "framework", cJSON_CreateString(framework)) &&
+                   common_json_add(claim, "span", doc_span_json(start, end)) &&
+                   common_json_add(claim, "location", doc_location_json(build, notes->meter.meter_map, start, end)) &&
+                   common_json_add(claim, "note_ids", doc_note_ids_json(ids, id_count)) &&
+                   common_json_add(claim, "label", cJSON_CreateString(label)) &&
+                   (consumed = true, common_json_add(claim, "uncertainty", uncertainty)))) {
         if (!consumed) {
             cJSON_Delete(uncertainty);
         }
@@ -206,8 +206,8 @@ static cJSON *claim_json(DocBuild *build, const char *framework, const ImportedS
 static cJSON *time_signature_json(const TimeSignature *time_signature) {
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "numerator", cJSON_CreateNumber((double)time_signature_top_number(time_signature))) &&
-          json_add(object, "denominator", cJSON_CreateNumber((double)time_signature_bottom_number(time_signature))))) {
+        !(common_json_add(object, "numerator", cJSON_CreateNumber((double)time_signature_top_number(time_signature))) &&
+          common_json_add(object, "denominator", cJSON_CreateNumber((double)time_signature_bottom_number(time_signature))))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -236,7 +236,7 @@ static cJSON *pickup_json(DocBuild *build, const MeterMap *map) {
     }
 
     cJSON *pickup = cJSON_CreateObject();
-    if (pickup && !(json_add(pickup, "length", doc_rational_json(length)) && json_add(pickup, "beats", beats))) {
+    if (pickup && !(common_json_add(pickup, "length", doc_rational_json(length)) && common_json_add(pickup, "beats", beats))) {
         cJSON_Delete(pickup);
         return NULL;
     }
@@ -257,15 +257,15 @@ static cJSON *meter_changes_json(DocBuild *build, const MeterMap *map, size_t fi
         MusicalTime doc_region_start = meter_map_region_start(region);
         cJSON *change = cJSON_CreateObject();
         if (!(change &&
-              json_add(change, "measure", cJSON_CreateNumber((double)meter_map_region_first_measure_number(region))) &&
-              json_add(change, "start", doc_rational_json(doc_region_start.value)) &&
-              json_add(change, "time_signature", time_signature_json(meter_map_region_time_signature(region))) &&
-              json_add(change, "inferred", cJSON_CreateBool(meter_map_region_is_defaulted(region))))) {
+              common_json_add(change, "measure", cJSON_CreateNumber((double)meter_map_region_first_measure_number(region))) &&
+              common_json_add(change, "start", doc_rational_json(doc_region_start.value)) &&
+              common_json_add(change, "time_signature", time_signature_json(meter_map_region_time_signature(region))) &&
+              common_json_add(change, "inferred", cJSON_CreateBool(meter_map_region_is_defaulted(region))))) {
             cJSON_Delete(change);
             cJSON_Delete(changes);
             return NULL;
         }
-        if (!json_append(changes, change)) {
+        if (!common_json_append(changes, change)) {
             cJSON_Delete(changes);
             return NULL;
         }
@@ -280,9 +280,9 @@ static cJSON *reading_json(DocBuild *build, const ImportedScore *notes) {
     }
     const ImportedReading *reading = &notes->source.reading;
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "scale",
+    if (object && !(common_json_add(object, "scale",
                              doc_rational_json(doc_rational(build, (long)reading->scale.num, (unsigned long)reading->scale.den))) &&
-                    json_add(object, "meter_overridden", cJSON_CreateBool(reading->has_meter)))) {
+                    common_json_add(object, "meter_overridden", cJSON_CreateBool(reading->has_meter)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -317,16 +317,16 @@ cJSON *doc_meter_json(DocBuild *build, const ImportedScore *notes) {
                                : (notated ? NOTATED_TIME_SIGNATURE_SOURCE : TIME_SIGNATURE_SOURCE);
     const char *source_name = overridden ? "override" : (inferred ? "inferred" : (notated ? "notated" : "file"));
     cJSON *meter = claim_json(build, claim_source, notes, NULL, notes->count, label, (AnalysisConfidence){false, {0, 1}});
-    if (!(meter && json_add(meter, "source", cJSON_CreateString(source_name)) &&
-          json_add(meter, "time_signature", time_signature_json(time_signature)) &&
-          json_add(meter, "measure_count", cJSON_CreateNumber((double)measure_count)) &&
-          json_add(meter, "last_measure",
+    if (!(meter && common_json_add(meter, "source", cJSON_CreateString(source_name)) &&
+          common_json_add(meter, "time_signature", time_signature_json(time_signature)) &&
+          common_json_add(meter, "measure_count", cJSON_CreateNumber((double)measure_count)) &&
+          common_json_add(meter, "last_measure",
               measure_count > 0 ? cJSON_CreateNumber((double)(meter_map_first_measure_number(map) +
                                                               (int)measure_count - 1))
                                 : cJSON_CreateNull()) &&
-          json_add(meter, "pickup", has_pickup ? pickup_json(build, map) : cJSON_CreateNull()) &&
-          json_add(meter, "changes", meter_changes_json(build, map, primary_index + 1)) &&
-          json_add(meter, "reading", reading_json(build, notes)))) {
+          common_json_add(meter, "pickup", has_pickup ? pickup_json(build, map) : cJSON_CreateNull()) &&
+          common_json_add(meter, "changes", meter_changes_json(build, map, primary_index + 1)) &&
+          common_json_add(meter, "reading", reading_json(build, notes)))) {
         cJSON_Delete(meter);
         return NULL;
     }
@@ -364,15 +364,15 @@ static cJSON *key_signatures_json(DocBuild *build, const ImportedScore *notes) {
         Rational start = event->position.value;
         cJSON *object = cJSON_CreateObject();
         bool ok = major_label && minor_label && object &&
-                  json_add(object, "start", doc_rational_json(start)) &&
-                  json_add(object, "location", doc_position_json(build, notes->meter.meter_map, start)) &&
-                  json_add(object, "sharps_flats", cJSON_CreateNumber(event->sharps_flats)) &&
-                  json_add(object, "mode_hint", cJSON_CreateString(mode_hint_name(event->mode_hint))) &&
-                  json_add(object, "major_key", cJSON_CreateString(major_label)) &&
-                  json_add(object, "minor_key", cJSON_CreateString(minor_label));
+                  common_json_add(object, "start", doc_rational_json(start)) &&
+                  common_json_add(object, "location", doc_position_json(build, notes->meter.meter_map, start)) &&
+                  common_json_add(object, "sharps_flats", cJSON_CreateNumber(event->sharps_flats)) &&
+                  common_json_add(object, "mode_hint", cJSON_CreateString(mode_hint_name(event->mode_hint))) &&
+                  common_json_add(object, "major_key", cJSON_CreateString(major_label)) &&
+                  common_json_add(object, "minor_key", cJSON_CreateString(minor_label));
         free(major_label);
         free(minor_label);
-        if (!ok || !json_append(signatures, object)) {
+        if (!ok || !common_json_append(signatures, object)) {
             if (!ok) {
                 cJSON_Delete(object);
             }
@@ -401,10 +401,10 @@ static cJSON *input_parts_json(const ImportedScore *notes) {
         }
         const ImportedPart *part = &notes->source.parts[i];
         cJSON *object = cJSON_CreateObject();
-        if (!(object && json_add(object, "id", cJSON_CreateString(part->id)) &&
-              json_add(object, "name", cJSON_CreateString(part->name)) &&
-              json_add(object, "staff_count", cJSON_CreateNumber(part->staff_count)) &&
-              json_add(object, "note_count", cJSON_CreateNumber((double)note_count)) && json_append(parts, object))) {
+        if (!(object && common_json_add(object, "id", cJSON_CreateString(part->id)) &&
+              common_json_add(object, "name", cJSON_CreateString(part->name)) &&
+              common_json_add(object, "staff_count", cJSON_CreateNumber(part->staff_count)) &&
+              common_json_add(object, "note_count", cJSON_CreateNumber((double)note_count)) && common_json_append(parts, object))) {
             cJSON_Delete(object);
             cJSON_Delete(parts);
             return NULL;
@@ -415,11 +415,11 @@ static cJSON *input_parts_json(const ImportedScore *notes) {
 
 static cJSON *input_tempo_json(const ImportedSource *source) {
     cJSON *tempo = cJSON_CreateObject();
-    if (tempo && !(json_add(tempo, "declared", cJSON_CreateBool(source->tempo_declared)) &&
-                   json_add(tempo, "quarters_per_minute", source->tempo_declared
+    if (tempo && !(common_json_add(tempo, "declared", cJSON_CreateBool(source->tempo_declared)) &&
+                   common_json_add(tempo, "quarters_per_minute", source->tempo_declared
                                                          ? cJSON_CreateNumber(source->initial_quarters_per_minute)
                                                          : cJSON_CreateNull()) &&
-                   json_add(tempo, "marking_count", cJSON_CreateNumber((double)source->tempo_marking_count)))) {
+                   common_json_add(tempo, "marking_count", cJSON_CreateNumber((double)source->tempo_marking_count)))) {
         cJSON_Delete(tempo);
         return NULL;
     }
@@ -435,15 +435,15 @@ static cJSON *input_json(const ImportedScore *notes) {
     bool meter_stated = !meter_map_is_defaulted(notes->meter.meter_map);
     cJSON *input = cJSON_CreateObject();
     if (input &&
-        !(json_add(input, "format", cJSON_CreateString(score ? "musicxml" : "midi")) &&
-          json_add(input, "source_type", cJSON_CreateString(score ? "score" : "performance")) &&
-          json_add(input, "meter", cJSON_CreateString(knowledge_name(meter_stated, source->meter_notated))) &&
-          json_add(input, "key",
+        !(common_json_add(input, "format", cJSON_CreateString(score ? "musicxml" : "midi")) &&
+          common_json_add(input, "source_type", cJSON_CreateString(score ? "score" : "performance")) &&
+          common_json_add(input, "meter", cJSON_CreateString(knowledge_name(meter_stated, source->meter_notated))) &&
+          common_json_add(input, "key",
               cJSON_CreateString(knowledge_name(notes->key_signature_events.count > 0, source->key_notated))) &&
-          json_add(input, "spelling", cJSON_CreateString(source->spelling_notated ? "notated" : "rule")) &&
-          json_add(input, "parts", input_parts_json(notes)) && json_add(input, "tempo", input_tempo_json(source)) &&
-          json_add(input, "dynamics_count", cJSON_CreateNumber((double)source->dynamics_count)) &&
-          json_add(input, "warning_count", cJSON_CreateNumber((double)source->warning_count)))) {
+          common_json_add(input, "spelling", cJSON_CreateString(source->spelling_notated ? "notated" : "rule")) &&
+          common_json_add(input, "parts", input_parts_json(notes)) && common_json_add(input, "tempo", input_tempo_json(source)) &&
+          common_json_add(input, "dynamics_count", cJSON_CreateNumber((double)source->dynamics_count)) &&
+          common_json_add(input, "warning_count", cJSON_CreateNumber((double)source->warning_count)))) {
         cJSON_Delete(input);
         return NULL;
     }
@@ -453,16 +453,16 @@ static cJSON *input_json(const ImportedScore *notes) {
 cJSON *doc_metadata_json(DocBuild *build, const char *input_path, const ImportedScore *notes, const ChainResult *report) {
     cJSON *metadata = cJSON_CreateObject();
     if (metadata &&
-        !(json_add(metadata, "source_file", cJSON_CreateString(path_basename(input_path))) &&
-          json_add(metadata, "analyzer_version", cJSON_CreateString(URSATZ_ANALYZER_VERSION)) &&
-          json_add(metadata, "producer_key", cJSON_CreateString(ursatz_analyzer_producer_key())) &&
-          json_add(metadata, "note_count", cJSON_CreateNumber((double)notes->count)) &&
-          json_add(metadata, "ticks_per_quarter", notes->ticks_per_quarter > 0
+        !(common_json_add(metadata, "source_file", cJSON_CreateString(path_basename(input_path))) &&
+          common_json_add(metadata, "analyzer_version", cJSON_CreateString(URSATZ_ANALYZER_VERSION)) &&
+          common_json_add(metadata, "producer_key", cJSON_CreateString(analyzer_producer_key())) &&
+          common_json_add(metadata, "note_count", cJSON_CreateNumber((double)notes->count)) &&
+          common_json_add(metadata, "ticks_per_quarter", notes->ticks_per_quarter > 0
                                                  ? cJSON_CreateNumber((double)notes->ticks_per_quarter)
                                                  : cJSON_CreateNull()) &&
-          json_add(metadata, "input", input_json(notes)) &&
-          json_add(metadata, "key_found", cJSON_CreateBool(report->key_region_count > 0)) &&
-          json_add(metadata, "key_signatures", key_signatures_json(build, notes)))) {
+          common_json_add(metadata, "input", input_json(notes)) &&
+          common_json_add(metadata, "key_found", cJSON_CreateBool(report->key_region_count > 0)) &&
+          common_json_add(metadata, "key_signatures", key_signatures_json(build, notes)))) {
         cJSON_Delete(metadata);
         return NULL;
     }
@@ -479,7 +479,7 @@ Rational doc_region_end(DocBuild *build, const AnalysisKeyRegion *region) {
 
 cJSON *doc_measures_json(int first, int last) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "first", cJSON_CreateNumber(first)) && json_add(object, "last", cJSON_CreateNumber(last)))) {
+    if (object && !(common_json_add(object, "first", cJSON_CreateNumber(first)) && common_json_add(object, "last", cJSON_CreateNumber(last)))) {
         cJSON_Delete(object);
         return NULL;
     }

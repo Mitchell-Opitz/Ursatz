@@ -2,7 +2,7 @@
  * directly) against a real analysis document: the tab table, a row for every
  * item of a tab's sections, disabled empty tabs, row labels and locations,
  * the header and provenance fields, and the mapping of a claim's note_ids to
- * xml:ids. Also checks that app.js no longer carries the claim actions that
+ * xml:ids. Also checks that the page no longer carries the claim actions that
  * have no backend, that the view is the score workspace (no Score tab), and
  * the Library/Analysis navigation decisions.
  *
@@ -14,13 +14,17 @@
  *
  * Plain Node script, no framework/deps, run directly:
  * `node frontend/tests/analysis-view.test.js`. */
+import fs from "fs";
+import * as tabs from "../public/models/analysis-tabs.js";
+import { buildPieceTable } from "../public/views/library-parts.js";
+import { renderAnalysisTool } from "../public/views/analysis.js";
+import { setShell } from "../public/views/shell-context.js";
+import { check, finish } from "./support/check.js";
+import { installDom } from "./support/dom.js";
+import { analyzerSnapshot, indexSource, pageSource } from "./support/fixtures.js";
 
-const fs = require("fs");
-const path = require("path");
-const tabs = require("../public/analysis-tabs.js");
+const APP_MODULES = ["views/shell.js", "views/library.js", "views/analysis.js", "views/collections.js", "views/styles.js"];
 
-const { check, finish } = require("./support/check.js");
-const { analyzerSnapshot } = require("./support/fixtures.js");
 
 const doc = JSON.parse(fs.readFileSync(analyzerSnapshot("mozart-545.analysis.json"), "utf8"));
 const states = tabs.buildAllTabStates(doc);
@@ -163,17 +167,17 @@ check(
   "the provenance panel lists the document's metadata fields",
 );
 
-/* app.js carries no claim actions without a backend. */
-const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
-check(!/Accept|Dispute/.test(appSource), "app.js has no Accept or Dispute buttons");
-check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "app.js has no static analyzer list");
+/* The page carries no claim actions without a backend. */
+const appSource = pageSource(...APP_MODULES);
+check(!/Accept|Dispute/.test(appSource), "the page has no Accept or Dispute buttons");
+check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "the page has no static analyzer list");
 check(appSource.includes('accept=".mid,.midi,.musicxml,.xml,.mxl"'), "the upload picker accepts MusicXML files");
-check(appSource.includes("/reanalyze"), "app.js calls the reanalyze route");
+check(appSource.includes("/reanalyze"), "the page calls the reanalyze route");
 
 /* The Analysis view is the score workspace: Score mode by default, Data mode
  * keeps the tabs and the Provenance list, and the old Score tab is gone. */
 check(appSource.includes("ScoreWorkspace.mount("), "showAnalysisView mounts the score workspace");
-check(!/renderScoreTab|analysis-score\b|analysis-sidebar|analysis-layout/.test(appSource), "the old Score tab and sidebar markup are gone from app.js");
+check(!/renderScoreTab|analysis-score\b|analysis-sidebar|analysis-layout/.test(appSource), "the old Score tab and sidebar markup are gone from the page");
 check(!tabs.ANALYSIS_TABS.some((tab) => tab.id === "score"), "the claim tabs have no Score tab");
 check(
   appSource.includes("renderProvenancePanel(data.document)") && appSource.includes('class="sidebar-label">Provenance'),
@@ -182,43 +186,30 @@ check(
 check(appSource.includes("renderAnalysisTabs(data, tabId)"), "Data mode renders the claim tabs");
 check(appSource.includes("Re-run analysis") && appSource.includes("reanalyzePiece(id)"), "the toolbar offers Re-run analysis");
 check(appSource.includes("content--workspace") && appSource.includes("leaveWorkspace()"), "the content area is a workspace only while a piece is open");
-const indexSource = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
-const scriptOrder = ["score-notes.js", "workspace-state.js", "score-workspace.js", "app.js"].map((name) => indexSource.indexOf(`src="${name}"`));
-check(scriptOrder.every((at, i) => at >= 0 && (i === 0 || at > scriptOrder[i - 1])), "index.html loads workspace-state.js and score-workspace.js after score-notes.js and before app.js");
+const indexHtml = indexSource();
+check(/<script type="module" src="main\.js"><\/script>/.test(indexHtml) && indexHtml.indexOf("opensheetmusicdisplay.min.js") < indexHtml.indexOf("main.js"), "index.html loads the OSMD script, then main.js as a module");
 
-/* Mirrors app.js's buildPieceRow onFilenameClick wiring -- Library rows
- * call showAnalysisView(piece.id) on filename click; Collections rows
- * (also built via buildPieceRow) pass no onFilenameClick and stay
- * unaffected. */
-function filenameCellIsClickable(onFilenameClick) {
-  return Boolean(onFilenameClick);
-}
+/* The Library's piece rows open the Analysis view on a filename click; a row built without onOpen (a picker) has no clickable filename. */
+installDom();
+const piece = { id: "piece-1788837459-41", filename: "sonata.mid", tags: [] };
+const opened = [];
+const withOpen = document.createElement("div");
+buildPieceTable(withOpen, { pieces: [piece], columns: ["composer", "source", "tags"], onOpen: (row) => opened.push(row.id) });
+const filenameCell = withOpen.querySelector("tbody tr td span");
+check(filenameCell !== null && filenameCell.classList.contains("clickable"), "Library's filename cell is clickable (navigates to the Analysis view)");
+filenameCell.click();
+check(opened.length === 1 && opened[0] === piece.id, "clicking the filename opens that piece");
+const withoutOpen = document.createElement("div");
+buildPieceTable(withoutOpen, { pieces: [piece], columns: ["composer", "source", "tags"] });
+check(!withoutOpen.querySelector("tbody tr td span").classList.contains("clickable"), "a piece row built without onOpen has no clickable filename cell");
 
-check(
-  filenameCellIsClickable((piece) => piece.id) === true,
-  "Library's filename cell is clickable (navigates to the Analysis view)",
-);
-check(
-  filenameCellIsClickable(undefined) === false,
-  "a piece row built without onFilenameClick (e.g. Collections) has no clickable filename cell",
-);
-
-/* Mirrors app.js's renderAnalysisTool: the top-level Analysis nav tab
- * reopens lastAnalysisPieceId when set, and otherwise shows an empty
- * state rather than guessing a piece. */
-function resolveAnalysisToolTarget(lastAnalysisPieceId) {
-  return lastAnalysisPieceId ? { kind: "piece", id: lastAnalysisPieceId } : { kind: "empty" };
-}
-
-check(
-  resolveAnalysisToolTarget("piece-1788837459-41").kind === "piece" &&
-    resolveAnalysisToolTarget("piece-1788837459-41").id === "piece-1788837459-41",
-  "the Analysis nav tab reopens the last piece viewed when one is set",
-);
-check(
-  resolveAnalysisToolTarget(null).kind === "empty",
-  "the Analysis nav tab shows an empty state, not a guessed piece, before any piece has been opened",
-);
+/* The Analysis tab before any piece has been opened shows an empty state, not a guessed piece; its link goes back to the Library. */
+const selected = [];
+setShell({ contentEl: () => document.body, selectTool: (id) => selected.push(id) });
+renderAnalysisTool();
+check(document.body.textContent.includes("No piece selected yet"), "the Analysis nav tab shows an empty state before any piece has been opened");
+document.body.querySelector("a.back-link").click();
+check(selected.length === 1 && selected[0] === "library", "the empty state links back to the Library");
 
 /* The document per tab: a cache that starts from the summary, loads only the sections a tab lacks, and builds the
  * same tab state as the whole document does. */

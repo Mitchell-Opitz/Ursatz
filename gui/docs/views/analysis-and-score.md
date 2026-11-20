@@ -23,18 +23,18 @@ Style tags are separate and unchanged.
 The Motive links entry (after Subjects) shows which motive families of different pieces are variants of one another
 (routes: "Motive links routes"). A scope picker offers All Library pieces, Collection, Composer / Source / Tag
 (any of the three), Subject and Project, each with a picker over the existing lists. Run starts a run and the
-progress line reads `Comparing <done> of <total> pairs`, polled every second; when it is done it reads
+progress line reads `Comparing <done> of <total> pairs`, followed on the event stream (the run is a job; a second run waits in the queue); when it is done it reads
 `compared <n>, cached <n> of <n> pairs`, with the skipped pieces beside it. The result lists the groups of linked
 families first (piece, measures, degrees; a click opens that piece's Analysis on the motive), then the links table
 (both sides with measures and degrees, the steps joined by "then", the distance as a percent, and the dimensions kept
 and changed). Earlier runs are listed with their scope and date; each opens or is deleted. The model is
-`frontend/public/motive-links-model.js` (global `MotiveLinksModel`: `scopeBody`, `progressText`, `linkRows`,
-`groupRows`, `motiveFeatureRows`, `pieceLinkRows`); the DOM is `motive-links-view.js`.
+`frontend/public/models/motive-links-model.js` (`MotiveLinksModel`: `scopeBody`, `progressText`, `linkRows`,
+`groupRows`, `motiveFeatureRows`, `pieceLinkRows`); the DOM is `views/motive-links-view.js`.
 
 ## Analysis view
 
-Opening a piece shows the score workspace (`frontend/public/score-workspace.js`,
-global `ScoreWorkspace`). `ScoreWorkspace.mount(rootEl, options)` takes a
+Opening a piece shows the score workspace (`frontend/public/score/score-workspace.js`,
+`ScoreWorkspace`, with its playback transport in `score/transport.js`). `ScoreWorkspace.mount(rootEl, options)` takes a
 title, a subtitle, the score and meta URLs, the analysis document, the note
 `xml:id` list, the toolbar actions and a back callback, and knows nothing
 else about the Analyzer, so the Composer can mount it too. It returns
@@ -70,8 +70,8 @@ Edit, which opens meter, value scale (x1/4 to x4) and pickup fields with Save,
 Clear and Cancel. Apply and Save send `PATCH /api/analyzer/pieces/<id>` with
 `notation` (blank fields left out, Clear sends `null`), then load the analysis
 and score again. A rejected notation shows the backend's message
-(`invalid notation`) in the row. The model is `frontend/public/notation-panel.js`
-(global `NotationPanel`: `meterFitSummary`, `notationBody`, `readingText`),
+(`invalid notation`) in the row. The model is `frontend/public/models/notation-panel.js`
+(`NotationPanel`: `meterFitSummary`, `notationBody`, `readingText`),
 tested by `frontend/tests/notation-panel.test.js`. Nothing is applied
 automatically.
 
@@ -111,7 +111,7 @@ them):
 The zoom, the docked panels and the mode are remembered in `localStorage` under
 `ursatz.workspace.v1` (`{layersOpen, inspectorOpen, zoom, mode}`). The pure
 part (zoom steps, panel modes, shortcut table, saved state) is
-`frontend/public/workspace-state.js` (global `WorkspaceState`, no DOM).
+`frontend/public/models/workspace-state.js` (`WorkspaceState`, no DOM).
 
 Data mode replaces the score with the Provenance list and the claim tabs
 below. Provenance lists the document's metadata (source file, analyzer
@@ -152,16 +152,14 @@ inside it (the key regions, the form's sections and returns, the soprano and
 bass lines) are rows. Choosing a row switches to Score mode and selects that
 claim there (see [Selecting claims](#selecting-claims-and-the-inspector)).
 
-The tab logic is in `frontend/public/analysis-tabs.js` (no DOM, loaded by
-`index.html` before `app.js` and by the frontend tests); `app.js` renders it.
+The tab logic is in `frontend/public/models/analysis-tabs.js` (no DOM, imported by the Analysis view and by the frontend tests); `views/analysis.js` renders it.
 
 ## Score
 
 Score mode fetches `GET /api/analyzer/pieces/<id>/musicxml` and renders it with
 [OpenSheetMusicDisplay](https://opensheetmusicdisplay.org/), vendored as a
 static UMD build under `frontend/public/vendor/opensheetmusicdisplay/` and
-loaded by a plain `<script>` tag (`frontend/` has no `package.json` or
-bundler). A caption below the score ("This file declares no time signature;
+loaded by a plain `<script>` tag before the page's module script (`frontend/` has no bundler). A caption below the score ("This file declares no time signature;
 shown in 4/4") shows when `GET .../musicxml/meta` reports
 `meter_defaulted: true`, that is, when the source file gave no meter. When the
 response is not a 2xx XML document, `ScoreNotes.scoreResponseProblem` turns it
@@ -173,7 +171,7 @@ to the beat grid (`score_quantize_options_default()`), so notes carry `<type>`,
 dots, triplet brackets and `<beam>`. Each source part is a part with its
 instrument and General MIDI program (`midi_program`), `<work-title>` is the
 piece title (the filename without its extension) and the composer from
-`meta.json` is written as the composer credit.
+`piece.json` is written as the composer credit.
 
 A piece the Composer writes (a theme or a piece, API 2.1, R-599) is one `piano` part on a grand staff too: the melody on staff 1, the bass on staff 2 and an inner voice on the staff its notes sit in, each note with the Composer's note id as its `xml:id` (`piano-n<id>`). The playback of such a file lists a part for each line as before (see [themes and pieces](themes-and-pieces.md)). A piano piece is one part drawn as a grand staff: the hands are paired into
 `<staves>2</staves>`, the right hand on staff 1 and the left hand on staff 2.
@@ -186,8 +184,8 @@ playback are the same notes as before.
 
 A claim's `note_ids` are mapped to `<note xml:id>` values through the piece's
 `note_xml_ids`. OSMD does not keep `xml:id`, so the score finds each
-note by its position and pitch (`frontend/public/score-notes.js`, no DOM,
-loaded by `index.html` before `app.js` and by the frontend tests):
+note by its position and pitch (`frontend/public/score/score-notes.js`, no DOM,
+imported by the workspace and by the frontend tests):
 
 - The key is `<part index>|<measure number>|<staff>|<voice>|<onset>|<pitch>`.
   Onset is the position in the measure as a reduced fraction of a whole note
@@ -212,7 +210,7 @@ name and the number of items in the piece. A layer with no items is disabled
 Harmony, Structure). Everything is off by default; the choice is remembered
 and toggling never reloads the piece.
 
-`frontend/public/score-overlay.js` (global `ScoreOverlay`) draws the layers
+`frontend/public/score/score-overlay.js` (`ScoreOverlay`) draws the layers
 that are on in one SVG laid over the OSMD SVG, redrawn from scratch after
 every render and toggle. Positions come from `ScoreGeometry` (a piece position
 plus the timeline offset is an OSMD time).
@@ -280,6 +278,6 @@ The Inspector has two tabs.
   highlight, Enter selects.
 
 The pure part (picking, neighbors, filtering, formatting, the evidence rows)
-is `frontend/public/inspector-model.js` (global `InspectorModel`, no DOM); the
+is `frontend/public/score/inspector-model.js` (`InspectorModel`, no DOM); the
 panel is `inspector-view.js`; the selection and the overlay drawing live in
 `score-workspace.js` and `score-overlay.js`.

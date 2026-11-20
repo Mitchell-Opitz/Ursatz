@@ -1,9 +1,8 @@
 /* Covers the job client (public/backend-jobs.js) with a fake fetch: the request is sent, the job is polled until it
  * ends, the result is the status and body the route answered before jobs, progress is reported, a request answered at
  * once passes through, and an aborted signal cancels. Plain Node script: `node frontend/tests/backend-jobs.test.js`. */
-const J = require("../public/backend-jobs.js");
-
-const { check, same, finish } = require("./support/check.js");
+import J from "../public/core/backend-jobs.js";
+import { check, same, finish } from "./support/check.js";
 
 /* A fake fetch: script is a list of [status, body] answers, one for each call in order; calls records them. */
 function fakeFetch(script) {

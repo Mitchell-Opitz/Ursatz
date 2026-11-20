@@ -299,7 +299,7 @@ static char *theme_plan(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     char *plan = strdup(response.plan_json);
     composer_response_destroy(&response);
@@ -327,9 +327,9 @@ static uint64_t piece_hash(const char *name, const char *theme) {
     }
     PieceSpec *spec = calloc(1, sizeof(*spec));
     assert(spec);
-    ComposerError error;
+    UrsatzError error;
     memset(&error, 0, sizeof(error));
-    if (api_piece_read_request(spec, test_knowledge(), test_materials(), root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
+    if (api_piece_read_request(spec, test_knowledge(), test_materials(), root, "", NULL, false, NULL, &error) != URSATZ_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
         exit(1);
     }

@@ -4,12 +4,12 @@
   "title": "composer_api_versions response",
   "description": "The versions the Composer was built with; a host compares them with the ones it saved (docs/api.md).",
   "type": "object",
-  "required": ["composer_version", "api_version", "ursatz_commit", "composition_key", "plan_format_version"],
+  "required": ["composer_version", "api_version", "producer_key", "composition_key", "plan_format_version"],
   "additionalProperties": false,
   "properties": {
     "composer_version": { "type": "string", "minLength": 1 },
     "api_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
-    "ursatz_commit": { "type": "string", "minLength": 1 },
+    "producer_key": { "type": "string", "minLength": 1 },
     "composition_key": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "The key of the code that composes: a hash of its sources." },
     "plan_format_version": { "type": "integer", "minimum": 1 }
   }

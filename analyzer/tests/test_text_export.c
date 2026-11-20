@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/text_export.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -34,7 +34,7 @@ static bool piece_load(Piece *piece, const char *path, const char *name) {
         return false;
     }
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(&piece->notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
+    if (analyzer_analyze(&piece->notes, test_analyzer_defaults(), &result) != URSATZ_OK) {
         imported_score_destroy(&piece->notes);
         return false;
     }
@@ -60,8 +60,8 @@ static char *export_range(const Piece *piece, const char *title, int first, int 
     options.first_measure = first;
     options.last_measure = last;
     char *text = NULL;
-    AnalyzerStatus status = analyzer_text_export_piece(&piece->notes, piece->document, &options, &text);
-    CHECKF(status == ANALYZER_OK && text != NULL, "export %d-%d: status %d", first, last, (int)status);
+    UrsatzStatus status = analyzer_text_export_piece(&piece->notes, piece->document, &options, &text, NULL);
+    CHECKF(status == URSATZ_OK && text != NULL, "export %d-%d: status %d", first, last, (int)status);
     return text;
 }
 
@@ -150,14 +150,14 @@ static void check_pickup_piece(void) {
 
     /* Header lines. */
     CHECKF(line_is(whole, 1, "# Ursatz export v2: piece"), "line 1 is the title line");
-    CHECKF(URSATZ_ANALYZER_TEXT_EXPORT_VERSION == 2, "the format version constant is 2");
+    CHECKF(ANALYZER_TEXT_EXPORT_VERSION == 2, "the format version constant is 2");
     CHECKF(line_is(whole, 2, "title: pickup.musicxml"), "the title is the file name the document records");
     CHECKF(line_is(whole, 3, "key: C major | meter: 4/4 | tempo: not declared | measures: 0-4"), "the key, meter, tempo, measures line");
     CHECKF(line_is(whole, 4, "clefs: P1 S1 treble"), "the clefs line names each part's opening clefs");
     char commit[13];
-    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_producer_key());
+    snprintf(commit, sizeof(commit), "%.12s", analyzer_producer_key());
     char analyzer_line[160];
-    snprintf(analyzer_line, sizeof(analyzer_line), "analyzer: %s ursatz %s", ursatz_analyzer_version(), commit);
+    snprintf(analyzer_line, sizeof(analyzer_line), "analyzer: %s ursatz %s", analyzer_version(), commit);
     CHECKF(line_is(whole, 5, analyzer_line), "the analyzer line names the version and a 12 character commit");
     CHECKF(line_is(whole, 6,
                    "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>"),
@@ -364,20 +364,20 @@ static void check_refusals(void) {
     CHECKF(options.title == NULL && options.first_measure == 0 && options.last_measure == 0, "the default is the whole piece");
     char *text = (char *)"unchanged";
 
-    CHECKF(analyzer_text_export_piece(NULL, piece.document, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(NULL, piece.document, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "NULL notes");
     text = (char *)"unchanged";
-    CHECKF(analyzer_text_export_piece(&piece.notes, NULL, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, NULL, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "NULL document");
     text = (char *)"unchanged";
-    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, NULL, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, NULL, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "NULL options");
-    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, NULL) == ANALYZER_ERR_ARGUMENT, "NULL text");
+    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL text");
 
     text = NULL;
-    CHECKF(analyzer_text_export_piece(&piece.notes, "not json", &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, "not json", &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "a document that is not JSON");
-    CHECKF(analyzer_text_export_piece(&piece.notes, "{}", &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, "{}", &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "a document with no schema_version");
 
     char *older = malloc(strlen(piece.document) + 1);
@@ -387,7 +387,7 @@ static void check_refusals(void) {
         CHECKF(version != NULL, "the document states schema_version 13");
         if (version) {
             version[strlen("\"schema_version\": ")] = '8';
-            CHECKF(analyzer_text_export_piece(&piece.notes, older, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+            CHECKF(analyzer_text_export_piece(&piece.notes, older, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
                    "a document of another schema version");
         }
         free(older);
@@ -395,19 +395,19 @@ static void check_refusals(void) {
 
     options.first_measure = 3;
     options.last_measure = 2;
-    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "first greater than last");
     options.first_measure = 5;
     options.last_measure = 0;
-    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "a first measure with no last measure");
     options.first_measure = 50;
     options.last_measure = 60;
-    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "no measure in range");
     options.first_measure = -1;
     options.last_measure = 2;
-    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
+    CHECKF(analyzer_text_export_piece(&piece.notes, piece.document, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,
            "a negative measure");
     piece_release(&piece);
 }

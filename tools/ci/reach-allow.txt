@@ -5,104 +5,31 @@ analyzer/src/result/analysis_result.c analyzer_result_run_chain  # no app reads 
 analyzer/src/corpus/chord_sequence.c analyzer_chord_sequence_from_document  # no app reads a chord sequence from a document text since P61 B7 (the Composer read documents through it; the Analyzer reads the tree); its tests call it
 analyzer/src/result/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
 library/plan/plan_lanes.c plan_note_by_id  # no app finds a note by id until P65 (commands edit notes by id); its tests call it
-gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter
-gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test hook: test_analyzer_route reads the import counter
-gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
-gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
+workshop/src/analysis/import_cache.c workshop_import_cache_entries  # test hook: test_analyzer_route reads the import counter
+workshop/src/analysis/import_cache.c workshop_import_cache_imports  # test hook: test_analyzer_route reads the import counter
+workshop/src/analysis/import_cache.c workshop_import_cache_reset  # test hook: test_analyzer_route resets the import counter
+workshop/src/items/piece_lock.c workshop_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
 library/io/musicxml_importer.c musicxml_import_file  # the imported score reads a file into a buffer and calls musicxml_import_buffer (R-614); its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P69 (composing in modes tests pitches against materials); its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # no app calls it until P65 (addresses name bars and beats); its tests call it
-library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
-library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
-library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
-library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
+library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
+library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
+library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
+library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/plan/section_json.c section_json_member_count  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/plan/section_json.c section_json_member_name  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/plan/section_json.c section_json_member_uses  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
-library/realization/line.c line_add_relation  # no app calls it until P74 (line-writing stages); its tests call it
-library/realization/line.c line_role_from_name  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/movement.c movement_add_compound_part  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/movement.c movement_add_played_span  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/movement.c movement_set_ensemble  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/performer_part.c performer_part_add_pedal  # no app calls it until P75 (pedal writing); its tests call it
-library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/work.c material_reference_valid  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
-library/realization/work.c work_add_material  # no app calls it until P63 (the realization codec, called by the Analyzer); its tests call it
+library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P65 (note flags are set by a command on a text form of the realization, which the codec reads and writes but no app edits); its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app calls it until P63 (reading files name chord types); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 
 library/chain/chain_collect.c chain_result_take  # only analyzer_result_take_report calls it, which the Analyzer's tests use (P61 B9); its tests call it
 analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it
-library/realization/realization_json.c bad  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c child_index  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c child_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c copy_id  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c group_refused  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c musical_time_of  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c parse_signature  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_array  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_assignment  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_bool_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_derivation_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_duration_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_id_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_int_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_line  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_long  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_meter_map  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_movement_body  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_name  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_object  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_part  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_rational  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_region  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_span_members  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_spelling_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_tempo_map  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_text_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_time_member  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c read_work  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c realization_work_from_json  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/realization/realization_json.c refuse  # no app calls it until P63 (the Analyzer writes realizations); its tests call it
-library/reading/reading_json.c bad  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c child_index  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c child_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_cadence  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_chord  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_fault  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_group  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_line  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_meter  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_motive  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c fill_region  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c group_refused  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c musical_time_of  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_array  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_bool_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_cadence_array  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_cadence_name  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_chord_reading  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_claims  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_head  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_int_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_long  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_name  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_object  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_rational  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_rational_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_reading  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c read_text_member  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c reading_from_json  # no app calls it until P63 (the Analyzer writes readings); its tests call it
-library/reading/reading_json.c refuse  # no app calls it until P63 (the Analyzer writes readings); its tests call it
 library/model/containers/section.c section_id  # no app reads a section's id since P62 B11 (the claims that named it are gone); its tests call it
 library/model/core/entity.c entity_id  # no app reads an entity's id since P62 B11 (the claims that named it are gone); its tests call it
 library/model/structure/motif_occurrence.c motif_occurrence_id  # no app reads an occurrence's id since P62 B11 (the claims that named it are gone); its tests call it
@@ -110,3 +37,9 @@ library/model/structure/structure.c structure_entity  # no app reads a shell's e
 library/theory/framework/framework.c framework_id  # no app reads a framework's id since P62 B11 (the framework references of the claims are gone); its tests call it
 library/theory/tonality/framework.c standard_tonality_framework  # no app reads the standard-tonality framework since P62 B11 (the claims that carried it are gone); its tests call it
 library/analysis/harmony/key_regions.c common_practice_key_region_analysis_key  # no app calls it since P62 B12 (the form hearing reads the reading's region claims); its tests call it
+common/json.c common_json_rational_text  # no app writes an "n/d" text through it until P63 B15 (request bodies); its test calls it
+common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
+workshop/src/analysis/analysis.c workshop_analysis_delete_piece  # test hook: test_piece_lock deletes a piece without the cascades the route runs (workshop_library_delete)
+workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_queue limits a kind of its own (links and style start limited)
+workshop/src/coordinator/workshop.c workshop_data_dir  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
+workshop/src/coordinator/workshop.c workshop_job_workers  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it

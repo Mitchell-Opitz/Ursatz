@@ -69,11 +69,11 @@ static GrowStage stage_of_name(const char *name) {
 /* Runs one case from one start seed: whether it composed, and the stage of the last seed passed over. */
 static bool compose_from(GrowSetup *setup, unsigned long seed, int stuck[GROW_STAGE_COUNT + 1]) {
     GrowRun run;
-    ComposerError error;
+    UrsatzError error;
     memset(&error, 0, sizeof(error));
     setup->seed = seed;
-    ComposerStatus status = api_grow_run(setup, &run, &error);
-    bool composed = status == COMPOSER_OK && run.made == 1;
+    UrsatzStatus status = api_grow_run(setup, &run, &error);
+    bool composed = status == URSATZ_OK && run.made == 1;
     if (!composed) {
         GrowStage stage = run.passed_count > 0 ? stage_of_name(run.passed[run.passed_count - 1].stage) : GROW_STAGE_COUNT;
         stuck[stage]++;

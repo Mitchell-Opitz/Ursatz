@@ -4,4 +4,3 @@ composer/cli/motive_text.c type  # a local Rational of the motive text printer; 
 composer/cli/motive_text.c pitch-names  # the CLI's name table of the motive text; P64 (one CLI)
 composer/cli/counterpoint.c pitch-names  # the CLI's name table of the counterpoint text; P64 (one CLI)
 library/io/musicxml_score.c int128  # kept: a widened product comparison of a notated value, not a number type
-gui/backend/src/service/id_service.c fnv  # the GUI links no library until the workshop; P63 (common/)

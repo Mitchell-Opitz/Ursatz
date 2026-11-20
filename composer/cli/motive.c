@@ -167,7 +167,7 @@ static bool add_command_members(cJSON *request, const Options *options, bool ren
 }
 
 /* The status of a failed API call: a file that could not be made is a write failure, anything else as cli_fail_api. */
-static int fail_response(ComposerStatus status, const ComposerError *error, const Options *options) {
+static int fail_response(UrsatzStatus status, const UrsatzError *error, const Options *options) {
     if (strcmp(error->path, "/midi") == 0 || strcmp(error->path, "/musicxml") == 0) {
         const char *path = strcmp(error->path, "/midi") == 0 ? options->midi_path : options->musicxml_path;
         return fail(EXIT_OUTPUT, "cannot write '%s': %s", path, error->message);
@@ -180,15 +180,15 @@ static int fail_response(ComposerStatus status, const ComposerError *error, cons
  * file and is also rendered is read once by the bytes entry; its motive document, which holds the motive whole, is the input of
  * the render entry, which takes text only.
  */
-static ComposerStatus call_api(const Options *options, const MotiveInput *input, const unsigned char *bytes, size_t size,
+static UrsatzStatus call_api(const Options *options, const MotiveInput *input, const unsigned char *bytes, size_t size,
                                bool midi, bool render, cJSON *request, ComposerResponse *response) {
     char *text = cJSON_PrintUnformatted(request);
     if (!text) {
         memset(response, 0, sizeof *response);
         snprintf(response->error.message, sizeof response->error.message, "out of memory");
-        return COMPOSER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
-    ComposerStatus status;
+    UrsatzStatus status;
     if (!midi) {
         status = render ? composer_api_motive_render(cli_context(), text, NULL, response)
                         : composer_api_motive(cli_context(), text, NULL, response);
@@ -200,9 +200,9 @@ static ComposerStatus call_api(const Options *options, const MotiveInput *input,
         bool ok = plain && add_command_members(plain, options, false);
         char *plain_text = ok ? cJSON_PrintUnformatted(plain) : NULL;
         cJSON_Delete(plain);
-        status = plain_text ? composer_api_motive_from_midi(cli_context(), bytes, size, plain_text, NULL, response) : COMPOSER_ERR_ALLOC;
+        status = plain_text ? composer_api_motive_from_midi(cli_context(), bytes, size, plain_text, NULL, response) : URSATZ_ERR_ALLOC;
         free(plain_text);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             cJSON *document = cJSON_Parse(response->json);
             const cJSON *motive = document ? cJSON_GetObjectItemCaseSensitive(document, "motive") : NULL;
             cJSON *second = cJSON_CreateObject();
@@ -212,7 +212,7 @@ static ComposerStatus call_api(const Options *options, const MotiveInput *input,
                  cJSON_AddStringToObject(source, "text", motive_text) && add_command_members(second, options, true);
             composer_response_destroy(response);
             char *second_text = ok ? cJSON_PrintUnformatted(second) : NULL;
-            status = second_text ? composer_api_motive_render(cli_context(), second_text, NULL, response) : COMPOSER_ERR_ALLOC;
+            status = second_text ? composer_api_motive_render(cli_context(), second_text, NULL, response) : URSATZ_ERR_ALLOC;
             free(second_text);
             free(motive_text);
             cJSON_Delete(second);
@@ -261,15 +261,15 @@ int run_motive(int argc, char **argv) {
     }
 
     ComposerResponse response;
-    ComposerStatus api_status = call_api(&options, &input, bytes, size, midi, render, request, &response);
+    UrsatzStatus api_status = call_api(&options, &input, bytes, size, midi, render, request, &response);
     cJSON_Delete(request);
     free(bytes);
-    if (read_status != 0 && api_status != COMPOSER_ERR_REQUEST) {
+    if (read_status != 0 && api_status != URSATZ_ERR_REQUEST) {
         /* A bad option is reported before a file that cannot be read, as it always was. */
         composer_response_destroy(&response);
         return fail(read_status, "%s", read_error);
     }
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         status = fail_response(api_status, &response.error, &options);
         composer_response_destroy(&response);
         return status;

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-piece-body.v1.schema.json",
+  "title": "Piece body, format version 1",
+  "description": "projects/<prj>/items/<id>/v<n>/body.json: the body of a piece version (today's body, with the members the migrations of the GUI's version 0 folder write).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "uses",
+    "piece"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "format": {
+      "const": "ursatz-piece-body"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "uses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item_id",
+          "version"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "copy": {}
+        }
+      }
+    },
+    "piece": {
+      "type": "object"
+    }
+  }
+}

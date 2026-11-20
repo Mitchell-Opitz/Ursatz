@@ -1,6 +1,6 @@
-#include <ursatz_analyzer/producer_key.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/producer_key.h>
+#include <ursatz_analyzer_internal/version.h>
 
-const char *ursatz_analyzer_version(void) { return URSATZ_ANALYZER_VERSION; }
+const char *analyzer_version(void) { return URSATZ_ANALYZER_VERSION; }
 
-const char *ursatz_analyzer_producer_key(void) { return URSATZ_ANALYZER_PRODUCER_KEY; }
+const char *analyzer_producer_key(void) { return URSATZ_ANALYZER_PRODUCER_KEY; }

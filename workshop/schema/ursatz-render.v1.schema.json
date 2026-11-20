@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-render.v1.schema.json",
+  "title": "Motif render, format version 1",
+  "description": "cache/renders/<item>/v<n>/render.json: the key a cached render of a motif version was made for.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "api_version",
+    "composer_version",
+    "composition_key",
+    "render_key",
+    "tempo"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-render"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "api_version": {
+      "type": "string"
+    },
+    "composer_version": {
+      "type": "string"
+    },
+    "composition_key": {
+      "type": "string"
+    },
+    "render_key": {
+      "type": "string"
+    },
+    "tempo": {
+      "type": "integer"
+    }
+  }
+}

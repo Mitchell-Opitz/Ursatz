@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/motive_links.h>
 #include <io/imported_score.h>
-#include <ursatz_analyzer/motive_links.h>
 
 #include "model/core/rational.h"
 #include "links/links_internal.h"
@@ -69,9 +69,9 @@ int main(void) {
         return 1;
     }
     char *json = test_render_document(path, &notes, &report);
-    MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
+    MotiveLinkScope *scope = analyzer_links_scope_create(test_knowledge());
     CHECK(json != NULL && scope != NULL);
-    CHECK(json && scope && motive_link_scope_add_document(scope, "mozart-545", json) == MOTIVE_LINKS_OK);
+    CHECK(json && scope && analyzer_links_scope_add_document(scope, "mozart-545", json) == URSATZ_OK);
     CHECK(report.motive_count > 0);
     size_t mapped = 0;
     for (size_t i = 0; i < report.motive_count; i++) {
@@ -92,7 +92,7 @@ int main(void) {
     }
     CHECK(mapped > 0);
     printf("Mozart 545: %zu motive families mapped both ways\n", mapped);
-    motive_link_scope_destroy(scope);
+    analyzer_links_scope_destroy(scope);
     free(json);
     test_release_report(&report);
     imported_score_destroy(&notes);

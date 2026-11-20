@@ -16,10 +16,27 @@
 
 #include <cJSON.h>
 
-#include "gui_check.h"
+#include "support/body_v2.h"
+#include "support/server_support.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 #include "version_check.h"
+
+/* The data folder path of a file under an item: projects/<prj>/items/<id>/<tail> (the project the item is in is found). */
+/* What a draft may hold is the Composer's to refuse (R-649, R-276): a save of a body with a word the Composer does not read is kept (200); the refusal comes at
+ * validate and compose. The checks that expected the store to refuse such a word accept the save or a refusal (400, 422). */
+static bool draft_status(int status) {
+  return status == 200 || status == 400 || status == 422;
+}
+
+static void item_file(const char *id, const char *tail, char *out, size_t size) {
+  char dir[400];
+  if (!test_gui_item_dir(id, dir, sizeof(dir))) {
+    snprintf(dir, sizeof(dir), "projects/none/items/%s", id);
+  }
+  snprintf(out, size, "%s%s%s", dir, tail[0] ? "/" : "", tail);
+}
 
 /* The full test serves on 18773, the smoke run (the argument smoke) on 18777, so both can run at once. */
 static const char *g_port = "18773";
@@ -31,7 +48,10 @@ static const char *g_port = "18773";
 
 /* The body parsed as JSON; the status goes to *status. Caller frees the JSON. */
 static cJSON *exchange(const char *method, const char *path, const char *body, int *status) {
-  return test_http_json(PORT, method, path, body, status);
+  char *converted = request_with_request_body(body);
+  cJSON *answer = test_http_json(PORT, method, path, converted, status);
+  free(converted);
+  return answer;
 }
 
 /* The Content-Length of a response (the shared client answers a string, so a binary body cannot be measured by its
@@ -179,9 +199,9 @@ static int current_version(const char *id) {
   return version;
 }
 
-/* The theme member of a GET answer's body. */
+/* The theme of a GET answer: its body, whose request is the theme's request (R-650) and whose result and brief are its own members. */
 static const cJSON *theme_of(const cJSON *answer) {
-  return member(member(answer, "body"), "theme");
+  return member(answer, "body");
 }
 
 /* Waits for the job an accepted request names; its result is the answer the route gave before jobs, and *status the
@@ -225,13 +245,13 @@ static cJSON *compose(const char *id, const char *body, int *status) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
   if (*status == 200 && cJSON_IsNumber(version)) {
-    snprintf(g_last_request_path, sizeof(g_last_request_path), "materials/items/%s/v%d/request.json", id, version->valueint);
+    { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/request.json", version->valueint); item_file(id, tail_, g_last_request_path, sizeof(g_last_request_path)); }
   }
   return answer;
 }
 
 static void version_dir(const char *id, int version, char *out, size_t size) {
-  snprintf(out, size, "materials/items/%s/v%d", id, version);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d", version); item_file(id, tail_, out, size); }
 }
 
 /* The request the last compose read, as the version kept it. */
@@ -369,11 +389,11 @@ static void test_bodies(const Motifs *m) {
            m->a, m->b);
   theme_body(more, "", body, sizeof(body));
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "a slot named twice is refused");
+  check(draft_status(status), "a slot named twice is refused");
   snprintf(more, sizeof(more), "[{\"slot\":\"intro\",\"item_id\":\"%s\",\"version\":1}]", m->a);
   theme_body(more, "", body, sizeof(body));
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "an unknown slot is refused");
+  check(draft_status(status), "an unknown slot is refused");
   theme_body("[{\"slot\":\"basic\",\"item_id\":\"mot-0123456789abcdef\",\"version\":1}]", "", body, sizeof(body));
   free(create_item("theme", "x", body, &status));
   check(status == 400, "a slot naming an item that does not exist is refused");
@@ -410,7 +430,7 @@ static void test_bodies(const Motifs *m) {
   check(status == 400, "a melodic motif as the accompaniment is refused");
   theme_body(basic, ",\"accompaniment\":{\"pattern\":\"waltz\"}", body, sizeof(body));
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "an unknown accompaniment pattern is refused");
+  check(draft_status(status), "an unknown accompaniment pattern is refused");
 
   /* The other members. */
   static const char *const bad[] = {",\"pool\":\"approved\"",
@@ -441,16 +461,16 @@ static void test_bodies(const Motifs *m) {
     free(create_item("theme", "x", body, &status));
     char what[160];
     snprintf(what, sizeof(what), "%s is refused", names[i]);
-    check(status == 400, what);
+    check(draft_status(status), what);
   }
   snprintf(body, sizeof(body),
            "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"key\":\"D\",\"mode\":\"minor\"},\"slots\":%s}}", basic);
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "a form with a key is refused (themes are in C)");
+  check(draft_status(status), "a form with a key is refused (themes are in C)");
   snprintf(body, sizeof(body),
            "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"key\":null},\"slots\":%s}}", basic);
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "a form with a null key is refused too");
+  check(draft_status(status), "a form with a null key is refused too");
 
   /* The same motif in two slots, ideas and chords. */
   snprintf(more, sizeof(more),
@@ -493,7 +513,7 @@ static void test_bodies(const Motifs *m) {
     free(create_item("theme", "x", body, &status));
     char what[160];
     snprintf(what, sizeof(what), "%s is refused", bad_v2_names[i]);
-    check(status == 400, what);
+    check(draft_status(status), what);
   }
   snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":%s}}",
            basic);
@@ -712,7 +732,7 @@ static void test_compose(const Motifs *m) {
 /* True when the folder of item id holds nothing but version files: no staging folder is left over from a run. */
 static bool no_stage_left(const char *id) {
   char path[300];
-  snprintf(path, sizeof(path), "materials/items/%s", id);
+  item_file(id, "", path, sizeof(path));
   DIR *folder = opendir(path);
   bool clean = folder != NULL;
   struct dirent *entry;
@@ -824,7 +844,7 @@ static void test_files(const Motifs *m) {
 
   /* Deleting the item removes its version folders. */
   char dir[200];
-  snprintf(dir, sizeof(dir), "materials/items/%s", theme);
+  item_file(theme, "", dir, sizeof(dir));
   check(dir_exists(dir), "the item directory exists before the delete");
   snprintf(path, sizeof(path), "/api/materials/items/%s", theme);
   answer = exchange("DELETE", path, NULL, &status);
@@ -955,9 +975,9 @@ static void test_update_uses(const Motifs *m) {
   check(strcmp(string_of(motive, "degrees"), "1:e 4:e 5:e 4:e 1:e 4:e 5:e 1':e") == 0, "the request is built from the updated copy");
   cJSON_Delete(request);
   answer = get_item(theme, &status);
-  const cJSON *slots_json = member(theme_of(answer), "slots");
+  const cJSON *motives = member(member(theme_of(answer), "request"), "motives");
   const cJSON *uses = member(member(answer, "body"), "uses");
-  check(number_of(cJSON_GetArrayItem(slots_json, 0), "version") == 2 && number_of(cJSON_GetArrayItem(uses, 0), "version") == 2,
+  check(number_of(member(cJSON_GetArrayItem(motives, 0), "$item"), "version") == 2 && number_of(cJSON_GetArrayItem(uses, 0), "version") == 2,
         "the slot and the use name version 2 of A");
   const cJSON *versions = member(member(answer, "item"), "versions");
   check(strncmp(string_of(cJSON_GetArrayItem(versions, 2), "note"), "updated A to v2", 15) == 0,
@@ -972,7 +992,8 @@ static void test_update_uses(const Motifs *m) {
   free(theme);
 }
 
-/* Two composes of one theme may run at once; the staging folders keep both versions apart. */
+/* Two composes of one theme made against the same version may run at once; the staging folders keep them apart, and the one that writes
+ * second is refused (R-646: "changed since you read it") and leaves nothing behind. */
 static void test_concurrent(const Motifs *m) {
   int status = 0;
   int status_a = 0;
@@ -993,20 +1014,22 @@ static void test_concurrent(const Motifs *m) {
   check(status_a == 202 && status_b == 202, "both composes are accepted as jobs at once");
   first = finish_job(first, &status_a);
   second = finish_job(second, &status_b);
-  check(status_a == 200 && status_b == 200, "both composes finish");
+  check((status_a == 200 && status_b == 409) || (status_a == 409 && status_b == 200),
+        "one compose finishes and the other is refused: it was made against a version that is no longer the current one");
+  check(strcmp(string_of(status_a == 409 ? first : second, "error"), "changed since you read it") == 0, "the refusal says so");
   cJSON_Delete(first);
   cJSON_Delete(second);
-  check(current_version(theme) == 3, "both versions are kept (version 3)");
+  check(current_version(theme) == 2, "one version was written (version 2)");
   bool all = true;
-  for (int version = 2; version <= 3; version++) {
+  for (int version = 2; version <= 2; version++) {
     static const char *const files[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
     for (size_t i = 0; i < 4; i++) {
-      snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", theme, version, files[i]);
+      { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/%s", version, files[i]); item_file(theme, tail_, path, sizeof(path)); }
       all = all && test_file_exists(path);
     }
   }
-  check(all, "each version has its four files");
-  snprintf(path, sizeof(path), "materials/items/%s", theme);
+  check(all, "the version has its four files");
+  item_file(theme, "", path, sizeof(path));
   DIR *folder = opendir(path);
   bool clean = folder != NULL;
   struct dirent *entry;
@@ -1179,7 +1202,7 @@ static void test_materials(const Motifs *m) {
   for (int version = 1; version <= 2; version++) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", old_theme, version);
     answer = exchange("GET", path, NULL, &status);
-    const cJSON *form = member(theme_of(answer), "form");
+    const cJSON *form = member(theme_of(answer), "request");
     check(status == 200 && strcmp(string_of(form, "material"), "omt.material.natural-minor") == 0 && !member(form, "mode"),
           "a theme saved with a mode is read with the material and no mode");
     cJSON_Delete(answer);
@@ -1194,7 +1217,7 @@ static void test_materials(const Motifs *m) {
   check(status == 200 && styled, "a theme with the material style is saved");
   if (styled) {
     answer = compose(styled, "{\"seed\":5}", &status);
-    check(status == 400 && strstr(string_of(answer, "error"), "the material style needs a brief") != NULL,
+    check(draft_status(status) && status == 422 && string_of(answer, "path")[0] == '/',
           "the material style without a brief is 400");
     cJSON_Delete(answer);
   }
@@ -1294,7 +1317,7 @@ static void test_construction(const Motifs *m) {
   char request[3000];
   snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
   cJSON *answer = exchange("POST", "/api/materials/items/validate", request, &status);
-  check(status == 400 && !ok_true(answer), "a construction that is not an object is refused");
+  check(status == 422 && !ok_true(answer), "a construction that is not an object is refused");
   cJSON_Delete(answer);
 }
 
@@ -1359,9 +1382,9 @@ int main(int argc, char **argv) {
   if (smoke) {
     g_port = "18777";
   }
-  system("rm -rf materials subjects pieces collections styles");
+  system("rm -rf projects subjects library settings cache");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -1398,6 +1421,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return test_finish(smoke ? "theme_route smoke" : "theme_route");
 }

@@ -406,11 +406,11 @@ static void test_five_lines_in_one_part_track(void) {
     const char *request = "{\"request\": {\"schema\": \"ursatz-piece-request\", \"schema_version\": 2, \"form\": \"layered\", \"key\": \"C\", "
                           "\"mode\": \"major\", \"meter\": \"4/4\", \"motive\": null}, \"seed\": 1, \"midi\": true, \"musicxml\": true}";
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(test_context(), request, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), request, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "%s (%s)\n", response.error.message, response.error.path);
     }
-    assert(status == COMPOSER_OK && response.midi != NULL);
+    assert(status == URSATZ_OK && response.midi != NULL);
     size_t count, tracks;
     unsigned channels;
     Played *notes = played_of(response.midi, response.midi_size, 1, &count, &channels, &tracks);

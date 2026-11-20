@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/core/content_hash.h"
+#include <common/hash.h>
 #include "theory/knowledge/knowledge_embedded.h"
 
 #define MATERIAL_STEP_MAX 12
@@ -53,7 +53,7 @@ static void fail(char *message, size_t message_size, const char *path, const cha
 }
 
 static uint64_t fnv(uint64_t hash, const char *text) {
-    return content_hash_fnv1a64(hash, text, strlen(text));
+    return common_fnv1a64(text, strlen(text), hash);
 }
 
 static void slot_release(Slot *slot) {
@@ -881,7 +881,7 @@ static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entr
     slot.entry.status = status;
     slot.entry.version = version->valueint;
     slot.path = path;
-    content_hash_hex16(fnv(CONTENT_HASH_FNV1A64_OFFSET, text), slot.entry.hash);
+    common_fnv1a64_hex(fnv(COMMON_FNV1A64_OFFSET, text), slot.entry.hash);
     cJSON_free(text);
 
     KnowledgeStatus loaded = read_details(&slot, entry, path, message, message_size);
@@ -1028,14 +1028,14 @@ KnowledgeStatus knowledge_snapshot_build(const KnowledgeUserFile *user_files, si
         knowledge_snapshot_destroy(snapshot);
         return status;
     }
-    uint64_t hash = CONTENT_HASH_FNV1A64_OFFSET;
+    uint64_t hash = COMMON_FNV1A64_OFFSET;
     for (size_t i = 0; i < snapshot->count; i++) {
         hash = fnv(hash, snapshot->slots[i].entry.id);
         hash = fnv(hash, "=");
         hash = fnv(hash, snapshot->slots[i].entry.hash);
         hash = fnv(hash, "\n");
     }
-    content_hash_hex16(hash, snapshot->hash);
+    common_fnv1a64_hex(hash, snapshot->hash);
     *out = snapshot;
     return KNOWLEDGE_OK;
 }

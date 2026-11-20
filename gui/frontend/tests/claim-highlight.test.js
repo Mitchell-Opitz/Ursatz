@@ -4,12 +4,16 @@
  * same shape OSMD 3.10.1 gives) maps every xml:id to its notes; barline
  * fragments match their base id. Plain Node script, no dependencies. Run
  * directly: `node frontend/tests/claim-highlight.test.js`. */
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import ScoreNotes from "../public/score/score-notes.js";
+import { check, finish } from "./support/check.js";
+import { pageSource } from "./support/fixtures.js";
 
-const fs = require("fs");
-const path = require("path");
-const ScoreNotes = require("../public/score-notes.js");
+const APP_MODULES = ["views/shell.js", "views/library.js", "views/analysis.js", "views/collections.js", "views/styles.js"];
 
-const { check, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* Minimal XML reader giving the element shape score-notes.js needs
  * (tagName, children, getAttribute, textContent). Enough for the fixture:
@@ -115,12 +119,12 @@ const sameNoteOtherVoice = graphicalNote(0, 1, 1, 2, 0, 1, 0, 0, 5);
 ({ unmatched } = ScoreNotes.buildNoteIndex(entries, [sameNoteOtherVoice]));
 check(unmatched === 1, "the same pitch and onset in another voice is not the same note");
 
-/* The workspace selects claims itself: the old app.js highlight path (a
+/* The workspace selects claims itself: the old highlight path (a
  * pending claim colored through NoteheadColor and a re-render) is gone. */
-const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
+const appSource = pageSource(...APP_MODULES);
 check(
   !/pendingHighlightClaim|applyPendingHighlight|HIGHLIGHT_NOTEHEAD_COLOR|NoteheadColor|highlightPending/.test(appSource),
-  "app.js no longer colors a claim's notes through OSMD NoteheadColor",
+  "the page no longer colors a claim's notes through OSMD NoteheadColor",
 );
 check(
   appSource.includes("showClaimOnScore(row.claim)") && appSource.includes("analysisWorkspace.selectClaim(claim)"),

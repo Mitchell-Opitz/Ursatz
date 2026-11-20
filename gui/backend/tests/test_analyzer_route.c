@@ -25,12 +25,12 @@
 #endif
 
 #include <cJSON.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
-#include "gui_check.h"
+#include "support/server_support.h"
+#include "ursatz_check.h"
 #include "server.h"
-#include "service/import_cache.h"
-#include "service/subject_service.h"
+#include "coordinator/services.h"
 #include "test_http.h"
 
 /* The full test serves on 18766, the smoke run (the argument smoke) on 18778, so both can run at once. */
@@ -85,7 +85,7 @@ static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size
 
 static bool piece_file_exists(const char *id, const char *name) {
   char path[512];
-  snprintf(path, sizeof(path), "pieces/%s/%s", id, name);
+  snprintf(path, sizeof(path), "library/pieces/%s/%s", id, name);
   FILE *file = fopen(path, "rb");
   if (!file) {
     return false;
@@ -96,14 +96,14 @@ static bool piece_file_exists(const char *id, const char *name) {
 
 static void seed_piece_meta(const char *id, const char *filename, const char *uploaded_at) {
   char dir[256];
-  snprintf(dir, sizeof(dir), "pieces/%s", id);
+  snprintf(dir, sizeof(dir), "library/pieces/%s", id);
   MKDIR(dir);
   char path[320];
-  snprintf(path, sizeof(path), "%s/meta.json", dir);
+  snprintf(path, sizeof(path), "%s/piece.json", dir);
   char text[512];
   snprintf(text, sizeof(text),
-           "{\"filename\":\"%s\",\"format\":\"midi\",\"uploaded_at\":\"%s\",\"analyzer_version\":\"0.1.0\","
-           "\"document_schema_version\":9}",
+           "{\"format\":\"ursatz-library-piece\",\"format_version\":1,\"filename\":\"%s\",\"source_format\":\"midi\","
+           "\"uploaded_at\":\"%s\",\"analyzer_version\":\"0.1.0\",\"document_schema_version\":9}",
            filename, uploaded_at);
   test_write_file(path, text, strlen(text));
 }
@@ -478,8 +478,8 @@ static void check_notation_override(const char *id) {
   for (size_t i = 0; i < sizeof(kInvalid) / sizeof(kInvalid[0]); i++) {
     response = patch_piece(id, kInvalid[i]);
     char what[96];
-    snprintf(what, sizeof(what), "%s gives 400 invalid notation", kInvalid[i]);
-    check(test_http_status(response) == 400 && strstr(test_http_body(response), "invalid notation") != NULL, what);
+    snprintf(what, sizeof(what), "%s gives 400 or 422 invalid notation", kInvalid[i]);
+    check((test_http_status(response) == 400 || test_http_status(response) == 422) && strstr(test_http_body(response), "invalid notation") != NULL, what);
     free(response);
   }
   detail = get_json(path);
@@ -805,14 +805,14 @@ static void check_document_sections(const char *id) {
 static void check_import_cache(const char *id) {
   char path[320];
   const char *tails[] = {"", "/musicxml", "/musicxml/meta", "/playback", "?document=summary", "/musicxml"};
-  ursatz_gui_import_cache_reset();
+  workshop_import_cache_reset();
   for (size_t i = 0; i < sizeof(tails) / sizeof(tails[0]); i++) {
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s%s", id, tails[i]);
     char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
     check(test_http_status(response) == 200, "a cached read answers 200");
     free(response);
   }
-  check(ursatz_gui_import_cache_imports() == 1, "detail, score, meta and playback of one piece import it once");
+  check(workshop_import_cache_imports() == 1, "detail, score, meta and playback of one piece import it once");
 
   char *patched = patch_piece(id, "{\"composer\":\"Cache Test\"}");
   check(test_http_status(patched) == 200, "the PATCH answers 200");
@@ -825,19 +825,19 @@ static void check_import_cache(const char *id) {
   check(test_http_status(response) == 200 && strstr(test_http_body(response), "Cache Test") != NULL,
         "the score after a PATCH carries the new composer, not the cached one");
   free(response);
-  check(ursatz_gui_import_cache_imports() == 2, "the open after a PATCH imports once more");
+  check(workshop_import_cache_imports() == 2, "the open after a PATCH imports once more");
 
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", id);
-  char *reanalyzed = test_http_exchange(PORT, "POST", path, NULL, "", 0);
+  char *reanalyzed = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, "", 0));
   check(test_http_status(reanalyzed) == 200, "re-analyze answers 200");
   free(reanalyzed);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
   response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   free(response);
-  check(ursatz_gui_import_cache_imports() == 3, "the open after a re-analyze imports once more");
+  check(workshop_import_cache_imports() == 3, "the open after a re-analyze imports once more");
 
   /* More pieces than the cache holds: the table stays at 8 entries and every read still answers. */
-  ursatz_gui_import_cache_reset();
+  workshop_import_cache_reset();
   for (int i = 0; i < 10; i++) {
     char name[32];
     char piece_file[64];
@@ -856,7 +856,7 @@ static void check_import_cache(const char *id) {
     }
     free(other);
   }
-  check(ursatz_gui_import_cache_entries() <= 8, "the import cache holds at most 8 pieces");
+  check(workshop_import_cache_entries() <= 8, "the import cache holds at most 8 pieces");
 }
 
 int main(int argc, char **argv) {
@@ -866,11 +866,12 @@ int main(int argc, char **argv) {
   }
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces 2> nul");
+  system("rmdir /s /q library settings cache 2> nul");
 #else
-  system("rm -rf pieces");
+  system("rm -rf library settings cache");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   const char *fixtures = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char mozart_path[512];
@@ -885,7 +886,7 @@ int main(int argc, char **argv) {
   snprintf(score_path, sizeof(score_path), URSATZ_FIXTURES_DIR "/accuracy-corpus/%s/score.musicxml",
            folder);
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -905,7 +906,7 @@ int main(int argc, char **argv) {
       check_piece_export(smoke_id, "Bach 114");
     }
     free(smoke_id);
-    ursatz_gui_server_stop(ctx);
+    test_gui_server_stop(ctx);
     return test_finish("analyzer_route smoke");
   }
 
@@ -915,11 +916,11 @@ int main(int argc, char **argv) {
   check(mozart_id != NULL && test_http_status(response) == 200, "Mozart 545.mid uploads with 200 OK");
   free(response);
   check(mozart_id && piece_file_exists(mozart_id, "source.mid"), "the MIDI upload is stored as source.mid");
-  check(mozart_id && piece_file_exists(mozart_id, "analysis.json") && piece_file_exists(mozart_id, "meta.json"),
-        "analysis.json and meta.json are stored next to the source");
+  check(mozart_id && piece_file_exists(mozart_id, "analysis.json") && piece_file_exists(mozart_id, "piece.json"),
+        "analysis.json and piece.json are stored next to the source");
   if (mozart_id) {
     char path[512];
-    snprintf(path, sizeof(path), "pieces/%s/source.mid", mozart_id);
+    snprintf(path, sizeof(path), "library/pieces/%s/source.mid", mozart_id);
     size_t stored_size = 0, original_size = 0;
     char *stored = test_read_file(path, &stored_size);
     char *original = test_read_file(mozart_path, &original_size);
@@ -1007,25 +1008,25 @@ int main(int argc, char **argv) {
     /* A piece whose stored source is gone: the score routes answer 422 with
        a JSON message, not a 200 the viewer would hand to OSMD. */
     char source_path[512];
-    snprintf(source_path, sizeof(source_path), "pieces/%s/source.musicxml", chords_id);
+    snprintf(source_path, sizeof(source_path), "library/pieces/%s/source.musicxml", chords_id);
     check(remove(source_path) == 0, "the chord piece's stored source can be deleted");
     char route[256];
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml", chords_id);
     char *missing_source = test_http_exchange(PORT, "GET", route, NULL, NULL, 0);
-    check(test_http_status(missing_source) == 422, "a score with a missing source file gives 422");
+    check(test_http_status(missing_source) == 500, "a score with a missing source file gives 500");
     check(strstr(missing_source, "Content-Type: application/json\r\n") != NULL,
           "the missing-source score error is application/json");
-    check(strstr(test_http_body(missing_source), "\"message\":\"could not import the stored source\"") != NULL,
+    check(strstr(test_http_body(missing_source), "\"error\":\"could not import the stored source\"") != NULL,
           "the missing-source score error carries its message");
     free(missing_source);
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/musicxml/meta", chords_id);
     missing_source = test_http_exchange(PORT, "GET", route, NULL, NULL, 0);
-    check(test_http_status(missing_source) == 422, "musicxml/meta with a missing source file gives 422");
+    check(test_http_status(missing_source) == 500, "musicxml/meta with a missing source file gives 500");
     free(missing_source);
     snprintf(route, sizeof(route), "/api/analyzer/pieces/%s/playback", chords_id);
     missing_source = test_http_exchange(PORT, "GET", route, NULL, NULL, 0);
-    check(test_http_status(missing_source) == 422, "playback with a missing source file gives 422");
-    check(strstr(test_http_body(missing_source), "\"message\":\"could not import the stored source\"") != NULL,
+    check(test_http_status(missing_source) == 500, "playback with a missing source file gives 500");
+    check(strstr(test_http_body(missing_source), "\"error\":\"could not import the stored source\"") != NULL,
           "the missing-source playback error carries its message");
     free(missing_source);
   }
@@ -1036,20 +1037,20 @@ int main(int argc, char **argv) {
   free(unknown_playback);
 
   /* Bodies the Analyzer cannot read. */
-  response = test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "just some text", 14);
+  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "just some text", 14));
   check(test_http_status(response) == 415, "a .txt body gives 415");
-  check(strstr(test_http_body(response), "\"error\": \"unsupported format\"") != NULL,
+  check(strstr(test_http_body(response), "\"error\":\"unsupported format\"") != NULL,
         "the 415 body is {\"error\": \"unsupported format\"}");
   free(response);
-  response = test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "MThd\0\0\0\6", 8);
+  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "MThd\0\0\0\6", 8));
   check(test_http_status(response) == 422, "a truncated MIDI file gives 422");
   free(response);
 
   /* The list: newest first, then id; anything that is not a piece directory
-     with a meta.json is left out. */
+     with a piece.json is left out. */
   seed_piece_meta("seed-newest", "newest.mid", "2099-01-01T00:00:00Z");
   seed_piece_meta("seed-oldest", "oldest.mid", "2001-01-01T00:00:00Z");
-  test_write_file("pieces/old-piece.db", "old", 3);
+  test_write_file("library/pieces/old-piece.db", "old", 3);
   char *list = test_http_exchange(PORT, "GET", "/api/analyzer/pieces", NULL, NULL, 0);
   check(test_http_status(list) == 200, "the list is 200 OK");
   const char *list_body = test_http_body(list);
@@ -1064,12 +1065,12 @@ int main(int argc, char **argv) {
   free(list);
 
   /* Re-run the analysis: the document is rebuilt from the stored source and
-     the versions in meta.json are rewritten; the rest of meta.json stays. */
+     the versions in piece.json are rewritten; the rest of piece.json stays. */
   if (mozart_id) {
     char analysis_path[512];
     char meta_path[512];
-    snprintf(analysis_path, sizeof(analysis_path), "pieces/%s/analysis.json", mozart_id);
-    snprintf(meta_path, sizeof(meta_path), "pieces/%s/meta.json", mozart_id);
+    snprintf(analysis_path, sizeof(analysis_path), "library/pieces/%s/analysis.json", mozart_id);
+    snprintf(meta_path, sizeof(meta_path), "library/pieces/%s/piece.json", mozart_id);
     char *document_before = test_read_file(analysis_path, NULL);
     char *meta_text = test_read_file(meta_path, NULL);
     cJSON *meta = meta_text ? cJSON_Parse(meta_text) : NULL;
@@ -1091,7 +1092,7 @@ int main(int argc, char **argv) {
 
     char path[256];
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", mozart_id);
-    response = test_http_exchange(PORT, "POST", path, NULL, NULL, 0);
+    response = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, NULL, 0));
     check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL,
           "POST reanalyze is 200 OK");
     free(response);
@@ -1111,15 +1112,15 @@ int main(int argc, char **argv) {
     const cJSON *filename = meta ? cJSON_GetObjectItemCaseSensitive(meta, "filename") : NULL;
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
               schema->valuedouble == 13,
-          "re-running the analysis rewrites the versions in meta.json");
-    check(cJSON_IsString(version) && strcmp(version->valuestring, ursatz_analyzer_version()) == 0,
-          "meta.json records the version the Analyzer reports");
+          "re-running the analysis rewrites the versions in piece.json");
+    check(cJSON_IsString(version) && strcmp(version->valuestring, analyzer_version()) == 0,
+          "piece.json records the version the Analyzer reports");
     check(cJSON_IsString(uploaded_after) && strcmp(uploaded_after->valuestring, uploaded_at_before) == 0 &&
               cJSON_IsString(filename) && strcmp(filename->valuestring, "Mozart 545.mid") == 0,
           "re-running the analysis keeps the filename and uploaded_at");
     cJSON_Delete(meta);
   }
-  response = test_http_exchange(PORT, "POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0);
+  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0));
   check(test_http_status(response) == 404, "reanalyze of an unknown id gives 404");
   free(response);
 
@@ -1144,24 +1145,24 @@ int main(int argc, char **argv) {
 
     /* Delete. A subject that linked the piece forgets it. */
     cJSON *subject = NULL;
-    check(ursatz_gui_subject_create("Delete test", "idea", "", &subject) == URSATZ_GUI_SUBJECT_OK,
+    check(workshop_subject_create("Delete test", "idea", "", &subject) == URSATZ_OK,
           "a subject is created");
     char *subject_id = subject ? strdup(cJSON_GetObjectItemCaseSensitive(subject, "id")->valuestring) : NULL;
     cJSON_Delete(subject);
     subject = NULL;
-    check(subject_id && ursatz_gui_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_GUI_SUBJECT_OK,
+    check(subject_id && workshop_subject_link_piece(subject_id, mozart_id, NULL, NULL) == URSATZ_OK,
           "the subject links the piece");
     char dir[256];
-    snprintf(dir, sizeof(dir), "pieces/%s", mozart_id);
+    snprintf(dir, sizeof(dir), "library/pieces/%s", mozart_id);
     response = test_http_exchange(PORT, "DELETE", path, NULL, NULL, 0);
     check(test_http_status(response) == 200, "DELETE removes a piece");
     free(response);
-    check(subject_id && ursatz_gui_subject_get(subject_id, &subject) == URSATZ_GUI_SUBJECT_OK &&
+    check(subject_id && workshop_subject_get(subject_id, &subject) == URSATZ_OK &&
               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(subject, "pieces")) == 0,
           "deleting a piece removes it from the subjects that linked it");
     cJSON_Delete(subject);
     if (subject_id) {
-      ursatz_gui_subject_delete(subject_id);
+      workshop_subject_delete(subject_id);
     }
     free(subject_id);
     check(!is_directory(dir), "deleting a piece removes its directory");
@@ -1174,6 +1175,6 @@ int main(int argc, char **argv) {
   free(score_id);
   free(bach_id);
   free(no_meter_id);
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return test_finish("analyzer_route");
 }

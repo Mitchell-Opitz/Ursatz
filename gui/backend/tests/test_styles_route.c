@@ -22,17 +22,20 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
-#include "gui_check.h"
+#include <theory/style/style_model.h>
+#include <theory/style/style_model_file.h>
+
+#include "support/server_support.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 
 /* The full test serves on 18769, the smoke run (the argument smoke) on 18779, so both can run at once. */
 static const char *g_port = "18769";
 #define PORT g_port
-#include "service/style_service.h"
+#include "coordinator/services.h"
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -58,7 +61,7 @@ static void patch_piece(const char *id, const char *body) {
 
 /* Builds a style with a JSON body; returns the parsed answer (caller deletes). */
 static cJSON *build_style(const char *body, int *status) {
-  return test_http_json(PORT, "POST", "/api/styles", body, status);
+  return test_http_json_finish(PORT, "POST", "/api/styles", body, status);
 }
 
 static const cJSON *style_of(const cJSON *answer) {
@@ -83,7 +86,7 @@ static int listed_styles(void) {
 /* The Analyzer reads styles/<id>/style-model.json and it holds the piece count. */
 static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
   char path[512];
-  snprintf(path, sizeof(path), "styles/%s/style-model.json", id);
+  snprintf(path, sizeof(path), "settings/styles/%s/style-model.json", id);
   StyleModel *model = NULL;
   size_t pieces = 0;
   if (style_model_file_read(path, &model, &pieces) != STYLE_MODEL_FILE_OK) {
@@ -95,7 +98,7 @@ static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
 
 /* The smoke run: Clementi 36 alone, a style built from its tag, listed and read back. */
 static int smoke_run(const char *clementi_path) {
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -150,11 +153,12 @@ int main(int argc, char **argv) {
   }
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections styles data 2> nul");
+  system("rmdir /s /q library settings cache data 2> nul");
 #else
-  system("rm -rf pieces collections styles data");
+  system("rm -rf library settings cache data");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   const char *fixtures = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char clementi_path[512];
@@ -165,7 +169,7 @@ int main(int argc, char **argv) {
     return smoke_run(clementi_path);
   }
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -203,8 +207,8 @@ int main(int argc, char **argv) {
   check(model_reads_with_pieces(tag_style_id, 2), "the Analyzer reads the model back with 2 pieces");
   {
     char path[512];
-    snprintf(path, sizeof(path), "styles/%s/meta.json", tag_style_id);
-    check(test_file_exists(path), "meta.json is stored next to the model");
+    snprintf(path, sizeof(path), "settings/styles/%s/style.json", tag_style_id);
+    check(test_file_exists(path), "style.json is stored next to the model");
   }
   check(listed_styles() == 1, "the list holds the new style");
 
@@ -235,13 +239,13 @@ int main(int argc, char **argv) {
   /* The model path the Composer will use. */
   {
     char path[1024];
-    check(ursatz_gui_style_model_path(tag_style_id, path, sizeof(path)) == URSATZ_GUI_STYLE_OK,
+    check(workshop_style_model_path(tag_style_id, path, sizeof(path)) == URSATZ_OK,
           "model_path finds the model");
     check(path[0] == '/' || (path[0] && path[1] == ':'), "the model path is absolute");
     size_t length = strlen(path);
     check(length > 16 && strcmp(path + length - 16, "style-model.json") == 0, "the path ends with style-model.json");
     check(test_file_exists(path), "the path names an existing file");
-    check(ursatz_gui_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_GUI_STYLE_ERR_NOT_FOUND,
+    check(workshop_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_ERR_NOT_FOUND,
           "model_path of an unknown style is not found");
   }
 
@@ -280,7 +284,7 @@ int main(int argc, char **argv) {
     char body[512];
     snprintf(path, sizeof(path), "/api/corpus/%s/pieces", collection_id);
     snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\",\"%s\"]}", clementi_id, mozart_id);
-    cJSON_Delete(test_http_json(PORT, "POST", path, body, &status));
+    cJSON_Delete(test_http_json_finish(PORT, "POST", path, body, &status));
     snprintf(body, sizeof(body), "{\"collection_id\":\"%s\"}", collection_id);
     answer = build_style(body, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2, "a style from a collection holds its pieces");
@@ -305,7 +309,7 @@ int main(int argc, char **argv) {
     char body[1024];
     snprintf(path, sizeof(path), "/api/corpus/%s/pieces", solo_id);
     snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\"]}", clementi_id);
-    cJSON_Delete(test_http_json(PORT, "POST", path, body, &status));
+    cJSON_Delete(test_http_json_finish(PORT, "POST", path, body, &status));
 
     snprintf(body, sizeof(body),
              "{\"brief\":{\"scopes\":[{\"kind\":\"collection\",\"collection_id\":\"%s\"},"
@@ -387,11 +391,11 @@ int main(int argc, char **argv) {
 
     /* Rebuild resolves the brief again: the style it names changed. */
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", one_id);
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 200, "rebuilding the style a brief names answers 200");
     cJSON_Delete(answer);
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2 &&
               strcmp(string_of(cJSON_GetObjectItemCaseSensitive(style_of(answer), "source"), "kind"), "brief") == 0,
           "rebuilding a brief resolves it again and keeps its kind");
@@ -402,7 +406,7 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof(path), "/api/styles/%s", one_id);
     cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 422 && !ok_true(answer), "rebuilding a brief whose style is gone answers 422");
     cJSON_Delete(answer);
     check(model_reads_with_pieces(with_style_id, 2), "a refused brief rebuild leaves the model as it was");
@@ -457,8 +461,8 @@ int main(int argc, char **argv) {
   {
     char meta_path[512];
     char analysis_path[512];
-    snprintf(meta_path, sizeof(meta_path), "pieces/%s/meta.json", mozart_id);
-    snprintf(analysis_path, sizeof(analysis_path), "pieces/%s/analysis.json", mozart_id);
+    snprintf(meta_path, sizeof(meta_path), "library/pieces/%s/piece.json", mozart_id);
+    snprintf(analysis_path, sizeof(analysis_path), "library/pieces/%s/analysis.json", mozart_id);
     char *meta_text = test_read_file(meta_path, NULL);
     cJSON *meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
@@ -482,8 +486,8 @@ int main(int argc, char **argv) {
     meta_text = test_read_file(meta_path, NULL);
     meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
-    check(number_of(meta, "document_schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION,
-          "its meta.json records the current schema version");
+    check(number_of(meta, "document_schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION,
+          "its piece.json records the current schema version");
     cJSON_Delete(meta);
   }
 
@@ -500,7 +504,7 @@ int main(int argc, char **argv) {
       snprintf(old_updated, sizeof(old_updated), "%s", string_of(style_of(answer), "updated_at"));
       cJSON_Delete(answer);
     }
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 1, "rebuilding after untagging one gives 1 piece");
     check(strcmp(string_of(style_of(answer), "id"), tag_style_id) == 0, "the rebuilt style keeps its id");
     check(strcmp(string_of(style_of(answer), "name"), "Tag: sonatina") == 0, "the rebuilt style keeps its name");
@@ -510,7 +514,7 @@ int main(int argc, char **argv) {
 
     /* No piece left: 422, and the style stays as it was. */
     patch_piece(mozart_id, "{\"remove_tags\":[\"sonatina\"]}");
-    answer = test_http_json(PORT, "POST", path, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", path, NULL, &status);
     check(status == 422 && !ok_true(answer), "rebuilding with no piece left answers 422");
     cJSON_Delete(answer);
     check(model_reads_with_pieces(tag_style_id, 1), "a refused rebuild leaves the model as it was");
@@ -526,7 +530,7 @@ int main(int argc, char **argv) {
     cJSON_Delete(deleted);
     check(listed_styles() == before - 1, "the list no longer holds it");
     char model[512];
-    snprintf(model, sizeof(model), "styles/%s/style-model.json", tag_style_id);
+    snprintf(model, sizeof(model), "settings/styles/%s/style-model.json", tag_style_id);
     check(!test_file_exists(model), "its files are gone");
     answer = test_http_json(PORT, "GET", path, NULL, &status);
     check(status == 404 && !ok_true(answer), "GET a deleted style answers 404");
@@ -536,7 +540,7 @@ int main(int argc, char **argv) {
     cJSON_Delete(answer);
     char rebuild[256];
     snprintf(rebuild, sizeof(rebuild), "/api/styles/%s/rebuild", tag_style_id);
-    answer = test_http_json(PORT, "POST", rebuild, NULL, &status);
+    answer = test_http_json_finish(PORT, "POST", rebuild, NULL, &status);
     check(status == 404, "rebuilding a deleted style answers 404");
     cJSON_Delete(answer);
     answer = test_http_json(PORT, "GET", "/api/styles/sty-0000000000000000", NULL, &status);

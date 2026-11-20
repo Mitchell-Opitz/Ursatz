@@ -1,9 +1,9 @@
 /* Covers the pure Subjects helpers (public/subjects-panel.js): panel rows by
  * kind, list rows, pickers, chips, link rows and request builders.
  * Plain Node script: `node frontend/tests/subjects-panel.test.js`. */
-const S = require("../public/subjects-panel.js");
-
-const { check, same, finish } = require("./support/check.js");
+import S from "../public/views/subjects-panel.js";
+import { check, same, finish } from "./support/check.js";
+import { installDom } from "./support/dom.js";
 
 const groups = [
   { kind: "character", subjects: [{ id: "sub-1", name: "Hero", item_count: 2, piece_count: 1, link_count: 3 }] },
@@ -70,5 +70,20 @@ check(S.withSubject(pending, { id: "sub-2", name: "Longing", kind: "idea" }).len
 check(pending.length === 1, "adding a subject leaves the list alone");
 check(S.withoutSubject(pending, "sub-1").length === 0 && S.withoutSubject(pending, "sub-9").length === 1, "a pending subject is removed by id");
 check(S.withSubject(undefined, { id: "sub-1", name: "Hero", kind: "character" }).length === 1 && S.withoutSubject(null, "sub-1").length === 0, "no list is an empty list");
+
+/* The mounted panel (the grouped panel it is built from): a group per kind with its subjects, a row opens its subject. */
+const { document } = installDom();
+const section = document.createElement("section");
+document.body.appendChild(section);
+const chosen = [];
+const panel = S.mount(section, { fetchGroups: async () => groups, onSelect: (id) => chosen.push(id) });
+await panel.refresh();
+check(same(section.querySelectorAll("details summary").map((el) => el.textContent), ["Characters", "Places", "Ideas", "Notes"]), "the panel has a group for each kind");
+check(section.querySelectorAll("details")[0].querySelectorAll("li").length === 1 && section.querySelectorAll("details")[1].textContent.includes("None yet"), "a kind with subjects lists them and one without says None yet");
+section.querySelector("li button.tags-panel-row").click();
+check(same(chosen, ["sub-1"]), "a row opens its subject");
+const failing = document.createElement("section");
+await S.mount(failing, { fetchGroups: async () => { throw new Error("down"); } }).refresh();
+check(failing.textContent === "Subjects unavailable", "a panel whose groups cannot be read says so");
 
 finish();

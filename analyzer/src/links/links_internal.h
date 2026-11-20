@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer_internal/motive_links.h>
 
 /* One motive family of a piece: what linking needs from its document. */
 typedef struct {

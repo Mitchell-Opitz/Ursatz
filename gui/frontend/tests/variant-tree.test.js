@@ -3,11 +3,19 @@
  * steps from the picker, generate and reroll requests, candidate naming and
  * candidate bodies. Plain Node script, run through ctest: it reads the vocabulary the build generates
  * (support/fixtures.js). */
-const { generated } = require("./support/fixtures.js");
-require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
-const V = require("../public/variant-tree.js");
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import V from "../public/models/variant-tree.js";
+import { check, same, finish } from "./support/check.js";
+import { byText, installDom } from "./support/dom.js";
+import fs from "fs";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")));
+
 
 const node = (id, flag, children, extra) => ({
   id,
@@ -233,87 +241,18 @@ const queued = Array.from({ length: 10 }, (_, n) =>
 );
 check(V.RENDER_LIMIT === 4 && queue.active() === 4 && queue.waiting() === 6, "ten tasks: four run, six wait");
 
-/* A minimal DOM, enough for VariantTreeView to build and click. */
-class FakeEl {
-  constructor(tag) {
-    this.tag = tag;
-    this.children = [];
-    this.listeners = {};
-    this.attributes = {};
-    this.style = {};
-    this.className = "";
-    this.textContent = "";
-    const owner = this;
-    this.classList = {
-      toggle(name, on) {
-        const names = new Set(owner.className.split(" ").filter(Boolean));
-        if (on) {
-          names.add(name);
-        } else {
-          names.delete(name);
-        }
-        owner.className = [...names].join(" ");
-      },
-      add(name) {
-        this.toggle(name, true);
-      },
-      remove(name) {
-        this.toggle(name, false);
-      },
-    };
-  }
-  set innerHTML(value) {
-    this.children = [];
-  }
-  append(...nodes) {
-    this.children.push(...nodes);
-  }
-  appendChild(node) {
-    this.children.push(node);
-    return node;
-  }
-  setAttribute(name, value) {
-    this.attributes[name] = value;
-  }
-  addEventListener(name, fn) {
-    (this.listeners[name] = this.listeners[name] || []).push(fn);
-  }
-  click() {
-    for (const fn of this.listeners.click || []) {
-      fn({});
-    }
-  }
-  all() {
-    return [this, ...this.children.flatMap((child) => (child instanceof FakeEl ? child.all() : []))];
-  }
-}
-const named = (root, tag, text) => root.all().filter((node) => node.tag === tag && node.textContent === text);
+const named = byText;
 
-const fs = require("fs");
-const vm = require("vm");
 const mounts = [];
 const destroyed = [];
-const sandbox = {
-  document: { createElement: (tag) => new FakeEl(tag) },
-  window: { localStorage: { getItem: () => null, setItem: () => {} } },
-  VariantTree: V,
-  MaterialsModel: require("../public/materials-model.js"),
-  ScoreWorkspace: {
-    mount(host, options) {
-      mounts.push({ host, options });
-      return { destroy: () => destroyed.push(options.title), play: () => {} };
-    },
+installDom();
+const View = (await import("../public/views/variant-tree-view.js")).default;
+const fakeWorkspace = {
+  mount(host, options) {
+    mounts.push({ host, options });
+    return { destroy: () => destroyed.push(options.title), play: () => {} };
   },
-  URL: { createObjectURL: () => "blob:x", revokeObjectURL: () => {} },
-  Blob: class {},
-  JSON,
-  Promise,
-  Number,
-  Math,
 };
-sandbox.ApiRequest = require("../public/request.js");
-vm.createContext(sandbox);
-const View = vm.runInContext(fs.readFileSync(`${__dirname}/../public/variant-tree-view.js`, "utf8") + "\n;VariantTreeView", sandbox);
 
 const savedTree = node("root", null, [node("a", "approved", []), node("b", "unflagged", [])]);
 let renderRunning = 0;
@@ -321,6 +260,7 @@ let renderPeak = 0;
 let renderCount = 0;
 const answers = [];
 const ctx = {
+  scoreWorkspace: fakeWorkspace,
   id: "root",
   name: "Motif",
   body: { motif: { degrees: "1:q 5:e", form: "full" } },
@@ -353,7 +293,7 @@ const ctx = {
   },
 };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-const parent = new FakeEl("div");
+const parent = document.createElement("div");
 
 
 const withHarmony = (text, tones, warnings) => ({

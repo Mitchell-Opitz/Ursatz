@@ -347,11 +347,11 @@ static void test_a_return_names_its_source(void) {
     const char *request = "{\"request\": {\"schema\": \"ursatz-piece-request\", \"schema_version\": 2, \"form\": \"small-rondo-ababa\", "
                           "\"key\": \"C\", \"mode\": \"major\", \"meter\": \"4/4\", \"bars\": 68, \"motive\": null}, \"seed\": 1}";
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(test_context(), request, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), request, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "%s (%s)\n", response.error.message, response.error.path);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     Plan *plan = plan_of_response(&response);
     composer_response_destroy(&response);
     PlanNote notes[4096];
@@ -380,7 +380,7 @@ static void test_a_given_theme_has_fresh_ids_and_no_source(void) {
     char *printed = cJSON_PrintUnformatted(theme_request);
     cJSON_Delete(theme_request);
     ComposerResponse theme;
-    assert(composer_api_theme(test_context(), printed, NULL, &theme) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &theme) == URSATZ_OK);
     free(printed);
     Plan *theme_plan = plan_of_response(&theme);
     PlanNote theme_notes[1024];
@@ -409,12 +409,12 @@ static void test_a_given_theme_has_fresh_ids_and_no_source(void) {
     char *piece_request = cJSON_PrintUnformatted(wrapped);
     cJSON_Delete(wrapped);
     ComposerResponse built;
-    ComposerStatus status = composer_api_piece(test_context(), piece_request, NULL, &built);
+    UrsatzStatus status = composer_api_piece(test_context(), piece_request, NULL, &built);
     free(piece_request);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         fprintf(stderr, "%s (%s)\n", built.error.message, built.error.path);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     Plan *plan = plan_of_response(&built);
     composer_response_destroy(&built);
     /* every Given note (the theme, copied in) is made from nothing here: a fresh id and no source */
@@ -446,7 +446,7 @@ static void test_a_theme_links_melody_notes_to_its_motive(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == URSATZ_OK);
     free(printed);
     Plan *plan = plan_of_response(&response);
     composer_response_destroy(&response);

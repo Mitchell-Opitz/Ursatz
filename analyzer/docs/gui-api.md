@@ -7,21 +7,21 @@ score export. Each gives the output the GUI's own code gave at its pin (`src/ser
 
 ## Import with tempo
 
-No new entry. `analyzer_import_file` (`<ursatz_analyzer/input_pipeline.h>`, the library's `imported_score_import_file` underneath) fills `ImportedScore.tempo_map` from
+No new entry. `analyzer_import_file` (`<ursatz_analyzer/analyzer_api.h>`, the library's `imported_score_import_file` underneath) fills `ImportedScore.tempo_map` from
 the one library parse of a MIDI file: its set-tempo events, or one defaulted region when it has none. A MusicXML import
 has no tempo map; its tempo is in `ImportedSource` (`tempo_declared`, `initial_quarters_per_minute`, `tempo_markings`).
 
 ## Playback timing
 
-`<ursatz_analyzer/playback.h>`
+`<ursatz_analyzer/analyzer_api.h>`
 
 ```c
 ImportedScore notes;
 AnalyzerPlayback playback;
 char *json = NULL;
-if (analyzer_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL, 0) == ANALYZER_OK &&
-    analyzer_playback_build(&notes, &playback) == ANALYZER_OK) {
-    if (analyzer_playback_to_json(&playback, &notes, &json) == ANALYZER_OK) {
+if (analyzer_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL, 0) == URSATZ_OK &&
+    analyzer_playback_build(&notes, &playback) == URSATZ_OK) {
+    if (analyzer_playback_to_json(&playback, &notes, &json) == URSATZ_OK) {
         /* send json, then free(json) */
     }
     analyzer_playback_destroy(&playback);
@@ -45,18 +45,19 @@ The JSON is `{"ok":true,"tempo_source":s,"tempo":[{"at":[n,d],"qpm":q}],"parts":
 "end":[n,d],"notes":[{"i":i,"on":[n,d],"len":[n,d],"pitch":m,"part":p}]}`. `parts` lists the parts that have a note; the
 name is the MusicXML part name, empty for a MIDI file.
 
-| `AnalyzerStatus` | Meaning |
+| `UrsatzStatus` | Meaning |
 | --- | --- |
-| `ANALYZER_ERR_ARGUMENT` | A NULL argument, or a MIDI import with no tempo map. |
-| `ANALYZER_ERR_LIBRARY` | A tempo region the library cannot read, or a time that does not fit. |
-| `ANALYZER_ERR_ALLOC` | Out of memory. |
+| `URSATZ_ERR_REQUEST` | A NULL argument, or a MIDI import with no tempo map. |
+| `URSATZ_ERR_INTERNAL` | A tempo region the library cannot read, or a time that does not fit. |
+| `URSATZ_ERR_ALLOC` | Out of memory. |
 
 ## Score export
 
-`<ursatz_analyzer/score_export.h>`: `analyzer_score_export_musicxml(&notes, &xml)` writes the imported notes as MusicXML
+`<ursatz_analyzer/analyzer_api.h>`: `analyzer_score_export_musicxml(&notes, &metadata, &xml, &error)` writes the imported notes as MusicXML
 3.1 (free with `free()`): parts with their General MIDI programs, staves, the source's own meter, key signatures in
-part 0, times quantized to notated values. Tempo markings, dynamics, the title and the composer are not written; the
-GUI keeps the last two with the piece. `ANALYZER_ERR_LIBRARY` when the library cannot write the score.
+part 0, times quantized to notated values. Tempo markings and dynamics are not written. The title and the composer are not in an
+import: the caller gives them in `AnalyzerScoreMetadata {title, composer}` (NULL, or an empty member, writes nothing) and the score
+carries them in its own `<work>` and `<identification>`. `URSATZ_ERR_INTERNAL` when the library cannot write the score.
 
 ### Note ids and defaulted meter
 

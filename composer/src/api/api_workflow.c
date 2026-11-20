@@ -143,13 +143,13 @@ static bool looks_like_analysis_document(const cJSON *document) {
            cJSON_IsString(cJSON_GetObjectItemCaseSensitive(metadata, "analyzer_version"));
 }
 
-ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSON *request, const char *name, char **text, ComposerError *error) {
+UrsatzStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSON *request, const char *name, char **text, UrsatzError *error) {
     char path[64];
     snprintf(path, sizeof path, "/%s", name);
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(request, name);
     *text = NULL;
     if (!cJSON_IsObject(member)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "the request needs \"%s\": a plan object", name);
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "the request needs \"%s\": a plan object", name);
     }
     char *printed = cJSON_PrintUnformatted(member);
     if (!printed) {
@@ -161,7 +161,7 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
     if (read != PLAN_OK) {
         if (read == PLAN_ERR_FORMAT && looks_like_analysis_document(member)) {
             cJSON_free(printed);
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path,
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path,
                             "the input is an Ursatz-Analyzer analysis document, not a plan; it describes a piece that is "
                             "already written");
         }
@@ -169,7 +169,7 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
         if (read == PLAN_ERR_ALLOC) {
             return api_fail_alloc(error);
         }
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s%s%s", detail.message,
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "cannot read plan: %s%s%s", detail.message,
                         detail.path[0] ? " at " : "", detail.path);
     }
     cJSON_free(printed);
@@ -177,24 +177,24 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
     *text = plan_to_json(plan, &producer, &detail);
     plan_destroy(plan);
     if (!*text) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, Plan **out, ComposerError *error) {
+UrsatzStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, Plan **out, UrsatzError *error) {
     PlanJsonError detail;
     if (plan_from_json_resolved(knowledge, text, composer_plan_read_hooks(), out, &detail) != PLAN_OK) {
         char path[64];
         snprintf(path, sizeof path, "/%s", name);
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- what a request asks to have made -------------------------------------------------------------- */
 
-ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs *out, ComposerError *error) {
+UrsatzStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs *out, UrsatzError *error) {
     memset(out, 0, sizeof(*out));
     out->export_options = plan_export_options_default();
     bool present = false;
@@ -203,11 +203,11 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
         !api_member_bool(request, "musicxml", &out->musicxml, &present, error) ||
         !api_member_bool(request, "plain_midi", &out->plain_midi, &present, error) ||
         !api_member_bool(request, "layers", &out->layers, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (workflow && (!api_member_bool(request, "record", &out->record, &present, error) ||
                      !api_member_string(request, "explain", &explain, &present, error))) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (explain) {
         if (strcmp(explain, "text") == 0) {
@@ -215,7 +215,7 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
         } else if (strcmp(explain, "json") == 0) {
             out->explain = 2;
         } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
         }
     }
     if (out->plain_midi) {
@@ -225,36 +225,36 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
     return api_read_tempo(request, &out->export_options, error);
 }
 
-ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, cJSON *document,
+UrsatzStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, cJSON *document,
                                   ComposerResponse *out) {
     PlanJsonError plan_error;
     PlanProducer producer = composer_plan_producer(knowledge);
     out->plan_json = plan_to_json(plan, &producer, &plan_error);
     if (!out->plan_json) {
-        return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "cannot write the plan: %s", plan_error.message);
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "cannot write the plan: %s", plan_error.message);
     }
     if (outputs->layers && document) {
-        ComposerStatus layered = api_layers_json(knowledge, plan, &outputs->export_options, document, &out->error);
-        if (layered != COMPOSER_OK) {
+        UrsatzStatus layered = api_layers_json(knowledge, plan, &outputs->export_options, document, &out->error);
+        if (layered != URSATZ_OK) {
             return layered;
         }
     }
     if (!outputs->midi && !outputs->musicxml) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     RenderedPlan rendered;
     PlanExportError detail;
     if (plan_export_render(plan, &rendered, &detail) != PLAN_EXPORT_OK) {
-        return api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "/midi", "cannot render the plan");
+        return api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "/midi", "cannot render the plan");
     }
-    ComposerStatus status = COMPOSER_OK;
+    UrsatzStatus status = URSATZ_OK;
     if (outputs->midi &&
         rendered_plan_midi_bytes(knowledge, &rendered, &outputs->export_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
-        status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "/midi", "cannot write the MIDI file: %s", detail.message);
+        status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "/midi", "cannot write the MIDI file: %s", detail.message);
     }
-    if (status == COMPOSER_OK && outputs->musicxml &&
+    if (status == URSATZ_OK && outputs->musicxml &&
         rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
-        status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s",
+        status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s",
                           detail.message);
     }
     rendered_plan_destroy(&rendered);
@@ -299,7 +299,7 @@ static char *record_text(const ComposeOutcome *outcome) {
     return text;
 }
 
-ComposerStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
+UrsatzStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
                                   cJSON *document, ComposerResponse *out) {
     if (outputs->record && outcome) {
         char *text = record_text(outcome);
@@ -315,7 +315,7 @@ ComposerStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcom
     if (outputs->explain && outcome) {
         Explanation explanation;
         if (explain_build(plan, outcome, &explanation) != EXPLAIN_OK) {
-            return api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "/explain", "cannot explain the run");
+            return api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "/explain", "cannot explain the run");
         }
         char *text = outputs->explain == 2 ? explain_to_json(&explanation) : explain_to_text(&explanation);
         explain_destroy(&explanation);
@@ -328,7 +328,7 @@ ComposerStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcom
             return api_fail_alloc(&out->error);
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the result of a compose ----------------------------------------------------------------------- */
@@ -550,7 +550,7 @@ static bool add_open(cJSON *list, const char *what, const char *reason) {
     return true;
 }
 
-ComposerStatus api_compose_stuck(const Plan *plan, const ComposeOutcome *outcome, unsigned long first,
+UrsatzStatus api_compose_stuck(const Plan *plan, const ComposeOutcome *outcome, unsigned long first,
                                  unsigned long last, ComposerResponse *out) {
     cJSON *document = cJSON_CreateObject();
     cJSON *stuck = cJSON_CreateObject();
@@ -605,13 +605,13 @@ ComposerStatus api_compose_stuck(const Plan *plan, const ComposeOutcome *outcome
         cJSON_Delete(document);
         return api_fail_alloc(&out->error);
     }
-    ComposerError error;
-    api_fail(&error, COMPOSER_ERR_UNSATISFIABLE, "", "the plan could not be completed from seeds %lu to %lu: stuck at the %s stage%s",
+    UrsatzError error;
+    api_fail(&error, URSATZ_ERR_UNSATISFIABLE, "", "the plan could not be completed from seeds %lu to %lu: stuck at the %s stage%s",
              first, last, compose_stage_name(outcome->stuck_stage),
              outcome->key_rejected ? " (the keys or cadences heard did not fit the plan)" : "");
-    ComposerStatus status = api_respond_json(out, document);
+    UrsatzStatus status = api_respond_json(out, document);
     out->error = error;
-    return status == COMPOSER_OK ? COMPOSER_ERR_UNSATISFIABLE : status;
+    return status == URSATZ_OK ? URSATZ_ERR_UNSATISFIABLE : status;
 }
 
 static void append_number(char *out, size_t size, unsigned long value, bool first) {

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <model/core/content_hash.h>
+#include <common/hash.h>
 #include <string.h>
 
 #include <plan/plan_lanes.h>
@@ -234,7 +234,7 @@ static unsigned long long hash_value(unsigned long long hash, long long value) {
     for (int i = 0; i < 8; i++) {
         bytes[i] = (unsigned char)(((unsigned long long)value >> (8 * i)) & 0xFFu);
     }
-    return content_hash_fnv1a64(hash, bytes, sizeof(bytes));
+    return common_fnv1a64(bytes, sizeof(bytes), hash);
 }
 
 /*
@@ -242,7 +242,7 @@ static unsigned long long hash_value(unsigned long long hash, long long value) {
  * first), since the fidelity of the same notes an octave higher or lower is the same (R-354 drops whole octaves).
  */
 static unsigned long long measurement_key(LaneSpanId span, const PlanNote *notes, size_t count) {
-    unsigned long long hash = hash_value(CONTENT_HASH_FNV1A64_OFFSET, (long long)span);
+    unsigned long long hash = hash_value(COMMON_FNV1A64_OFFSET, (long long)span);
     int octave = count > 0 ? (notes[0].midi >= 0 ? notes[0].midi / 12 : -((11 - notes[0].midi) / 12)) * 12 : 0;
     for (size_t i = 0; i < count; i++) {
         hash = hash_value(hash, notes[i].midi - octave);

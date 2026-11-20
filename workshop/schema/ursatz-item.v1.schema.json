@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-item.v1.schema.json",
+  "title": "Item header, format version 1",
+  "description": "projects/<prj>/items/<id>/item.json: the item's name and its current version. The versions are the folders v<n>/ with an envelope; the project is the folder the item is in.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "type",
+    "name",
+    "current_version",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-item"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "motif",
+        "theme",
+        "piece"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "current_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "journal_seq": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

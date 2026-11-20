@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
 
 /*
- * The bytes of the analysis document of Bach 114 (R-631): analysis_document_to_json of the document built from the result, with the
+ * The bytes of the analysis document of Bach 114 (R-631): analyzer_document_to_json of the document built from the result, with the
  * values of metadata.analyzer_version and metadata.producer_key replaced by "*" (they change with the build), compared byte for byte
  * with tests/snapshots/bach-114.analysis.bytes.json. test_document_snapshots compares the parsed documents of five pieces; this one
  * pins the text of one, so a change of how the document is printed (its member order, its spacing, its numbers) is seen.
@@ -58,11 +58,11 @@ static char *render_bach_114(void) {
     char *text = NULL;
     AnalyzerResult *result = NULL;
     AnalyzerOptions options = test_analyzer_options();
-    if (analyzer_analyze(&notes, &options, &result) == ANALYZER_OK) {
-        AnalysisDocument *document = analysis_document_build_from_result("Bach 114.mid", result);
+    if (analyzer_analyze(&notes, &options, &result) == URSATZ_OK) {
+        AnalysisDocument *document = analyzer_document_build("Bach 114.mid", result);
         if (document) {
-            text = analysis_document_to_json(document);
-            analysis_document_destroy(document);
+            text = analyzer_document_to_json(document);
+            analyzer_document_destroy(document);
         }
     }
     analyzer_result_destroy(result);

@@ -8,8 +8,8 @@ ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--
 ```
 
 Library: the profile, its counting, the comparison, the model file and the labels are the library's (`theory/style/`, see
-[the theory README](../../library/theory/README.md#style)); the Analyzer's `include/ursatz_analyzer/style_profile.h` keeps the two
-entries that read documents: `style_profile_add_document_json` and `style_profile_add_corpus`. A document is read into a
+[the theory README](../../library/theory/README.md#style)); the Analyzer's `include/ursatz_analyzer/analyzer_api.h` keeps the two
+entries that read documents: `analyzer_style_add_document_json` and `style_profile_add_corpus`. A document is read into a
 `StylePiece` (`src/style/style_piece_document.c`) and the library counts it.
 
 A style profile counts harmony, rhythm, melody and form labels over the analysis documents of a corpus run (see

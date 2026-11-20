@@ -36,6 +36,9 @@
 #define PIECE_ROWS_MAX (PIECE_STRUCTURE_MAX_SECTIONS + 1)
 #define PIECE_LANES_MAX 4
 #define PIECE_VARIATIONS_MAX 8
+/* The cells a section's progression harmony may name, and the motives a theme request may list (the vocabulary's limits.harmony_cells and limits.theme_motives). */
+#define API_HARMONY_CELLS_MAX 8
+#define API_THEME_MOTIVES_MAX 16
 /* As many seeds are tried as it takes to find the variations asked for, at most this many for each. */
 #define PIECE_SEEDS_PER_VARIATION 4
 
@@ -78,7 +81,7 @@ typedef struct {
     size_t pool_count;
     const Motive *basic;  /* the motive the motives stage compares with, NULL when it is invented */
     PlanExportOptions export_options;
-    const ComposerJob *job;
+    const UrsatzJob *job;
     const KnowledgeSnapshot *knowledge; /* the call context's; set by api_piece_read_request, must outlive the request */
     const CommonPracticeMaterials *materials; /* its common-practice materials, resolved once for the call; as long-lived */
 } PieceSpec;
@@ -86,11 +89,11 @@ typedef struct {
 /*
  * Reads the piece request object root (docs/piece-request.md). base is its JSON Pointer in the API request, which the error
  * paths start with. style_path, when not NULL, replaces the request's "style". The caller destroys the request, also on
- * failure. COMPOSER_ERR_REQUEST names a member; COMPOSER_ERR_UNSATISFIABLE is a style that cannot be read.
+ * failure. URSATZ_ERR_REQUEST names a member; URSATZ_ERR_UNSATISFIABLE is a style that cannot be read.
  */
-ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
+UrsatzStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
                                       const cJSON *root, const char *base, const char *style_path, bool plain_midi,
-                                      const ComposerJob *job, ComposerError *error);
+                                      const UrsatzJob *job, UrsatzError *error);
 void api_piece_request_destroy(PieceSpec *request);
 
 /* The name of the first version of the request's form: "loop" for the game loop, "piece" for a form with sizes. */
@@ -101,8 +104,8 @@ const char *api_piece_first_version_name(const PieceSpec *request);
  * section that has none (piece_default_cadences) and the default ending section when there is none
  * (piece_default_ending).
  */
-ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *root,
-                                  cJSON *filled, ComposerError *error);
+UrsatzStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *root,
+                                  cJSON *filled, UrsatzError *error);
 
 /* A version of the piece: its plan and what composing it reported. */
 typedef struct {
@@ -136,10 +139,10 @@ typedef struct {
 void api_piece_version_destroy(PieceVersion *version);
 
 /*
- * A performed form is composed whole (R-485): regenerating a section and varying one are Later. COMPOSER_ERR_REQUEST at
- * /request/form when the request's form is performed (form_spec_performed), else COMPOSER_OK.
+ * A performed form is composed whole (R-485): regenerating a section and varying one are Later. URSATZ_ERR_REQUEST at
+ * /request/form when the request's form is performed (form_spec_performed), else URSATZ_OK.
  */
-ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerError *error);
+UrsatzStatus api_piece_refuse_performed(const PieceSpec *request, UrsatzError *error);
 void api_piece_made_destroy(PieceMade *piece);
 
 /* The lanes of a section to write again; none means the whole section. */
@@ -153,20 +156,20 @@ typedef struct {
 
 /*
  * The lanes of "lanes" (a list of harmony, bass, melody, inner, or all) into edit; an empty or absent list, or "all", is the
- * whole section. path is the member's JSON Pointer. COMPOSER_ERR_REQUEST for another word.
+ * whole section. path is the member's JSON Pointer. URSATZ_ERR_REQUEST for another word.
  */
-ComposerStatus api_piece_read_lanes(const cJSON *lanes, const char *path, PieceEdit *edit, ComposerError *error);
+UrsatzStatus api_piece_read_lanes(const cJSON *lanes, const char *path, PieceEdit *edit, UrsatzError *error);
 
 /* The lanes as the document names them: "all", or the lane words joined with "+". */
 void api_piece_lanes_name(const PieceEdit *edit, char *out, size_t size);
 
 /*
- * The loop plan written again in the section of edit, with seed (the plan kept when edit has no section). COMPOSER_OK
+ * The loop plan written again in the section of edit, with seed (the plan kept when edit has no section). URSATZ_OK
  * with PIECE_ERR_STUCK in *result is a stuck run, which the next seed may mend; a refused edit is the status it names. A
- * cancel is COMPOSER_ERR_CANCELLED.
+ * cancel is URSATZ_ERR_CANCELLED.
  */
-ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
-                                         PieceVersion *loop, PieceResult *result, ComposerError *error);
+UrsatzStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
+                                         PieceVersion *loop, PieceResult *result, UrsatzError *error);
 
 /* The ending version built from the loop plan with seed + 20 (compose_run on the plan piece_build_ending makes). */
 PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece);
@@ -183,14 +186,14 @@ cJSON *api_piece_loop_json(const Plan *plan);
  * The MusicXML of a version's plan, made from the plan in memory (its span ids are the ones the notes' xml:id carry; a plan
  * file renumbers them). The caller frees *out.
  */
-ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, ComposerError *error);
+UrsatzStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, UrsatzError *error);
 
 /* The plan as a cJSON object, or NULL when it cannot be written. */
 cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const Plan *plan);
 
 /* The failure of a piece no seed composed: what the last try ran into. */
-ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
-                                      unsigned long first_seed, unsigned long last_seed, ComposerError *error);
+UrsatzStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
+                                      unsigned long first_seed, unsigned long last_seed, UrsatzError *error);
 
 /* --- shared by the files of the piece entry (api_piece.c reads the request, the others compose, regenerate, read the plans and write the result) --- */
 
@@ -230,24 +233,26 @@ typedef struct {
     int explain; /* 0 none, 1 text, 2 json */
 } ApiPieceOutputs;
 
-ComposerStatus api_piece_fail_cancelled(ComposerError *error);
+UrsatzStatus api_piece_fail_cancelled(UrsatzError *error);
 size_t api_piece_version_count(const PieceSpec *request);
 const char *api_piece_version_name(const PieceSpec *request, size_t index);
 void api_piece_make_config(const PieceSpec *request, bool check, unsigned long seed, ComposeConfig *config);
 PieceResult api_piece_compose(PieceSpec *request, bool check, unsigned long seed, PieceMade *piece);
 bool api_piece_cancelled(const PieceMade *piece);
 NodeId api_piece_sized_section_find(const Plan *plan, const char *name);
-ComposerStatus api_piece_regenerate(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
-                                       PieceMade *piece, PieceResult *result, ComposerError *error);
+UrsatzStatus api_piece_regenerate(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
+                                       PieceMade *piece, PieceResult *result, UrsatzError *error);
 cJSON *api_piece_time_json(Rational time);
 void api_piece_planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t size, bool *flats);
 size_t api_piece_collect_rows(const PieceSpec *request, const PieceVersion *version, ApiPieceRow *rows);
 double api_piece_span_beats(const PieceSpec *request, Rational length);
+/* Adds start_text, end_text and length_text (API 4.2) to the loop region {"start", "end"}; false when it has no times. */
+bool api_piece_loop_texts(const PieceSpec *request, cJSON *loop);
 cJSON *api_piece_document(const PieceSpec *request, const PieceMade *piece, const PieceEdit *edit,
                              const cJSON *regenerate_section, bool from);
-ComposerStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
+UrsatzStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
                                   ComposerResponse *out);
-ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *document, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
+UrsatzStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *document, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
                                   ComposerResponse *out);
 
 #endif

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 
 #include "cJSON.h"
 
@@ -118,7 +118,7 @@ static void test_notated_metadata_and_pickup(void) {
     imported_score_destroy(&notes);
 
     const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
-    assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    assert(number(document, "schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION);
     assert(strcmp(string(input, "format"), "musicxml") == 0);
     assert(strcmp(string(input, "source_type"), "score") == 0);
     assert(strcmp(string(input, "meter"), "notated") == 0);
@@ -278,25 +278,22 @@ static void test_override_and_sniff(void) {
 /* The Analyzer's thin import entries: the library's import, the message of a failure, the status of the Analyzer API. */
 static void test_thin_entries(void) {
     ImportedScore notes;
-    char message[256] = "";
-    assert(analyzer_import_file(musicxml("pickup.musicxml"), IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) ==
-           ANALYZER_OK);
-    assert(notes.source.format == IMPORTED_FORMAT_MUSICXML && message[0] == '\0');
+    UrsatzError error = {{0}};
+    assert(analyzer_import_file(musicxml("pickup.musicxml"), IMPORTED_FORMAT_AUTO, &notes, &error) == URSATZ_OK);
+    assert(notes.source.format == IMPORTED_FORMAT_MUSICXML && error.message[0] == '\0');
     imported_score_destroy(&notes);
 
-    assert(analyzer_import_file("/nowhere/missing.musicxml", IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) ==
-           ANALYZER_ERR_LIBRARY);
-    assert(strcmp(message, "Error: cannot read file '/nowhere/missing.musicxml'") == 0);
-    assert(analyzer_import_file(musicxml("malformed.musicxml"), IMPORTED_FORMAT_AUTO, &notes, NULL, 0) ==
-           ANALYZER_ERR_LIBRARY);
-    assert(analyzer_import_file(NULL, IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) == ANALYZER_ERR_ARGUMENT);
+    assert(analyzer_import_file("/nowhere/missing.musicxml", IMPORTED_FORMAT_AUTO, &notes, &error) == URSATZ_ERR_NOT_FOUND);
+    assert(strcmp(error.message, "Error: cannot read file '/nowhere/missing.musicxml'") == 0);
+    assert(strcmp(error.path, "/nowhere/missing.musicxml") == 0);
+    assert(analyzer_import_file(musicxml("malformed.musicxml"), IMPORTED_FORMAT_AUTO, &notes, NULL) == URSATZ_ERR_FORMAT);
+    assert(analyzer_import_file(NULL, IMPORTED_FORMAT_AUTO, &notes, &error) == URSATZ_ERR_REQUEST);
 
     const char *text = "<?xml version=\"1.0\"?><score-partwise version=\"3.1\"/>";
-    assert(analyzer_import_buffer((const unsigned char *)text, strlen(text), IMPORTED_FORMAT_AUTO, &notes, message,
-                                  sizeof message) == ANALYZER_ERR_LIBRARY);
-    assert(strstr(message, "the score contains no notes") != NULL || strstr(message, "failed to import") != NULL);
-    assert(analyzer_import_buffer(NULL, 3, IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) ==
-           ANALYZER_ERR_ARGUMENT);
+    assert(analyzer_import_buffer((const unsigned char *)text, strlen(text), IMPORTED_FORMAT_AUTO, &notes, &error) ==
+           URSATZ_ERR_FORMAT);
+    assert(strstr(error.message, "the score contains no notes") != NULL || strstr(error.message, "failed to import") != NULL);
+    assert(analyzer_import_buffer(NULL, 3, IMPORTED_FORMAT_AUTO, &notes, &error) == URSATZ_ERR_REQUEST);
 }
 
 int main(void) {

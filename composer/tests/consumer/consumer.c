@@ -10,8 +10,8 @@
    call context: the knowledge snapshot of the embedded entries. */
 
 int main(void) {
-    if (strcmp(composer_api_version(), "3.2") != 0) {
-        fprintf(stderr, "consumer: API version %s, expected 3.2\n", composer_api_version());
+    if (strcmp(composer_api_version(), "4.2") != 0) {
+        fprintf(stderr, "consumer: API version %s, expected 4.0\n", composer_api_version());
         return 1;
     }
     KnowledgeSnapshot *knowledge = NULL;
@@ -22,12 +22,12 @@ int main(void) {
     }
     const ComposerContext context = {knowledge};
     ComposerResponse response;
-    if (composer_api_versions(&response) != COMPOSER_OK || !response.json) {
+    if (composer_api_versions(&response) != URSATZ_OK || !response.json) {
         fprintf(stderr, "consumer: versions failed: %s\n", response.error.message);
         return 1;
     }
     composer_response_destroy(&response);
-    if (composer_api_vocabulary(&context, &response) != COMPOSER_OK || !response.json) {
+    if (composer_api_vocabulary(&context, &response) != URSATZ_OK || !response.json) {
         fprintf(stderr, "consumer: vocabulary failed: %s\n", response.error.message);
         return 1;
     }

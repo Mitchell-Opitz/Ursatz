@@ -99,7 +99,7 @@ the Mode select sets major or minor, so every motif is stored with the key
 `C major` or `C minor`. A piece sets the real key. Upload MIDI moves the notes
 to C and says so (`Moved from D minor to C minor.`, or `No key found: read as
 C major.`). A motif on another tonic is refused when the backend starts (see
-[Data check](../storage.md#data-check)). The score and playback always use the stored key.
+[Data check](../../../workshop/docs/data-folder.md#older-folders-and-migration)). The score and playback always use the stored key.
 
 The Composer's
 message for a note list it cannot read shows beside the note list and the

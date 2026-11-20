@@ -4,6 +4,8 @@
 
 #include <cJSON.h>
 
+#include <common/files.h>
+
 #include "counterpoint.h"
 #include "cli_context.h"
 #include "develop.h"
@@ -11,7 +13,7 @@
 #include "grow.h"
 #include "listen.h"
 #include "motive.h"
-#include "plan.h"
+#include "plan_cmd.h"
 #include "progression.h"
 #include "random_motive.h"
 #include "recognize.h"
@@ -46,61 +48,12 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", HARMONIZE_USAGE_LINE);
 }
 
-/* The whole file as text, NUL-terminated; false when it cannot be read. */
-static bool read_text_file(const char *path, char **text, size_t *size) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return false;
-    }
-    size_t capacity = 4096;
-    size_t used = 0;
-    char *buffer = malloc(capacity);
-    bool ok = buffer != NULL;
-    while (ok && !feof(file)) {
-        if (used + 1 >= capacity) {
-            char *grown = realloc(buffer, capacity * 2);
-            ok = grown != NULL;
-            if (ok) {
-                buffer = grown;
-                capacity *= 2;
-            }
-        }
-        if (ok) {
-            used += fread(buffer + used, 1, capacity - used - 1, file);
-            ok = !ferror(file);
-        }
-    }
-    fclose(file);
-    if (!ok) {
-        free(buffer);
-        return false;
-    }
-    buffer[used] = '\0';
-    *text = buffer;
-    *size = used;
-    return true;
-}
-
-/* Writes to "<path>.tmp", then renames, so a failure leaves no half-written file at path. */
+/* Writes the file atomically (common_file_write_atomic), so a failure leaves no half-written file at path. */
 static bool write_file_atomically(const char *path, const void *data, size_t size, char *message, size_t message_size) {
-    size_t length = strlen(path);
-    char *temporary = malloc(length + sizeof(".tmp"));
-    if (!temporary) {
-        snprintf(message, message_size, "out of memory");
-        return false;
-    }
-    memcpy(temporary, path, length);
-    memcpy(temporary + length, ".tmp", sizeof(".tmp"));
-    FILE *file = fopen(temporary, "wb");
-    bool wrote = file && fwrite(data, 1, size, file) == size;
-    bool closed = file && fclose(file) == 0;
-    if (!wrote || !closed || rename(temporary, path) != 0) {
-        remove(temporary);
+    if (common_file_write_atomic(path, data, size, NULL) != URSATZ_OK) {
         snprintf(message, message_size, "could not write '%s'", path);
-        free(temporary);
         return false;
     }
-    free(temporary);
     return true;
 }
 
@@ -117,7 +70,7 @@ static void report_skipped(const char *json) {
 }
 
 /* Prints the API's refusal as the export command always has and returns the exit status. */
-static int report_export_error(const ComposerError *error, const char *plan_path, const char *tempo_text) {
+static int report_export_error(const UrsatzError *error, const char *plan_path, const char *tempo_text) {
     static const char READ[] = "cannot read plan";
     static const char RENDER[] = "cannot render plan";
     if (strcmp(error->path, "/tempo") == 0) {
@@ -166,7 +119,7 @@ static int run_export(int argc, char **argv) {
 
     char *plan_text = NULL;
     size_t plan_size = 0;
-    if (!read_text_file(plan_path, &plan_text, &plan_size)) {
+    if (!cli_read_file(plan_path, &plan_text, &plan_size)) {
         fprintf(stderr, "Error: cannot read plan '%s': could not open '%s'\n", plan_path, plan_path);
         return 1;
     }
@@ -197,9 +150,9 @@ static int run_export(int argc, char **argv) {
     }
 
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_export(cli_context(), request_text, NULL, &response);
+    UrsatzStatus api_status = composer_api_export(cli_context(), request_text, NULL, &response);
     free(request_text);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         return report_export_error(&response.error, plan_path, tempo_text);
     }
     report_skipped(response.json);
@@ -281,7 +234,7 @@ int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         ComposerResponse response;
         memset(&response, 0, sizeof response);
-        cJSON *versions = composer_api_versions(&response) == COMPOSER_OK ? cJSON_Parse(response.json) : NULL;
+        cJSON *versions = composer_api_versions(&response) == URSATZ_OK ? cJSON_Parse(response.json) : NULL;
         const cJSON *version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
         printf("ursatz-composer %s\n", cJSON_IsString(version) ? version->valuestring : "");
         cJSON_Delete(versions);

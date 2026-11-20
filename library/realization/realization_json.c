@@ -7,7 +7,8 @@
 
 #include <cJSON.h>
 
-#include "model/core/content_hash.h"
+#include <common/hash.h>
+#include <common/json.h>
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/time/meter_map.h"
@@ -445,7 +446,7 @@ bool realization_digest(const Work *work, char out[17]) {
         free(text);
         return false;
     }
-    content_hash_hex16(content_hash_fnv1a64(CONTENT_HASH_FNV1A64_OFFSET, text, strlen(text)), out);
+    common_fnv1a64_hex(common_fnv1a64(text, strlen(text), COMMON_FNV1A64_OFFSET), out);
     free(text);
     return true;
 }
@@ -602,11 +603,16 @@ static bool read_text_member(Reader *r, const cJSON *object, const char *path, c
 }
 
 static bool read_rational(Reader *r, const cJSON *item, const char *path, Rational *out) {
+    long long num;
+    long long den;
+    /* A time in range is read by the common codec; any other value falls through to the checks that say what is wrong. */
+    if (common_json_rational_read(item, COMMON_RATIONAL_OBJECT, &num, &den) && num >= -1000000000LL && num <= 1000000000LL &&
+        den <= 1000000000LL) {
+        return rational_make(num, den, out) == RATIONAL_OK || bad(r, path, "not a time");
+    }
     if (!cJSON_IsObject(item)) {
         return bad(r, path, "expected a time {\"num\", \"den\"}");
     }
-    long long num;
-    long long den;
     char at[REALIZATION_JSON_PATH_MAX];
     const cJSON *n = member(r, item, path, "num");
     child_member(at, path, "num");

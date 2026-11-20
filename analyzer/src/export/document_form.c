@@ -9,10 +9,10 @@ static cJSON *idea_json(DocBuild *build, const ImportedScore *notes, const char 
     Rational end = doc_rational(build, idea->end.num, idea->end.den);
     cJSON *claim = doc_claim_json_with(build, framework, notes, idea->note_ids, idea->note_id_count, start, end, idea->label,
                                    cJSON_CreateNumber(idea->uncertainty));
-    if (!(claim && json_add(claim, "index", cJSON_CreateNumber(idea->index)) &&
-          json_add(claim, "measures", doc_measures_json(idea->first_measure, idea->last_measure)) &&
-          json_add(claim, "length", cJSON_CreateNumber(idea->length_measures)) &&
-          json_add(claim, "similarity", idea->compared ? cJSON_CreateNumber(idea->similarity) : cJSON_CreateNull()))) {
+    if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber(idea->index)) &&
+          common_json_add(claim, "measures", doc_measures_json(idea->first_measure, idea->last_measure)) &&
+          common_json_add(claim, "length", cJSON_CreateNumber(idea->length_measures)) &&
+          common_json_add(claim, "similarity", idea->compared ? cJSON_CreateNumber(idea->similarity) : cJSON_CreateNull()))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -27,11 +27,11 @@ static cJSON *subphrase_json(DocBuild *build, const ImportedScore *notes, const 
     Rational end = doc_rational(build, subphrase->end.num, subphrase->end.den);
     cJSON *claim = doc_claim_json_with(build, framework, notes, subphrase->note_ids, subphrase->note_id_count, start, end,
                                    "subphrase", cJSON_CreateNumber(subphrase->uncertainty));
-    if (!(claim && json_add(claim, "index", cJSON_CreateNumber(subphrase->index)) &&
-          json_add(claim, "first_idea", cJSON_CreateNumber((double)(subphrase->first_idea - phrase->first_idea))) &&
-          json_add(claim, "idea_count", cJSON_CreateNumber((double)subphrase->idea_count)) &&
-          json_add(claim, "measures", doc_measures_json(subphrase->first_measure, subphrase->last_measure)) &&
-          json_add(claim, "length", cJSON_CreateNumber(subphrase->length_measures)))) {
+    if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber(subphrase->index)) &&
+          common_json_add(claim, "first_idea", cJSON_CreateNumber((double)(subphrase->first_idea - phrase->first_idea))) &&
+          common_json_add(claim, "idea_count", cJSON_CreateNumber((double)subphrase->idea_count)) &&
+          common_json_add(claim, "measures", doc_measures_json(subphrase->first_measure, subphrase->last_measure)) &&
+          common_json_add(claim, "length", cJSON_CreateNumber(subphrase->length_measures)))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -49,8 +49,8 @@ static cJSON *phrase_model_json(const ChainResult *report, const AnalysisPhrase 
             continue;
         }
         cJSON *segment = cJSON_CreateObject();
-        if (!(segment && json_add(segment, "chord", cJSON_CreateNumber((double)(phrase->first_entry + k))) &&
-              json_add(segment, "label", cJSON_CreateString(entry->phrase_model)) && json_append(list, segment))) {
+        if (!(segment && common_json_add(segment, "chord", cJSON_CreateNumber((double)(phrase->first_entry + k))) &&
+              common_json_add(segment, "label", cJSON_CreateString(entry->phrase_model)) && common_json_append(list, segment))) {
             cJSON_Delete(segment);
             cJSON_Delete(list);
             return NULL;
@@ -65,15 +65,15 @@ static bool add_ideas_and_subphrases(DocBuild *build, cJSON *claim, const Import
     cJSON *ideas = cJSON_CreateArray();
     bool ok = subphrases && ideas;
     for (size_t k = 0; ok && k < phrase->subphrase_count; k++) {
-        ok = json_append(subphrases, subphrase_json(build, notes, framework, report, phrase,
+        ok = common_json_append(subphrases, subphrase_json(build, notes, framework, report, phrase,
                                                &report->subphrases[phrase->first_subphrase + k]));
     }
     for (size_t k = 0; ok && k < phrase->idea_count; k++) {
-        ok = json_append(ideas, idea_json(build, notes, framework, &report->ideas[phrase->first_idea + k]));
+        ok = common_json_append(ideas, idea_json(build, notes, framework, &report->ideas[phrase->first_idea + k]));
     }
-    if (ok && json_add(claim, "subphrases", subphrases)) {
+    if (ok && common_json_add(claim, "subphrases", subphrases)) {
         subphrases = NULL;
-        if (json_add(claim, "ideas", ideas)) {
+        if (common_json_add(claim, "ideas", ideas)) {
             return true;
         }
         ideas = NULL;
@@ -86,7 +86,7 @@ static bool add_ideas_and_subphrases(DocBuild *build, cJSON *claim, const Import
 static cJSON *expansion_techniques_json(const AnalysisExpansion *expansion) {
     cJSON *techniques = cJSON_CreateArray();
     for (size_t n = 0; techniques && n < expansion->technique_count; n++) {
-        if (!json_append(techniques, cJSON_CreateString(expansion->techniques[n]))) {
+        if (!common_json_append(techniques, cJSON_CreateString(expansion->techniques[n]))) {
             cJSON_Delete(techniques);
             return NULL;
         }
@@ -103,18 +103,18 @@ static cJSON *expansion_json(DocBuild *build, const ImportedScore *notes, const 
     Rational end = doc_rational(build, expansion->end.num, expansion->end.den);
     cJSON *claim = doc_claim_json_with(build, framework, notes, expansion->note_ids, expansion->note_id_count, start, end,
                                    expansion->kind, cJSON_CreateNumber(expansion->uncertainty));
-    if (!(claim && json_add(claim, "index", cJSON_CreateNumber(expansion->index)) &&
-          json_add(claim, "change", cJSON_CreateString(expansion->change)) &&
-          json_add(claim, "theme", expansion->has_theme ? cJSON_CreateNumber((double)expansion->theme) : cJSON_CreateNull()) &&
-          json_add(claim, "expected_length", cJSON_CreateNumber(expansion->expected_length)) &&
-          json_add(claim, "actual_length", cJSON_CreateNumber(expansion->actual_length)) &&
-          json_add(claim, "measures_changed", cJSON_CreateNumber(expansion->measures_changed)) &&
-          json_add(claim, "measures", doc_measures_json(expansion->first_measure, expansion->last_measure)) &&
-          json_add(claim, "techniques", expansion_techniques_json(expansion)) &&
+    if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber(expansion->index)) &&
+          common_json_add(claim, "change", cJSON_CreateString(expansion->change)) &&
+          common_json_add(claim, "theme", expansion->has_theme ? cJSON_CreateNumber((double)expansion->theme) : cJSON_CreateNull()) &&
+          common_json_add(claim, "expected_length", cJSON_CreateNumber(expansion->expected_length)) &&
+          common_json_add(claim, "actual_length", cJSON_CreateNumber(expansion->actual_length)) &&
+          common_json_add(claim, "measures_changed", cJSON_CreateNumber(expansion->measures_changed)) &&
+          common_json_add(claim, "measures", doc_measures_json(expansion->first_measure, expansion->last_measure)) &&
+          common_json_add(claim, "techniques", expansion_techniques_json(expansion)) &&
           (!expansion->external_kind ||
-           (json_add(claim, "external_kind", cJSON_CreateString(expansion->external_kind)) &&
-            json_add(claim, "suffix_length_typical", cJSON_CreateBool(expansion->suffix_length_typical)) &&
-            json_add(claim, "suffix_agrees_with_location", cJSON_CreateBool(expansion->suffix_agrees_with_location)))))) {
+           (common_json_add(claim, "external_kind", cJSON_CreateString(expansion->external_kind)) &&
+            common_json_add(claim, "suffix_length_typical", cJSON_CreateBool(expansion->suffix_length_typical)) &&
+            common_json_add(claim, "suffix_agrees_with_location", cJSON_CreateBool(expansion->suffix_agrees_with_location)))))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -132,12 +132,12 @@ static bool add_expansions(DocBuild *build, cJSON *claim, const ImportedScore *n
         if (!list && !(list = cJSON_CreateArray())) {
             return false;
         }
-        if (!json_append(list, expansion_json(build, notes, framework, &report->expansions[e]))) {
+        if (!common_json_append(list, expansion_json(build, notes, framework, &report->expansions[e]))) {
             cJSON_Delete(list);
             return false;
         }
     }
-    return !list || json_add(claim, "expansions", list);
+    return !list || common_json_add(claim, "expansions", list);
 }
 
 /* One claim per phrase, in time order, from the library's standard-form analysis. The claim's span is the phrase's
@@ -174,21 +174,21 @@ cJSON *doc_phrases_json(DocBuild *build, const ImportedScore *notes, const Chain
                                              cJSON_CreateNumber(phrase->uncertainty))
                            : NULL;
         free(ids);
-        if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)i)) &&
-              json_add(claim, "measures", doc_measures_json(phrase->first_measure, phrase->end_measure)) &&
-              json_add(claim, "length", cJSON_CreateNumber(phrase->length_measures)) &&
-              json_add(claim, "extension_measures", cJSON_CreateNumber(phrase->extension_measures)) &&
-              json_add(claim, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
-              json_add(claim, "signal", cJSON_CreateString(phrase->signal)) &&
-              json_add(claim, "role", cJSON_CreateString(phrase->role)) &&
-              json_add(claim, "phrase_model", phrase_model_json(report, phrase)) &&
+        if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber((double)i)) &&
+              common_json_add(claim, "measures", doc_measures_json(phrase->first_measure, phrase->end_measure)) &&
+              common_json_add(claim, "length", cJSON_CreateNumber(phrase->length_measures)) &&
+              common_json_add(claim, "extension_measures", cJSON_CreateNumber(phrase->extension_measures)) &&
+              common_json_add(claim, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
+              common_json_add(claim, "signal", cJSON_CreateString(phrase->signal)) &&
+              common_json_add(claim, "role", cJSON_CreateString(phrase->role)) &&
+              common_json_add(claim, "phrase_model", phrase_model_json(report, phrase)) &&
               add_ideas_and_subphrases(build, claim, notes, framework, report, phrase) &&
               add_expansions(build, claim, notes, framework, report, i))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
         }
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }
@@ -201,10 +201,10 @@ cJSON *doc_phrases_json(DocBuild *build, const ImportedScore *notes, const Chain
    two-phrase theme can end on none). */
 static cJSON *theme_part_json(const AnalysisThemePart *part) {
     cJSON *object = cJSON_CreateObject();
-    if (!(object && json_add(object, "name", doc_string_or_null_json(part->name)) &&
-          json_add(object, "measures", doc_measures_json(part->first_measure, part->last_measure)) &&
-          json_add(object, "length", cJSON_CreateNumber(part->length_measures)) &&
-          json_add(object, "cadence", part->has_cadence ? cJSON_CreateNumber((double)part->cadence) : cJSON_CreateNull()))) {
+    if (!(object && common_json_add(object, "name", doc_string_or_null_json(part->name)) &&
+          common_json_add(object, "measures", doc_measures_json(part->first_measure, part->last_measure)) &&
+          common_json_add(object, "length", cJSON_CreateNumber(part->length_measures)) &&
+          common_json_add(object, "cadence", part->has_cadence ? cJSON_CreateNumber((double)part->cadence) : cJSON_CreateNull()))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -214,8 +214,8 @@ static cJSON *theme_part_json(const AnalysisThemePart *part) {
 /* The phrases a theme spans: the first one's index and how many. */
 static cJSON *theme_phrases_json(const AnalysisTheme *theme) {
     cJSON *object = cJSON_CreateObject();
-    if (!(object && json_add(object, "first", cJSON_CreateNumber((double)theme->first_phrase)) &&
-          json_add(object, "count", cJSON_CreateNumber((double)theme->phrase_count)))) {
+    if (!(object && common_json_add(object, "first", cJSON_CreateNumber((double)theme->first_phrase)) &&
+          common_json_add(object, "count", cJSON_CreateNumber((double)theme->phrase_count)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -224,7 +224,7 @@ static cJSON *theme_phrases_json(const AnalysisTheme *theme) {
 
 static cJSON *theme_parts_json(const AnalysisTheme *theme) {
     cJSON *parts = cJSON_CreateArray();
-    if (!(parts && json_append(parts, theme_part_json(&theme->parts[0])) && json_append(parts, theme_part_json(&theme->parts[1])))) {
+    if (!(parts && common_json_append(parts, theme_part_json(&theme->parts[0])) && common_json_append(parts, theme_part_json(&theme->parts[1])))) {
         cJSON_Delete(parts);
         return NULL;
     }
@@ -235,7 +235,7 @@ static cJSON *theme_parts_json(const AnalysisTheme *theme) {
 static cJSON *theme_traits_json(const AnalysisTheme *theme) {
     cJSON *traits = cJSON_CreateArray();
     for (size_t n = 0; traits && n < theme->trait_count; n++) {
-        if (!json_append(traits, cJSON_CreateString(theme->traits[n]))) {
+        if (!common_json_append(traits, cJSON_CreateString(theme->traits[n]))) {
             cJSON_Delete(traits);
             return NULL;
         }
@@ -246,8 +246,8 @@ static cJSON *theme_traits_json(const AnalysisTheme *theme) {
 /* The two themes that make up a compound period, as indices into "themes". */
 static cJSON *theme_halves_json(const AnalysisTheme *theme) {
     cJSON *halves = cJSON_CreateArray();
-    if (!(halves && json_append(halves, cJSON_CreateNumber((double)theme->halves[0])) &&
-          json_append(halves, cJSON_CreateNumber((double)theme->halves[1])))) {
+    if (!(halves && common_json_append(halves, cJSON_CreateNumber((double)theme->halves[0])) &&
+          common_json_append(halves, cJSON_CreateNumber((double)theme->halves[1])))) {
         cJSON_Delete(halves);
         return NULL;
     }
@@ -280,26 +280,26 @@ cJSON *doc_themes_json(DocBuild *build, const ImportedScore *notes, const ChainR
         Rational end = doc_rational(build, theme->end.num, theme->end.den);
         cJSON *claim = doc_claim_json_with(build, framework, notes, theme->note_ids, theme->note_id_count, start, end,
                                        theme->form, cJSON_CreateNumber(theme->uncertainty));
-        if (!(claim && json_add(claim, "index", cJSON_CreateNumber(theme->index)) &&
-              json_add(claim, "beginning", doc_string_or_null_json(theme->beginning)) &&
-              json_add(claim, "ending", doc_string_or_null_json(theme->ending)) &&
-              json_add(claim, "phrases", theme_phrases_json(theme)) &&
-              json_add(claim, "measures", doc_measures_json(theme->first_measure, theme->last_measure)) &&
-              json_add(claim, "length", cJSON_CreateNumber(theme->length_measures)) &&
-              json_add(claim, "parts_are_phrases", cJSON_CreateBool(theme->parts_are_phrases)) &&
-              json_add(claim, "commonality", doc_string_or_null_json(theme->commonality)) &&
-              json_add(claim, "part_of_compound", cJSON_CreateBool(theme->part_of_compound)) &&
-              json_add(claim, "traits", theme_traits_json(theme)) &&
-              json_add(claim, "archetypal", cJSON_CreateBool(theme->archetypal)) &&
-              json_add(claim, "cadences_usual", cJSON_CreateBool(theme->cadences_usual)) &&
-              json_add(claim, "lengths_usual", cJSON_CreateBool(theme->lengths_usual)) &&
-              json_add(claim, "parts", theme_parts_json(theme)) &&
-              (!theme->has_halves || json_add(claim, "halves", theme_halves_json(theme))))) {
+        if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber(theme->index)) &&
+              common_json_add(claim, "beginning", doc_string_or_null_json(theme->beginning)) &&
+              common_json_add(claim, "ending", doc_string_or_null_json(theme->ending)) &&
+              common_json_add(claim, "phrases", theme_phrases_json(theme)) &&
+              common_json_add(claim, "measures", doc_measures_json(theme->first_measure, theme->last_measure)) &&
+              common_json_add(claim, "length", cJSON_CreateNumber(theme->length_measures)) &&
+              common_json_add(claim, "parts_are_phrases", cJSON_CreateBool(theme->parts_are_phrases)) &&
+              common_json_add(claim, "commonality", doc_string_or_null_json(theme->commonality)) &&
+              common_json_add(claim, "part_of_compound", cJSON_CreateBool(theme->part_of_compound)) &&
+              common_json_add(claim, "traits", theme_traits_json(theme)) &&
+              common_json_add(claim, "archetypal", cJSON_CreateBool(theme->archetypal)) &&
+              common_json_add(claim, "cadences_usual", cJSON_CreateBool(theme->cadences_usual)) &&
+              common_json_add(claim, "lengths_usual", cJSON_CreateBool(theme->lengths_usual)) &&
+              common_json_add(claim, "parts", theme_parts_json(theme)) &&
+              (!theme->has_halves || common_json_add(claim, "halves", theme_halves_json(theme))))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
         }
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }
@@ -313,10 +313,10 @@ cJSON *doc_themes_json(DocBuild *build, const ImportedScore *notes, const ChainR
 
 static cJSON *idea_node_json(const AnalysisIdea *idea) {
     cJSON *node = cJSON_CreateObject();
-    if (!(node && json_add(node, "level", cJSON_CreateString("idea")) &&
-          json_add(node, "phrase", cJSON_CreateNumber((double)idea->phrase)) &&
-          json_add(node, "index", cJSON_CreateNumber(idea->index)) && json_add(node, "label", cJSON_CreateString(idea->label)) &&
-          json_add(node, "measures", doc_measures_json(idea->first_measure, idea->last_measure)))) {
+    if (!(node && common_json_add(node, "level", cJSON_CreateString("idea")) &&
+          common_json_add(node, "phrase", cJSON_CreateNumber((double)idea->phrase)) &&
+          common_json_add(node, "index", cJSON_CreateNumber(idea->index)) && common_json_add(node, "label", cJSON_CreateString(idea->label)) &&
+          common_json_add(node, "measures", doc_measures_json(idea->first_measure, idea->last_measure)))) {
         cJSON_Delete(node);
         return NULL;
     }
@@ -329,14 +329,14 @@ static cJSON *subphrase_node_json(const ChainResult *report, const AnalysisSubph
     cJSON *ideas = cJSON_CreateArray();
     bool ok = node && ideas;
     for (size_t k = 0; ok && k < subphrase->idea_count; k++) {
-        ok = json_append(ideas, idea_node_json(&report->ideas[subphrase->first_idea + k]));
+        ok = common_json_append(ideas, idea_node_json(&report->ideas[subphrase->first_idea + k]));
     }
-    bool taken = false; /* json_add() takes the ideas over, and frees them itself when it fails */
-    if (!(ok && json_add(node, "level", cJSON_CreateString("subphrase")) &&
-          json_add(node, "phrase", cJSON_CreateNumber((double)subphrase->phrase)) &&
-          json_add(node, "index", cJSON_CreateNumber(subphrase->index)) &&
-          json_add(node, "measures", doc_measures_json(subphrase->first_measure, subphrase->last_measure)) &&
-          (taken = true, json_add(node, "ideas", ideas)))) {
+    bool taken = false; /* common_json_add() takes the ideas over, and frees them itself when it fails */
+    if (!(ok && common_json_add(node, "level", cJSON_CreateString("subphrase")) &&
+          common_json_add(node, "phrase", cJSON_CreateNumber((double)subphrase->phrase)) &&
+          common_json_add(node, "index", cJSON_CreateNumber(subphrase->index)) &&
+          common_json_add(node, "measures", doc_measures_json(subphrase->first_measure, subphrase->last_measure)) &&
+          (taken = true, common_json_add(node, "ideas", ideas)))) {
         if (!taken) {
             cJSON_Delete(ideas);
         }
@@ -365,22 +365,22 @@ static cJSON *phrase_node_json(const ChainResult *report, size_t index) {
     cJSON *ideas = cJSON_CreateArray();
     bool ok = node && subphrases && ideas;
     for (size_t k = 0; ok && k < phrase->subphrase_count; k++) {
-        ok = json_append(subphrases, subphrase_node_json(report, &report->subphrases[phrase->first_subphrase + k]));
+        ok = common_json_append(subphrases, subphrase_node_json(report, &report->subphrases[phrase->first_subphrase + k]));
     }
     for (size_t k = 0; ok && k < phrase->idea_count; k++) {
         if (!idea_in_subphrase(report, phrase, phrase->first_idea + k)) {
-            ok = json_append(ideas, idea_node_json(&report->ideas[phrase->first_idea + k]));
+            ok = common_json_append(ideas, idea_node_json(&report->ideas[phrase->first_idea + k]));
         }
     }
     bool taken_subphrases = false;
     bool taken_ideas = false;
-    if (!(ok && json_add(node, "level", cJSON_CreateString("phrase")) &&
-          json_add(node, "phrase", cJSON_CreateNumber((double)index)) &&
-          json_add(node, "measures", doc_measures_json(phrase->first_measure, phrase->end_measure)) &&
-          json_add(node, "length", cJSON_CreateNumber(phrase->length_measures)) &&
-          json_add(node, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
-          (taken_subphrases = true, json_add(node, "subphrases", subphrases)) &&
-          (taken_ideas = true, json_add(node, "ideas", ideas)))) {
+    if (!(ok && common_json_add(node, "level", cJSON_CreateString("phrase")) &&
+          common_json_add(node, "phrase", cJSON_CreateNumber((double)index)) &&
+          common_json_add(node, "measures", doc_measures_json(phrase->first_measure, phrase->end_measure)) &&
+          common_json_add(node, "length", cJSON_CreateNumber(phrase->length_measures)) &&
+          common_json_add(node, "cadence", phrase->has_cadence ? cJSON_CreateNumber((double)phrase->cadence) : cJSON_CreateNull()) &&
+          (taken_subphrases = true, common_json_add(node, "subphrases", subphrases)) &&
+          (taken_ideas = true, common_json_add(node, "ideas", ideas)))) {
         if (!taken_subphrases) {
             cJSON_Delete(subphrases);
         }
@@ -396,7 +396,7 @@ static cJSON *phrase_node_json(const ChainResult *report, size_t index) {
 static cJSON *section_phrases_json(const ChainResult *report, const AnalysisSection *section) {
     cJSON *phrases = cJSON_CreateArray();
     for (size_t k = 0; phrases && k < section->phrase_count; k++) {
-        if (!json_append(phrases, phrase_node_json(report, section->first_phrase + k))) {
+        if (!common_json_append(phrases, phrase_node_json(report, section->first_phrase + k))) {
             cJSON_Delete(phrases);
             return NULL;
         }
@@ -406,18 +406,18 @@ static cJSON *section_phrases_json(const ChainResult *report, const AnalysisSect
 
 static bool add_section_fields(cJSON *claim, const ChainResult *report, const AnalysisSection *section,
                                size_t index) {
-    return json_add(claim, "level", cJSON_CreateString("section")) && json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
-           json_add(claim, "measures", doc_measures_json(section->first_measure, section->last_measure)) &&
-           json_add(claim, "key", section->in_region ? cJSON_CreateString(report->key_regions[section->region].label)
+    return common_json_add(claim, "level", cJSON_CreateString("section")) && common_json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
+           common_json_add(claim, "measures", doc_measures_json(section->first_measure, section->last_measure)) &&
+           common_json_add(claim, "key", section->in_region ? cJSON_CreateString(report->key_regions[section->region].label)
                                                 : cJSON_CreateNull()) &&
-           json_add(claim, "region", section->in_region ? cJSON_CreateNumber((double)section->region) : cJSON_CreateNull()) &&
-           json_add(claim, "closed", cJSON_CreateBool(section->closed)) &&
-           json_add(claim, "cadence", section->has_cadence ? cJSON_CreateNumber((double)section->cadence) : cJSON_CreateNull()) &&
-           json_add(claim, "returns_from",
+           common_json_add(claim, "region", section->in_region ? cJSON_CreateNumber((double)section->region) : cJSON_CreateNull()) &&
+           common_json_add(claim, "closed", cJSON_CreateBool(section->closed)) &&
+           common_json_add(claim, "cadence", section->has_cadence ? cJSON_CreateNumber((double)section->cadence) : cJSON_CreateNull()) &&
+           common_json_add(claim, "returns_from",
                section->has_return ? cJSON_CreateNumber((double)section->returns_from) : cJSON_CreateNull()) &&
-           json_add(claim, "return",
+           common_json_add(claim, "return",
                section->has_return ? cJSON_CreateNumber((double)section->return_index) : cJSON_CreateNull()) &&
-           json_add(claim, "phrases", section_phrases_json(report, section));
+           common_json_add(claim, "phrases", section_phrases_json(report, section));
 }
 
 /* One claim per section, labelled with its letter: the span runs from its first phrase's start to its last phrase's
@@ -449,12 +449,12 @@ static cJSON *section_json(DocBuild *build, const ImportedScore *notes, const Ch
 
 static cJSON *return_similarity_json(const AnalysisThematicReturn *item) {
     cJSON *object = cJSON_CreateObject();
-    if (!(object && json_add(object, "value", cJSON_CreateNumber(item->similarity)) &&
-          json_add(object, "contour", cJSON_CreateNumber(item->contour_score)) &&
-          json_add(object, "rhythm", cJSON_CreateNumber(item->rhythm_score)) &&
-          json_add(object, "window", cJSON_CreateNumber((double)item->window_length)) &&
-          json_add(object, "earlier_offset", cJSON_CreateNumber((double)item->earlier_offset)) &&
-          json_add(object, "later_offset", cJSON_CreateNumber((double)item->later_offset)))) {
+    if (!(object && common_json_add(object, "value", cJSON_CreateNumber(item->similarity)) &&
+          common_json_add(object, "contour", cJSON_CreateNumber(item->contour_score)) &&
+          common_json_add(object, "rhythm", cJSON_CreateNumber(item->rhythm_score)) &&
+          common_json_add(object, "window", cJSON_CreateNumber((double)item->window_length)) &&
+          common_json_add(object, "earlier_offset", cJSON_CreateNumber((double)item->earlier_offset)) &&
+          common_json_add(object, "later_offset", cJSON_CreateNumber((double)item->later_offset)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -476,13 +476,13 @@ static cJSON *return_json(DocBuild *build, const ImportedScore *notes, const Cha
     cJSON *claim = doc_claim_json_with(build, framework_name(standard_form_framework()), notes, later->note_ids,
                                    later->note_id_count, start, end, "thematic-return",
                                    cJSON_CreateNumber(1.0 - item->similarity));
-    if (!(claim && json_add(claim, "earlier_theme", cJSON_CreateNumber((double)item->earlier_theme)) &&
-          json_add(claim, "later_theme", cJSON_CreateNumber((double)item->later_theme)) &&
-          json_add(claim, "earlier_section", cJSON_CreateNumber((double)item->earlier_section)) &&
-          json_add(claim, "later_section", cJSON_CreateNumber((double)item->later_section)) &&
-          json_add(claim, "earlier", doc_measures_json(earlier->first_measure, earlier->last_measure)) &&
-          json_add(claim, "later", doc_measures_json(later->first_measure, later->last_measure)) &&
-          json_add(claim, "similarity", return_similarity_json(item)))) {
+    if (!(claim && common_json_add(claim, "earlier_theme", cJSON_CreateNumber((double)item->earlier_theme)) &&
+          common_json_add(claim, "later_theme", cJSON_CreateNumber((double)item->later_theme)) &&
+          common_json_add(claim, "earlier_section", cJSON_CreateNumber((double)item->earlier_section)) &&
+          common_json_add(claim, "later_section", cJSON_CreateNumber((double)item->later_section)) &&
+          common_json_add(claim, "earlier", doc_measures_json(earlier->first_measure, earlier->last_measure)) &&
+          common_json_add(claim, "later", doc_measures_json(later->first_measure, later->last_measure)) &&
+          common_json_add(claim, "similarity", return_similarity_json(item)))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -503,20 +503,20 @@ cJSON *doc_form_json(DocBuild *build, const ImportedScore *notes, const ChainRes
     for (size_t g = 0; ok && g < reading_group_count(build->reading); g++) {
         const ReadingGroup *held = reading_group_at(build->reading, g);
         if (held->kind == READING_GROUP_SECTION) {
-            ok = json_append(sections, section_json(build, notes, report, held->detail));
+            ok = common_json_append(sections, section_json(build, notes, report, held->detail));
         }
     }
     for (size_t r = 0; ok && r < report->thematic_return_count; r++) {
-        ok = json_append(returns, return_json(build, notes, report, &report->thematic_returns[r]));
+        ok = common_json_append(returns, return_json(build, notes, report, &report->thematic_returns[r]));
     }
     bool taken_sections = false;
     bool taken_returns = false;
-    if (!(ok && json_add(form, "level", cJSON_CreateString("form")) &&
-          json_add(form, "measures",
+    if (!(ok && common_json_add(form, "level", cJSON_CreateString("form")) &&
+          common_json_add(form, "measures",
               doc_measures_json(report->sections[0].first_measure,
                             report->sections[report->section_count - 1].last_measure)) &&
-          (taken_sections = true, json_add(form, "sections", sections)) &&
-          (taken_returns = true, json_add(form, "returns", returns)))) {
+          (taken_sections = true, common_json_add(form, "sections", sections)) &&
+          (taken_returns = true, common_json_add(form, "returns", returns)))) {
         if (!taken_sections) {
             cJSON_Delete(sections);
         }
@@ -539,10 +539,10 @@ static cJSON *repeat_json(DocBuild *build, const ImportedScore *notes, const Ana
     Rational end = doc_rational(build, repeat->end.num, repeat->end.den);
     cJSON *claim = doc_claim_json_with(build, framework_name(standard_form_framework()), notes, repeat->note_ids,
                                    repeat->note_id_count, start, end, kind, cJSON_CreateNumber(0.0));
-    if (!(claim && json_add(claim, "kind", cJSON_CreateString(kind)) &&
-          json_add(claim, "earlier", doc_measures_json(repeat->earlier_first, repeat->earlier_last)) &&
-          json_add(claim, "later", doc_measures_json(repeat->later_first, repeat->later_last)) &&
-          json_add(claim, "transposition", cJSON_CreateNumber((double)repeat->transposition)))) {
+    if (!(claim && common_json_add(claim, "kind", cJSON_CreateString(kind)) &&
+          common_json_add(claim, "earlier", doc_measures_json(repeat->earlier_first, repeat->earlier_last)) &&
+          common_json_add(claim, "later", doc_measures_json(repeat->later_first, repeat->later_last)) &&
+          common_json_add(claim, "transposition", cJSON_CreateNumber((double)repeat->transposition)))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -553,7 +553,7 @@ static cJSON *repeat_json(DocBuild *build, const ImportedScore *notes, const Ana
 cJSON *doc_repeats_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < report->repeat_count; i++) {
-        if (!json_append(list, repeat_json(build, notes, &report->repeats[i]))) {
+        if (!common_json_append(list, repeat_json(build, notes, &report->repeats[i]))) {
             cJSON_Delete(list);
             return NULL;
         }

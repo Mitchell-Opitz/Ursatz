@@ -6,12 +6,12 @@ The structure of the analysis JSON document: top level, metadata, meter, sources
 GUI and corpus statistics read. The JSON Schema is
 [`schema/analysis-document.v13.schema.json`](../schema/analysis-document.v13.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render_result` from
-`<ursatz_analyzer/analysis_document.h>`. The document is an export of an `AnalyzerResult`
+`<ursatz_analyzer/analyzer_api.h>`. The document is an export of an `AnalyzerResult`
 (see [analysis-result.md](analysis-result.md)).
 
 ## Where it comes from
 
-The document is an export of the Analyzer's reading (R-631). `analysis_document_build_from_reading(path, reading, score, knowledge, &out)` takes the reading `analyzer_result_reading` gives; its detail is the chain the result ran. The keys, chords, cadences, phrases, themes, form and motives sections walk the reading's claims of that kind (regions, cadences, the groups of kind phrase, theme and section, the occurrence that opens each motive family) and print each claim's element of the chain's result, in the result's order. The chords section prints every chord entry of the chain, so an entry the chain read as "no match", which has no chord claim, keeps its place; every other area reads the chain's result itself. A reading with no detail (one read from a file) or from a chain that did not run every stage is `ANALYZER_ERR_ARGUMENT`. The text is byte for byte what the report form gave (P62 B10: `test_document_bytes_smoke` pins the text of Bach 114, `test_document_snapshots` the five pieces).
+The document is an export of the Analyzer's reading (R-631). `analysis_document_build_from_reading(path, reading, score, knowledge, &out)` takes the reading `analyzer_result_reading` gives; its detail is the chain the result ran. The keys, chords, cadences, phrases, themes, form and motives sections walk the reading's claims of that kind (regions, cadences, the groups of kind phrase, theme and section, the occurrence that opens each motive family) and print each claim's element of the chain's result, in the result's order. The chords section prints every chord entry of the chain, so an entry the chain read as "no match", which has no chord claim, keeps its place; every other area reads the chain's result itself. A reading with no detail (one read from a file) or from a chain that did not run every stage is `URSATZ_ERR_REQUEST`. The text is byte for byte what the report form gave (P62 B10: `test_document_bytes_smoke` pins the text of Bach 114, `test_document_snapshots` the five pieces).
 
 ## The code
 
@@ -75,7 +75,7 @@ phrases.
 | --- | --- | --- |
 | `source_file` | string | Input file name without its directory. |
 | `analyzer_version` | string | Ursatz-Analyzer version, from the CMake project version. |
-| `producer_key` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`ursatz_analyzer_producer_key()`). Version 11 and older documents call it `ursatz_commit`. |
+| `producer_key` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`analyzer_producer_key()`). Version 11 and older documents call it `ursatz_commit`. |
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
 | `input` | object | The input format and what it states or leaves to inference. See below. |

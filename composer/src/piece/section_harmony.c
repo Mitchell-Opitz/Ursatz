@@ -101,12 +101,12 @@ PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony 
         plan_meter_bar_length(meter, &bar_length);
         Rational bars;
         long length = rational_div(span.length, bar_length, &bars) == RATIONAL_OK && bars.den == 1 ? (long)bars.num : 0;
-        ComposerError error;
+        UrsatzError error;
         memset(&error, 0, sizeof(error));
-        ComposerStatus read = request_read_chords(list, "/chords", "the section", 1, meter, key, length, chords, numerals, CHORDS_MAX, &count,
+        UrsatzStatus read = request_read_chords(list, "/chords", "the section", 1, meter, key, length, chords, numerals, CHORDS_MAX, &count,
                                                   &error);
         cJSON_Delete(list);
-        if (read != COMPOSER_OK) {
+        if (read != URSATZ_OK) {
             refuse(message, message_size, "%s", error.message);
             return PIECE_ERR_BAD_REQUEST;
         }

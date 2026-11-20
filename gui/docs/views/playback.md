@@ -81,7 +81,8 @@ registry.mapProgram(73, "my-source"); // MIDI program 73 plays it
 registry.setPartSource(2, "my-source"); // or override one part
 ```
 
-The registry is `frontend/public/instruments.js` (global `Instruments`), the
+The registry is `frontend/public/score/instruments.js` (`Instruments`), the
+controls, the audio output and the cursor are `score/transport.js` (the workspace creates it), the
 built-in sounds are `sound-sources.js` (`gm-piano`, the default, and
 `basic-synth`, the fallback that needs no files), the timing is
 `playback-engine.js` (a timeline with tempo regions and a transport that
@@ -113,14 +114,14 @@ in the motif's stored key (C major or C minor). Nothing is saved.
   (`analyzer_playback_to_json`: `tempo_source`, `tempo`, `parts`, `end`,
   `notes`). Positions are whole notes from the pickup start, so the first note
   is at `[0, 1]`. The backend writes the MIDI bytes to
-  `materials/.render-tmp/<random>.mid` (the Analyzer imports by path), reads
+  `cache/tmp/<random>.mid` (the Analyzer imports by path), reads
   it and deletes it; nothing is cached for this route.
 - `GET /api/materials/items/<id>/versions/<n>/score?key=` answers MusicXML
   and `.../playback?key=` answers the playback JSON for that stored version;
   `key` defaults to the motif's own key, and a version without degrees is 404.
   Both come from one render kept under the version in
-  `items/<id>/v<n>/render/`: `score.musicxml`, `motif.mid` and `render.json`
-  `{api_version, composer_version, ursatz_commit, render_key, tempo}` (the three
+  `cache/renders/<id>/v<n>/`: `score.musicxml`, `motif.mid` and `render.json`
+  (format `ursatz-render`: `api_version`, `composer_version`, `composition_key`, `render_key`, `tempo`) (the three
   versions from `composer_api_versions`). A request with the same key, tempo
   and Composer build and producer key reads these files, an older cache missing once, so the Composer runs at most once
   per version and key.

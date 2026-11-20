@@ -47,11 +47,11 @@ static const char *region_source_name(AnalysisRegionSource source) {
 /* One key region: the shared claim (its span runs barline to barline) and the key's fields. */
 static cJSON *key_region_json(DocBuild *build, const ImportedScore *notes, const AnalysisKeyRegion *region, size_t index) {
     cJSON *claim = region_span_claim(build, notes, region, region->label, cJSON_CreateNumber(region->uncertainty));
-    if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
-          json_add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
-          json_add(claim, "material", cJSON_CreateString(region->material->id)) &&
-          json_add(claim, "measures", doc_measures_json(region->first_measure, region->last_measure)) &&
-          json_add(claim, "source", cJSON_CreateString(region_source_name(region->source))))) {
+    if (!(claim && common_json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
+          common_json_add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
+          common_json_add(claim, "material", cJSON_CreateString(region->material->id)) &&
+          common_json_add(claim, "measures", doc_measures_json(region->first_measure, region->last_measure)) &&
+          common_json_add(claim, "source", cJSON_CreateString(region_source_name(region->source))))) {
         cJSON_Delete(claim);
         return NULL;
     }
@@ -65,7 +65,7 @@ static cJSON *home_region_indices_json(const ChainResult *report) {
     for (size_t i = 0; indices && i < report->key_region_count; i++) {
         const AnalysisKeyRegion *region = &report->key_regions[i];
         if (region->tonic_pitch_class == home->tonic_pitch_class && region->material == home->material &&
-            !json_append(indices, cJSON_CreateNumber((double)i))) {
+            !common_json_append(indices, cJSON_CreateNumber((double)i))) {
             cJSON_Delete(indices);
             return NULL;
         }
@@ -77,10 +77,10 @@ static cJSON *home_key_json(DocBuild *build, const ChainResult *report) {
     const AnalysisKeyRegion *home = &report->key_regions[report->home_region];
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "rule", cJSON_CreateString(HOME_KEY_RULE)) &&
-          json_add(object, "label", cJSON_CreateString(home->label)) &&
-          json_add(object, "region_indices", home_region_indices_json(report)) &&
-          json_add(object, "duration",
+        !(common_json_add(object, "rule", cJSON_CreateString(HOME_KEY_RULE)) &&
+          common_json_add(object, "label", cJSON_CreateString(home->label)) &&
+          common_json_add(object, "region_indices", home_region_indices_json(report)) &&
+          common_json_add(object, "duration",
                    doc_rational_json(doc_rational(build, report->home_duration.num, report->home_duration.den))))) {
         cJSON_Delete(object);
         return NULL;
@@ -100,16 +100,16 @@ cJSON *doc_keys_json(DocBuild *build, const ImportedScore *notes, const ChainRes
     }
     for (size_t r = 0; r < reading_region_count(build->reading); r++) {
         size_t i = reading_region_at(build->reading, r)->detail;
-        if (!json_append(regions, key_region_json(build, notes, &report->key_regions[i], i))) {
+        if (!common_json_append(regions, key_region_json(build, notes, &report->key_regions[i], i))) {
             cJSON_Delete(keys);
             cJSON_Delete(regions);
             return NULL;
         }
     }
     bool found = report->key_region_count > 0;
-    if (!(json_add(keys, "regions", regions) && json_add(keys, "home_key", found ? home_key_json(build, report) : cJSON_CreateNull()) &&
-          json_add(keys, "opening_region", found ? cJSON_CreateNumber(0) : cJSON_CreateNull()) &&
-          json_add(keys, "closing_region",
+    if (!(common_json_add(keys, "regions", regions) && common_json_add(keys, "home_key", found ? home_key_json(build, report) : cJSON_CreateNull()) &&
+          common_json_add(keys, "opening_region", found ? cJSON_CreateNumber(0) : cJSON_CreateNull()) &&
+          common_json_add(keys, "closing_region",
               found ? cJSON_CreateNumber((double)(report->key_region_count - 1)) : cJSON_CreateNull()))) {
         cJSON_Delete(keys);
         return NULL;
@@ -150,12 +150,12 @@ static bool add_change_fields(cJSON *claim, const ChainResult *report, const Ana
                               const char *to_name) {
     const AnalysisKeyRegion *from = &report->key_regions[change->from_region];
     const AnalysisKeyRegion *to = &report->key_regions[change->to_region];
-    return json_add(claim, "extent", cJSON_CreateString(extent_name(change->extent))) &&
-           json_add(claim, "cadence_confirmed", cJSON_CreateBool(change->cadence_confirmed)) &&
-           json_add(claim, "from_region", cJSON_CreateNumber((double)change->from_region)) &&
-           json_add(claim, to_name, cJSON_CreateNumber((double)change->to_region)) &&
-           json_add(claim, "from_key", cJSON_CreateString(from->label)) &&
-           json_add(claim, "to_key", cJSON_CreateString(to->label));
+    return common_json_add(claim, "extent", cJSON_CreateString(extent_name(change->extent))) &&
+           common_json_add(claim, "cadence_confirmed", cJSON_CreateBool(change->cadence_confirmed)) &&
+           common_json_add(claim, "from_region", cJSON_CreateNumber((double)change->from_region)) &&
+           common_json_add(claim, to_name, cJSON_CreateNumber((double)change->to_region)) &&
+           common_json_add(claim, "from_key", cJSON_CreateString(from->label)) &&
+           common_json_add(claim, "to_key", cJSON_CreateString(to->label));
 }
 
 /* One claim per tonicization: a brief excursion to another key that returns to the one before it. Its span is
@@ -180,7 +180,7 @@ cJSON *doc_tonicizations_json(DocBuild *build, const ImportedScore *notes, const
             cJSON_Delete(list);
             return NULL;
         }
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }
@@ -215,16 +215,16 @@ cJSON *doc_modulations_json(DocBuild *build, const ImportedScore *notes, const C
         free(label);
         bool has_reading = change_has_pivot_reading(change);
         if (!(claim && add_change_fields(claim, report, change, "to_region") &&
-              json_add(claim, "type", cJSON_CreateString(change->has_pivot ? "pivot" : "direct")) &&
-              json_add(claim, "is_return", cJSON_CreateBool(change->is_return)) &&
-              json_add(claim, "pivot_chord_index",
+              common_json_add(claim, "type", cJSON_CreateString(change->has_pivot ? "pivot" : "direct")) &&
+              common_json_add(claim, "is_return", cJSON_CreateBool(change->is_return)) &&
+              common_json_add(claim, "pivot_chord_index",
                   has_reading ? cJSON_CreateNumber((double)pivot_index) : cJSON_CreateNull()))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
         }
         pivot_index += has_reading ? 1 : 0;
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }
@@ -259,20 +259,20 @@ cJSON *doc_pivot_chords_json(DocBuild *build, const ImportedScore *notes, const 
                                   doc_rational(build, entry->end.num, entry->end.den), label, pivot->confidence)
                   : NULL;
         free(label);
-        if (!(claim && json_add(claim, "modulation_index", cJSON_CreateNumber((double)this_modulation)) &&
-              json_add(claim, "chord_index", cJSON_CreateNumber((double)change->pivot_entry)) &&
-              json_add(claim, "root", cJSON_CreateString(pivot->root)) &&
-              json_add(claim, "quality", cJSON_CreateString(pivot->quality)) &&
-              json_add(claim, "bass", cJSON_CreateString(pivot->bass)) &&
-              json_add(claim, "inversion",
+        if (!(claim && common_json_add(claim, "modulation_index", cJSON_CreateNumber((double)this_modulation)) &&
+              common_json_add(claim, "chord_index", cJSON_CreateNumber((double)change->pivot_entry)) &&
+              common_json_add(claim, "root", cJSON_CreateString(pivot->root)) &&
+              common_json_add(claim, "quality", cJSON_CreateString(pivot->quality)) &&
+              common_json_add(claim, "bass", cJSON_CreateString(pivot->bass)) &&
+              common_json_add(claim, "inversion",
                   pivot->inversion >= 0 ? cJSON_CreateNumber(pivot->inversion) : cJSON_CreateNull()) &&
-              json_add(claim, "from_key", cJSON_CreateString(report->key_regions[change->from_region].label)) &&
-              json_add(claim, "to_key", cJSON_CreateString(report->key_regions[change->to_region].label)))) {
+              common_json_add(claim, "from_key", cJSON_CreateString(report->key_regions[change->from_region].label)) &&
+              common_json_add(claim, "to_key", cJSON_CreateString(report->key_regions[change->to_region].label)))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;
         }
-        if (!json_append(list, claim)) {
+        if (!common_json_append(list, claim)) {
             cJSON_Delete(list);
             return NULL;
         }
@@ -329,14 +329,14 @@ static cJSON *disagreement_json(const DocBuild *build, const char *scope, long s
                  region->label);
     }
     cJSON *note = cJSON_CreateObject();
-    if (note && !(json_add(note, "kind", cJSON_CreateString("key_signature_disagreement")) &&
-                  json_add(note, "scope", cJSON_CreateString(scope)) &&
-                  json_add(note, "signature_index",
+    if (note && !(common_json_add(note, "kind", cJSON_CreateString("key_signature_disagreement")) &&
+                  common_json_add(note, "scope", cJSON_CreateString(scope)) &&
+                  common_json_add(note, "signature_index",
                       signature_index >= 0 ? cJSON_CreateNumber((double)signature_index) : cJSON_CreateNull()) &&
-                  json_add(note, "region_index", cJSON_CreateNumber((double)region_index)) &&
-                  json_add(note, "notated", event ? cJSON_CreateString(notated) : cJSON_CreateNull()) &&
-                  json_add(note, "detected", cJSON_CreateString(region->label)) &&
-                  json_add(note, "message", cJSON_CreateString(message)))) {
+                  common_json_add(note, "region_index", cJSON_CreateNumber((double)region_index)) &&
+                  common_json_add(note, "notated", event ? cJSON_CreateString(notated) : cJSON_CreateNull()) &&
+                  common_json_add(note, "detected", cJSON_CreateString(region->label)) &&
+                  common_json_add(note, "message", cJSON_CreateString(message)))) {
         cJSON_Delete(note);
         return NULL;
     }
@@ -368,12 +368,12 @@ cJSON *doc_notes_json(DocBuild *build, const ImportedScore *notes, const ChainRe
         size_t region_index = 0;
         const AnalysisKeyRegion *region = region_at(build, report, event->position.value, &region_index);
         if (region && !key_fits_signature(region, event->sharps_flats) &&
-            !json_append(list, disagreement_json(build, "region_at_signature", (long)i, event, region_index, region))) {
+            !common_json_append(list, disagreement_json(build, "region_at_signature", (long)i, event, region_index, region))) {
             cJSON_Delete(list);
             return NULL;
         }
     }
-    if (!home_fits_any && !json_append(list, disagreement_json(build, "home_key", -1, NULL, report->home_region, home))) {
+    if (!home_fits_any && !common_json_append(list, disagreement_json(build, "home_key", -1, NULL, report->home_region, home))) {
         cJSON_Delete(list);
         return NULL;
     }

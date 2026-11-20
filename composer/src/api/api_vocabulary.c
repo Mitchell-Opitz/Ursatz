@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -100,10 +101,10 @@ void api_choice_join(const ApiChoice *table, const char *separator, const char *
     }
 }
 
-ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char *text) {
+UrsatzStatus api_fail_meter(UrsatzError *error, const char *path, const char *text) {
     char list[64];
     api_choice_list(API_METERS, list, sizeof list);
-    return api_fail(error, COMPOSER_ERR_REQUEST, path, "meter '%s' is not supported; use %s", text, list);
+    return api_fail(error, URSATZ_ERR_REQUEST, path, "meter '%s' is not supported; use %s", text, list);
 }
 
 /* --- labels of the lists the library holds ----------------------------------------------------------------- */
@@ -580,6 +581,51 @@ static bool add_preferences(cJSON *root) {
 }
 
 /* The sizes the requests are limited to, for the help of a client that shows them. */
+/* How far a theme strays from its motif (Composer API 1.9; the words of api_development_name): word, label and the help the editor shows. */
+static bool add_theme_developments(cJSON *root) {
+    static const struct {
+        const char *word;
+        const char *label;
+        const char *help;
+    } DEVELOPMENTS[] = {
+        {"melody", "Melody", "The theme repeats the motif and stays close to it (Schoenberg ch. XI)."},
+        {"balanced", "Balanced", "The theme repeats and develops by turns; what a request without the member reads as."},
+        {"theme", "Theme", "The theme develops the motif, with the construction a theme of that kind has (Schoenberg ch. XI)."},
+    };
+    cJSON *list = add_list(root, "theme_developments");
+    for (size_t i = 0; list && i < sizeof(DEVELOPMENTS) / sizeof(DEVELOPMENTS[0]); i++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!entry || !cJSON_AddStringToObject(entry, "value", DEVELOPMENTS[i].word) || !cJSON_AddStringToObject(entry, "label", DEVELOPMENTS[i].label) ||
+            !cJSON_AddStringToObject(entry, "help", DEVELOPMENTS[i].help) || !cJSON_AddItemToArray(list, entry)) {
+            cJSON_Delete(entry);
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/* The lanes of a piece version a regenerate or a set of variations may name (a section's lane; "all" is every one). */
+static bool add_lanes(cJSON *root) {
+    static const char *const LANES[] = {"harmony", "bass", "melody", "inner", "all"};
+    cJSON *list = add_list(root, "lanes");
+    for (size_t i = 0; list && i < sizeof(LANES) / sizeof(LANES[0]); i++) {
+        char label[16];
+        snprintf(label, sizeof(label), "%c%s", (char)(LANES[i][0] - 'a' + 'A'), LANES[i] + 1);
+        if (!add_choice(list, LANES[i], label)) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/* The bars a theme may have with a construction, 3 to 16 (API_THEME_BARS), and whether it may have a pickup (it may not). */
+static bool add_construction_limits(cJSON *limits) {
+    cJSON *bars = cJSON_AddObjectToObject(limits, "construction_bars");
+    size_t count = api_choice_count(API_THEME_BARS);
+    return bars && count > 0 && cJSON_AddNumberToObject(bars, "min", atoi(API_THEME_BARS[0].value)) &&
+           cJSON_AddNumberToObject(bars, "max", atoi(API_THEME_BARS[count - 1].value)) && cJSON_AddBoolToObject(limits, "construction_pickup", 0);
+}
+
 static bool add_limits(cJSON *root) {
     cJSON *limits = cJSON_AddObjectToObject(root, "limits");
     return limits && cJSON_AddNumberToObject(limits, "motive_notes", MOTIVE_MAX_NOTES) &&
@@ -591,7 +637,11 @@ static bool add_limits(cJSON *root) {
            cJSON_AddNumberToObject(limits, "tempo_min", (double)API_TEMPO_MIN) &&
            cJSON_AddNumberToObject(limits, "tempo_max", (double)API_TEMPO_MAX) &&
            cJSON_AddNumberToObject(limits, "piece_sections", PIECE_STRUCTURE_MAX_SECTIONS) &&
-           cJSON_AddNumberToObject(limits, "piece_beats", (double)API_PIECE_BEATS_MAX) && add_seed_max(limits) &&
+           cJSON_AddNumberToObject(limits, "piece_beats", (double)API_PIECE_BEATS_MAX) &&
+           cJSON_AddNumberToObject(limits, "theme_motives", API_THEME_MOTIVES_MAX) &&
+           cJSON_AddNumberToObject(limits, "theme_extensions", SECTION_CONSTRUCTION_EXTENSIONS) &&
+           cJSON_AddNumberToObject(limits, "piece_variations", PIECE_VARIATIONS_MAX) &&
+           cJSON_AddNumberToObject(limits, "harmony_cells", API_HARMONY_CELLS_MAX) && add_construction_limits(limits) && add_seed_max(limits) &&
            add_preference_limits(limits);
 }
 
@@ -605,7 +655,7 @@ bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials)
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
-           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) &&
+           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_lanes(root) &&
            add_preferences(root) && add_limits(root);
 }
 
@@ -644,17 +694,17 @@ static bool add_relations(cJSON *root, const KnowledgeSnapshot *knowledge) {
     return list != NULL;
 }
 
-ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
+UrsatzStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
     if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_schemas(root, &materials)) {
         cJSON_Delete(root);
-        return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     return api_respond_json(out, root);
 }

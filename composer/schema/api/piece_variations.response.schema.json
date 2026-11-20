@@ -228,7 +228,8 @@
                 "no_parallels",
                 "step",
                 "leading_tone",
-                "held"
+                "held",
+                "rules"
               ],
               "additionalProperties": false,
               "properties": {
@@ -247,6 +248,35 @@
                 "held": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "label",
+                      "ok"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "enum": [
+                          "progression",
+                          "no_parallels",
+                          "step",
+                          "leading_tone"
+                        ]
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "ok": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "description": "The four rules, each with the sentence it is shown as and whether it held (API 4.2)."
                 }
               }
             }
@@ -374,7 +404,9 @@
         "cadence",
         "heard",
         "fill",
-        "source"
+        "source",
+        "start_text",
+        "length_text"
       ],
       "additionalProperties": false,
       "properties": {
@@ -455,6 +487,14 @@
             "null"
           ],
           "description": "The harmony the request gave the section, as asked: its numerals, \"schema <name>\" or the chord bars; null for none (R-610)."
+        },
+        "start_text": {
+          "type": "string",
+          "description": "Where the section starts in the request's meter: \"bar 3\" at a bar's first beat, else \"bar 3 beat 2\" (API 4.2)."
+        },
+        "length_text": {
+          "type": "string",
+          "description": "The section's length in the request's meter: \"2 bars\", \"6 beats\", \"1 bar 2 beats\" (API 4.2)."
         }
       },
       "description": "A section of a form whose sections the request gives (the game loop)."
@@ -480,7 +520,9 @@
         "part",
         "repeat_of",
         "upbeat",
-        "connective"
+        "connective",
+        "start_text",
+        "length_text"
       ],
       "additionalProperties": false,
       "properties": {
@@ -669,6 +711,14 @@
             "null"
           ],
           "description": "The harmony the request gave the section, as asked: its numerals, \"schema <name>\" or the chord bars; null for none (R-610)."
+        },
+        "start_text": {
+          "type": "string",
+          "description": "Where the section starts in the request's meter: \"bar 3\" at a bar's first beat, else \"bar 3 beat 2\" (API 4.2)."
+        },
+        "length_text": {
+          "type": "string",
+          "description": "The section's length in the request's meter: \"2 bars\", \"6 beats\", \"1 bar 2 beats\" (API 4.2)."
         }
       },
       "description": "A section of the size of a form with sizes."

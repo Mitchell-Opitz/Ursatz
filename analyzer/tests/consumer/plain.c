@@ -1,16 +1,12 @@
-/* A consumer that links only ursatz_analyzer: every public header, and nothing of the chain's internals. */
-#include <ursatz_analyzer/analysis_document.h>
-#include <chain/chain_result.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/chord_sequence.h>
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/motive_links.h>
-#include <ursatz_analyzer/playback.h>
-#include <ursatz_analyzer/score_export.h>
-#include <ursatz_analyzer/similar_material.h>
-#include <ursatz_analyzer/staleness.h>
-#include "theory/style/style_labels.h"
-#include <ursatz_analyzer/style_profile.h>
+/* A consumer that links only ursatz_analyzer: the one API header, and nothing of the chain's internals. */
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/chord_sequence.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer_internal/motive_links.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/similar_material.h>
+#include <ursatz_analyzer_internal/style_profile.h>
 
 int analyzer_consumer_plain(void) { return 0; }

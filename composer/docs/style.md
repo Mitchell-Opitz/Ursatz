@@ -179,7 +179,7 @@ through the melody, so a melody weight reaches the harmony it measures a little.
 A style says what a corpus is like; seeding starts a piece from a passage of it. The corpus is the output directory of
 `ursatz-analyzer --corpus <folder> --out <dir>`, the same one the Analyzer's `--similar` searches. The Composer does not
 search it (R-619): the Analyzer finds the passages (`analyzer_corpus_passages_like`, `analyzer_corpus_passages_numerals`,
-`<ursatz_analyzer/corpus_passages.h>`, see the Analyzer's `docs/corpus-passages.md`) and the request gives them inline,
+`<ursatz_analyzer/analyzer_api.h>`, see the Analyzer's `docs/corpus-passages.md`) and the request gives them inline,
 ranked best first, as `corpus_passages` (`schema/api/corpus-passages.schema.json`). The command line keeps its flags and does
 the finding itself, so what follows reads the same for it.
 
@@ -217,7 +217,7 @@ command line prints with the corpus directory (`N stale documents in '<dir>' (..
 
 A corpus with no passage scoring 1/2 or more, or none analyzed, exits 2 with `no passage of the corpus ... is similar to ...`
 and nothing is written (the command line finds that out before the request; a request with no passage, or none with two notes
-in its first bar, is `COMPOSER_ERR_UNSATISFIABLE` at `/corpus_passages`). A passage that is not a MIDI or MusicXML file, or
+in its first bar, is `URSATZ_ERR_UNSATISFIABLE` at `/corpus_passages`). A passage that is not a MIDI or MusicXML file, or
 numerals the Analyzer cannot read, is a usage error; a directory that is not a corpus output is exit 2. Only one bar of melody is
 taken: for more, cut the passage into a file and give it to `plan --given-melody`.
 

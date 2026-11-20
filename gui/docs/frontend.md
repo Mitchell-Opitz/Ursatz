@@ -2,26 +2,42 @@
 
 How the frontend is organized, the score layers and the score geometry. [Docs index](README.md).
 
-Plain static HTML, JS and CSS served by the backend from `frontend/public/`.
+Plain static HTML, CSS and JS modules served by the backend from `frontend/public/`.
 No framework or build pipeline. Theming lives entirely in `style.css` as CSS
 custom properties on `:root`, so a theme picker can swap colors without
-touching markup or `app.js`. Frontend logic makes no styling decisions.
+touching markup or the views. Frontend logic makes no styling decisions.
+
+## Modules
+
+The frontend is ES modules (R-652): `frontend/package.json` has `"type": "module"`, every file in `public/` has `import` and `export`, and no file reads another's top-level name. `index.html` loads the classic OSMD script (its UMD global) and then `<script type="module" src="main.js">`; the soundfont stays a script that `score/sound-sources.js` adds when the first sound is needed.
+
+| Folder | Holds |
+|---|---|
+| `core/` | `api.js` (the page's JSON calls), `request.js` (the one fetch of JSON, requests, base versions), `events.js` (one `EventSource`), `backend-jobs.js` (follows a job), `vocabulary.js` (the Composer's words, loaded once), `upload-queue.js`, `values.js` (`isPlainObject`, `isClaim`, `isClaimArray`, `text`, `wholeNumber`, `itemUrl`) and `dom.js` (`el(tag, cls, text)`): helpers exist once |
+| `models/` | the pure models, no DOM: `materials-model.js`, `themes-model.js`, `pieces-model.js`, `motive-links-model.js`, `piece-metadata.js`, `analysis-tabs.js`, `variant-tree.js`, `workspace-state.js`, `notation-panel.js`, `style-view.js` |
+| `views/` | the DOM views: `shell.js` (tools, sidebar, panels, boot), `library.js`, `analysis.js`, `collections.js`, `styles.js`, `library-parts.js` (the piece table and filter constants those share), `materials-view.js`, `materials-common.js`, `motif-detail-view.js`, `theme-detail-view.js`, `themes-view.js`, `pieces-view.js`, `variant-tree-view.js`, `motif-compare-view.js`, `subjects-view.js`, `motive-links-view.js`, `grouped-panel.js` (the sidebar's collapsible groups, used by `tags-panel.js` and `subjects-panel.js`) and `export-control.js` |
+| `score/` | the score workspace and what it draws and plays: `score-workspace.js`, `transport.js` (the playback transport: controls, audio, cursor, follow, seek, ending, tempo, the Sound menu), `score-layers.js`, `score-geometry.js`, `score-overlay.js`, `score-notes.js`, `inspector-model.js`, `inspector-view.js`, `playback-engine.js`, `instruments.js`, `sound-sources.js`, `reverb.js` |
+
+Views do not import the shell or each other in a cycle. What a view needs from the page (the content area, the move to the Analysis view, to another tool or to an item) it reads from `views/shell-context.js`, which the shell fills once at boot (`setShell({contentEl, showAnalysis, openItem, setActiveTool, activeToolId, leaveWorkspace, drawScore, fetchExportText, notifySubjectsChanged, setTagsActive, refreshTags, selectTool, showCollections})`); a test sets a fake. The pieces the materials views share are in `materials-common.js`, which the detail views, the themes and pieces views and the hub `materials-view.js` all import. `check-frontend-theory.sh` scans `public/` recursively for the music-theory names that live in the apps.
+
+The views follow the workshop instead of polling: `core/events.js` holds one `EventSource` on `/api/events`; the shell reloads the open Library table, materials view, collection view, subjects panel and motive link runs on the events that say what they show changed (300 ms debounce, and everything on `reset`).
 
 The Corpus tool is shown as "Collections" in the sidebar and view title; the
 API, module and route names stay `corpus`.
 
 The Library, a collection's detail and the add-pieces picker share one table
-(`buildPieceTable` in `app.js`): a select column, Title, Composer, Source,
+(`buildPieceTable` in `views/library-parts.js`): a select column, Title, Composer, Source,
 Tags and Actions.
 
 - **Cards**: name, a one-line description, "<n> pieces" and the top 3
-  composers and top 3 tags among the collection's pieces. The `⋯` button
+  composers and top 3 tags among the collection's pieces (from `GET /api/analyzer/groups?collection=<id>`). The `⋯` button
   opens Rename, Edit description and Delete (the confirm names the
   collection; its pieces are not deleted). The header form takes a name and
   an optional description.
 - **Detail**: the title and description each have an inline editor. The
-  table lists the members with search, Composer, Source and Tag filters
-  applied in the browser. Row actions are Open (analysis) and Remove from
+  table lists the members with search, Composer, Source and Tag filters:
+  the filters are queries on the collection (`GET /api/analyzer/pieces?collection=<id>&...`, the filter selects
+  come from `GET /api/analyzer/groups?collection=<id>`), the search narrows the answer in the page. Row actions are Open (analysis) and Remove from
   collection; checked rows can be removed together.
 - **Add pieces**: opens a picker with the Library filters (applied by the
   backend) over pieces not yet in the collection. `Add selected (n)` and
@@ -39,8 +55,8 @@ Tags and Actions.
   hover and focus, labelled "Build style from <row>"). It opens an inline name
   prompt prefilled with the default name ("Composer: X", "Source: X",
   "Tag: x" joined with " · ", "Collection: <name>" or "Selected pieces");
-  Build sends `POST /api/styles` and the button reads "Building..." until the
-  answer. A plain composer, source or tag filter builds from that filter;
+  Build sends `POST /api/styles` as a job (`BackendJobs.runJob`) and the button reads "Building..." until
+  the job ends. A plain composer, source or tag filter builds from that filter;
   Unassigned, Untagged and search have no backend form, so those build from
   the ids of the pieces shown. A failure shows under the button.
 - **Styles**: a section under the collection cards listing each style with
@@ -59,7 +75,7 @@ Tags and Actions.
 
 ## Export control
 
-`frontend/public/export-control.js` (global `ExportControl`) is the shared Export button. `ExportControl.create({fetchText,
+`frontend/public/views/export-control.js` (`ExportControl`) is the shared Export button. `ExportControl.create({fetchText,
 filename, withRange})` returns an element with Export, then Copy (clipboard, or a hidden textarea and
 `execCommand("copy")`; reads "Copied" for 2 s) and Download .txt, and From and To inputs when `withRange`. The
 helpers `exportFilename(name)` and `rangeQuery(from, to)` are pure. The control builds no line of the text: the
@@ -67,7 +83,7 @@ backend returns the Analyzer's export ([format](https://github.com/Mitchell-Opit
 
 ## Score layers
 
-`frontend/public/score-layers.js` (global `ScoreLayers`, no DOM) is the data
+`frontend/public/score/score-layers.js` (`ScoreLayers`, no DOM) is the data
 model of the claim layers drawn on the score. Each layer turns sections of
 the analysis document into items `{key, layerId, text, label, start, end, at,
 noteIds, style, claim, parent}`, with `start` and `end` in whole notes from
@@ -109,7 +125,7 @@ the next piece.
 
 ## Score geometry
 
-`frontend/public/score-geometry.js` (global `ScoreGeometry`) turns positions
+`frontend/public/score/score-geometry.js` (`ScoreGeometry`) turns positions
 into places on the rendered score. `extractLayout(osmd)` reads OSMD once into
 a plain layout, in CSS pixels from the OSMD SVG's top-left:
 `{unit, systems: [{index, top, bottom, left, right, measures: [{number, start,

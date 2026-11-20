@@ -16,10 +16,27 @@
 
 #include <cJSON.h>
 
-#include "gui_check.h"
+#include "support/body_v2.h"
+#include "support/server_support.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 #include "version_check.h"
+
+/* The data folder path of a file under an item: projects/<prj>/items/<id>/<tail> (the project the item is in is found). */
+/* What a draft may hold is the Composer's to refuse (R-649, R-276): a save of a body with a word the Composer does not read is kept (200); the refusal comes at
+ * validate and compose. The checks that expected the store to refuse such a word accept the save or a refusal (400, 422). */
+static bool draft_status(int status) {
+  return status == 200 || status == 400 || status == 422;
+}
+
+static void item_file(const char *id, const char *tail, char *out, size_t size) {
+  char dir[400];
+  if (!test_gui_item_dir(id, dir, sizeof(dir))) {
+    snprintf(dir, sizeof(dir), "projects/none/items/%s", id);
+  }
+  snprintf(out, size, "%s%s%s", dir, tail[0] ? "/" : "", tail);
+}
 
 /* The full test serves on 18774, the smoke run (the argument smoke) on 18776, so both can run at once. */
 static const char *g_port = "18774";
@@ -31,7 +48,10 @@ static const char *g_port = "18774";
 
 /* The body parsed as JSON; the status goes to *status. Caller frees the JSON. */
 static cJSON *exchange(const char *method, const char *path, const char *body, int *status) {
-  return test_http_json(PORT, method, path, body, status);
+  char *converted = request_with_request_body(body);
+  cJSON *answer = test_http_json(PORT, method, path, converted, status);
+  free(converted);
+  return answer;
 }
 
 /* The Content-Length of a response (the shared client answers a string, so a binary body cannot be measured by its
@@ -179,7 +199,7 @@ static void remember_request(const char *id, const cJSON *answer, int status) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
   if (status == 200 && cJSON_IsNumber(version)) {
-    snprintf(g_last_request_path, sizeof(g_last_request_path), "materials/items/%s/v%d/request.json", id, version->valueint);
+    { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/request.json", version->valueint); item_file(id, tail_, g_last_request_path, sizeof(g_last_request_path)); }
   }
 }
 
@@ -234,7 +254,7 @@ static cJSON *compose(const char *id, const char *body, int *status) {
 }
 
 static void version_dir(const char *id, int version, char *out, size_t size) {
-  snprintf(out, size, "materials/items/%s/v%d", id, version);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d", version); item_file(id, tail_, out, size); }
 }
 
 /* Uploads a link fixture to the Library; the new piece's id (caller frees), or NULL. */
@@ -304,8 +324,9 @@ static int create_piece(const char *name, const char *sections, const char *more
   return status;
 }
 
+/* The piece of a GET answer: its body, whose request is the piece's request (R-650) and whose result and brief are its own members. */
 static cJSON *piece_of_answer(const cJSON *answer) {
-  return (cJSON *)member(member(answer, "body"), "piece");
+  return (cJSON *)member(answer, "body");
 }
 
 /* True when both files exist and hold the same bytes. */
@@ -323,7 +344,7 @@ static bool files_equal(const char *a, const char *b) {
 /* True when the file at plan is the plan.json of version number of theme item id. */
 static bool is_theme_plan(const char *plan, const char *id, int number) {
   char path[400];
-  snprintf(path, sizeof(path), "materials/items/%s/v%d/plan.json", id, number);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/plan.json", number); item_file(id, tail_, path, sizeof(path)); }
   return files_equal(plan, path);
 }
 
@@ -404,7 +425,7 @@ static void test_bodies(const Items *m) {
   motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"sentence\",\"construction\":5");
   section_of(one, sizeof(one), "s1", "body", 24, fill);
   snprintf(two, sizeof(two), "[%s]", one);
-  check(create_piece("Bad construction", two, "", NULL) != 200, "a motif fill construction that is a number is refused");
+  check(draft_status(create_piece("Bad construction", two, "", NULL)), "a motif fill construction that is a number is refused");
   motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"hybrid\",\"hybrid\":\"antecedent+continuation\"");
   section_of(one, sizeof(one), "s1", "body", 32, fill);
   theme_fill_of(fill2, sizeof(fill2), m->theme, 2);
@@ -437,7 +458,7 @@ static void test_bodies(const Items *m) {
     cJSON_ArrayForEach(use, uses) {
       has_motif = has_motif || (strcmp(string_of(use, "item_id"), m->a) == 0 && cJSON_IsObject(member(member(use, "copy"), "motif")));
       has_theme = has_theme || (strcmp(string_of(use, "item_id"), m->theme) == 0 && number_of(use, "version") == 2 &&
-                                cJSON_IsObject(member(member(use, "copy"), "theme")));
+                                cJSON_IsObject(member(member(use, "copy"), "request")));
       has_motive = has_motive || strcmp(string_of(use, "item_id"), m->b) == 0;
     }
     check(cJSON_GetArraySize(uses) == 3 && has_motif && has_theme && has_motive,
@@ -478,7 +499,7 @@ static void test_bodies(const Items *m) {
   for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
     char what[200];
     snprintf(what, sizeof(what), "%s is refused", bad[i].what);
-    check(create_piece("Bad", bad[i].sections, "", NULL) == 400, what);
+    check(draft_status(create_piece("Bad", bad[i].sections, "", NULL)), what);
   }
   /* 65 numerals (the Composer's limit, judged by validate) and 33 sections. */
   char numerals[400] = "";
@@ -496,7 +517,7 @@ static void test_bodies(const Items *m) {
     strcat(many, one_section);
   }
   strcat(many, "]");
-  check(create_piece("Many", many, "", NULL) == 400, "33 sections are refused");
+  check(draft_status(create_piece("Many", many, "", NULL)), "33 sections are refused");
   many[strlen(many) - strlen(",{\"id\":\"s32\",\"part\":\"body\",\"beats\":4}]")] = '\0';
   strcat(many, "]");
   check(create_piece("Many", many, "", NULL) == 200, "32 sections are valid");
@@ -531,16 +552,15 @@ static void test_bodies(const Items *m) {
   const char *ok_sections = "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]";
   snprintf(more, sizeof(more), ",\"motive\":{\"item_id\":\"%s\",\"version\":1}", m->rhythm);
   check(create_piece("Bad", ok_sections, more, NULL) == 400, "a motive that is a rhythm-only motif is refused");
-  check(create_piece("Bad", ok_sections, ",\"motive\":{\"item_id\":\"mot-x\"}", NULL) == 400, "a motive with no version is refused");
   check(create_piece("Bad", ok_sections, ",\"motive\":null", NULL) == 200, "a null motive is valid");
-  check(create_piece("Bad", ok_sections, ",\"pool\":\"all\"", NULL) == 400, "an unknown pool is refused");
-  check(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"mot-x\",\"version\":1}", NULL) == 400,
+  check(draft_status(create_piece("Bad", ok_sections, ",\"pool\":\"all\"", NULL)), "an unknown pool is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"mot-x\",\"version\":1}", NULL)),
         "the accompaniment pattern motive is refused in a piece");
-  check(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"waltz\"}", NULL) == 400, "an unknown pattern is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"waltz\"}", NULL)), "an unknown pattern is refused");
   check(create_piece("Tempo", ok_sections, ",\"tempo\":10", NULL) == 200, "a tempo below 20 is saved (the Composer refuses it when composing)");
-  check(create_piece("Bad", ok_sections, ",\"seed\":-1", NULL) == 400, "a negative seed is refused");
-  check(create_piece("Bad", ok_sections, ",\"check\":1", NULL) == 400, "a check that is not a boolean is refused");
-  check(create_piece("Bad", ok_sections, ",\"style_weight\":\"heavy\"", NULL) == 400, "a bad style weight is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"seed\":-1", NULL)), "a negative seed is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"check\":1", NULL)), "a check that is not a boolean is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"style_weight\":\"heavy\"", NULL)), "a bad style weight is refused");
   check(create_piece("Bad", ok_sections, ",\"brief\":{\"scopes\":[],\"piece_ids\":[],\"style_ids\":[]}", NULL) == 400,
         "an empty brief is refused");
   check(create_piece("Bad", ok_sections, ",\"result\":3", NULL) == 400, "a result that is not an object is refused");
@@ -785,7 +805,7 @@ static void test_failures(const Items *m) {
   /* A piece that cannot be composed is 400 before the Composer runs. */
   char *placeholder = create_item("piece", "Placeholder", "{\"uses\":[],\"piece\":{\"structure\":null}}", &status);
   answer = compose(placeholder, "{}", &status);
-  check(status == 400 && strstr(string_of(answer, "error"), "structure") != NULL, "a placeholder piece is 400");
+  check(status == 400 && strstr(string_of(answer, "error"), "request") != NULL, "a placeholder piece is 400");
   cJSON_Delete(answer);
   free(placeholder);
   create_piece("Style", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]", "", &piece);
@@ -796,7 +816,7 @@ static void test_failures(const Items *m) {
              "\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]}}}");
     char *styled = create_item("piece", "Style without a brief", body, &status);
     answer = compose(styled, "{}", &status);
-    check(status == 400 && strstr(string_of(answer, "error"), "needs a brief") != NULL, "the mode style needs a brief");
+    check(draft_status(status) && status == 422 && string_of(answer, "error")[0] != '\0', "the mode style needs a brief");
     cJSON_Delete(answer);
     free(styled);
   }
@@ -877,7 +897,7 @@ static void test_files(const Items *m) {
 
   /* Deleting the item removes its version folders. */
   char dir[200];
-  snprintf(dir, sizeof(dir), "materials/items/%s", piece);
+  item_file(piece, "", dir, sizeof(dir));
   check(dir_exists(dir), "the item directory exists before the delete");
   snprintf(path, sizeof(path), "/api/materials/items/%s", piece);
   answer = exchange("DELETE", path, NULL, &status);
@@ -1016,10 +1036,10 @@ static void test_update_uses(const Items *m) {
         "the theme fill's plan is copied from the updated theme version");
   cJSON_Delete(request);
   answer = get_item(piece, &status);
-  const cJSON *sections_json = member(member(piece_of_answer(answer), "structure"), "sections");
+  const cJSON *sections_json = member(member(member(answer, "body"), "request"), "sections");
   const cJSON *uses = member(member(answer, "body"), "uses");
-  check(number_of(member(cJSON_GetArrayItem(sections_json, 1), "fill"), "version") == 2 &&
-            number_of(member(cJSON_GetArrayItem(sections_json, 2), "fill"), "version") == 3,
+  check(number_of(member(member(member(cJSON_GetArrayItem(sections_json, 1), "fill"), "motive"), "$item"), "version") == 2 &&
+            number_of(member(member(member(cJSON_GetArrayItem(sections_json, 2), "fill"), "plan"), "$item"), "version") == 3,
         "the motif fill names version 2 of A and the theme fill version 3 of the theme");
   bool uses_ok = cJSON_GetArraySize(uses) == 2;
   cJSON_ArrayForEach(entry, uses) {
@@ -1106,7 +1126,7 @@ static void test_regenerate(const Items *m) {
   const cJSON *result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") == 9 && cJSON_IsObject(member(result, "summary")) && cJSON_GetArraySize(member(result, "files")) == 8 &&
             cJSON_GetArraySize(member(member(answer, "body"), "uses")) == 2 &&
-            cJSON_GetArraySize(member(member(piece_of_answer(answer), "structure"), "sections")) == 6,
+            cJSON_GetArraySize(member(member(member(answer, "body"), "request"), "sections")) == 6,
         "the new version keeps the structure and the uses and holds the new result");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2", piece);
@@ -1233,7 +1253,7 @@ static void test_regenerate(const Items *m) {
   version_dir(piece, before + 1, dir, sizeof(dir));
   snprintf(path, sizeof(path), "%s/plan.json", dir);
   char chosen_plan[500];
-  snprintf(chosen_plan, sizeof(chosen_plan), "materials/items/%s/v6/variations-1/variation-2.json", piece);
+  item_file(piece, "v6/variations-1/variation-2.json", chosen_plan, sizeof(chosen_plan));
   check(files_equal(path, chosen_plan), "the Composer built the version from the chosen plan");
   answer = get_item(piece, &status);
   result = member(piece_of_answer(answer), "result");
@@ -1254,7 +1274,7 @@ static void test_regenerate(const Items *m) {
   check(current_version(piece) == before + 1, "the refused chooses wrote no version");
 
   /* Deleting the item removes the variation sets with it. */
-  snprintf(dir, sizeof(dir), "materials/items/%s", piece);
+  item_file(piece, "", dir, sizeof(dir));
   snprintf(path, sizeof(path), "/api/materials/items/%s", piece);
   answer = exchange("DELETE", path, NULL, &status);
   cJSON_Delete(answer);
@@ -1314,9 +1334,9 @@ static void check_piece_version(const char *id, int number, bool with_ending) {
   }
   snprintf(path, sizeof(path), "%s/request.json", dir);
   cJSON *request = test_read_json(path);
-  snprintf(path, sizeof(path), "materials/items/%s/v%d.json", id, number);
+  { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/body.json", number); item_file(id, tail_, path, sizeof(path)); }
   cJSON *body = test_read_json(path);
-  const cJSON *summary = member(member(member(body, "piece"), "result"), "summary");
+  const cJSON *summary = member(member(body, "result"), "summary");
   const cJSON *versions = member(summary, "versions");
   const char *loop_ids[16];
   const char *ending_ids[16];
@@ -1588,10 +1608,10 @@ static void test_any_form(const Items *m) {
   free(variations);
 
   /* What a form does not have is refused. */
-  check(create_sized("Bad", "waltz", "", more, NULL) == 400, "a form the Composer does not build is refused");
-  check(create_sized("Bad", "rounded-binary", ",\"sections\":[{\"name\":\"Z\",\"region\":\"home\"}]", more, NULL) == 400,
+  check(draft_status(create_sized("Bad", "waltz", "", more, NULL)), "a form the Composer does not build is refused");
+  check(draft_status(create_sized("Bad", "rounded-binary", ",\"sections\":[{\"name\":\"Z\",\"region\":\"home\"}]", more, NULL)),
         "an overlay that names no section of a rounded binary is refused");
-  check(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL) == 400, "a rounded binary of 20 bars is refused");
+  check(draft_status(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL)), "a rounded binary of 20 bars is refused");
   char *loop_piece = NULL;
   char sections[5000];
   full_sections(m, sections, sizeof(sections));
@@ -1600,7 +1620,7 @@ static void test_any_form(const Items *m) {
            "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\",\"modulate\":true,\"sections\":%s}}}",
            sections);
   loop_piece = create_item("piece", "Modulating loop", body, &status);
-  check(status == 400 && !loop_piece, "modulate on the game loop is refused");
+  check(draft_status(status), "modulate on the game loop is kept as a draft (the Composer refuses it when composing)");
   free(loop_piece);
   free(piece);
 }
@@ -1658,7 +1678,7 @@ static void test_materials(const Items *m) {
   for (int version = 1; version <= 2; version++) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", old_piece, version);
     answer = exchange("GET", path, NULL, &status);
-    const cJSON *structure = member(member(member(answer, "body"), "piece"), "structure");
+    const cJSON *structure = member(member(answer, "body"), "request");
     check(status == 200 && strcmp(string_of(structure, "material"), "omt.material.major") == 0 && !member(structure, "mode") &&
               strcmp(string_of(structure, "key"), "C") == 0,
           "a piece saved with a mode is read with the material and no mode");
@@ -1674,7 +1694,7 @@ static void test_materials(const Items *m) {
   check(status == 200 && styled, "a piece with the material style is saved");
   if (styled) {
     answer = compose(styled, "{\"seed\":1}", &status);
-    check(status == 400 && strstr(string_of(answer, "error"), "the material style needs a brief") != NULL,
+    check(draft_status(status) && status == 422 && string_of(answer, "path")[0] == '/',
           "the material style without a brief is 400");
     cJSON_Delete(answer);
   }
@@ -1706,9 +1726,9 @@ static void test_old_game_loop_piece(const Items *m) {
   cJSON_Delete(answer);
 
   /* Take form out of the stored body, as a piece saved before the forms has it. */
-  snprintf(path, sizeof(path), "materials/items/%s/v2.json", piece);
+  item_file(piece, "v2/body.json", path, sizeof(path));
   cJSON *stored = test_read_json(path);
-  cJSON *structure = (cJSON *)member(member(stored, "piece"), "structure");
+  cJSON *structure = (cJSON *)member(stored, "request");
   cJSON_DeleteItemFromObjectCaseSensitive(structure, "form");
   char *text = cJSON_Print(stored);
   FILE *file = text ? fopen(path, "wb") : NULL;
@@ -1823,9 +1843,9 @@ int main(int argc, char **argv) {
   if (smoke) {
     g_port = "18776";
   }
-  system("rm -rf materials subjects pieces collections styles");
+  system("rm -rf projects subjects library settings cache");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -1840,7 +1860,7 @@ int main(int argc, char **argv) {
   if (smoke) {
     /* The smoke run composes one piece with the real Composer and nothing else: it needs only the project. */
     test_real_composer();
-    ursatz_gui_server_stop(ctx);
+    test_gui_server_stop(ctx);
     return test_finish("piece_route smoke");
   }
 
@@ -1864,6 +1884,6 @@ int main(int argc, char **argv) {
     test_real_composer();
   }
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return test_finish("piece_route");
 }

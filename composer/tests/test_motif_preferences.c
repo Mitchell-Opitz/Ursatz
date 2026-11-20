@@ -265,9 +265,9 @@ static bool theme_made(const Motive *motive, const GrowFidelityTable *table, uns
     GrowSetup setup;
     sentence_setup(&setup, &text, motive, table, seed);
     GrowRun run;
-    ComposerError error;
+    UrsatzError error;
     memset(&error, 0, sizeof(error));
-    bool made = api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1;
+    bool made = api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1;
     if (made && shown) {
         cJSON *document = api_grow_result_json(&setup, &run, NULL);
         assert(document);

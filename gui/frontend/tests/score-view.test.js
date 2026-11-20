@@ -2,11 +2,9 @@
  * shown only when /musicxml/meta reports that the file declares no time
  * signature. Plain Node script, no dependencies. Run directly:
  * `node frontend/tests/score-view.test.js`. */
-
-const ScoreNotes = require("../public/score-notes.js");
-const ScoreWorkspace = require("../public/score-workspace.js");
-
-const { check, finish } = require("./support/check.js");
+import ScoreNotes from "../public/score/score-notes.js";
+import ScoreWorkspace from "../public/score/score-workspace.js";
+import { check, finish } from "./support/check.js";
 
 check(
   ScoreNotes.meterCaption({ ok: true, meter_defaulted: true }) === "This file declares no time signature; shown in 4/4",

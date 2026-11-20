@@ -111,7 +111,7 @@ static void expect_cadences_heard(const Reading *reading, const char *plan_json)
 static void test_layers(void) {
     char *with_text = request_text(true);
     ComposerResponse layered;
-    assert(composer_api_theme(test_context(), with_text, NULL, &layered) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), with_text, NULL, &layered) == URSATZ_OK);
     free(with_text);
     cJSON *document = cJSON_Parse(layered.json);
     assert(document);
@@ -139,7 +139,7 @@ static void test_layers(void) {
     /* The same request without the flag: no members, and the rest of the document as it was. */
     char *plain_text = request_text(false);
     ComposerResponse plain;
-    assert(composer_api_theme(test_context(), plain_text, NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), plain_text, NULL, &plain) == URSATZ_OK);
     free(plain_text);
     cJSON *plain_document = cJSON_Parse(plain.json);
     assert(plain_document);
@@ -174,7 +174,7 @@ static void test_refusal(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/layers") == 0);
     free(printed);
     composer_response_destroy(&response);

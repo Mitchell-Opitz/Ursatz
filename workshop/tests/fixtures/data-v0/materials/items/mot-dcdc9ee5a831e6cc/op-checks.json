@@ -1,0 +1,11 @@
+{
+	"checks":	{
+		"transpose":	{
+			"verdict":	"works",
+			"comment":	"Sounds right",
+			"seed":	3,
+			"notes_text":	"C4 Eb4 G4",
+			"date":	"2026-11-01"
+		}
+	}
+}

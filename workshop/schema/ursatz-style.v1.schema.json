@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-style.v1.schema.json",
+  "title": "Style, format version 1",
+  "description": "settings/styles/<sty>/style.json: how a style was built (its model is style-model.json beside it, format of the library).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "name",
+    "created_at",
+    "updated_at",
+    "source",
+    "pieces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-style"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object"
+    },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "skipped": {
+      "type": "array"
+    },
+    "piece_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

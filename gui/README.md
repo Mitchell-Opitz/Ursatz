@@ -18,7 +18,7 @@ The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Motive l
 
 ## Materials
 
-A motif, a theme form and a piece structure name their material by its id (`omt.material.major`, `omt.material.natural-minor`, or `style` for a theme or a piece) in a `material` member. Items stored with the old `key` text or `mode` word are read with `material` and saved with it; see [Material members and migration on read](docs/storage.md#material-members-and-migration-on-read).
+A motif, a theme form and a piece structure name their material by its id (`omt.material.major`, `omt.material.natural-minor`, or `style` for a theme or a piece) in a `material` member. Items stored with the old `key` text or `mode` word are read with `material` and saved with it; see [Items and versions](../workshop/docs/data-folder.md#items-and-versions).
 
 ## Documentation
 

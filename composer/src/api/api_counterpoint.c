@@ -32,7 +32,7 @@ typedef struct {
     unsigned long suggest;
     bool suggested; /* "suggest" was given */
     bool plans;
-    const ComposerJob *job;
+    const UrsatzJob *job;
 } Options;
 
 /* One counter-melody written: its plan, the target and the verdict of the library. */
@@ -58,8 +58,8 @@ static const char *value_text(const cJSON *item, char *buffer, size_t size) {
 
 /* --- reading the request ---------------------------------------------------------------------------------- */
 
-static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
-                                   ApiOutputs *outputs, cJSON **line, ComposerError *error) {
+static UrsatzStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
+                                   ApiOutputs *outputs, cJSON **line, UrsatzError *error) {
     const char *material_text = NULL;
     const char *material_member = NULL;
     const char *position_text = NULL;
@@ -70,13 +70,13 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     const cJSON *species = cJSON_GetObjectItemCaseSensitive(request, "species");
     if (!species || cJSON_IsNull(species) || !cJSON_GetObjectItemCaseSensitive(request, "key") ||
         !cJSON_GetObjectItemCaseSensitive(request, "meter")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "counterpoint needs species, key and meter");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "counterpoint needs species, key and meter");
     }
     unsigned long number = 0;
     const char *species_text = value_text(species, buffer, sizeof buffer);
     if (!(cJSON_IsString(species) || cJSON_IsNumber(species)) || !request_parse_whole_number(species_text, 4, &number) ||
         number < 1) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/species",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/species",
                         "species must be 1, 2, 3 or 4, not '%s' (fifth species is not written)", species_text);
     }
     options->species = (int)number;
@@ -85,13 +85,13 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
         !api_read_material(request, NULL, false, &material_text, &material_member, error) ||
         !api_member_string(request, "meter", &options->meter_text, &found, error) ||
         !api_member_bool(request, "plans", &options->plans, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (position_text) {
         if (request_equals_ignore_case(position_text, "above")) {
             options->above = true;
         } else if (!request_equals_ignore_case(position_text, "below")) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/position", "position must be above or below, not '%s'", position_text);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/position", "position must be above or below, not '%s'", position_text);
         }
     }
     char combined[64];
@@ -101,42 +101,42 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
         const PitchMaterial *picked = NULL;
         ApiMaterialKind kind;
         snprintf(member_path, sizeof member_path, "/%s", material_member);
-        ComposerStatus resolved = api_resolve_material(knowledge, material_member, member_path, material_text, 0, &picked, &kind, error);
-        if (resolved != COMPOSER_OK) {
+        UrsatzStatus resolved = api_resolve_material(knowledge, material_member, member_path, material_text, 0, &picked, &kind, error);
+        if (resolved != URSATZ_OK) {
             return resolved;
         }
         if (strchr(options->key_text, ' ')) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key already names a mode; give a tonic alone with %s",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/key", "key already names a mode; give a tonic alone with %s",
                             material_member);
         }
         snprintf(combined, sizeof(combined), "%s %s", options->key_text, picked->key_word);
         if (!request_parse_key(combined, knowledge, &options->key)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "unknown key '%s'", options->key_text);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/key", "unknown key '%s'", options->key_text);
         }
     } else if (!request_parse_key(options->key_text, knowledge, &options->key)) {
         if (api_fail_unsupported_key(error, "/key", knowledge, options->key_text)) {
-            return COMPOSER_ERR_REQUEST;
+            return URSATZ_ERR_REQUEST;
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
                         options->key_text);
     }
     if (!request_parse_meter(options->meter_text, &options->meter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/meter",
                         "meter '%s' is not a meter; write beats over a beat unit, for example 4/4", options->meter_text);
     }
     unsigned long seed = 0;
     if (!api_member_whole(request, "seed", 0, API_SEED_MAX, &seed, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     options->seed = found ? seed : api_default_seed();
     options->suggest = 1;
     if (!api_member_whole(request, "suggest", 1, MAX_SUGGESTIONS, &options->suggest, &options->suggested, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
-    ComposerStatus status = api_read_outputs(request, false, outputs, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = api_read_outputs(request, false, outputs, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     /* The line is read as a motive of any length in the key and meter above. */
@@ -148,7 +148,7 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     if (!cJSON_AddStringToObject(*line, "key", combined)) {
         return api_fail_alloc(error);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the plan --------------------------------------------------------------------------------------------- */
@@ -288,8 +288,8 @@ static cJSON *notes_json(const Plan *plan, PlanLaneKind lane, int voice, PlanSpa
     return list;
 }
 
-static ComposerStatus result_json(const KnowledgeSnapshot *knowledge, const Options *options, const Result *result, PlanSpan span, const ApiOutputs *outputs,
-                                  cJSON **out, ComposerError *error) {
+static UrsatzStatus result_json(const KnowledgeSnapshot *knowledge, const Options *options, const Result *result, PlanSpan span, const ApiOutputs *outputs,
+                                  cJSON **out, UrsatzError *error) {
     cJSON *entry = cJSON_CreateObject();
     cJSON *line = notes_json(result->plan, options->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, span);
     cJSON *counter = notes_json(result->plan, PLAN_LANE_INNER_VOICE, 1, span);
@@ -335,13 +335,13 @@ static ComposerStatus result_json(const KnowledgeSnapshot *knowledge, const Opti
         char *text = NULL;
         if (plan_export_render(result->plan, &rendered, &detail) != PLAN_EXPORT_OK) {
             cJSON_Delete(entry);
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
         }
         PlanExportResult written = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &text, &detail);
         rendered_plan_destroy(&rendered);
         if (written != PLAN_EXPORT_OK) {
             cJSON_Delete(entry);
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
         }
         ok = cJSON_AddStringToObject(entry, "musicxml", text) != NULL;
         free(text);
@@ -351,17 +351,17 @@ static ComposerStatus result_json(const KnowledgeSnapshot *knowledge, const Opti
         }
     }
     *out = entry;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_counterpoint(const ComposerContext *context, const char *request_json,
-                                         const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_counterpoint(const ComposerContext *context, const char *request_json,
+                                         const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *request = NULL;
@@ -376,32 +376,32 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
     memset(results, 0, sizeof(results));
     memset(&options, 0, sizeof(options));
     memset(&outputs, 0, sizeof(outputs));
-    ComposerStatus status = api_parse_request(request_json, &request, &out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &request, &out->error);
+    if (status == URSATZ_OK) {
         status = read_request(request, context->knowledge, &options, &outputs, &line, &out->error);
         options.job = job;
         last_seed = options.seed;
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         /* A line of any length is read here: the one-bar limit belongs to a motive, not to a line to write against. */
         status = api_read_motive(line, "", context->knowledge, &motive, NULL, &out->error);
     }
     /* Whether the line is one the species can be written against, before any seed is tried. */
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         LaneSpanId target;
         Plan *plan = build_plan(&options, &motive, &target);
         const char *why = plan ? counterpoint_why_not(plan, target) : "the plan could not be built";
         if (why) {
-            status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot be written as asked: %s", why);
+            status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "cannot be written as asked: %s", why);
         }
         plan_destroy(plan);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         unsigned long tries = (unsigned long)API_SEED_TRIES * options.suggest;
-        for (unsigned long attempt = 0; attempt < tries && made < options.suggest && status == COMPOSER_OK; attempt++) {
+        for (unsigned long attempt = 0; attempt < tries && made < options.suggest && status == URSATZ_OK; attempt++) {
             Result result;
             if (job_step(job, "counterpoint", (unsigned)attempt, (unsigned)tries)) {
-                status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+                status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
                 break;
             }
             last_seed = (options.seed + attempt) & API_SEED_MAX;
@@ -417,17 +417,17 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
                 }
             }
         }
-        if (status == COMPOSER_OK && job_cancelled(job)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+        if (status == URSATZ_OK && job_cancelled(job)) {
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
         }
     }
-    if (status == COMPOSER_OK && made == 0) {
-        status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "",
+    if (status == URSATZ_OK && made == 0) {
+        status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "",
                           "cannot be written as asked: no species %d counter-melody %s the line holds the rules in %s, "
                           "from seeds %lu to %lu",
                           options.species, options.above ? "above" : "below", options.key_text, options.seed, last_seed);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         char key[24];
         char meter[16];
         PlanSpan span = {fraction(0, 1), motive.length};
@@ -443,15 +443,15 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
             cJSON_Delete(list);
             status = api_fail_alloc(&out->error);
         }
-        for (size_t k = 0; status == COMPOSER_OK && k < made; k++) {
+        for (size_t k = 0; status == URSATZ_OK && k < made; k++) {
             cJSON *entry = NULL;
             status = result_json(context->knowledge, &options, &results[k], span, &outputs, &entry, &out->error);
-            if (status == COMPOSER_OK && !cJSON_AddItemToArray(list, entry)) {
+            if (status == URSATZ_OK && !cJSON_AddItemToArray(list, entry)) {
                 cJSON_Delete(entry);
                 status = api_fail_alloc(&out->error);
             }
         }
-        if (status == COMPOSER_OK && made < options.suggest && options.suggested) {
+        if (status == URSATZ_OK && made < options.suggest && options.suggested) {
             char notice[96];
             cJSON *notices = cJSON_AddArrayToObject(document, "notices");
             snprintf(notice, sizeof(notice), "only %zu different counter-melod%s found for this request", made,
@@ -460,11 +460,11 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
                 status = api_fail_alloc(&out->error);
             }
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             /* The first counter-melody's own files. */
             status = api_render_outputs(context->knowledge, results[0].plan, &outputs, document, out);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
             document = NULL;
         }
@@ -475,8 +475,8 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
     }
     cJSON_Delete(line);
     cJSON_Delete(request);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

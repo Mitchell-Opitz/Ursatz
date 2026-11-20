@@ -1,4 +1,4 @@
-add_library(ursatz_composer STATIC
+add_library(ursatz_composer_engine STATIC
     composer.c
     structure/request_parse.c
     piece/request_chords.c
@@ -38,7 +38,6 @@ add_library(ursatz_composer STATIC
     api/api_validate.c
     util/job.c
     util/util.c
-    util/composer_json.c
     structure/plan_util.c
     style/style.c
     style/style_blend.c
@@ -182,7 +181,7 @@ add_custom_command(
     DEPENDS ${COMPOSER_FORM_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedForms.cmake
     COMMENT "Embedding the form documents"
     VERBATIM)
-target_sources(ursatz_composer PRIVATE ${COMPOSER_FORM_DATA})
+target_sources(ursatz_composer_engine PRIVATE ${COMPOSER_FORM_DATA})
 # The Composer's composition key (R-626): a hash of the sources that compose a piece (the Composer's sources and forms, and the
 # library groups it is made of, with the vendored cJSON), stamped in every plan the Composer writes (composer_composition_key).
 # A change to a test, a doc or an app leaves it as it was.
@@ -209,21 +208,27 @@ add_custom_command(
     DEPENDS ${composition_key_files} ${composition_key_list} ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
     COMMENT "Computing the Composer composition key"
     VERBATIM)
-target_sources(ursatz_composer PRIVATE ${composition_key_header})
-target_include_directories(ursatz_composer
+target_sources(ursatz_composer_engine PRIVATE ${composition_key_header})
+target_include_directories(ursatz_composer_engine
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/composer_generated
 )
-target_link_libraries(ursatz_composer
+target_link_libraries(ursatz_composer_engine
+    PUBLIC ursatz_common
     PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_reading ursatz_analysis ursatz_chain cjson
 )
+# The library consumers link exports only the API (exports.txt); the tests, the command line and the other code of the Composer's own use
+# the internals, so they link the engine.
+ursatz_localize_exports(ursatz_composer ENGINE ursatz_composer_engine KEEP ${CMAKE_CURRENT_SOURCE_DIR}/exports.txt)
+
 # The tests reach the internal headers and the libraries the sources use; no consumer does.
 add_library(ursatz_composer_internal INTERFACE)
 target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz_composer_internal INTERFACE
-    ursatz_io ursatz_realization ursatz_plan ursatz_reading ursatz_analysis ursatz_chain cjson
+    ursatz_composer_engine
+    ursatz_io ursatz_realization ursatz_plan ursatz_reading ursatz_analysis ursatz_chain ursatz_common cjson
 )
-target_compile_definitions(ursatz_composer PRIVATE
+target_compile_definitions(ursatz_composer_engine PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"
 )
-target_compile_options(ursatz_composer PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(ursatz_composer_engine PRIVATE -Wall -Wextra -Wpedantic)

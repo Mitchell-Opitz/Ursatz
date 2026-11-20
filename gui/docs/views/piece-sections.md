@@ -15,7 +15,7 @@ refuses any other shape; the Composer refuses a key or relation it does not know
 `harmony` is absent or null, `{progression, cells?}` (numerals as text, 1 to 8 cells for each chord), `{schema}` (a name from the
 vocabulary's `schemas`) or `{chords: [{bar, text}]}` (1 to 16 chords, `bar` from 1 in the section). The harmony stage fills what the
 harmony leaves of the section. A stored `fill` of kind `progression` is read as `harmony.progression` with an empty fill
-(`ursatz_gui_material_body_migrate`); a section that has a harmony keeps it and loses the fill's numerals.
+(`workshop_material_body_migrate`); a section that has a harmony keeps it and loses the fill's numerals.
 
 ## Overlays
 

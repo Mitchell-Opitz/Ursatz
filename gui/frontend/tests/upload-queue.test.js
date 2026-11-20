@@ -2,6 +2,8 @@
  * changes return new queues, the summary with and without failures, and
  * which file names are accepted. Plain Node script, no framework/deps, run
  * directly: `node frontend/tests/upload-queue.test.js`. */
+import UploadQueue from "../public/core/upload-queue.js";
+import { check, finish } from "./support/check.js";
 
 const {
   createQueue,
@@ -10,9 +12,7 @@ const {
   markFailed,
   queueSummary,
   acceptedFile,
-} = require("../public/upload-queue.js");
-
-const { check, finish } = require("./support/check.js");
+} = UploadQueue;
 
 const queue = createQueue([{ name: "a.mid" }, { name: "b.xml" }, { name: "c.mxl" }]);
 check(queue.length === 3, "one entry per file");

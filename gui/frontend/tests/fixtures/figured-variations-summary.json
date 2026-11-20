@@ -39,7 +39,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 1",
+          "length_text": "8 bars"
         },
         {
           "id": "variation 1",
@@ -95,7 +97,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 9",
+          "length_text": "8 bars"
         },
         {
           "id": "variation 2",
@@ -151,7 +155,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 17",
+          "length_text": "8 bars"
         },
         {
           "id": "variation 3",
@@ -207,7 +213,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 25",
+          "length_text": "8 bars"
         },
         {
           "id": "variation 4",
@@ -263,7 +271,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 33",
+          "length_text": "8 bars"
         },
         {
           "id": "variation 5",
@@ -319,7 +329,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 41",
+          "length_text": "8 bars"
         },
         {
           "id": "C1",
@@ -339,7 +351,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 49",
+          "length_text": "4 bars"
         },
         {
           "id": "C2",
@@ -359,7 +373,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 53",
+          "length_text": "4 bars"
         }
       ],
       "score": {

@@ -165,13 +165,13 @@ static void compose(const Case *test, unsigned long seed, GrowRun *run, Motive *
     setup.suggest = 1;
     setup.development = GROW_DEVELOP_BALANCED;
     setup.seed = seed;
-    ComposerError error;
+    UrsatzError error;
     memset(&error, 0, sizeof(error));
-    ComposerStatus status = api_grow_run(&setup, run, &error);
-    if (status != COMPOSER_OK || run->made != 1) {
+    UrsatzStatus status = api_grow_run(&setup, run, &error);
+    if (status != URSATZ_OK || run->made != 1) {
         fprintf(stderr, "%s seed %lu: no theme\n", test->name, seed);
     }
-    assert(status == COMPOSER_OK && run->made == 1);
+    assert(status == URSATZ_OK && run->made == 1);
 }
 
 static void test_cadential_ideas(void) {
@@ -265,10 +265,10 @@ static void test_no_residue(void) {
     setup.development = GROW_DEVELOP_BALANCED;
     setup.seed = 1;
     GrowRun run;
-    ComposerError error;
+    UrsatzError error;
     memset(&error, 0, sizeof(error));
-    ComposerStatus status = api_grow_run(&setup, &run, &error);
-    assert(status != COMPOSER_OK || run.made == 0);
+    UrsatzStatus status = api_grow_run(&setup, &run, &error);
+    assert(status != URSATZ_OK || run.made == 0);
     api_grow_run_destroy(&run);
 }
 

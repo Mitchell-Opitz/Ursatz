@@ -2,12 +2,12 @@
  * snapshot (analyzer/tests/snapshots/mozart-545.analysis.json): each layer's items come from the right sections,
  * cadences sit at their arrival, and unknown sections become Other layers. Plain Node script, no dependencies. Run
  * directly: `node frontend/tests/score-layers.test.js`. */
+import ScoreLayers from "../public/score/score-layers.js";
+import { analyzerSnapshot, readJson } from "./support/fixtures.js";
+import { check, finish } from "./support/check.js";
 
-const ScoreLayers = require("../public/score-layers.js");
-const { analyzerSnapshot } = require("./support/fixtures.js");
-const fixture = require(analyzerSnapshot("mozart-545.analysis.json"));
+const fixture = readJson(analyzerSnapshot("mozart-545.analysis.json"));
 
-const { check, finish } = require("./support/check.js");
 
 const doc = JSON.parse(JSON.stringify(fixture));
 const catalog = ScoreLayers.buildLayerCatalog(doc);

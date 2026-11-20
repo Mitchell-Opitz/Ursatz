@@ -1,9 +1,7 @@
 /* Confirms the pure helpers of export-control.js: the download file name and the measure range query. Plain Node
  * script: `node frontend/tests/export-control.test.js`. */
-
-const ExportControl = require("../public/export-control.js");
-
-const { check, finish } = require("./support/check.js");
+import ExportControl from "../public/views/export-control.js";
+import { check, finish } from "./support/check.js";
 
 const name = ExportControl.exportFilename;
 check(name("Mozart 545") === "mozart-545.txt", "a name becomes a lowercase slug with .txt");

@@ -269,10 +269,10 @@ int main(void) {
             setup.development = GROW_DEVELOP_BALANCED;
             setup.seed = seed;
             GrowRun run;
-            ComposerError error;
+            UrsatzError error;
             memset(&error, 0, sizeof(error));
-            ComposerStatus status = api_grow_run(&setup, &run, &error);
-            if (status != COMPOSER_OK || run.made != 1) {
+            UrsatzStatus status = api_grow_run(&setup, &run, &error);
+            if (status != URSATZ_OK || run.made != 1) {
                 api_grow_run_destroy(&run);
                 continue;
             }

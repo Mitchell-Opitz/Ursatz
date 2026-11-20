@@ -1,4 +1,4 @@
-#include <ursatz_analyzer/playback.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <limits.h>
 #include <math.h>
@@ -10,7 +10,7 @@
 
 #include "model/events/note_event.h"
 #include "model/time/temporal_anchor.h"
-#include "util/json_util.h"
+#include <common/json.h>
 
 #define DEFAULT_QUARTERS_PER_MINUTE 120.0
 #define MICROSECONDS_PER_MINUTE 60000000.0
@@ -30,18 +30,18 @@ static bool rational_at(long long num, unsigned long long den, Rational *out) {
 /* ---- tempo ---- */
 
 /* The MIDI file's set-tempo regions, read from the import's tempo map. */
-static AnalyzerStatus midi_tempo(const TempoMap *map, AnalyzerTempoRegion **out, size_t *count, bool *defaulted) {
+static UrsatzStatus midi_tempo(const TempoMap *map, AnalyzerTempoRegion **out, size_t *count, bool *defaulted) {
     size_t region_count = tempo_map_region_count(map);
     AnalyzerTempoRegion *regions = calloc(region_count > 0 ? region_count : 1, sizeof(AnalyzerTempoRegion));
     if (!regions) {
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     for (size_t i = 0; i < region_count; i++) {
         const TempoMapRegion *region = tempo_map_region(map, i);
         unsigned long microseconds = region ? tempo_map_region_microseconds_per_quarter(region) : 0;
         if (!region || microseconds == 0) {
             free(regions);
-            return ANALYZER_ERR_LIBRARY;
+            return URSATZ_ERR_INTERNAL;
         }
         regions[i].at = tempo_map_region_start(region).value;
         regions[i].quarters_per_minute = round_to_milli(MICROSECONDS_PER_MINUTE / (double)microseconds);
@@ -49,15 +49,15 @@ static AnalyzerStatus midi_tempo(const TempoMap *map, AnalyzerTempoRegion **out,
     *defaulted = tempo_map_is_defaulted(map);
     *out = regions;
     *count = region_count;
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 /* A MusicXML score's tempo: its declared tempo at 0, then one region per metronome mark. */
-static AnalyzerStatus score_tempo(const ImportedSource *source, AnalyzerTempoRegion **out, size_t *count,
+static UrsatzStatus score_tempo(const ImportedSource *source, AnalyzerTempoRegion **out, size_t *count,
                                   bool *defaulted) {
     AnalyzerTempoRegion *regions = calloc(source->tempo_marking_count + 1, sizeof(AnalyzerTempoRegion));
     if (!regions) {
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     regions[0].at = rational_ratio(0, 1);
     if (!source->tempo_declared || !(source->initial_quarters_per_minute > 0.0)) {
@@ -65,7 +65,7 @@ static AnalyzerStatus score_tempo(const ImportedSource *source, AnalyzerTempoReg
         *out = regions;
         *count = 1;
         *defaulted = true;
-        return ANALYZER_OK;
+        return URSATZ_OK;
     }
     regions[0].quarters_per_minute = round_to_milli(source->initial_quarters_per_minute);
     size_t used = 1;
@@ -96,38 +96,38 @@ static AnalyzerStatus score_tempo(const ImportedSource *source, AnalyzerTempoReg
     *out = regions;
     *count = used;
     *defaulted = false;
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 /* Multiplies every region's tempo by num/den, and its position too when positions is set. */
-static AnalyzerStatus scale_tempo(AnalyzerTempoRegion *regions, size_t count, long num, unsigned long den,
+static UrsatzStatus scale_tempo(AnalyzerTempoRegion *regions, size_t count, long num, unsigned long den,
                                   bool positions) {
     if (num <= 0 || den == 0 || (num == 1 && den == 1)) {
-        return ANALYZER_OK;
+        return URSATZ_OK;
     }
     Rational scale;
     if (!rational_at(num, den, &scale)) {
-        return ANALYZER_ERR_LIBRARY;
+        return URSATZ_ERR_INTERNAL;
     }
     for (size_t i = 0; i < count; i++) {
         regions[i].quarters_per_minute = round_to_milli(regions[i].quarters_per_minute * (double)num / (double)den);
         if (positions && rational_mul(regions[i].at, scale, &regions[i].at) != RATIONAL_OK) {
-            return ANALYZER_ERR_LIBRARY;
+            return URSATZ_ERR_INTERNAL;
         }
     }
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 /* ---- notes ---- */
 
-static AnalyzerStatus build_notes(const ImportedScore *imported, AnalyzerPlayback *out) {
+static UrsatzStatus build_notes(const ImportedScore *imported, AnalyzerPlayback *out) {
     out->end = rational_ratio(0, 1);
     if (imported->count == 0) {
-        return ANALYZER_OK;
+        return URSATZ_OK;
     }
     out->notes = calloc(imported->count, sizeof(AnalyzerPlaybackNote));
     if (!out->notes) {
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     out->note_count = imported->count;
     for (size_t i = 0; i < imported->count; i++) {
@@ -138,12 +138,12 @@ static AnalyzerStatus build_notes(const ImportedScore *imported, AnalyzerPlaybac
         AnalyzerPlaybackNote *note = &out->notes[i];
         Rational note_end;
         if (!position || !duration || !value) {
-            return ANALYZER_ERR_LIBRARY;
+            return URSATZ_ERR_INTERNAL;
         }
         note->onset = position->value;
         note->length = duration->value;
         if (rational_add(note->onset, note->length, &note_end) != RATIONAL_OK) {
-            return ANALYZER_ERR_LIBRARY;
+            return URSATZ_ERR_INTERNAL;
         }
         if (rational_cmp(note_end, out->end) > 0) {
             out->end = note_end;
@@ -155,37 +155,37 @@ static AnalyzerStatus build_notes(const ImportedScore *imported, AnalyzerPlaybac
         note->index = i;
         note->part = imported->streams ? imported->streams[i] : 0;
     }
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
-AnalyzerStatus analyzer_playback_build(const ImportedScore *notes, AnalyzerPlayback *out) {
+UrsatzStatus analyzer_playback_build(const ImportedScore *notes, AnalyzerPlayback *out) {
     if (!out) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     memset(out, 0, sizeof(*out));
     if (!notes || (notes->count > 0 && (!notes->events || !notes->pitch_values))) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     bool is_midi = notes->source.format == IMPORTED_FORMAT_MIDI;
     if (is_midi && !notes->tempo_map) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     bool defaulted = false;
-    AnalyzerStatus status = is_midi ? midi_tempo(notes->tempo_map, &out->tempo, &out->tempo_count, &defaulted)
+    UrsatzStatus status = is_midi ? midi_tempo(notes->tempo_map, &out->tempo, &out->tempo_count, &defaulted)
                                     : score_tempo(&notes->source, &out->tempo, &out->tempo_count, &defaulted);
-    if (status == ANALYZER_OK && notes->source.reading_applied) {
+    if (status == URSATZ_OK && notes->source.reading_applied) {
         status = scale_tempo(out->tempo, out->tempo_count, (long)notes->source.reading.scale.num,
                              (unsigned long)notes->source.reading.scale.den, is_midi);
     }
-    if (status == ANALYZER_OK) {
+    if (status == URSATZ_OK) {
         status = build_notes(notes, out);
     }
-    if (status != ANALYZER_OK) {
+    if (status != URSATZ_OK) {
         analyzer_playback_destroy(out);
         return status;
     }
     out->tempo_source = defaulted ? "default" : (is_midi ? "file" : "score");
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 void analyzer_playback_destroy(AnalyzerPlayback *playback) {
@@ -201,8 +201,8 @@ void analyzer_playback_destroy(AnalyzerPlayback *playback) {
 
 static cJSON *rational_json(Rational value) {
     cJSON *array = cJSON_CreateArray();
-    if (!array || !json_append(array, cJSON_CreateNumber((double)value.num)) ||
-        !json_append(array, cJSON_CreateNumber((double)value.den))) {
+    if (!array || !common_json_append(array, cJSON_CreateNumber((double)value.num)) ||
+        !common_json_append(array, cJSON_CreateNumber((double)value.den))) {
         cJSON_Delete(array);
         return NULL;
     }
@@ -222,13 +222,13 @@ static bool add_tempo(cJSON *root, const AnalyzerPlayback *playback) {
     }
     for (size_t i = 0; i < playback->tempo_count; i++) {
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !json_append(array, entry) || !json_add(entry, "at", rational_json(playback->tempo[i].at)) ||
-            !json_add(entry, "qpm", cJSON_CreateNumber(playback->tempo[i].quarters_per_minute))) {
+        if (!entry || !common_json_append(array, entry) || !common_json_add(entry, "at", rational_json(playback->tempo[i].at)) ||
+            !common_json_add(entry, "qpm", cJSON_CreateNumber(playback->tempo[i].quarters_per_minute))) {
             cJSON_Delete(array);
             return false;
         }
     }
-    return json_add(root, "tempo", array);
+    return common_json_add(root, "tempo", array);
 }
 
 static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const ImportedScore *imported) {
@@ -256,15 +256,15 @@ static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const Impor
             name = imported->source.parts[index].name;
         }
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !json_append(array, entry) || !json_add(entry, "index", cJSON_CreateNumber((double)index)) ||
-            !json_add(entry, "name", cJSON_CreateString(name)) || !json_add(entry, "program", cJSON_CreateNumber(0))) {
+        if (!entry || !common_json_append(array, entry) || !common_json_add(entry, "index", cJSON_CreateNumber((double)index)) ||
+            !common_json_add(entry, "name", cJSON_CreateString(name)) || !common_json_add(entry, "program", cJSON_CreateNumber(0))) {
             cJSON_Delete(array);
             free(ids);
             return false;
         }
     }
     free(ids);
-    return json_add(root, "parts", array);
+    return common_json_add(root, "parts", array);
 }
 
 static bool add_notes(cJSON *root, const AnalyzerPlayback *playback) {
@@ -275,37 +275,37 @@ static bool add_notes(cJSON *root, const AnalyzerPlayback *playback) {
     for (size_t i = 0; i < playback->note_count; i++) {
         const AnalyzerPlaybackNote *note = &playback->notes[i];
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !json_append(array, entry) || !json_add(entry, "i", cJSON_CreateNumber((double)note->index)) ||
-            !json_add(entry, "on", rational_json(note->onset)) || !json_add(entry, "len", rational_json(note->length)) ||
-            !json_add(entry, "pitch", cJSON_CreateNumber(note->midi)) ||
-            !json_add(entry, "part", cJSON_CreateNumber((double)note->part))) {
+        if (!entry || !common_json_append(array, entry) || !common_json_add(entry, "i", cJSON_CreateNumber((double)note->index)) ||
+            !common_json_add(entry, "on", rational_json(note->onset)) || !common_json_add(entry, "len", rational_json(note->length)) ||
+            !common_json_add(entry, "pitch", cJSON_CreateNumber(note->midi)) ||
+            !common_json_add(entry, "part", cJSON_CreateNumber((double)note->part))) {
             cJSON_Delete(array);
             return false;
         }
     }
-    return json_add(root, "notes", array);
+    return common_json_add(root, "notes", array);
 }
 
-AnalyzerStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedScore *notes, char **out) {
+UrsatzStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedScore *notes, char **out) {
     if (!out) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     if (!playback || !notes || !playback->tempo_source || playback->note_count != notes->count) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     cJSON *root = cJSON_CreateObject();
-    bool ok = root && json_add(root, "ok", cJSON_CreateTrue()) &&
-              json_add(root, "tempo_source", cJSON_CreateString(playback->tempo_source)) && add_tempo(root, playback) &&
+    bool ok = root && common_json_add(root, "ok", cJSON_CreateTrue()) &&
+              common_json_add(root, "tempo_source", cJSON_CreateString(playback->tempo_source)) && add_tempo(root, playback) &&
               add_parts(root, playback, notes);
     if (ok) {
-        ok = json_add(root, "end", rational_json(playback->end)) && add_notes(root, playback);
+        ok = common_json_add(root, "end", rational_json(playback->end)) && add_notes(root, playback);
     }
     char *text = ok ? cJSON_PrintUnformatted(root) : NULL;
     cJSON_Delete(root);
     if (!text) {
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     *out = text;
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }

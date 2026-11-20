@@ -1,10 +1,10 @@
 #include "util/job.h"
 
-bool job_cancelled(const ComposerJob *job) {
-    return job && job->cancelled && job->cancelled(job->user);
+bool job_cancelled(const UrsatzJob *job) {
+    return ursatz_job_cancelled(job);
 }
 
-bool job_step(const ComposerJob *job, const char *stage, unsigned done, unsigned total) {
+bool job_step(const UrsatzJob *job, const char *stage, unsigned done, unsigned total) {
     if (!job) {
         return false;
     }

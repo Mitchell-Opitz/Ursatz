@@ -15,7 +15,7 @@
 #include <plan/plan_state.h>
 
 #include "motive/motive_internal.h"
-#include "util/composer_json.h"
+#include <common/json.h>
 #include "util/util.h"
 #include <plan/plan_common.h>
 
@@ -759,9 +759,9 @@ bool motive_equal(const Motive *a, const Motive *b) {
 
 static cJSON *meter_json(const PlanMeter *meter) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(composer_json_add(object, "beats_per_bar", composer_json_number(meter->beats_per_bar)) &&
-                    composer_json_add(object, "beat_unit", composer_json_number(meter->beat_unit)) &&
-                    composer_json_add(object, "bars_per_hyperbar", composer_json_number(meter->bars_per_hyperbar)))) {
+    if (object && !(common_json_add(object, "beats_per_bar", common_json_number(meter->beats_per_bar)) &&
+                    common_json_add(object, "beat_unit", common_json_number(meter->beat_unit)) &&
+                    common_json_add(object, "bars_per_hyperbar", common_json_number(meter->bars_per_hyperbar)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -770,8 +770,8 @@ static cJSON *meter_json(const PlanMeter *meter) {
 
 static cJSON *key_json(const SpelledKey *key) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(composer_json_add(object, "tonic_pitch_class", composer_json_number(spelled_key_tonic_pitch_class(key))) &&
-                    composer_json_add(object, "material", cJSON_CreateString(plan_key_material_id(key))))) {
+    if (object && !(common_json_add(object, "tonic_pitch_class", common_json_number(spelled_key_tonic_pitch_class(key))) &&
+                    common_json_add(object, "material", cJSON_CreateString(plan_key_material_id(key))))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -783,16 +783,16 @@ static cJSON *notes_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->note_count; i++) {
         const MotiveSketchNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && composer_json_add(object, "midi_pitch", composer_json_number(motive_pitch(motive, i))) &&
-                  composer_json_add(object, "offset", composer_json_rational(note->onset.num, note->onset.den)) &&
-                  composer_json_add(object, "duration", composer_json_rational(note->duration.num, note->duration.den));
+        bool ok = object && common_json_add(object, "midi_pitch", common_json_number(motive_pitch(motive, i))) &&
+                  common_json_add(object, "offset", common_json_rational_object(note->onset.num, note->onset.den)) &&
+                  common_json_add(object, "duration", common_json_rational_object(note->duration.num, note->duration.den));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
             return NULL;
         }
-        /* composer_json_append frees the object itself when it fails. */
-        if (!composer_json_append(array, object)) {
+        /* common_json_append frees the object itself when it fails. */
+        if (!common_json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -805,15 +805,15 @@ static cJSON *features_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->feature_count; i++) {
         const MotiveSketchFeature *feature = &motive->features[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && composer_json_add(object, "label", cJSON_CreateString(feature->label)) &&
-                  composer_json_add(object, "first", composer_json_number((long)feature->first)) &&
-                  composer_json_add(object, "last", composer_json_number((long)feature->last));
+        bool ok = object && common_json_add(object, "label", cJSON_CreateString(feature->label)) &&
+                  common_json_add(object, "first", common_json_number((long)feature->first)) &&
+                  common_json_add(object, "last", common_json_number((long)feature->last));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
             return NULL;
         }
-        if (!composer_json_append(array, object)) {
+        if (!common_json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -824,29 +824,29 @@ static cJSON *features_json(const Motive *motive) {
 cJSON *motive_json_object(const Motive *motive) {
     cJSON *document = cJSON_CreateObject();
     PlanMeter meter = motive_meter(motive);
-    bool ok = document && composer_json_add(document, "meter", meter_json(&meter));
+    bool ok = document && common_json_add(document, "meter", meter_json(&meter));
     /* An inferred key is worked out again on reading, so only a stated one is written. */
     if (ok && motive->key_source == MOTIVE_SKETCH_KEY_GIVEN) {
         SpelledKey key = motive_key(motive);
-        ok = composer_json_add(document, "key", key_json(&key));
+        ok = common_json_add(document, "key", key_json(&key));
     }
-    ok = ok && composer_json_add(document, "notes", notes_json(motive));
+    ok = ok && common_json_add(document, "notes", notes_json(motive));
     if (ok && motive->form != MOTIVE_SKETCH_FORM_FULL) {
-        ok = composer_json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
+        ok = common_json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
     }
     if (ok && motive_pickup(motive).num != 0) {
-        ok = composer_json_add(document, "pickup", composer_json_rational(motive_pickup(motive).num, motive_pickup(motive).den));
+        ok = common_json_add(document, "pickup", common_json_rational_object(motive_pickup(motive).num, motive_pickup(motive).den));
     }
     if (ok && motive->chord_count > 0) {
         char *harmony = motive_harmony_to_text(motive);
-        ok = harmony && composer_json_add(document, "harmony", cJSON_CreateString(harmony));
+        ok = harmony && common_json_add(document, "harmony", cJSON_CreateString(harmony));
         free(harmony);
     }
     if (ok && motive->feature_count > 0) {
-        ok = composer_json_add(document, "features", features_json(motive));
+        ok = common_json_add(document, "features", features_json(motive));
     }
     if (ok && motive->accompaniment) {
-        ok = composer_json_add(document, "role", cJSON_CreateString(motive_role_name(motive->accompaniment)));
+        ok = common_json_add(document, "role", cJSON_CreateString(motive_role_name(motive->accompaniment)));
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -858,53 +858,122 @@ cJSON *motive_json_object(const Motive *motive) {
 char *motive_json_text(cJSON *document) {
     char *printed = document ? cJSON_Print(document) : NULL;
     cJSON_Delete(document);
-    char *text = printed ? composer_json_indent(printed) : NULL;
+    char *text = printed ? common_json_indent(printed) : NULL;
     cJSON_free(printed);
     return text;
 }
 
-static bool read_time(ComposerJsonReader *reader, const cJSON *item, const char *path, long min_num, Rational *out) {
+/* ------------------------------------------------------------------ reading a motive document */
+
+#define READER_PATH_MAX 128
+
+/* The first failure of a read: where in the document and what was wrong (UrsatzError path and message). */
+typedef struct {
+    UrsatzError error;
+    bool failed;
+} MotiveReader;
+
+/* Records the first failure only; always returns false. */
+static bool reader_fail(MotiveReader *reader, const char *path, const char *format, ...) {
+    if (!reader->failed) {
+        reader->failed = true;
+        va_list args;
+        va_start(args, format);
+        vsnprintf(reader->error.message, sizeof(reader->error.message), format, args);
+        va_end(args);
+        snprintf(reader->error.path, sizeof(reader->error.path), "%s", path);
+    }
+    return false;
+}
+
+static bool reader_bad(MotiveReader *reader, const char *path, const char *message) {
+    return reader_fail(reader, path, "%s", message);
+}
+
+static void child_path(char *out, const char *parent, const char *key) {
+    if (parent[0] == '\0') {
+        snprintf(out, READER_PATH_MAX, "%s", key);
+    } else {
+        snprintf(out, READER_PATH_MAX, "%s.%s", parent, key);
+    }
+}
+
+static void index_path(char *out, const char *parent, size_t index) {
+    snprintf(out, READER_PATH_MAX, "%s[%zu]", parent, index);
+}
+
+/* The member of object named key. NULL when absent, after reporting it if required. */
+static const cJSON *reader_member(MotiveReader *reader, const cJSON *object, const char *path, const char *key, bool required) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    if (!item && required) {
+        char at[READER_PATH_MAX];
+        child_path(at, path, key);
+        reader_bad(reader, at, "missing required field");
+    }
+    return item;
+}
+
+/* The whole-number member key of object, from min to max. */
+static bool reader_int_member(MotiveReader *reader, const cJSON *object, const char *path, const char *key, long min, long max,
+                              long *out) {
+    const cJSON *item = reader_member(reader, object, path, key, true);
+    if (!item) {
+        return false;
+    }
+    char at[READER_PATH_MAX];
+    child_path(at, path, key);
+    if (!cJSON_IsNumber(item)) {
+        return reader_bad(reader, at, "expected a number");
+    }
+    long long value;
+    if (!common_json_long(object, key, &value) || value < min || value > max) {
+        return reader_fail(reader, at, "expected an integer from %ld to %ld", min, max);
+    }
+    *out = (long)value;
+    return true;
+}
+
+static bool read_time(MotiveReader *reader, const cJSON *item, const char *path, long min_num, Rational *out) {
     if (!cJSON_IsObject(item)) {
-        return composer_json_bad_format(reader, path, "expected an object with num and den");
+        return reader_bad(reader, path, "expected an object with num and den");
     }
     long num;
     long den;
-    if (!composer_json_read_int_member(reader, item, path, "num", min_num, 1000000000L, &num) ||
-        !composer_json_read_int_member(reader, item, path, "den", 1, 1000000000L, &den)) {
+    if (!reader_int_member(reader, item, path, "num", min_num, 1000000000L, &num) ||
+        !reader_int_member(reader, item, path, "den", 1, 1000000000L, &den)) {
         return false;
     }
     return rational_make(num, (long long)den, out) == RATIONAL_OK;
 }
 
-static bool read_time_member(ComposerJsonReader *reader, const cJSON *object, const char *path, const char *key, long min_num,
+static bool read_time_member(MotiveReader *reader, const cJSON *object, const char *path, const char *key, long min_num,
                              Rational *out) {
-    const cJSON *item = composer_json_member(reader, object, path, key, true);
+    const cJSON *item = reader_member(reader, object, path, key, true);
     if (!item) {
         return false;
     }
-    char at[COMPOSER_JSON_PATH_MAX];
-    composer_json_child_path(at, path, key);
+    char at[READER_PATH_MAX];
+    child_path(at, path, key);
     return read_time(reader, item, at, min_num, out);
 }
 
-static bool read_meter(ComposerJsonReader *reader, const cJSON *item, MotiveDocument *document) {
+static bool read_meter(MotiveReader *reader, const cJSON *item, MotiveDocument *document) {
     if (!cJSON_IsObject(item)) {
-        return composer_json_bad_format(reader, "meter", "expected an object");
+        return reader_bad(reader, "meter", "expected an object");
     }
     long beats;
     long unit;
-    if (!composer_json_read_int_member(reader, item, "meter", "beats_per_bar", 1, 64, &beats) ||
-        !composer_json_read_int_member(reader, item, "meter", "beat_unit", 1, 16, &unit)) {
+    if (!reader_int_member(reader, item, "meter", "beats_per_bar", 1, 64, &beats) ||
+        !reader_int_member(reader, item, "meter", "beat_unit", 1, 16, &unit)) {
         return false;
     }
     PlanMeter meter = {(int)beats, (int)unit, 0};
     if (!meter_valid(&meter)) {
-        return composer_json_bad_format(reader, "meter.beat_unit", "expected 1, 2, 4, 8 or 16");
+        return reader_bad(reader, "meter.beat_unit", "expected 1, 2, 4, 8 or 16");
     }
-    const cJSON *hyperbar = cJSON_GetObjectItemCaseSensitive(item, "bars_per_hyperbar");
-    if (hyperbar) {
+    if (cJSON_GetObjectItemCaseSensitive(item, "bars_per_hyperbar")) {
         long bars;
-        if (!composer_json_read_long(reader, hyperbar, "meter.bars_per_hyperbar", 0, 1000, &bars)) {
+        if (!reader_int_member(reader, item, "meter", "bars_per_hyperbar", 0, 1000, &bars)) {
             return false;
         }
         meter.bars_per_hyperbar = (int)bars;
@@ -915,36 +984,36 @@ static bool read_meter(ComposerJsonReader *reader, const cJSON *item, MotiveDocu
     return true;
 }
 
-static bool read_key(ComposerJsonReader *reader, const cJSON *item, MotiveDocument *document) {
+static bool read_key(MotiveReader *reader, const cJSON *item, MotiveDocument *document) {
     if (!cJSON_IsObject(item)) {
-        return composer_json_bad_format(reader, "key", "expected an object");
+        return reader_bad(reader, "key", "expected an object");
     }
     long tonic;
-    if (!composer_json_read_int_member(reader, item, "key", "tonic_pitch_class", 0, 11, &tonic)) {
+    if (!reader_int_member(reader, item, "key", "tonic_pitch_class", 0, 11, &tonic)) {
         return false;
     }
     /* "material" (a K1 id, name, key word or alias) or the old "mode" (major or minor); the two together are refused. */
     const cJSON *material = cJSON_GetObjectItemCaseSensitive(item, "material");
     const cJSON *old_mode = cJSON_GetObjectItemCaseSensitive(item, "mode");
     if (material && old_mode) {
-        return composer_json_bad_format(reader, "key.mode", "give \"material\" or the old \"mode\", not both");
+        return reader_bad(reader, "key.mode", "give \"material\" or the old \"mode\", not both");
     }
     const PitchMaterial *picked = NULL;
     if (material) {
         if (!cJSON_IsString(material)) {
-            return composer_json_bad_format(reader, "key.material", "expected a material id, name, key word or alias");
+            return reader_bad(reader, "key.material", "expected a material id, name, key word or alias");
         }
         picked = knowledge_snapshot_material_named(document->knowledge, material->valuestring);
         if (!picked || !composer_material_supported(&document->materials, picked)) {
-            return composer_json_bad_format(reader, "key.material", "expected a material the Composer writes keys in (major or minor)");
+            return reader_bad(reader, "key.material", "expected a material the Composer writes keys in (major or minor)");
         }
     } else {
-        const cJSON *mode = composer_json_member(reader, item, "key", "mode", true);
+        const cJSON *mode = reader_member(reader, item, "key", "mode", true);
         if (!mode) {
             return false;
         }
         if (!cJSON_IsString(mode) || (strcmp(mode->valuestring, "major") != 0 && strcmp(mode->valuestring, "minor") != 0)) {
-            return composer_json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
+            return reader_bad(reader, "key.mode", "expected \"major\" or \"minor\"");
         }
         picked = common_practice_material(&document->materials, strcmp(mode->valuestring, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
                                                                                                            : COMMON_PRACTICE_KEY_MAJOR);
@@ -954,38 +1023,38 @@ static bool read_key(ComposerJsonReader *reader, const cJSON *item, MotiveDocume
     return true;
 }
 
-static bool read_notes(ComposerJsonReader *reader, const cJSON *array, Motive *motive) {
+static bool read_notes(MotiveReader *reader, const cJSON *array, Motive *motive) {
     if (!cJSON_IsArray(array)) {
-        return composer_json_bad_format(reader, "notes", "expected an array");
+        return reader_bad(reader, "notes", "expected an array");
     }
     int count = cJSON_GetArraySize(array);
     if (count == 0) {
-        return composer_json_fail(reader, "notes", "the motive has no notes");
+        return reader_fail(reader, "notes", "the motive has no notes");
     }
     if (count > MOTIVE_MAX_NOTES) {
-        return composer_json_fail(reader, "notes", "the motive has %d notes; the most is %d", count,
+        return reader_fail(reader, "notes", "the motive has %d notes; the most is %d", count,
                          MOTIVE_MAX_NOTES);
     }
     Rational end = motive_time(0, 1);
     for (int i = 0; i < count; i++) {
         const cJSON *item = cJSON_GetArrayItem(array, i);
-        char path[COMPOSER_JSON_PATH_MAX];
-        composer_json_index_path(path, "notes", (size_t)i);
+        char path[READER_PATH_MAX];
+        index_path(path, "notes", (size_t)i);
         if (!cJSON_IsObject(item)) {
-            return composer_json_bad_format(reader, path, "expected an object");
+            return reader_bad(reader, path, "expected an object");
         }
         long pitch;
         MotiveSketchNote note;
-        if (!composer_json_read_int_member(reader, item, path, "midi_pitch", 0, 127, &pitch) ||
+        if (!reader_int_member(reader, item, path, "midi_pitch", 0, 127, &pitch) ||
             !read_time_member(reader, item, path, "offset", 0, &note.onset) ||
             !read_time_member(reader, item, path, "duration", 1, &note.duration)) {
             return false;
         }
         note.pitch = (int)pitch;
         if (rational_cmp(note.onset, end) < 0) {
-            char at[COMPOSER_JSON_PATH_MAX];
-            composer_json_child_path(at, path, "offset");
-            return composer_json_fail(reader, at, "the note starts before the note before it ends");
+            char at[READER_PATH_MAX];
+            child_path(at, path, "offset");
+            return reader_fail(reader, at, "the note starts before the note before it ends");
         }
         end = motive_event_end(&note);
         motive->notes[i] = note;
@@ -994,34 +1063,34 @@ static bool read_notes(ComposerJsonReader *reader, const cJSON *array, Motive *m
     return true;
 }
 
-static bool read_features(ComposerJsonReader *reader, const cJSON *array, MotiveDocument *document) {
+static bool read_features(MotiveReader *reader, const cJSON *array, MotiveDocument *document) {
     if (!cJSON_IsArray(array)) {
-        return composer_json_bad_format(reader, "features", "expected an array");
+        return reader_bad(reader, "features", "expected an array");
     }
     int count = cJSON_GetArraySize(array);
     if (count > MOTIVE_MAX_FEATURES) {
-        return composer_json_fail(reader, "features", "the motive has %d features; the most is %d", count,
+        return reader_fail(reader, "features", "the motive has %d features; the most is %d", count,
                          MOTIVE_MAX_FEATURES);
     }
     for (int i = 0; i < count; i++) {
         const cJSON *item = cJSON_GetArrayItem(array, i);
-        char path[COMPOSER_JSON_PATH_MAX];
-        composer_json_index_path(path, "features", (size_t)i);
+        char path[READER_PATH_MAX];
+        index_path(path, "features", (size_t)i);
         if (!cJSON_IsObject(item)) {
-            return composer_json_bad_format(reader, path, "expected an object");
+            return reader_bad(reader, path, "expected an object");
         }
-        const cJSON *label = composer_json_member(reader, item, path, "label", true);
+        const cJSON *label = reader_member(reader, item, path, "label", true);
         long first;
         long last;
-        if (!label || !composer_json_read_int_member(reader, item, path, "first", 0, 1000000L, &first) ||
-            !composer_json_read_int_member(reader, item, path, "last", 0, 1000000L, &last)) {
+        if (!label || !reader_int_member(reader, item, path, "first", 0, 1000000L, &first) ||
+            !reader_int_member(reader, item, path, "last", 0, 1000000L, &last)) {
             return false;
         }
         size_t label_size = cJSON_IsString(label) ? strlen(label->valuestring) : 0;
         if (label_size < 1 || label_size > MOTIVE_FEATURE_LABEL_MAX) {
-            char at[COMPOSER_JSON_PATH_MAX];
-            composer_json_child_path(at, path, "label");
-            return composer_json_bad_format(reader, at, "expected text of 1 to 8 characters");
+            char at[READER_PATH_MAX];
+            child_path(at, path, "label");
+            return reader_bad(reader, at, "expected text of 1 to 8 characters");
         }
         MotiveSketchFeature *feature = &document->features[i];
         memset(feature, 0, sizeof(*feature));
@@ -1043,10 +1112,9 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
         motive_set_error(error, location, "not valid JSON");
         return MOTIVE_ERR_SYNTAX;
     }
-    ComposerJsonError detail;
-    memset(&detail, 0, sizeof(detail));
-    ComposerJsonReader reader = {&detail, false};
-    bool ok = cJSON_IsObject(root) || composer_json_bad_format(&reader, "", "expected an object");
+    MotiveReader reader;
+    memset(&reader, 0, sizeof(reader));
+    bool ok = cJSON_IsObject(root) || reader_bad(&reader, "", "expected an object");
     const cJSON *meter = ok ? cJSON_GetObjectItemCaseSensitive(root, "meter") : NULL;
     const cJSON *key = ok ? cJSON_GetObjectItemCaseSensitive(root, "key") : NULL;
     ok = ok && (!meter || cJSON_IsNull(meter) || read_meter(&reader, meter, document));
@@ -1055,7 +1123,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     const cJSON *pickup = ok ? cJSON_GetObjectItemCaseSensitive(root, "pickup") : NULL;
     if (ok && form && !cJSON_IsNull(form)) {
         ok = (cJSON_IsString(form) && motive_form_parse(form->valuestring, &document->form)) ||
-             composer_json_bad_format(&reader, "form", "expected \"full\", \"rhythm\" or \"contour\"");
+             reader_bad(&reader, "form", "expected \"full\", \"rhythm\" or \"contour\"");
     }
     if (ok && pickup && !cJSON_IsNull(pickup)) {
         ok = read_time(&reader, pickup, "pickup", 0, &document->pickup);
@@ -1066,7 +1134,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     const cJSON *role = ok ? cJSON_GetObjectItemCaseSensitive(root, "role") : NULL;
     if (ok && harmony && !cJSON_IsNull(harmony)) {
         ok = (cJSON_IsString(harmony) && strlen(harmony->valuestring) < sizeof(document->harmony_text)) ||
-             composer_json_bad_format(&reader, "harmony", "expected chord text such as \"I V6@2 I@3\"");
+             reader_bad(&reader, "harmony", "expected chord text such as \"I V6@2 I@3\"");
         if (ok) {
             snprintf(document->harmony_text, sizeof(document->harmony_text), "%s", harmony->valuestring);
             document->has_harmony_text = true;
@@ -1075,13 +1143,13 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     ok = ok && (!features || cJSON_IsNull(features) || read_features(&reader, features, document));
     if (ok && role && !cJSON_IsNull(role)) {
         ok = (cJSON_IsString(role) && motive_role_parse(role->valuestring, &document->accompaniment)) ||
-             composer_json_bad_format(&reader, "role", "expected \"melodic\" or \"accompaniment\"");
+             reader_bad(&reader, "role", "expected \"melodic\" or \"accompaniment\"");
         document->has_role = ok;
     }
-    ok = ok && read_notes(&reader, composer_json_member(&reader, root, "", "notes", true), motive);
+    ok = ok && read_notes(&reader, reader_member(&reader, root, "", "notes", true), motive);
     cJSON_Delete(root);
     if (!ok) {
-        motive_set_error(error, detail.path, "%s", detail.message);
+        motive_set_error(error, reader.error.path, "%s", reader.error.message);
         return MOTIVE_ERR_VALUE;
     }
     return MOTIVE_OK;

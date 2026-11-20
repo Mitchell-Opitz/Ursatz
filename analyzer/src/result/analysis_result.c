@@ -1,4 +1,5 @@
-#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 #include <io/imported_realization.h>
 #include <realization/realization_json.h>
 #include <reading/reading_build.h>
-#include <ursatz_analyzer/version.h>
 
 #include "result/analysis_result_internal.h"
 
@@ -36,41 +36,41 @@ void analyzer_result_destroy(AnalyzerResult *result) {
 }
 
 /* The realization of the notes and the reading of the chain run over it (R-630). */
-static AnalyzerStatus build_layers(AnalyzerResult *result) {
+static UrsatzStatus build_layers(AnalyzerResult *result) {
     char(*note_ids)[REALIZATION_ID_MAX] = NULL;
     ImportedScoreResult imported = imported_score_realization(result->notes, NULL, &result->realization, &note_ids);
     if (imported != IMPORTED_SCORE_OK) {
-        return imported == IMPORTED_SCORE_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_LIBRARY;
+        return imported == IMPORTED_SCORE_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_INTERNAL;
     }
     ReadingSource source = {READING_SOURCE_ANALYZER, "ursatz-analyzer", "", result->options.stages, ""};
-    snprintf(source.producer_key, sizeof(source.producer_key), "%s", ursatz_analyzer_producer_key());
+    snprintf(source.producer_key, sizeof(source.producer_key), "%s", analyzer_producer_key());
     snprintf(source.knowledge_hash, sizeof(source.knowledge_hash), "%s", knowledge_snapshot_hash(result->options.knowledge));
     ReadingTarget target = {"w1", "m1", ""};
     if (!realization_digest(result->realization, target.digest)) {
         free(note_ids);
-        return ANALYZER_ERR_LIBRARY;
+        return URSATZ_ERR_INTERNAL;
     }
     RealizationResult built = reading_build(result->chain, &source, &target, (const char(*)[REALIZATION_ID_MAX])note_ids,
                                             result->notes->count, &result->reading);
     free(note_ids);
     if (built != REALIZATION_OK) {
-        return built == REALIZATION_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_LIBRARY;
+        return built == REALIZATION_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_INTERNAL;
     }
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
-AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOptions *options, AnalyzerResult **out) {
+UrsatzStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOptions *options, AnalyzerResult **out) {
     if (!out) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     *out = NULL;
     AnalyzerOptions used = options ? *options : analyzer_options_default();
     if (!notes || !used.knowledge || (used.stages & ANALYSIS_CHAIN_STAGE_PERCEPTION) == 0) {
-        return ANALYZER_ERR_ARGUMENT;
+        return URSATZ_ERR_REQUEST;
     }
     AnalyzerResult *result = calloc(1, sizeof(*result));
     if (!result) {
-        return ANALYZER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
     result->notes = notes;
     result->options = used;
@@ -81,15 +81,15 @@ AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOption
     AnalysisChainStatus status = analysis_chain_run_score(notes, &config, &result->chain);
     if (status != ANALYSIS_CHAIN_OK) {
         free(result);
-        return status == ANALYSIS_CHAIN_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_LIBRARY;
+        return status == ANALYSIS_CHAIN_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_INTERNAL;
     }
-    AnalyzerStatus built = build_layers(result);
-    if (built != ANALYZER_OK) {
+    UrsatzStatus built = build_layers(result);
+    if (built != URSATZ_OK) {
         analyzer_result_destroy(result);
         return built;
     }
     *out = result;
-    return ANALYZER_OK;
+    return URSATZ_OK;
 }
 
 const AnalysisChain *analyzer_result_run_chain(const AnalyzerResult *result) {

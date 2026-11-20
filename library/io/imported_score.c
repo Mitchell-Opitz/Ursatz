@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/files.h>
+
 #include "io/general_midi.h"
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
@@ -776,36 +778,13 @@ static ImportedScoreResult import_bytes(const unsigned char *bytes, size_t size,
 
 /* The whole file in a new buffer; IMPORTED_SCORE_ERR_IO with the message when it cannot be read. */
 static ImportedScoreResult read_file(const char *path, unsigned char **bytes, size_t *size, ImportedScoreError *error) {
-    FILE *file = fopen(path, "rb");
-    if (!file || fseek(file, 0, SEEK_END) != 0) {
-        if (file) {
-            fclose(file);
-        }
-        set_error(error, "Error: cannot read file '%s'", path);
+    char *data = NULL;
+    UrsatzStatus status = common_file_read(path, &data, size, NULL);
+    if (status != URSATZ_OK) {
+        set_error(error, status == URSATZ_ERR_ALLOC ? "Error: out of memory reading '%s'" : "Error: cannot read file '%s'", path);
         return IMPORTED_SCORE_ERR_IO;
     }
-    long length = ftell(file);
-    if (length < 0) {
-        fclose(file);
-        set_error(error, "Error: cannot read file '%s'", path);
-        return IMPORTED_SCORE_ERR_IO;
-    }
-    rewind(file);
-    unsigned char *buffer = malloc((size_t)length > 0 ? (size_t)length : 1);
-    if (!buffer) {
-        fclose(file);
-        set_error(error, "Error: out of memory reading '%s'", path);
-        return IMPORTED_SCORE_ERR_IO;
-    }
-    size_t read_count = fread(buffer, 1, (size_t)length, file);
-    fclose(file);
-    if (read_count != (size_t)length) {
-        free(buffer);
-        set_error(error, "Error: cannot read file '%s'", path);
-        return IMPORTED_SCORE_ERR_IO;
-    }
-    *bytes = buffer;
-    *size = (size_t)length;
+    *bytes = (unsigned char *)data;
     return IMPORTED_SCORE_OK;
 }
 

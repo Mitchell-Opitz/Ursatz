@@ -1,4 +1,8 @@
-#include <ursatz_analyzer/corpus.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
+#include <ursatz_analyzer_internal/version.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -8,18 +12,15 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/staleness.h>
-#include <ursatz_analyzer/version.h>
 
 #include "cJSON.h"
 #include "export/analysis_document_internal.h"
 #include "corpus/corpus_internal.h"
 #include "result/run_file.h"
-#include "util/file_util.h"
+#include <common/files.h>
+#include <common/hash.h>
+#include <common/strings.h>
 #include "util/misc_util.h"
-#include <model/core/content_hash.h>
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define INDEX_NAME "corpus-index.json"
@@ -33,7 +34,21 @@ typedef struct {
     unsigned long long content_hash; /* FNV-1a 64 of the input file's bytes */
     long measures;                   /* -1 when unknown */
     char home_key[HOME_KEY_CAPACITY]; /* empty when unknown */
+    char *message;                   /* the importer's text of a failed import, for the caller's report; NULL when none */
+    char **warnings;                 /* the warnings an import raised, for the caller's report */
+    size_t warning_count;
 } PieceRecord;
+
+static void record_report_free(PieceRecord *record) {
+    free(record->message);
+    for (size_t i = 0; i < record->warning_count; i++) {
+        free(record->warnings[i]);
+    }
+    free(record->warnings);
+    record->message = NULL;
+    record->warnings = NULL;
+    record->warning_count = 0;
+}
 
 typedef struct {
     char **paths;
@@ -58,30 +73,7 @@ char *corpus_join(const char *dir, const char *name) {
 }
 
 bool corpus_make_dirs(const char *path) {
-    char *copy = strdup(path);
-    if (!copy) {
-        return false;
-    }
-    bool ok = true;
-    for (char *p = copy + 1; ok; p++) {
-        if (*p == '/' || *p == '\0') {
-            char saved = *p;
-            *p = '\0';
-            if (mkdir(copy, 0777) != 0 && errno != EEXIST) {
-                ok = false;
-            }
-            *p = saved;
-            if (saved == '\0') {
-                break;
-            }
-        }
-    }
-    if (ok) {
-        struct stat info;
-        ok = stat(path, &info) == 0 && S_ISDIR(info.st_mode);
-    }
-    free(copy);
-    return ok;
+    return common_dir_make(path, NULL) == URSATZ_OK;
 }
 
 bool corpus_make_parent_dirs(const char *file_path) {
@@ -194,7 +186,7 @@ static const char *import_error_text(ImportedScoreResult result) {
 }
 
 /* Writes text to <output_dir>/<relative><suffix>, creating directories. */
-static bool write_output_file(const char *output_dir, const char *relative, const char *suffix, const char *text) {
+static bool write_output_file(const char *output_dir, const char *relative, const char *suffix, const char *text, UrsatzError *error) {
     char *name = malloc(strlen(relative) + strlen(suffix) + 1);
     if (!name) {
         return false;
@@ -206,16 +198,16 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
     if (!path) {
         return false;
     }
-    bool ok = corpus_make_parent_dirs(path) && file_write_atomic(path, text);
+    bool ok = corpus_make_parent_dirs(path) && (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
     if (!ok) {
-        fprintf(stderr, "Error: cannot write '%s'\n", path);
+        ursatz_error_set(error, URSATZ_ERR_IO, path, "cannot write '%s'", path);
     }
     free(path);
     return ok;
 }
 
 static unsigned long long fnv1a_file(const char *path) {
-    uint64_t hash = CONTENT_HASH_FNV1A64_OFFSET;
+    uint64_t hash = COMMON_FNV1A64_OFFSET;
     FILE *file = fopen(path, "rb");
     if (!file) {
         return hash;
@@ -223,7 +215,7 @@ static unsigned long long fnv1a_file(const char *path) {
     unsigned char chunk[8192];
     size_t got;
     while ((got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        hash = content_hash_fnv1a64(hash, chunk, got);
+        hash = common_fnv1a64(chunk, got, hash);
     }
     fclose(file);
     return hash;
@@ -246,8 +238,8 @@ static void read_document_summary(const AnalysisDocument *document, PieceRecord 
 
 /* Imports, analyzes and writes one piece into record. A piece that cannot be analyzed is a failed record and still
    returns OK; only a failure to write an output file is a run error. */
-static CorpusRunResult analyze_piece(const char *output_dir, const char *relative, const char *input_path,
-                                     const KnowledgeSnapshot *knowledge, PieceRecord *record) {
+static UrsatzStatus analyze_piece(const char *output_dir, const char *relative, const char *input_path,
+                                     const KnowledgeSnapshot *knowledge, PieceRecord *record, UrsatzError *error) {
     record->status = CORPUS_PIECE_FAILED;
     record->error = NULL;
     record->document = NULL;
@@ -258,24 +250,35 @@ static CorpusRunResult analyze_piece(const char *output_dir, const char *relativ
     ImportedScore notes;
     AnalyzerResult *result = NULL;
     ImportedScoreResult imported = IMPORTED_SCORE_OK;
-    RunFileResult ran = analyzer_run_file(input_path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL);
+    UrsatzStatus analyzed = URSATZ_OK;
+    UrsatzError import_error = {{0}};
+    RunFileResult ran =
+        analyzer_run_file(input_path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL, &analyzed, &import_error);
     if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
-        return CORPUS_RUN_OK;
+        record->message = strdup(import_error.message);
+        return URSATZ_OK;
     }
     if (ran != RUN_FILE_OK) {
-        record->error = "out of memory";
-        return CORPUS_RUN_OK;
+        record->error = analyzed == URSATZ_ERR_ALLOC ? "out of memory" : "analysis failed";
+        return URSATZ_OK;
+    }
+    if (notes.source.warning_line_count > 0) {
+        record->warnings = calloc(notes.source.warning_line_count, sizeof(char *));
+        for (size_t i = 0; record->warnings && i < notes.source.warning_line_count; i++) {
+            record->warnings[i] = strdup(notes.source.warnings[i]);
+            record->warning_count += record->warnings[i] != NULL;
+        }
     }
     AnalysisDocument *document = analyzer_run_file_document(input_path, &notes, result);
     if (!document) {
         record->error = "out of memory";
-        return CORPUS_RUN_OK;
+        return URSATZ_OK;
     }
 
     read_document_summary(document, record);
-    char *json = analysis_document_to_json(document);
-    analysis_document_destroy(document);
+    char *json = analyzer_document_to_json(document);
+    analyzer_document_destroy(document);
     char *document_name = malloc(strlen(relative) + strlen(ANALYSIS_DOCUMENT_SUFFIX) + 1);
     if (!json || !document_name) {
         free(json);
@@ -283,110 +286,72 @@ static CorpusRunResult analyze_piece(const char *output_dir, const char *relativ
         record->measures = -1;
         record->home_key[0] = '\0';
         record->error = "out of memory";
-        return CORPUS_RUN_OK;
+        return URSATZ_OK;
     }
     strcpy(document_name, relative);
     strcat(document_name, ANALYSIS_DOCUMENT_SUFFIX);
 
-    bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json);
+    bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json, error);
     free(json);
     if (!wrote) {
         free(document_name);
-        return CORPUS_RUN_ERR_WRITE;
+        return URSATZ_ERR_IO;
     }
     record->status = CORPUS_PIECE_ANALYZED;
     record->document = document_name;
-    return CORPUS_RUN_OK;
+    return URSATZ_OK;
 }
 
 /* ---- Corpus index ---- */
 
-static bool append_text(char **buffer, size_t *length, size_t *capacity, const char *text) {
-    size_t add = strlen(text);
-    if (*length + add + 1 > *capacity) {
-        size_t grown = *capacity ? *capacity : 1024;
-        while (*length + add + 1 > grown) {
-            grown *= 2;
-        }
-        char *data = realloc(*buffer, grown);
-        if (!data) {
-            return false;
-        }
-        *buffer = data;
-        *capacity = grown;
+/* A JSON string literal for text, or the literal null for NULL; the escaping is cJSON's. */
+static void append_json_or_null(CommonText *out, const char *text) {
+    if (text) {
+        common_text_append_json_string(out, text);
+    } else {
+        common_text_append(out, "null");
     }
-    memcpy(*buffer + *length, text, add + 1);
-    *length += add;
-    return true;
-}
-
-/* A JSON string literal for text (or the literal null for NULL), escaped by cJSON. */
-static bool append_json_string(char **buffer, size_t *length, size_t *capacity, const char *text) {
-    if (!text) {
-        return append_text(buffer, length, capacity, "null");
-    }
-    cJSON *item = cJSON_CreateString(text);
-    char *printed = item ? cJSON_PrintUnformatted(item) : NULL;
-    cJSON_Delete(item);
-    if (!printed) {
-        return false;
-    }
-    bool ok = append_text(buffer, length, capacity, printed);
-    cJSON_free(printed);
-    return ok;
 }
 
 /* The index for the first count pieces: 2-space indent, fixed key order, one piece member per line. */
 static char *render_index(const char *input_dir, const char *const *paths, const PieceRecord *records, size_t count) {
-    char *out = NULL;
-    size_t length = 0;
-    size_t capacity = 0;
-    char number[64];
-    bool ok = append_text(&out, &length, &capacity,
-                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 2,\n"
-                          "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
-                          "  \"producer_key\": \"") &&
-              append_text(&out, &length, &capacity, ursatz_analyzer_producer_key()) &&
-              append_text(&out, &length, &capacity, "\",\n") &&
-              (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
-                        URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION),
-               append_text(&out, &length, &capacity, number)) &&
-              append_text(&out, &length, &capacity, "  \"input_dir\": ") &&
-              append_json_string(&out, &length, &capacity, input_dir) &&
-              append_text(&out, &length, &capacity, count ? ",\n  \"pieces\": [\n" : ",\n  \"pieces\": []\n");
-    for (size_t i = 0; ok && i < count; i++) {
+    CommonText out;
+    common_text_init(&out);
+    common_text_appendf(&out, "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": %d,\n", ANALYZER_CORPUS_INDEX_VERSION);
+    common_text_append(&out,
+                       "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
+                       "  \"producer_key\": \"");
+    common_text_append(&out, analyzer_producer_key());
+    common_text_append(&out, "\",\n");
+    common_text_appendf(&out, "  \"document_schema_version\": %d,\n", ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    common_text_append(&out, "  \"input_dir\": ");
+    append_json_or_null(&out, input_dir);
+    common_text_append(&out, count ? ",\n  \"pieces\": [\n" : ",\n  \"pieces\": []\n");
+    for (size_t i = 0; i < count; i++) {
         const PieceRecord *record = &records[i];
-        ok = append_text(&out, &length, &capacity, "    {\n      \"path\": ") &&
-             append_json_string(&out, &length, &capacity, paths[i]) &&
-             append_text(&out, &length, &capacity, ",\n      \"document\": ") &&
-             append_json_string(&out, &length, &capacity, record->document) &&
-             append_text(&out, &length, &capacity, ",\n      \"status\": ") &&
-             append_text(&out, &length, &capacity,
-                         record->status == CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"") &&
-             append_text(&out, &length, &capacity, ",\n      \"error\": ") &&
-             append_json_string(&out, &length, &capacity, record->error) &&
-             (snprintf(number, sizeof(number), ",\n      \"content_hash\": \"%016llx\",\n      \"measures\": ",
-                       record->content_hash),
-              append_text(&out, &length, &capacity, number));
-        if (ok && record->measures >= 0) {
-            snprintf(number, sizeof(number), "%ld", record->measures);
-            ok = append_text(&out, &length, &capacity, number);
-        } else if (ok) {
-            ok = append_text(&out, &length, &capacity, "null");
+        common_text_append(&out, "    {\n      \"path\": ");
+        append_json_or_null(&out, paths[i]);
+        common_text_append(&out, ",\n      \"document\": ");
+        append_json_or_null(&out, record->document);
+        common_text_append(&out, ",\n      \"status\": ");
+        common_text_append(&out, record->status == CORPUS_PIECE_FAILED ? "\"failed\"" : "\"analyzed\"");
+        common_text_append(&out, ",\n      \"error\": ");
+        append_json_or_null(&out, record->error);
+        common_text_appendf(&out, ",\n      \"content_hash\": \"%016llx\",\n      \"measures\": ", record->content_hash);
+        if (record->measures >= 0) {
+            common_text_appendf(&out, "%ld", record->measures);
+        } else {
+            common_text_append(&out, "null");
         }
-        ok = ok && append_text(&out, &length, &capacity, ",\n      \"home_key\": ") &&
-             append_json_string(&out, &length, &capacity, record->home_key[0] ? record->home_key : NULL) &&
-             append_text(&out, &length, &capacity, i + 1 < count ? "\n    },\n" : "\n    }\n");
+        common_text_append(&out, ",\n      \"home_key\": ");
+        append_json_or_null(&out, record->home_key[0] ? record->home_key : NULL);
+        common_text_append(&out, i + 1 < count ? "\n    },\n" : "\n    }\n");
     }
-    if (ok && count) {
-        ok = append_text(&out, &length, &capacity, "  ]\n");
+    if (count) {
+        common_text_append(&out, "  ]\n");
     }
-    ok = ok && append_text(&out, &length, &capacity, "}\n");
-    if (!ok) {
-        free(out);
-        return NULL;
-    }
-    return out;
+    common_text_append(&out, "}\n");
+    return common_text_take(&out);
 }
 
 /* ---- Resume ---- */
@@ -394,28 +359,27 @@ static char *render_index(const char *input_dir, const char *const *paths, const
 /* Reads the index left by an earlier run. *out is NULL when there is no index, or when it was written by another
    analyzer, document schema version or producer key (nothing in it can be reused; an index of schema version 1 holds
    ursatz_commit instead of producer_key, so it reuses nothing and is written again). An index that exists but cannot be
-   read is CORPUS_RUN_ERR_INDEX. */
-static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) {
+   read is URSATZ_ERR_FORMAT. */
+static UrsatzStatus load_previous_index(const char *output_dir, cJSON **out, UrsatzError *error) {
     *out = NULL;
     char *path = corpus_join(output_dir, INDEX_NAME);
     if (!path) {
-        fprintf(stderr, "Error: out of memory\n");
-        return CORPUS_RUN_ERR_INDEX;
+        return ursatz_error_set(error, URSATZ_ERR_FORMAT, output_dir, "out of memory");
     }
     char *text = NULL;
-    if (!file_read_all(path, &text, NULL)) {
+    if (common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
         free(path);
-        return CORPUS_RUN_OK;
+        return URSATZ_OK;
     }
     cJSON *root = cJSON_Parse(text);
     free(text);
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "schema");
     const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(root, "pieces");
     if (!cJSON_IsString(name) || strcmp(name->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
-        fprintf(stderr, "Error: cannot read the corpus index '%s'\n", path);
+        UrsatzStatus status = ursatz_error_set(error, URSATZ_ERR_FORMAT, path, "cannot read the corpus index '%s'", path);
         cJSON_Delete(root);
         free(path);
-        return CORPUS_RUN_ERR_INDEX;
+        return status;
     }
     free(path);
 
@@ -426,10 +390,10 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
         analyzer_document_status_of((int)document_schema->valuedouble, analyzer_version->valuestring,
                                     producer_key->valuestring) != ANALYZER_DOCUMENT_CURRENT) {
         cJSON_Delete(root);
-        return CORPUS_RUN_OK;
+        return URSATZ_OK;
     }
     *out = root;
-    return CORPUS_RUN_OK;
+    return URSATZ_OK;
 }
 
 static bool file_exists(const char *dir, const char *relative, const char *suffix) {
@@ -494,26 +458,24 @@ static bool write_index(const char *output_dir, const char *input_dir, const cha
                         const PieceRecord *records, size_t count) {
     char *text = render_index(input_dir, paths, records, count);
     char *final_path = corpus_join(output_dir, INDEX_NAME);
-    bool ok = text && final_path && file_write_atomic(final_path, text);
+    bool ok = text && final_path && (common_file_write_atomic(final_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     free(final_path);
     return ok;
 }
 
-CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out) {
+UrsatzStatus corpus_run(const CorpusRunOptions *options, CorpusRunSummary *out, UrsatzError *error) {
     CorpusRunSummary summary = {0, 0, 0};
     if (out) {
         *out = summary;
     }
     if (!options || !options->knowledge || !options->input_dir || !options->input_dir[0]) {
-        fprintf(stderr, "Error: corpus run needs an input directory and a knowledge snapshot\n");
-        return CORPUS_RUN_ERR_ARGUMENT;
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "corpus run needs an input directory and a knowledge snapshot");
     }
 
     struct stat input_info;
     if (stat(options->input_dir, &input_info) != 0 || !S_ISDIR(input_info.st_mode)) {
-        fprintf(stderr, "Error: cannot read input directory '%s'\n", options->input_dir);
-        return CORPUS_RUN_ERR_INPUT_DIR;
+        return ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, options->input_dir, "cannot read input directory '%s'", options->input_dir);
     }
 
     char *default_output = NULL;
@@ -521,15 +483,14 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
     if (!output_dir) {
         default_output = corpus_join(options->input_dir, CORPUS_DEFAULT_OUTPUT_NAME);
         if (!default_output) {
-            fprintf(stderr, "Error: out of memory\n");
-            return CORPUS_RUN_ERR_OUTPUT_DIR;
+            return ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
         }
         output_dir = default_output;
     }
     if (!corpus_make_dirs(output_dir)) {
-        fprintf(stderr, "Error: cannot create output directory '%s'\n", output_dir);
+        UrsatzStatus status = ursatz_error_set(error, URSATZ_ERR_IO, output_dir, "cannot create output directory '%s'", output_dir);
         free(default_output);
-        return CORPUS_RUN_ERR_OUTPUT_DIR;
+        return status;
     }
 
     struct stat output_info;
@@ -537,44 +498,42 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
 
     PieceList pieces = {0};
     PieceRecord *records = NULL;
-    CorpusRunResult result = CORPUS_RUN_OK;
+    UrsatzStatus result = URSATZ_OK;
     if (!walk_directory(options->input_dir, "", have_output_info ? &output_info : NULL, &pieces)) {
-        fprintf(stderr, "Error: out of memory while listing '%s'\n", options->input_dir);
-        result = CORPUS_RUN_ERR_INPUT_DIR;
+        result = ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, options->input_dir, "out of memory while listing '%s'", options->input_dir);
     } else {
         qsort(pieces.paths, pieces.count, sizeof(char *), compare_paths);
         records = calloc(pieces.count ? pieces.count : 1, sizeof(PieceRecord));
         if (!records) {
-            fprintf(stderr, "Error: out of memory\n");
-            result = CORPUS_RUN_ERR_WRITE;
+            result = ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
         }
     }
 
     cJSON *previous = NULL;
-    if (result == CORPUS_RUN_OK && options->resume) {
-        result = load_previous_index(output_dir, &previous);
+    if (result == URSATZ_OK && options->resume) {
+        result = load_previous_index(output_dir, &previous, error);
     }
 
     size_t done = 0;
-    for (; result == CORPUS_RUN_OK && done < pieces.count; done++) {
+    for (; result == URSATZ_OK && done < pieces.count; done++) {
         const char *relative = pieces.paths[done];
         char *input_path = corpus_join(options->input_dir, relative);
         if (!input_path) {
-            fprintf(stderr, "Error: out of memory\n");
-            result = CORPUS_RUN_ERR_WRITE;
+            result = ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
             break;
         }
         PieceRecord *record = &records[done];
         if (!(previous && reuse_previous(previous, output_dir, relative, fnv1a_file(input_path), record))) {
-            result = analyze_piece(output_dir, relative, input_path, options->knowledge, record);
+            result = analyze_piece(output_dir, relative, input_path, options->knowledge, record, error);
         }
         free(input_path);
-        if (result != CORPUS_RUN_OK) {
+        if (result != URSATZ_OK) {
+            record_report_free(record);
             break;
         }
         if (!write_index(output_dir, options->input_dir, (const char *const *)pieces.paths, records, done + 1)) {
-            fprintf(stderr, "Error: cannot write the corpus index in '%s'\n", output_dir);
-            result = CORPUS_RUN_ERR_WRITE;
+            result = ursatz_error_set(error, URSATZ_ERR_IO, output_dir, "cannot write the corpus index in '%s'", output_dir);
+            record_report_free(record);
             done++;
             break;
         }
@@ -586,13 +545,14 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
             summary.failed++;
         }
         if (options->on_piece) {
-            options->on_piece(relative, record->status, record->error, options->user);
+            CorpusPieceReport report = {record->message, (const char *const *)record->warnings, record->warning_count};
+            options->on_piece(relative, record->status, record->error, &report, options->user);
         }
+        record_report_free(record);
     }
-    if (result == CORPUS_RUN_OK && pieces.count == 0 &&
+    if (result == URSATZ_OK && pieces.count == 0 &&
         !write_index(output_dir, options->input_dir, (const char *const *)pieces.paths, records, 0)) {
-        fprintf(stderr, "Error: cannot write the corpus index in '%s'\n", output_dir);
-        result = CORPUS_RUN_ERR_WRITE;
+        result = ursatz_error_set(error, URSATZ_ERR_IO, output_dir, "cannot write the corpus index in '%s'", output_dir);
     }
     for (size_t i = 0; records && i < done && i < pieces.count; i++) {
         free(records[i].document);

@@ -11,34 +11,11 @@
 #include <string.h>
 #include <time.h>
 
+#include <common/files.h>
 
 
 bool cli_read_file(const char *path, char **text, size_t *size) {
-    *text = NULL;
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return false;
-    }
-    long length = -1;
-    if (fseek(file, 0, SEEK_END) == 0) {
-        length = ftell(file);
-        if (length < 0 || fseek(file, 0, SEEK_SET) != 0) {
-            length = -1;
-        }
-    }
-    char *buffer = length >= 0 ? malloc((size_t)length + 1) : NULL;
-    bool read = buffer && fread(buffer, 1, (size_t)length, file) == (size_t)length;
-    fclose(file);
-    if (!read) {
-        free(buffer);
-        return false;
-    }
-    buffer[length] = '\0';
-    *text = buffer;
-    if (size) {
-        *size = (size_t)length;
-    }
-    return true;
+    return common_file_read(path, text, size, NULL) == URSATZ_OK;
 }
 
 bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *out) {
@@ -71,7 +48,7 @@ const char *cli_material_word(const char *id, char *out, size_t size) {
     ComposerResponse response;
     memset(&response, 0, sizeof response);
     snprintf(out, size, "%s", id ? id : "");
-    if (id && composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK) {
+    if (id && composer_api_vocabulary(cli_context(), &response) == URSATZ_OK) {
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *entry = NULL;
         cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(document, "materials")) {
@@ -90,7 +67,7 @@ const char *cli_material_word(const char *id, char *out, size_t size) {
 long cli_limit(const char *name) {
     ComposerResponse response;
     long value = 0;
-    if (composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK) {
+    if (composer_api_vocabulary(cli_context(), &response) == URSATZ_OK) {
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "limits"), name);
         value = cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
@@ -114,7 +91,7 @@ int cli_fail(int status, const char *format, ...) {
     return status;
 }
 
-int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name) {
+int cli_fail_api(UrsatzStatus status, const UrsatzError *error, const char *input_name) {
     static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo",
                                           "count", "seed", "distance", "function", "depth", "mode", "material", "suggest",
                                           "into", "hybrid", "bars", "cadence", "first_cadence", "accompaniment", "texture",
@@ -209,7 +186,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
             snprintf(at, sizeof message - (size_t)(at - message), "%s%s", PHRASES[i][1], tail);
         }
     }
-    return cli_fail(status == COMPOSER_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
+    return cli_fail(status == URSATZ_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
 }
 
 int cli_style_without_add(CliStyleWithout *list, const char *name) {
@@ -321,9 +298,9 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
     cJSON_Delete(request);
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    ComposerStatus status = printed ? composer_api_export(cli_context(), printed, NULL, &response) : COMPOSER_ERR_ALLOC;
+    UrsatzStatus status = printed ? composer_api_export(cli_context(), printed, NULL, &response) : URSATZ_ERR_ALLOC;
     cJSON_free(printed);
-    ok = status == COMPOSER_OK && response.plan_json &&
+    ok = status == URSATZ_OK && response.plan_json &&
          cli_write_bytes(temporary, response.plan_json, strlen(response.plan_json));
     const char *why = response.error.message[0] ? response.error.message : "the plan";
     int result = ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, why);
@@ -356,9 +333,9 @@ int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, b
     if (!printed) {
         return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
     }
-    ComposerStatus status = composer_api_export(cli_context(), printed, NULL, out);
+    UrsatzStatus status = composer_api_export(cli_context(), printed, NULL, out);
     cJSON_free(printed);
-    return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
+    return status == URSATZ_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 
 void cli_discard_pending(CliPendingFile *pending, size_t count) {

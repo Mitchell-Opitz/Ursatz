@@ -20,7 +20,8 @@
 #define MKDIR(path) mkdir(path, 0755)
 #endif
 
-#include "gui_check.h"
+#include "support/server_support.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 
@@ -67,18 +68,18 @@ static bool extract_id(const char *response, char *out, size_t out_size) {
 
 static void reset_directories(void) {
 #ifdef _WIN32
-  system("rmdir /s /q collections pieces 2> nul");
+  system("rmdir /s /q library settings cache 2> nul");
 #else
-  system("rm -rf collections pieces");
+  system("rm -rf library settings cache");
 #endif
 }
 
 /* A piece the routes can see: pieces/<id>/meta.json. */
 static void make_piece(const char *id) {
   char path[128];
-  snprintf(path, sizeof(path), "pieces/%s", id);
+  snprintf(path, sizeof(path), "library/pieces/%s", id);
   MKDIR(path);
-  snprintf(path, sizeof(path), "pieces/%s/meta.json", id);
+  snprintf(path, sizeof(path), "library/pieces/%s/piece.json", id);
   const char *meta = "{\"filename\":\"piece.mid\",\"format\":\"midi\",\"uploaded_at\":\"2026-01-01T00:00:00Z\"}";
   test_write_file(path, meta, strlen(meta));
 }
@@ -86,12 +87,13 @@ static void make_piece(const char *id) {
 int main(void) {
   printf("-- collection routes\n");
   reset_directories();
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
   make_piece("piece-1");
   make_piece("piece-2");
   make_piece("piece-3");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -246,8 +248,8 @@ int main(void) {
         "the deleted piece left the second collection");
 
   /* Collections survive a restart. */
-  ursatz_gui_server_stop(ctx);
-  ctx = ursatz_gui_server_start(PORT, ".");
+  test_gui_server_stop(ctx);
+  ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server restarts");
   if (!ctx) {
     return 1;
@@ -269,9 +271,9 @@ int main(void) {
   check(test_http_status(response) == 404, "deleting a deleted collection is 404");
   check(exchange_into("GET", "/api/corpus", NULL, response, sizeof(response)), "list after delete: got a response");
   check(!has(response, "\"id\":\"test-corpus\""), "the deleted collection is not listed");
-  check(test_file_exists("pieces/piece-3/meta.json"), "deleting a collection leaves its pieces");
+  check(test_file_exists("library/pieces/piece-3/piece.json"), "deleting a collection leaves its pieces");
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   check(true, "server stops cleanly");
 
   reset_directories();

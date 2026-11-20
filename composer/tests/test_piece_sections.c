@@ -46,7 +46,7 @@ static cJSON *theme_plan(const char *into, const char *mode) {
     char *body = printed(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), body, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), body, NULL, &response) == URSATZ_OK);
     free(body);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
@@ -111,9 +111,9 @@ static cJSON *own_motif(void) {
     return fill;
 }
 
-static ComposerStatus run(cJSON *request, ComposerResponse *response) {
+static UrsatzStatus run(cJSON *request, ComposerResponse *response) {
     char *text = printed(request);
-    ComposerStatus status = composer_api_piece(test_context(), text, NULL, response);
+    UrsatzStatus status = composer_api_piece(test_context(), text, NULL, response);
     free(text);
     cJSON_Delete(request);
     return status;
@@ -121,12 +121,12 @@ static ComposerStatus run(cJSON *request, ComposerResponse *response) {
 
 static void expect_refusal(cJSON *request, const char *path, const char *message) {
     ComposerResponse response;
-    ComposerStatus status = run(request, &response);
-    if (status != COMPOSER_ERR_REQUEST || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
+    UrsatzStatus status = run(request, &response);
+    if (status != URSATZ_ERR_REQUEST || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
         fprintf(stderr, "'%s' at '%s' (status %d), expected '%s' at '%s'\n", response.error.message, response.error.path, (int)status,
                 message, path);
     }
-    assert(status == COMPOSER_ERR_REQUEST && strcmp(response.error.path, path) == 0 && strstr(response.error.message, message));
+    assert(status == URSATZ_ERR_REQUEST && strcmp(response.error.path, path) == 0 && strstr(response.error.message, message));
     composer_response_destroy(&response);
 }
 
@@ -198,11 +198,11 @@ static void test_ternary_regions(void) {
     assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "minor"), theme_fill(minor))));
     assert(cJSON_AddItemToArray(sections, overlay("B", region_relation("mediant", "A"), theme_fill(major))));
     ComposerResponse response;
-    ComposerStatus status = run(wrap(sized_request("ternary", sections), PIECE_SEED), &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = run(wrap(sized_request("ternary", sections), PIECE_SEED), &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "ternary with overlays: %s\n", response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
     assert(plan);
@@ -249,7 +249,7 @@ static void test_previous_anchor(void) {
     assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "minor"), theme_fill(minor))));
     assert(cJSON_AddItemToArray(sections, overlay("B", region_relation("mediant", "previous"), theme_fill(major))));
     ComposerResponse response;
-    assert(run(wrap(sized_request("ternary", sections), PIECE_SEED), &response) == COMPOSER_OK);
+    assert(run(wrap(sized_request("ternary", sections), PIECE_SEED), &response) == URSATZ_OK);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
     assert(plan && strcmp(key_text(key_span(plan, 1), "tonic"), "Eb") == 0 && strcmp(key_text(key_span(plan, 1), "anchor"), "previous") == 0);
@@ -261,8 +261,8 @@ static void test_own_motive(void) {
     cJSON *sections = cJSON_CreateArray();
     assert(cJSON_AddItemToArray(sections, overlay("B", NULL, own_motif())));
     ComposerResponse response;
-    ComposerStatus status = run(wrap(sized_request("ternary", sections), PIECE_SEED), &response);
-    assert(status == COMPOSER_OK);
+    UrsatzStatus status = run(wrap(sized_request("ternary", sections), PIECE_SEED), &response);
+    assert(status == URSATZ_OK);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
     assert(plan && strstr(cJSON_PrintUnformatted(plan), "\"label\":\"own B\"") != NULL);
@@ -297,11 +297,11 @@ static void test_game_loop_region(void) {
     assert(cJSON_AddItemToObject(body, "region", region_relation("dominant", "home")));
     assert(cJSON_AddItemToObject(cJSON_GetArrayItem(sections, 2), "region", cJSON_CreateString("home")));
     ComposerResponse response;
-    ComposerStatus status = run(wrap(piece, PIECE_SEED), &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = run(wrap(piece, PIECE_SEED), &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "game loop with a region: %s\n", response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
     assert(plan);

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 #include <io/imported_score.h>
 #include "test_knowledge.h"
 #include "test_support.h"
@@ -46,12 +46,12 @@ int main(void) {
 
     AnalysisDocument *document = test_build_document("long_labels.mid", &report);
     assert(document != NULL);
-    char *json = analysis_document_to_json(document);
+    char *json = analyzer_document_to_json(document);
     assert(json);
     assert(strstr(json, key_label));
     assert(strstr(json, chord_label));
     free(json);
-    analysis_document_destroy(document);
+    analyzer_document_destroy(document);
     test_release_report(&report);
     assert(report.entries == NULL);
     assert(report.entry_count == 0);

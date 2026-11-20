@@ -615,10 +615,10 @@ int run_piece(int argc, char **argv) {
         return status;
     }
     ComposerResponse response;
-    ComposerStatus api_status = options.variations ? composer_api_piece_variations(cli_context(), text, NULL, &response)
+    UrsatzStatus api_status = options.variations ? composer_api_piece_variations(cli_context(), text, NULL, &response)
                                                    : composer_api_piece(cli_context(), text, NULL, &response);
     cJSON_free(text);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
     } else if (options.variations) {
         cJSON *document = cJSON_Parse(response.json);

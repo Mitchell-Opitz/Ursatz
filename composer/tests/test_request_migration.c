@@ -30,7 +30,7 @@
  * test_plan_json.
  */
 
-typedef ComposerStatus (*Entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *);
+typedef UrsatzStatus (*Entry)(const ComposerContext *, const char *, const UrsatzJob *, ComposerResponse *);
 
 /* --- helpers --------------------------------------------------------------------------------------- */
 
@@ -74,9 +74,9 @@ static char *print(const cJSON *request) {
     return printed;
 }
 
-static ComposerStatus run(Entry entry, const cJSON *request, ComposerResponse *response) {
+static UrsatzStatus run(Entry entry, const cJSON *request, ComposerResponse *response) {
     char *printed = print(request);
-    ComposerStatus status = entry(test_context(), printed, NULL, response);
+    UrsatzStatus status = entry(test_context(), printed, NULL, response);
     free(printed);
     return status;
 }
@@ -96,7 +96,7 @@ static bool same_reply(const ComposerResponse *a, const ComposerResponse *b) {
  */
 static void expect_same_replies(Entry entry, cJSON *request, cJSON *object, const char *old, const char *const *words, size_t count) {
     ComposerResponse expected;
-    assert(run(entry, request, &expected) == COMPOSER_OK);
+    assert(run(entry, request, &expected) == URSATZ_OK);
     assert(expected.json);
     for (size_t i = 0; i < count; i++) {
         cJSON *copy = cJSON_Duplicate(request, true);
@@ -109,12 +109,12 @@ static void expect_same_replies(Entry entry, cJSON *request, cJSON *object, cons
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(holder, "mode")->valuestring, old) == 0);
         rename_member(holder, "mode", "material", words[i]);
         ComposerResponse got;
-        ComposerStatus status = run(entry, copy, &got);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = run(entry, copy, &got);
+        if (status != URSATZ_OK) {
             fprintf(stderr, "material '%s' for mode '%s': %s\n", words[i], old, got.error.message);
         }
-        bool same = status == COMPOSER_OK && same_reply(&expected, &got);
-        if (status == COMPOSER_OK && !same) {
+        bool same = status == URSATZ_OK && same_reply(&expected, &got);
+        if (status == URSATZ_OK && !same) {
             fprintf(stderr, "material '%s' for mode '%s': the reply differs\n%s\n%s\n", words[i], old, expected.json, got.json);
         }
         assert(same);
@@ -126,15 +126,15 @@ static void expect_same_replies(Entry entry, cJSON *request, cJSON *object, cons
 
 static void expect_refused(Entry entry, const cJSON *request, const char *path_suffix, const char *message) {
     ComposerResponse response;
-    ComposerStatus status = run(entry, request, &response);
+    UrsatzStatus status = run(entry, request, &response);
     size_t length = strlen(response.error.path);
     size_t suffix = strlen(path_suffix);
-    if (status != COMPOSER_ERR_REQUEST || length < suffix || strcmp(response.error.path + length - suffix, path_suffix) != 0 ||
+    if (status != URSATZ_ERR_REQUEST || length < suffix || strcmp(response.error.path + length - suffix, path_suffix) != 0 ||
         !strstr(response.error.message, message)) {
         fprintf(stderr, "wanted a request refusal at '%s' with '%s', got %d at '%s': %s\n", path_suffix, message, (int)status,
                 response.error.path, response.error.message);
     }
-    assert(status == COMPOSER_ERR_REQUEST && length >= suffix && strcmp(response.error.path + length - suffix, path_suffix) == 0);
+    assert(status == URSATZ_ERR_REQUEST && length >= suffix && strcmp(response.error.path + length - suffix, path_suffix) == 0);
     assert(strstr(response.error.message, message));
     assert(!response.json && !response.plan_json && !response.midi && !response.musicxml);
     composer_response_destroy(&response);
@@ -290,7 +290,7 @@ static void test_motive_document_key(void) {
     assert(input && request && cJSON_AddStringToObject(input, "format", "json") && cJSON_AddStringToObject(input, "text", old_text) &&
            cJSON_AddItemToObject(request, "input", input));
     ComposerResponse expected;
-    assert(run(composer_api_motive, request, &expected) == COMPOSER_OK && expected.json);
+    assert(run(composer_api_motive, request, &expected) == URSATZ_OK && expected.json);
     cJSON_Delete(request);
     free(old_text);
 
@@ -305,7 +305,7 @@ static void test_motive_document_key(void) {
         assert(input && request && cJSON_AddStringToObject(input, "format", "json") && cJSON_AddStringToObject(input, "text", text) &&
                cJSON_AddItemToObject(request, "input", input));
         ComposerResponse got;
-        assert(run(composer_api_motive, request, &got) == COMPOSER_OK && same_reply(&expected, &got));
+        assert(run(composer_api_motive, request, &got) == URSATZ_OK && same_reply(&expected, &got));
         composer_response_destroy(&got);
         cJSON_Delete(request);
         free(text);
@@ -328,8 +328,8 @@ static void test_motive_document_key(void) {
         assert(input && request && cJSON_AddStringToObject(input, "format", "json") && cJSON_AddStringToObject(input, "text", text) &&
                cJSON_AddItemToObject(request, "input", input));
         ComposerResponse response;
-        ComposerStatus status = run(composer_api_motive, request, &response);
-        assert(status != COMPOSER_OK && !response.json);
+        UrsatzStatus status = run(composer_api_motive, request, &response);
+        assert(status != URSATZ_OK && !response.json);
         assert(strstr(response.error.message, "key") != NULL || strstr(response.error.path, "key") != NULL);
         composer_response_destroy(&response);
         cJSON_Delete(request);
@@ -368,11 +368,11 @@ static void export_plan(const char *plan_text, ComposerResponse *response) {
     cJSON *plan = cJSON_Parse(plan_text);
     assert(request && plan && cJSON_AddItemToObject(request, "plan", plan) && cJSON_AddTrueToObject(request, "midi") &&
            cJSON_AddTrueToObject(request, "musicxml"));
-    ComposerStatus status = run(composer_api_export, request, response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = run(composer_api_export, request, response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "export: %s (%s)\n", response->error.message, response->error.path);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON_Delete(request);
 }
 
@@ -512,12 +512,12 @@ static char *plan_with_span_named(const char *text, int span, bool by_relation) 
 }
 
 /* One fill of the plan text from a seed: its MIDI file and MusicXML. */
-static ComposerStatus fill_plan(const char *plan_text, unsigned long seed, ComposerResponse *response) {
+static UrsatzStatus fill_plan(const char *plan_text, unsigned long seed, ComposerResponse *response) {
     cJSON *request = cJSON_CreateObject();
     cJSON *plan = cJSON_Parse(plan_text);
     assert(request && plan && cJSON_AddItemToObject(request, "plan", plan) && cJSON_AddNumberToObject(request, "seed", (double)seed) &&
            cJSON_AddTrueToObject(request, "midi") && cJSON_AddTrueToObject(request, "musicxml"));
-    ComposerStatus status = run(composer_api_fill, request, response);
+    UrsatzStatus status = run(composer_api_fill, request, response);
     cJSON_Delete(request);
     return status;
 }
@@ -552,19 +552,19 @@ static void test_relation_named_span_composes(void) {
     plan_destroy(read);
 
     ComposerResponse named;
-    ComposerStatus status = COMPOSER_ERR_UNSATISFIABLE;
-    for (unsigned long tried = seed; tried < seed + 8 && status != COMPOSER_OK; tried++) {
+    UrsatzStatus status = URSATZ_ERR_UNSATISFIABLE;
+    for (unsigned long tried = seed; tried < seed + 8 && status != URSATZ_OK; tried++) {
         status = fill_plan(by_key, tried, &named);
-        if (status != COMPOSER_OK) {
-            assert(status == COMPOSER_ERR_UNSATISFIABLE);
+        if (status != URSATZ_OK) {
+            assert(status == URSATZ_ERR_UNSATISFIABLE);
             composer_response_destroy(&named);
         } else {
             seed = tried;
         }
     }
-    assert(status == COMPOSER_OK && named.midi_size > 14 && named.musicxml);
+    assert(status == URSATZ_OK && named.midi_size > 14 && named.musicxml);
     ComposerResponse by_name;
-    assert(fill_plan(by_relation, seed, &by_name) == COMPOSER_OK);
+    assert(fill_plan(by_relation, seed, &by_name) == URSATZ_OK);
     assert(by_name.midi_size == named.midi_size && memcmp(by_name.midi, named.midi, named.midi_size) == 0);
     assert(same_text(by_name.musicxml, named.musicxml));
     composer_response_destroy(&by_name);
@@ -573,7 +573,7 @@ static void test_relation_named_span_composes(void) {
     /* a relation that cannot resolve is refused by the entry that composes, with the relation's message, and nothing is composed */
     char *unknown = replace_all(by_relation, "omt.relation.dominant", "omt.relation.no-such-relation");
     ComposerResponse refused;
-    assert(fill_plan(unknown, seed, &refused) != COMPOSER_OK);
+    assert(fill_plan(unknown, seed, &refused) != URSATZ_OK);
     assert(!refused.midi && !refused.json && refused.error.message[0] != '\0');
     composer_response_destroy(&refused);
     free(unknown);

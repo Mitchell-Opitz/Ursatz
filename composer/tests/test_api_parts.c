@@ -46,11 +46,11 @@ static char *print(cJSON *request) {
 }
 
 static cJSON *composed(const char *printed, ComposerResponse *response) {
-    ComposerStatus status = composer_api_piece(test_context(), printed, NULL, response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), printed, NULL, response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "test_api_parts: %s: %s\n", test_status_name(status), response->error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *document = cJSON_Parse(response->json);
     assert(document);
     return document;
@@ -183,10 +183,10 @@ static void test_refusals(void) {
         assert(cJSON_AddStringToObject(section, "function", VALUES[v]));
         char *printed = print(request);
         ComposerResponse response;
-        ComposerStatus status = composer_api_piece(test_context(), printed, NULL, &response);
+        UrsatzStatus status = composer_api_piece(test_context(), printed, NULL, &response);
         char expected[96];
         snprintf(expected, sizeof expected, "%s", v < 2 ? "unknown function" : "a request takes transition or coda");
-        assert(status == COMPOSER_ERR_REQUEST);
+        assert(status == URSATZ_ERR_REQUEST);
         if (strcmp(response.error.path, "/request/sections/2/function") != 0 || !strstr(response.error.message, expected)) {
             fprintf(stderr, "'%s' at '%s'\n", response.error.message, response.error.path);
         }
@@ -210,7 +210,7 @@ static void test_refusals(void) {
     section = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(request, "request"), "sections"), 3);
     assert(cJSON_AddStringToObject(section, "function", "coda"));
     printed = print(request);
-    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == URSATZ_ERR_REQUEST);
     composer_response_destroy(&response);
     free(printed);
 }

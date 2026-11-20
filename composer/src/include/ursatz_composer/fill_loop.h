@@ -72,7 +72,7 @@ typedef struct {
     size_t max_iterations;  /* attempts, including failed ones; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     FillCheckerFn checker;  /* NULL means fill_default_checker */
     void *checker_context;
-    const ComposerJob *job; /* NULL for none: progress ("fill", attempts so far, max_iterations) and cancel, once per target */
+    const UrsatzJob *job; /* NULL for none: progress ("fill", attempts so far, max_iterations) and cancel, once per target */
 } FillConfig;
 
 typedef enum {

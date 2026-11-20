@@ -1,0 +1,99 @@
+{
+	"kind":	"piece",
+	"body":	{
+		"uses":	[],
+		"piece":	{
+			"structure":	{
+				"key":	"D",
+				"material":	"omt.material.natural-minor",
+				"meter":	"4/4",
+				"sections":	[{
+						"id":	"s0",
+						"part":	"intro",
+						"letter":	"I",
+						"beats":	8,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	null
+					}, {
+						"id":	"s1",
+						"part":	"body",
+						"letter":	"A",
+						"beats":	32,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	null
+					}, {
+						"id":	"s2",
+						"part":	"body",
+						"letter":	"B",
+						"beats":	6,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	null
+					}, {
+						"id":	"s3",
+						"part":	"turnaround",
+						"letter":	"T",
+						"beats":	4,
+						"pickup":	"0",
+						"cadence":	null,
+						"fill":	null
+					}]
+			}
+		}
+	},
+	"request":	{
+		"schema":	"ursatz-piece-request",
+		"schema_version":	2,
+		"form":	"game-loop",
+		"key":	"D",
+		"material":	"omt.material.natural-minor",
+		"meter":	"4/4",
+		"motive":	null,
+		"sections":	[{
+				"id":	"s0",
+				"part":	"intro",
+				"letter":	"I",
+				"beats":	8,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}, {
+				"id":	"s1",
+				"part":	"body",
+				"letter":	"A",
+				"beats":	32,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}, {
+				"id":	"s2",
+				"part":	"body",
+				"letter":	"B",
+				"beats":	6,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}, {
+				"id":	"s3",
+				"part":	"turnaround",
+				"letter":	"T",
+				"beats":	4,
+				"pickup":	"0",
+				"cadence":	null,
+				"fill":	{
+					"kind":	"empty"
+				}
+			}],
+		"accompaniment":	null,
+		"voicing":	null,
+		"tempo":	null
+	}
+}

@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/score_export.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -91,9 +91,9 @@ static bool id_in_export(const char *xml, const char *id) {
 static void check_note_ids(size_t i, const ImportedScore *notes, const char *xml) {
     char **ids = NULL;
     size_t count = 99;
-    AnalyzerStatus status = analyzer_score_note_xml_ids(notes, &ids, &count);
-    CHECKF(status == ANALYZER_OK, "%s: note ids status %d", FILES[i].stem, (int)status);
-    if (status != ANALYZER_OK) {
+    UrsatzStatus status = analyzer_score_note_xml_ids(notes, &ids, &count, NULL);
+    CHECKF(status == URSATZ_OK, "%s: note ids status %d", FILES[i].stem, (int)status);
+    if (status != URSATZ_OK) {
         return;
     }
     CHECKF(count == notes->count, "%s: %zu ids for %zu notes", FILES[i].stem, count, notes->count);
@@ -154,27 +154,55 @@ static void check_meter_defaulted(void) {
 static void check_arguments(void) {
     ImportedScore notes;
     char *xml = (char *)1;
-    CHECKF(analyzer_score_export_musicxml(NULL, &xml) == ANALYZER_ERR_ARGUMENT && xml == NULL, "NULL notes");
+    CHECKF(analyzer_score_export_musicxml(NULL, NULL, &xml, NULL) == URSATZ_ERR_REQUEST && xml == NULL, "NULL notes");
     if (!import_file(0, &notes)) {
         CHECKF(false, "arguments: cannot import %s", FILES[0].file);
         return;
     }
-    CHECKF(analyzer_score_export_musicxml(&notes, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
+    CHECKF(analyzer_score_export_musicxml(&notes, NULL, NULL, NULL) == URSATZ_ERR_REQUEST, "NULL out");
     char **ids = (char **)1;
     size_t id_count = 7;
-    CHECKF(analyzer_score_note_xml_ids(NULL, &ids, &id_count) == ANALYZER_ERR_ARGUMENT && ids == NULL && id_count == 0,
+    CHECKF(analyzer_score_note_xml_ids(NULL, &ids, &id_count, NULL) == URSATZ_ERR_REQUEST && ids == NULL && id_count == 0,
            "ids: NULL notes");
-    CHECKF(analyzer_score_note_xml_ids(&notes, NULL, &id_count) == ANALYZER_ERR_ARGUMENT, "ids: NULL out");
-    CHECKF(analyzer_score_note_xml_ids(&notes, &ids, NULL) == ANALYZER_ERR_ARGUMENT, "ids: NULL count");
+    CHECKF(analyzer_score_note_xml_ids(&notes, NULL, &id_count, NULL) == URSATZ_ERR_REQUEST, "ids: NULL out");
+    CHECKF(analyzer_score_note_xml_ids(&notes, &ids, NULL, NULL) == URSATZ_ERR_REQUEST, "ids: NULL count");
     analyzer_score_note_xml_ids_destroy(NULL, 0);
     NoteEvent **events = notes.events;
     notes.events = NULL;
     xml = (char *)1;
-    CHECKF(analyzer_score_export_musicxml(&notes, &xml) == ANALYZER_ERR_ARGUMENT && xml == NULL, "notes with no events");
+    CHECKF(analyzer_score_export_musicxml(&notes, NULL, &xml, NULL) == URSATZ_ERR_REQUEST && xml == NULL, "notes with no events");
     ids = (char **)1;
-    CHECKF(analyzer_score_note_xml_ids(&notes, &ids, &id_count) == ANALYZER_ERR_ARGUMENT && ids == NULL,
+    CHECKF(analyzer_score_note_xml_ids(&notes, &ids, &id_count, NULL) == URSATZ_ERR_REQUEST && ids == NULL,
            "ids: notes with no events");
     notes.events = events;
+    imported_score_destroy(&notes);
+}
+
+/* The title and composer a caller gives are written in the score; a NULL or empty member leaves its element out, and an XML character is escaped. */
+static void check_metadata(void) {
+    ImportedScore notes;
+    if (!import_file(0, &notes)) {
+        CHECKF(false, "metadata: cannot import %s", FILES[0].file);
+        return;
+    }
+    char *xml = NULL;
+    AnalyzerScoreMetadata both = {"Prelude & Fugue <1>", "J. S. Bach"};
+    CHECKF(analyzer_score_export_musicxml(&notes, &both, &xml, NULL) == URSATZ_OK && xml != NULL, "metadata: export");
+    CHECKF(xml && strstr(xml, "<work-title>Prelude &amp; Fugue &lt;1&gt;</work-title>") != NULL, "metadata: the title is written and escaped");
+    CHECKF(xml && strstr(xml, "<creator type=\"composer\">J. S. Bach</creator>") != NULL, "metadata: the composer is written");
+    free(xml);
+
+    AnalyzerScoreMetadata title_only = {"Only a title", ""};
+    CHECKF(analyzer_score_export_musicxml(&notes, &title_only, &xml, NULL) == URSATZ_OK && xml != NULL, "metadata: title only");
+    CHECKF(xml && strstr(xml, "<work-title>Only a title</work-title>") != NULL && strstr(xml, "type=\"composer\"") == NULL,
+           "metadata: an empty composer is left out");
+    free(xml);
+
+    char *plain = NULL;
+    CHECKF(analyzer_score_export_musicxml(&notes, NULL, &plain, NULL) == URSATZ_OK && plain != NULL, "metadata: none");
+    CHECKF(plain && strstr(plain, "<work-title>") == NULL && strstr(plain, "type=\"composer\"") == NULL,
+           "metadata: NULL leaves both out, as the Analyzer's own exports do");
+    free(plain);
     imported_score_destroy(&notes);
 }
 
@@ -192,8 +220,8 @@ int main(int argc, char **argv) {
             continue;
         }
         char *xml = NULL;
-        AnalyzerStatus status = analyzer_score_export_musicxml(&notes, &xml);
-        CHECKF(status == ANALYZER_OK && xml != NULL, "%s: export status %d", FILES[i].stem, (int)status);
+        UrsatzStatus status = analyzer_score_export_musicxml(&notes, NULL, &xml, NULL);
+        CHECKF(status == URSATZ_OK && xml != NULL, "%s: export status %d", FILES[i].stem, (int)status);
         if (xml) {
             CHECKF(strncmp(xml, "<?xml", 5) == 0, "%s: not an XML document", FILES[i].stem);
             check_snapshot(i, xml, update);
@@ -206,6 +234,7 @@ int main(int argc, char **argv) {
     }
     check_meter_defaulted();
     check_arguments();
+    check_metadata();
     const char *name = smoke ? "test_score_export_smoke" : "test_score_export";
     return update ? test_goldens_updated(name) : test_finish(name);
 }

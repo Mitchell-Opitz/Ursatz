@@ -39,21 +39,63 @@
     "preferences",
     "relations",
     "schemas",
+    "theme_developments",
+    "lanes",
     "limits"
   ],
   "additionalProperties": false,
   "properties": {
+    "theme_developments": {
+      "type": "array",
+      "minItems": 1,
+      "description": "How far a theme may stray from its motif (API 1.9): the value a request carries, its label and the help an editor shows (API 4.1).",
+      "items": {
+        "type": "object",
+        "required": [
+          "value",
+          "label",
+          "help"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "help": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The lanes of a piece version a regenerate or a set of variations may name (API 4.1); all is every lane.",
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
     "schemas": {
       "type": "array",
       "minItems": 1,
       "description": "The galant schemas a section's harmony may name: those that make a chord of each stage in the major and the natural minor (R-610).",
-      "items": { "$ref": "#/$defs/choice" }
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
     },
     "relations": {
       "type": "array",
       "minItems": 1,
       "description": "The relations of the knowledge snapshot (K6) a section's region may name, from an anchor (R-610).",
-      "items": { "$ref": "#/$defs/relation" }
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
     },
     "meters": {
       "type": "array",
@@ -341,7 +383,13 @@
         "seed_max",
         "piece_sections",
         "piece_beats",
-        "preferences"
+        "theme_motives",
+        "theme_extensions",
+        "piece_variations",
+        "harmony_cells",
+        "preferences",
+        "construction_bars",
+        "construction_pickup"
       ],
       "additionalProperties": {
         "oneOf": [
@@ -363,6 +411,29 @@
         },
         "preferences": {
           "$ref": "#/$defs/preference_limits"
+        },
+        "construction_bars": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "description": "The whole bars a theme may have with a construction (R-468): from min to max, beside theme_bars_regular (API 4.2)."
+        },
+        "construction_pickup": {
+          "type": "boolean",
+          "description": "Whether a theme with a construction may have a pickup: false (API 4.2)."
         }
       }
     },
@@ -374,11 +445,29 @@
   "$defs": {
     "relation": {
       "type": "object",
-      "required": ["id", "name", "family"],
+      "required": [
+        "id",
+        "name",
+        "family"
+      ],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "name": { "type": "string", "minLength": 1 },
-        "family": { "enum": ["tonal", "modal", "neo-riemannian", "set", "serial"] }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "enum": [
+            "tonal",
+            "modal",
+            "neo-riemannian",
+            "set",
+            "serial"
+          ]
+        }
       },
       "additionalProperties": false
     },
@@ -1254,7 +1343,7 @@
               "description": "A given chord plan: Roman numerals I to VII in any case, an optional o or degree sign, an optional place @bar or @bar:beat (bar 1 or 2, beat 1 to 12). Either no chord has a place (at most 3 chords) or every chord after the first has one, rising. Absent by default: the plan is drawn.",
               "items": {
                 "type": "string",
-                "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|°)?(@[12](:([1-9]|1[0-2]))?)?$"
+                "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|\u00b0)?(@[12](:([1-9]|1[0-2]))?)?$"
               }
             }
           }

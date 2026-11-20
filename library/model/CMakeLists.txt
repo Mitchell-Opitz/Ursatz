@@ -6,7 +6,6 @@ add_library(ursatz_model
     core/entity.c
     core/string_copy.c
     core/once.c
-    core/content_hash.c
     core/rational.c
     core/value.c
     core/occurrence.c
@@ -54,7 +53,6 @@ ursatz_public_headers(ursatz_model
         model/core/occurrence.h
         model/core/once.h
         model/core/provenance_reference.h
-        model/core/content_hash.h
         model/core/rational.h
         model/core/string_copy.h
         model/core/value.h
@@ -93,6 +91,8 @@ ursatz_public_headers(ursatz_model
         model/time/time_span.h
         model/time/tuplet.h
 )
+# The common part (R-638): the FNV hash of common/hash.h, which the library's JSON files and the snapshot use.
+target_link_libraries(ursatz_model PUBLIC ursatz_common)
 # lround, floor and friends
 target_link_libraries(ursatz_model PUBLIC m)
 # core/once.c (thread-safe lazy initialization)

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-subject.v1.schema.json",
+  "title": "Subject, format version 1",
+  "description": "subjects/<sub>.json: a character, place, idea or note that items and Library pieces link to.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "name",
+    "kind",
+    "note",
+    "items",
+    "pieces",
+    "related",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-subject"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^sub-"
+    },
+    "name": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "character",
+        "place",
+        "idea",
+        "note"
+      ]
+    },
+    "note": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    }
+  }
+}

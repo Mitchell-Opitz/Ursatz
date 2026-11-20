@@ -33,32 +33,32 @@ static cJSON *four_places(double value) {
     return cJSON_CreateNumber(strtod(text, NULL));
 }
 
-ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
-                              ComposerStyleWeights *out, ComposerError *error) {
+UrsatzStatus api_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
+                              ComposerStyleWeights *out, UrsatzError *error) {
     if (!blend_path) {
         if (all_text || list_text) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, all_text ? "/blend_weight" : "/blend_weights",
+            return api_fail(error, URSATZ_ERR_REQUEST, all_text ? "/blend_weight" : "/blend_weights",
                             "%s needs blend", all_text ? "blend_weight" : "blend_weights");
         }
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (!has_style) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/blend", "blend needs style");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/blend", "blend needs style");
     }
     Rational all = {1, 2};
     if (all_text) {
         if (!request_parse_ratio(all_text, &all)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weight", "blend_weight must be a fraction like 1/2, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weight", "blend_weight must be a fraction like 1/2, not '%s'",
                             all_text);
         }
         if (all.num > all.den) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weight", "blend_weight must be from 0 to 1, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weight", "blend_weight must be from 0 to 1, not '%s'",
                             all_text);
         }
     }
     *out = composer_style_weights_all(all);
     if (!list_text) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     bool seen[STYLE_DIMENSION_COUNT] = {false};
     const char *at = list_text;
@@ -67,7 +67,7 @@ ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char
         size_t length = end ? (size_t)(end - at) : strlen(at);
         char item[64];
         if (length == 0 || length >= sizeof item) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights must be like harmony=1/2,form=0, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights", "blend_weights must be like harmony=1/2,form=0, not '%s'",
                             list_text);
         }
         memcpy(item, at, length);
@@ -75,25 +75,25 @@ ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char
         char *equals = strchr(item, '=');
         StyleDimension dimension;
         if (!equals) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights must be like harmony=1/2,form=0, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights", "blend_weights must be like harmony=1/2,form=0, not '%s'",
                             list_text);
         }
         *equals = '\0';
         if (!style_dimension_from_name(item, &dimension)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights",
                             "blend_weights: '%s' is not a dimension (harmony, rhythm, melody, form)", item);
         }
         if (seen[dimension]) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights names %s twice", item);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights", "blend_weights names %s twice", item);
         }
         seen[dimension] = true;
         Rational weight;
         if (!request_parse_ratio(equals + 1, &weight)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights: %s must be a fraction like 1/2, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights", "blend_weights: %s must be a fraction like 1/2, not '%s'",
                             item, equals + 1);
         }
         if (weight.num > weight.den) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights", "blend_weights: %s must be from 0 to 1, not '%s'", item,
+            return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights", "blend_weights: %s must be from 0 to 1, not '%s'", item,
                             equals + 1);
         }
         out->numerator[dimension] = weight.num;
@@ -102,30 +102,30 @@ ComposerStatus api_read_blend(bool has_style, const char *blend_path, const char
         if (*at == ',') {
             at++;
             if (*at == '\0') {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/blend_weights",
+                return api_fail(error, URSATZ_ERR_REQUEST, "/blend_weights",
                                 "blend_weights must be like harmony=1/2,form=0, not '%s'", list_text);
             }
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
+UrsatzStatus api_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
                               const char *const *without, size_t without_count, ComposerStyle **out,
-                              ComposerError *error) {
+                              UrsatzError *error) {
     if (!blend_path) {
         return api_load_style(style_path, without, without_count, "/style", "/without", out, error);
     }
     ComposerStyle *first = NULL;
     ComposerStyle *second = NULL;
-    ComposerStatus status = api_load_style(style_path, without, without_count, "/style", "/without", &first, error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = api_load_style(style_path, without, without_count, "/style", "/without", &first, error);
+    if (status == URSATZ_OK) {
         status = api_load_style(blend_path, without, without_count, "/blend", "/without", &second, error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         ComposerStyleResult blended = composer_style_blend(first, second, weights, out);
         if (blended != COMPOSER_STYLE_OK) {
-            status = api_fail(error, blended == COMPOSER_STYLE_ERR_ARGUMENT ? COMPOSER_ERR_REQUEST : COMPOSER_ERR_UNSATISFIABLE,
+            status = api_fail(error, blended == COMPOSER_STYLE_ERR_ARGUMENT ? URSATZ_ERR_REQUEST : URSATZ_ERR_UNSATISFIABLE,
                               "/blend", "cannot blend '%s' with '%s': %s", style_path, blend_path,
                               composer_style_result_name(blended));
         }
@@ -152,7 +152,7 @@ cJSON *api_style_distance_json(const StyleComparison *comparison) {
     return object;
 }
 
-ComposerStatus api_style_category_check(const char *name, ComposerError *error) {
+UrsatzStatus api_style_category_check(const char *name, UrsatzError *error) {
     StyleDimension dimension;
     if (!style_category_dimension(name, &dimension)) {
         char list[640];
@@ -162,28 +162,28 @@ ComposerStatus api_style_category_check(const char *name, ComposerError *error) 
             int written = snprintf(list + used, sizeof list - used, "%s%s", i ? ", " : "", style_category_name(i));
             used += written > 0 ? (size_t)written : 0;
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_without",
                         "style_without: '%s' is not a style category (the categories are %s)", name, list);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
-                                     ComposerError *error) {
-    ComposerStatus checked = api_style_category_check(name, error);
-    if (checked != COMPOSER_OK) {
+UrsatzStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
+                                     UrsatzError *error) {
+    UrsatzStatus checked = api_style_category_check(name, error);
+    if (checked != URSATZ_OK) {
         return checked;
     }
     for (size_t i = 0; i < *count; i++) {
         if (strcmp(names[i], name) == 0) {
-            return COMPOSER_OK;
+            return URSATZ_OK;
         }
     }
     if (*count >= capacity) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without is given at most %zu times", capacity);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without is given at most %zu times", capacity);
     }
     names[(*count)++] = name;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 

@@ -5,9 +5,9 @@
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 #include "result/analysis_result_internal.h"
 
 #include <chain/analysis_chain.h>
@@ -99,8 +99,8 @@ static void check_piece(const char *fixture, const char *slug) {
 
     AnalyzerResult *result = NULL;
     AnalyzerOptions options = test_analyzer_options();
-    AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
-    CHECKF(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
+    UrsatzStatus status = analyzer_analyze(&notes, &options, &result);
+    CHECKF(status == URSATZ_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
     if (result) {
         const ChainResult *report = analyzer_result_report(result);
         CHECKF(report && report->entry_count > 0, "%s: empty report view", slug);
@@ -135,15 +135,15 @@ static void check_options(const char *fixture) {
 
     /* Arguments. */
     AnalyzerResult *result = (AnalyzerResult *)0x1;
-    CHECKF(analyzer_analyze(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "NULL notes");
+    CHECKF(analyzer_analyze(NULL, NULL, &result) == URSATZ_ERR_REQUEST && result == NULL, "NULL notes");
     AnalyzerOptions with_knowledge = test_analyzer_options();
-    CHECKF(analyzer_analyze(&notes, &with_knowledge, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
-    CHECKF(analyzer_analyze(&notes, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no options, no knowledge");
+    CHECKF(analyzer_analyze(&notes, &with_knowledge, NULL) == URSATZ_ERR_REQUEST, "NULL out");
+    CHECKF(analyzer_analyze(&notes, NULL, &result) == URSATZ_ERR_REQUEST && result == NULL, "no options, no knowledge");
     AnalyzerOptions no_knowledge = analyzer_options_default();
-    CHECKF(analyzer_analyze(&notes, &no_knowledge, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no knowledge");
+    CHECKF(analyzer_analyze(&notes, &no_knowledge, &result) == URSATZ_ERR_REQUEST && result == NULL, "no knowledge");
     AnalyzerOptions none = test_analyzer_options();
     none.stages = 0;
-    CHECKF(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
+    CHECKF(analyzer_analyze(&notes, &none, &result) == URSATZ_ERR_REQUEST && result == NULL, "no stages");
     analyzer_result_destroy(NULL);
     CHECKF(analyzer_result_run_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
 
@@ -151,14 +151,14 @@ static void check_options(const char *fixture) {
     AnalyzerOptions texture = test_analyzer_options();
     texture.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
     result = NULL;
-    CHECKF(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");
+    CHECKF(analyzer_analyze(&notes, &texture, &result) == URSATZ_OK && result, "texture stage only");
     if (result) {
         const AnalysisChain *chain = analyzer_result_run_chain(result);
         CHECKF(analysis_chain_texture(chain) != NULL, "texture results from the texture stage");
         CHECKF(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
         CHECKF(analyzer_result_report(result)->progression_count == 0, "progressions without the report");
         CHECKF(analyzer_result_report(result)->entry_count == 0, "report entries from a partial chain");
-        CHECKF(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
+        CHECKF(analyzer_document_build(fixture, result) == NULL, "a document from a partial chain");
     }
     analyzer_result_destroy(result);
     imported_score_destroy(&notes);

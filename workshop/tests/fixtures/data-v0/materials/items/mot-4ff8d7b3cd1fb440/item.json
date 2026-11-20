@@ -1,0 +1,14 @@
+{
+	"id":	"mot-4ff8d7b3cd1fb440",
+	"type":	"motif",
+	"name":	"B",
+	"project_id":	"prj-464d210a92492f9d",
+	"created_at":	"2026-11-19T20:55:10Z",
+	"versions":	[{
+			"number":	1,
+			"created_at":	"2026-11-19T20:55:10Z",
+			"note":	"Created"
+		}],
+	"current_version":	1,
+	"updated_at":	"2026-11-19T20:55:10Z"
+}

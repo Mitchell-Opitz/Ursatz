@@ -34,8 +34,8 @@
  * MusicXML of the loop version are made in memory.
  */
 
-ComposerStatus api_piece_fail_cancelled(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+UrsatzStatus api_piece_fail_cancelled(UrsatzError *error) {
+    return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
 }
 
 /* ------------------------------------------------------------- composing */
@@ -67,12 +67,12 @@ void api_piece_version_destroy(PieceVersion *version) {
     memset(version, 0, sizeof(*version));
 }
 
-ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerError *error) {
+UrsatzStatus api_piece_refuse_performed(const PieceSpec *request, UrsatzError *error) {
     if (request->form && form_spec_performed(request->form)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/request/form",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/request/form",
                         "regenerate and variations of the %s form are Later: it is composed whole", request->form->label);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 const Plan *api_piece_version_output_plan(const PieceVersion *version) {

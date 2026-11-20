@@ -309,9 +309,9 @@ static int make_variants(const Options *options) {
         return status != 0 ? status : cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_variants(cli_context(), text, NULL, &response);
+    UrsatzStatus api_status = composer_api_variants(cli_context(), text, NULL, &response);
     free(text);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         if (strncmp(response.error.path, "/chain", 6) == 0 && options->chain_path) {
             status = cli_fail(CLI_EXIT_USAGE, "%s: %s", options->chain_path, response.error.message);
         } else {
@@ -356,8 +356,8 @@ int run_variants(int argc, char **argv) {
         return make_variants(&options);
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_variant_operations(&response);
-    if (api_status != COMPOSER_OK) {
+    UrsatzStatus api_status = composer_api_variant_operations(&response);
+    if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
         composer_response_destroy(&response);
         return status;

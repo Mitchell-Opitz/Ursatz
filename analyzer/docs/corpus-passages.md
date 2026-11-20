@@ -2,7 +2,7 @@
 
 The passages of an analyzed corpus, ready to give to the Composer. Back to the [docs index](README.md).
 
-Library: `include/ursatz_analyzer/corpus_passages.h`, part of the `ursatz_analyzer` target. R-619.
+Library: `include/ursatz_analyzer/analyzer_api.h`, part of the `ursatz_analyzer` target. R-619.
 
 The Composer API seeds a motive or a progression from passages given inline in a request (`corpus_passages`, the
 [schema](../../composer/schema/api/corpus-passages.schema.json)); it does not search a corpus. This is how a caller (the
@@ -12,7 +12,7 @@ more for what the Composer needs and the search does not keep: the chords and wh
 
 ```c
 AnalyzerCorpusPassages found;
-AnalyzerPassagesStatus status = analyzer_corpus_passages_like(corpus_dir, knowledge, "passage.mid", 10, &found);
+UrsatzStatus status = analyzer_corpus_passages_like(corpus_dir, knowledge, "passage.mid", 10, &found);
 /* or analyzer_corpus_passages_numerals(corpus_dir, knowledge, "I IV V I", 100, &found) */
 char *json = analyzer_corpus_passages_to_json(&found); /* the request's corpus_passages */
 analyzer_corpus_passages_destroy(&found);
@@ -31,9 +31,9 @@ starts at, so a reader finds the chords of the passage from the one that starts 
 last chord at or before it. `stale` is true when the document was analyzed by another version ([corpus.md](corpus.md)); it is
 read all the same. A passage whose notes do not fit a `Rational` has no notes.
 
-No match is `ANALYZER_PASSAGES_OK` with no passage. `ANALYZER_PASSAGES_ERR_QUERY` is a passage file or a numerals text that cannot
-be read as a query (fewer than two notes or numerals, a file that is neither MIDI nor MusicXML), `ANALYZER_PASSAGES_ERR_CORPUS` a
-corpus output directory that cannot be read, `ANALYZER_PASSAGES_ERR_ARGUMENT` a NULL argument or a `max` of 0.
+No match is `URSATZ_OK` with no passage. `URSATZ_ERR_REQUEST` is a passage file or a numerals text that cannot
+be read as a query (fewer than two notes or numerals, a file that is neither MIDI nor MusicXML), `URSATZ_ERR_NOT_FOUND` a
+corpus output directory that cannot be read, `URSATZ_ERR_REQUEST` a NULL argument or a `max` of 0.
 
 `analyzer_corpus_passages_to_json` writes the array the Composer API reads: each passage `{"piece", "start": {"measure", "beat"},
 "end": {...}, "similarity": {"num", "den"}, "stale", "notes": [{"midi", "onset", "duration"}], "chords": [{"numeral", "measure",

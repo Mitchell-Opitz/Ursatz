@@ -21,8 +21,9 @@
 
 #include <cJSON.h>
 
+#include "support/server_support.h"
 #include "server.h"
-#include "gui_check.h"
+#include "ursatz_check.h"
 #include "test_http.h"
 
 #ifndef URSATZ_GUI_TEST_PIECE_FIXTURES
@@ -133,17 +134,18 @@ static void snapshot_piece(const char *name, const char *source_path, const char
 
 int main(void) {
 #ifdef _WIN32
-  system("rmdir /s /q pieces 2> nul");
+  system("rmdir /s /q library settings cache 2> nul");
 #else
-  system("rm -rf pieces");
+  system("rm -rf library settings cache");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
   capture = test_update_goldens();
   if (capture) {
     MKDIR(URSATZ_GUI_TEST_PIECE_FIXTURES);
   }
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -164,6 +166,6 @@ int main(void) {
   snapshot_piece("chords-backup", URSATZ_FIXTURES_DIR "/musicxml/chords_backup.musicxml",
                  "chords_backup.musicxml", NULL);
 
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
   return capture ? test_goldens_updated("piece_snapshot") : test_finish("piece_snapshot");
 }

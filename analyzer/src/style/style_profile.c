@@ -1,4 +1,4 @@
-#include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer_internal/style_profile.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -21,7 +21,7 @@ static StyleProfileResult add_document_tree(StyleProfile *profile, const cJSON *
     return result;
 }
 
-StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const char *json) {
+StyleProfileResult analyzer_style_add_document_json(StyleProfile *profile, const char *json) {
     if (!profile || !json) {
         return STYLE_PROFILE_ERR_ARGUMENT;
     }
@@ -44,7 +44,7 @@ static bool add_corpus_document(const char *piece_path, const char *document, co
     (void)document;
     (void)status;
     CorpusAdd *add = context;
-    add->result = style_profile_add_document_json(add->profile, json);
+    add->result = analyzer_style_add_document_json(add->profile, json);
     return add->result == STYLE_PROFILE_OK;
 }
 

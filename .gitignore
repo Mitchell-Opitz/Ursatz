@@ -1,2 +1,4 @@
 build/
 build-*/
+/plan_written_*
+/reading_written_*

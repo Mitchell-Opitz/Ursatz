@@ -182,7 +182,8 @@
         "figure",
         "mode",
         "independent",
-        "lyric"
+        "lyric",
+        "labels"
       ],
       "properties": {
         "name": {
@@ -449,6 +450,31 @@
         "lyric": {
           "type": "boolean",
           "description": "A subordinate theme whose motive is the main theme's, augmented (R-506)."
+        },
+        "labels": {
+          "type": "object",
+          "required": [
+            "role",
+            "return",
+            "keys",
+            "figure"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": "string"
+            },
+            "return": {
+              "type": "string"
+            },
+            "keys": {
+              "type": "string"
+            },
+            "figure": {
+              "type": "string"
+            }
+          },
+          "description": "The sentences the section is shown as (API 4.2): its role (then \" (independent)\" or \" (lyric)\"), what it returns (with its variation), its keys (with the mode) and its figure in words; \"\" for a member the section has none of."
         }
       },
       "additionalProperties": false
@@ -459,7 +485,8 @@
         "bars",
         "count",
         "default",
-        "sections"
+        "sections",
+        "label"
       ],
       "properties": {
         "bars": {
@@ -478,6 +505,10 @@
           "items": {
             "$ref": "#/$defs/section"
           }
+        },
+        "label": {
+          "type": "string",
+          "description": "\"3 variations, 32 bars\" for a size with a count (the noun is the role of its last section), else \"16 bars\" (API 4.2)."
         }
       },
       "additionalProperties": false

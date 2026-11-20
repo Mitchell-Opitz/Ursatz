@@ -173,9 +173,9 @@ int run_random_motive(int argc, char **argv) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_random_motive(cli_context(), text, NULL, &response);
+    UrsatzStatus api_status = composer_api_random_motive(cli_context(), text, NULL, &response);
     free(text);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
         composer_response_destroy(&response);
         return status;

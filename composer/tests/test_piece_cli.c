@@ -287,7 +287,7 @@ static void test_done_when(void) {
            test_file_exists("loop.musicxml") && test_file_exists("ending.musicxml") && test_file_exists("explain.json"));
 
     /* Intro 2 bars, then the body 12 bars and the turnaround 2: the loop is whole notes 2 to 16. */
-    assert(strstr(shown, "\"loop\":{\"start\":\"2/1\",\"end\":\"16/1\"}"));
+    assert(strstr(shown, "\"loop\":{\"start\":\"2/1\",\"end\":\"16/1\",\"text\":\"bar 3 to bar 17\",\"length_text\":\"14 bars\"}"));
     assert(marker_tick("loop.mid", "loopStart") == (long)(2 * WHOLE_TICKS));
     assert(marker_tick("loop.mid", "loopEnd") == (long)(16 * WHOLE_TICKS));
     assert(marker_tick("ending.mid", "loopStart") < 0 && marker_tick("ending.mid", "loopEnd") < 0);

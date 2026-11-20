@@ -4,13 +4,17 @@ The routes for materials (motifs, themes, pieces) and subjects. [Docs index](../
 
 ## Materials and subjects routes
 
-Both stores are described under [Material store](../storage.md#material-store) and [Subjects](../storage.md#subjects); these
-routes only dispatch into them (`routes/materials.c`). Every answer is JSON.
-A success is `{"ok":true,...}`; a failure is `{"ok":false,"error":"..."}` with
-`400` for an invalid id, name, kind, type or body, `404` for something not
-found, `409` for a project that still holds items or an item that other items
-use, `405` for a method the route does not take and `413` for a request body
-over 256 KB.
+Both stores are described under [Material store](../../../workshop/docs/data-folder.md#items-and-versions) and [Subjects](../../../workshop/docs/data-folder.md#layout-2); these
+routes only name queries and commands of the workshop (`routes/materials_routes.c`, `motifs_routes.c`, `subjects_routes.c`). Every answer is JSON in
+the one envelope ([the envelope](envelope.md)): a success is `{"ok":true,...}`; a failure is
+`{"ok":false,"error":"...","code":"...","path"?}` with `400` for an invalid id, name, kind, type or body, `422` for a member of a
+Composer request the Composer refuses (its `path` names it), `404` for something not found, `409` for a project that still holds
+items, an item that other items use or an item changed since it was read, `405` for a method the route does not take and `413` for a
+request body over 1 MB.
+
+A write to an item that has versions (a save, a rename, a delete, a compose, a regenerate, a choose, a flag, a promote, a link, a
+reroll, a re-analysis and an update of a use) carries the version the page read as `base_version` in its JSON body (`?base_version=<n>`
+on a `DELETE`); an item that moved on answers `409` with `current_version`. `DELETE` also takes `?force=1`.
 
 Projects:
 
@@ -40,7 +44,7 @@ Items:
 - `GET /api/materials/items/<id>/export[?version=<n>]`: the Analyzer's text export of a motif, theme or piece
   (`analyzer_text_export_material`, [format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)),
   `200 text/plain; charset=utf-8`; the current version unless `version` is given. The route calls
-  `ursatz_gui_material_export` (`service/material_export_service.c`) and nothing else. A motif's text has a `motif`
+  `workshop_material_export` (`workshop/src/rendering/export.c`) and nothing else. A motif's text has a `motif`
   section (the Composer's render of its request, its segments from `features` marked on the notes, the facts role, form,
   meter, key, pickup, notes, base harmony and tones) and one `variant <n>: <operations>` section for each of its variants
   (facts kind, kept, changed, functions, flag). A theme's header carries its form, chords (`bar <n>`) and slots; its

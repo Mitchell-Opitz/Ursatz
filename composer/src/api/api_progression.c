@@ -49,7 +49,7 @@ typedef struct {
     bool has_sequence;
     unsigned long suggest; /* 0 for none */
     bool plans;
-    const ComposerJob *job;
+    const UrsatzJob *job;
 } Options;
 
 /* --- reading the request --------------------------------------------------------------------------------- */
@@ -63,15 +63,15 @@ static bool needs_lead(const Options *options) {
            (options->has_schema && galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
 }
 
-static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
-                                   ApiOutputs *outputs, ComposerError *error) {
+static UrsatzStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
+                                   ApiOutputs *outputs, UrsatzError *error) {
     const char *cadence_text = NULL;
     const char *embellish_text = NULL;
     bool found;
     memset(options, 0, sizeof(*options));
     options->bass = true;
     if (!api_has_member(request, "key") || !api_has_member(request, "meter") || !api_has_member(request, "bars") || !api_has_member(request, "cadence")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "progression needs key, meter, bars and cadence");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "progression needs key, meter, bars and cadence");
     }
     if (!api_member_string(request, "key", &options->key_text, &found, error) ||
         !api_member_string(request, "meter", &options->meter_text, &found, error) ||
@@ -81,13 +81,13 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
         !api_member_string(request, "sequence", &options->sequence_text, &found, error) ||
         !api_member_bool(request, "bass", &options->bass, &found, error) ||
         !api_member_bool(request, "plans", &options->plans, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (!request_parse_key(options->key_text, knowledge, &options->key)) {
         if (api_fail_unsupported_key(error, "/key", knowledge, options->key_text)) {
-            return COMPOSER_ERR_REQUEST;
+            return URSATZ_ERR_REQUEST;
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                         "for example \"D minor\"",
                         options->key_text);
@@ -97,15 +97,15 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     }
     unsigned long bars = 0;
     if (!api_member_whole(request, "bars", 1, MAX_BARS, &bars, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     options->bars = (long)bars;
     if (!request_parse_cadence(cadence_text, &options->cadence)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/cadence", "unknown cadence '%s'; use PAC, IAC, HC, DC or PC", cadence_text);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/cadence", "unknown cadence '%s'; use PAC, IAC, HC, DC or PC", cadence_text);
     }
     unsigned long seed = 0;
     if (!api_member_whole(request, "seed", 0, API_SEED_MAX, &seed, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     options->seed = found ? seed : api_default_seed();
     if (embellish_text) {
@@ -118,51 +118,51 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
             }
         }
         if (!known) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/embellish", "embellish must be none, low, medium or high, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/embellish", "embellish must be none, low, medium or high, not '%s'",
                             embellish_text);
         }
     }
-    ComposerStatus status = api_read_outputs(request, false, outputs, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = api_read_outputs(request, false, outputs, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     if (options->schema_text) {
         if (!harmony_schema_find(options->schema_text, &options->schema)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/schema", "unknown schema '%s' (list_schemas lists them)",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/schema", "unknown schema '%s' (list_schemas lists them)",
                             options->schema_text);
         }
         options->has_schema = true;
         if (!harmony_schema_available(options->schema, options->key.material)) {
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/schema", "the schema '%s' cannot be written in a %s key",
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/schema", "the schema '%s' cannot be written in a %s key",
                             options->schema_text, composer_key_is_minor(&options->key) ? "minor" : "major");
         }
     }
     if (options->sequence_text) {
         if (!harmony_sequence_find(options->sequence_text, &options->sequence)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/sequence", "unknown sequence '%s' (list_schemas lists them)",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/sequence", "unknown sequence '%s' (list_schemas lists them)",
                             options->sequence_text);
         }
         options->has_sequence = true;
     }
     if (!api_member_whole(request, "suggest", 1, MAX_SUGGESTIONS, &options->suggest, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (!options->bass && (options->has_schema || options->has_sequence)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/bass",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/bass",
                         "schema and sequence write their own bass, so they cannot be used with bass false");
     }
     if (!options->bass && (outputs->midi || outputs->musicxml)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/bass",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/bass",
                         "midi and musicxml write the bass line (harmony makes no sound yet), so they cannot be used with bass "
                         "false");
     }
     size_t minimum = harmony_phrase_min_bars(options->cadence, &options->meter) + (needs_lead(options) ? 1 : 0);
     if ((size_t)options->bars < minimum) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/bars", "%ld bar%s is too short for a %s in %s; at least %zu bars are needed",
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/bars", "%ld bar%s is too short for a %s in %s; at least %zu bars are needed",
                         options->bars, options->bars == 1 ? "" : "s", plan_cadence_name(options->cadence), options->meter_text,
                         minimum);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- building the plan ------------------------------------------------------------------------------------ */
@@ -575,8 +575,8 @@ static const char *heard_name(const Options *options, const Built *built) {
 }
 
 /* Adds "heard", "chords" and, when asked, "plan" and "musicxml" of one progression to object. */
-static ComposerStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON *object, const Options *options, const Built *built, const ApiOutputs *outputs,
-                                      ComposerError *error) {
+static UrsatzStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON *object, const Options *options, const Built *built, const ApiOutputs *outputs,
+                                      UrsatzError *error) {
     Row rows[MAX_CHORDS];
     size_t count = collect_rows(options, built, rows);
     cJSON *chords = cJSON_CreateArray();
@@ -608,12 +608,12 @@ static ComposerStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON 
         PlanExportError detail;
         char *text = NULL;
         if (plan_export_render(built->plan, &rendered, &detail) != PLAN_EXPORT_OK) {
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
         }
         PlanExportResult result = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &text, &detail);
         rendered_plan_destroy(&rendered);
         if (result != PLAN_EXPORT_OK) {
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
         }
         ok = cJSON_AddStringToObject(object, "musicxml", text) != NULL;
         free(text);
@@ -621,11 +621,11 @@ static ComposerStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON 
             return api_fail_alloc(error);
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const Options *options, const Built *built, size_t made, unsigned long seed,
-                                     const ApiOutputs *outputs, cJSON **result, ComposerError *error) {
+static UrsatzStatus build_document(const KnowledgeSnapshot *knowledge, const Options *options, const Built *built, size_t made, unsigned long seed,
+                                     const ApiOutputs *outputs, cJSON **result, UrsatzError *error) {
     char key[24];
     char meter[16];
     cJSON *document = cJSON_CreateObject();
@@ -635,10 +635,10 @@ static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const O
               cJSON_AddNumberToObject(document, "bars", (double)options->bars) &&
               cJSON_AddStringToObject(document, "cadence", plan_cadence_name(options->cadence)) &&
               cJSON_AddNumberToObject(document, "seed", (double)seed);
-    ComposerStatus status = ok ? COMPOSER_OK : api_fail_alloc(error);
-    if (status == COMPOSER_OK && options->suggest > 0) {
+    UrsatzStatus status = ok ? URSATZ_OK : api_fail_alloc(error);
+    if (status == URSATZ_OK && options->suggest > 0) {
         cJSON *list = cJSON_AddArrayToObject(document, "alternatives");
-        for (size_t k = 0; list && k < made && status == COMPOSER_OK; k++) {
+        for (size_t k = 0; list && k < made && status == URSATZ_OK; k++) {
             cJSON *entry = cJSON_CreateObject();
             if (!entry || !cJSON_AddItemToArray(list, entry)) {
                 cJSON_Delete(entry);
@@ -650,7 +650,7 @@ static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const O
         if (!list) {
             status = api_fail_alloc(error);
         }
-        if (status == COMPOSER_OK && made < options->suggest) {
+        if (status == URSATZ_OK && made < options->suggest) {
             char notice[96];
             cJSON *notices = cJSON_AddArrayToObject(document, "notices");
             snprintf(notice, sizeof(notice), "only %zu alternative%s found for this request", made, made == 1 ? "" : "s");
@@ -658,21 +658,21 @@ static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const O
                 status = api_fail_alloc(error);
             }
         }
-    } else if (status == COMPOSER_OK) {
+    } else if (status == URSATZ_OK) {
         status = add_progression(knowledge, document, options, &built[0], outputs, error);
     }
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         cJSON_Delete(document);
         return status;
     }
     *result = document;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the lists of names --------------------------------------------------------------------------------- */
 
 /* `list_schemas`: {"schemas": [{"name", "function", "materials"}], "sequences": [name]}. */
-static ComposerStatus list_names(const CommonPracticeMaterials *materials, ComposerResponse *out) {
+static UrsatzStatus list_names(const CommonPracticeMaterials *materials, ComposerResponse *out) {
     cJSON *document = cJSON_CreateObject();
     cJSON *schemas = document ? cJSON_AddArrayToObject(document, "schemas") : NULL;
     cJSON *sequences = schemas ? cJSON_AddArrayToObject(document, "sequences") : NULL;
@@ -708,12 +708,12 @@ static ComposerStatus list_names(const CommonPracticeMaterials *materials, Compo
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_progression(const ComposerContext *context, const char *request_json,
-                                        const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_progression(const ComposerContext *context, const char *request_json,
+                                        const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *request = NULL;
@@ -727,46 +727,46 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
     memset(built, 0, sizeof(built));
     memset(&options, 0, sizeof(options));
     memset(&outputs, 0, sizeof(outputs));
-    ComposerStatus status = api_parse_request(request_json, &request, &out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &request, &out->error);
+    if (status == URSATZ_OK) {
         bool list = false;
         bool found;
         if (!api_member_bool(request, "list_schemas", &list, &found, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
+            status = URSATZ_ERR_REQUEST;
         } else if (list) {
             status = list_names(&materials, out);
             cJSON_Delete(request);
-            if (status != COMPOSER_OK) {
-                ComposerError error = out->error;
+            if (status != URSATZ_OK) {
+                UrsatzError error = out->error;
                 composer_response_destroy(out);
                 out->error = error;
             }
             return status;
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_request(request, context->knowledge, &options, &outputs, &out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             options.job = job;
             seed = options.seed;
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         parameters_for(&options, &parameters);
         if (options.suggest > 0) {
             /* The alternatives are the candidates the harmony stage proposes, each taken through the other stages. */
             size_t proposed = count_suggestions(&options, &parameters, seed);
-            for (size_t i = 0; i < proposed && made < options.suggest && status == COMPOSER_OK; i++) {
+            for (size_t i = 0; i < proposed && made < options.suggest && status == URSATZ_OK; i++) {
                 if (job_step(job, "progression", (unsigned)i, (unsigned)proposed)) {
-                    status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+                    status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
                 } else if (make_progression(&options, &parameters, seed, (long)i, &built[made]) == MADE) {
                     made++;
                 }
             }
         } else {
-            for (int attempt = 0; attempt < API_SEED_TRIES && made == 0 && status == COMPOSER_OK; attempt++) {
+            for (int attempt = 0; attempt < API_SEED_TRIES && made == 0 && status == URSATZ_OK; attempt++) {
                 if (job_step(job, "progression", (unsigned)attempt, API_SEED_TRIES)) {
-                    status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+                    status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
                     break;
                 }
                 seed = (options.seed + (unsigned long)attempt) & 0xFFFFFFFFUL;
@@ -775,29 +775,29 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
                 made += result == MADE;
             }
         }
-        if (status == COMPOSER_OK && job_cancelled(job)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+        if (status == URSATZ_OK && job_cancelled(job)) {
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
         }
     }
-    if (status == COMPOSER_OK && made == 0) {
+    if (status == URSATZ_OK && made == 0) {
         unsigned long last = (options.seed + API_SEED_TRIES - 1) & 0xFFFFFFFFUL;
         if (skeleton_unused) {
-            status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "%s could not be used for %s, %s, %ld bars, %s from seeds %lu to %lu",
+            status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "%s could not be used for %s, %s, %ld bars, %s from seeds %lu to %lu",
                               options.has_schema ? "the schema" : "the sequence", options.key_text, options.meter_text,
                               options.bars, plan_cadence_name(options.cadence), options.seed, last);
         } else {
-            status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "no valid progression for %s, %s, %ld bars, %s from seeds %lu to %lu",
+            status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "no valid progression for %s, %s, %ld bars, %s from seeds %lu to %lu",
                               options.key_text, options.meter_text, options.bars, plan_cadence_name(options.cadence),
                               options.seed, last);
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *document = NULL;
         status = build_document(context->knowledge, &options, built, made, seed, &outputs, &document, &out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             /* The first progression's own files. */
             status = api_render_outputs(context->knowledge, built[0].plan, &outputs, document, out);
-            if (status != COMPOSER_OK) {
+            if (status != URSATZ_OK) {
                 cJSON_Delete(document);
             } else {
                 status = api_respond_json(out, document);
@@ -808,8 +808,8 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
         plan_destroy(built[i].plan);
     }
     cJSON_Delete(request);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

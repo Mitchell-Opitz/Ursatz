@@ -240,9 +240,9 @@ int run_recognize(int argc, char **argv) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_recognize(cli_context(), text, NULL, &response);
+    UrsatzStatus api_status = composer_api_recognize(cli_context(), text, NULL, &response);
     free(text);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         MotiveInputNames names = {options.source.path, options.target.path, options.basic.path, NULL};
         motive_input_fail(&file, api_status, &response.error, &names);
         composer_response_destroy(&response);

@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_result.h>
+#include <ursatz_analyzer_internal/input_pipeline.h>
 #include "test_knowledge.h"
 #include "result/analysis_result_internal.h"
 
@@ -73,7 +73,7 @@ static AnalyzerResult *test_result_of(const ChainResult *report) {
 
 AnalysisDocument *test_build_document(const char *input_path, const ChainResult *report) {
     AnalyzerResult *result = test_result_of(report);
-    return result ? analysis_document_build_from_result(input_path, result) : NULL;
+    return result ? analyzer_document_build(input_path, result) : NULL;
 }
 
 char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report) {
@@ -82,8 +82,8 @@ char *test_render_document(const char *input_path, const ImportedScore *notes, c
     if (!document) {
         return NULL;
     }
-    char *json = analysis_document_to_json(document);
-    analysis_document_destroy(document);
+    char *json = analyzer_document_to_json(document);
+    analyzer_document_destroy(document);
     return json;
 }
 
@@ -91,7 +91,7 @@ bool test_analyze_report(const ImportedScore *notes, ChainResult *report) {
     memset(report, 0, sizeof(*report));
     report->home_duration.den = 1;
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
+    if (analyzer_analyze(notes, test_analyzer_defaults(), &result) != URSATZ_OK) {
         return false;
     }
     AnalyzerResult **grown = realloc(test_results, (test_result_count + 1) * sizeof(*grown));

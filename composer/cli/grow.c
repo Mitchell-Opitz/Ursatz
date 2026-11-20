@@ -393,8 +393,8 @@ int run_grow(int argc, char **argv) {
     }
 
     ComposerResponse response;
-    ComposerStatus called = cli_call(composer_api_grow, request, &response);
-    if (called != COMPOSER_OK) {
+    UrsatzStatus called = cli_call(composer_api_grow, request, &response);
+    if (called != URSATZ_OK) {
         /* A bad option is reported before a file that cannot be read; the first file that could not be read is the one named. */
         MotiveFile *failed = file.read_status != 0 ? &file : &accompaniment_file;
         MotiveInputNames names = {options.input, NULL, NULL, options.accompaniment_motive_path};

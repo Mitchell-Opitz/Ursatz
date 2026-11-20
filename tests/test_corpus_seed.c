@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <ursatz_analyzer/corpus_passages.h>
+#include <ursatz_analyzer/analyzer_api.h>
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/corpus_seed.h>
@@ -63,9 +63,9 @@ static SpelledKey key_of(int tonic, HarmonyMode mode) {
    the JSON of the request member, so the Analyzer's writer and the Composer's reader are held together. */
 static CorpusPassages passages_from(const char *corpus, const char *like_path, const char *numerals) {
     AnalyzerCorpusPassages found;
-    AnalyzerPassagesStatus searched = like_path ? analyzer_corpus_passages_like(corpus, test_knowledge(), like_path, 10, &found)
+    UrsatzStatus searched = like_path ? analyzer_corpus_passages_like(corpus, test_knowledge(), like_path, 10, &found)
                                                 : analyzer_corpus_passages_numerals(corpus, test_knowledge(), numerals, 100, &found);
-    assert(searched == ANALYZER_PASSAGES_OK);
+    assert(searched == URSATZ_OK);
     char *text = analyzer_corpus_passages_to_json(&found);
     assert(text);
     cJSON *array = cJSON_Parse(text);
@@ -164,9 +164,9 @@ static int test_motive(void) {
     /* The Analyzer refuses what cannot be searched; the Composer refuses what cannot be placed. */
     AnalyzerCorpusPassages refused;
     assert(analyzer_corpus_passages_like(COMPOSER_SONATINAS_CORPUS, test_knowledge(), "no-such-file.mid", 10, &refused) ==
-           ANALYZER_PASSAGES_ERR_QUERY);
+           URSATZ_ERR_REQUEST);
     assert(analyzer_corpus_passages_like("no-such-directory", test_knowledge(), PASSAGE, 10, &refused) ==
-           ANALYZER_PASSAGES_ERR_CORPUS);
+           URSATZ_ERR_NOT_FOUND);
     assert(corpus_seed_motive(test_knowledge(), NULL, 0, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);
     corpus_passages_destroy(&passages);
     printf("the opening bar of Mozart 545 seeds the bar transposed, cut at the barline\n");
@@ -290,7 +290,7 @@ static int test_progression(void) {
            CORPUS_SEED_OK);
     AnalyzerCorpusPassages refused;
     assert(analyzer_corpus_passages_numerals(COMPOSER_SONATINAS_CORPUS, test_knowledge(), "not numerals", 100, &refused) ==
-           ANALYZER_PASSAGES_ERR_QUERY);
+           URSATZ_ERR_REQUEST);
     assert(corpus_seed_progression(test_knowledge(), major.items, major.count, 0, HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_ARGUMENT);
     corpus_passages_destroy(&major);
     corpus_passages_destroy(&minor_passages);

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-collection.v1.schema.json",
+  "title": "Collection, format version 1",
+  "description": "library/collections/<id>.json: a named set of Library pieces.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "name",
+    "description",
+    "pieces",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-collection"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    }
+  }
+}

@@ -40,7 +40,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 1",
+          "length_text": "8 bars"
         },
         {
           "id": "T",
@@ -66,7 +68,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 9",
+          "length_text": "8 bars"
         },
         {
           "id": "S1",
@@ -93,7 +97,9 @@
           "repeat_of": null,
           "upbeat": null,
           "connective": null,
-          "construction_text": "4+5 sentence as given: fragment 2 is repeated a step lower (bar 7)."
+          "construction_text": "4+5 sentence as given: fragment 2 is repeated a step lower (bar 7).",
+          "start_text": "bar 17",
+          "length_text": "9 bars"
         },
         {
           "id": "S2",
@@ -119,7 +125,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 26",
+          "length_text": "8 bars"
         },
         {
           "id": "C",
@@ -140,7 +148,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 34",
+          "length_text": "4 bars"
         },
         {
           "id": "R",
@@ -166,7 +176,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 38",
+          "length_text": "4 bars"
         },
         {
           "id": "A return",
@@ -196,7 +208,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 42",
+          "length_text": "8 bars"
         },
         {
           "id": "K",
@@ -222,7 +236,9 @@
           "part": null,
           "repeat_of": null,
           "upbeat": null,
-          "connective": null
+          "connective": null,
+          "start_text": "bar 50",
+          "length_text": "8 bars"
         }
       ],
       "score": {

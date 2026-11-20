@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-item-version.v1.schema.json",
+  "title": "Item version envelope, format version 1",
+  "description": "projects/<prj>/items/<id>/v<n>/envelope.json: what a version is, apart from its body. A version exists once its envelope does.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "kind",
+    "version",
+    "note",
+    "lineage",
+    "actor",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-item-version"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "motif",
+        "theme",
+        "piece"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "lineage": {
+      "type": "object",
+      "required": [
+        "derived_from"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "derived_from": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "item_id",
+                "version"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "item_id": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "actor": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    }
+  }
+}

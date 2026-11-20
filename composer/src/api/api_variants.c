@@ -21,10 +21,10 @@
 #define VARIANTS_DRAWS_PER_COUNT API_VARIANTS_DRAWS_PER_COUNT
 #define SEED_MAX API_VARIANTS_SEED_MAX
 
-ComposerStatus composer_api_variant_operations(ComposerResponse *out) {
+UrsatzStatus composer_api_variant_operations(ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     out->json = variant_registry_to_json();
-    return out->json ? COMPOSER_OK : api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+    return out->json ? URSATZ_OK : api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 
 /* --- the chain ------------------------------------------------------------ */
@@ -50,15 +50,15 @@ static bool parse_ratio(const char *text, long *numerator, long *denominator) {
 }
 
 /* Sets one parameter of a step from its JSON value. */
-static ComposerStatus set_param(VariantStep *step, size_t number, const char *base, const cJSON *item,
-                                ComposerError *error) {
+static UrsatzStatus set_param(VariantStep *step, size_t number, const char *base, const cJSON *item,
+                                UrsatzError *error) {
     char path[sizeof error->path];
     snprintf(path, sizeof path, "%s/params/%s", base, item->string);
     const VariantOperation *operation = variant_registry_find(step->op);
     int index = variant_operation_param_index(operation, item->string);
     VariantParam described;
     if (index < 0 || !variant_operation_param(operation, (size_t)index, &described)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "step %zu: %s has no parameter '%s'", number, step->op,
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "step %zu: %s has no parameter '%s'", number, step->op,
                         item->string);
     }
     const VariantParam *param = &described;
@@ -93,7 +93,7 @@ static ComposerStatus set_param(VariantStep *step, size_t number, const char *ba
         break;
     }
     if (!ok) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "step %zu: '%s' of %s must be a %s", number, param->name,
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "step %zu: '%s' of %s must be a %s", number, param->name,
                         step->op,
                         param->kind == VARIANT_PARAM_BOOL       ? "true or false"
                         : param->kind == VARIANT_PARAM_RATIO    ? "ratio text like \"2:1\""
@@ -101,21 +101,21 @@ static ComposerStatus set_param(VariantStep *step, size_t number, const char *ba
                                                                 : "whole number");
     }
     if (!variant_step_set(step, param->name, value, den)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "step %zu: '%s' of %s is out of range (%ld to %ld)", number,
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "step %zu: '%s' of %s is out of range (%ld to %ld)", number,
                         param->name, step->op, param->min, param->max);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* Reads {"steps": [{"op", "params"}]} into *chain. */
-static ComposerStatus read_chain(const cJSON *root, VariantChain *chain, ComposerError *error) {
+static UrsatzStatus read_chain(const cJSON *root, VariantChain *chain, UrsatzError *error) {
     memset(chain, 0, sizeof *chain);
     const cJSON *steps = cJSON_GetObjectItemCaseSensitive(root, "steps");
     if (!cJSON_IsArray(steps)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/chain", "expected {\"steps\": [...]}");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/chain", "expected {\"steps\": [...]}");
     }
     if (cJSON_GetArraySize(steps) < 1 || cJSON_GetArraySize(steps) > VARIANT_CHAIN_MAX) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/chain/steps", "a chain has 1 to %d steps", VARIANT_CHAIN_MAX);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/chain/steps", "a chain has 1 to %d steps", VARIANT_CHAIN_MAX);
     }
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, steps) {
@@ -126,33 +126,33 @@ static ComposerStatus read_chain(const cJSON *root, VariantChain *chain, Compose
         const cJSON *params = cJSON_GetObjectItemCaseSensitive(item, "params");
         VariantStep *step = &chain->steps[chain->step_count];
         if (!cJSON_IsString(op)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, base, "step %zu needs an \"op\" name", number);
+            return api_fail(error, URSATZ_ERR_REQUEST, base, "step %zu needs an \"op\" name", number);
         }
         if (!variant_step_init(step, op->valuestring)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, base,
+            return api_fail(error, URSATZ_ERR_REQUEST, base,
                             "step %zu: unknown operation '%s'; composer_api_variant_operations lists them", number,
                             op->valuestring);
         }
         if (params && !cJSON_IsObject(params)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, base, "step %zu: \"params\" must be an object", number);
+            return api_fail(error, URSATZ_ERR_REQUEST, base, "step %zu: \"params\" must be an object", number);
         }
         const cJSON *param = NULL;
         cJSON_ArrayForEach(param, params) {
-            ComposerStatus status = set_param(step, number, base, param, error);
-            if (status != COMPOSER_OK) {
+            UrsatzStatus status = set_param(step, number, base, param, error);
+            if (status != URSATZ_OK) {
                 return status;
             }
         }
         chain->step_count++;
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the motives ---------------------------------------------------------- */
 
-static bool object_or_fail(const cJSON *item, const char *path, ComposerError *error) {
+static bool object_or_fail(const cJSON *item, const char *path, UrsatzError *error) {
     if (!cJSON_IsObject(item)) {
-        api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be a motive request with an input", path + 1);
+        api_fail(error, URSATZ_ERR_REQUEST, path, "%s must be a motive request with an input", path + 1);
         return false;
     }
     return true;
@@ -199,21 +199,21 @@ static cJSON *read_as(const cJSON *part, const cJSON *meter_key_role_from, const
  * The basic motive of "basic": read in the meter, key and role of the request and the form of form_from's input. Not an
  * error when absent.
  */
-static ComposerStatus read_basic(const cJSON *request, const KnowledgeSnapshot *knowledge, const cJSON *form_from,
-                                 Motive *basic, bool *given, ComposerError *error) {
+static UrsatzStatus read_basic(const cJSON *request, const KnowledgeSnapshot *knowledge, const cJSON *form_from,
+                                 Motive *basic, bool *given, UrsatzError *error) {
     const cJSON *part = cJSON_GetObjectItemCaseSensitive(request, "basic");
     *given = part && !cJSON_IsNull(part);
     if (!*given) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (!object_or_fail(part, "/basic", error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     cJSON *copy = read_as(part, request, form_from);
     if (!copy) {
-        return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
-    ComposerStatus status = api_read_motive(copy, "/basic", knowledge, basic, NULL, error);
+    UrsatzStatus status = api_read_motive(copy, "/basic", knowledge, basic, NULL, error);
     cJSON_Delete(copy);
     return status;
 }
@@ -372,34 +372,34 @@ static cJSON *variants_document(unsigned long seed, const Motive *source, const 
     return document;
 }
 
-static ComposerStatus respond_variants(ComposerResponse *out, unsigned long seed, const Motive *source,
+static UrsatzStatus respond_variants(ComposerResponse *out, unsigned long seed, const Motive *source,
                                        const Variant *variants, size_t count, const Skipped *skipped,
                                        size_t skipped_count, bool each_op, bool detail, cJSON *notices) {
     cJSON *document = variants_document(seed, source, variants, count, skipped, skipped_count, each_op, detail, notices);
     if (!document) {
-        return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     return api_respond_json(out, document);
 }
 
-static ComposerStatus cancelled(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+static UrsatzStatus cancelled(UrsatzError *error) {
+    return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
 }
 
 /* each_op: one one-step variant for each operation that takes the motive's form. */
-static ComposerStatus make_each_op(const Filter *filter, bool detail, unsigned long seed, const Motive *source, const Motive *basic,
-                                   const ComposerJob *job, ComposerResponse *out) {
+static UrsatzStatus make_each_op(const Filter *filter, bool detail, unsigned long seed, const Motive *source, const Motive *basic,
+                                   const UrsatzJob *job, ComposerResponse *out) {
     size_t rows = variant_registry_count();
     Variant *variants = calloc(rows, sizeof(*variants));
     Skipped *skipped = calloc(rows, sizeof(*skipped));
     if (!variants || !skipped) {
         free(variants);
         free(skipped);
-        return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     size_t made = 0;
     size_t skipped_count = 0;
-    ComposerStatus status = COMPOSER_OK;
+    UrsatzStatus status = URSATZ_OK;
     for (size_t i = 0; i < rows; i++) {
         if (job_step(job, "variants", (unsigned)i, (unsigned)rows)) {
             status = cancelled(&out->error);
@@ -430,9 +430,9 @@ static ComposerStatus make_each_op(const Filter *filter, bool detail, unsigned l
             skipped_count++;
         }
     }
-    if (status == COMPOSER_OK && made == 0) {
-        status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "no operation could be applied to this motive");
-    } else if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK && made == 0) {
+        status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "no operation could be applied to this motive");
+    } else if (status == URSATZ_OK) {
         status = respond_variants(out, seed, source, variants, made, skipped, skipped_count, true, detail, NULL);
     }
     free(variants);
@@ -440,9 +440,9 @@ static ComposerStatus make_each_op(const Filter *filter, bool detail, unsigned l
     return status;
 }
 
-static ComposerStatus add_notice(cJSON *notices, ComposerError *error, const char *format, ...) __attribute__((format(printf, 3, 4)));
+static UrsatzStatus add_notice(cJSON *notices, UrsatzError *error, const char *format, ...) __attribute__((format(printf, 3, 4)));
 
-static ComposerStatus add_notice(cJSON *notices, ComposerError *error, const char *format, ...) {
+static UrsatzStatus add_notice(cJSON *notices, UrsatzError *error, const char *format, ...) {
     char text[256];
     va_list args;
     va_start(args, format);
@@ -451,9 +451,9 @@ static ComposerStatus add_notice(cJSON *notices, ComposerError *error, const cha
     cJSON *item = cJSON_CreateString(text);
     if (!item || !cJSON_AddItemToArray(notices, item)) {
         cJSON_Delete(item);
-        return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 typedef struct {
@@ -467,7 +467,7 @@ typedef struct {
     Filter filter;
 } VariantsRequest;
 
-static ComposerStatus read_variants_request(const cJSON *request, VariantsRequest *read, ComposerError *error) {
+static UrsatzStatus read_variants_request(const cJSON *request, VariantsRequest *read, UrsatzError *error) {
     memset(read, 0, sizeof *read);
     read->count = VARIANTS_COUNT_DEFAULT;
     read->seed = api_default_seed() % (SEED_MAX + 1);
@@ -481,7 +481,7 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
         !api_member_bool(request, "each_op", &read->each_op, NULL, error) ||
         !api_member_bool(request, "detail", &read->detail, NULL, error) ||
         !api_member_string(request, "distance", &distance_text, &has_distance, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (has_seed) {
         read->seed = seed;
@@ -489,10 +489,10 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
     const cJSON *functions = cJSON_GetObjectItemCaseSensitive(request, "functions");
     if (functions && !cJSON_IsNull(functions)) {
         if (!cJSON_IsArray(functions)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/functions", "functions must be a list of function names");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/functions", "functions must be a list of function names");
         }
         if (cJSON_GetArraySize(functions) > VARIANT_FUNCTIONS) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/functions", "functions has at most %d names", VARIANT_FUNCTIONS);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/functions", "functions has at most %d names", VARIANT_FUNCTIONS);
         }
         for (int i = 0; i < cJSON_GetArraySize(functions); i++) {
             const cJSON *item = cJSON_GetArrayItem(functions, i);
@@ -502,7 +502,7 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
             if (api_choice_find(API_FUNCTIONS, name) < 0) {
                 char functions[96];
                 api_choice_list(API_FUNCTIONS, functions, sizeof functions);
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "function must be %s, not '%s'", functions, name);
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "function must be %s, not '%s'", functions, name);
             }
             read->filter.functions[read->filter.function_count++] = name;
         }
@@ -510,47 +510,47 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
     const cJSON *chain = cJSON_GetObjectItemCaseSensitive(request, "chain");
     read->has_chain = chain && !cJSON_IsNull(chain);
     if (read->each_op && (read->has_chain || has_count || has_distance || read->filter.function_count > 0)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/each_op", "each_op takes no chain, count, distance or functions");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/each_op", "each_op takes no chain, count, distance or functions");
     }
     if (has_distance) {
         if (read->has_chain) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "a distance takes random chains, not a chain");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/distance", "a distance takes random chains, not a chain");
         }
         static const Distance *const DISTANCES[] = {&DISTANCE_CLOSE, &DISTANCE_MEDIUM, &DISTANCE_FAR};
         int distance = api_choice_find(API_DISTANCES, distance_text);
         if (distance < 0) {
             char names[64];
             api_choice_list(API_DISTANCES, names, sizeof names);
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "distance must be %s, not '%s'", names, distance_text);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/distance", "distance must be %s, not '%s'", names, distance_text);
         }
         read->distance = DISTANCES[distance];
     }
     if (read->has_chain) {
         if (!cJSON_IsObject(chain)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/chain", "expected {\"steps\": [...]}");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/chain", "expected {\"steps\": [...]}");
         }
         return read_chain(chain, &read->chain, error);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The variants proper: load the source, make "count" variants, build the document. */
-static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
+static UrsatzStatus make_variants(const cJSON *request, const KnowledgeSnapshot *knowledge, const UrsatzJob *job,
                                     ComposerResponse *out) {
-    ComposerError *error = &out->error;
+    UrsatzError *error = &out->error;
     VariantsRequest read;
-    ComposerStatus status = read_variants_request(request, &read, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = read_variants_request(request, &read, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     Motive source;
     status = api_read_motive(request, "", knowledge, &source, NULL, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     Motive basic = source;
     status = read_basic(request, knowledge, request, &basic, &read.filter.basic_given, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     if (read.each_op) {
@@ -563,7 +563,7 @@ static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapsho
     if (!variants || !notices) {
         free(variants);
         cJSON_Delete(notices);
-        return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     size_t made = 0;
     bool filtered = read.filter.function_count > 0 || read.distance;
@@ -571,8 +571,8 @@ static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapsho
                         : read.distance                                 ? "distance"
                                                                         : "function";
     unsigned long draws = filtered ? count * VARIANTS_DRAWS_PER_COUNT : count;
-    status = COMPOSER_OK;
-    for (unsigned long i = 0; i < draws && made < count && status == COMPOSER_OK; i++) {
+    status = URSATZ_OK;
+    for (unsigned long i = 0; i < draws && made < count && status == URSATZ_OK; i++) {
         if (job_step(job, "variants", (unsigned)i, (unsigned)draws)) {
             status = cancelled(error);
             break;
@@ -584,7 +584,7 @@ static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapsho
         } else if (!(read.distance ? variant_random_chain_of(&source, variant_seed, read.distance->min_steps,
                                                              read.distance->max_steps, &variant->chain)
                                    : variant_random_chain(&source, variant_seed, &variant->chain))) {
-            status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot draw a chain for this motive");
+            status = api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "cannot draw a chain for this motive");
             break;
         }
         VariantResult result =
@@ -597,7 +597,7 @@ static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapsho
             }
             made++;
         } else if (read.has_chain) {
-            status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "step %zu of the chain: %s",
+            status = api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "step %zu of the chain: %s",
                               variant->record.failed_step + 1,
                               variant->record.error[0] ? variant->record.error : variant_result_name(result));
         } else {
@@ -605,17 +605,17 @@ static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapsho
                                 variant->record.error[0] ? variant->record.error : variant_result_name(result));
         }
     }
-    if (status == COMPOSER_OK && made == 0) {
-        status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
+    if (status == URSATZ_OK && made == 0) {
+        status = api_fail(error, URSATZ_ERR_UNSATISFIABLE, "",
                           filtered ? "no variant that suits the %s was found in %lu draws"
                                    : "no variant could be made of this motive",
                           asked, draws);
     }
-    if (status == COMPOSER_OK && filtered && made < count) {
+    if (status == URSATZ_OK && filtered && made < count) {
         status = add_notice(notices, error, "Only %zu of %lu variants suit the %s within %lu draws", made, count, asked,
                             draws);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = respond_variants(out, read.seed, &source, variants, made, NULL, 0, false, read.detail, notices);
     } else {
         cJSON_Delete(notices);
@@ -705,13 +705,13 @@ static cJSON *recognize_document(const Motive *source, const VariantChain *chain
 
 /* The motive request of "source" or "target": its own input, harmony and features, read in the request's meter, key and
    role with the pickup the request gives it. The errors of the members the request gives are put at their own paths. */
-static ComposerStatus read_recognize_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, const char *name,
-                                            const char *pickup_name, Motive *out, ComposerError *error) {
+static UrsatzStatus read_recognize_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, const char *name,
+                                            const char *pickup_name, Motive *out, UrsatzError *error) {
     char base[32];
     snprintf(base, sizeof base, "/%s", name);
     const cJSON *part = cJSON_GetObjectItemCaseSensitive(request, name);
     if (!object_or_fail(part, base, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     const cJSON *source_part = cJSON_GetObjectItemCaseSensitive(request, "source");
     cJSON *copy = read_as(part, request, source_part);
@@ -726,11 +726,11 @@ static ComposerStatus read_recognize_motive(const cJSON *request, const Knowledg
         }
     }
     if (!copy) {
-        return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
-    ComposerStatus status = api_read_motive(copy, base, knowledge, out, NULL, error);
+    UrsatzStatus status = api_read_motive(copy, base, knowledge, out, NULL, error);
     cJSON_Delete(copy);
-    if (status == COMPOSER_ERR_REQUEST) {
+    if (status == URSATZ_ERR_REQUEST) {
         /* The members the request gives for both motives are named at the request's own path. */
         static const char *const SHARED[] = {"meter", "key", "role"};
         char own[sizeof error->path];
@@ -748,36 +748,36 @@ static ComposerStatus read_recognize_motive(const cJSON *request, const Knowledg
     return status;
 }
 
-static ComposerStatus recognize_request(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
+static UrsatzStatus recognize_request(const cJSON *request, const KnowledgeSnapshot *knowledge, const UrsatzJob *job,
                                         ComposerResponse *out) {
-    ComposerError *error = &out->error;
+    UrsatzError *error = &out->error;
     if (job_step(job, "recognize", 0, 1)) {
         return cancelled(error);
     }
     const cJSON *meter = cJSON_GetObjectItemCaseSensitive(request, "meter");
     if (!meter || cJSON_IsNull(meter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter is required: both motives are read in it");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/meter", "meter is required: both motives are read in it");
     }
     unsigned long depth = VARIANT_CHAIN_MAX;
     bool detail = false;
     if (!api_member_whole(request, "depth", 1, VARIANT_CHAIN_MAX, &depth, NULL, error) ||
         !api_member_bool(request, "detail", &detail, NULL, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     Motive source;
     Motive target;
-    ComposerStatus status = read_recognize_motive(request, knowledge, "source", "pickup", &source, error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = read_recognize_motive(request, knowledge, "source", "pickup", &source, error);
+    if (status == URSATZ_OK) {
         status = read_recognize_motive(request, knowledge, "target", "target_pickup", &target, error);
     }
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     VariantChain chain;
     VariantRecognition recognition;
     VariantResult result = variant_recognize_depth(&source, &target, depth, &chain, &recognition);
     if (result != VARIANT_OK) {
-        return api_fail(error, COMPOSER_ERR_INTERNAL, "", "cannot recognize: %s", variant_result_name(result));
+        return api_fail(error, URSATZ_ERR_INTERNAL, "", "cannot recognize: %s", variant_result_name(result));
     }
     /* Remoteness is the distance from the basic motive; with no "basic" the source is the basic motive. */
     VariantRecord remoteness;
@@ -785,13 +785,13 @@ static ComposerStatus recognize_request(const cJSON *request, const KnowledgeSna
     Motive basic;
     bool basic_given = false;
     status = read_basic(request, knowledge, cJSON_GetObjectItemCaseSensitive(request, "source"), &basic, &basic_given, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     if (basic_given) {
         result = variant_set_remoteness(&basic, &target, depth, &remoteness);
         if (result != VARIANT_OK) {
-            return api_fail(error, COMPOSER_ERR_INTERNAL, "", "cannot recognize: %s", variant_result_name(result));
+            return api_fail(error, URSATZ_ERR_INTERNAL, "", "cannot recognize: %s", variant_result_name(result));
         }
     } else {
         remoteness.remoteness_num = recognition.distance_num;
@@ -799,45 +799,45 @@ static ComposerStatus recognize_request(const cJSON *request, const KnowledgeSna
     }
     cJSON *document = recognize_document(&source, &chain, &recognition, &remoteness, detail);
     if (!document) {
-        return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     return api_respond_json(out, document);
 }
 
 /* --- entries -------------------------------------------------------------- */
 
-typedef ComposerStatus (*RequestRunner)(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
+typedef UrsatzStatus (*RequestRunner)(const cJSON *request, const KnowledgeSnapshot *knowledge, const UrsatzJob *job,
                                         ComposerResponse *out);
 
-static ComposerStatus run_entry(const ComposerContext *context, RequestRunner run, const char *request_json,
-                                const ComposerJob *job, ComposerResponse *out) {
+static UrsatzStatus run_entry(const ComposerContext *context, RequestRunner run, const char *request_json,
+                                const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *request = NULL;
-    ComposerStatus status = api_parse_request(request_json, &request, &out->error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &request, &out->error);
+    if (status != URSATZ_OK) {
         return status;
     }
     status = run(request, context->knowledge, job, out);
     cJSON_Delete(request);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }
     return status;
 }
 
-ComposerStatus composer_api_variants(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+UrsatzStatus composer_api_variants(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                      ComposerResponse *out) {
     return run_entry(context, make_variants, request_json, job, out);
 }
 
-ComposerStatus composer_api_recognize(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+UrsatzStatus composer_api_recognize(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                       ComposerResponse *out) {
     return run_entry(context, recognize_request, request_json, job, out);
 }

@@ -1,0 +1,350 @@
+#include "store_internal.h"
+
+/* --- body validation ----------------------------------------------------- */
+
+#define LABEL_MAX_CHARS 8
+#define NOTES_MAX_CHARS 4000
+#define HARMONY_MAX_CHARS 200
+
+UrsatzStatus store_invalid_body(UrsatzError *error, const char *message) {
+    workshop_error_text(error, message);
+    return workshop_fail(URSATZ_ERR_REQUEST, error ? message : "invalid body");
+}
+
+static bool in_set(const cJSON *value, const char *const *set) {
+    if (!cJSON_IsString(value)) {
+        return false;
+    }
+    for (; *set; set++) {
+        if (strcmp(value->valuestring, *set) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_whole_number(const cJSON *value, double minimum) {
+    return cJSON_IsNumber(value) && value->valuedouble >= minimum && value->valuedouble == (double)(long long)value->valuedouble;
+}
+
+static size_t utf8_length(const char *text) {
+    size_t chars = 0;
+    for (; *text; text++) {
+        if (((unsigned char)*text & 0xC0) != 0x80) {
+            chars++;
+        }
+    }
+    return chars;
+}
+
+/* A member that is absent or null. */
+bool store_is_absent_or_null(const cJSON *object, const char *name) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(object, name);
+    return !value || cJSON_IsNull(value);
+}
+
+static UrsatzStatus validate_uses(const cJSON *body, UrsatzError *error) {
+    const cJSON *uses = cJSON_GetObjectItemCaseSensitive(body, "uses");
+    if (!cJSON_IsArray(uses)) {
+        return store_invalid_body(error, "uses must be an array");
+    }
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, uses) {
+        const cJSON *item_id = cJSON_GetObjectItemCaseSensitive(use, "item_id");
+        const cJSON *copy = cJSON_GetObjectItemCaseSensitive(use, "copy");
+        if (!cJSON_IsObject(use) || !cJSON_IsString(item_id) || !store_is_valid_id(item_id->valuestring) ||
+            !is_whole_number(cJSON_GetObjectItemCaseSensitive(use, "version"), 1) || (copy && !cJSON_IsObject(copy))) {
+            return store_invalid_body(error, "each use needs item_id, version and, if present, an object copy");
+        }
+    }
+    return URSATZ_OK;
+}
+
+static bool is_string_list_from(const cJSON *value, const char *const *set) {
+    if (!cJSON_IsArray(value)) {
+        return false;
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, value) {
+        if (!in_set(entry, set)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static UrsatzStatus validate_derived(const cJSON *derived, UrsatzError *error) {
+    static const char *const kinds[] = {"exact", "motive-form", "variant", NULL};
+    static const char *const dimensions[] = {"rhythm", "intervals", "harmony", "contour", NULL};
+    static const char *const functions[] = {"beginning", "continuation", "contrast", "cadential", NULL};
+    static const char *const flags[] = {"approved", "rejected", "unflagged", NULL};
+    const cJSON *standalone = cJSON_GetObjectItemCaseSensitive(derived, "standalone");
+    const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
+    const cJSON *seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
+    if (!cJSON_IsObject(derived)) {
+        return store_invalid_body(error, "derived must be null or an object");
+    }
+    if (!cJSON_IsString(source_item) || !store_is_valid_id(source_item->valuestring) ||
+        !is_whole_number(cJSON_GetObjectItemCaseSensitive(derived, "source_version"), 1)) {
+        return store_invalid_body(error, "derived needs source_item and source_version");
+    }
+    if (!cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "operations"))) {
+        return store_invalid_body(error, "derived operations must be an array");
+    }
+    if (seed && !cJSON_IsNull(seed) && !is_whole_number(seed, 0)) {
+        return store_invalid_body(error, "derived seed must be null or a whole number");
+    }
+    if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "kind"), kinds)) {
+        return store_invalid_body(error, "derived kind must be exact, motive-form or variant");
+    }
+    if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "kept"), dimensions) ||
+        !is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "changed"), dimensions)) {
+        return store_invalid_body(error, "derived kept and changed must list rhythm, intervals, harmony or contour");
+    }
+    if (!is_string_list_from(cJSON_GetObjectItemCaseSensitive(derived, "functions"), functions)) {
+        return store_invalid_body(error, "derived functions must list beginning, continuation, contrast or cadential");
+    }
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(derived, "harmony");
+    if (harmony && !cJSON_IsNull(harmony) &&
+        (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
+        return store_invalid_body(error, "derived harmony must be null or a string of at most 200 characters");
+    }
+    const cJSON *remoteness = cJSON_GetObjectItemCaseSensitive(derived, "remoteness");
+    if (remoteness && !cJSON_IsNull(remoteness) &&
+        (!cJSON_IsNumber(remoteness) || remoteness->valuedouble < 0 || remoteness->valuedouble > 1)) {
+        return store_invalid_body(error, "derived remoteness must be null or a number from 0 to 1");
+    }
+    if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
+        return store_invalid_body(error, "derived flag must be approved, rejected or unflagged");
+    }
+    if (standalone && !cJSON_IsBool(standalone)) {
+        return store_invalid_body(error, "derived standalone must be true or false");
+    }
+    return URSATZ_OK;
+}
+
+#define TONE_OVERRIDES_MAX 64
+#define TONE_ROLE_MAX 24
+
+/* motif.tone_overrides is absent, null or an object of "<note>": "<role>" (1-based note); the role is the Composer's
+ * word (R-276), so a save keeps its type and size and validate marks a role the Composer does not read. */
+
+/*
+ * What the store checks of a body is what it owns (R-649): the body is an object with its uses and exactly the member of its type, ids and
+ * item references are ids and versions, derived records and lineage, the brief the GUI keeps, and the sizes of the text members. What the words
+ * mean (a role, a form, a meter, a key, a section, a chord, a pool, a tempo) is the Composer's: a draft may hold any word (R-276), and validate
+ * and compose say where the Composer refuses one.
+ */
+
+#define TEXT_WORD_MAX 80
+#define MEMBERS_MAX 64
+#define THEME_BRIEF_MAX_SCOPES 16
+#define THEME_BRIEF_MAX_PIECES 5000
+#define THEME_BRIEF_MAX_STYLES 16
+#define LIST_MAX 64
+#define TEXT_MAX 4000
+
+static bool is_string_or_null(const cJSON *object, const char *name) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(object, name);
+    return !value || cJSON_IsNull(value) || cJSON_IsString(value);
+}
+
+/* A text member within the byte cap, or absent or null. */
+static bool text_within(const cJSON *object, const char *name, size_t max_chars) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(object, name);
+    return !value || cJSON_IsNull(value) || (cJSON_IsString(value) && utf8_length(value->valuestring) <= max_chars);
+}
+
+/* The members of object that are text are within the cap (a form, a region, a harmony: the words the Composer reads). */
+static bool all_text_within(const cJSON *object, size_t max_chars) {
+    const cJSON *member = NULL;
+    cJSON_ArrayForEach(member, object) {
+        if (cJSON_IsString(member) && utf8_length(member->valuestring) > max_chars) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* {item_id, version}: a reference to a version of another item. */
+static bool reference_ok(const cJSON *reference) {
+    const cJSON *item_id = cJSON_GetObjectItemCaseSensitive(reference, "item_id");
+    return cJSON_IsObject(reference) && cJSON_IsString(item_id) && store_is_valid_id(item_id->valuestring) &&
+           is_whole_number(cJSON_GetObjectItemCaseSensitive(reference, "version"), 1);
+}
+
+static bool theme_id_list_ok(const cJSON *brief, const char *name, size_t max) {
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(brief, name);
+    if (!list) {
+        return true;
+    }
+    if (!cJSON_IsArray(list) || (size_t)cJSON_GetArraySize(list) > max) {
+        return false;
+    }
+    const cJSON *id = NULL;
+    cJSON_ArrayForEach(id, list) {
+        if (!cJSON_IsString(id) || !store_is_valid_id(id->valuestring)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* {scopes, piece_ids, style_ids} as the styles route takes a brief: at most 16 scopes, 5000 pieces and 16 styles. */
+static bool theme_brief_ok(const cJSON *brief) {
+    static const char *const kinds[] = {"all", "collection", "filter", "subject", "project", NULL};
+    const cJSON *scopes = cJSON_GetObjectItemCaseSensitive(brief, "scopes");
+    if (!cJSON_IsObject(brief) || (scopes && (!cJSON_IsArray(scopes) || cJSON_GetArraySize(scopes) > THEME_BRIEF_MAX_SCOPES)) ||
+        !theme_id_list_ok(brief, "piece_ids", THEME_BRIEF_MAX_PIECES) ||
+        !theme_id_list_ok(brief, "style_ids", THEME_BRIEF_MAX_STYLES)) {
+        return false;
+    }
+    const cJSON *scope = NULL;
+    cJSON_ArrayForEach(scope, scopes) {
+        const cJSON *filter = cJSON_GetObjectItemCaseSensitive(scope, "filter");
+        if (!cJSON_IsObject(scope) || !in_set(cJSON_GetObjectItemCaseSensitive(scope, "kind"), kinds) ||
+            !is_string_or_null(scope, "collection_id") || !is_string_or_null(scope, "subject_id") ||
+            !is_string_or_null(scope, "project_id") ||
+            (filter && !cJSON_IsNull(filter) &&
+             (!cJSON_IsObject(filter) || !is_string_or_null(filter, "composer") || !is_string_or_null(filter, "source") ||
+              !is_string_or_null(filter, "tag")))) {
+            return false;
+        }
+    }
+    int entries = (scopes ? cJSON_GetArraySize(scopes) : 0) +
+                  cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "piece_ids")) +
+                  cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(brief, "style_ids"));
+    return entries > 0;
+}
+
+/* True when the body's request is a placeholder: no request, or one with no member (a new theme or piece). */
+bool store_request_is_placeholder(const cJSON *body) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    return !cJSON_IsObject(request) || request->child == NULL;
+}
+
+/* An id like s0, s12 or end. */
+bool store_piece_section_id_ok(const char *id) {
+    if (strcmp(id, "end") == 0) {
+        return true;
+    }
+    if (id[0] != 's' || id[1] == '\0' || strlen(id) > PIECE_ID_MAX) {
+        return false;
+    }
+    for (const char *c = id + 1; *c; c++) {
+        if (!isdigit((unsigned char)*c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+static UrsatzStatus validate_motif(const cJSON *motif, UrsatzError *error) {
+    if (!cJSON_IsObject(motif)) {
+        return store_invalid_body(error, "a motif body needs a motif object");
+    }
+    if (!all_text_within(motif, TEXT_MAX) || !text_within(motif, "notes", NOTES_MAX_CHARS) ||
+        !is_string_or_null(motif, "notes") || !text_within(motif, "harmony", HARMONY_MAX_CHARS) ||
+        !text_within(motif, "degrees", NOTES_MAX_CHARS)) {
+        return store_invalid_body(error, "a motif's text members must be text of at most 4000 characters (harmony 200)");
+    }
+    for (const char *const *word = (const char *const[]){"role", "form", "meter", "key", "material", "pickup", NULL}; *word; word++) {
+        const cJSON *value = cJSON_GetObjectItemCaseSensitive(motif, *word);
+        if (value && !cJSON_IsNull(value) && (!cJSON_IsString(value) || utf8_length(value->valuestring) > TEXT_WORD_MAX)) {
+            return store_invalid_body(error, "a motif's role, form, meter, key, material and pickup must be text");
+        }
+    }
+    const cJSON *features = cJSON_GetObjectItemCaseSensitive(motif, "features");
+    if (features && !cJSON_IsNull(features) && (!cJSON_IsArray(features) || cJSON_GetArraySize(features) > MEMBERS_MAX)) {
+        return store_invalid_body(error, "motif features must be an array");
+    }
+    const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides");
+    if (overrides && !cJSON_IsNull(overrides) && (!cJSON_IsObject(overrides) || cJSON_GetArraySize(overrides) > MEMBERS_MAX)) {
+        return store_invalid_body(error, "motif tone_overrides must be an object of at most 64 notes");
+    }
+    const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
+    if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {
+        return store_invalid_body(error, "motif analysis must be null or an object");
+    }
+    return store_is_absent_or_null(motif, "derived")
+               ? URSATZ_OK
+               : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error);
+}
+
+/* Whether every reference inside a stored request is well formed (R-650): {"$item": {item_id, version[, file]}} or
+   {"$pool": {item_id, pool}}. What the request means is the Composer's. */
+static bool request_references_ok(const cJSON *node, int depth) {
+    if (depth > 16) {
+        return false;
+    }
+    if (cJSON_IsObject(node)) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(node, "$item");
+        const cJSON *pool = cJSON_GetObjectItemCaseSensitive(node, "$pool");
+        if (item) {
+            const cJSON *file = cJSON_GetObjectItemCaseSensitive(item, "file");
+            return reference_ok(item) && (!file || cJSON_IsString(file));
+        }
+        if (pool) {
+            return cJSON_IsObject(pool) && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(pool, "item_id")) &&
+                   (!cJSON_GetObjectItemCaseSensitive(pool, "pool") || cJSON_IsString(cJSON_GetObjectItemCaseSensitive(pool, "pool")));
+        }
+    }
+    const cJSON *child = NULL;
+    cJSON_ArrayForEach(child, node) {
+        if ((cJSON_IsObject(child) || cJSON_IsArray(child)) && !request_references_ok(child, depth + 1)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* A theme or piece body: the request the Composer reads (any object: a draft may hold any word, R-276), the brief the GUI keeps and
+   what the last compose left; the store checks the references and the sizes. */
+static UrsatzStatus validate_request_body(const cJSON *body, const char *what, UrsatzError *error) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    if (!cJSON_IsObject(request)) {
+        char message[96];
+        snprintf(message, sizeof(message), "a %s body needs a request object", what);
+        return store_invalid_body(error, message);
+    }
+    if (!request_references_ok(request, 0)) {
+        return store_invalid_body(error, "a reference of the request needs item_id and version (a pool, item_id)");
+    }
+    if (!store_is_absent_or_null(body, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(body, "brief"))) {
+        char message[96];
+        snprintf(message, sizeof(message), "%s brief needs scopes, piece_ids or style_ids within the limits", what);
+        return store_invalid_body(error, message);
+    }
+    const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(body, "result");
+    if (result_member && !cJSON_IsNull(result_member) && !cJSON_IsObject(result_member)) {
+        char message[96];
+        snprintf(message, sizeof(message), "%s result must be null or an object", what);
+        return store_invalid_body(error, message);
+    }
+    return URSATZ_OK;
+}
+
+UrsatzStatus workshop_material_body_validate(const char *type, const cJSON *body, UrsatzError *error) {
+    workshop_error_text(error, NULL);
+    if (!store_prefix_for_type(type)) {
+        return workshop_fail(URSATZ_ERR_REQUEST, "invalid type");
+    }
+    if (!cJSON_IsObject(body)) {
+        return store_invalid_body(error, "a version body must be an object");
+    }
+    UrsatzStatus result = validate_uses(body, error);
+    if (result != URSATZ_OK) {
+        return result;
+    }
+    /* a motif body holds `motif`; a theme or piece body holds `request` (and neither holds the members of a format 1 body) */
+    bool motif = strcmp(type, "motif") == 0;
+    static const char *const members[] = {"motif", "theme", "piece", "request"};
+    for (size_t i = 0; i < sizeof(members) / sizeof(members[0]); i++) {
+        bool own = motif ? strcmp(members[i], "motif") == 0 : strcmp(members[i], "request") == 0;
+        if (!own && cJSON_GetObjectItemCaseSensitive(body, members[i])) {
+            return store_invalid_body(error, "a body must not carry another type's member");
+        }
+    }
+    return motif ? validate_motif(cJSON_GetObjectItemCaseSensitive(body, "motif"), error) : validate_request_body(body, type, error);
+}

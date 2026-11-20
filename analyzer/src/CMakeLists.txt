@@ -1,4 +1,4 @@
-add_library(ursatz_analyzer STATIC
+add_library(ursatz_analyzer_engine STATIC
     version.c
     result/input_pipeline.c
     result/analysis_result.c
@@ -27,14 +27,12 @@ add_library(ursatz_analyzer STATIC
     links/motive_links.c
     links/motive_link_cache.c
     links/motive_links_render.c
-    util/json_util.c
-    util/file_util.c
     util/misc_util.c
     export/score_text.c
     export/text_export.c
     export/material_export.c
 )
-configure_file(version.h.in ${PROJECT_BINARY_DIR}/include/ursatz_analyzer/version.h @ONLY)
+configure_file(version.h.in ${PROJECT_BINARY_DIR}/include/ursatz_analyzer_internal/version.h @ONLY)
 
 # The producer key (R-554): a hash of the sources that produce an analysis, stored in every analysis document, corpus
 # index and cache and compared by the stale check. A change to a test, a doc or the GUI leaves it as it was.
@@ -53,7 +51,7 @@ list(TRANSFORM producer_sources PREPEND "${URSATZ_REPO_ROOT}/" OUTPUT_VARIABLE p
 string(REPLACE ";" "\n" producer_list_text "${producer_sources}")
 set(producer_list ${PROJECT_BINARY_DIR}/producer_sources.txt)
 file(CONFIGURE OUTPUT ${producer_list} CONTENT "${producer_list_text}\n" @ONLY)
-set(producer_key_header ${PROJECT_BINARY_DIR}/include/ursatz_analyzer/producer_key.h)
+set(producer_key_header ${PROJECT_BINARY_DIR}/include/ursatz_analyzer_internal/producer_key.h)
 add_custom_command(
     OUTPUT ${producer_key_header}
     COMMAND ${CMAKE_COMMAND} -DROOT=${URSATZ_REPO_ROOT} -DLIST=${producer_list} -DOUT=${producer_key_header}
@@ -61,16 +59,19 @@ add_custom_command(
     DEPENDS ${producer_source_files} ${producer_list} ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
     COMMENT "Computing the Analyzer producer key"
     VERBATIM)
-target_sources(ursatz_analyzer PRIVATE ${producer_key_header})
-target_include_directories(ursatz_analyzer
-    PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/include
+target_sources(ursatz_analyzer_engine PRIVATE ${producer_key_header})
+target_include_directories(ursatz_analyzer_engine
+    PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
-target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz_io ursatz_analysis ursatz_chain ursatz_realization ursatz_reading ursatz_plan
+target_link_libraries(ursatz_analyzer_engine
+    PUBLIC ursatz_io ursatz_analysis ursatz_chain ursatz_realization ursatz_reading ursatz_plan ursatz_common
     PRIVATE cjson
 )
 
+# The library consumers link exports only the API (exports.txt); the command line and the tests use the internals, so they link the engine.
+ursatz_localize_exports(ursatz_analyzer ENGINE ursatz_analyzer_engine KEEP ${CMAKE_CURRENT_SOURCE_DIR}/exports.txt)
+
 add_executable(ursatz-analyzer cli/main.c)
 target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer)
+target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer_engine)

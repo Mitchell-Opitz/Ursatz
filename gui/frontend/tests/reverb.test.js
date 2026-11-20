@@ -2,10 +2,8 @@
  * the right length, fades in from 0 and decays, and the gains are an
  * equal-power crossfade that keeps the dry signal audible. Plain Node script,
  * no dependencies. Run directly: `node frontend/tests/reverb.test.js`. */
-
-const Reverb = require("../public/reverb.js");
-
-const { check, finish } = require("./support/check.js");
+import Reverb from "../public/score/reverb.js";
+import { check, finish } from "./support/check.js";
 
 /* A seeded random so the envelope check is repeatable. */
 function seeded(seed) {

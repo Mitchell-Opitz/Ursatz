@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-project.v1.schema.json",
+  "title": "Project, format version 1",
+  "description": "projects/<prj>/project.json.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "name",
+    "description",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-project"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^prj-"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    }
+  }
+}

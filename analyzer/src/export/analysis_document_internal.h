@@ -1,8 +1,9 @@
 #ifndef URSATZ_ANALYZER_ANALYSIS_DOCUMENT_INTERNAL_H
 #define URSATZ_ANALYZER_ANALYSIS_DOCUMENT_INTERNAL_H
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer_internal/version.h>
+#include <common/strings.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -30,7 +31,7 @@
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_signature.h"
-#include "util/json_util.h"
+#include <common/json.h>
 #include "util/misc_util.h"
 
 /* Library-private view of AnalysisDocument: renderers read the cJSON tree directly. */
@@ -51,13 +52,6 @@ typedef struct {
     CommonPracticeMaterials materials; /* the major and natural minor a notated key signature's labels are spelled with */
     const Reading *reading;            /* the Analyzer's reading the document is exported from (R-631) */
 } DocBuild;
-
-/* The text being printed (document_print.c). */
-typedef struct {
-    char *data;
-    size_t length;
-    size_t capacity;
-} Buffer;
 
 /* ---- shared helpers (document_shared.c) ---- */
 
@@ -119,7 +113,7 @@ cJSON *doc_texture_json(DocBuild *build, const ImportedScore *notes, const Chain
 cJSON *doc_markings_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report);
 cJSON *doc_voice_leading_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report);
 cJSON *doc_schemas_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report);
-bool doc_buffer_append(Buffer *buffer, const char *text);
-bool doc_print_value(Buffer *buffer, const cJSON *item, int depth);
+/* Prints item into buffer: 2-space indent, scalars as cJSON prints them (document_print.c). */
+bool doc_print_value(CommonText *buffer, const cJSON *item, int depth);
 
 #endif

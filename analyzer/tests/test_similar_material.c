@@ -5,8 +5,8 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/similar_material.h>
+#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer_internal/similar_material.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -128,7 +128,7 @@ static void test_motive(void) {
     CHECKF(opening_motive(&query, 0), "cannot read the %s motive", motive_piece);
     SimilarResults results = {0};
     SimilarOptions options = similar_options_default();
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == SIMILAR_OK, "motive search failed");
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == URSATZ_OK, "motive search failed");
     CHECKF(results.pieces_searched == corpus_pieces, "searched %zu pieces", results.pieces_searched);
     CHECKF(results.count > 0 && results.count <= options.max_results, "%zu matches", results.count);
     if (results.count > 0) {
@@ -159,7 +159,7 @@ static void test_motive(void) {
     SimilarQuery higher;
     SimilarResults higher_results = {0};
     CHECKF(opening_motive(&higher, 5), "cannot read the transposed motive");
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &higher, &options, &higher_results) == SIMILAR_OK, "transposed search failed");
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &higher, &options, &higher_results) == URSATZ_OK, "transposed search failed");
     char *higher_text = render(&higher_results);
     CHECKF(text && higher_text && strcmp(text, higher_text) == 0, "a motive moved up a fourth scores differently:\n%s\n%s",
            text ? text : "", higher_text ? higher_text : "");
@@ -171,10 +171,10 @@ static void test_motive(void) {
         char *progression_text = NULL;
         SimilarQuery progression;
         SimilarResults progression_results = {0};
-        CHECKF(similar_query_from_numerals("I IV V I", &progression) == SIMILAR_OK, "cannot read the progression");
+        CHECKF(similar_query_from_numerals("I IV V I", &progression) == URSATZ_OK, "cannot read the progression");
         SimilarOptions wide = similar_options_default();
         wide.max_results = 100; /* Bach 114's cadences score lower than the best ten */
-        CHECKF(similar_material_find(work_dir, test_knowledge(), &progression, &wide, &progression_results) == SIMILAR_OK, "progression search failed");
+        CHECKF(similar_material_find(work_dir, test_knowledge(), &progression, &wide, &progression_results) == URSATZ_OK, "progression search failed");
         progression_text = render(&progression_results);
         size_t total = strlen(text) + (progression_text ? strlen(progression_text) : 0) + 64;
         char *both = malloc(total);
@@ -202,21 +202,21 @@ static void test_motive(void) {
 
 static void test_queries(void) {
     SimilarQuery query;
-    CHECKF(similar_query_from_numerals("ii-V6/5-I", &query) == SIMILAR_OK && query.numeral_count == 3 &&
+    CHECKF(similar_query_from_numerals("ii-V6/5-I", &query) == URSATZ_OK && query.numeral_count == 3 &&
                strcmp(query.numerals[0], "ii") == 0 && strcmp(query.numerals[1], "V7") == 0 && strcmp(query.numerals[2], "I") == 0,
            "numerals read wrongly");
     similar_query_destroy(&query);
-    CHECKF(similar_query_from_numerals("I  IV\tV7 I", &query) == SIMILAR_OK && query.numeral_count == 4, "spaces and tabs");
+    CHECKF(similar_query_from_numerals("I  IV\tV7 I", &query) == URSATZ_OK && query.numeral_count == 4, "spaces and tabs");
     similar_query_destroy(&query);
-    CHECKF(similar_query_from_numerals("I banana", &query) == SIMILAR_ERR_QUERY, "a word is not a numeral");
-    CHECKF(similar_query_from_numerals("I", &query) == SIMILAR_ERR_QUERY, "one numeral is not a progression");
-    CHECKF(similar_query_from_numerals("", &query) == SIMILAR_ERR_QUERY, "no numerals");
-    CHECKF(similar_query_from_numerals(NULL, &query) == SIMILAR_ERR_ARGUMENT, "NULL text");
+    CHECKF(similar_query_from_numerals("I banana", &query) == URSATZ_ERR_REQUEST, "a word is not a numeral");
+    CHECKF(similar_query_from_numerals("I", &query) == URSATZ_ERR_REQUEST, "one numeral is not a progression");
+    CHECKF(similar_query_from_numerals("", &query) == URSATZ_ERR_REQUEST, "no numerals");
+    CHECKF(similar_query_from_numerals(NULL, &query) == URSATZ_ERR_REQUEST, "NULL text");
 
     char path[1100];
     snprintf(path, sizeof path, "%s/motive.mid", work_dir);
     CHECKF(write_motive_midi(path), "cannot write %s", path);
-    CHECKF(similar_query_from_file(path, test_knowledge(), &query) == SIMILAR_OK && query.kind == SIMILAR_QUERY_MOTIVE && query.note_count == 4,
+    CHECKF(similar_query_from_file(path, test_knowledge(), &query) == URSATZ_OK && query.kind == SIMILAR_QUERY_MOTIVE && query.note_count == 4,
            "the motive file reads wrongly");
     if (query.note_count == 4) {
         CHECKF(query.notes[0].pitch == 72 && query.notes[1].pitch == 76 && query.notes[2].pitch == 79 && query.notes[3].pitch == 71,
@@ -229,28 +229,28 @@ static void test_queries(void) {
     SimilarQuery short_query = {SIMILAR_QUERY_MOTIVE, calloc(1, sizeof(SimilarNote)), 1, NULL, 0};
     short_query.notes[0] = (SimilarNote){60, 0, 1, 1, 4};
     SimilarResults results = {0};
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &short_query, NULL, &results) == SIMILAR_ERR_QUERY, "a one-note query is refused");
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &short_query, NULL, &results) == URSATZ_ERR_REQUEST, "a one-note query is refused");
     similar_query_destroy(&short_query);
 
-    CHECKF(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V");
+    CHECKF(similar_query_from_numerals("I V", &query) == URSATZ_OK, "I V");
     SimilarOptions options = similar_options_default();
-    CHECKF(similar_material_find("/nonexistent/corpus", test_knowledge(), &query, &options, &results) == SIMILAR_ERR_IO, "a missing corpus");
+    CHECKF(similar_material_find("/nonexistent/corpus", test_knowledge(), &query, &options, &results) == URSATZ_ERR_IO, "a missing corpus");
     options.max_results = 0;
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == SIMILAR_ERR_ARGUMENT, "no results asked for");
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == URSATZ_ERR_REQUEST, "no results asked for");
     options = similar_options_default();
     options.minimum_numerator = 3;
     options.minimum_denominator = 2;
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == SIMILAR_ERR_ARGUMENT, "a minimum above 1");
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == URSATZ_ERR_REQUEST, "a minimum above 1");
     options = similar_options_default();
     options.minimum_numerator = options.minimum_denominator = 1;
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == SIMILAR_OK, "minimum 1");
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == URSATZ_OK, "minimum 1");
     for (size_t i = 0; i < results.count; i++) {
         CHECKF(results.matches[i].score.similarity.num == results.matches[i].score.similarity.den, "minimum 1 kept %zu", i);
     }
     options.max_results = 2;
     options.minimum_numerator = 0;
     similar_results_destroy(&results);
-    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == SIMILAR_OK && results.count == 2, "max 2 gives %zu", results.count);
+    CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == URSATZ_OK && results.count == 2, "max 2 gives %zu", results.count);
     similar_results_destroy(&results);
     similar_query_destroy(&query);
 
@@ -260,9 +260,9 @@ static void test_queries(void) {
     snprintf(path, sizeof path, "%s/not-a-corpus/corpus-index.json", work_dir);
     const char *fake_index = "{\"schema\": \"something-else\"}";
     CHECKF(test_write_file(path, fake_index, strlen(fake_index)), "cannot write the fake index");
-    CHECKF(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V again");
+    CHECKF(similar_query_from_numerals("I V", &query) == URSATZ_OK, "I V again");
     snprintf(path, sizeof path, "%s/not-a-corpus", work_dir);
-    CHECKF(similar_material_find(path, test_knowledge(), &query, NULL, &results) == SIMILAR_ERR_FORMAT, "a foreign index");
+    CHECKF(similar_material_find(path, test_knowledge(), &query, NULL, &results) == URSATZ_ERR_FORMAT, "a foreign index");
     similar_query_destroy(&query);
 }
 
@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
 
     CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
-    if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != corpus_pieces) {
+    if (corpus_run(&run, &summary, NULL) != URSATZ_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");
         return 1;
     }

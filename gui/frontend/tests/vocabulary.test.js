@@ -2,11 +2,15 @@
  * from the vocabulary the build generates from the Composer (vocabulary.json is the route's answer), and the debounced
  * validator with a fake fetch and fake timers. Also checks the model tables that map the Composer's request paths to form fields.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
-const V = require("../public/vocabulary.js");
-const { generated } = require("./support/fixtures.js");
-const fixture = require(generated("vocabulary.json"));
+import V from "../public/core/vocabulary.js";
+import T from "../public/models/themes-model.js";
+import P from "../public/models/pieces-model.js";
+import M from "../public/models/materials-model.js";
+import { generated, readJson } from "./support/fixtures.js";
+import { check, same, finish } from "./support/check.js";
 
-const { check, same, finish } = require("./support/check.js");
+const fixture = readJson(generated("vocabulary.json"));
+
 
 async function main() {
   // before it is loaded
@@ -25,7 +29,7 @@ async function main() {
     return { status: 200, json: async () => (url === "/api/composer/forms" ? { forms: [] } : fixture) };
   });
   check(loaded === fixture && V.loaded() && same(calls, ["/api/composer/vocabulary", "/api/composer/forms"]), "load fetches the routes once and keeps the answers");
-  const forms = require(generated("forms.json"));
+  const forms = readJson(generated("forms.json"));
   V.set(fixture, forms);
   check(V.forms().length === forms.forms.length && V.form("game-loop").label === "Game loop" && V.form("rounded-binary").sections === "sizes" && V.form("nothing") === null,
         "the forms are the Composer's, each by name");
@@ -59,18 +63,15 @@ async function main() {
   check(same(V.list("nothing"), []), "an unknown list is empty");
 
   // the models read from it
-  const T = require("../public/themes-model.js");
-  const P = require("../public/pieces-model.js");
-  const M = require("../public/materials-model.js");
   check(T.fieldForPath("/meter") === "meter" && T.fieldForPath("/first_cadence") === "firstCadence" && T.fieldForPath("/cadence") === "cadence" &&
           T.fieldForPath("/harmony") === "chords" && T.fieldForPath("/motives/0/degrees") === "slots" && T.fieldForPath("/nothing") === null,
         "theme request paths name the form fields");
   const themeRequest = T.validateRequest(T.emptyState("t"));
   check(themeRequest.method === "POST" && themeRequest.url === "/api/materials/items/validate" && JSON.parse(themeRequest.body).type === "theme" &&
-          JSON.parse(themeRequest.body).body.theme.form.meter === "4/4",
+          JSON.parse(themeRequest.body).body.request.meter === "4/4",
         "the theme form asks the validate route about its body");
   const pieceRequest = P.validateRequest(P.emptyState("p"));
-  check(JSON.parse(pieceRequest.body).type === "piece" && Array.isArray(JSON.parse(pieceRequest.body).body.piece.structure.sections),
+  check(JSON.parse(pieceRequest.body).type === "piece" && Array.isArray(JSON.parse(pieceRequest.body).body.request.sections),
         "the piece form asks the validate route about its body");
   check(M.fieldForPath("/input/text") === "notes" && M.fieldForPath("/harmony") === "harmony" && M.fieldForPath("/features/1") === "features" &&
           M.fieldForPath("/meter") === "meter" && M.fieldForPath("/tones/2") === "notes",
@@ -81,8 +82,8 @@ async function main() {
   const motif = M.validateRequest({ role: "melodic", form: "full", notes: "C4:q D4:q", meter: "4/4", material: "omt.material.natural-minor", pickup: "", harmony: "", features: [], toneOverrides: {} }, null);
   check(JSON.parse(motif.body).type === "motif" && JSON.parse(motif.body).body.motif.material === "omt.material.natural-minor", "the motif editor asks the validate route about its body");
   // a GUI spelling of a key is kept as stored in the body
-  check(T.formFromBody({ uses: [], theme: { form: { into: "period", meter: "6/8", bars: 4, cadence: "HC" }, slots: [] } }, "x").meter === "6/8" &&
-          P.stateFromBody({ uses: [], piece: { structure: { key: "C# major", material: "omt.material.major", meter: "4/4", sections: [] } } }, "x").key === "C# major",
+  check(T.formFromBody(T.requestBodyOf([], { form: { into: "period", meter: "6/8", bars: 4, cadence: "HC" }, slots: [] }), "x").meter === "6/8" &&
+          P.stateFromBody(P.requestBodyOf([], { structure: { key: "C# major", material: "omt.material.major", meter: "4/4", sections: [] } }), "x").key === "C# major",
         "an item saved with a GUI key spelling opens as stored");
 
   // the validator

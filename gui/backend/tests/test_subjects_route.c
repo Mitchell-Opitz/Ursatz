@@ -38,7 +38,8 @@ static bool ok_true(const cJSON *json) {
 }
 
 
-#include "gui_check.h"
+#include "support/server_support.h"
+#include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
 
@@ -268,17 +269,18 @@ static void test_links(const char *anna, const char *piece) {
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces collections materials subjects data 2> nul");
+  system("rmdir /s /q library settings cache projects subjects data 2> nul");
 #else
-  system("rm -rf pieces collections materials subjects data");
+  system("rm -rf library settings cache projects subjects data");
 #endif
-  MKDIR("pieces");
+  MKDIR("library");
+  MKDIR("library/pieces");
 
   char clementi_path[512];
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid",
            URSATZ_FIXTURES_DIR "/framework-v1-corpus");
 
-  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  struct mg_context *ctx = test_gui_server_start(PORT);
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
@@ -296,7 +298,7 @@ int main(void) {
 
   free(anna);
   free(piece);
-  ursatz_gui_server_stop(ctx);
+  test_gui_server_stop(ctx);
 
   return test_finish("subjects_route");
 }

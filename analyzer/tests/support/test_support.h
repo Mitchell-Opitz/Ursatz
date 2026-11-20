@@ -9,7 +9,7 @@
 
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
-#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer_internal/analysis_document.h>
 
 /* A format 0 MIDI file with one track into buf; returns its size. */
 size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
@@ -23,11 +23,11 @@ double test_rational_of(const cJSON *rational);
 /* True when the {start, end} span of inner lies inside the span of outer. */
 bool test_within(const cJSON *inner, const cJSON *outer);
 
-/* The analysis document of the analysis a report came from (test_analyze_report), for an input path: analysis_document_build_from_result.
+/* The analysis document of the analysis a report came from (test_analyze_report), for an input path: analyzer_document_build.
    NULL when the report is not one test_analyze_report made, or on allocation failure. */
 AnalysisDocument *test_build_document(const char *input_path, const ChainResult *report);
 
-/* test_build_document, then analysis_document_to_json. Returns a heap string the caller frees, or NULL. `notes` is the one the report
+/* test_build_document, then analyzer_document_to_json. Returns a heap string the caller frees, or NULL. `notes` is the one the report
    was made from (unused: the result holds it). */
 char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report);
 

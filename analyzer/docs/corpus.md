@@ -6,7 +6,7 @@ Corpus mode, which analyzes every piece in a folder into documents and a corpus 
 ursatz-analyzer --corpus <dir> [--out <dir>] [--resume]
 ```
 
-Library: `corpus_run` in `include/ursatz_analyzer/corpus.h`.
+Library: `corpus_run` in `src/include/ursatz_analyzer_internal/corpus.h`. The run prints nothing: a failure comes back in its `UrsatzError`, and what a piece said (the importer's text of a failed import, the warnings of one that worked) in the `CorpusPieceReport` its callback gets; the command line prints them as before.
 
 ## Folder walk
 
@@ -36,7 +36,7 @@ directory, output directory that cannot be created, unreadable index on `--resum
 | --- | --- |
 | `schema`, `schema_version` | `"ursatz-corpus-index"`, `2`. |
 | `analyzer_version` | The analyzer's project version. |
-| `producer_key` | The producer key of the build that wrote the index (`ursatz_analyzer_producer_key()`). An index of schema version 1 holds it as `ursatz_commit`. |
+| `producer_key` | The producer key of the build that wrote the index (`analyzer_producer_key()`). An index of schema version 1 holds it as `ursatz_commit`. |
 | `document_schema_version` | The analysis document schema the documents follow. |
 | `input_dir` | The directory as given on the command line. |
 | `pieces[].path` | Input path relative to `input_dir`. |
@@ -68,7 +68,7 @@ A stored analysis is current only when its schema version, the analyzer version 
 it was analyzed against all match the build that reads it. A document holds them as `schema_version`,
 `metadata.analyzer_version` and `metadata.producer_key`; the index holds the same keys for the whole run.
 
-`<ursatz_analyzer/staleness.h>` gives the check (the first mismatch, in the order schema, analyzer, Ursatz, names the
+`<ursatz_analyzer/analyzer_api.h>` gives the check (the first mismatch, in the order schema, analyzer, Ursatz, names the
 status):
 
 | Status | Meaning |

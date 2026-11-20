@@ -27,7 +27,7 @@ mkdir -p "$dir"
 dir=$(cd "$dir" && pwd)
 : > "$dir/.reach-scan"
 
-cmake -S "$root" -B "$dir" -DURSATZ_TESTS=OFF "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" > /dev/null
+cmake -S "$root" -B "$dir" -DURSATZ_TESTS=OFF -DURSATZ_LOCALIZE_EXPORTS=OFF "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" > /dev/null
 cmake --build "$dir" -j > "$dir/reach-build.log" 2>&1 || {
   tail -50 "$dir/reach-build.log" >&2
   echo "check-reach: the scan build failed (log: $dir/reach-build.log)" >&2
@@ -104,8 +104,9 @@ for app in ursatz-analyzer ursatz-composer ursatz-gui-backend; do
 done
 [ "$found" -gt 0 ] || { echo "check-reach: no application was built in $dir" >&2; exit 1; }
 
-# Every project object in the scan build: archive targets (linked or not) and the application mains.
-find "$dir" -name '*.a' -not -path '*third_party*' | while read -r a; do objects_of "$a"; done > "$out/all.objects"
+# Every project object in the scan build: archive targets (linked or not) and the application mains. The *_internal archives build the same sources
+# again for the tests that call the workshop's internals; they are not a second copy to scan.
+find "$dir" -name '*.a' -not -path '*third_party*' -not -name '*_internal.a' | while read -r a; do objects_of "$a"; done > "$out/all.objects"
 sort -u "$out/objects" "$out/all.objects" -o "$out/all.objects"
 # shellcheck disable=SC2046
 sections_of $(cat "$out/all.objects") | sort -u > "$out/all"

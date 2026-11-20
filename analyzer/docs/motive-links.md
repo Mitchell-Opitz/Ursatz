@@ -6,7 +6,7 @@ Motive links: how the families of motives in different pieces are linked, scored
 ursatz-analyzer --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] [--format text|json]
 ```
 
-Library: `include/ursatz_analyzer/motive_links.h`. Output schemas: `schema/motive-links.v1.schema.json` and, for the
+Library: `include/ursatz_analyzer/analyzer_api.h`. Output schemas: `schema/motive-links.v1.schema.json` and, for the
 cache, `schema/motive-link-cache.v2.schema.json`.
 
 Linking finds the motive families of different pieces that are variants of one another: one family's prototype is a
@@ -16,11 +16,11 @@ chain of motive relations (a transposition, an augmentation, an inversion, a fra
 
 ## Scope
 
-A scope is a set of pieces in the order they were added. `motive_link_scope_add_document` adds one piece from its
+A scope is a set of pieces in the order they were added. `analyzer_links_scope_add_document` adds one piece from its
 document's JSON; `motive_link_scope_add_corpus` adds every analyzed piece of a corpus run, in index order, the index path
 as the piece id. A piece id added twice is refused. A document whose motive families have no `features` (written before
-analyzer 0.2.0) is `MOTIVE_LINKS_ERR_NO_FEATURES`: analyze the piece again. The CLI names the piece and says to run the
-corpus again. A scope is made with a knowledge snapshot (`motive_link_scope_create`), which gives each document's `features.material` id its
+analyzer 0.2.0) is `URSATZ_ERR_UNSATISFIABLE`: analyze the piece again. The CLI names the piece and says to run the
+corpus again. A scope is made with a knowledge snapshot (`analyzer_links_scope_create`), which gives each document's `features.material` id its
 material; the snapshot outlives the scope. The scope is the caller's choice (a corpus run, a collection, a subject), so one cache serves them all.
 
 Each family is read from its prototype's `features` (see [analysis-document.md](analysis-document.md)) as a melodic

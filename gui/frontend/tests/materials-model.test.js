@@ -1,11 +1,17 @@
 /* Covers the pure materials helpers (public/materials-model.js): request
  * builders, new item bodies, the project filter, item and version rows.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
-const { generated } = require("./support/fixtures.js");
-require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
-const M = require("../public/materials-model.js");
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import M from "../public/models/materials-model.js";
+import { check, same, finish } from "./support/check.js";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")));
+
 
 const projects = [
   { id: "prj-a", name: "Sonata" },
@@ -33,10 +39,10 @@ check(M.buildVersionGetRequest("mot-1", 2).url === "/api/materials/items/mot-1/v
 
 const motif = M.newItemBody("motif").motif;
 check(motif.notes !== "" && motif.pickup === "0" && same(motif.features, []) && motif.derived === null, "new motif body is valid");
-check(same(M.newItemBody("theme"), { uses: [], theme: { form: null, slots: [] } }), "new theme body");
-check(same(M.newItemBody("piece"), { uses: [], piece: { structure: null } }), "new piece body");
+check(same(M.newItemBody("theme"), { uses: [], request: {} }), "new theme body");
+check(same(M.newItemBody("piece"), { uses: [], request: {} }), "new piece body");
 const item = JSON.parse(M.buildCreateItemRequest("theme", " Main ", "prj-a").body);
-check(item.type === "theme" && item.name === "Main" && item.project_id === "prj-a" && item.body.theme, "create item body");
+check(item.type === "theme" && item.name === "Main" && item.project_id === "prj-a" && item.body.request, "create item body");
 check(same(JSON.parse(M.buildUpdateItemRequest("x", { name: " B ", project_id: "" }).body), { name: "B" }), "update item skips empty fields");
 
 check(M.errorText({ error: "project is not empty" }) === "project is not empty", "error text from the answer");
@@ -96,21 +102,15 @@ check(M.motifFormValues({ motif: { material: null } }).material === "omt.materia
 check(same(M.MOTIF_MATERIALS.map((entry) => [entry.value, entry.label]), [["omt.material.major", "major"], ["omt.material.natural-minor", "minor"]]) && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the materials and the tonic hint");
 check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
 check(values.harmony === "" && M.motifFormValues({ motif: { harmony: "I V6@2" } }).harmony === "I V6@2", "form values read the harmony");
-check(M.motifFormProblems({ ...values, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
-check(M.motifFormProblems({ ...values, harmony: "I ".repeat(101) })[0].field === "harmony", "a harmony over 200 characters is a problem");
 check(M.buildMotifBody({ ...values, harmony: " I V6@2 " }, null).motif.harmony === "I V6@2", "the body holds the trimmed harmony");
 check(M.buildMotifBody({ ...values, harmony: "  " }, null).motif.harmony === null, "an empty harmony is stored as null");
 check(M.newItemBody("motif").motif.harmony === null, "a new motif has no harmony");
-check(M.errorField("harmony: token 2 (column 4) is not a chord") === "harmony" && M.errorField("features[0] is outside the notes") === "features" && M.errorField("give a key") === "notes", "a Composer refusal goes to its field");
 const withHarmony = M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4", harmony: "I V@2", features: [{ label: "a", first: 0, last: 1 }] } });
 check(JSON.parse(withHarmony.body).harmony === "I V@2" && JSON.parse(withHarmony.body).features.length === 1, "a render passes the harmony and features");
 check(JSON.parse(M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4" } }).body).harmony === undefined, "a render without harmony leaves it out");
 check(JSON.parse(M.randomRequest({ meter: "4/4", role: "accompaniment", seed: 1 }).body).role === undefined, "random motifs have no role option");
 const blank = M.motifFormValues(null);
 check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
-check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");
-check(M.motifFormProblems({ ...values }).length === 0, "a filled form has no problems");
-check(M.motifFormProblems({ ...values, key: "Dm" }).length === 0, "the form has no key to check");
 
 const rebuilt = M.buildMotifBody({ ...values, notes: " C4:q ", pickup: "" }, body);
 check(rebuilt.motif.notes === "C4:q" && rebuilt.motif.material === "omt.material.natural-minor" && !("key" in rebuilt.motif) && rebuilt.motif.pickup === "0", "body trims notes, stores the material and no key text, and an empty pickup is 0");
@@ -130,14 +130,6 @@ check(saveVersion.url === "/api/materials/items/mot-1/versions" && JSON.parse(sa
 check(!("note" in JSON.parse(M.buildSaveMotifRequest({ id: "mot-1", note: " ", body: rebuilt }).body)), "an empty note is left out");
 
 // Features.
-check(M.featureProblems([{ label: "a", first: 1, last: 2 }]).length === 0, "a good feature row passes");
-check(M.featureProblems([{ label: "", first: 1, last: 1 }]).length === 1, "an empty label fails");
-check(M.featureProblems([{ label: "abcdefghi", first: 1, last: 1 }]).length === 1, "a label over 8 characters fails");
-check(M.featureProblems([{ label: "a", first: 1, last: 1 }, { label: "a", first: 2, last: 2 }]).length === 1, "a repeated label fails");
-check(M.featureProblems([{ label: "a", first: 3, last: 2 }]).length === 1, "first after last fails");
-check(M.featureProblems([{ label: "a", first: 0, last: 1 }]).length === 1, "note numbers start at 1");
-check(M.featureProblems([{ label: "a", first: NaN, last: 1 }]).length === 1, "a blank number fails");
-check(M.motifFormProblems({ ...values, features: [{ label: "", first: 1, last: 1 }] })[0].field === "features", "feature problems show on the form");
 check(M.newFeatureRow([]).label === "a" && M.newFeatureRow([{ label: "a" }]).label === "b", "a new feature row takes the next free letter");
 
 // Analysis rows.
@@ -284,7 +276,7 @@ check(randomBody.material === "random" && !("mode" in randomBody) && randomBody.
 check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
 check(M.randomSettings === undefined, "the draw of the mode and meter is not computed here");
 check(same(M.drawnSettings({ drawn: { material: "omt.material.natural-minor", meter: "6/8" } }), { material: "omt.material.natural-minor", meter: "6/8" }), "the drawn material and meter come from the answer");
-for (const captured of require("../../backend/tests/fixtures/composer/b11_captures.json").random) {
+for (const captured of readJson(path.join(__dirname, "../../backend/tests/fixtures/composer/b11_captures.json")).random) {
   const material = captured.mode === "minor" ? "omt.material.natural-minor" : "omt.material.major";
   const answer = { drawn: { material, meter: captured.meter } };
   check(same(M.drawnSettings(answer), { material, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);
@@ -412,8 +404,6 @@ check(table.length === 2 && table[0].updateAvailable && !table[1].updateAvailabl
 check(table[0].project === "Sonata" && table[0].version === 1 && table[0].type === "theme", "the Used by row carries project, version and type");
 check(M.usedByTable(null, projects, 1).length === 0, "no usedByUsers, no rows");
 
-check(M.errorField("Segment 1: the label is 1 to 8 characters.") === "features", "a segment problem belongs to the segments field");
-check(M.motifFormProblems({ ...editorValues(), features: [{ label: "", first: 1, last: 1 }] }).some((p) => /^Segment 1:/.test(p.message)), "segment problems are named Segment");
 check(/head and tail/.test(M.SEGMENTS_HINT) && /Liquidation and motive-forms/.test(M.SEGMENTS_HINT), "the segments hint names the use");
 
 /* The status area of a motif tab: sections write to it, an empty text clears it, no element is a no-op. */

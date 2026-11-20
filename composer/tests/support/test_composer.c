@@ -174,9 +174,8 @@ ComposerMeasureResult test_style_measure(const Plan *plan, const ComposerStyle *
     return result;
 }
 
-const char *test_status_name(ComposerStatus status) {
-    static const char *const NAMES[] = {"ok", "request", "unsatisfiable", "cancelled", "alloc", "internal"};
-    return (unsigned)status < sizeof NAMES / sizeof NAMES[0] ? NAMES[status] : "unknown";
+const char *test_status_name(UrsatzStatus status) {
+    return ursatz_status_name(status);
 }
 
 char *test_motive_json(const Motive *motive) {

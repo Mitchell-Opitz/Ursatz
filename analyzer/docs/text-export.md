@@ -1,6 +1,6 @@
 # Text export
 
-Back to the [docs index](README.md). Header: `<ursatz_analyzer/text_export.h>`. Command: `ursatz-analyzer export`.
+Back to the [docs index](README.md). Header: `<ursatz_analyzer/analyzer_api.h>`. Command: `ursatz-analyzer export`.
 
 ## What it is for
 
@@ -16,7 +16,7 @@ changes neither `analysis.json`, its schema nor the score MusicXML.
 
 ## Format v2
 
-`URSATZ_ANALYZER_TEXT_EXPORT_VERSION` is 2 and is the `v2` of the first line. Version 2 adds the `clefs:` header line and the clef changes on a measure line (version 1 had neither). This is the start of an export of
+`ANALYZER_TEXT_EXPORT_VERSION` is 2 and is the `v2` of the first line. Version 2 adds the `clefs:` header line and the clef changes on a measure line (version 1 had neither). This is the start of an export of
 `tests/musicxml/pickup.musicxml`:
 
 ```
@@ -111,20 +111,20 @@ disagrees with the notes above it.
 `0` and `0` export the whole piece. A pickup (measure `0`) is included when the first measure is 0 or 1. A range that
 starts after a claim leaves that claim out, even when it reaches into the range. A last measure past the end stops at
 the last measure. A first measure greater than the last, a negative number, or a range with no measure in it is
-`ANALYZER_ERR_ARGUMENT`.
+`URSATZ_ERR_REQUEST`.
 
 ## Entries
 
 ```c
 AnalyzerTextExportOptions analyzer_text_export_options_default(void);
-AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
+UrsatzStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
                                           const AnalyzerTextExportOptions *options, char **text);
 ```
 
 `notes` is the import the analysis ran on and `document_json` its analysis document (`analysis_document_render_result`
-or the stored `analysis.json`). On `ANALYZER_OK` the caller frees `*text` with `free`. `ANALYZER_ERR_ARGUMENT` for a NULL
-argument, a document that is not JSON or whose `schema_version` is not `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION`, or an
-empty range; `ANALYZER_ERR_LIBRARY` when the score cannot be written or read back; `ANALYZER_ERR_ALLOC`.
+or the stored `analysis.json`). On `URSATZ_OK` the caller frees `*text` with `free`. `URSATZ_ERR_REQUEST` for a NULL
+argument, a document that is not JSON or whose `schema_version` is not `ANALYZER_DOCUMENT_SCHEMA_VERSION`, or an
+empty range; `URSATZ_ERR_INTERNAL` when the score cannot be written or read back; `URSATZ_ERR_ALLOC`.
 
 ```sh
 ursatz-analyzer export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>
@@ -140,7 +140,7 @@ motifs, a piece's loop and ending. The caller passes the MusicXML of each sectio
 string; the Analyzer reads no store or Composer format and prints each value as given (a line break becomes a space).
 
 ```c
-AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *material, char **text);
+UrsatzStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *material, char **text);
 ```
 
 ```
@@ -176,16 +176,16 @@ key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
 - **Segments.** A segment is a label and the first and last note it covers, as 0-based indexes into the section's notes
   in time order (a chord counts once, rests not at all; notes that start together go by part, staff and voice). The
   first note is followed by `[<label>]` and the last by `[/<label>]`, after any `~`. A one-note segment carries both. A
-  segment with a NULL label, a first after its last, or a note past the section's notes is `ANALYZER_ERR_ARGUMENT`.
-- **Errors.** `ANALYZER_ERR_ARGUMENT` for a NULL material, kind, text or section label; `ANALYZER_ERR_LIBRARY` when a
+  segment with a NULL label, a first after its last, or a note past the section's notes is `URSATZ_ERR_REQUEST`.
+- **Errors.** `URSATZ_ERR_REQUEST` for a NULL material, kind, text or section label; `URSATZ_ERR_INTERNAL` when a
   section's bytes cannot be imported (the message is on stderr) or its score cannot be written or read back, and no
-  text is returned; `ANALYZER_ERR_ALLOC`.
+  text is returned; `URSATZ_ERR_ALLOC`.
 - **Size.** A 2-bar motif with 6 variants is under 8 KB (`test_material_export`). Snapshots are
   `tests/snapshots/material-<kind>.export.txt`.
 
 ## Versioning
 
-The first line carries the format version. A change to the layout of any line bumps `URSATZ_ANALYZER_TEXT_EXPORT_VERSION`.
+The first line carries the format version. A change to the layout of any line bumps `ANALYZER_TEXT_EXPORT_VERSION`.
 Adding a claim line or a token a reader can skip does not. The export has its own snapshots
 (`tests/snapshots/<slug>.export.txt`, the `analyzer:` line removed) so a change shows in review.
 
