@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 const char *ursatz_status_name(UrsatzStatus status) {
     switch (status) {
@@ -38,4 +39,16 @@ UrsatzStatus ursatz_error_set(UrsatzError *error, UrsatzStatus status, const cha
         snprintf(error->path, sizeof(error->path), "%s", path ? path : "");
     }
     return status;
+}
+
+bool ursatz_status_parse(const char *name, UrsatzStatus *out) {
+    for (int status = URSATZ_OK; name && status <= URSATZ_ERR_INTERNAL; status++) {
+        if (strcmp(ursatz_status_name((UrsatzStatus)status), name) == 0) {
+            if (out) {
+                *out = (UrsatzStatus)status;
+            }
+            return true;
+        }
+    }
+    return false;
 }

@@ -28,6 +28,9 @@ typedef struct {
 /* The status as a word: "ok", "request", "unsatisfiable", "not-found", "conflict", "format", "io", "cancelled", "alloc", "internal". */
 const char *ursatz_status_name(UrsatzStatus status);
 
+/* The inverse of ursatz_status_name: true and *out set for each of its ten words, false for any other text (and *out untouched). */
+bool ursatz_status_parse(const char *name, UrsatzStatus *out);
+
 /*
  * Fills error (NULL is allowed) with the formatted message and the path (NULL is ""), and returns status, so a caller writes
  * "return ursatz_error_set(error, URSATZ_ERR_REQUEST, "/key", "the key is not a note name");".
