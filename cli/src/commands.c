@@ -5,6 +5,7 @@
 
 #include "query.h"
 #include "render.h"
+#include "show.h"
 #include "status.h"
 #include "analyze.h"
 #include "corpus.h"
@@ -32,6 +33,8 @@ static const char *const FLAGS_CORPUS[] = {"--out", "--resume", NULL};
 static const char *const FLAGS_STYLE_PROFILE[] = {"--name", "--out", NULL};
 static const char *const FLAGS_STATUS[] = {"--format", NULL};
 static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL};
+static const char *const FLAGS_SHOW[] = {"--view", NULL};
+static const char *const FLAGS_HISTORY[] = {"--format", "--limit", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
@@ -601,6 +604,42 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz --data ~/ursatz-data query project.list\n"
     "  echo '{\"id\": \"item-1\"}' | ursatz --data ~/ursatz-data query item.get --params -",
      FLAGS_QUERY, 1, 1, run_query},
+    {"show",
+    "show <address> [--view <json>]",
+     "Show what the data folder holds under an address",
+    "Prints what the workshop holds under an address, as JSON. An address is <kind>:<id> with the kind item, piece, project, subject, collection, style, links or job, and item:<id>@v<n> for one version of an item.\n"
+    "\n"
+    "  item:<id>        the item with its versions            (query item.get)\n"
+    "  item:<id>@v<n>   one version of the item               (query item.version)\n"
+    "  piece:<id>       a Library piece                       (query library.piece)\n"
+    "  project:<id>     a project                             (query project.get)\n"
+    "  subject:<id>     a subject                             (query subject.get)\n"
+    "  collection:<id>  a collection                          (query collection.get)\n"
+    "  style:<id>       a style                               (query style.get)\n"
+    "  links:<id>       a motive link run                     (query links.get)\n"
+    "  job:<id>         a job                                 (query job.get)\n"
+    "\n"
+    "--view json is the only view for now (the other views come with Ursatz Text). The data folder is named before the subcommand: ursatz --data <dir> show item:<id>.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage (a text that is no address, another view), or an address the workshop refuses; 2 the folder cannot be opened, or any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data show item:itm-3f2a\n"
+    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2",
+     FLAGS_SHOW, 1, 1, run_show},
+    {"history",
+    "history [<address>] [--limit <n>] [--format <text|json>]",
+     "List what the commands changed in the data folder, newest first",
+    "Lists the journal of the data folder: every command that changed it, newest first. With an address, only the records about it. One line a record: the sequence number, the time, the actor, the command and its target (- for none). --format json prints the records with the paths each wrote and removed.\n"
+    "\n"
+    "--limit is how many records, 1 to 1000 (default 20). The data folder is named before the subcommand: ursatz --data <dir> history.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage (a text that is no address, a limit out of range); 2 the folder cannot be opened, or any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data history\n"
+    "  ursatz --data ~/ursatz-data history item:itm-3f2a --limit 5",
+     FLAGS_HISTORY, 0, 1, run_history},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);
