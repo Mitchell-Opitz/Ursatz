@@ -4,6 +4,7 @@ Newest first. [Docs index](README.md).
 
 ## P65: Ursatz Text (2026-11)
 
+- **Restore.** `ursatz restore item:<id>@v<n> [--base <n>] [--note <text>]` makes the next version a copy of an older one (R-667); `--note` joins the flag table (29 commands).
 - **Text commands.** `ursatz apply` takes commands written in Ursatz Text (one command a line; JSON when the first character is `{` or `[`) and prints the version each makes. A text is read by the workshop's tool `commands-parse`, so a mistake names its line. The `--wait` of a command that starts a job works (a local `item.compose` stopped with "job not found").
 - **Views.** `ursatz show <address|file>` prints the views of Ursatz Text (`--view summary`, `structure`, `harmony`, `line:<name>`, `part:<name>`, `reading`, `full`, `json`; `--measures <first>-<last>`); an item or a piece address takes `/<section>`. `analyze --view text` is `--view reading` and its text is framed as a view.
 - **Generated help.** `ursatz help commands [--format text|markdown|json]`, `ursatz help grammar`, `ursatz help <command>` (a name with a dot) and `ursatz help flags [--format text|markdown]` print the command reference, the grammar, the help of one command and the flag table from the command schemas and the flag tables. `cli/docs/flags.md` is the generated flag table (it had missed `--accompaniment-format`, `--material` and `--value-scale`) and a test compares it.

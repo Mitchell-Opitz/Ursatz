@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P65 B8: restore a version (2026-11)
+
+- **`item.restore`.** The next version of an item is a copy of an older one: its files, its body with the paths of its result in the new folder, the same uses; the envelope's `lineage` gains `restored_from` ([data folder](data-folder.md)). The commands are 49 ([commands](command-reference.md)).
+
 ## P65 B7: section commands (2026-11)
 
 - **Section commands.** `section.insert`, `section.delete`, `section.move`, `section.resize` and `section.set` edit the sections of a piece version's request and save the next version ([commands](commands.md#the-section-commands)); the commands are 48. A param of the type `object` may name words that stand in place of the object (`words` in `workshop/commands`): `section.set`'s `region home` and `harmony none`.

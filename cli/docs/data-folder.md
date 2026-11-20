@@ -84,6 +84,10 @@ ursatz render item:<id>[@v<n>] [--midi <file>] [--musicxml <file>] [--tempo <bpm
 
 `render` renders the `plan.json` of a version (the current one when the address has none) to MIDI or MusicXML as `render <plan.json>` does; a motif has no plan (exit 2). `regenerate <plan.json>` and `render <plan.json>` stay the forms for a file.
 
+## restore
+
+`ursatz restore item:<id>@v<n> [--base <n>] [--note <text>]` makes the next version of the item a copy of version n: its files, its body (the paths of its result in the new folder) and its uses (the command `item.restore`). Nothing is rewritten, so restoring is an undo that keeps the history: it prints `item <id> version <new> (restored v<n>)`. The note of the new version is `restore v<n>` unless `--note` gives one; `--base` is the version the command is made against (default: the current one). The current version cannot be restored, and a version that is not there is not found. The GUI's versions list has the same action.
+
 ## migrate
 
 `ursatz migrate [--dry-run] [--backup <dir>]` migrates a data folder of an older layout to the current one (layout 2); the GUI backend no longer does. `--dry-run` writes nothing and reports every planned move and rewrite. A real run copies the whole folder to `--backup` first (default: beside it, `<folder>-backup-<time>`), migrates and prints the report as JSON. The folder must not be open: while a process holds it, the command exits 2 with `stop the Ursatz process <pid> first`. A folder in an older layout is refused by every other command with the two commands to run (`migrate --dry-run`, then `migrate`). See [older folders](../../workshop/docs/data-folder.md#older-folders-and-migration).
