@@ -31,7 +31,7 @@ ursatz --version
 | `listen` | batches of motifs or themes from fixed seeds for listening | [cli-listen.md](cli-listen.md) |
 | `analyze` | the analysis document of a MIDI or MusicXML file, or its text export | [analyze.md](analyze.md) |
 | `corpus`, `style-profile` | analyzes a folder of pieces; counts its style | [corpus.md](corpus.md) |
-| `status`, `query`, `show`, `history`, `apply`, `migrate`; `compose`, `regenerate` and `render` of an item | the data folder | [data-folder.md](data-folder.md) |
+| `status`, `query`, `show` (in text views), `history`, `apply` (text commands), `restore`, `migrate`; `compose`, `regenerate` and `render` of an item | the data folder | [data-folder.md](data-folder.md) |
 
 [workflows.md](workflows.md) has the commands in order: a piece from a plan, the middle-out start, the Analyzer's check, and a piece from a corpus. [changelog.md](changelog.md) lists the changes of this part.
 
