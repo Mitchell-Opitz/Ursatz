@@ -2,7 +2,7 @@
 
 Part of the settings document ([preferences.md](preferences.md)). Back to the [docs index](README.md).
 
-The settings of the segments motive generator ([cli-random-motive.md](cli-random-motive.md#the-segments-strategy)), stored in `MotiveRandomPreferences` and read through `MotiveRandomOptions.preferences` (NULL for the defaults). The drawn strategy keeps its constants as the comparison baseline and reads none of them (R-304). A weighted list is an object of whole numbers 0 to 20 under the names below, with a sum above 0; a name left out keeps its default. A list whose weights sum to 0 where the meter leaves an entry out (a three-way shape list in a meter with no halves) draws its first entry.
+The settings of the segments motive generator ([cli-random-motive.md](../../cli/docs/cli-random-motive.md#the-segments-strategy)), stored in `MotiveRandomPreferences` and read through `MotiveRandomOptions.preferences` (NULL for the defaults). The drawn strategy keeps its constants as the comparison baseline and reads none of them (R-304). A weighted list is an object of whole numbers 0 to 20 under the names below, with a sum above 0; a name left out keeps its default. A list whose weights sum to 0 where the meter leaves an entry out (a three-way shape list in a meter with no halves) draws its first entry.
 
 | Key | Default | Limit | What it shapes | Replaces |
 | --- | --- | --- | --- | --- |

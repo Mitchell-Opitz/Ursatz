@@ -45,7 +45,7 @@ Tests are split by the `slow` label so a pull request run stays short.
 ursatz grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
 ```
 
-Every command, with an example each, is in [docs/cli.md](docs/cli.md).
+Every command, with an example each, is in [docs/cli.md](../cli/docs/README.md).
 
 ## Composer API
 

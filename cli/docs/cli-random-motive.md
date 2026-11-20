@@ -1,14 +1,14 @@
 # random-motive command
 
-The `random-motive` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `random-motive` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer random-motive --material <major|minor> --meter <n/m> [--key <key>] [--form <full|rhythm|contour>] [--strategy <segments|drawn>] [--role <melodic|accompaniment>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--json]
+ursatz random-motive --material <word> --meter <n/m> [--key <key>] [--form <name>] [--strategy <name>] [--role <role>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--format <text|json>]
 ```
 
 Makes random motives from a mode and a meter. Every motive keeps the hard melodic rules of standard counterpoint, the ones motive invention keeps, and the same options and seed always give the same motives.
 
-There are two strategies, `--strategy segments` (the default) and `--strategy drawn`. The length, pickup, number of notes, rhythm and range are not options for either. They are drawn inside defaults named at the top of the strategy's file, which are meant to be tuned there: `src/motive/motive_random_segments.c` for `segments` and `src/motive/motive_random.c` for `drawn`. The segments strategy's draws (bars, pickup, shapes, chord plans, features, leap, rung moves, decorations, note lengths) are settings, in `MotiveRandomPreferences` (`motive_random_preferences_default` has the defaults); see [preferences.md](preferences-motif.md). The steps both share (the chord-tone frame, the non-chord tone decorations, the form and the style) are in `src/motive/motive_random_common.c`.
+There are two strategies, `--strategy segments` (the default) and `--strategy drawn`. The length, pickup, number of notes, rhythm and range are not options for either. They are drawn inside defaults named at the top of the strategy's file, which are meant to be tuned there: `src/motive/motive_random_segments.c` for `segments` and `src/motive/motive_random.c` for `drawn`. The segments strategy's draws (bars, pickup, shapes, chord plans, features, leap, rung moves, decorations, note lengths) are settings, in `MotiveRandomPreferences` (`motive_random_preferences_default` has the defaults); see [preferences.md](../../composer/docs/preferences-motif.md). The steps both share (the chord-tone frame, the non-chord tone decorations, the form and the style) are in `src/motive/motive_random_common.c`.
 
 ## The segments strategy
 
@@ -24,7 +24,7 @@ A motive is made of segments, as a theme starts: a first cell, its repeat on the
 8. **Ending.** Rhythmic reduction in the last segment: its last note is at least a beat long, on a chord tone of the last chord, made by joining the cell's last notes (when the last segment is `a'`, `a`'s own last note is already at least a beat).
 9. **Checks.** The motive keeps the melodic rules and the range and pitch limits of the drawn strategy, and its tone labels must read as drawn, with the plan as its given base harmony. Up to 256 candidates are drawn for each motive; a candidate draws its bars, shape and plan once and tries its notes up to 8 times within them, so a shape's weight is not changed by how often it fails the rules.
 
-**Listening settings.** Nine members of the segments strategy's `MotiveRandomPreferences` (R-420 to R-422), set in the `motif` group of the preferences document ([preferences.md](preferences.md); API 1.12). Each is off by default: with none set, every motive, plan and file is byte-identical to before.
+**Listening settings.** Nine members of the segments strategy's `MotiveRandomPreferences` (R-420 to R-422), set in the `motif` group of the preferences document ([preferences.md](../../composer/docs/preferences.md); API 1.12). Each is off by default: with none set, every motive, plan and file is byte-identical to before.
 
 - `accented_one_in` and `accented_types` (step 7): in one eligible on-beat note of this many (0 never), a chord tone becomes an accented non-chord tone that resolves to the next note: an appoggiatura or a passing tone (a step beside the chord tone, which comes one note later), or a suspension where the chord changes (the note before is held over and falls by a step). One per segment, never the pickup or the last note of a segment; `accented_types` weights the three.
 - `avoid_repeats` (step 7): a decoration that finds no figure tries the other kinds before a chord tone, a chord tone never repeats the note beside it, a new segment does not start on the note before it, and a motive with two adjacent notes of one pitch is drawn again, except a suspension and the pair of the repeated-note feature.
@@ -65,7 +65,7 @@ The earlier strategy, kept as it was:
 
 The motive is heard in I throughout, so suspension, retardation and anticipation (they need a chord change), double neighbor and changing tone (they need two non-chord notes side by side) and pedal are never drawn. A motive is kept only when its tone labels (see `analysis` below) read as it was drawn: the beats are chord tones, and each decorated note has the type drawn and resolves.
 
-The command is a wrapper of the [composer API](api.md): it reads its arguments into a request, calls
+The command is a wrapper of the [composer API](../../composer/docs/api.md): it reads its arguments into a request, calls
 `composer_api_random_motive` and prints the response JSON, or the text lines made from it. The request members have the
 options' names and values (`material`, `meter`, `key`, `form`, `strategy`, `role`, `style`, `style_without`, `count`, `seed`).
 
@@ -88,7 +88,7 @@ it is odd; the meter is `4/4`, `3/4`, `2/4` or `6/8` for `(m >> 16) mod 4` of 0,
 | `--style-without <category>` | Read the style without this category (repeatable, at most 8; needs `--style`; an unknown name is exit 1). |
 | `--count <n>` | How many motives, 1 to 16, 1 by default. The motives of one run are all different. |
 | `--seed <n>` | A whole number from 0. By default from the clock. The seed is printed. |
-| `--json` | Print as JSON (below). |
+| `--format json` | Print as JSON (below). |
 
 ## Output
 
@@ -112,7 +112,7 @@ JSON:
 }
 ```
 
-Each motive is the document of `motive --json` (`motive` and `analysis`, with `notes_text`, `degrees_text` and the rest of the analysis), without `rendered`. The `analysis` carries `base_harmony` (the plan, `given` true, for `segments`; `I`, `given` false, proposed from the frame, for `drawn`), `segments` (the motive's own for `segments`, proposed for `drawn`), `tones` (the role of each note, and for a non-chord tone its type and the note it resolves to) and `warnings`, as `motive --json` does.
+Each motive is the document of `motive --format json` (`motive` and `analysis`, with `notes_text`, `degrees_text` and the rest of the analysis), without `rendered`. The `analysis` carries `base_harmony` (the plan, `given` true, for `segments`; `I`, `given` false, proposed from the frame, for `drawn`), `segments` (the motive's own for `segments`, proposed for `drawn`), `tones` (the role of each note, and for a non-chord tone its type and the note it resolves to) and `warnings`, as `motive --format json` does.
 
 ## Exit status
 

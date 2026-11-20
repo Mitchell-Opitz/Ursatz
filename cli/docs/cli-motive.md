@@ -1,9 +1,9 @@
 # motive command
 
-The `motive` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `motive` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--tone <n>=<role>]... [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
+ursatz motive <input> [--meter <n/m>] [--key <key>] [--input-format <format>] [--form <name>] [--pickup <beats>] [--harmony <text>] [--feature <l:a-b>]... [--role <role>] [--tone <n>=<role>]... [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--format <text|json>]
 ```
 
 Loads a motive, a short cell of notes (one bar or less, as a rule), and prints its analysis: the
@@ -12,7 +12,7 @@ can be attached to a plan as Given material with `motive_attach` (`<ursatz_compo
 command reads and reports, and with `--render-key`, `--midi` or `--musicxml` it also renders the motive
 (below).
 
-The command is a wrapper of the [composer API](api.md): it reads its arguments and the input file into a request, calls
+The command is a wrapper of the [composer API](../../composer/docs/api.md): it reads its arguments and the input file into a request, calls
 `composer_api_motive` (or `composer_api_motive_from_midi` for a MIDI file, and `composer_api_motive_render` with
 `--render-key`, `--midi` or `--musicxml`), writes the MIDI and MusicXML the response holds to the paths given and prints the
 response JSON, or the text lines made from it. The request members have the options' names and values (`meter`, `key`,
@@ -20,7 +20,7 @@ response JSON, or the text lines made from it. The request members have the opti
 
 ## Input
 
-`<input>` is a file. `--format` says what it is; `auto` (the default) looks at the bytes: `MThd` is
+`<input>` is a file. `--input-format` says what it is; `auto` (the default) looks at the bytes: `MThd` is
 MIDI, a first character of `<` is MusicXML, `{` is JSON, and anything else is a note list.
 
 | Format | Notes |
@@ -31,7 +31,7 @@ MIDI, a first character of `<` is MusicXML, `{` is JSON, and anything else is a 
 | `degrees` | A degree list, below. Never chosen by `auto`. |
 | `rhythm` | A rhythm-only list, below. Never chosen by `auto`. |
 | `contour` | A contour-only list, below. Never chosen by `auto`. |
-| `json` | A motive document, see [motive-format.md](motive-format.md#motive-documents). |
+| `json` | A motive document, see [motive-format.md](../../composer/docs/motive-format.md#motive-documents). |
 
 A motive is one voice. A MIDI or MusicXML file with notes sounding together, or with notes in more than
 one MusicXML part, is refused as polyphonic and the message gives the position of the first overlap. No
@@ -98,7 +98,7 @@ has the form `contour`. When it is heard, rank `r` sounds on degree `r + 1` of t
 each note a quarter. Only the contour is analyzed.
 
 `--form rhythm` and `--form contour` read the input as a rhythm or a contour; they are the same as
-`--format rhythm` and `--format contour`, and a `--format` that says otherwise is an error. `--form full`
+`--input-format rhythm` and `--input-format contour`, and an `--input-format` that says otherwise is an error. `--form full`
 (the default) leaves the format as it is.
 
 ## Pickup
@@ -125,7 +125,7 @@ Chords. A chord is an upper case numeral `I` to `VII`, with `b` or `#` before it
 
 The onsets are in beats of the motive's meter, which a MIDI or MusicXML file may declare, so with such a file the file is read twice, as for `--pickup`. A text that is not a chord is exit status 1 and names the token and column (`token 2 (column 4)`); a chord that starts outside the motive, or a feature outside its notes, is exit status 2 and names the place (`harmony[1]`, `features[0]`).
 
-The text output lists `Own harmony:`, the features and the role when the motive has them. The `--json` document has them in `motive` and `harmony_text` in `analysis` (see [motive-format.md](motive-format.md#motive-analysis)).
+The text output lists `Own harmony:`, the features and the role when the motive has them. The `--format json` document has them in `motive` and `harmony_text` in `analysis` (see [motive-format.md](../../composer/docs/motive-format.md#motive-analysis)).
 
 The same three options are read by [variants](cli-variants.md) and [grow](cli-grow.md); [random-motive](cli-random-motive.md) takes `--role`.
 
@@ -149,7 +149,7 @@ Tones. Each note is a chord tone, a non-chord tone of one of ten types (`passing
 
 Resolution is worked out for the label you give a note; a label on one note never changes how another is labelled.
 
-The text output has a `Base harmony:` line (`I V@2 (proposed)`, `VI (given)`, `none`), a `Tones:` line (`1 A5 chord, 2 B5 passing, ...`, `none`) and a `Warning: Note <n> (<name>) does not resolve` line for each unresolved note. The `analysis` in `--json` has `base_harmony` (`text` in the own-harmony syntax and `given`, or `null`), `tones` (one object per note: `note` 1-based, `role` `chord`, `non-chord` or `unclassified`, `type` or `null`, `resolves_to` 1-based or `null`, `unresolved`, `overridden`) and `warnings`. [variants](cli-variants.md) gives the same fields in every variant's `motive`.
+The text output has a `Base harmony:` line (`I V@2 (proposed)`, `VI (given)`, `none`), a `Tones:` line (`1 A5 chord, 2 B5 passing, ...`, `none`) and a `Warning: Note <n> (<name>) does not resolve` line for each unresolved note. The `analysis` in `--format json` has `base_harmony` (`text` in the own-harmony syntax and `given`, or `null`), `tones` (one object per note: `note` 1-based, `role` `chord`, `non-chord` or `unclassified`, `type` or `null`, `resolves_to` 1-based or `null`, `unresolved`, `overridden`) and `warnings`. [variants](cli-variants.md) gives the same fields in every variant's `motive`.
 
 ## Meter and key
 
@@ -204,8 +204,8 @@ to is left out.
 A rhythm has only the `Rhythm:` section and a contour only the `Contour:` line: their pitches are made up to
 sound them, so there are no intervals, range, degrees or harmony.
 
-`--json` prints the motive and its analysis as one JSON document, described in
-[motive-format.md](motive-format.md#motive-analysis). The `analysis` also gives the form, the pickup in beats
+`--format json` prints the motive and its analysis as one JSON document, described in
+[motive-format.md](../../composer/docs/motive-format.md#motive-analysis). The `analysis` also gives the form, the pickup in beats
 (`"1"`, `"1/2"`), `notes_text` (the pitches as a note list), `degrees_text` (as a degree list, `null` without
 a key) and, for the two forms, `rhythm_text` or `contour_text`. The same motive gives the same bytes whichever format
 it was read from.
@@ -223,7 +223,7 @@ an error.
 | --- | --- |
 | `--midi <file>` | Write the rendered motive as a MIDI file. |
 | `--musicxml <file>` | Write it as a MusicXML file. |
-| `--tempo <bpm>` | The tempo of the files, 20 to 400 quarter notes per minute, as in `export`. |
+| `--tempo <bpm>` | The tempo of the files, 20 to 400 quarter notes per minute, as in `render`. |
 
 The files are one voice (a part named `melody`), as long as the motive, with its meter and, when it has
 one, the key it is rendered in. A pickup is written as a short first meter, its own length (a pickup of
@@ -232,7 +232,7 @@ first bar is `<measure number="0" implicit="yes">`; the full bars are numbered f
 length is not a meter (1/3 of a beat) cannot be written. Library: `motive_in_key` in
 `<ursatz_composer/motive.h>`, `motive_render_plan` in `<ursatz_composer/motive_render.h>`.
 
-With `--json`, a render option adds a top-level `rendered` object next to `motive` and `analysis`:
+With `--format json`, a render option adds a top-level `rendered` object next to `motive` and `analysis`:
 
 ```json
 "rendered": {"key": "G minor", "notes": [{"midi_pitch": 67, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}}]}

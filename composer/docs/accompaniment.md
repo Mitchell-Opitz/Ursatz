@@ -121,7 +121,7 @@ The library at this pin has no Ursatz-Analyzer texture stage, so the input is bu
 ## Growing with an accompaniment
 
 `GrowRequest.has_accompaniment` and `GrowRequest.accompaniment` ask for one ([grow.md](grow.md)); `grow --accompaniment`
-and `--texture` ([cli-grow.md](cli-grow.md)) set them. `grow-theme` opens, for every harmony target, a Constrained inner
+and `--texture` ([cli-grow.md](../../cli/docs/cli-grow.md)) set them. `grow-theme` opens, for every harmony target, a Constrained inner
 voice span over the same time: voice 1 with the constraint, and voices 2 and 3 for a block, an oom-pah and `any`. With
 `GrowRequest.accompaniment_motive` (an accompaniment-role motive of at most a bar, not with a voicing) the request makes
 the accompaniment: the motive is the material node `acc`, in the last bar of the material, the constraint is pattern

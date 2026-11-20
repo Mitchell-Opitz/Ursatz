@@ -1,22 +1,24 @@
 # piece command
 
-The `piece` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `piece` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer piece <request.json> [--seed <n>] [--check] [--out <loop-plan.json>] [--layers <dir>] [--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz piece <request.json> [--seed <n>] [--check] [--out <file>] [--layers <dir>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format <text|json>]
+ursatz piece --from <loop-plan.json> --request <request.json> --regenerate <id|none> [--lane <lane>] [--seed <n>] [--check] [--out <file>] [--layers <dir>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format <text|json>]
+ursatz piece --from <loop-plan.json> --request <request.json> --variations <id> --lane <lane> --count <n> --out-dir <dir> [--seed <n>] [--check] [--plain-midi] [--format <text|json>]
 ```
 
-The command is a wrapper of the [composer API](api.md): it reads the request file (and the plan file of each theme fill, and
+The command is a wrapper of the [composer API](../../composer/docs/api.md): it reads the request file (and the plan file of each theme fill, and
 the loop plan of `--from`) into a request, calls `composer_api_piece` (or `composer_api_piece_variations` with
 `--variations`), writes the plans, MIDI files, MusicXML and explanation the response holds to the paths given (the ending
 version's MIDI file through `composer_api_export`), prints the result from the response JSON alone, and maps the status to
 the exit status. The output below is the response's `json`; the plan paths and the `files` list are the command's.
 
-Composes a looping game track from a request ([piece-request.md](piece-request.md)): an intro, a body, a turnaround and an
+Composes a looping game track from a request ([piece-request.md](../../composer/docs/piece-request.md)): an intro, a body, a turnaround and an
 ending, each made of sections of any length in beats. Two versions come out (R-172):
 
 - **loop**: the intro, the body and the turnaround. The loop is the body and the turnaround; its end is composed last against
-  a copy of the body's first bar, so that it leads back ([loop-seam.md](loop-seam.md));
+  a copy of the body's first bar, so that it leads back ([loop-seam.md](../../composer/docs/loop-seam.md));
 - **ending**: the intro and the body exactly as the loop has them (every lane Given), then the ending, composed from seed + 20.
   The ending's harmony hears the body's last chord. The turnaround and the seam are left out.
 
@@ -24,21 +26,21 @@ The two versions are the same note for note up to the body's end.
 
 The seed, `--check`, `--out` and the other options are `theme`'s ([cli-theme.md](cli-theme.md)). The seeds from `--seed`
 are tried one after another, up to 16, and a seed whose loop or ending is stuck (or, with `--check`, contradicted by the
-Analyzer) is passed over. `--check` runs `analyzer_check_piece_in` on each version ([analyzer-check.md](analyzer-check.md#the-whole-piece)).
+Analyzer) is passed over. `--check` runs `analyzer_check_piece_in` on each version ([analyzer-check.md](../../composer/docs/analyzer-check.md#the-whole-piece)).
 
 | Option | Effect |
 | --- | --- |
 | `--out`, `--ending-out` | The plan of the first version (the loop's) and of the ending version as JSON. |
 | `--layers <dir>` | The three layers of the first version: `plan.json`, `realization.json` and `readings/composer.json` ([cli-theme.md](cli-theme.md)). |
-| `--midi`, `--ending-midi` | The first version and the ending version as a MIDI file with the tempo of the brief. The loop's file has the markers `loopStart` and `loopEnd` in the conductor track ([export.md](export.md#loop-markers)); the ending's has none. |
+| `--midi`, `--ending-midi` | The first version and the ending version as a MIDI file with the tempo of the brief. The loop's file has the markers `loopStart` and `loopEnd` in the conductor track ([export.md](../../composer/docs/export.md#loop-markers)); the ending's has none. |
 | `--musicxml`, `--ending-musicxml` | Each version as MusicXML. |
 
-A request of `"schema_version": 2` names another form ([piece-request.md](piece-request.md#a-piece-of-another-form-schema-version-2)).
+A request of `"schema_version": 2` names another form ([piece-request.md](../../composer/docs/piece-request.md#a-piece-of-another-form-schema-version-2)).
 A form with sizes has the one version `piece`: `--out`, `--midi` and `--musicxml` write it, and `--ending-out`, `--ending-midi`
 and `--ending-musicxml` exit 1 with `the <form> form has no ending version`. The text and the JSON list each version of the
 document in order; a row of a form with sizes shows its role and the section it returns instead of the fill.
 | `--plain-midi` | No track names and no section markers. The loop markers stay. |
-| `--explain <file>` | Why each candidate was chosen or rejected, in both versions: text with a heading for each, or with a `.json` name `{"loop": ..., "ending": ...}` ([explain.md](explain.md)). |
+| `--explain <file>` | Why each candidate was chosen or rejected, in both versions: text with a heading for each, or with a `.json` name `{"loop": ..., "ending": ...}` ([explain.md](../../composer/docs/explain.md)). |
 
 ## Output
 
@@ -55,7 +57,7 @@ JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"sta
 - `sections`: `{"id", "part", "letter", "start", "beats", "cadence", "heard", "fill", "source"}`; `cadence` is the planned type,
   `heard` the cadence the Analyzer heard at the section's end (`null` without `--check`), `source` where the material came
   from (`basic motive`, `own motive`, the theme plan's path, the numerals); a section that `--regenerate` kept (outside the
-  scope of the hearing, see [regenerate.md](regenerate.md)) also has `"in_scope": false`, and the text line ends `(kept)`
+  scope of the hearing, see [regenerate.md](../../composer/docs/regenerate.md)) also has `"in_scope": false`, and the text line ends `(kept)`
   where it would show the cadence heard; a row also has `start_text` (`"bar 3"`, `"bar 3 beat 2"`) and `length_text` (`"2 bars"`, `"1 bar 2 beats"`), written in the meter (API 4.2);
 - `score`: `{"numerator", "denominator"}`; `seam`: the four rules and how many held, for the loop, else `null`; it has `rules` `[{"id", "label", "ok"}]` (API 4.2);
 - `analyzer_check`: `{"planned", "agreed", "contradicts", "items"}` or `null`; `style_distance`: or `null`.
@@ -63,7 +65,7 @@ JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"sta
 ## Regenerate
 
 ```sh
-ursatz-composer piece --from <loop-plan.json> --request <request.json> --regenerate <section id>|none [--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--layers <dir>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz piece --from <loop-plan.json> --request <request.json> --regenerate <section id>|none [--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--layers <dir>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
 Writes one section of a loop plan the command wrote again (R-173), and nothing the section does not reach. `--request` is
@@ -75,7 +77,7 @@ and the JSON gains `"regenerated": {"section", "lane"}`.
 
 - **The seam.** When the section holds the body's first bar, the seam's copy of that bar is dropped and the sections the
   loop's end holds back (the turnaround) are reopened, so the seam stage copies the new bar and writes the end against it
-  ([loop-seam.md](loop-seam.md)). Regenerating a held section only (the turnaround) leaves the copy as it is.
+  ([loop-seam.md](../../composer/docs/loop-seam.md)). Regenerating a held section only (the turnaround) leaves the copy as it is.
 - **The ending version** is always built again from the new loop plan (seed + 20 of the seed that worked), so the two stay
   the same note for note up to the body's end. `--regenerate none` reopens nothing and only builds the ending version again;
   the loop version then has no score or seam in the output. It is for a variation chosen as the new loop plan.
@@ -92,7 +94,7 @@ material among its phrases, a progression fill's numerals) is exit 2.
 ## Variations
 
 ```sh
-ursatz-composer piece --from <loop-plan.json> --request <request.json> --variations <section id> --lane harmony|bass|melody|inner|all --count <1..8> --out-dir <dir> [--seed <n>] [--check] [--plain-midi] [--format text|json]
+ursatz piece --from <loop-plan.json> --request <request.json> --variations <section id> --lane harmony|bass|melody|inner|all --count <1..8> --out-dir <dir> [--seed <n>] [--check] [--plain-midi] [--format text|json]
 ```
 
 Makes up to `--count` different versions of a section (R-088, R-173). The section is regenerated as above (the seam and the
@@ -116,6 +118,6 @@ other output options (`--out`, `--midi`, ...) do not apply and are exit 1.
 | Status | Meaning |
 | --- | --- |
 | 0 | Success. |
-| 1 | Usage, or a request that does not read ([piece-request.md](piece-request.md#errors)). |
+| 1 | Usage, or a request that does not read ([piece-request.md](../../composer/docs/piece-request.md#errors)). |
 | 2 | The request cannot be satisfied: no seed of the 16 tried composes both versions (the stage the last was stuck in is named), a motive that does not fit in a bar. |
 | 3 | An output file could not be written. All files are written or none. |

@@ -1,16 +1,16 @@
 # fill command
 
-The `fill` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `fill` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--out <plan.json>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file.json>] [--explain <file>] [--format text|json]
+ursatz fill <plan.json> [--seed <n>] [--check] [--candidates <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--out <file>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--record <file>] [--explain <file>] [--format <text|json>]
 ```
 
-Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](piece.md)) over the plan, which
+Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piece.md](../../composer/docs/piece.md)) over the plan, which
 fills every open theme section in stages (invent, structure, motives, harmony, bass, melody, texture and the returns),
 and writes the piece.
 
-The command reads the plan file into a request for `composer_api_fill` ([api.md](api.md)) and writes the plan, MIDI, MusicXML, records and explanation the response holds, all or none. The text it prints is made from the response document alone; a plan no seed completes is the response `stuck` report, printed as the lines below.
+The command reads the plan file into a request for `composer_api_fill` ([api.md](../../composer/docs/api.md)) and writes the plan, MIDI, MusicXML, records and explanation the response holds, all or none. The text it prints is made from the response document alone; a plan no seed completes is the response `stuck` report, printed as the lines below.
 
 ## Input
 
@@ -29,21 +29,21 @@ with a message that says it is an analysis document. The document is recognized 
 | Option | Meaning |
 | --- | --- |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same plan and seed give the same output, byte for byte. |
-| `--check` | Analyze every theme section with the Ursatz Analyzer and reject a run whose analysis contradicts the plan: a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault in material the plan wrote. See [analyzer-check.md](analyzer-check.md). Off by default; with it the result says how many cadences and keys were heard as planned. |
+| `--check` | Analyze every theme section with the Ursatz Analyzer and reject a run whose analysis contradicts the plan: a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault in material the plan wrote. See [analyzer-check.md](../../composer/docs/analyzer-check.md). Off by default; with it the result says how many cadences and keys were heard as planned. |
 | `--candidates <n>` | Compose `n` candidates (1 to 32) from the seeds `--seed`, `--seed + 1`, ... and write the best: the most cadences and keys heard as planned, then the best score, then the lower seed. Every candidate is listed with its seed, its agreement and its score. Not combined with the seed retries: if no candidate completes the command fails. |
-| `--style <file>` | Prefer the harmony and melody closest to a style: a style model file the Ursatz Analyzer wrote (`--style-profile`). Overrides the plan's own style. The Analyzer's distance from the style is printed with the result, per dimension. See [style.md](style.md). |
+| `--style <file>` | Prefer the harmony and melody closest to a style: a style model file the Ursatz Analyzer wrote (`--style-profile`). Overrides the plan's own style. The Analyzer's distance from the style is printed with the result, per dimension. See [style.md](../../composer/docs/style.md). |
 | `--style-weight <n/d>` | How strongly the style is preferred (default `1/1`). Overrides the plan's weight; needs a style from here or the plan. |
-| `--style-without <category>` | Read the style without this category (repeatable, at most 8). Replaces the plan's own list when given; needs a style from here or the plan; an unknown name is exit 1. See [style.md](style.md). |
-| `--blend <file>` | A second style model file, blended with the style (`--style`, or the plan's style). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
+| `--style-without <category>` | Read the style without this category (repeatable, at most 8). Replaces the plan's own list when given; needs a style from here or the plan; an unknown name is exit 1. See [style.md](../../composer/docs/style.md). |
+| `--blend <file>` | A second style model file, blended with the style (`--style`, or the plan's style). The share of each of the two in each dimension is set by the weights below. See [style.md](../../composer/docs/style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
 | `--out <plan.json>` | The realized plan as JSON. |
 | `--layers <dir>` | The three layers of the realized plan: `plan.json`, `realization.json` and `readings/composer.json` ([cli-theme.md](cli-theme.md)). |
 | `--midi <file>`, `--musicxml <file>` | The piece, one part for each voice. The source material is not part of the piece, and a layered form sounds as its layers say. |
-| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
-| `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
+| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](../../composer/docs/export.md). |
+| `--plain-midi` | MIDI without track names and section markers. See [export.md](../../composer/docs/export.md). |
 | `--record <file.json>` | The records of the stages as one JSON array. Each element is `{"stage": <name>, "record": <fill record>}`, the record being the `fill_record_to_json` document of that stage (the seed, the attempts, the candidates and why each was chosen or rejected). A stage that did not run has no element. |
-| `--explain <file>` | Why each candidate was chosen or rejected, put together from the records, the Analyzer check and the rejected runs: JSON when the file name ends in `.json`, else text. Works with or without `--check` and `--style`. See [explain.md](explain.md). |
+| `--explain <file>` | Why each candidate was chosen or rejected, put together from the records, the Analyzer check and the rejected runs: JSON when the file name ends in `.json`, else text. Works with or without `--check` and `--style`. See [explain.md](../../composer/docs/explain.md). |
 | `--format <text\|json>` | How the result is printed on stdout. Text by default. |
 
 ## Seeds
@@ -71,7 +71,7 @@ returns heard 1 of 1 planned
 
 A section in which no theme is heard (a theme of 4 bars is seldom heard) is reported as `no theme heard`.
 
-A plan with given material ([middle-out.md](middle-out.md), placed with `plan --given-melody` and the like) is filled
+A plan with given material ([middle-out.md](../../composer/docs/middle-out.md), placed with `plan --given-melody` and the like) is filled
 around it. Before the run `fill` copies the Given spans the user placed, and after it compares them with the plan, span
 by span and byte for byte (the pitches and the times of the notes, the numerals of the chords). The result lists each
 run of them and says that they are unchanged:

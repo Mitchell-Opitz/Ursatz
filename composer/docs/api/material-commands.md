@@ -16,7 +16,7 @@ the same name with its path.
 
 ### `composer_api_progression(context, request_json, job, out)`
 
-A chord progression for one phrase, with a bass line ([cli-progression.md](../cli-progression.md)).
+A chord progression for one phrase, with a bass line ([cli-progression.md](../../../cli/docs/cli-progression.md)).
 
 | Member | Value |
 |---|---|
@@ -39,7 +39,7 @@ seed completes are `URSATZ_ERR_UNSATISFIABLE`. Schemas: `progression.request.sch
 
 ### `composer_api_counterpoint(context, request_json, job, out)`
 
-A counter-melody against a line in strict species ([cli-counterpoint.md](../cli-counterpoint.md)). The request is the motive
+A counter-melody against a line in strict species ([cli-counterpoint.md](../../../cli/docs/cli-counterpoint.md)). The request is the motive
 request of the line (any length) with:
 
 | Member | Value |
@@ -58,7 +58,7 @@ for), is `URSATZ_ERR_UNSATISFIABLE`. Progress per seed (`"counterpoint"`). Schem
 
 ### `composer_api_develop(context, request_json, job, out)`
 
-Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)). The request is the motive request with:
+Motives related to one motive, best first ([cli-develop.md](../../../cli/docs/cli-develop.md)). The request is the motive request with:
 
 | Member | Value |
 |---|---|
@@ -73,7 +73,7 @@ Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)).
 
 ### `composer_api_grow(context, request_json, job, out)`
 
-A theme grown from a motive ([cli-grow.md](../cli-grow.md)). The request is the motive request, or, in place of `input`,
+A theme grown from a motive ([cli-grow.md](../../../cli/docs/cli-grow.md)). The request is the motive request, or, in place of `input`,
 `corpus_passages` (the passages of a corpus like a passage, found by the Analyzer, best first; [schema](../../schema/api/corpus-passages.schema.json)): the first bar of a similar passage becomes the motive and the
 document reports it as `source` (not with `harmony`, `features` or `role`). The brief:
 

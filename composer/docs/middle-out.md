@@ -13,8 +13,8 @@ GivenResult plan_give_section(Plan *, NodeId section, const Plan *source, NodeId
 ```
 
 From the command line: `plan --given-melody <file> --at B:1`, `--given-progression "I IV V I" --at A:1 --cells 2` and
-`--given-bass <file> --at B` ([cli-plan.md](cli-plan.md)); `fill` says which spans were given and that they are
-unchanged ([cli-fill.md](cli-fill.md)).
+`--given-bass <file> --at B` ([cli-plan.md](../../cli/docs/cli-plan.md)); `fill` says which spans were given and that they are
+unchanged ([cli-fill.md](../../cli/docs/cli-fill.md)).
 
 ## Placing
 

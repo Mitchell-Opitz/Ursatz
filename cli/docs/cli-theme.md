@@ -1,14 +1,14 @@
 # theme command
 
-The `theme` command of the Composer command line, with options and output. Back to the [docs index](README.md).
+The `theme` command of `ursatz`, with options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file.json>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file>] [--layers <dir>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format <text|json>]
 ```
 
-Grows a theme from the motives of a request ([theme-request.md](theme-request.md)): up to 16 motives, which the slots of
+Grows a theme from the motives of a request ([theme-request.md](../../composer/docs/theme-request.md)): up to 16 motives, which the slots of
 the theme and its single ideas name, and the brief. It is `grow` over the same library (`grow_build_plan_checked` and `grow_run`, see
-[grow.md](grow.md)): the options after the request file, the seeds, `--check`, the files and the output are
+[grow.md](../../composer/docs/grow.md)): the options after the request file, the seeds, `--check`, the files and the output are
 [grow's](cli-grow.md), and a request with one motive gives the plan `grow` gives for the same options and seed.
 
 `--layers <dir>` (R-634) writes the first theme's three layers into `dir` (made, with `dir/readings`): `plan.json`, `realization.json`
@@ -27,14 +27,14 @@ The output of `grow`, with:
   `<idea>: <slot> slot, motive <id>, <source>`, with the chain of a registry form or an operator and the connection in percent;
 - JSON: a `brief` member, `{"tempo": {"qpm", "from"}, "mode": {"mode", "from"}, "density", "without"}` (`from` is
   `request`, `option` or `style`; `density` is the style's attacks per beat, or `null`), a `chords` member, the chords of the
-  request as read (`[{"bar", "text"}]`, [theme-request.md](theme-request.md#chords)), in each theme a `construction` member (`null` or `{"halves", "ideas", "extensions", "reason", "text"}`, [api/theme-and-piece.md](api/theme-and-piece.md)), at the root the construction the request gave, and in each theme a `slots` member,
+  request as read (`[{"bar", "text"}]`, [theme-request.md](../../composer/docs/theme-request.md#chords)), in each theme a `construction` member (`null` or `{"halves", "ideas", "extensions", "reason", "text"}`, [api/theme-and-piece.md](../../composer/docs/api/theme-and-piece.md)), at the root the construction the request gave, and in each theme a `slots` member,
   one entry for each idea: `{"idea", "slot", "motive", "source", "item", "chain", "connection"}`.
 
 `slot` is the function slot of the idea and `motive` the id of the request motive it is made from: the motive of the idea
 when `ideas` gives it one, else the motive of its slot. `source` is `motive` (the motive of the slot, exactly), `idea` (the
 motive `ideas` gives the idea, exactly), `registry` (a form of the variant registry, with its chain) or `operator` (a motive
 development operator, with its label). `item` is always `null`. `connection` is the form's connection score
-([grow-harmony.md](grow-harmony.md#motive-forms)) in percent, `null` for the basic idea, an idea with a motive of its own and the operators.
+([grow-harmony.md](../../composer/docs/grow-harmony.md#motive-forms)) in percent, `null` for the basic idea, an idea with a motive of its own and the operators.
 
 ## Exit status
 

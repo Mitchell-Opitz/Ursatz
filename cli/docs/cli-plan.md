@@ -1,17 +1,17 @@
 # plan command
 
-The `plan` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `plan` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer plan --form <name> --key <K> [--material major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
+ursatz plan --form <name> --key <key> --meter <n/m> --out <file> [--material <word>] [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--like-progression <numerals>]... [--accompaniment <pattern>] [--texture <name>] [--given-melody <file>]... [--given-progression <numerals>]... [--given-bass <file>]... [--at <L>[:<bar>]]... [--cells <n>]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--format <text|json>]
 ```
 
 Plans a whole short piece from a form template and writes the plan as JSON. Nothing is composed yet: the
 sections, their keys and cadences, the sections that return an earlier one and the motive are in the plan, every
 section open for [`fill`](cli-fill.md) to realize. It builds a request for `piece_build_plan`
-(`<ursatz_composer/piece.h>`, see [piece.md](piece.md)).
+(`<ursatz_composer/piece.h>`, see [piece.md](../../composer/docs/piece.md)).
 
-The command reads the options into a request for `composer_api_plan` ([api.md](api.md)), reads the motive and the given files into it, writes the plan the response holds and prints it. The motive and the given phrases arrive as text (a MIDI file through `composer_api_motive_from_midi` first), so the name shown for each is the file the command was given.
+The command reads the options into a request for `composer_api_plan` ([api.md](../../composer/docs/api.md)), reads the motive and the given files into it, writes the plan the response holds and prints it. The motive and the given phrases arrive as text (a MIDI file through `composer_api_motive_from_midi` first), so the name shown for each is the file the command was given.
 
 `--form`, `--key`, `--meter` and `--out` are required; `--form` may be left out when there is given material.
 
@@ -19,29 +19,29 @@ The command reads the options into a request for `composer_api_plan` ([api.md](a
 
 | Option | Meaning |
 | --- | --- |
-| `--form <name>` | `binary`, `rounded-binary`, `ternary`, `variations`, `loop` or `layered`. See [piece.md](piece.md) for the sections of each. |
+| `--form <name>` | `binary`, `rounded-binary`, `ternary`, `variations`, `loop` or `layered`. See [piece.md](../../composer/docs/piece.md) for the sections of each. |
 | `--key <K>` | The tonic (`D`, `F#`, `Bb`), with the material from `--material`, or the tonic and the mode in one argument (`"D minor"`, any case). |
 | `--material <major\|minor>` | The material when `--key` is a tonic only. Major by default. Not with a `--key` that names its mode. `--mode` is read as the same option. |
 | `--meter <n/m>` | 2/4, 3/4, 4/4 or 6/8. |
-| `--bars <n>` | The size of the piece in bars. Each form has its own sizes (binary 8 or 16, rounded binary 16 or 24, ternary 12 or 24, variations 16 to 72 in steps of 8, loop 8 or 16, layered 16 to 32 in steps of 8); a size it does not have is refused with the sizes it has. The default is the form's default size ([forms.md](forms.md)). |
+| `--bars <n>` | The size of the piece in bars. Each form has its own sizes (binary 8 or 16, rounded binary 16 or 24, ternary 12 or 24, variations 16 to 72 in steps of 8, loop 8 or 16, layered 16 to 32 in steps of 8); a size it does not have is refused with the sizes it has. The default is the form's default size ([forms.md](../../composer/docs/forms.md)). |
 | `--count <n>` | The variations (1 to 8) of `variations` or the layers (2 to 4) of `layered`, instead of `--bars`. With both, they must agree. Refused for the other forms. |
-| `--modulate` | Plan the keys and the cadences across the sections from the seed ([piece.md](piece.md)): a section may end in a closely related key, reached by a pivot chord, and the cadences follow. Without it every section is in the home key and the cadences are the form's. |
+| `--modulate` | Plan the keys and the cadences across the sections from the seed ([piece.md](../../composer/docs/piece.md)): a section may end in a closely related key, reached by a pivot chord, and the cadences follow. Without it every section is in the home key and the cadences are the form's. |
 | `--motive <file>` | The motive, loaded as for the [motive command](cli-motive.md) (a MIDI file, a MusicXML file, a note list or a motive JSON file), given the key and the meter. Without it the plan asks for one to be invented when it is filled. |
-| `--from-corpus <dir>` | The output directory of `ursatz-analyzer --corpus`, for `--like` and `--like-progression`. The passage used, its measures and its score are printed and kept in the plan as a `source` constraint. Exit 2 when no passage scores 1/2 or more, with nothing written. See [style.md](style.md). The chords of a matched document are read through the Analyzer's joined chord sequence (`analyzer_chord_sequence_from_document`), as the search reads them; a document written by another Analyzer or Ursatz version is read all the same and counted: `Warning: N stale documents in '<dir>'` on stderr. The command finds the passages with the Analyzer (`analyzer_corpus_passages_like`) and gives them to the API inline as `corpus_passages` (R-619). |
+| `--from-corpus <dir>` | The output directory of `ursatz corpus`, for `--like` and `--like-progression`. The passage used, its measures and its score are printed and kept in the plan as a `source` constraint. Exit 2 when no passage scores 1/2 or more, with nothing written. See [style.md](../../composer/docs/style.md). The chords of a matched document are read through the Analyzer's joined chord sequence (`analyzer_chord_sequence_from_document`), as the search reads them; a document written by another Analyzer or Ursatz version is read all the same and counted: `Warning: N stale documents in '<dir>'` on stderr. The command finds the passages with the Analyzer (`analyzer_corpus_passages_like`) and gives them to the API inline as `corpus_passages` (R-619). |
 | `--like <file>` | The motive, taken from the corpus: one bar of a passage similar to this MIDI or MusicXML passage, picked by the seed among the best, in `--key`. Instead of `--motive`. |
 | `--like-progression "<numerals>"` | A progression placed like `--given-progression` (with its `--at` and `--cells`), but with the chords of the passage of the corpus that best matches these numerals and that the plan can place in the key's mode. |
-| `--accompaniment <pattern>` | `block`, `arpeggiated`, `alberti` (not in 6/8), `oom-pah` or `any`. A layered form has an accompaniment in any case. See [accompaniment.md](accompaniment.md). |
+| `--accompaniment <pattern>` | `block`, `arpeggiated`, `alberti` (not in 6/8), `oom-pah` or `any`. A layered form has an accompaniment in any case. See [accompaniment.md](../../composer/docs/accompaniment.md). |
 | `--texture <name>` | The texture the accompaniment is to be heard as, as for [grow](cli-grow.md). Alone it implies `--accompaniment any`. |
-| `--given-melody <file>` | A phrase to place in the piece, from a MIDI file, a MusicXML file, a note list or a motive JSON file, of any length up to 64 notes (the motive limit of one bar is not asked). `fill` never changes it. Repeatable, up to 8 `--given-*` in all. See [middle-out.md](middle-out.md). |
+| `--given-melody <file>` | A phrase to place in the piece, from a MIDI file, a MusicXML file, a note list or a motive JSON file, of any length up to 64 notes (the motive limit of one bar is not asked). `fill` never changes it. Repeatable, up to 8 `--given-*` in all. See [middle-out.md](../../composer/docs/middle-out.md). |
 | `--given-progression "<I IV V I>"` | Roman numerals, one chord each, to place in the piece, separated by spaces, commas or bars. A numeral the harmony operators write, or an applied chord. |
 | `--given-bass <file>` | A bass line to place, read as `--given-melody` is, with no rests: its notes fill its bars. |
 | `--at <L>[:<bar>]` | Goes after the `--given-*` it places: the letter of the section (`B`, `A'`, as the plan prints it) and the bar of it, from 1 (the default), where the material starts. With no `--form`, the default is `B:1`. |
 | `--cells <n>` | After a `--given-progression`: the cells each chord lasts (a bar has 1 in 2/4 and 3/4, 2 in 4/4 and 6/8). The default is a bar. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The seed chooses the keys and cadences of `--modulate`; the same options and seed give the same plan. The seed that fills the plan is given to `fill`. |
-| `--style <file>` | A style model file from the Ursatz Analyzer (`--style-profile`). It must read; its path is kept in the plan as given, as a `style` constraint on the form node, so `fill` finds the file from where it is run. See [style.md](style.md). |
+| `--style <file>` | A style model file from the Ursatz Analyzer (`--style-profile`). It must read; its path is kept in the plan as given, as a `style` constraint on the form node, so `fill` finds the file from where it is run. See [style.md](../../composer/docs/style.md). |
 | `--style-weight <n/d>` | How strongly `fill` prefers the style (default `1/1`; needs `--style`). Kept in the plan. |
-| `--style-without <category>` | Read the style without this category (repeatable, at most 8; needs `--style`; an unknown name is exit 1). Kept in the plan as the `without` list of the `style` constraint, so `fill` reads the style the same way. See [style.md](style.md). |
-| `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
+| `--style-without <category>` | Read the style without this category (repeatable, at most 8; needs `--style`; an unknown name is exit 1). Kept in the plan as the `without` list of the `style` constraint, so `fill` reads the style the same way. See [style.md](../../composer/docs/style.md). |
+| `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](../../composer/docs/style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
 | `--out <plan.json>` | Where the plan is written, as `plan_to_json` writes it. |
@@ -50,7 +50,7 @@ The command reads the options into a request for `composer_api_plan` ([api.md](a
 ## Given material
 
 `--given-melody`, `--given-progression` and `--given-bass` place material in the plan from a bar of a section, as
-Given lane spans (`<ursatz_composer/given.h>`, [middle-out.md](middle-out.md)). Each is followed by its `--at`, which
+Given lane spans (`<ursatz_composer/given.h>`, [middle-out.md](../../composer/docs/middle-out.md)). Each is followed by its `--at`, which
 names the section by its letter and the bar of it (from 1) where the material starts; a progression may also be
 followed by `--cells`. The material is read after the plan is made, so it is refused if it would cross the section's
 end, cross a change of key, or overlap Given material of the same kind.
@@ -61,8 +61,8 @@ The plan takes a bar more of material for each `--given-melody`, for the motive 
 is made from.
 
 ```sh
-ursatz-composer plan --key C --meter 4/4 --given-melody phrase.txt --seed 1 --out piece.json
-ursatz-composer plan --form rounded-binary --key C --meter 4/4 --given-progression "I IV V I" --at A:1 --cells 2 --out piece.json
+ursatz plan --key C --meter 4/4 --given-melody phrase.txt --seed 1 --out piece.json
+ursatz plan --form rounded-binary --key C --meter 4/4 --given-progression "I IV V I" --at A:1 --cells 2 --out piece.json
 ```
 
 ## Output

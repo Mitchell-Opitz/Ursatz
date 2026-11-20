@@ -1,15 +1,15 @@
 # progression command
 
-The `progression` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `progression` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer progression --key <key> --meter <n/m> --bars <n> --cadence <type> [options]
+ursatz progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]
 ```
 
 Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for.
 Output is printed on stdout and can also be written as plan JSON, MIDI or MusicXML.
 
-The command is a wrapper of the [composer API](api.md): it reads its arguments into a request, calls `composer_api_progression` (and `composer_api_export` for the MIDI file of an alternative after the first), writes the plan, MIDI and MusicXML files the response holds, all or none, and prints the progression from the response document alone. `--list-schemas` is the request `{"list_schemas": true}`.
+The command is a wrapper of the [composer API](../../composer/docs/api.md): it reads its arguments into a request, calls `composer_api_progression` (and `composer_api_export` for the MIDI file of an alternative after the first), writes the plan, MIDI and MusicXML files the response holds, all or none, and prints the progression from the response document alone. `--list-schemas` is the request `{"list_schemas": true}`.
 
 ## Required flags
 
@@ -51,8 +51,8 @@ that is not an opening, add one bar at the start (a tonic chord the schema follo
 | `--out <file.json>` | Write the plan as JSON. |
 | `--midi <file>` | Write the bass line as MIDI. Needs the bass. |
 | `--musicxml <file>` | Write the bass line as MusicXML. Needs the bass. |
-| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](export.md). |
-| `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
+| `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: none. See [export.md](../../composer/docs/export.md). |
+| `--plain-midi` | MIDI without track names and section markers. See [export.md](../../composer/docs/export.md). |
 | `--format <text\|json>` | Stdout format. Default `text`. |
 | `--help` | Print usage. |
 
@@ -100,7 +100,7 @@ A failing command prints an `Error:` line on stderr and writes no files.
 ### 1. A minor-key authentic cadence
 
 ```sh
-ursatz-composer progression --key "D minor" --meter 4/4 --bars 8 --cadence PAC --seed 7
+ursatz progression --key "D minor" --meter 4/4 --bars 8 --cadence PAC --seed 7
 ```
 
 ```
@@ -119,7 +119,7 @@ cadence PAC (heard: perfect-authentic)
 ### 2. A schema, written to files
 
 ```sh
-ursatz-composer progression --key "G major" --meter 4/4 --bars 8 --cadence PAC --seed 2 \
+ursatz progression --key "G major" --meter 4/4 --bars 8 --cadence PAC --seed 2 \
     --schema romanesca --out phrase.json --midi phrase.mid
 ```
 
@@ -145,7 +145,7 @@ wrote phrase.mid
 ### 3. Triple meter, embellished, as JSON
 
 ```sh
-ursatz-composer progression --key "A minor" --meter 3/4 --bars 6 --cadence HC --seed 5 \
+ursatz progression --key "A minor" --meter 3/4 --bars 6 --cadence HC --seed 5 \
     --embellish medium --format json
 ```
 
@@ -156,7 +156,7 @@ ursatz-composer progression --key "A minor" --meter 3/4 --bars 6 --cadence HC --
 ### Error
 
 ```sh
-ursatz-composer progression --key "D minor" --meter 4/4 --bars 1 --cadence PAC
+ursatz progression --key "D minor" --meter 4/4 --bars 1 --cadence PAC
 ```
 
 ```

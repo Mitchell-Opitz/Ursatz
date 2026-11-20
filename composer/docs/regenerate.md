@@ -90,7 +90,7 @@ the section must be Given (and there must be one), else `REGENERATE_ERR_BAD_TARG
 harmony spans that are not Given. A melody that is only partly Given is refused because regenerating the harmony then
 writes the melody around the given part again, and the melody stage often cannot join it. Its signature is the hash of
 the harmony lane alone (each span's place and numeral, in time order), so two harmonizations are different only when
-their chords are. See [cli-variations.md](cli-variations.md) for the commands.
+their chords are. See [cli-variations.md](../../cli/docs/cli-variations.md) for the commands.
 
 Variations are reseedings of `regenerate`: nothing yet ornaments a melody or reharmonizes with substitutions.
 
@@ -99,7 +99,7 @@ with seed 3, for each config seed 1 to 20. All 80 were kept; the test fails only
 
 ## Pieces
 
-A game loop (`piece`, [cli-piece.md](cli-piece.md)) is regenerated section by section with `piece --from ... --regenerate`
+A game loop (`piece`, [cli-piece.md](../../cli/docs/cli-piece.md)) is regenerated section by section with `piece --from ... --regenerate`
 and `--variations`. The command adds three things to `plan_regenerate_all`, from `<ursatz_composer/piece_reopen.h>`:
 
 - `piece_section_find` finds a section by the id of the request (its PIECE_PART constraint).

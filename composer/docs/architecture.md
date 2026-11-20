@@ -29,7 +29,7 @@ All four are built by the root `CMakeLists.txt`, in that order. The Composer hea
 | (`library/plan/`) | The piece plan is the library's (R-625): `Plan`, its lanes, states, section descriptions, form record, constraints (`plan_constraint_kinds.c`: one row per kind holds its name, validity, writer and reader), edits (`plan_clone`, `plan_lane_span_reopen`), the producer stamp and reader hooks of the JSON codec. The Composer writes plans with `composer_plan_producer` and reads them with `composer_plan_read_hooks` | [plan.md](../../library/docs/modules/plan.md), [plan-format.md](../../library/docs/modules/plan-format.md) |
 | `src/<module>/` | One folder for each module of the layers below (R-636) | [structure.md](structure.md), [Layers](#layers) |
 | `forms/` | The built-in forms, one JSON document each, embedded at build time by `cmake/EmbedForms.cmake` | [forms.md](forms.md) |
-| `cli/` | The `ursatz-composer` command | [cli.md](cli.md) |
+| `cli/` | The `ursatz-composer` command | [cli.md](../../cli/docs/README.md) |
 | `schema/` | The plan schema and the API request and response schemas | [plan-format.md](../../library/docs/modules/plan-format.md) |
 
 The full table with every directory is in [structure.md](structure.md).
@@ -72,7 +72,7 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 | `composer_api.h` | `composer_api_theme`, `composer_api_piece`, `composer_api_piece_variations` | Grow a theme, compose a piece, vary its lanes | [api/theme-and-piece.md](api/theme-and-piece.md) |
 | `composer_api.h` | `composer_api_plan`, `composer_api_fill`, `composer_api_lock`, `composer_api_regenerate`, `composer_api_variations`, `composer_api_harmonize` | The plan workflow | [api/plan-workflow.md](api/plan-workflow.md) |
 | `composer_api.h` | `composer_api_progression`, `composer_api_counterpoint`, `composer_api_develop`, `composer_api_grow` | The material commands | [api/material-commands.md](api/material-commands.md) |
-| CLI | `export`, `progression`, `motive`, `develop`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `variations`, `harmonize` | One command for each entry, a client of the API | [cli.md](cli.md) |
+| CLI | `export`, `progression`, `motive`, `develop`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `variations`, `harmonize` | One command for each entry, a client of the API | [cli.md](../../cli/docs/README.md) |
 
 ## Version constants and schemas
 

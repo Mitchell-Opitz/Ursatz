@@ -1,9 +1,9 @@
 # develop command
 
-The `develop` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+The `develop` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz-composer develop <motive-input> --op <name> [--seed <n>] [--suggest <n>] [--meter <n/m>] [--key <key>] [options]
+ursatz develop <input> --op <name> [--input-format <format>] [--meter <n/m>] [--key <key>] [--seed <n>] [--suggest <n>] [--by <n>] [--degree <n>] [--tonal] [--axis <pitch>] [--interval <n>] [--amount <n>] [--keep-contour] [--position <where>] [--length <n>] [--min <n>] [--drop <n>] [--keep-rhythm] [--ratio <n:m>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi]
 ```
 
 Makes motives related to the one in `<motive-input>` and prints them, best first, each as a note list
@@ -11,10 +11,10 @@ with its recognizability score. The best one can also be written, after the sour
 MusicXML. The command runs the motivic development operators (`<ursatz_composer/motive_develop.h>`)
 on a small plan: the source is Given, and an open motive node after it asks for the development.
 
-The command is a wrapper of the [composer API](api.md): it reads its arguments and the input file into a request (a MIDI file through `composer_api_motive_from_midi` first), calls `composer_api_develop`, prints the candidates from the response document and writes the MIDI file and the MusicXML the response holds.
+The command is a wrapper of the [composer API](../../composer/docs/api.md): it reads its arguments and the input file into a request (a MIDI file through `composer_api_motive_from_midi` first), calls `composer_api_develop`, prints the candidates from the response document and writes the MIDI file and the MusicXML the response holds.
 
 The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note
-list or a motive JSON file, with `--meter`, `--key` and `--format` meaning the same.
+list or a motive JSON file, with `--meter`, `--key` and `--input-format` meaning the same.
 
 ## Operations
 
@@ -59,7 +59,7 @@ transpose, invert, retrograde, interval change, fragment, liquidate, augment and
 passes its options to the operators as a relation step on the `motive_ref` of the open motive node
 (`--op fragment --position leading --length 3` asks for `fragment position=1 length=3`; an option left out is
 an open parameter of the step, which the operator draws from the seed), and `motive_develop` takes that step.
-The relation steps and their text are in [plan-constraints.md](plan-constraints.md#motive-relation-steps). A tonal step
+The relation steps and their text are in [plan-constraints.md](../../composer/docs/plan-constraints.md#motive-relation-steps). A tonal step
 is counted in the key's scale: a note on a scale degree stays on a degree (F and B in C major never
 become F sharp or C sharp), and a pitch outside the scale keeps its place, raised, in its step.
 
@@ -111,7 +111,7 @@ two tied notes (`C4:q~ C4:s`); a rest is split into rests.
 
 `--midi <file>` and `--musicxml <file>` write the source followed by the best candidate, with the
 meter and, when there is one, the key. Only the best candidate is written. `--tempo <bpm>` writes a tempo in both
-files and `--plain-midi` leaves the track names and section markers out of the MIDI ([export.md](export.md)).
+files and `--plain-midi` leaves the track names and section markers out of the MIDI ([export.md](../../composer/docs/export.md)).
 
 ## Exit status
 
