@@ -1,0 +1,73 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "project",
+  "summary": "Projects: the folders that hold items.",
+  "commands": [
+    {
+      "name": "project.create",
+      "summary": "Make a project",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "help": "The project's name."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "help": "A short description."
+        }
+      ],
+      "one_of": [],
+      "reply": "The project.",
+      "job": null,
+      "example": "project.create name demo"
+    },
+    {
+      "name": "project.update",
+      "summary": "Rename a project or change its description",
+      "target": "project",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "help": "The new name."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "help": "The new description."
+        }
+      ],
+      "one_of": [],
+      "reply": "The project.",
+      "job": null,
+      "example": "project.update project:prj-1 name \"My demo\""
+    },
+    {
+      "name": "project.delete",
+      "summary": "Delete a project",
+      "target": "project",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "project.delete project:prj-1"
+    }
+  ]
+}

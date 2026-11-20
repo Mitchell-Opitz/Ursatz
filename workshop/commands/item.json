@@ -1,0 +1,477 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "item",
+  "summary": "Items: the motifs, themes and pieces of a project, their versions and compositions.",
+  "commands": [
+    {
+      "name": "item.create",
+      "summary": "Make a motif, theme or piece with its first version",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "type",
+          "type": "enum",
+          "required": true,
+          "help": "The kind of item.",
+          "values": [
+            "motif",
+            "theme",
+            "piece"
+          ]
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "help": "The item's name."
+        },
+        {
+          "name": "project_id",
+          "type": "string",
+          "required": true,
+          "help": "The project that holds it."
+        },
+        {
+          "name": "body",
+          "type": "object",
+          "required": true,
+          "help": "The version's body: a motif, theme or piece body (formats ursatz-motif-body, ursatz-theme-body, ursatz-piece-body)."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "What the first version says; \"Created\" for a motif or theme when absent."
+        }
+      ],
+      "one_of": [],
+      "reply": "The item; analysis_error when the Composer could not analyze a motif.",
+      "job": null,
+      "example": "item.create type motif name hook project_id prj-1\n  body uses []\n    motif role melodic form full notes \"C4:e D4:e G4:q\""
+    },
+    {
+      "name": "item.update",
+      "summary": "Rename an item or move it to another project",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "help": "The new name."
+        },
+        {
+          "name": "project_id",
+          "type": "string",
+          "required": false,
+          "help": "The project it moves to."
+        }
+      ],
+      "one_of": [],
+      "reply": "The item.",
+      "job": null,
+      "example": "item.update item:mot-1@v1 name theme-a"
+    },
+    {
+      "name": "item.delete",
+      "summary": "Delete an item and its variants",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object; used_by lists the items that use it when the delete is refused.",
+      "job": null,
+      "example": "item.delete item:mot-1@v1"
+    },
+    {
+      "name": "item.save",
+      "summary": "Save the next version of an item",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "body",
+          "type": "object",
+          "required": true,
+          "help": "The version's body: a motif, theme or piece body (formats ursatz-motif-body, ursatz-theme-body, ursatz-piece-body)."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "What changed; required for a motif or theme."
+        }
+      ],
+      "one_of": [],
+      "reply": "The item; analysis_error when the Composer could not analyze a motif.",
+      "job": null,
+      "example": "item.save item:mot-1@v1 note \"Shorter\"\n  body uses []\n    motif role melodic form full notes \"C4:e D4:e G4:q\""
+    },
+    {
+      "name": "item.reanalyze",
+      "summary": "Analyze a motif again and save the result as a version",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "The item.",
+      "job": null,
+      "example": "item.reanalyze item:mot-1@v1"
+    },
+    {
+      "name": "item.compose",
+      "summary": "Compose a theme or piece into a new version",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "seed",
+          "type": "integer",
+          "required": false,
+          "help": "The seed of the composition; one is drawn when absent.",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        {
+          "name": "update_uses",
+          "type": "boolean",
+          "required": false,
+          "help": "Move every updated use to its source's current version first."
+        }
+      ],
+      "one_of": [],
+      "reply": "The job that composes the item.",
+      "job": "theme or piece",
+      "example": "item.compose item:pce-1@v2 seed 1"
+    },
+    {
+      "name": "item.regenerate",
+      "summary": "Write one section of a composed piece again as the next version",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The composed version to work from.",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        {
+          "name": "section_id",
+          "type": "string",
+          "required": true,
+          "help": "The section to write again."
+        },
+        {
+          "name": "lane",
+          "type": "string",
+          "required": false,
+          "help": "The lane to write again; every lane when absent."
+        },
+        {
+          "name": "seed",
+          "type": "integer",
+          "required": false,
+          "help": "The seed of the composition; one is drawn when absent.",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      ],
+      "one_of": [],
+      "reply": "The job that writes the section.",
+      "job": "regenerate",
+      "example": "item.regenerate item:pce-1@v3 version 3 section_id a seed 2"
+    },
+    {
+      "name": "item.variations",
+      "summary": "Make variations of a section of a composed piece",
+      "target": "item",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The composed version to work from.",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        {
+          "name": "section_id",
+          "type": "string",
+          "required": true,
+          "help": "The section to vary."
+        },
+        {
+          "name": "lane",
+          "type": "string",
+          "required": true,
+          "help": "The lane to vary."
+        },
+        {
+          "name": "count",
+          "type": "integer",
+          "required": true,
+          "help": "How many variations.",
+          "minimum": 1,
+          "maximum": 8
+        },
+        {
+          "name": "seed",
+          "type": "integer",
+          "required": false,
+          "help": "The seed of the composition; one is drawn when absent.",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      ],
+      "one_of": [],
+      "reply": "The job that makes the set of variations.",
+      "job": "variations",
+      "example": "item.variations item:pce-1 version 3 section_id a lane melody count 3"
+    },
+    {
+      "name": "item.choose",
+      "summary": "Make one variation of a set the next version",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The composed version the set belongs to.",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        {
+          "name": "set",
+          "type": "integer",
+          "required": true,
+          "help": "The set of variations.",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        {
+          "name": "index",
+          "type": "integer",
+          "required": true,
+          "help": "Which variation of the set, from 1.",
+          "minimum": 1,
+          "maximum": 99
+        }
+      ],
+      "one_of": [],
+      "reply": "The job that makes the version.",
+      "job": "choose",
+      "example": "item.choose item:pce-1@v3 version 3 set 1 index 2"
+    },
+    {
+      "name": "item.set-op-checks",
+      "summary": "Replace the marks of Try every operation",
+      "target": "item",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "checks",
+          "type": "object",
+          "required": true,
+          "help": "The marks by operation name: each {verdict (works or wrong), comment, seed, notes_text, date}; at most 64."
+        }
+      ],
+      "one_of": [],
+      "reply": "The stored marks.",
+      "job": null,
+      "example": "item.set-op-checks item:mot-1\n  checks\n    invert verdict works comment ok seed 1 notes_text \"C4:e\" date \"2026-11-20\""
+    },
+    {
+      "name": "item.save-variant",
+      "summary": "Save one candidate of the variants run as a derived motif",
+      "target": "item",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "variant",
+          "type": "object",
+          "required": true,
+          "help": "A candidate from the variants query: chain, seed, kind, derivation and motive."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "help": "The new motif's name; one is made from the operations when absent."
+        },
+        {
+          "name": "flag",
+          "type": "enum",
+          "required": false,
+          "help": "The new motif's flag; unflagged when absent.",
+          "values": [
+            "approved",
+            "rejected",
+            "unflagged"
+          ]
+        }
+      ],
+      "one_of": [],
+      "reply": "The new item.",
+      "job": null,
+      "example": "item.save-variant item:mot-1 flag approved\n  variant seed 1 kind variant derivation \"inversion\""
+    },
+    {
+      "name": "item.flag",
+      "summary": "Flag a derived motif as approved, rejected or unflagged",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "flag",
+          "type": "enum",
+          "required": true,
+          "help": "The flag.",
+          "values": [
+            "approved",
+            "rejected",
+            "unflagged"
+          ]
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": false,
+          "help": "How the derived motif relates to its source.",
+          "values": [
+            "exact",
+            "motive-form",
+            "variant"
+          ]
+        }
+      ],
+      "one_of": [],
+      "reply": "The item.",
+      "job": null,
+      "example": "item.flag item:mot-2@v1 flag approved"
+    },
+    {
+      "name": "item.promote",
+      "summary": "Save a variant as a motif of its own",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "help": "The motif's name."
+        },
+        {
+          "name": "project_id",
+          "type": "string",
+          "required": true,
+          "help": "The project it moves to."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note; \"Saved as new motif\" when absent."
+        }
+      ],
+      "one_of": [],
+      "reply": "The item.",
+      "job": null,
+      "example": "item.promote item:mot-2@v1 name \"New hook\" project_id prj-1"
+    },
+    {
+      "name": "item.link-form",
+      "summary": "Record a motif as a form of another motif",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "source",
+          "type": "object",
+          "required": true,
+          "help": "The motif it is a form of: {item, version}."
+        },
+        {
+          "name": "recognition",
+          "type": "object",
+          "required": true,
+          "help": "A recognition from the recognize query that found a chain (found true, derivation, chain)."
+        }
+      ],
+      "one_of": [],
+      "reply": "The item.",
+      "job": null,
+      "example": "item.link-form item:mot-3@v1\n  source item mot-1 version 2\n  recognition found true derivation \"inversion\""
+    },
+    {
+      "name": "item.reroll",
+      "summary": "Run a derived motif's chain again with a new seed",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "The job that makes the new version.",
+      "job": "reroll",
+      "example": "item.reroll item:mot-2@v1"
+    },
+    {
+      "name": "item.update-use",
+      "summary": "Move an item's use of a source to the source's current version",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "source_id",
+          "type": "string",
+          "required": true,
+          "help": "The source item the use names."
+        }
+      ],
+      "one_of": [],
+      "reply": "The item.",
+      "job": null,
+      "example": "item.update-use item:thm-1@v1 source_id mot-1"
+    }
+  ]
+}

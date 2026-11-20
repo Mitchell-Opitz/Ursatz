@@ -1,0 +1,126 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "collection",
+  "summary": "Collections: named sets of library pieces.",
+  "commands": [
+    {
+      "name": "collection.create",
+      "summary": "Make a collection of library pieces",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "help": "The collection's name."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "help": "A short description."
+        },
+        {
+          "name": "id",
+          "type": "string",
+          "required": false,
+          "help": "An id for the collection; one is made when absent."
+        }
+      ],
+      "one_of": [],
+      "reply": "The collection: id, name, description, piece_count, updated_at.",
+      "job": null,
+      "example": "collection.create name Preludes description \"Short pieces\""
+    },
+    {
+      "name": "collection.update",
+      "summary": "Rename a collection or change its description",
+      "target": "collection",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "help": "The new name."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "help": "The new description."
+        }
+      ],
+      "one_of": [],
+      "reply": "The collection: id, name, description, piece_count, updated_at.",
+      "job": null,
+      "example": "collection.update collection:col-1 name Fugues"
+    },
+    {
+      "name": "collection.delete",
+      "summary": "Delete a collection (its pieces stay)",
+      "target": "collection",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "collection.delete collection:col-1"
+    },
+    {
+      "name": "collection.add-pieces",
+      "summary": "Add library pieces to a collection",
+      "target": "collection",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "piece_id",
+          "type": "string",
+          "required": false,
+          "help": "One piece to add."
+        },
+        {
+          "name": "piece_ids",
+          "type": "array",
+          "required": false,
+          "help": "Pieces to add, 1 to 5000; wins over piece_id.",
+          "items": "string"
+        }
+      ],
+      "one_of": [],
+      "reply": "added: how many joined; already: how many were in it.",
+      "job": null,
+      "example": "collection.add-pieces collection:col-1 piece_ids [piece-1 piece-2]"
+    },
+    {
+      "name": "collection.remove-piece",
+      "summary": "Take a piece out of a collection",
+      "target": "collection",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "piece_id",
+          "type": "string",
+          "required": true,
+          "help": "The piece to remove."
+        }
+      ],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "collection.remove-piece collection:col-1 piece_id piece-1"
+    }
+  ]
+}

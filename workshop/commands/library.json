@@ -1,0 +1,113 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "library",
+  "summary": "Library pieces: import, change, delete and analyze again the pieces a person uploaded.",
+  "commands": [
+    {
+      "name": "library.import",
+      "summary": "Import a MIDI or MusicXML file as a library piece",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": true,
+      "params": [
+        {
+          "name": "filename",
+          "type": "string",
+          "required": false,
+          "help": "The name of the uploaded file, kept as the piece's file name."
+        }
+      ],
+      "one_of": [],
+      "reply": "The job that imports and analyzes the file; its result holds the piece id.",
+      "job": "analysis",
+      "example": "library.import filename song.mid file ./song.mid"
+    },
+    {
+      "name": "library.update",
+      "summary": "Change a piece's file name, composer, source, tags or notation",
+      "target": "piece",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "filename",
+          "type": "string",
+          "required": false,
+          "help": "The new file name; not empty."
+        },
+        {
+          "name": "composer",
+          "type": "string",
+          "required": false,
+          "help": "The composer's name."
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "required": false,
+          "help": "Where the piece comes from."
+        },
+        {
+          "name": "tags",
+          "type": "array",
+          "required": false,
+          "help": "Replaces the piece's tags.",
+          "items": "string"
+        },
+        {
+          "name": "add_tags",
+          "type": "array",
+          "required": false,
+          "help": "Tags to add.",
+          "items": "string"
+        },
+        {
+          "name": "remove_tags",
+          "type": "array",
+          "required": false,
+          "help": "Tags to remove.",
+          "items": "string"
+        },
+        {
+          "name": "notation",
+          "type": "object",
+          "required": false,
+          "help": "How the score is read: meter, value_scale and pickup, each a string; null clears it."
+        }
+      ],
+      "one_of": [],
+      "reply": "The piece as the Library shows it.",
+      "job": null,
+      "example": "library.update piece:piece-1 composer Bach tags [fugue organ]"
+    },
+    {
+      "name": "library.delete",
+      "summary": "Delete a library piece and its files",
+      "target": "piece",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "library.delete piece:piece-1"
+    },
+    {
+      "name": "library.reanalyze",
+      "summary": "Analyze a library piece again from its stored source",
+      "target": "piece",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "The job that analyzes the piece again.",
+      "job": "analysis",
+      "example": "library.reanalyze piece:piece-1"
+    }
+  ]
+}

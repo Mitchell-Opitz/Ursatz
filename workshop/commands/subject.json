@@ -1,0 +1,217 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "subject",
+  "summary": "Subjects: the characters, places, ideas and notes items and pieces are linked to.",
+  "commands": [
+    {
+      "name": "subject.create",
+      "summary": "Make a subject",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "help": "The subject's name."
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "help": "What the subject is.",
+          "values": [
+            "character",
+            "place",
+            "idea",
+            "note"
+          ]
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "A note about it."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject.",
+      "job": null,
+      "example": "subject.create name hero kind character"
+    },
+    {
+      "name": "subject.update",
+      "summary": "Change a subject's name, kind or note",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "help": "The new name."
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": false,
+          "help": "The new kind.",
+          "values": [
+            "character",
+            "place",
+            "idea",
+            "note"
+          ]
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The new note."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject.",
+      "job": null,
+      "example": "subject.update subject:sub-1 note \"The lead\""
+    },
+    {
+      "name": "subject.delete",
+      "summary": "Delete a subject",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "subject.delete subject:sub-1"
+    },
+    {
+      "name": "subject.link-item",
+      "summary": "Link a subject to an item",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "item_id",
+          "type": "string",
+          "required": true,
+          "help": "The item to link."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject; already says it was linked.",
+      "job": null,
+      "example": "subject.link-item subject:sub-1 item_id mot-1"
+    },
+    {
+      "name": "subject.unlink-item",
+      "summary": "Take a subject's link to an item away",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "item_id",
+          "type": "string",
+          "required": true,
+          "help": "The item to unlink."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject.",
+      "job": null,
+      "example": "subject.unlink-item subject:sub-1 item_id mot-1"
+    },
+    {
+      "name": "subject.link-piece",
+      "summary": "Link a subject to a library piece",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "piece_id",
+          "type": "string",
+          "required": true,
+          "help": "The piece to link."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject; already says it was linked.",
+      "job": null,
+      "example": "subject.link-piece subject:sub-1 piece_id piece-1"
+    },
+    {
+      "name": "subject.unlink-piece",
+      "summary": "Take a subject's link to a library piece away",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "piece_id",
+          "type": "string",
+          "required": true,
+          "help": "The piece to unlink."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject.",
+      "job": null,
+      "example": "subject.unlink-piece subject:sub-1 piece_id piece-1"
+    },
+    {
+      "name": "subject.relate",
+      "summary": "Relate a subject to another subject",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "other_id",
+          "type": "string",
+          "required": true,
+          "help": "The other subject."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject; already says it was related.",
+      "job": null,
+      "example": "subject.relate subject:sub-1 other_id sub-2"
+    },
+    {
+      "name": "subject.unrelate",
+      "summary": "Take a subject's relation to another subject away",
+      "target": "subject",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "other_id",
+          "type": "string",
+          "required": true,
+          "help": "The other subject."
+        }
+      ],
+      "one_of": [],
+      "reply": "The subject.",
+      "job": null,
+      "example": "subject.unrelate subject:sub-1 other_id sub-2"
+    }
+  ]
+}

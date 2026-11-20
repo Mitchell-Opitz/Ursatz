@@ -1,0 +1,86 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "style",
+  "summary": "Styles: style models built from library pieces or a brief.",
+  "commands": [
+    {
+      "name": "style.build",
+      "summary": "Build a style model from pieces, a collection, a filter or a brief",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "help": "The style's name."
+        },
+        {
+          "name": "filter",
+          "type": "object",
+          "required": false,
+          "help": "Pieces by composer, source and tag: each a string or null."
+        },
+        {
+          "name": "collection_id",
+          "type": "string",
+          "required": false,
+          "help": "A collection whose pieces make the style."
+        },
+        {
+          "name": "piece_ids",
+          "type": "array",
+          "required": false,
+          "help": "The pieces that make the style, 1 to 5000.",
+          "items": "string"
+        },
+        {
+          "name": "brief",
+          "type": "object",
+          "required": false,
+          "help": "A written brief the style is made from."
+        }
+      ],
+      "one_of": [
+        [
+          "filter",
+          "collection_id",
+          "piece_ids",
+          "brief"
+        ]
+      ],
+      "reply": "The job that builds the style; its result holds the style.",
+      "job": "style",
+      "example": "style.build name \"Bach set\"\n  filter composer Bach"
+    },
+    {
+      "name": "style.rebuild",
+      "summary": "Build a style again from its source",
+      "target": "style",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "The job that builds the style again.",
+      "job": "style",
+      "example": "style.rebuild style:sty-1"
+    },
+    {
+      "name": "style.delete",
+      "summary": "Delete a style",
+      "target": "style",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "style.delete style:sty-1"
+    }
+  ]
+}
