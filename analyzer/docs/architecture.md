@@ -67,7 +67,9 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 | `URSATZ_ANALYZER_VERSION`, `analyzer_version()` | `<ursatz_analyzer_internal/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-producer-key) |
 | `analyzer_producer_key()` | `<ursatz_analyzer_internal/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-producer-key) |
 | `ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 2 | [text-export.md](text-export.md) |
-| `ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 12 | [versions.md](analysis-document/versions.md) |
+| `ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 13 | [versions.md](analysis-document/versions.md) |
+| `ANALYZER_CORPUS_INDEX_VERSION`, `ANALYZER_LINK_CACHE_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 2 each | [corpus.md](corpus.md) |
+| `ANALYZER_MOTIVE_LINKS_VERSION`, `ANALYZER_SIMILAR_VERSION` | `include/ursatz_analyzer/analyzer_api.h` | 1 each | [motive-links.md](motive-links.md), [similar-material.md](similar-material.md) |
 | analysis document schema | `schema/analysis-document.v13.schema.json` | v13 | [analysis-document.md](analysis-document.md) |
 | corpus index, motive link cache schemas | `schema/corpus-index.v2.schema.json`, `schema/motive-link-cache.v2.schema.json` | v2 each |
 | motive links, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |

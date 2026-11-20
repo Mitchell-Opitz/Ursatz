@@ -47,8 +47,8 @@ line for each section (`<id> <part> <letter> start <time>, <n> beats, cadence <t
 score, the seam rules held (loop only), the number of planned items the Analyzer agreed with (with `--check`) and the style
 distance (with a style).
 
-JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"start", "end"}, "versions": {"loop": V, "ending": V},
-"files": [...]}`, times as `"n/d"` whole notes, and each version V
+JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"start", "end", "text", "length_text"}, "versions": {"loop": V, "ending": V},
+"files": [...]}`, times as `"n/d"` whole notes (the loop's `text` reads `"bar 3 to bar 7"` and `length_text` `"4 bars"` in the request's meter, API 4.2), and each version V
 `{"plan", "sections", "score", "seam", "analyzer_check", "style_distance"}`:
 
 - `plan`: the path written with `--out` / `--ending-out`, else `null`;

@@ -2,11 +2,15 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
-## Unreleased (phase P62)
+## Unreleased (phase P63)
 
 API 4.2 (R-651, P63 B16): each section of a form in `forms` has `labels` (`role`, `return`, `keys`, `figure`) and each size a `label`; each row of a piece version has `start_text` (`"bar 3"`, `"bar 3 beat 2"`) and `length_text` (`"2 bars"`, `"1 bar 2 beats"`) in the request's meter, the loop region has `text` and `length_text`, and the seam has `rules` (`id`, `label`, `ok`). The vocabulary's limits have `construction_bars` (`{"min": 3, "max": 16}`) and `construction_pickup` (`false`). The members are additions: a plan and every composed file are as before.
 
 API 4.1 (R-649, P63 B14): the vocabulary lists `theme_developments` (`value`, `label`, `help`) and `lanes` and the limits `theme_motives` (16), `theme_extensions` (3), `piece_variations` (8) and `harmony_cells` (8), so a client holds no copy of them.
+
+API 4.0 (R-639, P63 B2): the Composer answers with the common status set. Every entry returns `UrsatzStatus` with an `UrsatzError` (`message` and `path`); `ComposerStatus`, `ComposerError` and `ComposerJob` are gone and a long call takes the common `UrsatzJob` (`<common/job.h>`: progress and cancelled callbacks). A request says `"api_version": 4` or none; the versions response names `producer_key` where it had `ursatz_commit`. The two `export_failure` copies are one `api_export_failure`: a motive export refusal is `REQUEST` at `/midi` or `/musicxml`, its message prefixed with "the motive cannot be exported". `composer_api.h` includes `<common/status.h>` and `<common/job.h>`. The Composer exports only its API (27 names, `cmake/UrsatzExports.cmake`, R-640) and calls `common/` for its files, JSON, strings and hash (R-638).
+
+## Phase P62
 
 The Composer's hearing gives readings, and the critic reads them (R-633, B12; A20261115-655). `hearing_section_reading` and `hearing_piece_reading` (`check/hearing.c`) build a reading of a heard span with `reading_build` over the span's chain run: source the Composer (its composition key and the snapshot's hash), target `w1`, `m1` and no digest until `hearing_piece_reading_of` names it, evidence the performer note ids of the work (`piano-n<plan note id>`, `piano-e<n>` for a note with no plan note: `rendered_plan_note_id`). The analyzer check (`analyzer_check`), the form hearing (`form_hear`), the key check and the style measure read the reading's claims in place of the chain's result; `hearing_event_of_note` maps a performer note id back to a rendered event. `tools/ci/check-hearing.sh` also fails on `reading_build` or a chain result accessor outside `check/hearing.c`. `candidate_create` lost its two Interpretation arrays with the claim machinery (B11). Composed output does not move (the gate and the piece sweep hold). New: `test_hearing_reading`.
 
