@@ -2,6 +2,7 @@
 # two apps and below the GUI. Sources include <ursatz_workshop/...> and the headers beside them.
 add_library(ursatz_workshop_engine STATIC
     src/base/command_context.c
+    src/base/events_hub.c
     src/base/http_status.c
     src/base/knowledge.c
     src/base/last_error.c
@@ -52,6 +53,7 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_library.c
     src/coordinator/data_lock.c
     src/coordinator/dispatch.c
+    src/coordinator/events.c
     src/coordinator/settings.c
     src/coordinator/workshop.c
 )

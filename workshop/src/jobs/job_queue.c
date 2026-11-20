@@ -3,6 +3,7 @@
 #include "job_queue.h"
 
 #include "base/command_context.h"
+#include "base/events_hub.h"
 
 #include <pthread.h>
 #include <stdint.h>
@@ -32,6 +33,7 @@ typedef struct Job {
   void *input;
   void (*free_input)(void *);
   UrsatzJob composer_job;
+  struct timespec last_progress_event; /* when the last job-progress event went out (at most 4 a second) */
   WorkshopCommandContext context; /* the command that queued it, set again on the worker that runs it */
   bool has_context;
   time_t finished_at;
@@ -139,13 +141,68 @@ static void prune_locked(void) {
   }
 }
 
+/* job-done {id, kind, state, http_status}; the job's fields are copied while the queue is locked and the event goes out after it is not. */
+typedef struct {
+  char id[WORKSHOP_JOB_ID_BYTES];
+  char kind[WORKSHOP_JOB_KIND_BYTES];
+  char stage[WORKSHOP_JOB_STAGE_BYTES];
+  const char *state;
+  unsigned done;
+  unsigned total;
+  int http_status;
+} JobEvent;
+
+static void job_event_fill(JobEvent *event, const Job *job) {
+  snprintf(event->id, sizeof(event->id), "%s", job->id);
+  snprintf(event->kind, sizeof(event->kind), "%s", job->kind);
+  snprintf(event->stage, sizeof(event->stage), "%s", job->stage);
+  event->state = workshop_job_state_name(job->state);
+  event->done = job->done;
+  event->total = job->total;
+  event->http_status = job->http_status;
+}
+
+static void publish_job_done(const JobEvent *event) {
+  cJSON *object = cJSON_CreateObject();
+  if (object && cJSON_AddStringToObject(object, "id", event->id) && cJSON_AddStringToObject(object, "kind", event->kind) &&
+      cJSON_AddStringToObject(object, "state", event->state) && cJSON_AddNumberToObject(object, "http_status", event->http_status)) {
+    workshop_event("job-done", object);
+  } else {
+    cJSON_Delete(object);
+  }
+}
+
+static void publish_job_progress(const JobEvent *event) {
+  cJSON *object = cJSON_CreateObject();
+  if (object && cJSON_AddStringToObject(object, "id", event->id) && cJSON_AddStringToObject(object, "kind", event->kind) &&
+      cJSON_AddStringToObject(object, "stage", event->stage) && cJSON_AddNumberToObject(object, "done", event->done) &&
+      cJSON_AddNumberToObject(object, "total", event->total)) {
+    workshop_event("job-progress", object);
+  } else {
+    cJSON_Delete(object);
+  }
+}
+
 static void on_progress(void *user, const char *stage, unsigned done, unsigned total) {
   Job *job = user;
+  JobEvent event;
+  bool publish = false;
   pthread_mutex_lock(&g_lock);
   snprintf(job->stage, sizeof(job->stage), "%s", stage ? stage : "");
   job->done = done;
   job->total = total;
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  long long since_ms = (long long)(now.tv_sec - job->last_progress_event.tv_sec) * 1000 + (now.tv_nsec - job->last_progress_event.tv_nsec) / 1000000;
+  if (job->last_progress_event.tv_sec == 0 || since_ms >= 250 || done == total) {
+    job->last_progress_event = now;
+    job_event_fill(&event, job);
+    publish = true;
+  }
   pthread_mutex_unlock(&g_lock);
+  if (publish) {
+    publish_job_progress(&event);
+  }
 }
 
 static bool on_cancelled(void *user) {
@@ -241,8 +298,13 @@ static void *worker_main(void *arg) {
       job->result = out.tree;
     }
     job->finished_at = time(NULL);
+    JobEvent finished;
+    job_event_fill(&finished, job);
     prune_locked();
     pthread_cond_broadcast(&g_wake);
+    pthread_mutex_unlock(&g_lock);
+    publish_job_done(&finished);
+    pthread_mutex_lock(&g_lock);
   }
   pthread_mutex_unlock(&g_lock);
   return NULL;
@@ -398,6 +460,11 @@ bool workshop_job_cancel(const char *id) {
     job->cancel_requested = true;
     job->finished_at = time(NULL);
     pthread_cond_broadcast(&g_wake);
+    JobEvent cancelled;
+    job_event_fill(&cancelled, job);
+    pthread_mutex_unlock(&g_lock);
+    publish_job_done(&cancelled);
+    return true;
   } else if (job->state == WORKSHOP_JOB_RUNNING) {
     job->cancel_requested = true;
   }

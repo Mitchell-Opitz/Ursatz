@@ -135,6 +135,22 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
                               UrsatzError *error);
 
 /*
+ * Events (R-648). A program that follows the workshop subscribes, waits for the next event and unsubscribes. An event is a name and a JSON object:
+ * item-changed {item_id, version}, item-removed {item_id}, library-changed {piece_id}, collection-changed {collection_id}, subject-changed {subject_id},
+ * style-changed {style_id}, links-changed {run_id} (published after the transaction that made the change committed), job-progress {id, kind, stage, done,
+ * total} (at most four a second per job), job-done {id, kind, state, http_status}, analysis-stale {piece_id} (a query found a stale analysis) and reset
+ * {} (this subscriber's queue overflowed: read the state again). A subscriber has a queue of 256 events. NULL when the workshop is not started.
+ * workshop_events_next waits up to timeout_ms and answers false on a timeout and once workshop_events_close ran (name and json are the caller's, free them).
+ * workshop_events_close, called before the server stops, makes every waiting reader return.
+ */
+typedef struct WorkshopEvents WorkshopEvents;
+
+WorkshopEvents *workshop_events_subscribe(Workshop *workshop);
+bool workshop_events_next(WorkshopEvents *events, int timeout_ms, char **name, char **json);
+void workshop_events_unsubscribe(WorkshopEvents *events);
+void workshop_events_close(Workshop *workshop);
+
+/*
  * Starts what the workshop runs once it is open (the stores, the motive link run index and the job queue) and makes the data folder the
  * working directory of the process, which the services' relative paths need; workshop_stop cancels every job, joins the workers and shuts
  * the stores. A query or command before workshop_start answers URSATZ_ERR_INTERNAL, and workshop_close stops a started workshop. A second

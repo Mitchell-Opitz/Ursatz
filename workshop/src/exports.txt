@@ -1,6 +1,10 @@
 workshop_close
 workshop_command
 workshop_data_dir
+workshop_events_close
+workshop_events_next
+workshop_events_subscribe
+workshop_events_unsubscribe
 workshop_http_threads
 workshop_job_workers
 workshop_migrate

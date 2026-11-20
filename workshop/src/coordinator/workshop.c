@@ -14,6 +14,7 @@
 #include "items/recover.h"
 #include "items/store.h"
 #include "items/subjects.h"
+#include "base/events_hub.h"
 #include "items/collections.h"
 #include "analysis/links.h"
 #include "jobs/job_queue.h"
@@ -124,6 +125,16 @@ UrsatzStatus workshop_start(Workshop *workshop, UrsatzError *error) {
         workshop_collection_service_shutdown();
         return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the job workers cannot start");
     }
+    CommonEventBus *bus = common_event_bus_create();
+    if (!bus) {
+        workshop_jobs_stop();
+        workshop_link_service_shutdown();
+        workshop_subject_service_shutdown();
+        workshop_material_service_shutdown();
+        workshop_collection_service_shutdown();
+        return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    workshop_events_hub_set(bus);
     workshop->started = true;
     return URSATZ_OK;
 }
@@ -133,6 +144,9 @@ void workshop_stop(Workshop *workshop) {
         return;
     }
     workshop_jobs_stop(); /* cancels what runs and joins the workers, after the last request is answered */
+    CommonEventBus *bus = workshop_events_hub();
+    workshop_events_hub_set(NULL);
+    common_event_bus_destroy(bus);
     workshop_link_service_shutdown();
     workshop_subject_service_shutdown();
     workshop_material_service_shutdown();

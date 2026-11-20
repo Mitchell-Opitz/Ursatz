@@ -1,4 +1,5 @@
 #include "base/command_context.h"
+#include "base/events_hub.h"
 #include "txn.h"
 
 #include <dirent.h>
@@ -580,6 +581,7 @@ UrsatzStatus workshop_txn_commit(WorkshopTxn *txn, UrsatzError *error) {
     write_index(txn->seq);
     CRASH(AFTER_INDEX);
     workshop_command_context_set_last_seq(txn->seq);
+    workshop_events_after_commit(txn->command, txn->target, txn->headers);
     txn_free(txn);
     unlock();
     return finish;

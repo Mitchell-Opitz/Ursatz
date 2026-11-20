@@ -2,12 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "base/events_hub.h"
 #include "coordinator/dispatch.h"
 
 /* The Library queries (R-646): the pieces a person uploaded, as the GUI lists, opens, exports and plays them. */
 
 #define DOCUMENT_SECTIONS_MAX 64
 #define DOCUMENT_SECTION_NAME_MAX 64
+
+static const cJSON *member_of(const cJSON *object, const char *name) {
+    return cJSON_GetObjectItemCaseSensitive(object, name);
+}
 
 static const char *piece_dir(void) {
     return WORKSHOP_DIR_PIECES;
@@ -81,6 +86,15 @@ WORKSHOP_HANDLER(workshop_q_library_piece) {
     UrsatzStatus result = workshop_library_piece_json(piece_dir(), id, mode && strcmp(mode, "summary") == 0, &piece);
     if (result != URSATZ_OK) {
         return workshop_call_fail(error, result, "", result == URSATZ_ERR_NOT_FOUND ? "piece not found" : "failed to load piece");
+    }
+    /* A piece whose analysis is stale is a fact other pages want to know (R-648). */
+    if (cJSON_IsTrue(member_of(piece, "stale"))) {
+        cJSON *event = cJSON_CreateObject();
+        if (event && cJSON_AddStringToObject(event, "piece_id", id)) {
+            workshop_event("analysis-stale", event);
+        } else {
+            cJSON_Delete(event);
+        }
     }
     return workshop_reply_tree(reply, piece, error);
 }
