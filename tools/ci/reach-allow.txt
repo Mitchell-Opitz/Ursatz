@@ -44,4 +44,3 @@ analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261
 analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
 analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
 library/analysis/similarity/similarity_model.c similarity_dimension_name  # the front end of the old --similar printed the dimension names; kept with the similarity search (A20261115-607); its test calls it
-library/text/text_tree.c text_block_parse  # no app reads a block of lines until P65 B6 (the command parser reads object params with it); its tests call it
