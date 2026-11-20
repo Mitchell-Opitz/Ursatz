@@ -11,8 +11,8 @@ Everything but `main.c` is built as the static library `ursatz_gui_core` (`backe
 - Files, folders, text, JSON and hashes come from `common/` (`<common/files.h>`, `strings.h`, `json.h`, `hash.h`; see the common part's headers): the backend keeps no copy of them. `links.c` keeps its own `iso_utc_now`, which adds milliseconds so two runs in one second still order.
 - `workshop/src/items/lock.h`: `WorkshopLock` (a pthread mutex) with `WORKSHOP_LOCK_INIT` and
   `workshop_lock_acquire/release`. Each store wraps it in `LOCK()` and `UNLOCK()`.
-- `workshop/src/items/piece_lock.c`: `workshop_piece_lock(id)` and `_unlock`, one mutex per piece directory (see [Piece store](storage.md#piece-store), [Concurrency](storage.md#concurrency)).
-- `workshop/src/items/data_check.c`: `workshop_data_check`, the startup check `server.c` runs first (see [Data check](storage.md#data-check)).
+- `workshop/src/items/piece_lock.c`: `workshop_piece_lock(id)` and `_unlock`, one mutex per piece directory (see [Piece store](../../workshop/docs/data-folder.md#the-library), [Concurrency](../../workshop/docs/data-folder.md#changes-are-transactions)).
+- `workshop/src/items/data_check.c`: `workshop_data_check`, the startup check `server.c` runs first (see [Data check](../../workshop/docs/data-folder.md#older-folders-and-migration)).
 - `routes/route_util.c`: the senders every route uses (`ursatz_gui_send_json`, `_send_json_status`, `_send_failure`
   with `{"ok":false,"message"}`, `_send_object`, and `ursatz_gui_reason_phrase`) and `ursatz_gui_read_json_body`, the
   JSON object body of a request (up to 1 MiB; with a status pointer it also sends the 400, 413 or 500 itself). `routes/materials.c` passes

@@ -16,7 +16,7 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 | Directory | What it holds | Doc |
 |---|---|---|
 | `backend/src/routes/` | Route families: parse, call a service, answer | [api/](api/analysis-routes.md) |
-| `workshop/src/` | The only code that calls the Analyzer, Composer and stores | [storage.md](storage.md), [motifs-backend.md](motifs-backend.md) |
+| `workshop/src/` | The only code that calls the Analyzer, Composer and stores | [storage.md](../../workshop/docs/data-folder.md), [motifs-backend.md](motifs-backend.md) |
 | `backend/src/util/` | File, JSON and lock helpers | [Helpers](backend-modules.md#backend-helper-modules) |
 | `backend/tests/` | Tests and fixtures | [testing.md](testing.md) |
 | `frontend/public/` | The static pages, models and views | [frontend.md](frontend.md), [views/](views/library.md) |
@@ -45,9 +45,9 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 | Name | Where reported | Current value | Doc |
 |---|---|---|---|
 | `version`, `api_version`, `analyzer_version`, `producer_key` | `GET /api/composer/status`, from `composer_api_versions` | the Composer of this tree and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
-| `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `analyzer_version`, `analyzer_producer_key` (kept under the member `ursatz_commit`) and `ANALYZER_DOCUMENT_SCHEMA_VERSION` | the Analyzer of this tree | [Piece store](storage.md#piece-store) |
+| `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `analyzer_version`, `analyzer_producer_key` (kept under the member `ursatz_commit`) and `ANALYZER_DOCUMENT_SCHEMA_VERSION` | the Analyzer of this tree | [Piece store](../../workshop/docs/data-folder.md#the-library) |
 | `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the Composer of this tree | [Motif score and playback](views/playback.md#motif-score-and-playback) |
-| `schema_version` of a Composer request | `themes.c`, `pieces.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](storage.md#theme-bodies-and-version-files) |
+| `schema_version` of a Composer request | `themes.c`, `pieces.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](../../workshop/docs/data-folder.md#items-and-versions) |
 
 ## What it calls below
 
@@ -65,10 +65,10 @@ One piece, from file to composed motif, across four repos.
 1. **GUI.** The browser sends the file to `POST /api/analyzer/pieces` (`routes/analyzer.c`).
 2. **Analyzer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md)). `analysis.c` calls `analyzer_import_file`.
 3. **Ursatz** ([architecture](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md)). The Analyzer's pipeline runs the Ursatz frameworks (`analyzer_analyze`) and `analyzer_document_build` makes the analysis document.
-4. **GUI.** The service writes `analysis.json` and `meta.json` under the piece lock ([Piece store](storage.md#piece-store)), and the table fills in.
+4. **GUI.** The service writes `analysis.json` and `meta.json` under the piece lock ([Piece store](../../workshop/docs/data-folder.md#the-library)), and the table fills in.
 5. **GUI and Analyzer.** Opening a piece asks for the summary, the sections the score draws, the MusicXML (`analyzer_score_export_musicxml`) and the playback (`analyzer_playback_build`); the frontend draws and plays them ([views](views/analysis-and-score.md)).
 6. **GUI and Composer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md)). A service builds a Composer request and calls a `composer_api_*` entry in process; long runs use the job queue ([Jobs](api/composer-routes.md#jobs)).
-7. **GUI.** The result is stored as a version in the material store ([Material store](storage.md#material-store)) and shown in its view.
+7. **GUI.** The result is stored as a version in the material store ([Material store](../../workshop/docs/data-folder.md#items-and-versions)) and shown in its view.
 
 ### GUI actions
 

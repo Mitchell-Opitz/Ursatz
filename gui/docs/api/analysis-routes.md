@@ -165,7 +165,7 @@ piece ids: tagging a piece later does not add it.
 that holds it (a service call, `workshop_collection_remove_piece_everywhere`).
 
 A `data/corpus.db` of the old Corpus store is not read: the start refuses a folder that never imported it (see
-[Data check](../storage.md#data-check)).
+[Data check](../../../workshop/docs/data-folder.md#older-folders-and-migration)).
 
 ## Styles routes
 
@@ -223,7 +223,7 @@ renamed); a theme version uses it for its brief.
 A piece that cannot be added is skipped with a reason and the build goes on:
 `not found` (no such piece), `re-analysis failed` or `unreadable analysis`.
 When a piece's stored analysis is not current (another schema, Analyzer version or producer key; see
-[Staleness keys](../storage.md#piece-store)), the piece is analyzed again first, so older pieces still count. Only analysis documents are read,
+[Staleness keys](../../../workshop/docs/data-folder.md#the-library)), the piece is analyzed again first, so older pieces still count. Only analysis documents are read,
 never the scores. A build runs on the request thread and one mutex serializes
 the style store.
 

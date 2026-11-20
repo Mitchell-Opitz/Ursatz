@@ -72,5 +72,5 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
   failed. `404` for an unknown job.
 - `DELETE /api/jobs/<id>`: asks the job to stop (`204`; for a finished job nothing changes); `404` for an unknown job.
 
-Themes and pieces compose in process on the job queue (see [Theme bodies and version files](../storage.md#theme-bodies-and-version-files), [Piece bodies and version files](../storage.md#piece-bodies-and-version-files)). Each compose makes its files in a staging folder beside the version's (`v<n>.stage-<k>-<pid>`) and moves it to
+Themes and pieces compose in process on the job queue (see [Theme bodies and version files](../../../workshop/docs/data-folder.md#items-and-versions), [Piece bodies and version files](../../../workshop/docs/data-folder.md#items-and-versions)). Each compose makes its files in a staging folder beside the version's (`v<n>.stage-<k>-<pid>`) and moves it to
 the number the version is written with, so two composes of one item may run at once and both versions are kept.

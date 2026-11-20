@@ -17,7 +17,7 @@ jobs:
 
       - name: Check docs
         run: |
-          for part in library analyzer composer gui; do
+          for part in library analyzer composer gui workshop common; do
             bash tools/ci/check-docs.sh "$part"
           done
 

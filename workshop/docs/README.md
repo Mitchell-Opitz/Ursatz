@@ -1,0 +1,20 @@
+# Workshop docs
+
+The workshop is the process that holds the data folder, the jobs and the events, and answers every query and command of the GUI. Back to the [README](../../README.md).
+
+## Start here
+
+- [architecture.md](architecture.md): what the workshop is, how its source is laid out, its layers and its locks.
+
+## The data
+
+- [data-folder.md](data-folder.md): the folder layout, every format with its version and schema, transactions and recovery, the migration with its dry run and backup, the settings.
+
+## The calls
+
+- [commands.md](commands.md): `workshop_query` and `workshop_command`, the 42 commands, the queries, base versions, actors and failures.
+- [jobs-and-events.md](jobs-and-events.md): the job queue, the job kinds, cancel, and the event bus with its events.
+
+## Changes
+
+- [changelog.md](changelog.md): what changed in the workshop, newest first.

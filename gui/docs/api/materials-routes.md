@@ -4,7 +4,7 @@ The routes for materials (motifs, themes, pieces) and subjects. [Docs index](../
 
 ## Materials and subjects routes
 
-Both stores are described under [Material store](../storage.md#material-store) and [Subjects](../storage.md#subjects); these
+Both stores are described under [Material store](../../../workshop/docs/data-folder.md#items-and-versions) and [Subjects](../../../workshop/docs/data-folder.md#layout-2); these
 routes only dispatch into them (`routes/materials.c`). Every answer is JSON.
 A success is `{"ok":true,...}`; a failure is `{"ok":false,"error":"..."}` with
 `400` for an invalid id, name, kind, type or body, `404` for something not
