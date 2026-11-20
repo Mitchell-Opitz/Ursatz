@@ -37,6 +37,7 @@ add_library(ursatz_workshop_engine STATIC
     src/composition/motif_import.c
     src/composition/motifs.c
     src/composition/pieces.c
+    src/composition/request_resolve.c
     src/composition/themes.c
     src/composition/variants.c
     src/rendering/export.c
