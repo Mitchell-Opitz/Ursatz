@@ -4,7 +4,8 @@
 #include <stdbool.h>
 
 /*
- * The addresses of the things in a data folder (R-658): <kind>:<id>, and item:<id>@v<n> for one version of an item. A subcommand that takes a path or an
+ * The addresses of the things in a data folder (R-658): <kind>:<id>, and item:<id>@v<n> for one version of an item. An item or a piece address may end in
+ * /<section>, a section of the piece (R-663): item:<id>@v<n>/<section>, piece:<id>/<section>. A subcommand that takes a path or an
  * address decides by cli_is_address (a known kind followed by ":"; a path that merely contains a colon is a path).
  */
 typedef enum {
@@ -22,6 +23,7 @@ typedef struct {
     CliAddressKind kind;
     char id[256];
     long version; /* 0 when absent: only an item address has one */
+    char section[32]; /* "" when absent: only an item or a piece address has one */
 } CliAddress;
 
 /* True and *out filled for an address; false for anything else (an unknown kind, an empty id, a version on a kind that has none, a version that is not

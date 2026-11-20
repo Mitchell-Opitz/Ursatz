@@ -36,7 +36,7 @@ static const char *const FLAGS_CORPUS[] = {"--out", "--resume", NULL};
 static const char *const FLAGS_STYLE_PROFILE[] = {"--name", "--out", NULL};
 static const char *const FLAGS_STATUS[] = {"--format", NULL};
 static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL};
-static const char *const FLAGS_SHOW[] = {"--view", NULL};
+static const char *const FLAGS_SHOW[] = {"--measures", "--view", NULL};
 static const char *const FLAGS_HISTORY[] = {"--format", "--limit", NULL};
 static const char *const FLAGS_APPLY[] = {"--format", "--wait", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
@@ -623,27 +623,25 @@ const CliCommand CLI_COMMANDS[] = {
     "  echo '{\"id\": \"item-1\"}' | ursatz --data ~/ursatz-data query item.get --params -",
      FLAGS_QUERY, 1, 1, run_query},
     {"show",
-    "show <address> [--view <json>]",
-     "Show what the data folder holds under an address",
-    "Prints what the workshop holds under an address, as JSON. An address is <kind>:<id> with the kind item, piece, project, subject, collection, style, links or job, and item:<id>@v<n> for one version of an item.\n"
+    "show <address|file> [--view <view>] [--measures <first>-<last>]",
+     "Show what the data folder or a layer file holds, as text views or JSON",
+    "Prints what the workshop holds under an address, or what a layer file (a plan, a realization, a reading) holds, as a view in Ursatz Text or as JSON. An address is <kind>:<id> with the kind item, piece, project, subject, collection, style, links or job, item:<id>@v<n> for one version of an item, and /<section> after an item or a piece to look at one section (item:<id>@v<n>/<section>, piece:<id>/<section>).\n"
     "\n"
-    "  item:<id>        the item with its versions            (query item.get)\n"
-    "  item:<id>@v<n>   one version of the item               (query item.version)\n"
-    "  piece:<id>       a Library piece                       (query library.piece)\n"
-    "  project:<id>     a project                             (query project.get)\n"
-    "  subject:<id>     a subject                             (query subject.get)\n"
-    "  collection:<id>  a collection                          (query collection.get)\n"
-    "  style:<id>       a style                               (query style.get)\n"
-    "  links:<id>       a motive link run                     (query links.get)\n"
-    "  job:<id>         a job                                 (query job.get)\n"
+    "  item:<id>        the current version of the item        (item.view, or item.get for json)\n"
+    "  item:<id>@v<n>   one version of the item                (item.view, or item.version for json)\n"
+    "  piece:<id>       a Library piece                        (library.view, or library.piece for json)\n"
+    "  <file>           a layer file                           (the tool text)\n"
+    "  project:<id>, subject:<id>, collection:<id>, style:<id>, links:<id>, job:<id>   json only         (project.get and the like)\n"
     "\n"
-    "--view json is the only view for now (the other views come with Ursatz Text). The data folder is named before the subcommand: ursatz --data <dir> show item:<id>.\n"
+    "--view is summary (the default for an item, a piece and a file), structure, harmony, line:<name>, part:<name>, reading, full (the lossless text of every layer) or json. --measures limits the view to bars <first>-<last>. The other kinds of address show only --view json. The data folder is named before the subcommand: ursatz --data <dir> show item:<id>.\n"
     "\n"
-    "Exit status: 0 success; 1 usage (a text that is no address, another view), or an address the workshop refuses; 2 the folder cannot be opened, or any other failure.\n"
+    "Exit status: 0 success; 1 usage (a text that is no address, a view the address does not give), or a view or an address the workshop refuses; 2 the folder cannot be opened, or any other failure.\n"
     "\n"
     "Example:\n"
     "  ursatz --data ~/ursatz-data show item:itm-3f2a\n"
-    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2",
+    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2 --view harmony --measures 1-8\n"
+    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2/A --view structure\n"
+    "  ursatz show plan.json --view line:melody",
      FLAGS_SHOW, 1, 1, run_show},
     {"history",
     "history [<address>] [--limit <n>] [--format <text|json>]",
