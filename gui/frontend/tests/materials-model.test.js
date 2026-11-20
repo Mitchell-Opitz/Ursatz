@@ -1,11 +1,17 @@
 /* Covers the pure materials helpers (public/materials-model.js): request
  * builders, new item bodies, the project filter, item and version rows.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
-const { generated } = require("./support/fixtures.js");
-require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
-const M = require("../public/materials-model.js");
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import M from "../public/models/materials-model.js";
+import { check, same, finish } from "./support/check.js";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")));
+
 
 const projects = [
   { id: "prj-a", name: "Sonata" },
@@ -270,7 +276,7 @@ check(randomBody.material === "random" && !("mode" in randomBody) && randomBody.
 check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
 check(M.randomSettings === undefined, "the draw of the mode and meter is not computed here");
 check(same(M.drawnSettings({ drawn: { material: "omt.material.natural-minor", meter: "6/8" } }), { material: "omt.material.natural-minor", meter: "6/8" }), "the drawn material and meter come from the answer");
-for (const captured of require("../../backend/tests/fixtures/composer/b11_captures.json").random) {
+for (const captured of readJson(path.join(__dirname, "../../backend/tests/fixtures/composer/b11_captures.json")).random) {
   const material = captured.mode === "minor" ? "omt.material.natural-minor" : "omt.material.major";
   const answer = { drawn: { material, meter: captured.meter } };
   check(same(M.drawnSettings(answer), { material, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);

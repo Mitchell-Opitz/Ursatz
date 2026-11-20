@@ -2,9 +2,8 @@
  * public/piece-metadata.js: card text, the add-pieces picker, the add body
  * and result line, and the name given to Save as collection. Plain Node
  * script: `node frontend/tests/collections-view.test.js`. */
-const M = require("../public/piece-metadata.js");
-
-const { check, same, finish } = require("./support/check.js");
+import M from "../public/models/piece-metadata.js";
+import { check, same, finish } from "./support/check.js";
 
 const library = [
   { id: "p1", filename: "nocturne.mid", composer: "John Field", source: "", tags: ["whimsical"] },

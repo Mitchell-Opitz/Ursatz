@@ -4,13 +4,18 @@
  * fixture (intro 2 bars, body of 8 and 4 bars from two motives, turnaround 2 bars, ending 2 bars), D minor at tempo
  * 170 from a style, seed 7 and --check.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
-const fs = require("fs");
-const path = require("path");
-const { generated } = require("./support/fixtures.js");
-require("../public/vocabulary.js").set(require(generated("vocabulary.json")), require(generated("forms.json")));
-const P = require("../public/pieces-model.js");
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import P from "../public/models/pieces-model.js";
+import { check, same, finish } from "./support/check.js";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")), readJson(generated("forms.json")));
+
 
 function section(id, part, letter, beats, fill, extra) {
   return { id, part, letter, beats, pickup: "0", cadence: null, fill: fill || { kind: "empty" }, ...extra };
@@ -120,7 +125,7 @@ check(P.cadenceOf(cadences, 4, served) === "PAC" && P.cadenceOf(cadences, 4) ===
 cadences.sections[2].cadence = "PAC";
 check(P.cadenceOf(cadences, 2, served) === "PAC" && P.cadenceOf(cadences, 1, served) === "IAC", "a chosen cadence wins over the served one");
 check(P.defaultCadence === undefined, "the cadence defaults are not computed here");
-const captured = require("../../backend/tests/fixtures/composer/b11_captures.json");
+const captured = readJson(path.join(__dirname, "../../backend/tests/fixtures/composer/b11_captures.json"));
 const capturedState = { sections: captured.cadences.parts.map((part, i) => ({ id: `s${i}`, part, cadence: null })) };
 const capturedServed = P.servedCadences({ sections: captured.cadences.defaults.map((cadence) => ({ cadence })) }, capturedState);
 check(same(capturedState.sections.map((_, i) => P.cadenceOf(capturedState, i, capturedServed)), captured.cadences.defaults), "the cadences shown for an intro, a loop of three sections and two endings equal the captured ones");
@@ -420,7 +425,7 @@ check(
 check(minuetRows.every((row) => row.function === ""), "a row without a function has none");
 
 /* The rondo labels (P52, R-521). */
-const rondoSections = require(generated("forms.json")).forms.find((form) => form.name === "small-rondo-ababa").sizes[0].sections;
+const rondoSections = readJson(generated("forms.json")).forms.find((form) => form.name === "small-rondo-ababa").sizes[0].sections;
 const rondoSection = (name) => rondoSections.find((section) => section.name === name);
 check(
   rondoSection("A1").labels.return === "A (embellish)" &&
@@ -435,7 +440,7 @@ check(
     rondoSection("A1").labels.keys === "home to home",
   "a section in the tonic major says so and any other shows its keys alone",
 );
-const mainSections = require(generated("forms.json")).forms.find((form) => form.name === "main-and-subordinate").sizes[0].sections;
+const mainSections = readJson(generated("forms.json")).forms.find((form) => form.name === "main-and-subordinate").sizes[0].sections;
 const mainReturn = mainSections.find((section) => section.returns);
 check(
   mainReturn.labels.return === `${mainReturn.returns} (${mainReturn.variation})` && mainReturn.labels.return === "A (exact)" && (mainSections.find((section) => section.name === "T")).labels.keys === "home to subordinate",
@@ -446,7 +451,7 @@ const rondoRows = P.resultView({ seed: 1, summary: rondoSummary }, { form: "smal
 check(rondoRows[8].letter === "A" && rondoRows[8].changes.includes("new setting"), "the second return of A in a small rondo says its new setting");
 
 /* The sonatina labels (P53, R-525). */
-const sonatinaForms = require(generated("forms.json")).forms;
+const sonatinaForms = readJson(generated("forms.json")).forms;
 const sonatinaSections = sonatinaForms.find((form) => form.name === "sonatina").sizes[0].sections;
 const sonatinaSection = (name) => sonatinaSections.find((section) => section.name === name);
 check(

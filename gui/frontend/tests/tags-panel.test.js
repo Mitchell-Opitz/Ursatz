@@ -2,9 +2,8 @@
  * the Unassigned and Untagged rows, the 12-row limit with Show all, the
  * filter each row opens, and which row is active.
  * Plain Node script: `node frontend/tests/tags-panel.test.js`. */
-const P = require("../public/tags-panel.js");
-
-const { check, same, finish } = require("./support/check.js");
+import P from "../public/views/tags-panel.js";
+import { check, same, finish } from "./support/check.js";
 
 const groups = {
   composers: [

@@ -3,10 +3,8 @@
  * the PATCH body and the reading text.
  *
  * Plain Node script: `node frontend/tests/notation-panel.test.js`. */
-
-const panel = require("../public/notation-panel.js");
-
-const { check, finish } = require("./support/check.js");
+import panel from "../public/models/notation-panel.js";
+import { check, finish } from "./support/check.js";
 
 function reading(num, den, scale, pickup, score) {
   return {

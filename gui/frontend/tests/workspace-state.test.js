@@ -3,10 +3,8 @@
  * table and which events it ignores, and the saved interface state with
  * defaults and a storage that throws. Plain Node script, no dependencies.
  * Run directly: `node frontend/tests/workspace-state.test.js`. */
-
-const WorkspaceState = require("../public/workspace-state.js");
-
-const { check, finish } = require("./support/check.js");
+import WorkspaceState from "../public/models/workspace-state.js";
+import { check, finish } from "./support/check.js";
 
 /* Zoom. */
 const { ZOOM_STEPS, nextZoom, zoomLabel, panelMode, shortcutFor, loadUiState, saveUiState } = WorkspaceState;

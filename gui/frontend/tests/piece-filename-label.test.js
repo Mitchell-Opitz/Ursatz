@@ -5,12 +5,12 @@
  * clue which uploaded file it came from. Plain Node script, no
  * framework/deps, run directly: `node
  * frontend/tests/piece-filename-label.test.js`. */
+import { check, finish } from "./support/check.js";
 
 function formatPieceLabel(id, filename) {
   return filename ? `${filename} (${id})` : id;
 }
 
-const { check, finish } = require("./support/check.js");
 
 check(
   formatPieceLabel("piece-1788837459-41", "sonata.mid") === "sonata.mid (piece-1788837459-41)",

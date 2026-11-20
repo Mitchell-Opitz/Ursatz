@@ -1,0 +1,1396 @@
+/* Pieces view (P17): the piece form state, the version body it makes, its structure problems, the strip timeline,
+ * the compose request and the rows of a result. No DOM; pieces-view.js renders from these. Needs themes-model.js for
+ * the brief, the switches and the shared lists. The form state is
+ *   {id, uses, form, key, material, meter, tempo, bars, count, modulate, sections: [{id, part, letter, beats, pickup, cadence, fill}],
+ *    motive: {item_id, version} | null, pool, accompaniment: {kind, pattern}, picks: [...], switches: {...},
+ *    weight, check, seed}
+ * with form the name of a Composer form (game-loop when a body names none), bars and count the size of a sized form (0 and 0
+ * for its default size; such a form has no sections here), modulate a boolean, tempo and seed as the text typed (blank for
+ * none), beats a whole number, pickup a string of beats ("0", "1/2"),
+ * cadence null for the default and fill one of
+ *   {kind: "empty"} | {kind: "motif", item_id, version, into, hybrid} | {kind: "theme", item_id, version}.
+ * A section (and an overlay of a sized form, {name, region, harmony, fill}) may also have a region (R-610)
+ *   {kind: "none"} | {kind: "home"} | {kind: "key", tonic, material} | {kind: "relation", relation, anchor}
+ * and a harmony
+ *   {kind: "none"} | {kind: "progression", numerals, cells} | {kind: "schema", schema} | {kind: "chords", chords: [{bar, text}]},
+ * and a sized form's state has overlays: [{name, region, harmony, fill}] for the sections of its size that have any. */
+
+import Req from "../core/request.js";
+import Themes from "./themes-model.js";
+import Vocab from "../core/vocabulary.js";
+
+/* The Composer's words (R-270, R-276), read when asked: the vocabulary is loaded after the scripts. */
+const DEFAULT_FORM = "game-loop";
+const cadences = () => Vocab.values("cadences");
+const fillKinds = () => Vocab.list("fill_kinds");
+const materials = () => Vocab.list("piece_materials");
+const meters = () => Themes.METERS;
+const pools = () => Themes.POOLS;
+const weights = () => Themes.WEIGHTS;
+/* The bars of a theme without a construction (4 and 8) and the bars a theme may have with one (3 to 16). */
+const themeBars = () => Themes.REGULAR_BARS;
+const constructedBars = () => Themes.BARS;
+/* The pickups offered in a meter, in beats (any other multiple of 1/32 shorter than a bar is accepted too). */
+const pickups = (meter) => (Vocab.get().pickups || {})[meter] || [];
+/* The limits the Composer serves: the cells of a chord, the variations of a section. */
+const maxCells = () => Vocab.limit("harmony_cells", 0);
+const maxVariations = () => Vocab.limit("piece_variations", 0);
+
+function text(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function wholeNumber(value, min, max) {
+  const t = text(String(value === undefined || value === null ? "" : value));
+  if (!/^\d+$/.test(t)) {
+    return null;
+  }
+  const n = Number(t);
+  return n >= min && n <= max ? n : null;
+}
+
+function emptyFill() {
+  return { kind: "empty" };
+}
+
+function emptyRegion() {
+  return { kind: "none", tonic: "", material: "", relation: "", anchor: "home" };
+}
+
+function emptyHarmony() {
+  return { kind: "none", numerals: "", cells: "", schema: "", chords: [] };
+}
+
+function emptyState(id) {
+  return {
+    id: id || "",
+    uses: [],
+    form: DEFAULT_FORM,
+    key: "C",
+    material: (materials()[0] || {}).value || "",
+    meter: "4/4",
+    tempo: "",
+    bars: 0,
+    count: 0,
+    modulate: false,
+    sections: [],
+    overlays: [],
+    motive: null,
+    pool: "approved-and-unflagged",
+    accompaniment: { kind: "none", pattern: "any" },
+    picks: [],
+    switches: Themes.switchesFromWithout([]),
+    weight: "1/2",
+    check: false,
+    seed: "",
+  };
+}
+
+/* --- forms ------------------------------------------------------------ */
+
+/* The Composer's entry of a form (its sections, sizes, slots, versions), or null. */
+function formOf(name) {
+  return Vocab.form(name || DEFAULT_FORM);
+}
+
+/* True for a form whose sections the Composer gives by size; false for one whose request lists its sections. */
+function isSized(form) {
+  return Boolean(form) && form.sections === "sizes";
+}
+
+/* True for a form that always modulates (the Composer's `modulates`, R-493): its key plan is not a choice. */
+function isModulating(form) {
+  return Boolean(form) && form.modulates === true;
+}
+
+/* The meters a form is composed in: its entry's meters when it lists any, else every meter. */
+function meterChoices(form) {
+  return form && Array.isArray(form.meters) && form.meters.length > 0 ? form.meters.slice() : Themes.METERS.slice();
+}
+
+/* The tempo a form gives (quarters a minute), or null. */
+function formTempo(form) {
+  return form && Number.isFinite(form.tempo) ? form.tempo : null;
+}
+
+/* True for a form the Composer composes once and performs in order (written-out repeats or parts, R-485). */
+function isPerformed(form) {
+  return Boolean(form) && form.performed === true;
+}
+
+/* The parts of a compound form as [{name, text, form, again}], else []: text says what the part is (its form, its key,
+ * whether its repeats are written out, or the part it plays again). */
+function performedParts(form) {
+  if (!form || !Array.isArray(form.parts)) {
+    return [];
+  }
+  return form.parts.map((part) => {
+    const kept = part.repeats === true ? ", repeats written out" : "";
+    const text = part.again
+      ? `the ${part.again} again${kept}`
+      : `${part.form ? part.form.label : ""}${part.key && part.key !== "home" ? `, in the ${part.key} key` : ""}${part.motive === "new" ? ", with a motive of its own" : ""}${kept}`;
+    return { name: part.name, text, form: part.form ? part.form.value : "", again: part.again || "" };
+  });
+}
+
+/* The roles a request-listed form allows, in order: [{value, label, required}]. */
+function rolesOf(form) {
+  return form && Array.isArray(form.roles) ? form.roles : [];
+}
+
+function roleValues(form) {
+  return rolesOf(form).map((role) => role.value);
+}
+
+function partIndex(part, form) {
+  return roleValues(form === undefined ? formOf(DEFAULT_FORM) : form).indexOf(part);
+}
+
+/* The label of a role value in a form: a listed role, else a role of one of its sizes, else the value. */
+function roleLabel(form, value) {
+  const listed = rolesOf(form).find((role) => role.value === value);
+  if (listed) {
+    return listed.label;
+  }
+  for (const size of form && Array.isArray(form.sizes) ? form.sizes : []) {
+    const found = size.sections.find((section) => section.role && section.role.value === value);
+    if (found) {
+      return found.role.label;
+    }
+  }
+  /* A compound form lists no sections of its own: its rows are the sections of its parts' forms. */
+  for (const part of performedParts(form)) {
+    const partForm = part.form ? formOf(part.form) : null;
+    const label = partForm ? roleLabel(partForm, value) : value;
+    if (label !== value) {
+      return label;
+    }
+  }
+  return value;
+}
+
+/* The sizes of a sized form: [{value, bars, count, default, label}] (value "<bars>:<count>"). */
+function sizeOptions(form) {
+  if (!isSized(form)) {
+    return [];
+  }
+  return form.sizes.map((size) => ({
+    value: `${size.bars}:${size.count}`,
+    bars: size.bars,
+    count: size.count,
+    default: size.default === true,
+    label: size.label,
+  }));
+}
+
+/* The size bars and count name (0 and 0, or nothing a size has, is the default size), or null for a form with none. */
+function sizeOf(form, bars, count) {
+  if (!isSized(form)) {
+    return null;
+  }
+  const b = Number(bars) || 0;
+  const c = Number(count) || 0;
+  if (b === 0 && c === 0) {
+    return form.sizes.find((size) => size.default === true) || form.sizes[0] || null;
+  }
+  return form.sizes.find((size) => (c > 0 ? size.count === c : size.bars === b && size.count === 0)) || null;
+}
+
+/* The sections of a sized form at a size, as the Composer plans them (for display); [] for a form with none. */
+function sectionsOf(form, bars, count) {
+  const size = sizeOf(form, bars, count);
+  return size ? size.sections : [];
+}
+
+/* The construction of a sized form's section (P47, R-468) as {halves, text}: the halves as `4+6` and the sentence that
+ * says why, both "" for a section with none; a section whose construction is "auto" has no halves yet and says the
+ * Composer chooses it. */
+function sectionConstruction(section) {
+  const construction = section && section.construction;
+  if (construction === "auto") {
+    return { halves: "", text: "Chosen by the Composer" };
+  }
+  if (!construction || typeof construction !== "object") {
+    return { halves: "", text: "" };
+  }
+  return { halves: Themes.constructionHalves(construction), text: typeof construction.text === "string" ? construction.text : "" };
+}
+
+/* A state on another form: a request-listed form starts with one section of its first required role, a sized form
+ * with its default size and no sections. */
+function withForm(state, name) {
+  const next = JSON.parse(JSON.stringify(state));
+  const form = formOf(name);
+  next.form = form ? form.name : DEFAULT_FORM;
+  next.bars = 0;
+  next.count = 0;
+  if (!form || !form.settings || form.settings.modulate !== true) {
+    next.modulate = false;
+  }
+  next.sections = [];
+  if (form && !isSized(form)) {
+    next.sections = [newSection(next, defaultRole(form))];
+  }
+  return next;
+}
+
+/* The role a new section of a form starts as: its first required role, else its first. */
+function defaultRole(form) {
+  const roles = rolesOf(form);
+  const required = roles.find((role) => role.required === true) || roles[0];
+  return required ? required.value : "";
+}
+
+/* The beats in a bar of a meter, as the Composer lists it: 2/4 is 2, 6/8 is 6 (the eighth is the beat). A meter the
+ * Composer does not list (a piece saved with another) reads its numerator. */
+function barBeats(meter) {
+  const listed = (Vocab.entry("meters", meter) || {}).beats;
+  if (Number.isInteger(listed)) {
+    return listed;
+  }
+  const n = parseInt(meter, 10);
+  return Number.isInteger(n) && n > 0 ? n : 4;
+}
+
+/* The beat unit of a meter as the denominator of a whole note: 4/4 is 4, 6/8 is 8. */
+function beatUnit(meter) {
+  const d = parseInt(String(meter || "").split("/")[1], 10);
+  return Number.isInteger(d) && d > 0 ? d : 4;
+}
+
+/* --- section ids and letters ------------------------------------------ */
+
+/* The next free id: s0, s1, ... ; ending sections after the first take the same scheme (the id "end" is the
+ * Composer's own, a piece made here never needs it). */
+function nextSectionId(sections) {
+  const used = new Set((Array.isArray(sections) ? sections : []).map((section) => section.id));
+  let n = 0;
+  while (used.has(`s${n}`)) {
+    n++;
+  }
+  return `s${n}`;
+}
+
+/* The first letter A to Z not used by a section, then A1, B1, ... */
+function nextLetter(sections) {
+  const used = new Set((Array.isArray(sections) ? sections : []).map((section) => section.letter));
+  for (let round = 0; round < 40; round++) {
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i) + (round > 0 ? String(round) : "");
+      if (!used.has(letter)) {
+        return letter;
+      }
+    }
+  }
+  return "S";
+}
+
+/* The section functions a game loop section of a part may have (P51, R-510): the vocabulary's piece_functions entries
+ * ({name, label, parts}) whose parts hold the part. */
+function functionsFor(part) {
+  return Vocab.list("piece_functions").filter((entry) => Array.isArray(entry.parts) && entry.parts.includes(part));
+}
+
+/* A function name kept for a part: "" for one the vocabulary does not list or does not allow for the part. */
+function functionKept(name, part) {
+  return typeof name === "string" && functionsFor(part).some((entry) => entry.name === name) ? name : "";
+}
+
+/* A new section for a part, after the last section of that part. The default is 8 bars of the meter. */
+function newSection(state, part) {
+  const sections = Array.isArray(state.sections) ? state.sections : [];
+  return {
+    id: nextSectionId(sections),
+    part,
+    letter: nextLetter(sections),
+    beats: barBeats(state.meter) * 8,
+    pickup: "0",
+    cadence: null,
+    fill: emptyFill(),
+    function: "",
+    region: emptyRegion(),
+    harmony: emptyHarmony(),
+  };
+}
+
+/* The index to insert a section of part at: after the last section of that part or an earlier one. */
+function insertIndex(sections, part, form) {
+  const at = partIndex(part, form);
+  let index = 0;
+  sections.forEach((section, i) => {
+    if (partIndex(section.part, form) <= at) {
+      index = i + 1;
+    }
+  });
+  return index;
+}
+
+function addSection(state, part) {
+  const next = JSON.parse(JSON.stringify(state));
+  const section = newSection(next, part);
+  next.sections.splice(insertIndex(next.sections, part, formOf(next.form)), 0, section);
+  return next;
+}
+
+function removeSection(state, id) {
+  const next = JSON.parse(JSON.stringify(state));
+  next.sections = next.sections.filter((section) => section.id !== id);
+  return next;
+}
+
+/* Moves a section one place left (-1) or right (1) among the sections of its part. */
+function moveSection(state, id, direction) {
+  const next = JSON.parse(JSON.stringify(state));
+  const index = next.sections.findIndex((section) => section.id === id);
+  if (index < 0) {
+    return next;
+  }
+  const target = index + (direction < 0 ? -1 : 1);
+  if (target < 0 || target >= next.sections.length || next.sections[target].part !== next.sections[index].part) {
+    return next;
+  }
+  const moved = next.sections[index];
+  next.sections[index] = next.sections[target];
+  next.sections[target] = moved;
+  return next;
+}
+
+/* --- body and form --------------------------------------------------- */
+
+/* A fill as the body keeps it. A fill that names nothing yet is empty, so every fill may be saved unfinished.
+ * A motif fill keeps `into` for a theme length (4 or 8 whole bars, no pickup) or a section of 3 to 16 whole bars with a
+ * construction and no pickup; any other is a free phrase. The construction (P47, R-468) is "auto" (the Composer chooses
+ * it) or the given {ideas, extensions}; a fill with none has no member. */
+function fillFromState(fill, free) {
+  const f = fill && typeof fill === "object" ? fill : emptyFill();
+  switch (f.kind) {
+    case "motif": {
+      if (!text(f.item_id)) {
+        return emptyFill();
+      }
+      const out = { kind: "motif", item_id: f.item_id, version: Number(f.version) };
+      if (!free && Vocab.values("piece_intos").includes(f.into)) {
+        out.into = f.into;
+        out.hybrid = f.into === "hybrid" ? text(f.hybrid) : null;
+        if (f.construction === "auto") {
+          out.construction = "auto";
+        } else if (f.construction && typeof f.construction === "object") {
+          out.construction = Themes.constructionBody(f.construction, Themes.pairingIdeaNames(Themes.pairing(out)));
+        }
+      }
+      return out;
+    }
+    case "theme":
+      return text(f.item_id) ? { kind: "theme", item_id: f.item_id, version: Number(f.version) } : emptyFill();
+    default:
+      return emptyFill();
+  }
+}
+
+function fillFromBody(fill) {
+  if (!fill || typeof fill !== "object") {
+    return emptyFill();
+  }
+  switch (fill.kind) {
+    case "motif":
+      return {
+        kind: "motif",
+        item_id: fill.item_id,
+        version: Number(fill.version),
+        into: typeof fill.into === "string" ? fill.into : "",
+        hybrid: typeof fill.hybrid === "string" ? fill.hybrid : "",
+        construction: fill.construction === "auto" ? "auto" : Themes.constructionFromBody(fill.construction),
+      };
+    case "theme":
+      return { kind: "theme", item_id: fill.item_id, version: Number(fill.version) };
+    default:
+      return emptyFill();
+  }
+}
+
+/* The region of a state as the body keeps it (R-610): null for none, "home", {tonic, material} or {relation, anchor}; a
+ * region that names nothing yet is none, so it may be saved unfinished. */
+function regionFromState(region) {
+  const r = region && typeof region === "object" ? region : emptyRegion();
+  if (r.kind === "home") {
+    return "home";
+  }
+  if (r.kind === "key" && text(r.tonic) !== "" && text(r.material) !== "") {
+    return { tonic: text(r.tonic), material: text(r.material) };
+  }
+  if (r.kind === "relation" && text(r.relation) !== "") {
+    return { relation: text(r.relation), anchor: text(r.anchor) || "home" };
+  }
+  return null;
+}
+
+function regionFromBody(region) {
+  if (region === "home") {
+    return { ...emptyRegion(), kind: "home" };
+  }
+  if (region && typeof region === "object" && typeof region.tonic === "string" && typeof region.material === "string") {
+    return { ...emptyRegion(), kind: "key", tonic: region.tonic, material: region.material };
+  }
+  if (region && typeof region === "object" && typeof region.relation === "string") {
+    return {
+      ...emptyRegion(),
+      kind: "relation",
+      relation: region.relation,
+      anchor: typeof region.anchor === "string" && region.anchor !== "" ? region.anchor : "home",
+    };
+  }
+  return emptyRegion();
+}
+
+/* The harmony of a state as the body keeps it: null, {progression, cells?}, {schema} or {chords: [{bar, text}]}; a chord with
+ * no bar or no text is left out, and a kind that names nothing is none. */
+function harmonyFromState(harmony) {
+  const h = harmony && typeof harmony === "object" ? harmony : emptyHarmony();
+  if (h.kind === "progression" && text(h.numerals) !== "") {
+    const out = { progression: text(h.numerals).split(/\s+/).join(" ") };
+    const cells = wholeNumber(h.cells, 1, maxCells());
+    if (cells !== null) {
+      out.cells = cells;
+    }
+    return out;
+  }
+  if (h.kind === "schema" && text(h.schema) !== "") {
+    return { schema: text(h.schema) };
+  }
+  if (h.kind === "chords") {
+    const chords = (Array.isArray(h.chords) ? h.chords : [])
+      .map((chord) => ({ bar: wholeNumber(chord && chord.bar, 1, Infinity), text: text(chord && chord.text) }))
+      .filter((chord) => chord.bar !== null && chord.text !== "");
+    return chords.length > 0 ? { chords } : null;
+  }
+  return null;
+}
+
+function harmonyFromBody(harmony) {
+  if (harmony && typeof harmony === "object" && typeof harmony.progression === "string") {
+    return {
+      ...emptyHarmony(),
+      kind: "progression",
+      numerals: harmony.progression,
+      cells: Number.isInteger(harmony.cells) && harmony.cells > 0 ? String(harmony.cells) : "",
+    };
+  }
+  if (harmony && typeof harmony === "object" && typeof harmony.schema === "string") {
+    return { ...emptyHarmony(), kind: "schema", schema: harmony.schema };
+  }
+  if (harmony && typeof harmony === "object" && Array.isArray(harmony.chords)) {
+    return {
+      ...emptyHarmony(),
+      kind: "chords",
+      chords: harmony.chords
+        .filter((chord) => chord && typeof chord === "object")
+        .map((chord) => ({ bar: Number.isInteger(chord.bar) ? String(chord.bar) : "", text: typeof chord.text === "string" ? chord.text : "" })),
+    };
+  }
+  return emptyHarmony();
+}
+
+/* The overlays of a sized form as the body keeps them: {name, region?, harmony?, fill?} for each that has something. */
+function overlaysFromState(overlays) {
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(overlays) ? overlays : []).forEach((overlay) => {
+    const name = text(overlay && overlay.name);
+    if (name === "" || seen.has(name)) {
+      return;
+    }
+    const entry = { name };
+    const region = regionFromState(overlay.region);
+    const harmony = harmonyFromState(overlay.harmony);
+    const fill = fillFromState(overlay.fill, true);
+    if (region !== null) {
+      entry.region = region;
+    }
+    if (harmony !== null) {
+      entry.harmony = harmony;
+    }
+    if (fill.kind !== "empty") {
+      entry.fill = fill;
+    }
+    if (Object.keys(entry).length > 1) {
+      seen.add(name);
+      out.push(entry);
+    }
+  });
+  return out;
+}
+
+function overlaysFromBody(sections) {
+  return (Array.isArray(sections) ? sections : [])
+    .filter((entry) => entry && typeof entry === "object" && typeof entry.name === "string" && entry.name !== "")
+    .map((entry) => ({
+      name: entry.name,
+      region: regionFromBody(entry.region),
+      harmony: harmonyFromBody(entry.harmony),
+      fill: fillFromBody(entry.fill),
+    }));
+}
+
+function sectionFromState(section, meter) {
+  const out = {
+    id: section.id,
+    part: section.part,
+    letter: text(section.letter) || null,
+    beats: Number(section.beats),
+    pickup: text(section.pickup) || "0",
+    cadence: cadences().includes(section.cadence) ? section.cadence : null,
+    fill: fillFromState(section.fill, motifIsFree(section, meter)),
+  };
+  /* A section without a function has no member, so a piece saved before P51 is unchanged (R-510). */
+  const kept = functionKept(section.function, section.part);
+  if (kept !== "") {
+    out.function = kept;
+  }
+  /* A section without a region or harmony has no member, so a piece saved before P60 is unchanged (R-610). */
+  const region = regionFromState(section.region);
+  if (region !== null) {
+    out.region = region;
+  }
+  const harmony = harmonyFromState(section.harmony);
+  if (harmony !== null) {
+    out.harmony = harmony;
+  }
+  return out;
+}
+
+/* --- the stored request (R-650) ---------------------------------------------------------------------------------- */
+
+/* A piece version body is the Composer request it composes with, {uses, request, brief, result, check, seed}: a motif version is
+ * {"$item": {item_id, version}}, the saved forms of a motif {"$pool": {item_id, pool}} and the stored plan of a theme
+ * {"$item": {item_id, version, file: "plan.json"}}. The form keeps its own state; these two turn the piece member it builds
+ * ({structure, motive, pool, accompaniment, brief, style_weight, without, tempo, check, seed}) into the request and back (the
+ * translation the workshop's migration makes, so a body saved by either composes the same request). */
+
+const isReference = (entry) =>
+  Boolean(entry) && typeof entry === "object" && typeof entry.item_id === "string" && typeof entry.version === "number";
+
+const present = (value) => value !== undefined && value !== null;
+
+function copyMembers(from, to, names) {
+  for (const name of names) {
+    if (present(from[name])) {
+      to[name] = from[name];
+    }
+  }
+}
+
+/* A section's fill as the request holds it. */
+function fillToRequest(fill, pool) {
+  const kind = fill && typeof fill === "object" && typeof fill.kind === "string" ? fill.kind : "empty";
+  const out = { kind };
+  if (kind === "motif") {
+    out.motive = isReference(fill) ? { $item: { item_id: fill.item_id, version: fill.version } } : null;
+    out.forms = { $pool: { item_id: typeof fill.item_id === "string" ? fill.item_id : "", pool } };
+    copyMembers(fill, out, ["into", "hybrid", "construction"]);
+  } else if (kind === "theme") {
+    out.plan = {
+      $item: {
+        item_id: typeof fill.item_id === "string" ? fill.item_id : "",
+        version: typeof fill.version === "number" ? fill.version : 0,
+        file: "plan.json",
+      },
+    };
+  }
+  return out;
+}
+
+/* The fill the form keeps from a request's fill. */
+function fillFromRequest(fill) {
+  if (!fill || typeof fill !== "object") {
+    return { kind: "empty" };
+  }
+  if (fill.kind === "motif") {
+    const reference = fill.motive && fill.motive.$item ? fill.motive.$item : {};
+    const out = { kind: "motif", item_id: reference.item_id, version: reference.version };
+    copyMembers(fill, out, ["into", "hybrid", "construction"]);
+    return out;
+  }
+  if (fill.kind === "theme") {
+    const reference = fill.plan && fill.plan.$item ? fill.plan.$item : {};
+    return { kind: "theme", item_id: reference.item_id, version: reference.version };
+  }
+  return { kind: typeof fill.kind === "string" ? fill.kind : "empty" };
+}
+
+/* The body of a piece version from the piece member the form builds. */
+function requestBodyOf(uses, piece) {
+  const structure = piece.structure && typeof piece.structure === "object" && !Array.isArray(piece.structure) ? piece.structure : {};
+  const form = typeof structure.form === "string" ? structure.form : DEFAULT_FORM;
+  const sized = isSized(formOf(form));
+  const pool = typeof piece.pool === "string" ? piece.pool : "approved-and-unflagged";
+  const sections = [];
+  for (const section of Array.isArray(structure.sections) ? structure.sections : []) {
+    if (!section || typeof section !== "object") {
+      continue;
+    }
+    const fill = fillToRequest(section.fill, pool);
+    const entry = {};
+    if (sized) {
+      entry.name = present(section.name) ? section.name : null;
+      copyMembers(section, entry, ["region", "harmony"]);
+      if (fill.kind !== "empty") {
+        entry.fill = fill;
+      }
+    } else {
+      entry.id = present(section.id) ? section.id : null;
+      entry.part = present(section.part) ? section.part : null;
+      copyMembers(section, entry, ["letter"]);
+      entry.beats = present(section.beats) ? section.beats : null;
+      entry.pickup = typeof section.pickup === "string" ? section.pickup : "0";
+      entry.cadence = present(section.cadence) ? section.cadence : null;
+      copyMembers(section, entry, ["function", "region", "harmony"]);
+      entry.fill = fill;
+    }
+    sections.push(entry);
+  }
+  const request = { schema: "ursatz-piece-request", schema_version: 2, form };
+  copyMembers(structure, request, ["key", "material", "mode", "meter"]);
+  request.motive = isReference(piece.motive) ? { $item: { item_id: piece.motive.item_id, version: piece.motive.version } } : null;
+  if (sized) {
+    request.bars = typeof structure.bars === "number" ? structure.bars : 0;
+    request.count = typeof structure.count === "number" ? structure.count : 0;
+    request.modulate = structure.modulate === true;
+    if (sections.length > 0) {
+      request.sections = sections;
+    }
+  } else {
+    request.sections = sections;
+  }
+  const acc = piece.accompaniment;
+  request.accompaniment = acc && typeof acc === "object" ? { pattern: acc.pattern } : null;
+  if (!sized) {
+    request.voicing = null;
+  }
+  if (present(piece.style_weight)) {
+    request.style_weight = piece.style_weight;
+  }
+  if (Array.isArray(piece.without) && piece.without.length > 0) {
+    request.without = piece.without;
+  }
+  request.tempo = present(piece.tempo) ? piece.tempo : null;
+  const body = { uses: Array.isArray(uses) ? uses : [], request };
+  if (present(piece.brief)) {
+    body.brief = piece.brief;
+  }
+  if (piece.result && typeof piece.result === "object") {
+    body.result = piece.result;
+  }
+  if (typeof piece.check === "boolean") {
+    body.check = piece.check;
+  }
+  if (typeof piece.seed === "number") {
+    body.seed = piece.seed;
+  }
+  return body;
+}
+
+/* The piece member (the form's words, with the references by item and version) of a piece version body; {} for a placeholder. */
+function pieceOfBody(body) {
+  const request = body && body.request && typeof body.request === "object" ? body.request : {};
+  const sized = isSized(formOf(request.form));
+  let pool;
+  const sections = (Array.isArray(request.sections) ? request.sections : [])
+    .filter((section) => section && typeof section === "object")
+    .map((section) => {
+      const forms = section.fill && section.fill.forms && section.fill.forms.$pool;
+      if (forms && typeof forms.pool === "string") {
+        pool = forms.pool;
+      }
+      return section.fill === undefined ? { ...section } : { ...section, fill: fillFromRequest(section.fill) };
+    });
+  const structure = {};
+  copyMembers(request, structure, ["form", "key", "material", "mode", "meter"]);
+  if (sized) {
+    copyMembers(request, structure, ["bars", "count", "modulate"]);
+  }
+  if (sections.length > 0 || !sized) {
+    structure.sections = sections;
+  }
+  return {
+    structure,
+    motive: request.motive && request.motive.$item ? { item_id: request.motive.$item.item_id, version: request.motive.$item.version } : null,
+    pool,
+    accompaniment: request.accompaniment,
+    brief: body && body.brief !== undefined ? body.brief : null,
+    style_weight: request.style_weight,
+    without: request.without,
+    tempo: request.tempo,
+    check: body ? body.check : undefined,
+    seed: body ? body.seed : undefined,
+    result: body ? body.result : undefined,
+  };
+}
+
+/* The version body of a form state (the stored request, requestBodyOf). The result is left out; the backend fills the uses of
+ * the motifs the request names. */
+function bodyFromState(state) {
+  const s = state || emptyState();
+  const acc = s.accompaniment || { kind: "none" };
+  const form = formOf(s.form);
+  const structure = { form: form ? form.name : DEFAULT_FORM, key: text(s.key), material: s.material, meter: s.meter };
+  if (isSized(form)) {
+    structure.bars = Number(s.bars) || 0;
+    structure.count = Number(s.count) || 0;
+    structure.modulate = form.settings && form.settings.modulate === true && s.modulate === true;
+    const overlays = overlaysFromState(s.overlays);
+    if (overlays.length > 0) {
+      structure.sections = overlays;
+    }
+  } else {
+    structure.sections = (Array.isArray(s.sections) ? s.sections : []).map((section) => sectionFromState(section, s.meter));
+  }
+  const piece = {
+    structure,
+    motive: s.motive && text(s.motive.item_id) ? { item_id: s.motive.item_id, version: Number(s.motive.version) } : null,
+    pool: s.pool,
+    accompaniment: acc.kind === "pattern" ? { pattern: acc.pattern || "any" } : null,
+    brief: Themes.briefFromPicks(s.picks),
+    style_weight: s.weight,
+    without: Themes.withoutFromSwitches(s.switches),
+    tempo: wholeNumber(s.tempo, 0, Infinity),
+    check: Boolean(s.check),
+    seed: wholeNumber(s.seed, 0, Infinity),
+  };
+  return requestBodyOf(s.uses, piece);
+}
+
+/* The form state of a version body. A placeholder piece (structure null, a string, an array or an object with no
+ * sections) gives the defaults with no sections. */
+function stateFromBody(body, id) {
+  const state = emptyState(id);
+  const piece = pieceOfBody(body);
+  state.uses = body && Array.isArray(body.uses) ? body.uses.slice() : [];
+  const structure = piece.structure && typeof piece.structure === "object" && !Array.isArray(piece.structure) ? piece.structure : {};
+  const form = typeof structure.form === "string" ? formOf(structure.form) : null;
+  state.form = form ? form.name : DEFAULT_FORM;
+  if (typeof structure.key === "string" && structure.key !== "") {
+    state.key = structure.key;
+  }
+  if (materials().some((entry) => entry.value === structure.material)) {
+    state.material = structure.material;
+  }
+  if (meters().includes(structure.meter)) {
+    state.meter = structure.meter;
+  }
+  const kept = formOf(state.form);
+  if (isSized(kept)) {
+    state.bars = Number.isInteger(structure.bars) ? structure.bars : 0;
+    state.count = Number.isInteger(structure.count) ? structure.count : 0;
+    state.modulate = structure.modulate === true;
+    state.overlays = overlaysFromBody(structure.sections);
+  }
+  state.sections = (isSized(kept) || !Array.isArray(structure.sections) ? [] : structure.sections)
+    .filter((section) => section && typeof section === "object" && roleValues(kept).includes(section.part))
+    .map((section) => ({
+      id: String(section.id),
+      part: section.part,
+      letter: typeof section.letter === "string" ? section.letter : "",
+      beats: Number.isInteger(section.beats) ? section.beats : 0,
+      pickup: typeof section.pickup === "string" ? section.pickup : "0",
+      cadence: cadences().includes(section.cadence) ? section.cadence : null,
+      fill: fillFromBody(section.fill),
+      function: functionKept(section.function, section.part),
+      region: regionFromBody(section.region),
+      harmony: harmonyFromBody(section.harmony),
+    }));
+  if (piece.motive && typeof piece.motive === "object" && text(piece.motive.item_id)) {
+    state.motive = { item_id: piece.motive.item_id, version: Number(piece.motive.version) };
+  }
+  if (pools().some((entry) => entry.value === piece.pool)) {
+    state.pool = piece.pool;
+  }
+  if (piece.accompaniment && typeof piece.accompaniment === "object" && typeof piece.accompaniment.pattern === "string") {
+    state.accompaniment = { kind: "pattern", pattern: piece.accompaniment.pattern };
+  }
+  state.picks = Themes.picksFromBrief(piece.brief);
+  state.switches = Themes.switchesFromWithout(piece.without);
+  if (weights().some((entry) => entry.value === piece.style_weight)) {
+    state.weight = piece.style_weight;
+  }
+  state.tempo = Number.isInteger(piece.tempo) ? String(piece.tempo) : "";
+  state.check = piece.check === true;
+  state.seed = Number.isInteger(piece.seed) ? String(piece.seed) : "";
+  return state;
+}
+
+/* --- beats ----------------------------------------------------------- */
+
+/* "2 bars", "6 beats", "1 bar 2 beats". */
+function beatsLabel(beats, meter) {
+  const total = Number(beats);
+  if (!Number.isFinite(total) || total < 0) {
+    return "";
+  }
+  const per = barBeats(meter);
+  const bars = Math.floor(total / per);
+  const rest = total - bars * per;
+  const parts = [];
+  if (bars > 0) {
+    parts.push(`${bars} ${bars === 1 ? "bar" : "bars"}`);
+  }
+  if (rest > 0 || bars === 0) {
+    parts.push(`${rest} ${rest === 1 ? "beat" : "beats"}`);
+  }
+  return parts.join(" ");
+}
+
+/* Each section's start and length in beats, the pickup not counted: [{id, part, letter, start, beats}]. */
+function sectionTimeline(state) {
+  let start = 0;
+  return (Array.isArray(state && state.sections) ? state.sections : []).map((section) => {
+    const beats = Number.isFinite(Number(section.beats)) ? Number(section.beats) : 0;
+    const entry = { id: section.id, part: section.part, letter: section.letter, start, beats };
+    start += beats;
+    return entry;
+  });
+}
+
+/* The cadence of every section in a validate reply's request, in section order (the Composer fills those a section
+ * leaves unchosen); empty when the reply has none or its sections are not the form's. */
+function servedCadences(request, state) {
+  const sections = request && Array.isArray(request.sections) ? request.sections : [];
+  const count = Array.isArray(state && state.sections) ? state.sections.length : 0;
+  if (sections.length !== count) {
+    return [];
+  }
+  return sections.map((section) => (section && typeof section.cadence === "string" ? section.cadence : ""));
+}
+
+/* The cadence to show for the section at index: the chosen one, else the one the Composer served, else "" (not
+ * asked yet). */
+function cadenceOf(state, index, served) {
+  const section = state.sections[index];
+  if (section && section.cadence) {
+    return section.cadence;
+  }
+  return Array.isArray(served) && typeof served[index] === "string" ? served[index] : "";
+}
+
+/* --- themes ---------------------------------------------------------- */
+
+/* The length in beats of a composed theme version body, or null when it has no form. */
+function themeLengthBeats(body) {
+  const form = body && body.request;
+  if (!form || !Number.isInteger(form.bars)) {
+    return null;
+  }
+  return form.bars * barBeats(form.meter);
+}
+
+/* One line for a theme version body: "sentence in D minor, 4/4, 8 bars". */
+function themeFormText(body) {
+  const form = body && body.request;
+  if (!form || !form.into) {
+    return "";
+  }
+  const into = form.into === "hybrid" && form.hybrid ? `hybrid (${form.hybrid})` : form.into;
+  return `${into} in ${form.key} ${Vocab.materialWord(form.material)}, ${form.meter}, ${form.bars} bars`;
+}
+
+/* True when the theme version body was composed (it has a result). */
+function themeComposed(body) {
+  return Boolean(body && body.result && typeof body.result === "object");
+}
+
+/* True when the section is whole bars within the Composer's construction limits with no pickup: it may be a theme with a
+ * construction. */
+function constructionPossible(section, meter) {
+  const bars = Number(section.beats) / barBeats(meter);
+  const limit = (Vocab.get().limits || {}).construction_bars || {};
+  const pickup = Number(section.pickup);
+  const noPickup = section.pickup === undefined || section.pickup === null || section.pickup === "" || pickup === 0;
+  return Number.isInteger(bars) && bars >= limit.min && bars <= limit.max && noPickup;
+}
+
+/* A motif fill takes its theme form (sentence, period, hybrid) at 4 or 8 whole bars without a pickup, or at any whole
+ * 3 to 16 bars with a construction chosen or given; any other length is a free phrase. */
+function motifIsFree(section, meter) {
+  if (!constructionPossible(section, meter)) {
+    return true;
+  }
+  const bars = Number(section.beats) / barBeats(meter);
+  const construction = section.fill && section.fill.construction;
+  return !(themeBars().includes(bars) || construction === "auto" || (construction && typeof construction === "object"));
+}
+
+/* The construction choice of a motif fill: "default" (a theme of 4 or 8 bars as today, else a free phrase), "auto" or
+ * "given". */
+function constructionChoice(fill) {
+  const construction = fill && fill.construction;
+  if (construction === "auto") {
+    return "auto";
+  }
+  return construction && typeof construction === "object" ? "given" : "default";
+}
+
+/* The form fields the Composer's request paths name (a prefix of the path), for marking the field a refusal is
+ * about; anything under /sections marks the section list. */
+const FIELD_PATHS = [
+  ["/key", "key"],
+  ["/material", "material"],
+  ["/mode", "material"],
+  ["/meter", "meter"],
+  ["/tempo", "tempo"],
+  ["/seed", "seed"],
+  ["/sections", "sections"],
+  ["/bars", "size"],
+  ["/count", "size"],
+  ["/modulate", "modulate"],
+  ["/motive", "motive"],
+  ["/accompaniment", "accompaniment"],
+  ["/style_weight", "weight"],
+];
+
+/* The form field a request path is about, or null. */
+function fieldForPath(path) {
+  return Req.fieldForPath(path, FIELD_PATHS);
+}
+
+/* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
+function validateRequest(state) {
+  return Req.validateRequest("piece", bodyFromState(state));
+}
+
+/* --- requests -------------------------------------------------------- */
+
+function itemUrl(id, tail) {
+  return `/api/materials/items/${encodeURIComponent(id)}${tail}`;
+}
+
+/* A new version of the piece holding the form (no result). */
+function saveRequest(state, note) {
+  const request = { body: bodyFromState(state) };
+  if (text(note)) {
+    request.note = text(note);
+  }
+  return { method: "POST", url: itemUrl(state.id, "/versions"), headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) };
+}
+
+/* POST compose for the form state. options: {seed, update_uses}; a seed in options wins over the form's. */
+function composeRequest(state, options) {
+  const o = options || {};
+  const body = {};
+  const seed =
+    o.seed !== undefined && o.seed !== null && o.seed !== "" ? wholeNumber(o.seed, 0, Infinity) : wholeNumber(state.seed, 0, Infinity);
+  if (seed !== null) {
+    body.seed = seed;
+  }
+  if (o.update_uses) {
+    body.update_uses = true;
+  }
+  return { method: "POST", url: itemUrl(state.id, "/compose"), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true };
+}
+
+function versionFileUrl(id, number, name) {
+  return Themes.versionFileUrl(id, number, name);
+}
+
+function versionPlaybackUrl(id, number, file) {
+  return Themes.versionPlaybackUrl(id, number, file);
+}
+
+/* --- regenerate and variations ---------------------------------------- */
+
+/* The lanes a section may be written again in, the Composer's (all is the choice of every lane). */
+const lanes = () => Vocab.values("lanes").filter((value) => value !== "all");
+
+/* The lanes of a section that can be written again (R-173): only a section of the first version (rows, as versionView
+ * gives them) can be; a section filled with a theme takes harmony and bass only (the backend refuses the others). With no
+ * rows every section is asked. */
+function lanesFor(section, rows) {
+  if (!section || (Array.isArray(rows) && !rows.some((row) => row.id === section.id))) {
+    return [];
+  }
+  return section.fill && section.fill.kind === "theme" ? ["harmony", "bass"] : lanes();
+}
+
+/* The sections that offer regenerate and variations, from the first version's rows (resultView `versions[0].view.rows`):
+ * [{id, letter, length, lanes}]. A form whose request lists its sections takes them from the state (their fills limit the
+ * lanes); a sized form has none in the state and takes the rows. */
+function actionSections(state, rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (isSized(formOf(state.form))) {
+    return list.map((row) => ({ id: row.id, letter: row.letter || row.id, length: row.length, lanes: lanesFor({ id: row.id }, list) }));
+  }
+  return (state.sections || [])
+    .map((section) => ({ id: section.id, letter: section.letter || section.id, length: beatsLabel(section.beats, state.meter), lanes: lanesFor(section, list) }))
+    .filter((entry) => entry.lanes.length > 0);
+}
+
+/* The seed typed, blank for none: {value} (undefined for none) or {error}. */
+function optionalSeed(value) {
+  if (text(String(value === undefined || value === null ? "" : value)) === "") {
+    return { value: undefined };
+  }
+  const seed = wholeNumber(value, 0, Infinity);
+  return seed === null ? { error: "The seed is a whole number, or blank." } : { value: seed };
+}
+
+/* POST regenerate of a section of a composed version. options: {section_id, lane ("" or "all" for every lane), seed}.
+ * Returns {request} or {error}. */
+function regenerateRequest(id, number, options) {
+  const o = options || {};
+  const seed = optionalSeed(o.seed);
+  if (seed.error) {
+    return { error: seed.error };
+  }
+  if (!text(o.section_id)) {
+    return { error: "Choose a section." };
+  }
+  const body = { section_id: o.section_id };
+  if (text(o.lane) !== "") {
+    body.lane = o.lane;
+  }
+  if (seed.value !== undefined) {
+    body.seed = seed.value;
+  }
+  return {
+    request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/regenerate`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true },
+  };
+}
+
+/* POST variations of a section. options: {section_id, lane, count, seed}; the lane is needed. */
+function variationsRequest(id, number, options) {
+  const o = options || {};
+  const seed = optionalSeed(o.seed);
+  if (seed.error) {
+    return { error: seed.error };
+  }
+  const count = wholeNumber(o.count, 1, maxVariations());
+  if (count === null) {
+    return { error: `The count is 1 to ${maxVariations()}.` };
+  }
+  if (!text(o.section_id) || text(o.lane) === "") {
+    return { error: "Choose a section and a lane." };
+  }
+  const body = { section_id: o.section_id, lane: o.lane, count };
+  if (seed.value !== undefined) {
+    body.seed = seed.value;
+  }
+  return {
+    request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/variations`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true },
+  };
+}
+
+/* POST choose: variation index of set becomes the next version. */
+function chooseRequest(id, number, set, index) {
+  return {
+    method: "POST",
+    url: itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/choose`),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: Number(index) }),
+    job: true,
+  };
+}
+
+/* A file of a variations set: variation-<i>.musicxml, .mid, .json or result.json. */
+function variationFileUrl(id, number, set, name) {
+  return itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/${encodeURIComponent(name)}`);
+}
+
+/* The cards of a variations answer {set, variations: [{index, seed, score, seam, heard}]}. */
+function variationCards(answer) {
+  const list = answer && Array.isArray(answer.variations) ? answer.variations : [];
+  return list.map((entry) => {
+    const score = entry.score && Number.isFinite(entry.score.numerator) ? `${entry.score.numerator} of ${entry.score.denominator}` : "";
+    const seam = entry.seam && typeof entry.seam === "object" ? entry.seam.held : entry.seam;
+    return {
+      index: entry.index,
+      title: `#${entry.index} · seed ${entry.seed}`,
+      score,
+      seam: Number.isFinite(seam) ? `${seam} seam rules held` : "",
+      heard: typeof entry.heard === "string" ? entry.heard : "",
+    };
+  });
+}
+
+/* --- the result ------------------------------------------------------ */
+
+/* Where a section's material came from: the Composer's words, or for a theme fill (its plan's path) the name the
+ * caller gives that section in names ({<section id>: "Theme One v2"}). */
+function sourceText(source, names) {
+  if (typeof source !== "string") {
+    return "";
+  }
+  const theme = /(?:^|\/)theme-(.+)\.plan\.json$/.exec(source);
+  if (theme) {
+    return (names && names[theme[1]]) || "theme";
+  }
+  return source;
+}
+
+function versionView(version, meter, options) {
+  const v = version && typeof version === "object" ? version : null;
+  if (!v) {
+    return null;
+  }
+  const planned = options && options.form && isSized(options.form) ? sectionsOf(options.form, options.bars, options.count) : [];
+  const rows = (Array.isArray(v.sections) ? v.sections : []).map((section) => {
+    const part = section.role || section.part || "";
+    const entry = planned.find((item) => item.name === section.id);
+    return {
+      id: section.id,
+      part,
+      partLabel: roleLabel(options && options.form, part),
+      /* A performed form (R-485): the compound part a row belongs to, the section it plays again, the upbeat chord that
+       * leads into the next section and whether the stepwise link was written; "" for a row that has none. */
+      partName: section.role ? section.part || "" : "",
+      repeatOf: section.repeat_of || "",
+      upbeat: section.upbeat ? `${section.upbeat.chord} to ${section.upbeat.next}` : "",
+      connective: section.connective === true ? "yes" : section.connective === false ? "no" : "",
+      letter: section.letter || "",
+      start: section.start_text || "",
+      beats: section.beats,
+      length: section.length_text || "",
+      cadence: section.cadence || "",
+      heard: section.heard || "",
+      fill: section.fill || "",
+      source: sourceText(section.source, options && options.sourceNames),
+      plannedKey: section.key || "",
+      /* The region and the harmony the request gave the section, as it asked (R-610); "" for none. */
+      region: section.region || "",
+      harmony: section.harmony || "",
+      keyHeard: section.key_heard || "",
+      pedal: entry && entry.pedal && entry.pedal.label ? entry.pedal.label : "",
+      returns: section.returns || "",
+      changes: (section.changes && section.changes.text) || "",
+      /* A section with a construction (P47) carries the sentence that says why it is as long as it is; no other has the member. */
+      construction: typeof section.construction_text === "string" ? section.construction_text : "",
+      /* A figurate variation (P50, R-501) carries its figure's sentence and the skeleton tones it is built on; "" for a row
+       * that has none. */
+      figure: (section.figure && section.figure.text) || "",
+      skeleton: section.figure && Array.isArray(section.figure.skeleton) ? section.figure.skeleton.join(" ") : "",
+      /* The part of a larger form a section is (P51, R-510): the Composer's sentence; "" for a row that has none. */
+      function: (section.function && section.function.text) || "",
+    };
+  });
+  const seam = v.seam && typeof v.seam === "object" ? v.seam : null;
+  const check = v.analyzer_check && typeof v.analyzer_check === "object" ? v.analyzer_check : null;
+  const distance = v.style_distance && typeof v.style_distance === "object" ? v.style_distance : null;
+  const score = v.score && Number.isFinite(v.score.numerator) && Number.isFinite(v.score.denominator) ? v.score : null;
+  return {
+    rows,
+    seam: seam
+      ? {
+          held: seam.held,
+          total: Array.isArray(seam.rules) ? seam.rules.length : 0,
+          label: `${seam.held} of ${Array.isArray(seam.rules) ? seam.rules.length : 0} seam rules held`,
+          rules: (Array.isArray(seam.rules) ? seam.rules : []).map((rule) => ({ label: rule.label, held: rule.ok === true })),
+        }
+      : null,
+    score: score ? { numerator: score.numerator, denominator: score.denominator, label: `${score.numerator} of ${score.denominator}` } : null,
+    check: check
+      ? {
+          planned: check.planned,
+          agreed: check.agreed,
+          contradicts: check.contradicts === true,
+          label: `${check.agreed} of ${check.planned} planned items heard${check.contradicts ? ", contradicted" : ""}`,
+        }
+      : null,
+    distance: distance
+      ? Object.keys(distance).filter((label) => Number.isFinite(distance[label])).map((label) => ({ label, value: distance[label].toFixed(4) }))
+      : [],
+  };
+}
+
+/* A time "n/d" as a number of whole notes, or null. */
+function wholeNotes(time) {
+  const m = /^(\d+)\/(\d+)$/.exec(String(time || ""));
+  return m && Number(m[2]) !== 0 ? Number(m[1]) / Number(m[2]) : null;
+}
+
+/* The version of a form that loops (the form's versions say which), or null. */
+function loopVersion(form) {
+  const found = form && Array.isArray(form.versions) ? form.versions.find((version) => version.loop === true) : null;
+  return found ? found.value : null;
+}
+
+/* What loop playback needs, in whole notes: the loop region and where the last body section ends (the ending takes
+ * over there: the last section whose role is a loop role other than the last), or null when the form has no loop, the
+ * summary has none or no body section. */
+function playbackLoop(summary, form) {
+  const s = summary && typeof summary === "object" ? summary : {};
+  const f = form === undefined ? formOf(DEFAULT_FORM) : form;
+  const name = loopVersion(f);
+  const loop = s.loop && typeof s.loop === "object" ? s.loop : null;
+  const start = loop ? wholeNotes(loop.start) : null;
+  const end = loop ? wholeNotes(loop.end) : null;
+  const version = name && s.versions && s.versions[name] && Array.isArray(s.versions[name].sections) ? s.versions[name] : null;
+  if (start === null || end === null || !(end > start) || !version) {
+    return null;
+  }
+  const bodyRoles = (Array.isArray(f.loop_roles) ? f.loop_roles : []).slice(0, -1);
+  const unit = beatUnit(s.meter);
+  let bodyEnd = null;
+  for (const section of version.sections) {
+    const at = wholeNotes(section.start);
+    if (bodyRoles.includes(section.part) && at !== null && Number.isFinite(section.beats)) {
+      bodyEnd = Math.max(bodyEnd === null ? 0 : bodyEnd, at + section.beats / unit);
+    }
+  }
+  return bodyEnd === null ? null : { start, end, bodyEnd };
+}
+
+/* The versions of a summary in the form's order, then any other: [{name, label, loop, after, view}]. */
+function versionViews(versions, form, meter, options) {
+  const listed = form && Array.isArray(form.versions) ? form.versions : [];
+  const names = listed.map((version) => version.value).filter((name) => versions[name]);
+  for (const name of Object.keys(versions)) {
+    if (!names.includes(name)) {
+      names.push(name);
+    }
+  }
+  return names
+    .map((name) => {
+      const entry = listed.find((version) => version.value === name) || {};
+      return {
+        name,
+        label: entry.label || name,
+        loop: entry.loop === true,
+        after: typeof entry.after === "string" ? entry.after : null,
+        view: versionView(versions[name], meter, options),
+      };
+    })
+    .filter((entry) => entry.view !== null);
+}
+
+/* The Composer's summary of a piece version's result as rows to show. result is piece.result ({seed, summary, brief,
+ * loop, files}); options carries sourceNames ({<section id>: "Theme One v2"}) for the sections filled with a theme and
+ * form (the form's name, the game loop when absent) for the labels and the loop. */
+function resultView(result, options) {
+  const r = result && typeof result === "object" ? result : {};
+  const form = formOf(options && options.form);
+  const rowOptions = Object.assign({}, options, { form });
+  const summary = r.summary && typeof r.summary === "object" ? r.summary : {};
+  const meter = typeof summary.meter === "string" ? summary.meter : "4/4";
+  const versions = summary.versions && typeof summary.versions === "object" ? summary.versions : {};
+  const brief = summary.brief || {};
+  const tempo = brief.tempo || {};
+  const mode = brief.material ? { mode: Vocab.keyWord(brief.material.material), from: brief.material.from } : brief.mode || {};
+  const without = Array.isArray(brief.without) ? brief.without : [];
+  const loop = summary.loop && typeof summary.loop === "object" ? summary.loop : null;
+  const pieces = r.brief && typeof r.brief === "object" ? r.brief : {};
+  return {
+    seed: Number.isInteger(r.seed) ? r.seed : null,
+    key: typeof summary.key === "string" ? summary.key : "",
+    meter,
+    loop: loop && typeof loop.text === "string" ? loop.text : "",
+    playLoop: playbackLoop(summary, form),
+    loopLength: loop && typeof loop.length_text === "string" ? loop.length_text : "",
+    versions: versionViews(versions, form, meter, rowOptions),
+    brief: {
+      tempo: Number.isFinite(tempo.qpm) ? `${tempo.qpm} (${Themes.FROM_TEXT[tempo.from] || tempo.from})` : "not set",
+      mode: mode.mode ? `${mode.mode} (${Themes.FROM_TEXT[mode.from] || mode.from})` : "",
+      density: Number.isFinite(brief.density) ? `${brief.density} attacks per beat` : "not set",
+      without: without.length > 0 ? without.join(", ") : "none",
+    },
+    pieces:
+      Number.isInteger(pieces.piece_count) && pieces.piece_count > 0
+        ? `${pieces.piece_count} ${pieces.piece_count === 1 ? "piece" : "pieces"} in the brief` +
+          (Array.isArray(pieces.skipped) && pieces.skipped.length > 0 ? `, ${pieces.skipped.length} skipped` : "")
+        : "",
+    files: Array.isArray(r.files) ? r.files.slice() : [],
+  };
+}
+
+/* --- sources --------------------------------------------------------- */
+
+/* The motifs and themes with a newer version, from the item answer's uses_status. */
+function updatedUses(item) {
+  return Themes.updatedUses(item);
+}
+
+const api = {
+  DEFAULT_FORM,
+  formOf,
+  isSized,
+  meterChoices,
+  formTempo,
+  isPerformed,
+  isModulating,
+  performedParts,
+  rolesOf,
+  roleLabel,
+  functionsFor,
+  defaultRole,
+  sizeOptions,
+  sizeOf,
+  sectionsOf,
+  sectionConstruction,
+  withForm,
+  get CADENCES() {
+    return cadences();
+  },
+  get FILL_KINDS() {
+    return fillKinds();
+  },
+  get INTOS() {
+    return Themes.INTOS;
+  },
+  get MATERIALS() {
+    return Themes.MATERIALS;
+  },
+  get METERS() {
+    return Themes.METERS;
+  },
+  get POOLS() {
+    return Themes.POOLS;
+  },
+  get PATTERNS() {
+    return Themes.PATTERNS;
+  },
+  get WEIGHTS() {
+    return Themes.WEIGHTS;
+  },
+  pickups,
+  maxCells,
+  fieldForPath,
+  validateRequest,
+  emptyState,
+  emptyFill,
+  emptyRegion,
+  emptyHarmony,
+  regionFromState,
+  harmonyFromState,
+  barBeats,
+  newSection,
+  addSection,
+  removeSection,
+  moveSection,
+  bodyFromState,
+  requestBodyOf,
+  pieceOfBody,
+  stateFromBody,
+  beatsLabel,
+  sectionTimeline,
+  servedCadences,
+  cadenceOf,
+  motifIsFree,
+  constructionPossible,
+  constructionChoice,
+  themeLengthBeats,
+  themeFormText,
+  themeComposed,
+  saveRequest,
+  composeRequest,
+  versionFileUrl,
+  versionPlaybackUrl,
+  lanes,
+  maxVariations,
+  lanesFor,
+  actionSections,
+  optionalSeed,
+  regenerateRequest,
+  variationsRequest,
+  chooseRequest,
+  variationFileUrl,
+  variationCards,
+  resultView,
+  updatedUses,
+};
+export default api;

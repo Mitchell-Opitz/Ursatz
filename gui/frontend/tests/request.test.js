@@ -1,8 +1,9 @@
 /* Covers the base versions the page sends (public/request.js, R-646): an answer that holds an item records its current version, and a write to
  * an item that has versions carries it as base_version (in the JSON body, in the query of a DELETE); every other request goes as it was. Plain
  * Node script, run through ctest. */
-const Req = require("../public/request.js");
-const { check, same, finish } = require("./support/check.js");
+import Req from "../public/core/request.js";
+import { check, same, finish } from "./support/check.js";
+
 const eq = (actual, expected, what) => check(same(actual, expected), what);
 
 Req.forgetVersions();

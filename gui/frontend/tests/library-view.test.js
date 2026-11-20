@@ -4,6 +4,7 @@
  * and renderLibraryView(filter) merges a passed filter over the defaults.
  * Plain Node script, no framework/deps, run directly:
  * `node frontend/tests/library-view.test.js`. */
+import { check, finish } from "./support/check.js";
 
 function libraryFilenameCellText(piece) {
   return piece.filename || piece.id;
@@ -28,7 +29,6 @@ function libraryFilterFor(filter) {
 const LIBRARY_COLUMNS = ["", "Title", "Composer", "Source", "Tags", "Actions"];
 const LIBRARY_ACTIONS = ["Play", "Edit", "Re-run analysis", "Import from URL", "Delete analysis", "Delete piece"];
 
-const { check, finish } = require("./support/check.js");
 
 check(
   libraryFilenameCellText({ id: "piece-1788837459-41", filename: "sonata.mid" }) === "sonata.mid",

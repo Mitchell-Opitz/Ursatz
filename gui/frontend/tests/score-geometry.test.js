@@ -3,10 +3,9 @@
  * pixel-to-time inverse, the timeline offset and the lane stack. Plain Node
  * script, no dependencies. Run directly:
  * `node frontend/tests/score-geometry.test.js`. */
+import ScoreGeometry from "../public/score/score-geometry.js";
+import { check, near as nearWithin, finish } from "./support/check.js";
 
-const ScoreGeometry = require("../public/score-geometry.js");
-
-const { check, near: nearWithin, finish } = require("./support/check.js");
 const near = (a, b) => nearWithin(a, b, 1e-6);
 
 

@@ -1,9 +1,8 @@
 /* Covers the pure Subjects helpers (public/subjects-panel.js): panel rows by
  * kind, list rows, pickers, chips, link rows and request builders.
  * Plain Node script: `node frontend/tests/subjects-panel.test.js`. */
-const S = require("../public/subjects-panel.js");
-
-const { check, same, finish } = require("./support/check.js");
+import S from "../public/views/subjects-panel.js";
+import { check, same, finish } from "./support/check.js";
 
 const groups = [
   { kind: "character", subjects: [{ id: "sub-1", name: "Hero", item_count: 2, piece_count: 1, link_count: 3 }] },

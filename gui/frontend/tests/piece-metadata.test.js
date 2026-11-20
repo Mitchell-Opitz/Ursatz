@@ -1,8 +1,7 @@
 /* Covers the pure Library metadata helpers (public/piece-metadata.js).
  * Plain Node script: `node frontend/tests/piece-metadata.test.js`. */
-const M = require("../public/piece-metadata.js");
-
-const { check, same, finish } = require("./support/check.js");
+import M from "../public/models/piece-metadata.js";
+import { check, same, finish } from "./support/check.js";
 
 check(same(M.parseTagInput(" Etude, nocturne ,ETUDE,,"), ["etude", "nocturne"]), "tags trimmed, lowercased, deduplicated, empties dropped");
 check(same(M.parseTagInput(""), []), "empty tag text gives no tags");

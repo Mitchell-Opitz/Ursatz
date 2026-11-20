@@ -3,14 +3,19 @@
  * theme-summary.json is the output of `ursatz-composer theme --format json` for a sentence with two slot motives,
  * a style, `without: ["motive-nct-figure"]`, mode style, tempo 132 and --check.
  * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
-const fs = require("fs");
-const path = require("path");
-const Vocabulary = require("../public/vocabulary.js");
-const { generated } = require("./support/fixtures.js");
-Vocabulary.set(require(generated("vocabulary.json")));
-const T = require("../public/themes-model.js");
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import T from "../public/models/themes-model.js";
+import { check, same, finish } from "./support/check.js";
+import M from "../public/models/materials-model.js";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")));
+
 
 function filled() {
   const state = T.emptyState("thm-1");
@@ -101,11 +106,11 @@ const twice = filled();
 twice.slots = [{ slot: "basic", item_id: "mot-1", version: 1 }, { slot: "continuation", item_id: "mot-1", version: 1 }];
 const many = filled();
 many.slots = [1, 2, 3, 4, 5].map((n) => ({ slot: "basic", item_id: `mot-${n}`, version: 1 }));
-const fiveSlots = JSON.parse(JSON.stringify(require(generated("vocabulary.json"))));
+const fiveSlots = JSON.parse(JSON.stringify(readJson(generated("vocabulary.json"))));
 fiveSlots.theme_slots.push({ value: "coda", label: "Coda", required: false });
 Vocabulary.set(fiveSlots);
 check(T.REQUIRED_SLOT === "basic" && T.SLOT_NAMES.length === 5, "the required slot and the slot names are the vocabulary's");
-Vocabulary.set(require(generated("vocabulary.json")));
+Vocabulary.set(readJson(generated("vocabulary.json")));
 const keyed = T.bodyFromForm({ ...filled(), key: "D", pool: "approved" });
 check(!("key" in T.themeOfBody(keyed).form) && !("pool" in T.themeOfBody(keyed)), "the body has no key and no pool");
 check(!("key" in T.emptyState("x")) && !("pool" in T.emptyState("x")), "the form has no key and no pool");
@@ -249,7 +254,6 @@ delete globalThis.localStorage;
 check(T.readThemeTab() === "theme", "no storage gives Theme");
 
 /* The one Save reuses the motif decision */
-const M = require("../public/materials-model.js");
 check(M.motifSaveDecision({ body: true }, "").kind === "blocked", "a changed theme body without a note is blocked");
 check(M.motifSaveDecision({ name: true }, "").kind === "save", "a rename alone saves without a note");
 check(M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change says Nothing to save.");

@@ -14,13 +14,11 @@
  *
  * Plain Node script, no framework/deps, run directly:
  * `node frontend/tests/analysis-view.test.js`. */
+import fs from "fs";
+import * as tabs from "../public/models/analysis-tabs.js";
+import { check, finish } from "./support/check.js";
+import { analyzerSnapshot, indexSource, pageSource } from "./support/fixtures.js";
 
-const fs = require("fs");
-const path = require("path");
-const tabs = require("../public/analysis-tabs.js");
-
-const { check, finish } = require("./support/check.js");
-const { analyzerSnapshot } = require("./support/fixtures.js");
 
 const doc = JSON.parse(fs.readFileSync(analyzerSnapshot("mozart-545.analysis.json"), "utf8"));
 const states = tabs.buildAllTabStates(doc);
@@ -164,16 +162,16 @@ check(
 );
 
 /* app.js carries no claim actions without a backend. */
-const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
-check(!/Accept|Dispute/.test(appSource), "app.js has no Accept or Dispute buttons");
-check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "app.js has no static analyzer list");
+const appSource = pageSource("views/app.js");
+check(!/Accept|Dispute/.test(appSource), "the page has no Accept or Dispute buttons");
+check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "the page has no static analyzer list");
 check(appSource.includes('accept=".mid,.midi,.musicxml,.xml,.mxl"'), "the upload picker accepts MusicXML files");
-check(appSource.includes("/reanalyze"), "app.js calls the reanalyze route");
+check(appSource.includes("/reanalyze"), "the page calls the reanalyze route");
 
 /* The Analysis view is the score workspace: Score mode by default, Data mode
  * keeps the tabs and the Provenance list, and the old Score tab is gone. */
 check(appSource.includes("ScoreWorkspace.mount("), "showAnalysisView mounts the score workspace");
-check(!/renderScoreTab|analysis-score\b|analysis-sidebar|analysis-layout/.test(appSource), "the old Score tab and sidebar markup are gone from app.js");
+check(!/renderScoreTab|analysis-score\b|analysis-sidebar|analysis-layout/.test(appSource), "the old Score tab and sidebar markup are gone from the page");
 check(!tabs.ANALYSIS_TABS.some((tab) => tab.id === "score"), "the claim tabs have no Score tab");
 check(
   appSource.includes("renderProvenancePanel(data.document)") && appSource.includes('class="sidebar-label">Provenance'),
@@ -182,9 +180,8 @@ check(
 check(appSource.includes("renderAnalysisTabs(data, tabId)"), "Data mode renders the claim tabs");
 check(appSource.includes("Re-run analysis") && appSource.includes("reanalyzePiece(id)"), "the toolbar offers Re-run analysis");
 check(appSource.includes("content--workspace") && appSource.includes("leaveWorkspace()"), "the content area is a workspace only while a piece is open");
-const indexSource = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
-const scriptOrder = ["score-notes.js", "workspace-state.js", "score-workspace.js", "app.js"].map((name) => indexSource.indexOf(`src="${name}"`));
-check(scriptOrder.every((at, i) => at >= 0 && (i === 0 || at > scriptOrder[i - 1])), "index.html loads workspace-state.js and score-workspace.js after score-notes.js and before app.js");
+const indexHtml = indexSource();
+check(/<script type="module" src="main\.js"><\/script>/.test(indexHtml) && indexHtml.indexOf("opensheetmusicdisplay.min.js") < indexHtml.indexOf("main.js"), "index.html loads the OSMD script, then main.js as a module");
 
 /* Mirrors app.js's buildPieceRow onFilenameClick wiring -- Library rows
  * call showAnalysisView(piece.id) on filename click; Collections rows

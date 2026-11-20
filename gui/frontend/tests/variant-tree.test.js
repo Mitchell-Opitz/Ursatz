@@ -3,11 +3,18 @@
  * steps from the picker, generate and reroll requests, candidate naming and
  * candidate bodies. Plain Node script, run through ctest: it reads the vocabulary the build generates
  * (support/fixtures.js). */
-const { generated } = require("./support/fixtures.js");
-require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
-const V = require("../public/variant-tree.js");
+import path from "path";
+import { fileURLToPath } from "url";
+import Vocabulary from "../public/core/vocabulary.js";
+import { generated, readJson } from "./support/fixtures.js";
+import V from "../public/models/variant-tree.js";
+import { check, same, finish } from "./support/check.js";
+import fs from "fs";
 
-const { check, same, finish } = require("./support/check.js");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+Vocabulary.set(readJson(generated("vocabulary.json")));
+
 
 const node = (id, flag, children, extra) => ({
   id,
@@ -289,31 +296,17 @@ class FakeEl {
 }
 const named = (root, tag, text) => root.all().filter((node) => node.tag === tag && node.textContent === text);
 
-const fs = require("fs");
-const vm = require("vm");
 const mounts = [];
 const destroyed = [];
-const sandbox = {
-  document: { createElement: (tag) => new FakeEl(tag) },
-  window: { localStorage: { getItem: () => null, setItem: () => {} } },
-  VariantTree: V,
-  MaterialsModel: require("../public/materials-model.js"),
-  ScoreWorkspace: {
-    mount(host, options) {
-      mounts.push({ host, options });
-      return { destroy: () => destroyed.push(options.title), play: () => {} };
-    },
+globalThis.document = { createElement: (tag) => new FakeEl(tag) };
+globalThis.window = { localStorage: { getItem: () => null, setItem: () => {} } };
+const View = (await import("../public/views/variant-tree-view.js")).default;
+const fakeWorkspace = {
+  mount(host, options) {
+    mounts.push({ host, options });
+    return { destroy: () => destroyed.push(options.title), play: () => {} };
   },
-  URL: { createObjectURL: () => "blob:x", revokeObjectURL: () => {} },
-  Blob: class {},
-  JSON,
-  Promise,
-  Number,
-  Math,
 };
-sandbox.ApiRequest = require("../public/request.js");
-vm.createContext(sandbox);
-const View = vm.runInContext(fs.readFileSync(`${__dirname}/../public/variant-tree-view.js`, "utf8") + "\n;VariantTreeView", sandbox);
 
 const savedTree = node("root", null, [node("a", "approved", []), node("b", "unflagged", [])]);
 let renderRunning = 0;
@@ -321,6 +314,7 @@ let renderPeak = 0;
 let renderCount = 0;
 const answers = [];
 const ctx = {
+  scoreWorkspace: fakeWorkspace,
   id: "root",
   name: "Motif",
   body: { motif: { degrees: "1:q 5:e", form: "full" } },

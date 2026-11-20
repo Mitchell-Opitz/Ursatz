@@ -1,9 +1,9 @@
 /* Covers the event stream in the page (public/events.js) and the job client that follows it (public/backend-jobs.js) with a fake EventSource and a fake
  * fetch: events reach the followers of their name, the stream opens once, runJob resolves on job-done and reads the job again when the stream opens or
  * reconnects (no poll), progress events are reported, and a page without EventSource polls as before. Plain Node script, run through ctest. */
-const E = require("../public/events.js");
-const J = require("../public/backend-jobs.js");
-const { check, same, finish } = require("./support/check.js");
+import * as E from "../public/core/events.js";
+import J from "../public/core/backend-jobs.js";
+import { check, same, finish } from "./support/check.js";
 
 class FakeSource {
   constructor(url) {

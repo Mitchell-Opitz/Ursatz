@@ -2,10 +2,8 @@
  * unmapped programs, a mapped program, a part override winning over the
  * program, and registering a second source. Plain Node script, no
  * dependencies. Run directly: `node frontend/tests/instruments.test.js`. */
-
-const Instruments = require("../public/instruments.js");
-
-const { check, finish } = require("./support/check.js");
+import Instruments from "../public/score/instruments.js";
+import { check, finish } from "./support/check.js";
 
 function source(id) {
   return { id, label: id, credit: "", load: () => Promise.resolve(), start: () => ({ stop() {} }) };
