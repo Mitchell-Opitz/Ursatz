@@ -5,6 +5,7 @@
 
 #include "query.h"
 #include "render.h"
+#include "apply.h"
 #include "show.h"
 #include "status.h"
 #include "analyze.h"
@@ -35,6 +36,7 @@ static const char *const FLAGS_STATUS[] = {"--format", NULL};
 static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL};
 static const char *const FLAGS_SHOW[] = {"--view", NULL};
 static const char *const FLAGS_HISTORY[] = {"--format", "--limit", NULL};
+static const char *const FLAGS_APPLY[] = {"--format", "--wait", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
@@ -640,6 +642,23 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz --data ~/ursatz-data history\n"
     "  ursatz --data ~/ursatz-data history item:itm-3f2a --limit 5",
      FLAGS_HISTORY, 0, 1, run_history},
+    {"apply",
+    "apply [<file>] [--wait] [--format <text|json>]",
+     "Apply commands to the data folder from a file or standard input",
+    "Applies commands to the data folder, one after the other, as the actor of the session (--actor, default claude): the journal records them under that actor. The commands come from <file>, or from standard input (- or no file): JSON Lines, one command object a line (blank lines skipped), or one JSON array.\n"
+    "\n"
+    "A command is {\"command\": <name>, \"target\": <id>, \"base_version\": <n>, \"params\": {...}, \"file\": <path>}: only the name is needed. file is a path whose bytes go with the command (library.import), named by its base name. An actor member is refused: the actor comes from --actor. The names are the workshop's commands (project.create, item.save, item.compose, ...).\n"
+    "\n"
+    "Each command prints its number, name, target (- for none) and the journal sequence it wrote, and, when it started a job, the job's id; with --wait the job is waited for and its state follows (a failed job also prints its error). The first command the workshop refuses stops the run (the commands before it stay applied, each is its own transaction): a stale base version says the current version. --format json prints each reply as one line.\n"
+    "\n"
+    "The data folder is named before the subcommand: ursatz --data <dir> apply commands.jsonl.\n"
+    "\n"
+    "Exit status: 0 every command was applied; 1 usage (the input does not read, an actor member) or the first command refused as a request; 2 the folder cannot be opened, or any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  echo '{\"command\":\"project.create\",\"params\":{\"name\":\"Songs\"}}' | ursatz --data ~/ursatz-data apply\n"
+    "  ursatz --data ~/ursatz-data --actor claude apply edits.jsonl --wait",
+     FLAGS_APPLY, 0, 1, run_apply},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);

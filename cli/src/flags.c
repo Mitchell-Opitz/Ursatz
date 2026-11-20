@@ -122,6 +122,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--variations", NULL, CLI_FLAG_VALUE, "<id>", "make --count different versions of the section with that id"},
     {"--view", NULL, CLI_FLAG_VALUE, "<view>", "a view of the result: text is the measure-addressed text export of analyze, json what show prints"},
     {"--voicing", NULL, CLI_FLAG_SWITCH, NULL, "keep the grown melody as the soprano and add an alto and a tenor under it"},
+    {"--wait", NULL, CLI_FLAG_SWITCH, NULL, "wait for the job a command starts, and say how it ended"},
     {"--what", NULL, CLI_FLAG_VALUE, "<what>", "motifs or themes"},
     {"--write-midi", NULL, CLI_FLAG_SWITCH, NULL, "also write each version as a MIDI file"},
     {"--write-musicxml", NULL, CLI_FLAG_SWITCH, NULL, "also write each version as a MusicXML file"},
