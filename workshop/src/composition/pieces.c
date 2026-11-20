@@ -193,8 +193,8 @@ static const char *structure_material(const cJSON *structure) {
     return cJSON_IsString(material) ? material->valuestring : cJSON_IsString(mode) ? mode->valuestring : NULL;
 }
 
-/* What the request needs from the piece, checked before anything is made. A form with sizes asks only key, material and
- * meter. */
+/* Whether the structure has the members a request is made of: a draft that has not is no request yet (validate says it is incomplete). A form with sizes
+ * asks only key, material and meter. The Composer refuses the rest at its path (R-649). */
 static bool composable(const cJSON *piece, bool has_brief, UrsatzError *error) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
     bool sized = cJSON_IsObject(structure) && structure_sized(structure);
@@ -205,20 +205,7 @@ static bool composable(const cJSON *piece, bool has_brief, UrsatzError *error) {
                                                              : "the piece structure needs key, material, meter and sections");
         return false;
     }
-    if (strcmp(structure_material(structure), "style") == 0 && !has_brief) {
-        workshop_error_text(error, "the material style needs a brief");
-        return false;
-    }
-    const cJSON *section = NULL;
-    const cJSON *own_sections = sized ? NULL : cJSON_GetObjectItemCaseSensitive(structure, "sections");
-    cJSON_ArrayForEach(section, own_sections) {
-        const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
-        if (cJSON_IsObject(fill) && strcmp(common_json_string(fill, "kind"), "motif") == 0 &&
-            strcmp(common_json_string(fill, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(fill, "hybrid"))) {
-            workshop_error_printf(error, "the hybrid motif fill of section %s needs hybrid", common_json_string(section, "id"));
-            return false;
-        }
-    }
+    (void)has_brief; /* the material style without a brief and a hybrid fill without its parts are the Composer's to refuse, with their paths (R-649) */
     return true;
 }
 

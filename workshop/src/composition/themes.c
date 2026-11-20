@@ -226,7 +226,8 @@ static const char *form_material(const cJSON *form) {
     return cJSON_IsString(material) ? material->valuestring : cJSON_IsString(mode) ? mode->valuestring : NULL;
 }
 
-/* What the request needs from the theme, checked before anything is made. */
+/* Whether the form has the members a request is made of (into, material, meter): a draft that has not is no request yet (validate says it is incomplete). What the
+ * words mean is the Composer's (R-649): it refuses a hybrid without its parts, a style without a brief or a theme without its required slot at their paths. */
 static bool composable(const cJSON *theme, bool has_brief, UrsatzError *error) {
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
     if (!cJSON_IsObject(form) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "into")) ||
@@ -234,28 +235,7 @@ static bool composable(const cJSON *theme, bool has_brief, UrsatzError *error) {
         workshop_error_text(error, "the theme form needs into, material and meter");
         return false;
     }
-    if (strcmp(common_json_string(form, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "hybrid"))) {
-        workshop_error_text(error, "a hybrid theme form needs hybrid");
-        return false;
-    }
-    if (strcmp(form_material(form), "style") == 0 && !has_brief) {
-        workshop_error_text(error, "the material style needs a brief");
-        return false;
-    }
-    const cJSON *required = cJSON_GetArrayItem(workshop_composer_vocabulary_list("theme_slots"),
-                                               workshop_composer_vocabulary_required_index("theme_slots"));
-    const char *required_slot = common_json_string(required, "value");
-    bool has_required = false;
-    const cJSON *slot = NULL;
-    cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-        has_required = has_required || strcmp(common_json_string(slot, "slot"), required_slot) == 0;
-    }
-    if (!has_required) {
-        char text[96];
-        snprintf(text, sizeof(text), "the theme needs a %s slot", required_slot);
-        workshop_error_text(error, text);
-        return false;
-    }
+    (void)has_brief; /* a hybrid without its parts, a style without a brief, a theme without its required slot: the Composer refuses them with their path (R-649) */
     return true;
 }
 

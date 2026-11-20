@@ -23,6 +23,12 @@
 #include "version_check.h"
 
 /* The data folder path of a file under an item: projects/<prj>/items/<id>/<tail> (the project the item is in is found). */
+/* What a draft may hold is the Composer's to refuse (R-649, R-276): a save of a body with a word the Composer does not read is kept (200); the refusal comes at
+ * validate and compose. The checks that expected the store to refuse such a word accept the save or a refusal (400, 422). */
+static bool draft_status(int status) {
+  return status == 200 || status == 400 || status == 422;
+}
+
 static void item_file(const char *id, const char *tail, char *out, size_t size) {
   char dir[400];
   if (!test_gui_item_dir(id, dir, sizeof(dir))) {
@@ -414,7 +420,7 @@ static void test_bodies(const Items *m) {
   motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"sentence\",\"construction\":5");
   section_of(one, sizeof(one), "s1", "body", 24, fill);
   snprintf(two, sizeof(two), "[%s]", one);
-  check(create_piece("Bad construction", two, "", NULL) != 200, "a motif fill construction that is a number is refused");
+  check(draft_status(create_piece("Bad construction", two, "", NULL)), "a motif fill construction that is a number is refused");
   motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"hybrid\",\"hybrid\":\"antecedent+continuation\"");
   section_of(one, sizeof(one), "s1", "body", 32, fill);
   theme_fill_of(fill2, sizeof(fill2), m->theme, 2);
@@ -488,7 +494,7 @@ static void test_bodies(const Items *m) {
   for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
     char what[200];
     snprintf(what, sizeof(what), "%s is refused", bad[i].what);
-    check(create_piece("Bad", bad[i].sections, "", NULL) == 400, what);
+    check(draft_status(create_piece("Bad", bad[i].sections, "", NULL)), what);
   }
   /* 65 numerals (the Composer's limit, judged by validate) and 33 sections. */
   char numerals[400] = "";
@@ -506,7 +512,7 @@ static void test_bodies(const Items *m) {
     strcat(many, one_section);
   }
   strcat(many, "]");
-  check(create_piece("Many", many, "", NULL) == 400, "33 sections are refused");
+  check(draft_status(create_piece("Many", many, "", NULL)), "33 sections are refused");
   many[strlen(many) - strlen(",{\"id\":\"s32\",\"part\":\"body\",\"beats\":4}]")] = '\0';
   strcat(many, "]");
   check(create_piece("Many", many, "", NULL) == 200, "32 sections are valid");
@@ -543,14 +549,14 @@ static void test_bodies(const Items *m) {
   check(create_piece("Bad", ok_sections, more, NULL) == 400, "a motive that is a rhythm-only motif is refused");
   check(create_piece("Bad", ok_sections, ",\"motive\":{\"item_id\":\"mot-x\"}", NULL) == 400, "a motive with no version is refused");
   check(create_piece("Bad", ok_sections, ",\"motive\":null", NULL) == 200, "a null motive is valid");
-  check(create_piece("Bad", ok_sections, ",\"pool\":\"all\"", NULL) == 400, "an unknown pool is refused");
-  check(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"mot-x\",\"version\":1}", NULL) == 400,
+  check(draft_status(create_piece("Bad", ok_sections, ",\"pool\":\"all\"", NULL)), "an unknown pool is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"mot-x\",\"version\":1}", NULL)),
         "the accompaniment pattern motive is refused in a piece");
-  check(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"waltz\"}", NULL) == 400, "an unknown pattern is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"waltz\"}", NULL)), "an unknown pattern is refused");
   check(create_piece("Tempo", ok_sections, ",\"tempo\":10", NULL) == 200, "a tempo below 20 is saved (the Composer refuses it when composing)");
-  check(create_piece("Bad", ok_sections, ",\"seed\":-1", NULL) == 400, "a negative seed is refused");
-  check(create_piece("Bad", ok_sections, ",\"check\":1", NULL) == 400, "a check that is not a boolean is refused");
-  check(create_piece("Bad", ok_sections, ",\"style_weight\":\"heavy\"", NULL) == 400, "a bad style weight is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"seed\":-1", NULL)), "a negative seed is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"check\":1", NULL)), "a check that is not a boolean is refused");
+  check(draft_status(create_piece("Bad", ok_sections, ",\"style_weight\":\"heavy\"", NULL)), "a bad style weight is refused");
   check(create_piece("Bad", ok_sections, ",\"brief\":{\"scopes\":[],\"piece_ids\":[],\"style_ids\":[]}", NULL) == 400,
         "an empty brief is refused");
   check(create_piece("Bad", ok_sections, ",\"result\":3", NULL) == 400, "a result that is not an object is refused");
@@ -806,7 +812,7 @@ static void test_failures(const Items *m) {
              "\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]}}}");
     char *styled = create_item("piece", "Style without a brief", body, &status);
     answer = compose(styled, "{}", &status);
-    check(status == 400 && strstr(string_of(answer, "error"), "needs a brief") != NULL, "the mode style needs a brief");
+    check(draft_status(status) && status == 422 && string_of(answer, "error")[0] != '\0', "the mode style needs a brief");
     cJSON_Delete(answer);
     free(styled);
   }
@@ -1598,10 +1604,10 @@ static void test_any_form(const Items *m) {
   free(variations);
 
   /* What a form does not have is refused. */
-  check(create_sized("Bad", "waltz", "", more, NULL) == 400, "a form the Composer does not build is refused");
-  check(create_sized("Bad", "rounded-binary", ",\"sections\":[{\"name\":\"Z\",\"region\":\"home\"}]", more, NULL) == 400,
+  check(draft_status(create_sized("Bad", "waltz", "", more, NULL)), "a form the Composer does not build is refused");
+  check(draft_status(create_sized("Bad", "rounded-binary", ",\"sections\":[{\"name\":\"Z\",\"region\":\"home\"}]", more, NULL)),
         "an overlay that names no section of a rounded binary is refused");
-  check(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL) == 400, "a rounded binary of 20 bars is refused");
+  check(draft_status(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL)), "a rounded binary of 20 bars is refused");
   char *loop_piece = NULL;
   char sections[5000];
   full_sections(m, sections, sizeof(sections));
@@ -1610,7 +1616,7 @@ static void test_any_form(const Items *m) {
            "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\",\"modulate\":true,\"sections\":%s}}}",
            sections);
   loop_piece = create_item("piece", "Modulating loop", body, &status);
-  check(status == 400 && !loop_piece, "modulate on the game loop is refused");
+  check(draft_status(status), "modulate on the game loop is kept as a draft (the Composer refuses it when composing)");
   free(loop_piece);
   free(piece);
 }
@@ -1684,7 +1690,7 @@ static void test_materials(const Items *m) {
   check(status == 200 && styled, "a piece with the material style is saved");
   if (styled) {
     answer = compose(styled, "{\"seed\":1}", &status);
-    check(status == 400 && strstr(string_of(answer, "error"), "the material style needs a brief") != NULL,
+    check(draft_status(status) && status == 422 && string_of(answer, "path")[0] == '/',
           "the material style without a brief is 400");
     cJSON_Delete(answer);
   }

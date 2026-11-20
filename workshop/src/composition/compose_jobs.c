@@ -21,7 +21,7 @@ void workshop_compose_reply(UrsatzStatus result, cJSON *item, const UrsatzError 
     cJSON_Delete(item);
     return;
   }
-  int status = workshop_http_status(result, NULL); /* a refusal at a request member is 400; its path is sent beside it */
+  int status = workshop_http_status(result, error); /* a refusal at a request member is 422, its path sent beside it (R-649) */
   const char *fallback = result == URSATZ_ERR_NOT_FOUND ? "not found"
                          : result == URSATZ_ERR_REQUEST ? invalid_text
                          : result == URSATZ_ERR_UNSATISFIABLE ? "stuck"

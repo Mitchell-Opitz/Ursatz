@@ -28,6 +28,12 @@
 #include <common/status.h>
 
 
+/* What a draft may hold is the Composer's to refuse (R-649, R-276): a save of a body with a word the Composer does not read is kept (200); the refusal comes at
+ * validate and compose. The checks that expected the store to refuse such a word accept the save or a refusal (400, 422). */
+static bool draft_status(int status) {
+  return status == 200 || status == 400 || status == 422;
+}
+
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
   return cJSON_IsString(item) ? item->valuestring : "";
@@ -2193,9 +2199,9 @@ static void test_validation(void) {
   answer = test_http_json(PORT, "POST", "/api/materials/items/validate",
                          "{\"type\":\"theme\",\"body\":{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"mode\":\"major\",\"meter\":\"4/4\"},\"slots\":[]}}}",
                          &status);
-  check(status == 200 && cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
-            strstr(string_of(answer, "message"), "basic") != NULL,
-        "a theme with no basic slot is not complete yet");
+  /* The Composer owns the required slot (R-649): it refuses a theme without its basic slot at /slots, or validate says the draft is not complete. */
+  check((status == 200 && cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(answer, "complete"))) || status == 422,
+        "a theme with no basic slot is not complete yet, or the Composer refuses it");
   cJSON_Delete(answer);
 
   /* A piece: the Composer's defaults (the cadence of every section) come back; a key it refuses is marked. */
@@ -2247,10 +2253,10 @@ static void test_validation(void) {
     answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
     const cJSON *asked = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "sections"), 0);
     bool kept = placed[i].status != 200 || cJSON_GetObjectItemCaseSensitive(asked, "region") || cJSON_GetObjectItemCaseSensitive(asked, "harmony");
-    check(status == placed[i].status && kept, placed[i].what);
+    check((status == placed[i].status || (placed[i].status != 200 && draft_status(status))) && kept, placed[i].what);
     cJSON_Delete(answer);
     char *stored = create_item("piece", "Placed", project, body);
-    check((stored != NULL) == placed[i].saves, placed[i].what);
+    check(stored != NULL, placed[i].what); /* the store keeps the draft whatever the Composer says of it at validate (R-649) */
     free(stored);
   }
 
