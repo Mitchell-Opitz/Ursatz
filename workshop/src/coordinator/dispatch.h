@@ -87,7 +87,7 @@ WORKSHOP_HANDLER(workshop_q_library_list);
 WORKSHOP_HANDLER(workshop_q_library_groups);
 WORKSHOP_HANDLER(workshop_q_library_piece);
 WORKSHOP_HANDLER(workshop_q_library_document);
-WORKSHOP_HANDLER(workshop_q_library_export);
+WORKSHOP_HANDLER(workshop_q_library_view);
 WORKSHOP_HANDLER(workshop_q_library_musicxml);
 WORKSHOP_HANDLER(workshop_q_library_meter_defaulted);
 WORKSHOP_HANDLER(workshop_q_library_playback);
@@ -120,6 +120,7 @@ WORKSHOP_HANDLER(workshop_q_project_get);
 WORKSHOP_HANDLER(workshop_q_item_list);
 WORKSHOP_HANDLER(workshop_q_item_get);
 WORKSHOP_HANDLER(workshop_q_item_version);
+WORKSHOP_HANDLER(workshop_q_item_view);
 WORKSHOP_HANDLER(workshop_q_item_export);
 WORKSHOP_HANDLER(workshop_q_item_score);
 WORKSHOP_HANDLER(workshop_q_item_playback);
@@ -134,11 +135,14 @@ WORKSHOP_HANDLER(workshop_q_item_each_op);
 
 /* tools (tools.c): the third call, on files the params name (R-656) */
 WORKSHOP_HANDLER(workshop_t_analyze);
+WORKSHOP_HANDLER(workshop_t_commands);
+WORKSHOP_HANDLER(workshop_t_commands_parse);
 WORKSHOP_HANDLER(workshop_t_composer);
 WORKSHOP_HANDLER(workshop_t_corpus);
 WORKSHOP_HANDLER(workshop_t_corpus_passages);
 WORKSHOP_HANDLER(workshop_t_pitch_names);
 WORKSHOP_HANDLER(workshop_t_style_profile);
+WORKSHOP_HANDLER(workshop_t_text);
 WORKSHOP_HANDLER(workshop_t_versions);
 
 /* the journal (api_journal.c) */
@@ -164,6 +168,11 @@ WORKSHOP_HANDLER(workshop_c_style_rebuild);
 WORKSHOP_HANDLER(workshop_c_style_delete);
 WORKSHOP_HANDLER(workshop_c_links_run);
 WORKSHOP_HANDLER(workshop_c_links_delete);
+WORKSHOP_HANDLER(workshop_c_section_insert);
+WORKSHOP_HANDLER(workshop_c_section_delete);
+WORKSHOP_HANDLER(workshop_c_section_move);
+WORKSHOP_HANDLER(workshop_c_section_resize);
+WORKSHOP_HANDLER(workshop_c_section_set);
 WORKSHOP_HANDLER(workshop_c_job_cancel);
 
 /* projects, items, subjects commands (api_commands_items.c) */
@@ -185,6 +194,7 @@ WORKSHOP_HANDLER(workshop_c_item_flag);
 WORKSHOP_HANDLER(workshop_c_item_promote);
 WORKSHOP_HANDLER(workshop_c_item_link_form);
 WORKSHOP_HANDLER(workshop_c_item_reroll);
+WORKSHOP_HANDLER(workshop_c_item_restore);
 WORKSHOP_HANDLER(workshop_c_item_update_use);
 WORKSHOP_HANDLER(workshop_c_subject_create);
 WORKSHOP_HANDLER(workshop_c_subject_update);

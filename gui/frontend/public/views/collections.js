@@ -4,7 +4,7 @@ import { UNASSIGNED, UNTAGGED, buildActionButton, buildPieceTable, collectionRes
 import { showAnalysisView } from "./analysis.js";
 import { loadStylesSection, startStyleBuild } from "./styles.js";
 import { shell } from "./shell-context.js";
-import { fetchJsonResult, postJsonResult } from "../core/api.js";
+import { commandResult, fetchJsonResult } from "../core/api.js";
 
 /* The Collections tool: the collection cards, a collection's members and the picker that adds pieces to it. */
 export async function renderCorpusView() {
@@ -80,11 +80,7 @@ async function loadCollectionSummaries(collections) {
 }
 
 function patchCollection(id, body) {
-  return fetchJsonResult(`/api/corpus/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  return commandResult("collection.update", { target: id, params: body });
 }
 
 function showCollectionsStatus(text, isError) {
@@ -154,7 +150,7 @@ function buildCollectionCardMenu(corpus) {
     if (!window.confirm(`Delete the collection "${corpus.name}"? Its pieces are not deleted.`)) {
       return;
     }
-    const result = await fetchJsonResult(`/api/corpus/${corpus.id}`, { method: "DELETE" });
+    const result = await commandResult("collection.delete", { target: corpus.id });
     if (result.ok && result.data && result.data.ok) {
       renderCorpusView();
     } else {
@@ -223,7 +219,7 @@ async function handleCreateCorpus() {
   createButton.disabled = true;
 
   try {
-    const answer = await ApiRequest.apiRequest("POST", "/api/corpus", { name, description: document.getElementById("corpus-description-input").value });
+    const answer = await commandResult("collection.create", { params: { name, description: document.getElementById("corpus-description-input").value } });
     const data = answer.data || {};
 
     if (!answer.ok) {
@@ -441,7 +437,7 @@ async function bulkRemoveFromCollection(ids) {
   const labels = new Map(view.members.map((piece) => [piece.id, piece.filename || piece.id]));
   let failure = "";
   for (const pieceId of ids) {
-    const result = await fetchJsonResult(`/api/corpus/${view.id}/pieces/${pieceId}`, { method: "DELETE" });
+    const result = await commandResult("collection.remove-piece", { target: view.id, params: { piece_id: pieceId } });
     if (!result.ok || !result.data || !result.data.ok) {
       failure = `Stopped at ${labels.get(pieceId) || pieceId}: ${collectionResultError(result, "failed")}`;
       break;
@@ -744,7 +740,7 @@ async function addPiecesToCollection(ids) {
   const statusEl = document.getElementById("corpus-piece-add-status");
   statusEl.textContent = "";
   statusEl.classList.remove("error");
-  const result = await postJsonResult(`/api/corpus/${view.id}/pieces`, PieceMetadata.addPiecesBody(ids));
+  const result = await commandResult("collection.add-pieces", { target: view.id, params: PieceMetadata.addPiecesBody(ids) });
   if (!result.ok || !result.data || !result.data.ok) {
     statusEl.textContent = collectionResultError(result, "Add failed.");
     statusEl.classList.add("error");
@@ -756,7 +752,7 @@ async function addPiecesToCollection(ids) {
 
 async function handleRemovePiece(corpusId, corpusName, pieceId) {
   try {
-    const answer = await ApiRequest.apiRequest("DELETE", `/api/corpus/${corpusId}/pieces/${pieceId}`);
+    const answer = await commandResult("collection.remove-piece", { target: corpusId, params: { piece_id: pieceId } });
     const data = answer.data || {};
 
     if (!answer.ok) {

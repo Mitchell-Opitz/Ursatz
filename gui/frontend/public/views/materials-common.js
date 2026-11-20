@@ -67,10 +67,9 @@ async function sendJobRequest(request) {
   }
 }
 
-/* Sends a materials request: a write to an item carries the version the page holds (ApiRequest.withBaseVersion), and every answer that holds
+/* Sends a materials request: a command carries the version the page holds as its base_version (core/commands.js), and every answer that holds
  * an item records its current version. */
-export async function sendMaterialsRequest(original) {
-  const request = ApiRequest.withBaseVersion(original);
+export async function sendMaterialsRequest(request) {
   const answer = request.job
     ? await sendJobRequest(request)
     : await ApiRequest.sendRequest(request);
@@ -365,6 +364,20 @@ export function buildVersionsList(item, viewEl, statusEl, renderBody) {
       viewEl.appendChild(element("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
     });
     cell.appendChild(view);
+    if (!row.current) {
+      const restore = element("button", "", "Restore");
+      restore.type = "button";
+      restore.addEventListener("click", async () => {
+        const answer = await sendMaterialsRequest(MaterialsModel.buildRestoreRequest(item.id, row.number));
+        if (!answer.ok) {
+          statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not restore the version");
+          statusEl.classList.add("error");
+          return;
+        }
+        shell().openItem(item.type, item.id);
+      });
+      cell.appendChild(restore);
+    }
     tr.appendChild(cell);
     table.appendChild(tr);
   }

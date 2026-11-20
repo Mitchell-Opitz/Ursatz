@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-commands.v1.schema.json",
+  "title": "Command definitions, schema version 1",
+  "description": "workshop/commands/<family>.json: every command of one family, defined once (R-664). The workshop checks a command's params from this file, and the reference sheet, the text grammar and the help of each command are generated from it.",
+  "type": "object",
+  "required": ["schema", "schema_version", "family", "summary", "commands"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "ursatz-commands" },
+    "schema_version": { "const": 1 },
+    "family": { "type": "string", "pattern": "^[a-z]+$" },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "commands": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/command" } }
+  },
+  "$defs": {
+    "command": {
+      "type": "object",
+      "required": ["name", "summary", "target", "base", "journaled", "bytes", "params", "one_of", "reply", "job", "example"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z]+\\.[a-z-]+$", "description": "<family>.<verb>: its family before the dot" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 80, "description": "one line" },
+        "target": { "enum": ["item", "piece", "collection", "style", "links", "project", "subject", "job", null], "description": "the kind of address the command works on, or null" },
+        "base": { "type": "boolean", "description": "the command changes an item that has versions: the version the caller read is required" },
+        "journaled": { "type": "boolean", "description": "a record in the journal (false for a runtime control such as job.cancel)" },
+        "bytes": { "type": "boolean", "description": "the command takes a file as its body" },
+        "params": { "type": "array", "items": { "$ref": "#/$defs/param" } },
+        "one_of": {
+          "type": "array",
+          "description": "groups of param names of which exactly one is given",
+          "items": { "type": "array", "minItems": 2, "items": { "type": "string" } }
+        },
+        "reply": { "type": "string", "minLength": 1, "description": "what the answer holds" },
+        "job": { "type": ["string", "null"], "description": "the kind of job the command answers with, or null" },
+        "example": { "type": "string", "minLength": 1, "description": "the command in the text grammar of R-665" }
+      }
+    },
+    "param": {
+      "type": "object",
+      "required": ["name", "type", "required", "help"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "type": { "enum": ["string", "integer", "boolean", "enum", "rational", "object", "array"] },
+        "required": { "type": "boolean" },
+        "help": { "type": "string", "minLength": 1 },
+        "values": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "the words of an enum" },
+        "minimum": { "type": "integer" },
+        "maximum": { "type": "integer" },
+        "max_length": { "type": "integer", "minimum": 1, "description": "of a string" },
+        "items": {
+          "enum": ["string", "integer", "boolean", "rational", "object"],
+          "description": "the type of an array's items"
+        },
+        "words": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "for an object: words accepted in place of the object (the word home takes a region away)"
+        }
+      }
+    }
+  }
+}

@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "base/command_context.h"
+#include "coordinator/command_schemas.h"
 #include "coordinator/coordinator.h"
 
 /* --- the table of queries -------------------------------------------------------------------------------------------------------- */
@@ -20,7 +21,7 @@ static const QueryEntry kQueries[] = {
     {"library.groups", workshop_q_library_groups},
     {"library.piece", workshop_q_library_piece},
     {"library.document", workshop_q_library_document},
-    {"library.export", workshop_q_library_export},
+    {"library.view", workshop_q_library_view},
     {"library.musicxml", workshop_q_library_musicxml},
     {"library.meter-defaulted", workshop_q_library_meter_defaulted},
     {"library.playback", workshop_q_library_playback},
@@ -48,6 +49,7 @@ static const QueryEntry kQueries[] = {
     {"item.list", workshop_q_item_list},
     {"item.get", workshop_q_item_get},
     {"item.version", workshop_q_item_version},
+    {"item.view", workshop_q_item_view},
     {"item.export", workshop_q_item_export},
     {"item.score", workshop_q_item_score},
     {"item.playback", workshop_q_item_playback},
@@ -69,54 +71,68 @@ static const QueryEntry kQueries[] = {
 typedef struct {
     const char *name;
     WorkshopHandler handler;
-    bool takes_base_version; /* the command changes an item that has versions: it needs the version the caller read (commit 3) */
 } CommandEntry;
 
 static const CommandEntry kCommands[] = {
-    {"library.import", workshop_c_library_import, false},
-    {"library.update", workshop_c_library_update, false},
-    {"library.delete", workshop_c_library_delete, false},
-    {"library.reanalyze", workshop_c_library_reanalyze, false},
-    {"collection.create", workshop_c_collection_create, false},
-    {"collection.update", workshop_c_collection_update, false},
-    {"collection.delete", workshop_c_collection_delete, false},
-    {"collection.add-pieces", workshop_c_collection_add_pieces, false},
-    {"collection.remove-piece", workshop_c_collection_remove_piece, false},
-    {"style.build", workshop_c_style_build, false},
-    {"style.rebuild", workshop_c_style_rebuild, false},
-    {"style.delete", workshop_c_style_delete, false},
-    {"links.run", workshop_c_links_run, false},
-    {"links.delete", workshop_c_links_delete, false},
-    {"project.create", workshop_c_project_create, false},
-    {"project.update", workshop_c_project_update, false},
-    {"project.delete", workshop_c_project_delete, false},
-    {"item.create", workshop_c_item_create, false},
-    {"item.update", workshop_c_item_update, true},
-    {"item.delete", workshop_c_item_delete, true},
-    {"item.save", workshop_c_item_save, true},
-    {"item.reanalyze", workshop_c_item_reanalyze, true},
-    {"item.compose", workshop_c_item_compose, true},
-    {"item.regenerate", workshop_c_item_regenerate, true},
-    {"item.variations", workshop_c_item_variations, false},
-    {"item.choose", workshop_c_item_choose, true},
-    {"item.set-op-checks", workshop_c_item_set_op_checks, false},
-    {"item.save-variant", workshop_c_item_save_variant, false},
-    {"item.flag", workshop_c_item_flag, true},
-    {"item.promote", workshop_c_item_promote, true},
-    {"item.link-form", workshop_c_item_link_form, true},
-    {"item.reroll", workshop_c_item_reroll, true},
-    {"item.update-use", workshop_c_item_update_use, true},
-    {"subject.create", workshop_c_subject_create, false},
-    {"subject.update", workshop_c_subject_update, false},
-    {"subject.delete", workshop_c_subject_delete, false},
-    {"subject.link-item", workshop_c_subject_link_item, false},
-    {"subject.unlink-item", workshop_c_subject_unlink_item, false},
-    {"subject.link-piece", workshop_c_subject_link_piece, false},
-    {"subject.unlink-piece", workshop_c_subject_unlink_piece, false},
-    {"subject.relate", workshop_c_subject_relate, false},
-    {"subject.unrelate", workshop_c_subject_unrelate, false},
-    {"job.cancel", workshop_c_job_cancel, false}, /* a runtime control: it changes no file and writes no record */
+    {"library.import", workshop_c_library_import},
+    {"library.update", workshop_c_library_update},
+    {"library.delete", workshop_c_library_delete},
+    {"library.reanalyze", workshop_c_library_reanalyze},
+    {"collection.create", workshop_c_collection_create},
+    {"collection.update", workshop_c_collection_update},
+    {"collection.delete", workshop_c_collection_delete},
+    {"collection.add-pieces", workshop_c_collection_add_pieces},
+    {"collection.remove-piece", workshop_c_collection_remove_piece},
+    {"style.build", workshop_c_style_build},
+    {"style.rebuild", workshop_c_style_rebuild},
+    {"style.delete", workshop_c_style_delete},
+    {"links.run", workshop_c_links_run},
+    {"links.delete", workshop_c_links_delete},
+    {"project.create", workshop_c_project_create},
+    {"project.update", workshop_c_project_update},
+    {"project.delete", workshop_c_project_delete},
+    {"item.create", workshop_c_item_create},
+    {"item.update", workshop_c_item_update},
+    {"item.delete", workshop_c_item_delete},
+    {"item.save", workshop_c_item_save},
+    {"item.reanalyze", workshop_c_item_reanalyze},
+    {"item.compose", workshop_c_item_compose},
+    {"item.regenerate", workshop_c_item_regenerate},
+    {"item.variations", workshop_c_item_variations},
+    {"item.choose", workshop_c_item_choose},
+    {"item.set-op-checks", workshop_c_item_set_op_checks},
+    {"item.save-variant", workshop_c_item_save_variant},
+    {"item.flag", workshop_c_item_flag},
+    {"item.promote", workshop_c_item_promote},
+    {"item.link-form", workshop_c_item_link_form},
+    {"item.reroll", workshop_c_item_reroll},
+    {"item.restore", workshop_c_item_restore},
+    {"item.update-use", workshop_c_item_update_use},
+    {"subject.create", workshop_c_subject_create},
+    {"subject.update", workshop_c_subject_update},
+    {"subject.delete", workshop_c_subject_delete},
+    {"subject.link-item", workshop_c_subject_link_item},
+    {"subject.unlink-item", workshop_c_subject_unlink_item},
+    {"subject.link-piece", workshop_c_subject_link_piece},
+    {"subject.unlink-piece", workshop_c_subject_unlink_piece},
+    {"subject.relate", workshop_c_subject_relate},
+    {"subject.unrelate", workshop_c_subject_unrelate},
+    {"section.insert", workshop_c_section_insert},
+    {"section.delete", workshop_c_section_delete},
+    {"section.move", workshop_c_section_move},
+    {"section.resize", workshop_c_section_resize},
+    {"section.set", workshop_c_section_set},
+    {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };
+
+const char *const *workshop_command_names(size_t *count) {
+    static const char *names[sizeof(kCommands) / sizeof(kCommands[0])];
+    for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); i++) {
+        names[i] = kCommands[i].name;
+    }
+    *count = sizeof(kCommands) / sizeof(kCommands[0]);
+    return names;
+}
 
 /* --- parameters ------------------------------------------------------------------------------------------------------------------ */
 
@@ -400,7 +416,13 @@ UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const Wo
     snprintf(context.actor, sizeof(context.actor), "%s", actor->valuestring);
     snprintf(context.target, sizeof(context.target), "%s", call.target);
     context.base_version = base_version;
-    if (entry->takes_base_version) {
+    const cJSON *schema = workshop_command_schema(entry->name);
+    UrsatzStatus invalid = workshop_command_check(schema, call.target, call.params, error);
+    if (invalid != URSATZ_OK) {
+        cJSON_Delete(empty);
+        return invalid;
+    }
+    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(schema, "base"))) {
         UrsatzStatus refused = check_base_version(&call, reply, error);
         if (refused != URSATZ_OK) {
             cJSON_Delete(empty);
@@ -430,11 +452,14 @@ typedef struct {
 
 static const ToolEntry WORKSHOP_TOOLS[] = {
     {"analyze", workshop_t_analyze},
+    {"commands", workshop_t_commands},
+    {"commands-parse", workshop_t_commands_parse},
     {"composer", workshop_t_composer},
     {"corpus", workshop_t_corpus},
     {"corpus-passages", workshop_t_corpus_passages},
     {"pitch-names", workshop_t_pitch_names},
     {"style-profile", workshop_t_style_profile},
+    {"text", workshop_t_text},
     {"versions", workshop_t_versions},
 };
 

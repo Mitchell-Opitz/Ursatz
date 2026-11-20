@@ -3,6 +3,7 @@
  * DOM; materials-view.js renders from these. */
 
 import Req from "../core/request.js";
+import { commandRequest } from "../core/commands.js";
 import Vocab from "../core/vocabulary.js";
 
 /* The Composer's words (R-270, R-276): the modes, tone labels and tonic spellings are read when asked. */
@@ -27,17 +28,15 @@ function buildCreateProjectRequest(name, description) {
   if (description) {
     body.description = String(description);
   }
-  return Req.jsonRequest("POST", "/api/materials/projects", body);
+  return commandRequest("project.create", { params: body });
 }
 
 function buildRenameProjectRequest(id, name) {
-  return Req.jsonRequest("PATCH", `/api/materials/projects/${encodeURIComponent(id)}`, {
-    name: String(name || "").trim(),
-  });
+  return commandRequest("project.update", { target: id, params: { name: String(name || "").trim() } });
 }
 
 function buildDeleteProjectRequest(id) {
-  return Req.jsonRequest("DELETE", `/api/materials/projects/${encodeURIComponent(id)}`);
+  return commandRequest("project.delete", { target: id });
 }
 
 /* The items of one type, narrowed to a project unless the filter is "all". */
@@ -85,11 +84,8 @@ function newItemBody(type) {
 }
 
 function buildCreateItemRequest(type, name, projectId) {
-  return Req.jsonRequest("POST", "/api/materials/items", {
-    type,
-    name: String(name || "").trim(),
-    project_id: projectId,
-    body: newItemBody(type),
+  return commandRequest("item.create", {
+    params: { type, name: String(name || "").trim(), project_id: projectId, body: newItemBody(type) },
   });
 }
 
@@ -103,7 +99,7 @@ function buildUpdateItemRequest(id, fields) {
   if (typeof f.project_id === "string" && f.project_id !== "") {
     body.project_id = f.project_id;
   }
-  return Req.jsonRequest("PATCH", `/api/materials/items/${encodeURIComponent(id)}`, body);
+  return commandRequest("item.update", { target: id, params: body });
 }
 
 function projectsFrom(data) {
@@ -253,11 +249,7 @@ function hasUpdatedUse(statuses) {
 
 /* Moves a use to the source's current version (writes a new version). */
 function buildUpdateUseRequest(id, sourceId) {
-  return Req.jsonRequest(
-    "POST",
-    `/api/materials/items/${encodeURIComponent(id)}/uses/${encodeURIComponent(sourceId)}/update`,
-    {},
-  );
+  return commandRequest("item.update-use", { target: id, params: { source_id: sourceId } });
 }
 
 /* Rows for the Used by section from the item answer's used_by: the items
@@ -273,7 +265,6 @@ function usedByRows(users, projects) {
   }));
 }
 
-/* force true adds ?force=1, which deletes an item other items use. */
 /* Rows for the Used by table of a motif: usedByRows plus updateAvailable, true when the user's version is behind
  * currentVersion (the motif's current version). */
 function usedByTable(users, projects, currentVersion) {
@@ -284,7 +275,8 @@ function usedByTable(users, projects, currentVersion) {
 }
 
 function buildDeleteItemRequest(id, force) {
-  return Req.jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
+  /* force true deletes an item other items use. */
+  return commandRequest("item.delete", { target: id, params: force ? { force: true } : {} });
 }
 
 /* The warning for a refused delete (status 409 with used_by), or null when
@@ -350,7 +342,7 @@ function buildAddVersionRequest(id, body, note) {
   if (note && String(note).trim() !== "") {
     request.note = String(note).trim();
   }
-  return Req.jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
+  return commandRequest("item.save", { target: id, params: request });
 }
 
 const MOTIF_TABS = [
@@ -405,9 +397,14 @@ function composerAvailable(answer) {
   return Boolean(answer && answer.ok && answer.data && answer.data.available);
 }
 
+/* Makes the next version a copy of an older one; the answer is {version, restored_from}. */
+function buildRestoreRequest(id, version) {
+  return commandRequest("item.restore", { target: id, params: { version } });
+}
+
 /* Analyzes the current version of a motif again; the answer is the new version. */
 function buildReanalyzeRequest(id) {
-  return Req.jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/reanalyze`, {});
+  return commandRequest("item.reanalyze", { target: id });
 }
 
 const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
@@ -752,19 +749,21 @@ function motifSaveDecision(changes, note) {
 function buildSaveMotifRequest(options) {
   const o = options || {};
   if (!o.id) {
-    return Req.jsonRequest("POST", "/api/materials/items", {
-      type: "motif",
-      name: String(o.name || "").trim(),
-      project_id: o.project_id,
-      body: o.body,
-      ...(o.note && String(o.note).trim() !== "" ? { note: String(o.note).trim() } : {}),
+    return commandRequest("item.create", {
+      params: {
+        type: "motif",
+        name: String(o.name || "").trim(),
+        project_id: o.project_id,
+        body: o.body,
+        ...(o.note && String(o.note).trim() !== "" ? { note: String(o.note).trim() } : {}),
+      },
     });
   }
   const request = { body: o.body };
   if (o.note && String(o.note).trim() !== "") {
     request.note = String(o.note).trim();
   }
-  return Req.jsonRequest("POST", `/api/materials/items/${encodeURIComponent(o.id)}/versions`, request);
+  return commandRequest("item.save", { target: o.id, params: request });
 }
 
 function timeText(time) {
@@ -901,6 +900,7 @@ const api = {
   bodyWithUse,
   buildAddVersionRequest,
   buildReanalyzeRequest,
+  buildRestoreRequest,
   MOTIF_TABS,
   motifBodyChanged,
   motifSaveDecision,

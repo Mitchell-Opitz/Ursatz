@@ -16,6 +16,7 @@
  * and a sized form's state has overlays: [{name, region, harmony, fill}] for the sections of its size that have any. */
 
 import Req from "../core/request.js";
+import { commandRequest } from "../core/commands.js";
 import Themes from "./themes-model.js";
 import Vocab from "../core/vocabulary.js";
 import { itemUrl, text, wholeNumber } from "../core/values.js";
@@ -952,7 +953,7 @@ function saveRequest(state, note) {
   if (text(note)) {
     request.note = text(note);
   }
-  return Req.jsonRequest("POST", itemUrl(state.id, "/versions"), request);
+  return commandRequest("item.save", { target: state.id, params: request });
 }
 
 /* POST compose for the form state. options: {seed, update_uses}; a seed in options wins over the form's. */
@@ -967,7 +968,7 @@ function composeRequest(state, options) {
   if (o.update_uses) {
     body.update_uses = true;
   }
-  return Object.assign(Req.jsonRequest("POST", itemUrl(state.id, "/compose"), body), { job: true });
+  return Object.assign(commandRequest("item.compose", { target: state.id, params: body }), { job: true });
 }
 
 function versionFileUrl(id, number, name) {
@@ -1034,7 +1035,7 @@ function regenerateRequest(id, number, options) {
     body.seed = seed.value;
   }
   return {
-    request: Object.assign(Req.jsonRequest("POST", itemUrl(id, `/versions/${Number(number)}/regenerate`), body), { job: true }),
+    request: Object.assign(commandRequest("item.regenerate", { target: id, params: { version: Number(number), ...body } }), { job: true }),
   };
 }
 
@@ -1057,13 +1058,13 @@ function variationsRequest(id, number, options) {
     body.seed = seed.value;
   }
   return {
-    request: Object.assign(Req.jsonRequest("POST", itemUrl(id, `/versions/${Number(number)}/variations`), body), { job: true }),
+    request: Object.assign(commandRequest("item.variations", { target: id, params: { version: Number(number), ...body } }), { job: true }),
   };
 }
 
 /* POST choose: variation index of set becomes the next version. */
 function chooseRequest(id, number, set, index) {
-  return Object.assign(Req.jsonRequest("POST", itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/choose`), { index: Number(index) }), { job: true });
+  return Object.assign(commandRequest("item.choose", { target: id, params: { version: Number(number), set: Number(set), index: Number(index) } }), { job: true });
 }
 
 /* A file of a variations set: variation-<i>.musicxml, .mid, .json or result.json. */

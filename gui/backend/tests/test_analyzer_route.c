@@ -296,11 +296,39 @@ static void check_playback(const char *id, const char *label) {
   free(detail_response);
 }
 
-/* PATCHes a piece with a JSON body; returns the whole response. */
+/* The answer of a command as the tests read a response: a status line and the reply as the body (copied; the caller frees it). With
+ * wait, a command that runs as a job is waited for. */
+static char *answer_text(bool answered, int status, cJSON *reply) {
+  char *text = reply ? cJSON_PrintUnformatted(reply) : NULL;
+  size_t size = (text ? strlen(text) : 0) + 64;
+  char *response = answered || status != 0 ? malloc(size) : NULL;
+  if (response) {
+    snprintf(response, size, "HTTP/1.1 %d Answer\r\n\r\n%s", status, text ? text : "");
+  }
+  cJSON_free(text);
+  cJSON_Delete(reply);
+  return response;
+}
+
+static char *command_response(const char *name, const char *target, const char *params, bool wait) {
+  int status = 0;
+  cJSON *reply = NULL;
+  bool answered = wait ? test_gui_command_finish(PORT, name, target, -1, params, &status, &reply)
+                       : test_gui_command(PORT, name, target, -1, params, &status, &reply);
+  return answer_text(answered, status, reply);
+}
+
+/* library.import of the bytes with the upload name (percent-encoded), waited for. */
+static char *import_response(const char *encoded_name, const char *data, size_t size) {
+  int status = 0;
+  cJSON *reply = NULL;
+  bool answered = test_gui_command_file(PORT, "library.import", "", -1, "{}", encoded_name, data, size, &status, &reply);
+  return answer_text(answered, status, reply);
+}
+
+/* Updates a piece with library.update, body being its params; returns the answer as a response. */
 static char *patch_piece(const char *id, const char *body) {
-  char path[256];
-  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
-  return test_http_exchange(PORT, "PATCH", path, "application/json", body, strlen(body));
+  return command_response("library.update", id, body, false);
 }
 
 /* The parsed body of GET path (caller deletes). */
@@ -473,7 +501,7 @@ static void check_notation_override(const char *id) {
   static const char *const kInvalid[] = {
       "{\"notation\":{\"meter\":\"3/0\"}}",       "{\"notation\":{\"value_scale\":\"3\"}}",
       "{\"notation\":{\"pickup\":\"x\"}}",         "{\"notation\":{\"meter\":4}}",
-      "{\"notation\":\"3/4\"}",                     "{\"notation\":{\"pickup\":\"1/1\"}}",
+      "{\"notation\":{\"pickup\":\"1/1\"}}",
   };
   for (size_t i = 0; i < sizeof(kInvalid) / sizeof(kInvalid[0]); i++) {
     response = patch_piece(id, kInvalid[i]);
@@ -482,6 +510,11 @@ static void check_notation_override(const char *id) {
     check((test_http_status(response) == 400 || test_http_status(response) == 422) && strstr(test_http_body(response), "invalid notation") != NULL, what);
     free(response);
   }
+  /* a notation that is not an object is refused by the command's schema, at its member */
+  response = patch_piece(id, "{\"notation\":\"3/4\"}");
+  check((test_http_status(response) == 400 || test_http_status(response) == 422) && strstr(test_http_body(response), "notation must be an object") != NULL,
+        "{\"notation\":\"3/4\"} gives 400 or 422 notation must be an object");
+  free(response);
   detail = get_json(path);
   check(detail && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(detail, "notation")),
         "a refused notation leaves the piece without an override");
@@ -638,7 +671,7 @@ static void check_metadata(const char *a, const char *b, const char *c, const ch
         "an empty body says \"nothing to update\"");
   free(response);
   response = patch_piece(a, "{\"unknown\":\"member\"}");
-  check(strstr(test_http_body(response), "nothing to update"), "unknown members are ignored");
+  check(test_http_status(response) == 400 && strstr(test_http_body(response), "takes no param 'unknown'"), "an unknown member is refused by name");
   free(response);
   response = patch_piece("no-such-piece", "{\"composer\":\"X\"}");
   check(test_http_status(response) == 404, "PATCH of an unknown piece is 404");
@@ -692,7 +725,11 @@ static void check_piece_export(const char *id, const char *expected_title) {
   check(test_http_status(whole) == 200, "export answers 200");
   check(whole && strstr(whole, "Content-Type: text/plain; charset=utf-8") != NULL, "export is text/plain; charset=utf-8");
   const char *body = test_http_body(whole);
+  check(strncmp(body, "ursatz-text 1 view reading piece:", 33) == 0, "export starts with the view frame");
+  body = strchr(body, '\n') ? strchr(body, '\n') + 1 : body; /* the lines between the frame's first line and its trailing # lines are the export */
   check(strncmp(body, "# Ursatz export v2: piece\n", 26) == 0, "export starts with the header line");
+  check(strstr(body, "\n# leaves out: nothing the analysis document holds; the notes are the import's\n# expand: ursatz show piece:") != NULL,
+        "export ends with the frame's lines");
   snprintf(what, sizeof(what), "title: %s\n", expected_title);
   check(strstr(body, what) != NULL, "export names the piece by its file name without the extension");
   check(strstr(body, "\nm1 4/4\n") != NULL && strstr(body, "\nm2\n") != NULL, "the whole export has measures 1 and 2");
@@ -702,6 +739,7 @@ static void check_piece_export(const char *id, const char *expected_title) {
   char *ranged = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   body = test_http_body(ranged);
   check(test_http_status(ranged) == 200, "export of a range answers 200");
+  check(strstr(body, "--measures 2-2") != NULL, "the range is in the frame's expand line");
   check(strstr(body, "\nm2\n") != NULL && strstr(body, "\nm1 ") == NULL && strstr(body, "\nm3\n") == NULL,
         "a range lists only the measures in it");
   free(ranged);
@@ -827,8 +865,7 @@ static void check_import_cache(const char *id) {
   free(response);
   check(workshop_import_cache_imports() == 2, "the open after a PATCH imports once more");
 
-  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", id);
-  char *reanalyzed = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, "", 0));
+  char *reanalyzed = command_response("library.reanalyze", id, NULL, true);
   check(test_http_status(reanalyzed) == 200, "re-analyze answers 200");
   free(reanalyzed);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
@@ -1037,12 +1074,12 @@ int main(int argc, char **argv) {
   free(unknown_playback);
 
   /* Bodies the Analyzer cannot read. */
-  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "just some text", 14));
+  response = import_response("", "just some text", 14);
   check(test_http_status(response) == 415, "a .txt body gives 415");
   check(strstr(test_http_body(response), "\"error\":\"unsupported format\"") != NULL,
         "the 415 body is {\"error\": \"unsupported format\"}");
   free(response);
-  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces", NULL, "MThd\0\0\0\6", 8));
+  response = import_response("", "MThd\0\0\0\6", 8);
   check(test_http_status(response) == 422, "a truncated MIDI file gives 422");
   free(response);
 
@@ -1090,9 +1127,7 @@ int main(int argc, char **argv) {
     }
     test_write_file(analysis_path, "{}", 2);
 
-    char path[256];
-    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", mozart_id);
-    response = test_http_finish(PORT, test_http_exchange(PORT, "POST", path, NULL, NULL, 0));
+    response = command_response("library.reanalyze", mozart_id, NULL, true);
     check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL,
           "POST reanalyze is 200 OK");
     free(response);
@@ -1111,7 +1146,7 @@ int main(int argc, char **argv) {
     const cJSON *uploaded_after = meta ? cJSON_GetObjectItemCaseSensitive(meta, "uploaded_at") : NULL;
     const cJSON *filename = meta ? cJSON_GetObjectItemCaseSensitive(meta, "filename") : NULL;
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
-              schema->valuedouble == 13,
+              schema->valuedouble == ANALYZER_DOCUMENT_SCHEMA_VERSION,
           "re-running the analysis rewrites the versions in piece.json");
     check(cJSON_IsString(version) && strcmp(version->valuestring, analyzer_version()) == 0,
           "piece.json records the version the Analyzer reports");
@@ -1120,7 +1155,7 @@ int main(int argc, char **argv) {
           "re-running the analysis keeps the filename and uploaded_at");
     cJSON_Delete(meta);
   }
-  response = test_http_finish(PORT, test_http_exchange(PORT, "POST", "/api/analyzer/pieces/no-such-piece/reanalyze", NULL, NULL, 0));
+  response = command_response("library.reanalyze", "no-such-piece", NULL, true);
   check(test_http_status(response) == 404, "reanalyze of an unknown id gives 404");
   free(response);
 
@@ -1133,7 +1168,7 @@ int main(int argc, char **argv) {
     char path[256];
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", mozart_id);
     const char *body = "{\"filename\":\"Renamed.mid\"}";
-    response = test_http_exchange(PORT, "PATCH", path, "application/json", body, strlen(body));
+    response = patch_piece(mozart_id, body);
     check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"filename\":\"Renamed.mid\"") != NULL,
           "PATCH renames a piece");
     free(response);
@@ -1154,7 +1189,7 @@ int main(int argc, char **argv) {
           "the subject links the piece");
     char dir[256];
     snprintf(dir, sizeof(dir), "library/pieces/%s", mozart_id);
-    response = test_http_exchange(PORT, "DELETE", path, NULL, NULL, 0);
+    response = command_response("library.delete", mozart_id, NULL, false);
     check(test_http_status(response) == 200, "DELETE removes a piece");
     free(response);
     check(subject_id && workshop_subject_get(subject_id, &subject) == URSATZ_OK &&

@@ -1,0 +1,6 @@
+ursatz-text 1 view summary bach-114
+bach-114  home G major  4/4  bars 1-24
+  A  bars 1-24  harmony I IV | vi ii I | I iii6 I | I6 IV | vi ii6/5 vii° I | I6 | I IV6/4 | vi ii I | I iii6 I | I6 IV | vi ii6/5 vii° I | I6 | I7 vi | V6/4/V | V | iii V IV iii ii | I vii∅7 | I | I7 vi | V6/4/V | V | iii V IV iii ii | I vii∅7 | I
+parts P1
+# leaves out: notes, constraints, ids, spans (--view full)
+# expand: ursatz show <address>/<section> --view structure

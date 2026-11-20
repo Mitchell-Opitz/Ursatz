@@ -5,7 +5,8 @@ import MotiveLinksModel from "../models/motive-links-model.js";
 import { sendMaterialsRequest } from "./materials-common.js";
 import { loadSubjectList, subjectsState } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
-import { fetchJsonResult } from "../core/api.js";
+import { commandResult, fetchJsonResult } from "../core/api.js";
+import { commandRequest } from "../core/commands.js";
 
 /* The Motive links tool (R-154, R-156): pick a scope, run the link search over
  * its pieces, and follow the run. Pure parts are in motive-links-model.js;
@@ -235,7 +236,7 @@ export async function renderMotiveLinksView() {
   }
 
   async function deleteRun(id) {
-    const answer = await fetchJsonResult(`/api/links/runs/${id}`, { method: "DELETE" });
+    const answer = await commandResult("links.delete", { target: id });
     if (!answer.ok) {
       progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not delete the run";
       progressEl.classList.add("error");
@@ -283,7 +284,7 @@ export async function renderMotiveLinksView() {
     skippedEl.textContent = "";
     /* The run is a job on the backend queue (R-645): a second run waits behind the first. runJob polls the job and answers {"ok", "run"} when it ends. */
     const outcome = await BackendJobs.runJob(
-      { method: "POST", url: "/api/links/runs", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      commandRequest("links.run", { params: body }),
       { onProgress: (progress) => { if (progressEl.isConnected) { progressEl.textContent = BackendJobs.progressText(progress); } } },
     );
     if (!progressEl.isConnected) {

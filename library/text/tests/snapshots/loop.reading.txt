@@ -1,0 +1,68 @@
+ursatz-text 1 view reading loop
+bar 1
+  key D major  bars 1-13
+  section A  bars 1-10
+  phrase beginning  bars 1-2
+  idea basic-idea  bars 1-2
+  chord I  @1  c=1.00
+  chord IV  @3  c=1.00
+  meter 4/4
+  line melody  bars 1-13
+  line bass  bars 1-13
+bar 2
+  cadence half  @1
+  chord V  @1  c=0.46
+bar 3
+  theme theme-1  bars 3-10
+  phrase middle  bars 3-10
+  subphrase subphrase-1  bars 3-6
+  idea basic-idea  bars 3-4
+  chord vi6  @1  c=0.02
+  motive 0 exact  @1-@3
+  motive 1 exact  @1-@1
+  motive 2 exact  @2-@4
+  motive 3 exact  @3-@1
+bar 4
+  chord vii°6  @1  c=0.46
+  chord I6  @3  c=0.14
+  fault unresolved-leading-tone  @1
+bar 5
+  idea basic-idea  bars 5-6
+  chord vi6  @1  c=0.02
+  motive 0 exact  @1-@3
+  motive 1 exact  @1-@1
+  motive 2 exact  @2-@4
+  motive 3 exact  @3-@1
+bar 6
+  chord vii°6  @1  c=0.46
+  chord I6  @3  c=0.14
+  fault unresolved-leading-tone  @1
+bar 7
+  subphrase subphrase-2  bars 7-10
+  idea contrasting-idea  bars 7-8
+  chord I  @1  c=0.27
+  motive 4 exact  @1-@4
+bar 8
+  chord IV  @1  c=0.33
+  motive 4 tonal-transposed  @1-@4
+bar 9
+  idea contrasting-idea  bars 9-10
+  chord V  @1  c=0.39
+bar 10
+  cadence imperfect-authentic  @1
+  chord I  @1  c=1.00
+bar 11
+  section B  bars 11-13
+  phrase ending  bars 11-13
+  idea basic-idea  bars 11-13
+  chord I  @1  c=0.04
+  motive 1 real-transposed  @1-@1
+bar 12
+  chord I  @1  c=0.29
+  motive 0 fragmented  @3-@3
+  motive 1 fragmented  @3-@1
+bar 13
+  cadence half  @1
+  chord V  @1  c=1.00
+# leaves out: evidence, ids, chord detail (--view full)
+# expand: ursatz show <address> --view harmony

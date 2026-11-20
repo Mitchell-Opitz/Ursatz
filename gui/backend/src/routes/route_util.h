@@ -10,7 +10,7 @@
 #include <common/status.h>
 #include <ursatz_workshop/workshop_api.h>
 
-/* The largest request body ursatz_gui_read_json_body accepts. */
+/* The largest request body ursatz_gui_read_json_body_max is given. */
 #define URSATZ_GUI_JSON_BODY_MAX_BYTES (1024 * 1024)
 /* The caps of the one body reader (R-647): JSON 1 MB, an upload 64 MB, a MIDI motif 256 KB. */
 #define URSATZ_GUI_UPLOAD_MAX_BYTES (64 * 1024 * 1024)
@@ -49,9 +49,6 @@ int ursatz_gui_send_object(struct mg_connection *conn, int status, cJSON *object
  * sent as {"ok":false,"error":...} (400, 413 or 500) and *status is what the caller returns; on success *status is 200. */
 cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_bytes, int *status_or_null);
 
-/* ursatz_gui_read_json_body_max with URSATZ_GUI_JSON_BODY_MAX_BYTES. */
-cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null);
-
 /* The query string of a request as a params object: every variable by name, a variable that repeats as an array of its values. */
 cJSON *ursatz_gui_query_params(const struct mg_request_info *info);
 
@@ -66,17 +63,6 @@ typedef int (*UrsatzGuiFailureFn)(struct mg_connection *conn, UrsatzStatus statu
  * failure through failed. Returns the HTTP status sent. */
 int ursatz_gui_answer_query(struct mg_connection *conn, const char *name, cJSON *params, const WorkshopBytes *bytes,
                             UrsatzGuiFailureFn failed, bool bare);
-
-/* Runs the command name on target ("" for none) as the GUI's one person (actor "michelle") with params (consumed; NULL for none) and the file a
- * few commands take, and answers it as ursatz_gui_answer_query does (the journal_seq of the reply is not sent). With success_json, the
- * reply is sent bare. */
-int ursatz_gui_answer_command(struct mg_connection *conn, const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes,
-                              UrsatzGuiFailureFn failed, bool bare);
-
-/* Runs the command name as ursatz_gui_answer_command does, without answering: the reply (its journal_seq removed) and the failure are the
- * caller's. */
-UrsatzStatus ursatz_gui_run_command(const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
-                                    UrsatzError *error);
 
 /* The failure envelope (R-647): {"ok": false, "error": <message>, "code": <status name>, "path": <pointer, when set>}. code is the name of the status
  * a failure with that HTTP status stands for when NULL; path may be NULL. Returns status. */

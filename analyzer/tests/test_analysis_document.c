@@ -109,7 +109,9 @@ int main(void) {
 
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 13,\n", 26) == 0);
+    char expected_prefix[64];
+    snprintf(expected_prefix, sizeof(expected_prefix), "{\n  \"schema_version\": %d,\n", ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    assert(strncmp(json, expected_prefix, strlen(expected_prefix)) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = test_render_document(path, &notes, &report);
@@ -124,7 +126,11 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(ANALYZER_DOCUMENT_SCHEMA_VERSION == 13);
+    /* the constant is the schema file's own version: the one place a number is written besides the constant */
+    cJSON *schema = test_read_json(URSATZ_ANALYSIS_SCHEMA);
+    const cJSON *const_member = schema ? test_json_member(test_json_member(test_json_member(schema, "properties"), "schema_version"), "const") : NULL;
+    assert(cJSON_IsNumber(const_member) && (int)const_member->valuedouble == ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    cJSON_Delete(schema);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));

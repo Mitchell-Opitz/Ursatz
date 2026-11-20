@@ -4,14 +4,14 @@ The Analyzer, Corpus, Styles and Motive links routes. Every route answers the on
 
 ## Analyzer routes
 
-An import, a re-analysis, a style build and a style rebuild are jobs on the workshop's queue (R-645): the route answers `202` with
+An import, a re-analysis, a style build and a style rebuild are jobs on the workshop's queue (R-645): the command answers `202` with
 `{"ok":true,"job":{"id","kind","state"}}` (kind `analysis` or `style`; a style job waits while another one runs) and the answer the route
-gave before jobs is the job's result, in `GET /api/jobs/<id>` as `http_status` and `result`. The frontend runs them with
-`BackendJobs.runJob`, which resolves with that status and body. A style job reports `pieces <done>/<total>`; `DELETE /api/jobs/<id>`
+gave before jobs is the job's result, in `GET /api/jobs/<id>` as `http_status` and `result`. Every change of this page is a command the frontend sends (`core/commands.js`, `POST /api/workshop/command`); a job runs with
+`BackendJobs.runJob`, which resolves with that status and body. A style job reports `pieces <done>/<total>`; the command `job.cancel`
 stops it between pieces and nothing is written.
 
-- `POST /api/analyzer/pieces`: the file as the raw request body, its name
-  URL-encoded in the `X-Filename` header. The format is detected from the
+- `library.import`: the file as the raw request body of the command route, the command in the `X-Ursatz-Command` header and the name
+  URL-encoded in the `X-Filename` header (and the param `filename`). The format is detected from the
   content (`input_format_detect`), not from the filename. Returns
   `{"ok":true,"id":...,"filename":...}`. A body that is neither MIDI nor
   MusicXML gives `415` with `{"error":"unsupported format"}`; a file the
@@ -34,7 +34,7 @@ stops it between pieces and nothing is written.
 - `GET /api/analyzer/pieces/<id>`:
   `{"ok":true,"id","filename","format","uploaded_at","notation","analysis_status","note_xml_ids":[...],"document":{...}}`.
   A read writes nothing: the stored document is served, and when it is not current `analysis_status` names why and `"stale":true` is
-  added (absent when current). The frontend then runs `POST .../reanalyze` as a job and reads the piece again. The header shows a
+  added (absent when current). The frontend then runs the command `library.reanalyze` as a job and reads the piece again. The header shows a
   stale status.
   `notation` is the piece's notation override or `null`. `document` is the analysis document as stored. `note_xml_ids[i]` is the
   `<note xml:id>` the score export writes for note `i` of the source; a
@@ -45,9 +45,8 @@ stops it between pieces and nothing is written.
   document. The note ids and the rest of the reply are the same.
 - `GET /api/analyzer/pieces/<id>/document?sections=a,b`: `{"ok":true,"sections":{"a":...,"b":...}}`, only those
   sections of the stored `analysis.json`, read without importing the source. A name the document lacks is left out.
-  Names are lowercase letters, digits and `_` (at most 64 names of 64 characters); a missing, empty or malformed
-  `sections` is `400`; an unknown piece is `404`.
-- `PATCH /api/analyzer/pieces/<id>`: a JSON object with any of `filename`
+  Names are lowercase letters, digits and `_` (at most 64 of 64 characters); a bad `sections` is `400`, an unknown piece `404`.
+- `library.update`: params with any of `filename`
   (non-empty string), `composer`, `source` (strings; `""` clears), `tags`
   (array of strings, replaces all), `add_tags` and `remove_tags` (arrays of
   strings, applied after `tags`), and `notation` (see below). Unknown members
@@ -70,11 +69,11 @@ stops it between pieces and nothing is written.
     tempo scaled so the piece sounds as fast as before) all use it. The list
     entries and `GET /api/analyzer/pieces/<id>` include `notation` (`null`
     when unset).
-- `POST /api/analyzer/pieces/<id>/reanalyze`: runs the Analyzer again on the
+- `library.reanalyze`: runs the Analyzer again on the
   stored source. Returns `{"ok":true,"id":...}`, `404` for an unknown id, or
   `422` with `{"error":"import failed"}` when the source no longer imports (the job's status and result).
   The piece is unchanged unless the new analysis succeeded.
-- `DELETE /api/analyzer/pieces/<id>`: removes the piece's directory.
+- `library.delete`: removes the piece's directory.
 - `GET /api/analyzer/pieces/<id>/musicxml`: the piece's score as MusicXML
   (`application/xml`), written by the Analyzer (`analyzer_score_export_musicxml`)
   from the stored source: its parts and staves, its real meter and its key
@@ -85,12 +84,13 @@ stops it between pieces and nothing is written.
   a failed export `500` with
   `{"ok":false,"error":"failed to export piece","code":"<UrsatzStatus name>"}`;
   anything else `500` with `{"ok":false,"error":"failed to export piece"}`.
-- `GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]`: the piece as measure-addressed text
-  (`text/plain; charset=utf-8`), written by the Analyzer (`analyzer_text_export_piece`,
+- `GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]`: the reading view of the piece (`library.view`, view `reading`) as text
+  (`text/plain; charset=utf-8`): the first line `ursatz-text 1 view reading piece:<id>`, the piece as measure-addressed text written by the
+  Analyzer (`analyzer_text_export_piece`,
   [format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)) from the cached import and the stored `analysis.json`, so it shows what the Score
-  and Analysis views show. `from` and `to` are measure numbers as written in the score; one alone means that end
-  only. A non-integer, `from` after `to` or a range with no measure is `400` with `{"ok":false,"error":...}`;
-  unknown id `404`; a source that no longer imports `422`; anything else `500`.
+  and Analysis views show, and the trailing lines `# leaves out: ...` and `# expand: ...`. `from` and `to` are measure numbers as written in the score (the
+  view's `measures`); one alone means that end only. A non-integer, `from` after `to` or a range with no measure is `400` with
+  `{"ok":false,"error":...}`; unknown id `404`; a source that no longer imports `422`; anything else `500`.
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`:
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
   and the barlines come from a default 4/4 (the export then carries
@@ -123,7 +123,7 @@ stops it between pieces and nothing is written.
 The Collections tool keeps its `/api/corpus` paths. Collections are owned by
 the GUI (`workshop/src/items/collections.c`):
 
-- `POST /api/corpus`: body `{"name":"<name>"}`, with an optional
+- `collection.create`: params `{"name":"<name>"}`, with an optional
   `"description":"<text>"` and an optional `"id":"<collection-id>"` (accepted
   when it is a valid, unused id). Without an id, one is generated (`col-...`).
   Returns `{"ok":true,"id","name","description","piece_count","updated_at"}`
@@ -133,24 +133,24 @@ the GUI (`workshop/src/items/collections.c`):
   `{"ok":true,"corpora":[{"id","name","description","piece_count","updated_at"},...]}`.
 - `GET /api/corpus/<id>`: one collection, the list fields plus `created_at`
   and `pieces` (the piece ids, in add order). `404` when absent.
-- `PATCH /api/corpus/<id>`: body with `name` and/or `description` (`""`
-  clears the description). Answers with the list fields. A body with neither
-  answers `{"ok":false,"error":"nothing to update"}`; `404` when absent.
-- `DELETE /api/corpus/<id>`: deletes the collection. Its pieces are not
+- `collection.update`: params with `name` and/or `description` (`""`
+  clears the description). Answers with the list fields. Params with neither
+  answer `{"ok":false,"error":"nothing to update"}`; `404` when absent.
+- `collection.delete`: deletes the collection. Its pieces are not
   touched. `404` when absent.
-- `POST /api/corpus/<id>/pieces`: body `{"piece_id":"<id>"}` or
+- `collection.add-pieces`: params `{"piece_id":"<id>"}` or
   `{"piece_ids":["<id>",...]}` (at most 5000). Adds the ones that are not
   members yet and answers `{"ok":true,"added":n,"already":n}`; a piece that is
   already a member (or repeated in the request) is counted, not an error. An
   id with no Library piece is `400`
   `{"ok":false,"error":"unknown piece: <id>"}` and nothing is added; an
   unknown collection is `404`.
-- `DELETE /api/corpus/<id>/pieces/<piece_id>`: removes a piece id. Removing
+- `collection.remove-piece`: params `{"piece_id"}` removes a piece id. Removing
   one that is not a member is `400`.
 - `GET /api/corpus/<id>/pieces`: lists the piece ids in a collection:
   `{"ok":true,"pieces":[{"id":...},...]}`.
 
-Other failures are the envelope with a real status: `400` for a bad id, bad name or malformed body, `404` for a missing collection. `<id>` and `<piece_id>` path segments are
+Other failures are the envelope with a real status: `400` for a bad id, name or body, `404` for a missing collection. Ids are
 validated against the same alnum, `-`, `_` whitelist the Analyzer uses for
 piece ids (1 to 64 characters). Names are normalized like piece metadata
 values (trimmed, whitespace collapsed, at most 120 bytes, never empty);
@@ -160,7 +160,7 @@ Storage: one file per collection, `library/collections/<id>.json` (format `ursat
 `description`, `pieces` (ids in add order), `created_at` and `updated_at`
 (ISO 8601 UTC). A write is one transaction of the workshop ([the data folder](../../../workshop/docs/data-folder.md#changes-are-transactions)). A collection is a fixed set of
 piece ids: tagging a piece later does not add it.
-`DELETE /api/analyzer/pieces/<id>` also removes the id from every collection
+`library.delete` also removes the id from every collection
 that holds it, in the same transaction.
 
 A `data/corpus.db` of the old Corpus store is not read: the start refuses a folder that never imported it (see
@@ -174,7 +174,7 @@ with `--style` (the GUI option for that comes later). Styles are not
 collections and not tags: they are a count of harmony, rhythm, melody and
 form labels over the pieces they were built from.
 
-- `POST /api/styles`: body `{"name"?, <source>}` with exactly one source (else
+- `style.build`: params `{"name"?, <source>}` with exactly one source (else
   `400`):
   - `"filter": {"composer"?, "source"?, "tag"?}` (the pieces that match, as the
     Library filters them; at least one value),
@@ -205,12 +205,12 @@ form labels over the pieces they were built from.
   `{"<dimension>":{"<category>":{"labels":[{"label","count","total"}],"more":n}}}`
   with dimension `harmony`, `rhythm`, `melody` or `form`, the labels of a
   category by count descending (at most 12) and `more` the number cut.
-- `POST /api/styles/<id>/rebuild`: builds the style again from its stored
+- `style.rebuild`: builds the style again from its stored
   source over today's pieces (same id and name, files replaced in place,
-  `updated_at` set) and answers like `POST /api/styles`. `422` when no piece
+  `updated_at` set) and answers like `style.build`. `422` when no piece
   is left or the collection, subject, project or style it names is gone; the
   style stays as it was. A brief is resolved again.
-- `DELETE /api/styles/<id>`: `{"ok":true}`.
+- `style.delete`: `{"ok":true}`.
 
 An unknown style id is `404` `{"ok":false,"error":"style not found"}` on
 every route.
@@ -253,7 +253,7 @@ A scope names the pieces to link:
 
 Pieces are taken in id order. A scope that names no piece is `422`.
 
-- `POST /api/links/runs`: body `{"scope": {...}}`. Queues a run as a job (kind `links`) and answers `202` `{"ok":true,
+- `links.run`: params `{"scope": {...}}`. Queues a run as a job (kind `links`) and answers `202` `{"ok":true,
   "run":{...},"job":{...}}`; a second run waits in the queue behind the first (no `409`). `400` for a scope that cannot be
   one (an unknown kind, a missing id, a filter without a value), `404` for an unknown collection, subject or project,
   `422` for an empty scope.
@@ -261,7 +261,7 @@ Pieces are taken in id order. A scope that names no piece is `422`.
   newest first.
 - `GET /api/links/runs/<id>`: `{"ok":true,"run":{...}}`, the whole run; `404` when unknown. While it runs, `done` and
   `total` are the pairs compared so far and the pairs to compare.
-- `DELETE /api/links/runs/<id>`: `{"ok":true}`; `404` when unknown; a run that is queued or running is cancelled first.
+- `links.delete`: `{"ok":true}`; `404` when unknown; a run that is queued or running is cancelled first.
 - `GET /api/links/pieces/<piece id>`: `{"ok":true,"links":[{"run","scope","link"},...]}`, the links with this piece on
   either side, taken from the newest done run of each scope.
 

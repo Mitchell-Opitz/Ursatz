@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -342,4 +343,21 @@ void cli_discard_pending(CliPendingFile *pending, size_t count) {
     for (size_t i = 0; i < count; i++) {
         remove(pending[i].temporary);
     }
+}
+
+/* "12-16" as an inclusive range of measure numbers as written in the score; false for anything else. */
+bool cli_parse_measure_range(const char *text, int *first, int *last) {
+    char *end = NULL;
+    long a = strtol(text, &end, 10);
+    if (end == text || *end != '-' || a < 0) {
+        return false;
+    }
+    const char *rest = end + 1;
+    long b = strtol(rest, &end, 10);
+    if (end == rest || *end != '\0' || b < 0 || a > INT_MAX || b > INT_MAX || a > b) {
+        return false;
+    }
+    *first = (int)a;
+    *last = (int)b;
+    return true;
 }

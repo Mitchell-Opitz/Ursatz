@@ -1,5 +1,19 @@
 # The workshop (R-641): the process that holds the data folder, its services, the job queue, the history and the events, above the
 # two apps and below the GUI. Sources include <ursatz_workshop/...> and the headers beside them.
+# The command schemas of workshop/commands are embedded (R-664): no binary reads the folder at run time.
+if(NOT Python3_EXECUTABLE)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+endif()
+get_filename_component(URSATZ_WORKSHOP_REPOSITORY_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/.. ABSOLUTE)
+file(GLOB URSATZ_WORKSHOP_COMMAND_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/commands/*.json)
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_files.c
+    COMMAND ${Python3_EXECUTABLE} ${URSATZ_WORKSHOP_REPOSITORY_ROOT}/cmake/embed_json.py ${CMAKE_CURRENT_SOURCE_DIR}/commands
+        ${CMAKE_CURRENT_BINARY_DIR}/command_files.c coordinator/command_files.h WorkshopCommandFile workshop_command_files
+    DEPENDS ${URSATZ_WORKSHOP_COMMAND_FILES} ${URSATZ_WORKSHOP_REPOSITORY_ROOT}/cmake/embed_json.py
+    COMMENT "Embedding the command schemas"
+    VERBATIM)
+
 add_library(ursatz_workshop_engine STATIC
     src/base/command_context.c
     src/base/events_hub.c
@@ -26,6 +40,7 @@ add_library(ursatz_workshop_engine STATIC
     src/items/body_requests.c
     src/items/op_checks.c
     src/items/version_files.c
+    src/items/views.c
     src/items/piece_lock.c
     src/items/subjects.c
     src/analysis/analysis.c
@@ -35,6 +50,7 @@ add_library(ursatz_workshop_engine STATIC
     src/analysis/import_cache.c
     src/analysis/links.c
     src/analysis/passages.c
+    src/analysis/piece_view.c
     src/analysis/styles.c
     src/composition/compose_common.c
     src/composition/compose_jobs.c
@@ -44,6 +60,8 @@ add_library(ursatz_workshop_engine STATIC
     src/composition/motifs.c
     src/composition/pieces.c
     src/composition/request_resolve.c
+    src/composition/restore.c
+    src/composition/sections.c
     src/composition/themes.c
     src/composition/variants.c
     src/rendering/export.c
@@ -54,11 +72,16 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_collections.c
     src/coordinator/api_commands_items.c
     src/coordinator/api_commands_library.c
+    src/coordinator/api_commands_sections.c
     src/coordinator/api_composer.c
     src/coordinator/api_items.c
     src/coordinator/api_jobs.c
     src/coordinator/api_journal.c
     src/coordinator/api_library.c
+    src/coordinator/command_schemas.c
+    src/coordinator/command_text.c
+    src/coordinator/command_sheet.c
+    ${CMAKE_CURRENT_BINARY_DIR}/command_files.c
     src/coordinator/data_lock.c
     src/coordinator/dispatch.c
     src/coordinator/events.c
@@ -78,7 +101,7 @@ ursatz_public_headers(ursatz_workshop_engine
 # ursatz_workshop and ursatz_workshop_internal into one executable.
 target_include_directories(ursatz_workshop_engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(ursatz_workshop_engine
-    PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory ursatz_realization ursatz_reading cjson
+    PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory ursatz_realization ursatz_reading ursatz_text cjson
 )
 target_compile_options(ursatz_workshop_engine PRIVATE -Wall -Wextra -Wpedantic)
 if(URSATZ_TESTS)

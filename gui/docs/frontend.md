@@ -13,12 +13,14 @@ The frontend is ES modules (R-652): `frontend/package.json` has `"type": "module
 
 | Folder | Holds |
 |---|---|
-| `core/` | `api.js` (the page's JSON calls), `request.js` (the one fetch of JSON, requests, base versions), `events.js` (one `EventSource`), `backend-jobs.js` (follows a job), `vocabulary.js` (the Composer's words, loaded once), `upload-queue.js`, `values.js` (`isPlainObject`, `isClaim`, `isClaimArray`, `text`, `wholeNumber`, `itemUrl`) and `dom.js` (`el(tag, cls, text)`): helpers exist once |
+| `core/` | `api.js` (the page's JSON calls), `request.js` (the one fetch of JSON, requests, the versions the page holds), `commands.js` (`sendCommand`, `commandRequest`, `commandObject`: every change the page makes is a command object posted to `/api/workshop/command` with the actor `michelle` and the `base_version` the page holds for the target; a file goes as the body with the command in `X-Ursatz-Command`), `events.js` (one `EventSource`), `backend-jobs.js` (follows a job), `vocabulary.js` (the Composer's words, loaded once), `upload-queue.js`, `values.js` (`isPlainObject`, `isClaim`, `isClaimArray`, `text`, `wholeNumber`, `itemUrl`) and `dom.js` (`el(tag, cls, text)`): helpers exist once |
 | `models/` | the pure models, no DOM: `materials-model.js`, `themes-model.js`, `pieces-model.js`, `motive-links-model.js`, `piece-metadata.js`, `analysis-tabs.js`, `variant-tree.js`, `workspace-state.js`, `notation-panel.js`, `style-view.js` |
 | `views/` | the DOM views: `shell.js` (tools, sidebar, panels, boot), `library.js`, `analysis.js`, `collections.js`, `styles.js`, `library-parts.js` (the piece table and filter constants those share), `materials-view.js`, `materials-common.js`, `motif-detail-view.js`, `theme-detail-view.js`, `themes-view.js`, `pieces-view.js`, `variant-tree-view.js`, `motif-compare-view.js`, `subjects-view.js`, `motive-links-view.js`, `grouped-panel.js` (the sidebar's collapsible groups, used by `tags-panel.js` and `subjects-panel.js`) and `export-control.js` |
 | `score/` | the score workspace and what it draws and plays: `score-workspace.js`, `transport.js` (the playback transport: controls, audio, cursor, follow, seek, ending, tempo, the Sound menu), `score-layers.js`, `score-geometry.js`, `score-overlay.js`, `score-notes.js`, `inspector-model.js`, `inspector-view.js`, `playback-engine.js`, `instruments.js`, `sound-sources.js`, `reverb.js` |
 
 Views do not import the shell or each other in a cycle. What a view needs from the page (the content area, the move to the Analysis view, to another tool or to an item) it reads from `views/shell-context.js`, which the shell fills once at boot (`setShell({contentEl, showAnalysis, openItem, setActiveTool, activeToolId, leaveWorkspace, drawScore, fetchExportText, notifySubjectsChanged, setTagsActive, refreshTags, selectTool, showCollections})`); a test sets a fake. The pieces the materials views share are in `materials-common.js`, which the detail views, the themes and pieces views and the hub `materials-view.js` all import. `check-frontend-theory.sh` scans `public/` recursively for the music-theory names that live in the apps.
+
+A call that changes something is `Commands.sendCommand(name, {target, params, file, filename})`, which resolves like `sendRequest` (`{ok, status, data}`, a `202` job answer included), so a refusal is read at `data.path`; the models build the requests (`commandRequest`) and the views send them. The versions list of an item (`buildVersionsList`, `views/materials-common.js`) shows View and, on every version but the current one, Restore, which sends `item.restore` with the version and opens the item again.
 
 The views follow the workshop instead of polling: `core/events.js` holds one `EventSource` on `/api/events`; the shell reloads the open Library table, materials view, collection view, subjects panel and motive link runs on the events that say what they show changed (300 ms debounce, and everything on `reset`).
 
@@ -41,7 +43,7 @@ Tags and Actions.
   collection; checked rows can be removed together.
 - **Add pieces**: opens a picker with the Library filters (applied by the
   backend) over pieces not yet in the collection. `Add selected (n)` and
-  `Add all matching (n)` each send one `POST /api/corpus/<id>/pieces` with
+  `Add all matching (n)` each send one `collection.add-pieces` command with
   `piece_ids`; the result reads "Added 5, 2 were already in it".
 - **Save as collection**: shown in the Library while a filter is on. It
   creates a collection named from the filter ("John Field", "Tag: whimsical",
@@ -55,7 +57,7 @@ Tags and Actions.
   hover and focus, labelled "Build style from <row>"). It opens an inline name
   prompt prefilled with the default name ("Composer: X", "Source: X",
   "Tag: x" joined with " · ", "Collection: <name>" or "Selected pieces");
-  Build sends `POST /api/styles` as a job (`BackendJobs.runJob`) and the button reads "Building..." until
+  Build sends the command `style.build` as a job (`BackendJobs.runJob`) and the button reads "Building..." until
   the job ends. A plain composer, source or tag filter builds from that filter;
   Unassigned, Untagged and search have no backend form, so those build from
   the ids of the pieces shown. A failure shows under the button.

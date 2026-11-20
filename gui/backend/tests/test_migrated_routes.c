@@ -183,8 +183,7 @@ int main(void) {
   check(theme_id[0] != '\0', "the composed theme is found");
   if (theme_id[0]) {
     int status = 0;
-    snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme_id);
-    cJSON *accepted = test_http_json(PORT, "POST", path, "{\"seed\":2}", &status);
+    cJSON *accepted = test_gui_send(PORT, "item.compose", theme_id, "{\"seed\":2}", &status);
     cJSON *result = status == 202 ? job_result(accepted, &status) : NULL;
     cJSON_Delete(accepted);
     check(status == 200 && result && cJSON_IsTrue(member(result, "ok")) && number_of(member(result, "item"), "current_version") == 3,
@@ -199,7 +198,7 @@ int main(void) {
   /* what the routes write beside the migrated files: a project, a motif and a new version of it, a mark and a subject */
   {
     int status = 0;
-    cJSON *made = test_http_json(PORT, "POST", "/api/materials/projects", "{\"name\":\"Written after the migration\"}", &status);
+    cJSON *made = test_gui_send(PORT, "project.create", "", "{\"name\":\"Written after the migration\"}", &status);
     char project_id[96];
     snprintf(project_id, sizeof(project_id), "%s", string_of(member(made, "project"), "id"));
     cJSON_Delete(made);
@@ -209,25 +208,23 @@ int main(void) {
              "\"form\":\"full\",\"notes\":\"C4:q Eb4:q G4:h\",\"meter\":\"4/4\",\"material\":\"omt.material.natural-minor\",\"pickup\":\"0\","
              "\"features\":[],\"analysis\":null,\"derived\":null}}}",
              project_id);
-    made = test_http_json(PORT, "POST", "/api/materials/items", body, &status);
+    made = test_gui_send(PORT, "item.create", "", body, &status);
     check(status == 200 && cJSON_IsTrue(member(made, "ok")), "a motif is saved in a project written after the migration");
     char item_id[96];
     snprintf(item_id, sizeof(item_id), "%s", string_of(member(made, "item"), "id"));
     cJSON_Delete(made);
-    snprintf(path, sizeof(path), "/api/materials/items/%s/versions", item_id);
     snprintf(body, sizeof(body),
              "{\"note\":\"Second\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q G4:h\","
              "\"meter\":\"4/4\",\"material\":\"omt.material.natural-minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}");
-    made = test_http_json(PORT, "POST", path, body, &status);
+    made = test_gui_send(PORT, "item.save", item_id, body, &status);
     check(status == 200 && number_of(member(made, "item"), "current_version") == 2, "and gets a second version");
     cJSON_Delete(made);
-    snprintf(path, sizeof(path), "/api/materials/items/%s/op-checks", item_id);
-    made = test_http_json(PORT, "PUT", path,
+    made = test_gui_send(PORT, "item.set-op-checks", item_id,
                           "{\"checks\":{\"transpose\":{\"verdict\":\"works\",\"comment\":\"fine\",\"seed\":1,\"notes_text\":\"C4\",\"date\":\"2026-11-01\"}}}",
                           &status);
     check(status == 200, "its operation marks are saved");
     cJSON_Delete(made);
-    made = test_http_json(PORT, "POST", "/api/subjects", "{\"name\":\"After\",\"kind\":\"idea\"}", &status);
+    made = test_gui_send(PORT, "subject.create", "", "{\"name\":\"After\",\"kind\":\"idea\"}", &status);
     check(status == 200, "a subject is written");
     cJSON_Delete(made);
   }

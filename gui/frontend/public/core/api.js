@@ -1,5 +1,6 @@
 import ApiRequest from "./request.js";
 import BackendJobs from "./backend-jobs.js";
+import { commandRequest, sendCommand } from "./commands.js";
 
 /* The page's JSON calls (R-647): every route answers one envelope; ApiRequest sends it, BackendJobs follows a request the backend runs as a job. */
 /* Sends a request and resolves to {ok, status, data} (ApiRequest.sendRequest: the one fetch of JSON; every route answers one envelope, R-647). options
@@ -9,14 +10,20 @@ export function fetchJsonResult(url, options) {
   return ApiRequest.sendRequest({ url, method: o.method || "GET", headers: o.headers, body: o.body });
 }
 
-/* fetchJsonResult for a request the backend runs as a job (R-645: piece imports and re-analyses, style builds and rebuilds): runJob sends it,
- * polls the job and answers the status and body the route answered before jobs, so the callers keep their reply handling. */
-export async function jobJsonResult(url, options) {
-  const res = await BackendJobs.runJob({ url, method: options.method, headers: options.headers, body: options.body });
+/* Follows a request the backend runs as a job (R-645: piece imports and re-analyses, style builds and rebuilds): runJob sends it, polls the job and
+ * answers {ok, status, data} with the body the job ended with. */
+async function runJobResult(request) {
+  const res = await BackendJobs.runJob(request);
   const data = res.body || null;
   return { ok: res.status >= 200 && res.status < 300 && !(data && data.ok === false), status: res.status, data };
 }
 
-export function postJsonResult(url, body) {
-  return ApiRequest.apiRequest("POST", url, body);
+/* A change (R-668): the command `name` ({target, params, file, filename}) sent to POST /api/workshop/command; resolves to {ok, status, data}. */
+export function commandResult(name, options) {
+  return sendCommand(name, options);
+}
+
+/* commandResult for a command that runs as a job (a compose, an import, a style build): followed to its end. */
+export function commandJobResult(name, options) {
+  return runJobResult(commandRequest(name, options || {}));
 }

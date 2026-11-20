@@ -595,7 +595,7 @@ static UrsatzStatus get_piece_playback_unlocked(const char *pieces_dir, const ch
 }
 
 static UrsatzStatus get_piece_export_unlocked(const char *pieces_dir, const char *id, int first_measure,
-                                                              int last_measure, char **out_text) {
+                                                              int last_measure, const char *title_override, char **out_text) {
     char dir_path[320];
     if (!workshop_library_piece_dir(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, NULL);
@@ -635,7 +635,7 @@ static UrsatzStatus get_piece_export_unlocked(const char *pieces_dir, const char
     }
 
     AnalyzerTextExportOptions options = analyzer_text_export_options_default();
-    options.title = title;
+    options.title = title_override && title_override[0] ? title_override : title;
     options.first_measure = first_measure;
     options.last_measure = last_measure;
     char *text = NULL;
@@ -881,12 +881,12 @@ UrsatzStatus workshop_analysis_get_piece_playback(const char *pieces_dir, const 
 }
 
 UrsatzStatus workshop_analysis_get_piece_export(const char *pieces_dir, const char *id,
-                                                              int first_measure, int last_measure, char **out_text) {
+                                                              int first_measure, int last_measure, const char *title, char **out_text) {
     UrsatzStatus result;
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return result;
     }
-    result = get_piece_export_unlocked(pieces_dir, id, first_measure, last_measure, out_text);
+    result = get_piece_export_unlocked(pieces_dir, id, first_measure, last_measure, title, out_text);
     workshop_piece_unlock(id);
     return result;
 }

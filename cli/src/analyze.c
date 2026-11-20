@@ -13,23 +13,6 @@
 #include "cli_options.h"
 #include "cli_tools.h"
 
-/* "12-16" as an inclusive range of measure numbers as written in the score; false for anything else. */
-static bool parse_measure_range(const char *text, int *first, int *last) {
-    char *end = NULL;
-    long a = strtol(text, &end, 10);
-    if (end == text || *end != '-' || a < 0) {
-        return false;
-    }
-    const char *rest = end + 1;
-    long b = strtol(rest, &end, 10);
-    if (end == rest || *end != '\0' || b < 0 || a > INT_MAX || b > INT_MAX || a > b) {
-        return false;
-    }
-    *first = (int)a;
-    *last = (int)b;
-    return true;
-}
-
 /* Writes <dir>/<relative> (making the folders); the failure is printed. */
 static bool write_layer(const char *dir, const char *relative, const char *text) {
     char path[1200];
@@ -99,18 +82,18 @@ int run_analyze(const CliArgs *args) {
     const char *title = cli_value(args, "--title");
     const char *layers_dir = cli_value(args, "--layers");
     const char *model_plan = cli_value(args, "--model-plan");
-    if (view && strcmp(view, "text") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--view must be text, not '%s'", view);
+    if (view && strcmp(view, "reading") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--view must be reading, not '%s'", view);
     }
     if (!view && (measures || title)) {
-        return cli_fail(CLI_EXIT_USAGE, "--measures and --title need --view text");
+        return cli_fail(CLI_EXIT_USAGE, "--measures and --title need --view reading");
     }
     if (view && (layers_dir || model_plan)) {
-        return cli_fail(CLI_EXIT_USAGE, "--layers and --model-plan write files, so they do not go with --view text");
+        return cli_fail(CLI_EXIT_USAGE, "--layers and --model-plan write files, so they do not go with --view reading");
     }
     int first = 0;
     int last = 0;
-    if (measures && !parse_measure_range(measures, &first, &last)) {
+    if (measures && !cli_parse_measure_range(measures, &first, &last)) {
         return cli_fail(CLI_EXIT_USAGE, "--measures must be <first>-<last>, as in 12-16, not '%s'", measures);
     }
 

@@ -193,8 +193,25 @@ UrsatzStatus workshop_material_item_add_version(const char *id, const cJSON *bod
 UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,
                                                        cJSON **out_item);
 
+/*
+ * The next version as a copy of an older one (R-667, composition/restore.h): like workshop_material_item_add_version_staged, but the uses stay as the body
+ * says (they are not refreshed) and the envelope's lineage says `restored_from` (the version copied, from 1).
+ */
+UrsatzStatus workshop_material_item_add_version_restored(const char *id, const cJSON *body, const char *note, const char *stage, int restored_from,
+                                                         cJSON **out_item);
+
+/*
+ * Copies every file of version number into to_folder (which exists) but its envelope, and writes the absolute path of the version's folder into
+ * from_absolute (size bytes): what the paths in the version's body start with. NOT_FOUND for a version that is not there.
+ */
+UrsatzStatus workshop_material_version_copy(const char *id, int number, const char *to_folder, char *from_absolute, size_t size);
+
 /* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
 UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSON **out_body);
+
+/* The envelope of version number (1 to current_version): {format, format_version, id, kind, version, note, lineage, actor, created_at}. NOT_FOUND
+ * otherwise. Caller-owned. */
+UrsatzStatus workshop_material_version_envelope(const char *id, int number, cJSON **out_envelope);
 
 /*
  * Reports, for every use in the item's current version, how its source stands.

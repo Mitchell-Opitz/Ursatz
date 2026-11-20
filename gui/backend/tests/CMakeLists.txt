@@ -20,8 +20,8 @@ add_custom_target(gui_frontend_fixtures ALL
     DEPENDS ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json ${URSATZ_GUI_GENERATED_FIXTURES}/piece-minuet.json)
 
 # Opens a workshop on the test's working directory and starts the server on it (support/server_support.h).
-ursatz_test_library(gui_server_support SOURCES support/server_support.c LIBS ursatz_gui_core)
-ursatz_test_library(gui_server_support_internal SOURCES support/server_support.c LIBS ursatz_gui_core_internal)
+ursatz_test_library(gui_server_support SOURCES support/server_support.c LIBS ursatz_gui_core ursatz_test_http)
+ursatz_test_library(gui_server_support_internal SOURCES support/server_support.c LIBS ursatz_gui_core_internal ursatz_test_http)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route_smoke)
 ursatz_test_executable(test_analyzer_route LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal)

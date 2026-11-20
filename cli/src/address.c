@@ -34,18 +34,34 @@ bool cli_address_parse(const char *text, CliAddress *out) {
         return false;
     }
     const char *id = text + length + 1;
-    const char *at = strstr(id, "@v");
-    size_t id_length = at ? (size_t)(at - id) : strlen(id);
-    if (id_length == 0 || id_length >= sizeof(out->id) || strchr(id, '/') != NULL) {
+    const char *slash = strchr(id, '/');
+    size_t whole = slash ? (size_t)(slash - id) : strlen(id); /* the id and the version, before the section */
+    const char *at = memchr(id, '@', whole) ? strstr(id, "@v") : NULL;
+    if (at && (size_t)(at - id) >= whole) {
+        at = NULL;
+    }
+    size_t id_length = at ? (size_t)(at - id) : whole;
+    if (id_length == 0 || id_length >= sizeof(out->id)) {
         return false;
     }
     long version = 0;
     if (at) {
         char *end = NULL;
         version = strtol(at + 2, &end, 10);
-        if (kind != CLI_ADDRESS_ITEM || end == at + 2 || *end != '\0' || version < 1) {
+        if (kind != CLI_ADDRESS_ITEM || end == at + 2 || (size_t)(end - id) != whole || version < 1) {
             return false;
         }
+    } else if (memchr(id, '@', whole)) {
+        return false;
+    }
+    out->section[0] = '\0';
+    if (slash) {
+        size_t section_length = strlen(slash + 1);
+        if ((kind != CLI_ADDRESS_ITEM && kind != CLI_ADDRESS_PIECE) || section_length == 0 || section_length >= sizeof(out->section) ||
+            strchr(slash + 1, '/') != NULL) {
+            return false;
+        }
+        memcpy(out->section, slash + 1, section_length + 1);
     }
     out->kind = kind;
     memcpy(out->id, id, id_length);

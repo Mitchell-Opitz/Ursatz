@@ -25,20 +25,21 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 
 ## Route table
 
-Every route of `/api` is one row `{method, pattern, handler}` of a `<family>_routes.c` file; `route_table.c` matches a path against the rows (`<id>`, `<n>` and `<name>` take one segment each) and answers a path no row fits with `404` and one another method fits with `405`. A handler reads the request, builds the params, runs a workshop query or command and answers. Paths under `/api/materials/` are shortened to `...`.
+Every route of `/api` is one row `{method, pattern, handler}` of a `<family>_routes.c` file; `route_table.c` matches a path against the rows (`<id>`, `<n>` and `<name>` take one segment each) and answers a path no row fits with `404` and one another method fits with `405`. A handler reads the request, builds the params, runs a workshop query and answers. Every change goes through one route, `POST /api/workshop/command` (`workshop_routes.c`): the frontend sends the command object (`core/commands.js`) and the backend runs it as given ([Workshop routes](api/workshop-routes.md)); no other route builds a command. Paths under `/api/materials/` are shortened to `...`.
 
 | Routes | File | Workshop calls | Doc |
 |---|---|---|---|
-| `/api/analyzer/pieces` (`GET POST`), `.../<id>` (`GET PATCH DELETE`), `.../<id>/document`, `/export`, `/musicxml`, `/musicxml/meta`, `/playback`, `/reanalyze`, `/api/analyzer/groups` | `library_routes.c` | `library.*` | [Analyzer routes](api/analysis-routes.md#analyzer-routes) |
-| `/api/corpus`, `/api/corpus/<id>`, `.../<id>/pieces`, `.../pieces/<piece_id>` | `collections_routes.c` | `collection.*` | [Corpus routes](api/analysis-routes.md#corpus-routes) |
-| `/api/styles`, `/api/styles/<id>`, `.../<id>/rebuild` | `styles_routes.c` | `style.*` | [Styles routes](api/analysis-routes.md#styles-routes) |
-| `/api/links/runs`, `/api/links/runs/<id>`, `/api/links/pieces/<id>` | `links_routes.c` | `links.*` | [Motive links routes](api/analysis-routes.md#motive-links-routes) |
-| `.../projects`, `.../projects/<id>`, `.../items`, `.../items/<id>`, `.../items/validate`, `.../items/<id>/versions`, `/versions/<n>`, `/files/<name>`, `/score`, `/playback`, `/compose`, `/regenerate`, `/variations`, `/variations/<k>/choose`, `/reanalyze`, `/uses/<source>/update` | `materials_routes.c` | `project.*`, `item.*` | [Materials routes](api/materials-routes.md#materials-and-subjects-routes) |
-| `.../items/<id>/variants`, `/variants/save`, `/variant-tree`, `/reroll`, `/each-op`, `/op-checks`, `/link-form`, `/promote`, `/flag`, `.../variant-operations`, `.../recognize`, `.../render`, `.../motifs/random`, `.../motifs/import` (their rows come first: `/items/validate` is a word, not an id) | `motifs_routes.c` | `item.*`, `composer.*` | same |
-| `/api/subjects`, `/api/subjects/groups`, `/api/subjects/<id>`, `.../<id>/items/<item>`, `/pieces/<piece>`, `/related/<other>` | `subjects_routes.c` | `subject.*` | same |
+| `GET /api/analyzer/pieces`, `.../<id>`, `.../<id>/document`, `/export`, `/musicxml`, `/musicxml/meta`, `/playback`, `/api/analyzer/groups` | `library_routes.c` | `library.*` queries | [Analyzer routes](api/analysis-routes.md#analyzer-routes) |
+| `GET /api/corpus`, `/api/corpus/<id>`, `.../<id>/pieces` | `collections_routes.c` | `collection.*` queries | [Corpus routes](api/analysis-routes.md#corpus-routes) |
+| `GET /api/styles`, `/api/styles/<id>` | `styles_routes.c` | `style.*` queries | [Styles routes](api/analysis-routes.md#styles-routes) |
+| `GET /api/links/runs`, `/api/links/runs/<id>`, `/api/links/pieces/<id>` | `links_routes.c` | `links.*` queries | [Motive links routes](api/analysis-routes.md#motive-links-routes) |
+| `GET .../projects`, `.../projects/<id>`, `.../items`, `.../items/<id>`, `/export`, `/versions/<n>`, `/files/<name>`, `/score`, `/playback`, `/variations/<k>/<name>` | `materials_routes.c` | `project.*`, `item.*` queries | [Materials routes](api/materials-routes.md#materials-and-subjects-routes) |
+| `POST .../items/validate`, `.../items/<id>/variants`, `/each-op`, `.../recognize`, `.../render`, `.../motifs/random`, `.../motifs/import`; `GET .../items/<id>/variant-tree`, `/op-checks`, `.../variant-operations` (their rows come first: `/items/validate` is a word, not an id) | `motifs_routes.c` | `item.*`, `composer.*` queries | same |
+| `GET /api/subjects`, `/api/subjects/groups`, `/api/subjects/<id>` | `subjects_routes.c` | `subject.*` queries | same |
 | `GET /api/composer/status`, `/vocabulary`, `/forms` | `composer_routes.c` | `composer.*` | [Composer routes](api/composer-routes.md#composer-routes) |
-| `/api/jobs/<id>` (`GET DELETE`) | `jobs_routes.c` | `job.get`, `job.cancel` | [Jobs](api/composer-routes.md#jobs) |
+| `GET /api/jobs/<id>` | `jobs_routes.c` | `job.get` | [Jobs](api/composer-routes.md#jobs) |
 | `GET /api/events` | `events_routes.c` | `workshop_events_*` | [Events](api/composer-routes.md#events) |
+| `POST /api/workshop/command`, `POST /api/workshop/query/<name>`, `GET /api/workshop/status` | `workshop_routes.c` | any command or query by name | [Workshop routes](api/workshop-routes.md) |
 
 ## Version constants and schemas
 
@@ -53,7 +54,7 @@ Every route of `/api` is one row `{method, pattern, handler}` of a `<family>_rou
 
 One piece, from file to composed motif.
 
-1. **GUI.** The browser sends the file to `POST /api/analyzer/pieces`; the route reads it (cap 64 MB) and runs the command `library.import` with the file in `bytes`. The answer is `202` with the job.
+1. **GUI.** The browser sends the file to `POST /api/workshop/command` as the command `library.import` (the file as the body, the command in the header `X-Ursatz-Command`); the route reads it (cap 64 MB) and runs the command with the file in `bytes`. The answer is `202` with the job.
 2. **Workshop.** The job imports the file with the Analyzer (`analyzer_import_file`), analyzes it (`analyzer_analyze`), builds the analysis document and its layers and commits the piece as one transaction ([the data folder](../../workshop/docs/data-folder.md#changes-are-transactions)); `library-changed` and `job-done` events follow.
 3. **GUI.** The page, following the event stream, reads the Library again and the table fills in.
 4. **GUI and workshop.** Opening a piece asks for the summary, the sections the score draws, the MusicXML and the playback (`library.piece`, `library.document`, `library.musicxml`, `library.playback`); the frontend draws and plays them ([views](views/analysis-and-score.md)). A piece whose analysis is stale is answered as stored with `stale: true`, and the page starts the re-analysis job.
@@ -61,15 +62,18 @@ One piece, from file to composed motif.
 
 ### GUI actions
 
-| Action | Route | Workshop | Answered by |
+Every change is a command object sent to `POST /api/workshop/command` by `core/commands.js`; reads are the routes of the table above.
+
+| Action | Sent | Workshop | Answered by |
 |---|---|---|---|
-| Import or analyze a piece | `POST /api/analyzer/pieces`, `.../<id>/reanalyze` | `library.import`, `library.reanalyze` | Analyzer: `analyzer_import_file`, `analyzer_analyze` |
+| Import or analyze a piece | command `library.import`, `library.reanalyze` | `library.import`, `library.reanalyze` | Analyzer: `analyzer_import_file`, `analyzer_analyze` |
 | Open the Score | `GET .../musicxml`, `.../document?sections=` | `library.musicxml`, `library.document` | Analyzer: `analyzer_score_export_musicxml`, `analyzer_document_to_json` |
 | Play | `GET .../pieces/<id>/playback` | `library.playback` | Analyzer: `analyzer_playback_build` |
-| Create, analyze and save a motif | `POST /api/materials/items`, `.../<id>/versions`, `.../reanalyze` | `item.create`, `item.save`, `item.reanalyze` | Composer: `composer_api_motive` |
+| Create, analyze and save a motif | commands `item.create`, `item.save`, `item.reanalyze` | `item.create`, `item.save`, `item.reanalyze` | Composer: `composer_api_motive` |
+| Restore an older version | command `item.restore` | `item.restore` | the older version's files and layers, copied |
 | Random motif | `POST /api/materials/motifs/random` | `composer.random-motifs` | Composer: `composer_api_random_motive` |
-| Variants | `POST .../items/<id>/variants`, `.../variants/save` | `item.variants`, `item.save-variant` | Composer: `composer_api_variants`, `composer_api_variant_operations` |
-| Compose a theme or piece | `POST .../items/<id>/compose` | `item.compose` | Composer: `composer_api_theme`, `composer_api_piece`, `composer_api_piece_variations` |
+| Variants | `POST .../items/<id>/variants`; command `item.save-variant` | `item.variants`, `item.save-variant` | Composer: `composer_api_variants`, `composer_api_variant_operations` |
+| Compose a theme or piece | command `item.compose` | `item.compose` | Composer: `composer_api_theme`, `composer_api_piece`, `composer_api_piece_variations` |
 | Check a draft | `POST .../items/validate` | `item.validate` | Composer: `composer_api_validate` |
 | Export | `GET .../versions/<n>/files/<name>`, `/score` | `item.file`, `item.score` | the files the compose wrote |
 

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer_internal/analysis_document.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer_internal/motive_links.h>
 #include <io/imported_score.h>
 
@@ -12,6 +13,11 @@
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+
+/* The document version as text, for the literals of a test that writes a document by hand: the constant is the only place the number is written. */
+#define DOCUMENT_VERSION_TEXT_(x) #x
+#define DOCUMENT_VERSION_TEXT_X(x) DOCUMENT_VERSION_TEXT_(x)
+#define DOCUMENT_VERSION_TEXT DOCUMENT_VERSION_TEXT_X(ANALYZER_DOCUMENT_SCHEMA_VERSION)
 
 /*
  * Motive links over the four pieces of tests/fixtures/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
@@ -157,7 +163,7 @@ static void check_scope_errors(void) {
     cJSON_free(stripped);
 
     /* a piece without motives is a piece without families */
-    CHECK(analyzer_links_scope_add_document(scope, "empty", "{\"schema_version\": 13, \"motives\": []}") ==
+    CHECK(analyzer_links_scope_add_document(scope, "empty", "{\"schema_version\": " DOCUMENT_VERSION_TEXT ", \"motives\": []}") ==
           URSATZ_OK);
     CHECK(scope->piece_count == 3);
     CHECK(scope->family_count == 2);

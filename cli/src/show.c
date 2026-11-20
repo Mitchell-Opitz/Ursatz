@@ -18,8 +18,30 @@ static int fail_call(UrsatzStatus status, const UrsatzError *error) {
                     error->path);
 }
 
-/* The query that reads what the address names, with its params (a new object); NULL on allocation failure. */
-static const char *query_of(const CliAddress *address, cJSON **params) {
+static const char *kind_name(CliAddressKind kind) {
+    switch (kind) {
+    case CLI_ADDRESS_ITEM:
+        return "item";
+    case CLI_ADDRESS_PIECE:
+        return "piece";
+    case CLI_ADDRESS_PROJECT:
+        return "project";
+    case CLI_ADDRESS_SUBJECT:
+        return "subject";
+    case CLI_ADDRESS_COLLECTION:
+        return "collection";
+    case CLI_ADDRESS_STYLE:
+        return "style";
+    case CLI_ADDRESS_LINKS:
+        return "links";
+    case CLI_ADDRESS_JOB:
+        return "job";
+    }
+    return "";
+}
+
+/* The query that reads what the address names as JSON, with its params (a new object); NULL on allocation failure. */
+static const char *json_query_of(const CliAddress *address, cJSON **params) {
     *params = cJSON_CreateObject();
     bool ok = *params && cJSON_AddStringToObject(*params, "id", address->id);
     if (ok && address->version > 0) {
@@ -51,46 +73,114 @@ static const char *query_of(const CliAddress *address, cJSON **params) {
     return NULL;
 }
 
+/* The params of a view query or of the tool text: the view, the measures a-b of --measures and the section of the address. */
+static bool add_view_params(cJSON *params, const char *view, const char *measures, const char *section) {
+    bool ok = cJSON_AddStringToObject(params, "view", view) != NULL;
+    if (ok && measures) {
+        int first = 0;
+        int last = 0;
+        cJSON *range = cJSON_AddObjectToObject(params, "measures");
+        ok = range && cli_parse_measure_range(measures, &first, &last) && cJSON_AddNumberToObject(range, "first", first) &&
+             cJSON_AddNumberToObject(range, "last", last);
+    }
+    return ok && (!section || !section[0] || cJSON_AddStringToObject(params, "section", section));
+}
+
 int run_show(const CliArgs *args) {
     const char *view = cli_value(args, "--view");
+    const char *measures = cli_value(args, "--measures");
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "show needs an address\n%s", cli_usage_of("show"));
+        return cli_fail(CLI_EXIT_USAGE, "show needs an address or a file\n%s", cli_usage_of("show"));
     }
+    const char *input = args->inputs[0];
+    bool is_address = cli_is_address(input);
     CliAddress address;
-    if (!cli_address_parse(args->inputs[0], &address)) {
+    if (is_address && !cli_address_parse(input, &address)) {
         return cli_fail(CLI_EXIT_USAGE,
-                        "'%s' is not an address: write <kind>:<id> (item, piece, project, subject, collection, style, links or job), or item:<id>@v<n> for one version",
-                        args->inputs[0]);
+                        "'%s' is not an address: write <kind>:<id> (item, piece, project, subject, collection, style, links or job), or item:<id>@v<n> for one version, "
+                        "and /<section> after an item or a piece",
+                        input);
     }
-    if (view && strcmp(view, "json") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--view takes json (the other views come with Ursatz Text)");
+    bool layered = !is_address || address.kind == CLI_ADDRESS_ITEM || address.kind == CLI_ADDRESS_PIECE;
+    if (!view) {
+        view = layered ? "summary" : "json";
     }
+    if (is_address && !layered && strcmp(view, "json") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "%s addresses show only --view json", kind_name(address.kind));
+    }
+    int first = 0;
+    int last = 0;
+    if (measures && !cli_parse_measure_range(measures, &first, &last)) {
+        return cli_fail(CLI_EXIT_USAGE, "--measures must be <first>-<last>, as in 12-16, not '%s'", measures);
+    }
+    bool json = strcmp(view, "json") == 0;
+    const char *query = NULL;
+    const char *tool = NULL;
     cJSON *params = NULL;
-    const char *query = query_of(&address, &params);
-    if (!query) {
+    if (!is_address) {
+        tool = "text";
+        params = cJSON_CreateObject();
+        bool ok = params && cJSON_AddStringToObject(params, "path", input) && add_view_params(params, view, measures, NULL);
+        if (!ok) {
+            cJSON_Delete(params);
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        }
+    } else if (json || !layered) {
+        query = json_query_of(&address, &params);
+    } else {
+        query = address.kind == CLI_ADDRESS_ITEM ? "item.view" : "library.view";
+        params = cJSON_CreateObject();
+        bool ok = params && cJSON_AddStringToObject(params, "id", address.id) && (address.version <= 0 || cJSON_AddNumberToObject(params, "version", (double)address.version)) &&
+                  add_view_params(params, view, measures, address.section);
+        if (!ok) {
+            cJSON_Delete(params);
+            params = NULL;
+        }
+    }
+    if (!params) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     CliSession *session = NULL;
-    int opened = cli_session_open(cli_global(), &session);
-    if (opened != 0) {
-        cJSON_Delete(params);
-        return opened;
-    }
+    int result = 0;
     WorkshopReply reply;
     UrsatzError error;
     memset(&error, 0, sizeof error);
-    UrsatzStatus status = cli_session_query(session, query, params, &reply, &error);
-    cJSON_Delete(params);
-    int result = 0;
+    UrsatzStatus status;
+    if (tool) {
+        /* a file is read by this process: the tool needs no data folder */
+        Workshop *workshop = cli_tools();
+        status = workshop ? workshop_tool(workshop, tool, params, NULL, &reply, &error) : URSATZ_ERR_INTERNAL;
+        cJSON_Delete(params);
+    } else {
+        int opened = cli_session_open(cli_global(), &session);
+        if (opened != 0) {
+            cJSON_Delete(params);
+            return opened;
+        }
+        status = cli_session_query(session, query, params, &reply, &error);
+        cJSON_Delete(params);
+    }
     if (status != URSATZ_OK) {
         result = fail_call(status, &error);
     } else if (reply.bytes) {
-        result = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s answers a file", query);
+        result = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s answers a file", query ? query : tool);
+    } else if (tool && json) {
+        cJSON *tree = cJSON_Parse(cli_json_string(reply.json, "json"));
+        if (tree) {
+            cli_print_json(tree);
+            cJSON_Delete(tree);
+        } else {
+            result = cli_fail(CLI_EXIT_UNSATISFIABLE, "the tool text did not answer JSON");
+        }
+    } else if (!json && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(reply.json, "text"))) {
+        fputs(cli_json_string(reply.json, "text"), stdout);
     } else {
         cli_print_json(reply.json);
     }
     workshop_reply_destroy(&reply);
-    cli_session_close(session);
+    if (session) {
+        cli_session_close(session);
+    }
     return result;
 }
 

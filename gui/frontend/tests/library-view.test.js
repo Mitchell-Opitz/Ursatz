@@ -4,7 +4,7 @@
 import { renderLibraryView } from "../public/views/library.js";
 import { check, finish } from "./support/check.js";
 import { byText } from "./support/dom.js";
-import { openPage } from "./support/page.js";
+import { byCommand, openPage } from "./support/page.js";
 
 const pieces = [
   { id: "piece-1788837459-41", filename: "sonata.mid", composer: "John Field", source: "", tags: [], analysis_status: "current" },
@@ -16,8 +16,10 @@ const page = await openPage({
   "GET /api/analyzer/groups": groups,
   "GET /api/subjects": { ok: true, subjects: [] },
   "GET /api/analyzer/pieces/piece-1788837459-41": { ok: true, subjects: [] },
-  "PATCH /api/analyzer/pieces/piece-1788837459-41": (call) =>
-    call.body.filename === "" ? { status: 400, body: { ok: false, error: "filename must not be empty", code: "request" } } : { ok: true, piece: { ...pieces[0], filename: call.body.filename } },
+  "POST /api/workshop/command": byCommand({
+    "library.update": (command) =>
+      command.params.filename === "" ? { status: 400, body: { ok: false, error: "filename must not be empty", code: "request" } } : { ok: true, piece: { ...pieces[0], filename: command.params.filename } },
+  }),
 });
 page.setShell({ showAnalysis() {}, setTagsActive() {}, refreshTags() {} });
 
@@ -48,7 +50,7 @@ const title = editor.querySelector("input");
 title.value = "";
 byText(editor, "button", "Save")[0].click();
 await page.settle();
-check(page.callsTo("PATCH", "/api/analyzer/pieces/piece-1788837459-41").length === 1, "Save sends the piece");
+check(page.commands("library.update").length === 1 && page.commands("library.update")[0].target === "piece-1788837459-41", "Save sends the piece");
 check(editor.textContent.includes("filename must not be empty"), "the backend's refusal of an empty title is shown");
 title.value = "Sonata in C";
 byText(editor, "button", "Save")[0].click();

@@ -15,7 +15,13 @@
 
 #include <common/files.h>
 #include <common/json.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_workshop/workshop_api.h>
+
+/* The document version as text, for the literals of a test that writes a document by hand: the constant is the only place the number is written. */
+#define DOCUMENT_VERSION_TEXT_(x) #x
+#define DOCUMENT_VERSION_TEXT_X(x) DOCUMENT_VERSION_TEXT_(x)
+#define DOCUMENT_VERSION_TEXT DOCUMENT_VERSION_TEXT_X(ANALYZER_DOCUMENT_SCHEMA_VERSION)
 
 #include "items/journal.h"
 
@@ -114,7 +120,7 @@ int main(void) {
     /* committed record 3: a pending folder (a Library piece) */
     snprintf(path, sizeof(path), "%s/library/pieces/.pending-3-piece-x/piece.json", root);
     write_text(path, "{\"format\":\"ursatz-library-piece\",\"format_version\":1,\"filename\":\"x.mid\",\"source_format\":\"midi\","
-                     "\"uploaded_at\":\"2026-01-01T00:00:00Z\",\"analyzer_version\":\"0\",\"document_schema_version\":13}");
+                     "\"uploaded_at\":\"2026-01-01T00:00:00Z\",\"analyzer_version\":\"0\",\"document_schema_version\":" DOCUMENT_VERSION_TEXT "}");
     snprintf(path, sizeof(path), "%s/library/pieces/.pending-3-piece-x/source.mid", root);
     write_text(path, "MThd");
     /* committed record 4: an item header newer than the file's, and a folder whose header was never written */

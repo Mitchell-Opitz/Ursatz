@@ -10,6 +10,7 @@
 #include <common/json.h>
 
 #include "coordinator.h"
+#include "coordinator/command_schemas.h"
 #include "items/migrate.h"
 #include "items/recover.h"
 #include "items/store.h"
@@ -37,6 +38,10 @@ UrsatzStatus workshop_tools_open(Workshop **out, UrsatzError *error) {
     }
     if (!workshop_knowledge_init()) {
         return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the knowledge cannot be read");
+    }
+    if (workshop_command_schemas_open(error) != URSATZ_OK) {
+        workshop_knowledge_shutdown();
+        return URSATZ_ERR_INTERNAL;
     }
     Workshop *workshop = calloc(1, sizeof(*workshop));
     if (!workshop) {
@@ -83,6 +88,11 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     if (!workshop_knowledge_init()) {
         workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the knowledge cannot be read");
+    }
+    if (workshop_command_schemas_open(error) != URSATZ_OK) {
+        workshop_knowledge_shutdown();
+        workshop_data_lock_release(lock);
+        return URSATZ_ERR_INTERNAL;
     }
     Workshop *workshop = calloc(1, sizeof(*workshop));
     if (!workshop) {

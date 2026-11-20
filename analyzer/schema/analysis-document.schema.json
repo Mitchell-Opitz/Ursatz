@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v13.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/analyzer/schema/analysis-document.schema.json",
   "title": "Ursatz-Analyzer analysis document",
   "description": "Structured analysis of one piece. One top-level section per analysis area; unfilled sections are empty arrays, or null for singular sections.",
   "type": "object",

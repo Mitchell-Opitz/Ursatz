@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 
 #include "analysis/analyze_tool.h"
@@ -5,6 +6,10 @@
 #include "analysis/passages.h"
 #include "base/names.h"
 #include "composition/composer_tool.h"
+#include "coordinator/command_schemas.h"
+#include "coordinator/command_text.h"
+#include "coordinator/command_sheet.h"
+#include "items/views.h"
 #include "coordinator/dispatch.h"
 
 /* The tools (R-656): the calls that work on the files their params name and never on the data folder or the journal. dispatch.c lists them. */
@@ -187,5 +192,81 @@ WORKSHOP_HANDLER(workshop_t_style_profile) {
     }
     cJSON *answer = NULL;
     UrsatzStatus status = workshop_style_profile(dir, name, out, &answer, error);
+    return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
+}
+
+/* A file or a text of any layer kind as Ursatz Text, a view of it or its JSON (items/views.h). */
+WORKSHOP_HANDLER(workshop_t_text) {
+    const char *path = NULL;
+    const char *text = NULL;
+    const char *view = NULL;
+    if (!optional_string(call->params, "path", &path, error) || !optional_string(call->params, "text", &text, error) ||
+        !optional_string(call->params, "view", &view, error)) {
+        return URSATZ_ERR_REQUEST;
+    }
+    if ((path == NULL) == (text == NULL)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "give exactly one of path (a file) and text");
+    }
+    TextViewLimits limits;
+    UrsatzStatus status = workshop_view_limits(call->params, &limits, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    cJSON *answer = NULL;
+    status = workshop_view_input(path, text, view && view[0] ? view : "full", &limits, &answer, error);
+    return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
+}
+
+/* The command reference generated from the schemas (coordinator/command_sheet.h): params format (sheet, markdown, grammar, json or help) and name (for help). */
+WORKSHOP_HANDLER(workshop_t_commands) {
+    const char *format = NULL;
+    const char *name = NULL;
+    if (!optional_string(call->params, "format", &format, error) || !optional_string(call->params, "name", &name, error)) {
+        return URSATZ_ERR_REQUEST;
+    }
+    format = format && format[0] ? format : "sheet";
+    char *text = NULL;
+    if (strcmp(format, "sheet") == 0) {
+        text = workshop_command_sheet_text();
+    } else if (strcmp(format, "markdown") == 0) {
+        text = workshop_command_sheet_markdown();
+    } else if (strcmp(format, "grammar") == 0) {
+        text = workshop_command_sheet_grammar();
+    } else if (strcmp(format, "json") == 0) {
+        text = workshop_command_sheet_json();
+    } else if (strcmp(format, "help") == 0) {
+        if (!name || !name[0]) {
+            return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/name", "help needs the name of a command");
+        }
+        const cJSON *schema = workshop_command_schema(name);
+        if (!schema) {
+            return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "/params/name", "unknown command '%s'", name);
+        }
+        text = workshop_command_sheet_help(schema);
+    } else {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/format", "format is sheet, markdown, grammar, json or help");
+    }
+    if (!text) {
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    cJSON *answer = cJSON_CreateObject();
+    bool ok = answer && cJSON_AddStringToObject(answer, "format", format) && cJSON_AddStringToObject(answer, "text", text);
+    free(text);
+    if (!ok) {
+        cJSON_Delete(answer);
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    return workshop_reply_tree(reply, answer, error);
+}
+
+/* Commands written in Ursatz Text as the command objects `ursatz apply` sends (coordinator/command_text.h): param text. */
+WORKSHOP_HANDLER(workshop_t_commands_parse) {
+    bool bad = false;
+    const char *text = workshop_param_string(call->params, "text", &bad);
+    if (!text || bad) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/text", "text is required and a string");
+    }
+    cJSON *answer = NULL;
+    UrsatzStatus status = workshop_command_text_parse(text, &answer, error);
     return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
 }

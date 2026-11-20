@@ -1,0 +1,34 @@
+ursatz-text 1 view structure loop
+form structure  bars 1-68
+  section intro  bars 1-2  letter I  role intro  cadence half  free_phrase true
+    phrase phrase  bars 1-2
+      idea basic idea  bars 1-1
+      idea cadential  bars 2-2
+  section a  bars 3-10  letter A  role body  beginning presentation  ending continuation  cadence imperfect-authentic
+    phrase phrase  bars 3-10
+      subphrase presentation  bars 3-6
+        idea basic idea  bars 3-4
+        idea repetition  bars 5-6
+      subphrase continuation  bars 7-10
+        idea fragment 1  bars 7-7
+        idea fragment 2  bars 8-8
+        idea cadential  bars 9-10
+  section b  bars 11-12  letter B  role body  cadence imperfect-authentic  free_phrase true
+    phrase phrase  bars 11-12
+      idea basic idea  bars 11-12
+  section t  bars 12-13  letter T  role turnaround  cadence half  leads_in true  free_phrase true
+    phrase phrase  bars 12-13
+      idea basic idea  bars 12-13
+  section seam  bars 13-14  role seam
+  section material  bars 15-68  role material
+    phrase material  bars 15-68
+      idea material  bars 15-68
+        motive m0  bars 15-15
+        motive m1  bars 16-16
+        motive liquidated 3  bars 20-20
+        motive m2  bars 17-17
+        motive m3  bars 18-18
+        motive m4  bars 19-19
+        motive m1  bars 21-21
+# leaves out: lanes, notes, constraints, ids (--view full)
+# expand: ursatz show <address> --view harmony

@@ -172,7 +172,7 @@ const appSource = pageSource(...APP_MODULES);
 check(!/Accept|Dispute/.test(appSource), "the page has no Accept or Dispute buttons");
 check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "the page has no static analyzer list");
 check(appSource.includes('accept=".mid,.midi,.musicxml,.xml,.mxl"'), "the upload picker accepts MusicXML files");
-check(appSource.includes("/reanalyze"), "the page calls the reanalyze route");
+check(appSource.includes("library.reanalyze"), "the page sends the library.reanalyze command");
 
 /* The Analysis view is the score workspace: Score mode by default, Data mode
  * keeps the tabs and the Provenance list, and the old Score tab is gone. */

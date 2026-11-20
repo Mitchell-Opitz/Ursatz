@@ -12,7 +12,8 @@ The workshop is the process that holds the data folder, the jobs and the events,
 
 ## The calls
 
-- [commands.md](commands.md): `workshop_query` and `workshop_command`, the 42 commands, the queries, base versions, actors and failures.
+- [commands.md](commands.md): `workshop_query` and `workshop_command`, the 49 commands, the queries, base versions, actors and failures.
+- [command-reference.md](command-reference.md): every command with its target, params and summary, generated from `workshop/commands/*.json`.
 - [tools.md](tools.md): `workshop_tool`, the tools workshop with no data folder, and each tool's params, reply and failures.
 - [jobs-and-events.md](jobs-and-events.md): the job queue, the job kinds, cancel, and the event bus with its events.
 

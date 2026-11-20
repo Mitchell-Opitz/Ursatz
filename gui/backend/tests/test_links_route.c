@@ -47,12 +47,10 @@ static bool ok_true(const cJSON *json) {
   return cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "ok"));
 }
 
-/* PATCHes a piece with a JSON body. */
+/* Updates a piece with library.update; body is its params. */
 static void patch_piece(const char *id, const char *body) {
-  char path[256];
   int status = 0;
-  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
-  cJSON_Delete(test_http_json(PORT, "PATCH", path, body, &status));
+  cJSON_Delete(test_gui_send(PORT, "library.update", id, body, &status));
 }
 
 
@@ -60,7 +58,7 @@ static void patch_piece(const char *id, const char *body) {
 static cJSON *start_run(const char *scope, int *status) {
   char body[512];
   snprintf(body, sizeof(body), "{\"scope\":%s}", scope);
-  return test_http_json(PORT, "POST", "/api/links/runs", body, status);
+  return test_gui_send(PORT, "links.run", "", body, status);
 }
 
 static const cJSON *run_of(const cJSON *answer) {
@@ -138,10 +136,10 @@ int main(void) {
   cJSON_Delete(answer);
 
   /* Bad, unknown and empty scopes. */
-  answer = test_http_json(PORT, "POST", "/api/links/runs", "not json", &status);
-  check(status == 400 && !ok_true(answer), "a body that is not JSON answers 400");
+  answer = test_gui_send(PORT, "links.run", "", "[1]", &status);
+  check(status == 400 && !ok_true(answer), "params that are not an object answer 400");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "POST", "/api/links/runs", "{}", &status);
+  answer = test_gui_send(PORT, "links.run", "", "{}", &status);
   check(status == 400, "a request without a scope answers 400");
   cJSON_Delete(answer);
   answer = start_run("{\"kind\":\"everything\"}", &status);
@@ -182,10 +180,12 @@ int main(void) {
   /* A second run waits in the queue (one run at a time): 202, queued, behind a job of its own. Deleting it cancels its job and removes it. */
   answer = start_run("{\"kind\":\"all\"}", &status);
   check(status == 202 && ok_true(answer) && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "job")), "a second start answers 202 with its job");
-  char second_path[128];
-  snprintf(second_path, sizeof(second_path), "/api/links/runs/%s", string_of(run_of(answer), "id"));
+  char second_run[128];
+  char second_path[160];
+  snprintf(second_run, sizeof(second_run), "%s", string_of(run_of(answer), "id"));
+  snprintf(second_path, sizeof(second_path), "/api/links/runs/%s", second_run);
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "DELETE", second_path, NULL, &status);
+  answer = test_gui_send(PORT, "links.delete", second_run, NULL, &status);
   check(status == 200 && ok_true(answer), "deleting a run that waits cancels it and answers 200");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "GET", second_path, NULL, &status);
@@ -305,13 +305,13 @@ int main(void) {
   cJSON_Delete(answer);
 
   /* Deleting. */
-  answer = test_http_json(PORT, "DELETE", first_path, NULL, &status);
+  answer = test_gui_send(PORT, "links.delete", first_id, NULL, &status);
   check(status == 200 && ok_true(answer), "deleting a finished run answers 200");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "GET", first_path, NULL, &status);
   check(status == 404, "a deleted run answers 404");
   cJSON_Delete(answer);
-  answer = test_http_json(PORT, "DELETE", first_path, NULL, &status);
+  answer = test_gui_send(PORT, "links.delete", first_id, NULL, &status);
   check(status == 404, "deleting it again answers 404");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "GET", "/api/links/runs", NULL, &status);

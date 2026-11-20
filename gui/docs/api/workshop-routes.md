@@ -14,7 +14,7 @@ The generic routes of the backend: any query or command of the workshop by its n
 
 ## Commands
 
-A JSON body is the command object exactly as `workshop_command` takes it: `{"command", "actor", "target", "base_version", "params"}`. The actor is the caller's: the backend adds nothing, and the journal records what the body says.
+A JSON body is the command object exactly as `workshop_command` takes it: `{"command", "actor", "target", "base_version", "params"}`. The actor is the caller's: the backend adds nothing, and the journal records what the body says. The frontend is the caller of every change the page makes (`core/commands.js`): the actor is `michelle`, the target the item or other id, `params` exactly the params the command's schema declares (a member no schema declares is refused at `/params/<member>`), and `base_version` the version the page holds for the target when it holds one (a stale one answers 409). There is no other route that changes anything.
 
 A command that takes a file (`library.import`) is sent with `Content-Type: application/octet-stream`: the body is the file, the command object is percent-encoded in the header `X-Ursatz-Command`, and the file's name in `X-Filename` (decoded as the Library upload decodes it). A file up to 64 MB is taken.
 

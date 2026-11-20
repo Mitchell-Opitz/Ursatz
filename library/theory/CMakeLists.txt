@@ -329,9 +329,10 @@ get_filename_component(URSATZ_REPOSITORY_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. 
 file(GLOB_RECURSE URSATZ_KNOWLEDGE_FILES CONFIGURE_DEPENDS ${URSATZ_REPOSITORY_ROOT}/knowledge/*.json)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
-    COMMAND ${Python3_EXECUTABLE} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_knowledge.py ${URSATZ_REPOSITORY_ROOT}/knowledge
-        ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
-    DEPENDS ${URSATZ_KNOWLEDGE_FILES} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_knowledge.py
+    COMMAND ${Python3_EXECUTABLE} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_json.py ${URSATZ_REPOSITORY_ROOT}/knowledge
+        ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c theory/knowledge/knowledge_embedded.h KnowledgeEmbeddedFile knowledge_embedded_files
+        --skip schema
+    DEPENDS ${URSATZ_KNOWLEDGE_FILES} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_json.py
     COMMENT "Embedding the knowledge files"
     VERBATIM)
 target_sources(ursatz_theory PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c)

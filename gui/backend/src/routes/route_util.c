@@ -178,10 +178,6 @@ cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_byte
   return NULL;
 }
 
-cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null) {
-  return ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, status_or_null);
-}
-
 int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
   if (status == URSATZ_ERR_REQUEST && error && strcmp(error->path, "/body/size") == 0) {
     return 413;
@@ -359,63 +355,4 @@ static int is_call_path(const char *path) {
 int ursatz_gui_failed(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
   int http = ursatz_gui_http_status(status, is_call_path(error->path) && strcmp(error->path, "/body/size") != 0 ? NULL : error);
   return ursatz_gui_send_failure_at(conn, http, error->message, ursatz_status_name(status), error->path);
-}
-
-UrsatzStatus ursatz_gui_run_command(const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
-                                    UrsatzError *error) {
-  cJSON *command = cJSON_CreateObject();
-  /* The version the page read travels in the request as base_version (the body, or the query of a delete); the command carries it. */
-  cJSON *base = params ? cJSON_DetachItemFromObjectCaseSensitive(params, "base_version") : NULL;
-  if (cJSON_IsString(base)) {
-    char *end = NULL;
-    double number = strtod(base->valuestring, &end);
-    bool whole = end && *end == '\0' && end != base->valuestring;
-    cJSON_Delete(base);
-    base = whole ? cJSON_CreateNumber(number) : cJSON_CreateString("");
-  }
-  if (!command || !cJSON_AddStringToObject(command, "command", name) || !cJSON_AddStringToObject(command, "actor", "michelle") ||
-      !cJSON_AddStringToObject(command, "target", target ? target : "") || !cJSON_AddItemToObject(command, "params", params ? params : cJSON_CreateObject()) ||
-      (base && !cJSON_AddItemToObject(command, "base_version", base))) {
-    cJSON_Delete(command);
-    memset(reply, 0, sizeof(*reply));
-    snprintf(error->message, sizeof(error->message), "out of memory");
-    error->path[0] = '\0';
-    return URSATZ_ERR_ALLOC;
-  }
-  UrsatzStatus status = workshop_command(ursatz_gui_workshop(), command, bytes, reply, error);
-  cJSON_Delete(command);
-  if (reply->json) {
-    cJSON_DeleteItemFromObjectCaseSensitive(reply->json, "journal_seq");
-  }
-  return status;
-}
-
-int ursatz_gui_answer_command(struct mg_connection *conn, const char *name, const char *target, cJSON *params, const WorkshopBytes *bytes,
-                              UrsatzGuiFailureFn failed, bool bare) {
-  WorkshopReply reply;
-  UrsatzError error = {{0}, {0}};
-  UrsatzStatus status = ursatz_gui_run_command(name, target, params, bytes, &reply, &error);
-  if (status == URSATZ_ERR_CONFLICT && cJSON_GetObjectItemCaseSensitive(reply.json, "current_version")) {
-    /* The item changed since the page read it: 409 {"ok": false, "error", "current_version"}. */
-    cJSON *object = cJSON_CreateObject();
-    cJSON *current = cJSON_DetachItemFromObjectCaseSensitive(reply.json, "current_version");
-    workshop_reply_destroy(&reply);
-    if (!object || !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", error.message) ||
-        !cJSON_AddItemToObject(object, "current_version", current)) {
-      cJSON_Delete(object);
-      cJSON_Delete(current);
-      return ursatz_gui_send_failure(conn, 500, "out of memory");
-    }
-    return ursatz_gui_send_object(conn, 409, object);
-  }
-  if (status != URSATZ_OK) {
-    int answered = failed(conn, status, &error);
-    workshop_reply_destroy(&reply);
-    return answered;
-  }
-  const cJSON *job = cJSON_GetObjectItemCaseSensitive(reply.json, "job");
-  if (job && !cJSON_GetObjectItemCaseSensitive(job, "stage")) {
-    return ursatz_gui_send_reply_ok(conn, 202, &reply);
-  }
-  return bare ? ursatz_gui_send_reply_json(conn, 200, &reply) : ursatz_gui_send_reply_ok(conn, 200, &reply);
 }

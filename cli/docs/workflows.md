@@ -14,6 +14,24 @@ ursatz render piece-2.json --midi again.mid --tempo 96
 
 `plan` writes the plan of a short piece from a form template; `fill` realizes any plan ([cli-plan.md](cli-plan.md), [cli-fill.md](cli-fill.md)); `lock` makes a section, a phrase or one lane Given and `regenerate` writes one node again and only what depends on it ([cli-regenerate.md](cli-regenerate.md)); `render` writes the plan's Given and Realized notes as MIDI, MusicXML or both ([export.md](../../composer/docs/export.md)). `variations` and `harmonize` keep several versions of a node that sound different ([cli-variations.md](cli-variations.md)).
 
+## Changing a piece in a data folder
+
+A piece in a [data folder](data-folder.md) is read as text and changed with commands written as text. "Add a 4-bar phrase between A and B": insert B, insert the phrase after A, compose the new version (`edit.txt`):
+
+```
+# add B, then a 4-bar phrase between A (s0) and B
+section.insert item:pce-2c8d54834a9c499f@v2 after s0 id b bars 8 role body letter B
+section.insert item:pce-2c8d54834a9c499f@v3 after s0 id T0 bars 4 role body letter T function transition
+item.compose item:pce-2c8d54834a9c499f@v4 seed 1
+```
+
+```sh
+ursatz --data ~/ursatz-data apply edit.txt --wait
+ursatz --data ~/ursatz-data show item:pce-2c8d54834a9c499f --view summary
+```
+
+Each command names the version it works from (`@v<n>`): the first makes version 3, the second version 4, and `--wait` waits for the compose job and prints the version it made (5). `show` then lists the rows `s0`, `T0` (`function transition`, bars 9-12) and `b` (bars 13-20). The section commands are in the [command reference](../../workshop/docs/command-reference.md); `ursatz help section.insert` shows one.
+
 ## MIDI files
 
 A MIDI file opens in a DAW with named tracks (`melody`, `bass`, `inner_voice_<n>`, the form on the conductor track), a

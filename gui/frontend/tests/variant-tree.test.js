@@ -9,6 +9,7 @@ import Vocabulary from "../public/core/vocabulary.js";
 import { generated, readJson } from "./support/fixtures.js";
 import V from "../public/models/variant-tree.js";
 import { check, same, finish } from "./support/check.js";
+import { params, isCommand } from "./support/command.js";
 import { byText, installDom } from "./support/dom.js";
 import fs from "fs";
 
@@ -56,8 +57,8 @@ check(split.hidden === 0, "promoted nodes are not counted as hidden");
 check(V.promotedText(split.promoted[0]) === "Motif a1 (opens it)", "a promoted entry reads <name> (opens it)");
 check(V.treeRows(tree, true).promoted.length === 0 && V.treeRows(null, true).promoted.length === 0, "no standalone node gives an empty Promoted list");
 const promoteRequest = V.promoteRequest("v1", "  Own  ", "prj-1");
-check(promoteRequest.method === "POST" && promoteRequest.url === "/api/materials/items/v1/promote" &&
-  same(JSON.parse(promoteRequest.body), { name: "Own", project_id: "prj-1" }), "the promote request names the motif and its project");
+check(isCommand(promoteRequest, "item.promote", "v1") &&
+  same(params(promoteRequest), { name: "Own", project_id: "prj-1" }), "the promote request names the motif and its project");
 
 const operations = [
   { name: "augment", label: "Augment", category: "rhythm", citation: "ch. III", params: [{ name: "ratio", kind: "ratio", min: 0, max: 0 }], forms: ["full"] },
@@ -103,10 +104,10 @@ check(same(JSON.parse(reroll.body), { chain: V.fixedChain(candidate), count: 1, 
 check(V.candidateName("Opening", candidate) === "Opening transpose + augment", "candidate naming");
 check(V.candidateName("Opening", { chain: { steps: [] } }) === "Opening", "no operations keeps the name");
 
-check(same(JSON.parse(V.saveRequest("m1", candidate, "approved", "  My name ").body), { variant: candidate, flag: "approved", name: "My name" }), "save body");
-check(JSON.parse(V.saveRequest("m1", candidate, "bogus").body).flag === "unflagged", "an unknown flag saves as unflagged");
-check(same(JSON.parse(V.flagRequest("v1", "rejected", "variant").body), { flag: "rejected", kind: "variant" }), "flag body with a kind");
-check(V.rerollRequest("v1").url === "/api/materials/items/v1/reroll", "reroll url");
+check(isCommand(V.saveRequest("m1", candidate, "approved", "  My name "), "item.save-variant", "m1") && same(params(V.saveRequest("m1", candidate, "approved", "  My name ")), { variant: candidate, flag: "approved", name: "My name" }), "save body");
+check(params(V.saveRequest("m1", candidate, "bogus")).flag === "unflagged", "an unknown flag saves as unflagged");
+check(isCommand(V.flagRequest("v1", "rejected", "variant"), "item.flag", "v1") && same(params(V.flagRequest("v1", "rejected", "variant")), { flag: "rejected", kind: "variant" }), "flag body with a kind");
+check(isCommand(V.rerollRequest("v1"), "item.reroll", "v1"), "reroll is the item.reroll command");
 check(V.rerollRequest("v1").job === true && V.candidateRerollRequest("m1", candidate).job === true, "a reroll is a job");
 check(V.generateRequest("m1", {}).request.job === true && V.eachOpRequest("m1", "7").request.job === true, "variants and each-op are jobs");
 check(V.treeRequest("v1").method === "GET" && V.treeRequest("v1").url === "/api/materials/items/v1/variant-tree", "tree url");
@@ -171,8 +172,8 @@ check(V.markView(mark, mkResult("invert", "B3:q", 4)).changed === true, "a mark 
 const eachRequest = V.eachOpRequest("m1", "7");
 check(eachRequest.request.method === "POST" && eachRequest.request.url === "/api/materials/items/m1/each-op" && same(JSON.parse(eachRequest.request.body), { seed: 7 }) &&
   same(JSON.parse(V.eachOpRequest("m1", "").request.body), {}) && V.eachOpRequest("m1", "x").error !== undefined, "the each-op request takes an optional seed");
-check(V.opChecksRequest("m1").method === "GET" && V.opChecksPutRequest("m1", { invert: mark }).method === "PUT" &&
-  same(JSON.parse(V.opChecksPutRequest("m1", { invert: mark }).body), { checks: { invert: mark } }), "the op-checks requests GET and PUT the marks");
+check(V.opChecksRequest("m1").method === "GET" && isCommand(V.opChecksPutRequest("m1", { invert: mark }), "item.set-op-checks", "m1") &&
+  same(params(V.opChecksPutRequest("m1", { invert: mark })), { checks: { invert: mark } }), "the op-checks request reads the marks and the command sets them");
 const findingsMarks = {
   augment: { verdict: "works", comment: "", seed: 2, notes_text: "C4:h", date: "2026-10-23" },
   invert: { verdict: "wrong", comment: "too low", seed: 4, notes_text: "A3:q", date: "2026-10-23" },
@@ -205,7 +206,7 @@ const compareReq = V.compareRequest({ item: "m1", version: 2 }, { item: "m2", ve
 check(compareReq.method === "POST" && compareReq.url === "/api/materials/recognize" && same(JSON.parse(compareReq.body), { source: { item: "m1", version: 2 }, target: { item: "m2", version: 3 } }), "the compare request names both motifs and their versions");
 const recognition = { found: true, chain: { steps: [{ op: "invert", params: {} }, { op: "augment", params: { ratio: "2:1" } }] }, distance: 0.25, kept: ["rhythm"], changed: ["intervals"], derivation: "Inverted, then augmented." };
 const linkReq = V.linkFormRequest("m2", { item: "m1", version: 2 }, recognition);
-check(linkReq.method === "POST" && linkReq.url === "/api/materials/items/m2/link-form" && same(JSON.parse(linkReq.body), { source: { item: "m1", version: 2 }, recognition }), "the link request goes to the target with the source and the recognition");
+check(isCommand(linkReq, "item.link-form", "m2") && same(params(linkReq), { source: { item: "m1", version: 2 }, recognition }), "the link request goes to the target with the source and the recognition");
 const related = V.compareView(recognition);
 check(related.found && related.canLink && related.chain === "invert then augment" && related.related === "75% related" && related.derivation === "Inverted, then augmented.", "a found chain shows the chain, the derivation and N% related");
 check(same(related.chips.map((c) => c.text), ["kept rhythm", "changed intervals"]), "the compare result shows kept and changed chips");

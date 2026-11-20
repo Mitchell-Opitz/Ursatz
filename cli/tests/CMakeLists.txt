@@ -16,3 +16,16 @@ endif()
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_data_commands)
 ursatz_test(cli_data_commands COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DDATA_V0=${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0
     -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_data_commands/work -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_data_commands.cmake)
+
+# Ursatz Text on the command line (P65 B6): show with its views and refusals, apply with text commands, the generated help; and the flag reference page.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_text)
+ursatz_test(cli_text COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DDATA_V0=${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0
+    -DPLAN=${CMAKE_SOURCE_DIR}/library/text/tests/fixtures/loop.plan.json -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_text/work
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_text.cmake)
+ursatz_test(cli_flags_doc COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DPAGE=${CMAKE_SOURCE_DIR}/cli/docs/flags.md
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_flags_doc.cmake)
+
+# "Add a 4-bar phrase between A and B" with ursatz apply alone (P65 B7): two section inserts and a compose from a text file, then the summary.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_text_apply)
+ursatz_test(cli_text_apply COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DDATA_V0=${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0
+    -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_text_apply/work -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_text_apply.cmake)

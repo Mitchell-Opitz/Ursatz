@@ -17,6 +17,10 @@
 #include <cJSON.h>
 
 #include "support/body_v2.h"
+
+/* The bodies the tests write are format 1; the commands take format 2 (request_with_request_body). */
+#define test_gui_send test_gui_send_body_v2
+#define test_gui_send_finish test_gui_send_finish_body_v2
 #include "support/server_support.h"
 #include "ursatz_check.h"
 #include "server.h"
@@ -117,7 +121,7 @@ static char *create_item(const char *type, const char *name, const char *body, i
     return NULL;
   }
   sprintf(request, "{\"type\":\"%s\",\"name\":\"%s\",\"project_id\":\"%s\",\"body\":%s}", type, name, g_project, body);
-  cJSON *answer = exchange("POST", "/api/materials/items", request, status);
+  cJSON *answer = test_gui_send(PORT, "item.create", "", request, status);
   const cJSON *item = member(answer, "item");
   if (*status == 200 && cJSON_IsString(member(item, "id"))) {
     id = copy_string(string_of(item, "id"));
@@ -239,9 +243,7 @@ static cJSON *finish_job(cJSON *accepted, int *status) {
 static char g_last_request_path[512];
 
 static cJSON *compose(const char *id, const char *body, int *status) {
-  char path[160];
-  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", id);
-  cJSON *answer = finish_job(exchange("POST", path, body, status), status);
+  cJSON *answer = finish_job(test_gui_send(PORT, "item.compose", id, body, status), status);
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
   if (*status == 200 && cJSON_IsNumber(version)) {
@@ -649,18 +651,17 @@ static void test_compose(const Motifs *m) {
   check(strcmp(string_of(cJSON_GetArrayItem(member(member(answer, "item"), "versions"), 0), "note"), "Created") == 0,
         "the first version of a theme is noted Created");
   cJSON_Delete(answer);
-  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", theme);
   char wrapped[2600];
   snprintf(wrapped, sizeof(wrapped), "{\"body\":%s}", body);
-  answer = exchange("POST", path, wrapped, &status);
+  answer = test_gui_send(PORT, "item.save", theme, wrapped, &status);
   check(status == 400, "a theme version with no note is refused");
   cJSON_Delete(answer);
   snprintf(wrapped, sizeof(wrapped), "{\"note\":\"  \",\"body\":%s}", body);
-  answer = exchange("POST", path, wrapped, &status);
+  answer = test_gui_send(PORT, "item.save", theme, wrapped, &status);
   check(status == 400, "a theme version with a blank note is refused");
   cJSON_Delete(answer);
   snprintf(wrapped, sizeof(wrapped), "{\"note\":\"Added ideas\",\"body\":%s}", body);
-  answer = exchange("POST", path, wrapped, &status);
+  answer = test_gui_send(PORT, "item.save", theme, wrapped, &status);
   check(status == 200, "a theme version with a note is saved");
   cJSON_Delete(answer);
 
@@ -721,10 +722,6 @@ static void test_compose(const Motifs *m) {
   check(status == 400 && current_version(placeholder) == 1, "composing a placeholder theme is refused and writes nothing");
   cJSON_Delete(answer);
   free(placeholder);
-  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
-  answer = exchange("GET", path, NULL, &status);
-  check(status == 405, "compose takes POST only");
-  cJSON_Delete(answer);
 
   free(theme);
 }
@@ -846,8 +843,7 @@ static void test_files(const Motifs *m) {
   char dir[200];
   item_file(theme, "", dir, sizeof(dir));
   check(dir_exists(dir), "the item directory exists before the delete");
-  snprintf(path, sizeof(path), "/api/materials/items/%s", theme);
-  answer = exchange("DELETE", path, NULL, &status);
+  answer = test_gui_send(PORT, "item.delete", theme, NULL, &status);
   cJSON_Delete(answer);
   check(status == 200 && !dir_exists(dir), "deleting the item removes its directory and the version folders");
   free(theme);
@@ -932,14 +928,12 @@ static void test_update_uses(const Motifs *m) {
   int status = 0;
   char slots[600];
   char body[2400];
-  char path[400];
   slots_of(m->a, m->b, slots, sizeof(slots));
   theme_body(slots, "", body, sizeof(body));
   char *theme = create_item("theme", "Updating", body, &status);
 
   /* A new version of motif A, analyzed by the real Composer. */
-  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", m->a);
-  cJSON *answer = exchange("POST", path,
+  cJSON *answer = test_gui_send(PORT, "item.save", m->a,
                            "{\"note\":\"changed\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
                            "\"notes\":\"C4:e F4:e G4:e F4:e C4:e F4:e G4:e C5:e\",\"meter\":\"4/4\",\"key\":\"C minor\","
                            "\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}",
@@ -1008,9 +1002,8 @@ static void test_concurrent(const Motifs *m) {
   if (!theme) {
     return;
   }
-  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
-  cJSON *first = exchange("POST", path, "{\"seed\":11}", &status_a);
-  cJSON *second = exchange("POST", path, "{\"seed\":12}", &status_b);
+  cJSON *first = test_gui_send(PORT, "item.compose", theme, "{\"seed\":11}", &status_a);
+  cJSON *second = test_gui_send(PORT, "item.compose", theme, "{\"seed\":12}", &status_b);
   check(status_a == 202 && status_b == 202, "both composes are accepted as jobs at once");
   first = finish_job(first, &status_a);
   second = finish_job(second, &status_b);
@@ -1052,8 +1045,7 @@ static void test_jobs_route(const Motifs *m) {
   slots_of(m->a, m->b, slots, sizeof(slots));
   theme_body(slots, "", body, sizeof(body));
   char *theme = create_item("theme", "Jobs", body, &status);
-  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
-  cJSON *accepted = exchange("POST", path, "{\"seed\":3}", &status);
+  cJSON *accepted = test_gui_send(PORT, "item.compose", theme, "{\"seed\":3}", &status);
   const cJSON *job = member(accepted, "job");
   check(status == 202 && ok_true(accepted) && strncmp(string_of(job, "id"), "job-", 4) == 0 &&
             strcmp(string_of(job, "kind"), "theme") == 0 && strcmp(string_of(job, "state"), "queued") == 0,
@@ -1079,17 +1071,17 @@ static void test_jobs_route(const Motifs *m) {
   check(cJSON_IsString(member(finished, "stage")) && cJSON_IsNumber(member(finished, "done")) && cJSON_IsNumber(member(finished, "total")),
         "a job has its stage, done and total");
   cJSON_Delete(state);
-  state = exchange("DELETE", path, NULL, &status);
-  check(status == 204, "a cancel of a finished job is 204");
+  state = test_gui_send(PORT, "job.cancel", id, NULL, &status);
+  check(status == 200 && ok_true(state), "a cancel of a finished job is 200");
   cJSON_Delete(state);
-  state = exchange("DELETE", "/api/jobs/job-nothere", NULL, &status);
+  state = test_gui_send(PORT, "job.cancel", "job-nothere", NULL, &status);
   check(status == 404, "a cancel of an unknown job is 404");
   cJSON_Delete(state);
   state = exchange("GET", "/api/jobs/job-nothere", NULL, &status);
   check(status == 404 && !ok_true(state), "an unknown job is 404");
   cJSON_Delete(state);
   state = exchange("POST", path, "{}", &status);
-  check(status == 405, "a job takes GET and DELETE only");
+  check(status == 405, "a job takes GET only");
   cJSON_Delete(state);
   free(theme);
 }

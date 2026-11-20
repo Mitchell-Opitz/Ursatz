@@ -45,6 +45,24 @@ What the platform holds about a piece is in three layers, each a JSON file with 
 
 `ursatz analyze <input> --layers <dir>` writes the realization and the Analyzer's reading; `--model-plan <file>` writes the plan a reading gives (`reading_to_plan`). `ursatz theme`, `piece` and `fill` take `--layers <dir>` and write the plan, the realization and the Composer's reading of it. See [library/docs/modules/reading.md](library/docs/modules/reading.md).
 
+## Ursatz Text
+
+Ursatz Text is the compact, lossless text form of a plan, a reading, a realization, a knowledge file and the commands that change them: `parse(print(x))` equals `x`. `ursatz show` prints a piece or a file in text, in views that leave out what a reader does not need (summary, structure, harmony, one line, one part, reading), and `ursatz apply` takes text commands, so a change to a piece is one line:
+
+```
+$ ursatz show item:pce-2c8d54834a9c499f --view summary
+ursatz-text 1 view summary fill
+fill  form binary  home C major  4/4  bars 1-37
+  A  bars 1-8  letter A  harmony I viio6 | I6 | I viio6 | I6 | I | IV | V | I
+  B  bars 9-16  letter B  harmony I | - | I | - | I | IV | ii V | I
+  material  bars 17-37  role material
+# leaves out: notes, constraints, ids, spans (--view full)
+# expand: ursatz show <address>/<section> --view structure
+$ echo "section.insert item:pce-2c8d54834a9c499f@v2 after A id T bars 4 role body letter T" | ursatz apply
+```
+
+The grammar is in [library/text/README.md](library/text/README.md), every command with its params in [workshop/docs/command-reference.md](workshop/docs/command-reference.md), and `show`, `apply` and `restore` in [the data folder page](cli/docs/data-folder.md).
+
 ## Build and test
 
 From the repository root:

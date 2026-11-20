@@ -22,6 +22,19 @@ function indexBody() {
   return html.slice(html.indexOf("<body>") + 6, html.indexOf("<script"));
 }
 
+/* The one route every change goes to (R-668): the answers by command name, {"item.save": answer | (command, call) => answer}; a command with no
+ * answer is refused as unknown. Use as "POST /api/workshop/command": byCommand({...}). */
+export function byCommand(answers) {
+  return (call) => {
+    const command = call.body;
+    const answer = answers[command.command];
+    if (answer === undefined) {
+      return { status: 400, body: { ok: false, error: `no answer for ${command.command}`, code: "request" } };
+    }
+    return typeof answer === "function" ? answer(command, call) : answer;
+  };
+}
+
 /* routes: {"METHOD /path": answer | (call) => answer}; a path matches by its start up to the query. */
 export async function openPage(routes, options) {
   const o = options || {};
@@ -45,6 +58,12 @@ export async function openPage(routes, options) {
     settle: dom.settle,
     /* The calls made to a path (by method and start of the url). */
     callsTo: (method, url) => calls.filter((call) => call.method === method && call.url.startsWith(url)),
+    /* The commands the page sent (the command objects), the ones named `name` when it is given. */
+    commands: (name) =>
+      calls
+        .filter((call) => call.method === "POST" && call.url === "/api/workshop/command")
+        .map((call) => call.body)
+        .filter((command) => name === undefined || command.command === name),
     /* Gives the views the shell they call; the test gives only what its view uses. */
     setShell(context) {
       setShell(Object.assign({ contentEl: () => page.content }, context));

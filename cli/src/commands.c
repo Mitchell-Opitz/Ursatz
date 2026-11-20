@@ -36,7 +36,7 @@ static const char *const FLAGS_CORPUS[] = {"--out", "--resume", NULL};
 static const char *const FLAGS_STYLE_PROFILE[] = {"--name", "--out", NULL};
 static const char *const FLAGS_STATUS[] = {"--format", NULL};
 static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL};
-static const char *const FLAGS_SHOW[] = {"--view", NULL};
+static const char *const FLAGS_SHOW[] = {"--measures", "--view", NULL};
 static const char *const FLAGS_HISTORY[] = {"--format", "--limit", NULL};
 static const char *const FLAGS_APPLY[] = {"--format", "--wait", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
@@ -55,6 +55,7 @@ static const char *const FLAGS_LOCK[] = {"--format", "--lane", "--node", "--out"
 static const char *const FLAGS_REGENERATE[] = {"--base", "--format", "--lane", "--midi", "--musicxml", "--no-wait", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", "--version", NULL};
 static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
+static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
@@ -524,7 +525,7 @@ const CliCommand CLI_COMMANDS[] = {
      "Make batches of motifs or themes from fixed seeds for listening",
     "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n"
     "session plays and reads. Sample i (from 0) uses the seed --seed + i, so the same options, settings and seed\n"
-    "give the same files. See docs/cli-listen.md.\n"
+    "give the same files. See cli/docs/cli-listen.md.\n"
     "\n"
     "Files, i from 01: <i>.mid, <i>.musicxml, <i>.json (the API response) and one line per sample in listen.jsonl.\n"
     "Notes on options:\n"
@@ -548,20 +549,20 @@ const CliCommand CLI_COMMANDS[] = {
      FLAGS_LISTEN, 0, 0, run_listen},
     {"analyze",
     "analyze <input> [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>] [--layers <dir>] [--model-plan <file>]\n"
-    "analyze <input> --view text [--measures <first>-<last>] [--title <text>] [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>]",
+    "analyze <input> --view reading [--measures <first>-<last>] [--title <text>] [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>]",
      "Analyze a MIDI or MusicXML file into an analysis document, or print its text export",
     "Analyzes a MIDI or MusicXML file with the Ursatz Analyzer and writes the analysis document, <stem>.analysis.json,\n"
-    "next to the input (a JSON document: the form, phrases, cadences, harmony, keys and motives it hears). With --view text\n"
+    "next to the input (a JSON document: the form, phrases, cadences, harmony, keys and motives it hears). With --view reading\n"
     "it prints the measure-addressed text export of the piece instead, the text a person can paste into a conversation to\n"
     "say \"measure 27 is flagged as X, I read it as Y\", and writes nothing.\n"
     "\n"
     "--layers <dir> also writes the layers of the analysis: realization.json and readings/analyzer.json. --model-plan <file>\n"
-    "also writes the minimal plan of the Analyzer's reading (its sections, keys and chords). Neither goes with --view text.\n"
+    "also writes the minimal plan of the Analyzer's reading (its sections, keys and chords). Neither goes with --view reading.\n"
     "\n"
     "Notes on options:\n"
     "  --input-format is auto (the default), midi or musicxml. --meter, --value-scale and --pickup are a notation reading\n"
     "  for a file whose meter or note values are not what it means: --meter 3/4, --value-scale 2 or 1/2, --pickup 1/4 (the\n"
-    "  pickup must be shorter than one measure of the meter). --measures and --title need --view text: --measures 12-16\n"
+    "  pickup must be shorter than one measure of the meter). --measures and --title need --view reading: --measures 12-16\n"
     "  exports those measure numbers as written in the score (a pickup measure is number 0).\n"
     "\n"
     "Exit status: 0 success; 1 usage, an input that cannot be read, a notation reading that cannot be applied or an analysis\n"
@@ -569,7 +570,7 @@ const CliCommand CLI_COMMANDS[] = {
     "\n"
     "Example:\n"
     "  ursatz analyze song.mid\n"
-    "  ursatz analyze song.mid --view text --measures 1-4",
+    "  ursatz analyze song.mid --view reading --measures 1-4",
      FLAGS_ANALYZE, 1, 1, run_analyze},
     {"corpus",
     "corpus <dir> [--out <dir>] [--resume]",
@@ -623,27 +624,25 @@ const CliCommand CLI_COMMANDS[] = {
     "  echo '{\"id\": \"item-1\"}' | ursatz --data ~/ursatz-data query item.get --params -",
      FLAGS_QUERY, 1, 1, run_query},
     {"show",
-    "show <address> [--view <json>]",
-     "Show what the data folder holds under an address",
-    "Prints what the workshop holds under an address, as JSON. An address is <kind>:<id> with the kind item, piece, project, subject, collection, style, links or job, and item:<id>@v<n> for one version of an item.\n"
+    "show <address|file> [--view <view>] [--measures <first>-<last>]",
+     "Show what the data folder or a layer file holds, as text views or JSON",
+    "Prints what the workshop holds under an address, or what a layer file (a plan, a realization, a reading) holds, as a view in Ursatz Text or as JSON. An address is <kind>:<id> with the kind item, piece, project, subject, collection, style, links or job, item:<id>@v<n> for one version of an item, and /<section> after an item or a piece to look at one section (item:<id>@v<n>/<section>, piece:<id>/<section>).\n"
     "\n"
-    "  item:<id>        the item with its versions            (query item.get)\n"
-    "  item:<id>@v<n>   one version of the item               (query item.version)\n"
-    "  piece:<id>       a Library piece                       (query library.piece)\n"
-    "  project:<id>     a project                             (query project.get)\n"
-    "  subject:<id>     a subject                             (query subject.get)\n"
-    "  collection:<id>  a collection                          (query collection.get)\n"
-    "  style:<id>       a style                               (query style.get)\n"
-    "  links:<id>       a motive link run                     (query links.get)\n"
-    "  job:<id>         a job                                 (query job.get)\n"
+    "  item:<id>        the current version of the item        (item.view, or item.get for json)\n"
+    "  item:<id>@v<n>   one version of the item                (item.view, or item.version for json)\n"
+    "  piece:<id>       a Library piece                        (library.view, or library.piece for json)\n"
+    "  <file>           a layer file                           (the tool text)\n"
+    "  project:<id>, subject:<id>, collection:<id>, style:<id>, links:<id>, job:<id>   json only         (project.get and the like)\n"
     "\n"
-    "--view json is the only view for now (the other views come with Ursatz Text). The data folder is named before the subcommand: ursatz --data <dir> show item:<id>.\n"
+    "--view is summary (the default for an item, a piece and a file), structure, harmony, line:<name>, part:<name>, reading, full (the lossless text of every layer) or json. --measures limits the view to bars <first>-<last>. The other kinds of address show only --view json. The data folder is named before the subcommand: ursatz --data <dir> show item:<id>.\n"
     "\n"
-    "Exit status: 0 success; 1 usage (a text that is no address, another view), or an address the workshop refuses; 2 the folder cannot be opened, or any other failure.\n"
+    "Exit status: 0 success; 1 usage (a text that is no address, a view the address does not give), or a view or an address the workshop refuses; 2 the folder cannot be opened, or any other failure.\n"
     "\n"
     "Example:\n"
     "  ursatz --data ~/ursatz-data show item:itm-3f2a\n"
-    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2",
+    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2 --view harmony --measures 1-8\n"
+    "  ursatz --data ~/ursatz-data show item:itm-3f2a@v2/A --view structure\n"
+    "  ursatz show plan.json --view line:melody",
      FLAGS_SHOW, 1, 1, run_show},
     {"history",
     "history [<address>] [--limit <n>] [--format <text|json>]",
@@ -685,6 +684,17 @@ const CliCommand CLI_COMMANDS[] = {
     "Example:\n"
     "  ursatz --data ~/ursatz-data compose item:itm-3f2a --seed 7",
      FLAGS_COMPOSE, 1, 1, run_compose},
+    {"restore",
+    "restore item:<id>@v<n> [--base <n>] [--note <text>]",
+     "Make the next version of an item a copy of an older one",
+    "Makes the next version of the item a copy of version n, with its files: the version is not rewritten, the item gains a new one that holds what version n held (restoring is an undo that keeps the history). It prints item <id> version <new> (restored v<n>). The note of the new version is restore v<n> unless --note gives one. --base is the version the command is made against (default: the current one): a newer version refuses it. The current version cannot be restored. The data folder is named before the subcommand: ursatz --data <dir> restore item:<id>@v<n>.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or a command the workshop refuses (a stale --base, the current version, a version that is not there); 2 the folder cannot be opened, or any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data restore item:itm-3f2a@v2\n"
+    "  ursatz --data ~/ursatz-data restore item:itm-3f2a@v2 --note \"back to the short ending\"",
+     FLAGS_RESTORE, 1, 1, run_restore},
     {"migrate",
     "migrate [--dry-run] [--backup <dir>]",
      "Migrate a data folder from an older layout to the current one",

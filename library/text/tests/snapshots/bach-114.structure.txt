@@ -1,0 +1,22 @@
+ursatz-text 1 view structure bach-114
+section A  bars 1-24
+  phrase beginning  bars 1-8
+  phrase ending  bars 9-24
+  subphrase subphrase-1  bars 1-4
+  subphrase subphrase-2  bars 5-8
+  subphrase subphrase-1  bars 9-12
+  subphrase subphrase-2  bars 13-24
+  idea basic-idea  bars 1-2
+  idea contrasting-idea  bars 3-4
+  idea contrasting-idea  bars 5-6
+  idea contrasting-idea  bars 7-8
+  idea basic-idea  bars 9-10
+  idea contrasting-idea  bars 11-12
+  idea contrasting-idea  bars 13-14
+  idea contrasting-idea  bars 15-16
+  idea contrasting-idea  bars 17-18
+  idea contrasting-idea  bars 19-20
+  idea contrasting-idea  bars 21-22
+  idea contrasting-idea  bars 23-24
+# leaves out: lanes, notes, constraints, ids (--view full)
+# expand: ursatz show <address> --view harmony

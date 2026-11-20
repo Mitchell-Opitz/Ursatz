@@ -67,7 +67,7 @@ view's "Rhythm and meter" tab. It shows the reading the analysis used, the
 meter check's line from the `meter-fit` claim ("Declared 4/4 fits 41%. 3/4 with
 values doubled fits 93%."), Apply when the check found a better reading, and
 Edit, which opens meter, value scale (x1/4 to x4) and pickup fields with Save,
-Clear and Cancel. Apply and Save send `PATCH /api/analyzer/pieces/<id>` with
+Clear and Cancel. Apply and Save send the command `library.update` with
 `notation` (blank fields left out, Clear sends `null`), then load the analysis
 and score again. A rejected notation shows the backend's message
 (`invalid notation`) in the row. The model is `frontend/public/models/notation-panel.js`

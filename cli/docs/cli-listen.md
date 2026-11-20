@@ -57,7 +57,7 @@ A round makes a batch, listens, changes one setting and makes the same batch aga
 2. A style from a folder of MIDI or MusicXML files: `ursatz corpus <folder> --out <dir>`, then `ursatz style-profile <dir> --name <n> --out <n>.style.json`.
 3. The defaults as a settings file: `ursatz listen --print-settings > settings.json`; keep the members the round changes and delete the others.
 4. Make the batch: `ursatz listen --what themes --count 10 --seed 1 --style <n>.style.json --settings settings.json --out-dir round-1`.
-5. Notation text for each sample: `ursatz analyze round-1/<i>.musicxml --view text`.
+5. Notation text for each sample: `ursatz analyze round-1/<i>.musicxml --view reading`.
 6. Audio is rendered by the session, not by the repository: for example FluidSynth with a General MIDI soundfont, `fluidsynth -ni <soundfont>.sf2 round-1/<i>.mid -F round-1/<i>.wav -r 44100`.
 7. Change one setting in `settings.json` and make `round-2` with the same `--seed`: samples with the same number come from the same seed, so the difference between `round-1/03` and `round-2/03` is the setting.
 

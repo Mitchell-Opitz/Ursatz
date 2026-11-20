@@ -72,7 +72,7 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
 - `GET /api/jobs/<id>`: `{"ok": true, "job": {"id", "kind", "state", "stage", "done", "total", "http_status"?,
   "result"?}}`. `http_status` and `result` (the body the route answered before jobs) are there once the job is done or
   failed. `404` for an unknown job.
-- `DELETE /api/jobs/<id>`: asks the job to stop (`204`; for a finished job nothing changes); `404` for an unknown job.
+- `job.cancel`, sent through `POST /api/workshop/command` ([Workshop routes](workshop-routes.md)): asks the job to stop (`200 {"ok":true}`; for a finished job nothing changes); `404` for an unknown job. There is no `DELETE` route.
 
 Themes and pieces compose in process on the job queue (a body is a stored Composer request, see [Items and versions](../../../workshop/docs/data-folder.md#items-and-versions)). Each compose writes its files in a pending folder of the transaction that commits the version, so a version never exists without its files; a compose made against a version that is no longer the item's current one fails with `409` in its job result.
 

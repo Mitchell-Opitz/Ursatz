@@ -1,0 +1,362 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "section",
+  "summary": "Sections: add, remove, move, resize and set the sections of a piece version's request.",
+  "commands": [
+    {
+      "name": "section.insert",
+      "summary": "Add a section to a piece's request after or before another",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of the new section.",
+          "max_length": 15
+        },
+        {
+          "name": "after",
+          "type": "string",
+          "required": false,
+          "help": "The id of the section it follows."
+        },
+        {
+          "name": "before",
+          "type": "string",
+          "required": false,
+          "help": "The id of the section it precedes."
+        },
+        {
+          "name": "bars",
+          "type": "integer",
+          "required": false,
+          "help": "Its length in bars.",
+          "minimum": 1,
+          "maximum": 128
+        },
+        {
+          "name": "beats",
+          "type": "integer",
+          "required": false,
+          "help": "Its length in beats.",
+          "minimum": 1,
+          "maximum": 512
+        },
+        {
+          "name": "role",
+          "type": "enum",
+          "required": false,
+          "help": "Its part of the piece (default body).",
+          "values": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        {
+          "name": "letter",
+          "type": "string",
+          "required": false,
+          "help": "Its letter.",
+          "max_length": 3
+        },
+        {
+          "name": "function",
+          "type": "enum",
+          "required": false,
+          "help": "Its function.",
+          "values": [
+            "transition",
+            "coda"
+          ]
+        },
+        {
+          "name": "cadence",
+          "type": "enum",
+          "required": false,
+          "help": "The cadence it ends in.",
+          "values": [
+            "PAC",
+            "IAC",
+            "HC",
+            "DC",
+            "PC"
+          ]
+        },
+        {
+          "name": "pickup",
+          "type": "rational",
+          "required": false,
+          "help": "The beats of anacrusis before it, as 1 or 1/2."
+        },
+        {
+          "name": "fill",
+          "type": "enum",
+          "required": false,
+          "help": "How it is filled.",
+          "values": [
+            "empty",
+            "motif"
+          ]
+        },
+        {
+          "name": "region",
+          "type": "object",
+          "required": false,
+          "help": "Its region: a key or a relation to an anchor, written as member lines."
+        },
+        {
+          "name": "harmony",
+          "type": "object",
+          "required": false,
+          "help": "Its harmony, as the piece request gives it."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note (default: what the command did)."
+        }
+      ],
+      "one_of": [
+        [
+          "after",
+          "before"
+        ],
+        [
+          "bars",
+          "beats"
+        ]
+      ],
+      "reply": "The new version number and the ids of the sections in order.",
+      "job": null,
+      "example": "section.insert item:pce-2c8d54834a9c499f@v2 after s0 id T0 bars 4 role body letter T function transition"
+    },
+    {
+      "name": "section.delete",
+      "summary": "Remove a section from a piece's request",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of the section."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note (default: what the command did)."
+        }
+      ],
+      "one_of": [],
+      "reply": "The new version number and the ids of the sections in order.",
+      "job": null,
+      "example": "section.delete item:pce-2c8d54834a9c499f@v2 id T0"
+    },
+    {
+      "name": "section.move",
+      "summary": "Move a section after or before another",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of the section to move."
+        },
+        {
+          "name": "after",
+          "type": "string",
+          "required": false,
+          "help": "The id of the section it follows."
+        },
+        {
+          "name": "before",
+          "type": "string",
+          "required": false,
+          "help": "The id of the section it precedes."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note (default: what the command did)."
+        }
+      ],
+      "one_of": [
+        [
+          "after",
+          "before"
+        ]
+      ],
+      "reply": "The new version number and the ids of the sections in order.",
+      "job": null,
+      "example": "section.move item:pce-2c8d54834a9c499f@v2 id T0 after s0"
+    },
+    {
+      "name": "section.resize",
+      "summary": "Change the length of a section",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of the section."
+        },
+        {
+          "name": "bars",
+          "type": "integer",
+          "required": false,
+          "help": "Its new length in bars.",
+          "minimum": 1,
+          "maximum": 128
+        },
+        {
+          "name": "beats",
+          "type": "integer",
+          "required": false,
+          "help": "Its new length in beats.",
+          "minimum": 1,
+          "maximum": 512
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note (default: what the command did)."
+        }
+      ],
+      "one_of": [
+        [
+          "bars",
+          "beats"
+        ]
+      ],
+      "reply": "The new version number and the ids of the sections in order.",
+      "job": null,
+      "example": "section.resize item:pce-2c8d54834a9c499f@v2 id s0 bars 12"
+    },
+    {
+      "name": "section.set",
+      "summary": "Change the role, letter, function, cadence, pickup, fill, region or harmony",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of the section."
+        },
+        {
+          "name": "role",
+          "type": "enum",
+          "required": false,
+          "help": "Its part of the piece.",
+          "values": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        {
+          "name": "letter",
+          "type": "string",
+          "required": false,
+          "help": "Its letter.",
+          "max_length": 3
+        },
+        {
+          "name": "function",
+          "type": "enum",
+          "required": false,
+          "help": "Its function, or none to remove it.",
+          "values": [
+            "transition",
+            "coda",
+            "none"
+          ]
+        },
+        {
+          "name": "cadence",
+          "type": "enum",
+          "required": false,
+          "help": "The cadence it ends in, or none to remove it.",
+          "values": [
+            "PAC",
+            "IAC",
+            "HC",
+            "DC",
+            "PC",
+            "none"
+          ]
+        },
+        {
+          "name": "pickup",
+          "type": "rational",
+          "required": false,
+          "help": "The beats of anacrusis before it."
+        },
+        {
+          "name": "fill",
+          "type": "enum",
+          "required": false,
+          "help": "How it is filled.",
+          "values": [
+            "empty",
+            "motif"
+          ]
+        },
+        {
+          "name": "region",
+          "type": "object",
+          "required": false,
+          "help": "Its region, written as member lines, or the word home to remove it.",
+          "words": [
+            "home"
+          ]
+        },
+        {
+          "name": "harmony",
+          "type": "object",
+          "required": false,
+          "help": "Its harmony as the piece request gives it, or the word none to remove it.",
+          "words": [
+            "none"
+          ]
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note (default: what the command did)."
+        }
+      ],
+      "one_of": [],
+      "reply": "The new version number and the ids of the sections in order.",
+      "job": null,
+      "example": "section.set item:pce-2c8d54834a9c499f@v2 id s0 cadence PAC letter A\n  region relation omt.relation.dominant anchor home"
+    }
+  ]
+}

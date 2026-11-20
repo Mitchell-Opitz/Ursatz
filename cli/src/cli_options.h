@@ -98,4 +98,7 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
                     CliResponse *out);
 
+/* "12-16" as an inclusive range of measure numbers (the first may be 0, a pickup measure); false for anything else. */
+bool cli_parse_measure_range(const char *text, int *first, int *last);
+
 #endif

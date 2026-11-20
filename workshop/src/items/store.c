@@ -1,4 +1,7 @@
 #include "base/command_context.h"
+#include <limits.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <common/files.h>
 #include "store_internal.h"
 #include "formats.h"
@@ -539,7 +542,7 @@ int store_current_version_of(const cJSON *item) {
     return cJSON_IsNumber(number) ? number->valueint : 0;
 }
 
-/* The versions of an item, {number, created_at, note} each, from the envelopes of its version folders. */
+/* The versions of an item, {number, created_at, note, actor, lineage} each, from the envelopes of its version folders. */
 static cJSON *versions_from_envelopes(const char *project, const char *id, int current) {
     cJSON *versions = cJSON_CreateArray();
     for (int number = 1; versions && number <= current; number++) {
@@ -550,9 +553,12 @@ static cJSON *versions_from_envelopes(const char *project, const char *id, int c
             continue;
         }
         cJSON *entry = cJSON_CreateObject();
+        const cJSON *lineage = cJSON_GetObjectItemCaseSensitive(envelope, "lineage");
         if (!entry || !cJSON_AddNumberToObject(entry, "number", number) ||
             !cJSON_AddStringToObject(entry, "created_at", common_json_string(envelope, "created_at")) ||
-            !cJSON_AddStringToObject(entry, "note", common_json_string(envelope, "note"))) {
+            !cJSON_AddStringToObject(entry, "note", common_json_string(envelope, "note")) ||
+            !cJSON_AddStringToObject(entry, "actor", common_json_string(envelope, "actor")) ||
+            !cJSON_AddItemToObject(entry, "lineage", lineage ? cJSON_Duplicate(lineage, true) : cJSON_CreateNull())) {
             cJSON_Delete(entry);
             cJSON_Delete(versions);
             versions = NULL;
@@ -651,7 +657,7 @@ static cJSON *lineage_of(const char *type, const cJSON *body) {
 
 /* Writes the version folder's body, then its envelope (a version exists once its envelope does), into dir, which exists. */
 static UrsatzStatus write_version_files_locked(const char *dir, const char *id, const char *type, int number, const cJSON *body,
-                                               const char *note) {
+                                               const char *note, int restored_from) {
     char path[PATH_BYTES];
     cJSON *stored = cJSON_Duplicate(body, 1);
     UrsatzStatus result = stored ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
@@ -669,10 +675,15 @@ static UrsatzStatus write_version_files_locked(const char *dir, const char *id, 
     common_utc_now(now);
     cJSON *envelope = cJSON_CreateObject();
     cJSON *lineage = lineage_of(type, body);
+    if (lineage && restored_from > 0) {
+        cJSON_AddNumberToObject(lineage, "restored_from", restored_from);
+    }
     bool attached = false;
+    /* the command's actor (a job runs under the one that queued it); a version written with no command (a migration) is Michelle's */
+    const WorkshopCommandContext *context = workshop_command_context();
     bool ok = envelope && lineage && cJSON_AddStringToObject(envelope, "id", id) && cJSON_AddStringToObject(envelope, "kind", type) &&
               cJSON_AddNumberToObject(envelope, "version", number) && cJSON_AddStringToObject(envelope, "note", note) &&
-              (attached = cJSON_AddItemToObject(envelope, "lineage", lineage)) && cJSON_AddStringToObject(envelope, "actor", "michelle") &&
+              (attached = cJSON_AddItemToObject(envelope, "lineage", lineage)) && cJSON_AddStringToObject(envelope, "actor", context ? context->actor : "michelle") &&
               cJSON_AddStringToObject(envelope, "created_at", now);
     if (!ok) {
         cJSON_Delete(envelope);
@@ -776,7 +787,7 @@ static UrsatzStatus create_item_locked(WorkshopTxn *txn, const char *type, const
             result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
         } else {
             /* the folder holds the version; the header, which makes it an item, is set by the transaction after the folder is in place */
-            result = write_version_files_locked(version_dir, id, type, 1, stored, clean_note);
+            result = write_version_files_locked(version_dir, id, type, 1, stored, clean_note, 0);
             if (result == URSATZ_OK) {
                 result = save_item_locked(txn, item);
             }
@@ -942,6 +953,29 @@ UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSO
     return result;
 }
 
+UrsatzStatus workshop_material_version_envelope(const char *id, int number, cJSON **out_envelope) {
+    *out_envelope = NULL;
+    LOCK();
+    if (!store_ready) {
+        UNLOCK();
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    cJSON *item = NULL;
+    UrsatzStatus result = store_load_item_locked(id, &item);
+    char path[PATH_BYTES];
+    if (result == URSATZ_OK &&
+        (number < 1 || number > store_current_version_of(item) ||
+         !workshop_layout_version_file(common_json_string(item, "project_id"), id, number, WORKSHOP_FILE_ENVELOPE, path, sizeof(path)))) {
+        result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
+    if (result == URSATZ_OK && workshop_format_read(path, WORKSHOP_FORMAT_ITEM_VERSION, true, out_envelope, NULL) != URSATZ_OK) {
+        result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    cJSON_Delete(item);
+    UNLOCK();
+    return result;
+}
+
 /* Copies the folder from into the existing folder to, with everything under it. */
 static bool copy_folder(const char *from, const char *to) {
     CommonNames names = {0};
@@ -1048,7 +1082,8 @@ UrsatzStatus workshop_material_item_move(const char *id, const char *project_id,
  * files a compose made, which becomes the pending folder) when there is one, else a new folder; the body and the envelope go into it and the
  * header is set last, so a version a header names has everything.
  */
-UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage) {
+UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON *item, const cJSON *body, const char *note, const char *stage,
+                                        int restored_from) {
     /* A command made against a version of this item (base/command_context.h) writes only on top of it: a job that composes finds, when it
      * comes to write, that another change got in first, and fails with the refusal a stale base version gets at submit. */
     const WorkshopCommandContext *context = workshop_command_context();
@@ -1080,7 +1115,7 @@ UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON
     if (staged != URSATZ_OK) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
-    UrsatzStatus result = write_version_files_locked(pending, id, common_json_string(item, "type"), number, body, note);
+    UrsatzStatus result = write_version_files_locked(pending, id, common_json_string(item, "type"), number, body, note, restored_from);
     result = result == URSATZ_OK ? save_item_locked(txn, item) : result;
     if (result == URSATZ_OK && context && context->base_version >= 0 && strcmp(context->target, id) == 0) {
         workshop_command_context_set_base_version(number);
@@ -1088,12 +1123,11 @@ UrsatzStatus store_commit_version_locked(WorkshopTxn *txn, const char *id, cJSON
     return result;
 }
 
-UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,
-                                                       cJSON **out_item) {
+static UrsatzStatus add_version(const char *id, const cJSON *body, const char *note, const char *stage, int restored_from, cJSON **out_item) {
     if (out_item) {
         *out_item = NULL;
     }
-    WorkshopTxn *txn = store_txn_begin("item.save", id ? id : "");
+    WorkshopTxn *txn = store_txn_begin(restored_from > 0 ? "item.restore" : "item.save", id ? id : "");
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
@@ -1118,10 +1152,16 @@ UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJS
     }
     cJSON *stored = NULL;
     if (result == URSATZ_OK) {
-        result = store_fill_body_uses_locked(id, body, &stored);
+        /* a restored version keeps the uses of the version it copies (R-667) */
+        if (restored_from > 0) {
+            stored = cJSON_Duplicate(body, true);
+            result = stored ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
+        } else {
+            result = store_fill_body_uses_locked(id, body, &stored);
+        }
     }
     if (result == URSATZ_OK) {
-        result = store_commit_version_locked(txn, id, item, stored, clean_note, stage);
+        result = store_commit_version_locked(txn, id, item, stored, clean_note, stage, restored_from);
     }
     UNLOCK();
     result = store_txn_end(txn, result);
@@ -1132,6 +1172,40 @@ UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJS
     }
     cJSON_Delete(stored);
     free(clean_note);
+    return result;
+}
+
+UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJSON *body, const char *note, const char *stage,
+                                                       cJSON **out_item) {
+    return add_version(id, body, note, stage, 0, out_item);
+}
+
+UrsatzStatus workshop_material_item_add_version_restored(const char *id, const cJSON *body, const char *note, const char *stage, int restored_from,
+                                                         cJSON **out_item) {
+    return add_version(id, body, note, stage, restored_from, out_item);
+}
+
+UrsatzStatus workshop_material_version_copy(const char *id, int number, const char *to_folder, char *from_absolute, size_t size) {
+    LOCK();
+    cJSON *item = NULL;
+    char dir[PATH_BYTES];
+    UrsatzStatus result = store_ready ? store_load_item_locked(id, &item) : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    if (result == URSATZ_OK &&
+        (number < 1 || number > store_current_version_of(item) || !store_version_dir_path(id, number, dir, sizeof(dir)) || !common_path_is_dir(dir))) {
+        result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
+    char resolved[PATH_MAX];
+    if (result == URSATZ_OK && (!realpath(dir, resolved) || snprintf(from_absolute, size, "%s", resolved) >= (int)size || !copy_folder(dir, to_folder))) {
+        result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    if (result == URSATZ_OK) {
+        /* the envelope is the new version's own */
+        char envelope[PATH_BYTES * 2];
+        snprintf(envelope, sizeof(envelope), "%s/%s", to_folder, WORKSHOP_FILE_ENVELOPE);
+        unlink(envelope);
+    }
+    cJSON_Delete(item);
+    UNLOCK();
     return result;
 }
 

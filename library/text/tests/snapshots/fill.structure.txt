@@ -1,0 +1,39 @@
+ursatz-text 1 view structure fill
+form binary  bars 1-37
+  section A  bars 1-8  letter A  beginning presentation  ending continuation  cadence perfect-authentic
+    phrase phrase  bars 1-8
+      subphrase presentation  bars 1-4
+        idea basic idea  bars 1-2
+        idea repetition  bars 3-4
+      subphrase continuation  bars 5-8
+        idea fragment 1  bars 5-5
+        idea fragment 2  bars 6-6
+        idea cadential  bars 7-8
+  section B  bars 9-16  letter B  beginning presentation  ending continuation  cadence perfect-authentic
+    phrase phrase  bars 9-16
+      subphrase presentation  bars 9-12
+        idea basic idea  bars 9-10
+        idea repetition  bars 11-12
+      subphrase continuation  bars 13-16
+        idea fragment 1  bars 13-13
+        idea fragment 2  bars 14-14
+        idea cadential  bars 15-16
+  section material  bars 17-37  role material
+    phrase material  bars 17-37
+      idea material  bars 17-37
+        motive m0  bars 17-17
+        motive B motive  bars 18-18
+        motive m1  bars 19-19
+        motive segment a  bars 23-23
+        motive liquidated 3  bars 24-24
+        motive m2  bars 20-20
+        motive m3  bars 21-21
+        motive m4  bars 22-22
+        motive m1  bars 25-25
+        motive segment b  bars 29-29
+        motive liquidated 3  bars 30-30
+        motive m2  bars 26-26
+        motive m3  bars 27-27
+        motive m4  bars 28-28
+# leaves out: lanes, notes, constraints, ids (--view full)
+# expand: ursatz show <address> --view harmony

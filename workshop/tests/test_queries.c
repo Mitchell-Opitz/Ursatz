@@ -166,12 +166,19 @@ static void test_library_queries(void) {
     snprintf(params, sizeof(params), "{\"id\":\"%s\",\"sections\":\"Bad Name\"}", g_piece);
     check(query("library.document", params, &reply, &error) == URSATZ_ERR_REQUEST && strcmp(error.path, "/params/sections") == 0, "a section name that is no name is refused at its member");
     workshop_reply_destroy(&reply);
-    snprintf(params, sizeof(params), "{\"id\":\"%s\",\"from\":\"2\",\"to\":\"1\"}", g_piece);
-    check(query("library.export", params, &reply, &error) == URSATZ_ERR_REQUEST, "library.export refuses a range that is backwards");
+    snprintf(params, sizeof(params), "{\"id\":\"%s\",\"view\":\"reading\",\"measures\":{\"first\":2,\"last\":1}}", g_piece);
+    check(query("library.view", params, &reply, &error) == URSATZ_ERR_REQUEST, "library.view refuses a range that is backwards");
+    workshop_reply_destroy(&reply);
+    snprintf(params, sizeof(params), "{\"id\":\"%s\",\"view\":\"reading\"}", g_piece);
+    check(ask("library.view", params, &reply, &error) && cJSON_IsString(member(reply.json, "text")), "library.view reading is the text export");
+    const char *framed = str(reply.json, "text");
+    check(strncmp(framed, "ursatz-text 1 view reading piece:", 33) == 0 && strstr(framed, "\n# Ursatz export v2: piece\n") != NULL &&
+              strstr(framed, "\n# leaves out: nothing the analysis document holds; the notes are the import's\n# expand: ursatz show piece:") != NULL,
+          "the export is framed as a view: its own lines sit between the frame lines");
     workshop_reply_destroy(&reply);
     ids(params, sizeof(params), g_piece);
-    check(ask("library.export", params, &reply, &error) && reply.bytes && strncmp(reply.content_type, "text/plain", 10) == 0 && reply.size > 0,
-          "library.export is the text export (text/plain)");
+    check(query("library.export", params, &reply, &error) == URSATZ_ERR_REQUEST && strstr(error.message, "unknown query") != NULL,
+          "library.export is gone: library.view replaced it");
     workshop_reply_destroy(&reply);
     check(ask("library.musicxml", params, &reply, &error) && reply.bytes && strncmp(reply.content_type, "application/xml", 15) == 0 && strstr((char *)reply.bytes, "<score-partwise") != NULL,
           "library.musicxml is the score (application/xml)");

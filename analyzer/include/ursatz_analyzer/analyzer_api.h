@@ -36,7 +36,7 @@ const char *analyzer_producer_key(void);
 
 /*
  * The version of each format the Analyzer persists (R-640); each file writes its constant, and a breaking change bumps it.
- * The analysis document is described by schema/analysis-document.v13.schema.json; the style model's version is the library's.
+ * The analysis document is described by schema/analysis-document.schema.json; the style model's version is the library's.
  */
 #define ANALYZER_DOCUMENT_SCHEMA_VERSION 13
 #define ANALYZER_TEXT_EXPORT_VERSION 2 /* written as "# Ursatz export v2" on the first line of a text export */

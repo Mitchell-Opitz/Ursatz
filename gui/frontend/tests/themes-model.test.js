@@ -10,6 +10,7 @@ import Vocabulary from "../public/core/vocabulary.js";
 import { generated, readJson } from "./support/fixtures.js";
 import T from "../public/models/themes-model.js";
 import { check, same, finish } from "./support/check.js";
+import { params, isCommand } from "./support/command.js";
 import M from "../public/models/materials-model.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -178,15 +179,15 @@ check(T.pickLabel({ kind: "filter", composer: "Bach", tag: "x" }) === "Composer:
 
 /* requests */
 const compose = T.composeRequest(filled(), {});
-check(compose.method === "POST" && compose.url === "/api/materials/items/thm-1/compose" && compose.body === "{}", "compose posts an empty body without a seed");
+check(isCommand(compose, "item.compose", "thm-1") && same(params(compose), {}), "compose is item.compose with no params without a seed");
 const seeded = filled();
 seeded.seed = "97";
 check(T.composeRequest(seeded, {}).job === true, "compose is a job");
-check(same(JSON.parse(T.composeRequest(seeded, {}).body), { seed: 97 }), "the form's seed is sent");
-check(same(JSON.parse(T.composeRequest(seeded, { seed: 5, update_uses: true }).body), { seed: 5, update_uses: true }), "an option seed wins and update_uses is sent");
-check(same(JSON.parse(T.composeRequest(filled(), { seed: "x" }).body), {}), "a seed that is not a number is left out");
+check(same(params(T.composeRequest(seeded, {})), { seed: 97 }), "the form's seed is sent");
+check(same(params(T.composeRequest(seeded, { seed: 5, update_uses: true })), { seed: 5, update_uses: true }), "an option seed wins and update_uses is sent");
+check(same(params(T.composeRequest(filled(), { seed: "x" })), {}), "a seed that is not a number is left out");
 const save = T.saveRequest(filled(), " note ");
-check(save.url === "/api/materials/items/thm-1/versions" && JSON.parse(save.body).note === "note" && !("key" in T.themeOfBody(JSON.parse(save.body).body).form), "save posts a new version");
+check(isCommand(save, "item.save", "thm-1") && params(save).note === "note" && !("key" in T.themeOfBody(params(save).body).form), "save is item.save of a new version");
 check(T.versionFileUrl("thm-1", 3, "theme.musicxml") === "/api/materials/items/thm-1/versions/3/files/theme.musicxml", "version file route");
 
 /* pool */

@@ -27,12 +27,14 @@ An unknown name is `URSATZ_ERR_REQUEST`, path `/name`, `unknown tool '<name>'`.
 
 | Tool | Params | Reply |
 |---|---|---|
+| `commands` | `format`, `name` | `{format, text}` |
 | `composer` | `entry`, `request`, `kind` | `{json, plan_json, musicxml}`; MIDI as the bytes |
 | `corpus-passages` | `dir`, `like` or `numerals`, `limit` | `{passages: [...]}` |
 | `pitch-names` | `midi` | `{names: [...]}` |
 | `analyze` | `path`, `input_format`, `meter`, `value_scale`, `pickup`, `layers`, `model_plan`, `text` | `{warnings, document, document_path, ...}` |
 | `corpus` | `dir`, `out`, `resume` | `{pieces, analyzed, skipped, failed, out}` |
 | `style-profile` | `dir`, `name`, `out` | `{path, name, pieces, stale}` |
+| `text` | `path` or `text`, `view`, `measures`, `section` | `{kind, text}` or `{kind, json}` |
 | `versions` | none | the members of `workshop_status` except `data_dir` |
 
 ### composer
@@ -63,7 +65,7 @@ What `workshop_status` answers, without `data_dir`: `composer_version`, `api_ver
 
 One file analyzed as the Analyzer's command line did, with the outputs as text in the answer (the tool writes no file). `path` is required and is used as given: the document's `source` names it as the command line's did. `input_format` is `auto`, `midi` or `musicxml`. The notation reading: `meter` (`3/4`), `value_scale` (`2`, `1/2`) and `pickup` (`1/4`). `layers` and `model_plan` are booleans. `text` is an object `{first_measure, last_measure, title}`, each member optional (0 and 0, the default, export the whole piece).
 
-The reply: `warnings` (the importer's warning lines); without `text`, `document` (the analysis document's text) and `document_path` (where the command line wrote it: `<stem>.analysis.json` beside the input); with `layers`, `realization` and `reading` (texts); with `model_plan`, `plan` (the plan file's text, producer `ursatz-analyzer`); with `text`, `text` (the text export) and no document.
+The reply: `warnings` (the importer's warning lines); without `text`, `document` (the analysis document's text) and `document_path` (where the command line wrote it: `<stem>.analysis.json` beside the input); with `layers`, `realization` and `reading` (texts); with `model_plan`, `plan` (the plan file's text, producer `ursatz-analyzer`); with `text`, `text` (the text export framed as the reading view of the file: `ursatz-text 1 view reading <path>`, the export's own lines, then `# leaves out:` and `# expand:`) and no document.
 
 Failures: an import that fails is `URSATZ_ERR_FORMAT` with the importer's message, path `/params/path`; a notation reading that does not apply is `URSATZ_ERR_REQUEST`, `the pickup must be shorter than one measure of the meter` (path `/params/pickup`) or `a scaled time is too large` (`/params/value_scale`); an analysis that fails answers its status (`URSATZ_ERR_ALLOC` or `URSATZ_ERR_INTERNAL`), `the analysis failed`, path `""`; a text range with no measure is `URSATZ_ERR_REQUEST`, path `/params/text`; a model plan that cannot be made is `URSATZ_ERR_UNSATISFIABLE` with the reading's message.
 
@@ -74,3 +76,15 @@ Analyzes every piece of the folder `dir` into `out` (default `<dir>/.ursatz-corp
 ### style-profile
 
 The style model of a corpus output folder: `dir` (required), `name` (required, not empty) and `out` (default `<dir>/style-model.json`). The reply: `path`, `name`, `pieces` (how many pieces it counted) and `stale` (the analyzed pieces whose document another version wrote).
+
+### text
+
+A file or a text of any layer kind as Ursatz Text, a view of it, or its JSON ([text](../../library/text/README.md)). Params: exactly one of `path` (a file) and `text`; `view` (default `full`: `summary`, `structure`, `harmony`, `line:<name>`, `part:<name>`, `reading`, `full` or `json`); `measures` (`{first, last}`, either may be absent) and `section` (the label or id of a section).
+
+The input is JSON when its first non-space character is `{`, its kind from `format` or `schema` (`plan`, `reading`, `realization`, `knowledge`, else `json`); otherwise it is Ursatz Text and its kind is the header's (a plan, reading or realization text is read through its codec first). The reply is `{"kind": "<kind>", "text": "<the view>"}`, or for `json` `{"kind", "json": "<the codec's JSON text>"}`. `full` prints the layer; the other views read the one layer the file is.
+
+Failures: both or neither of `path` and `text` is `URSATZ_ERR_REQUEST`, path `/params`; a file that does not read is `URSATZ_ERR_NOT_FOUND`, path `/params/path`; a text that does not parse is `URSATZ_ERR_REQUEST`, path `/params/text` (`/params/path` for a file), `line <n>: <message>`; a layer a codec refuses is refused at the same path with the codec's `<path>: <message>`; a view the layer cannot give is `URSATZ_ERR_REQUEST`, path `/params/view` (`harmony needs a plan or a reading`, `unknown view '<v>'`); an unknown section is refused at `/params/section` and a measure range outside the piece at `/params/measures`.
+
+### commands
+
+The command reference generated from the schemas in `workshop/commands/` ([command reference](command-reference.md)). `format` is `sheet` (the rules of the text form and a line a command, at most 120 lines; the default), `markdown` (the page `command-reference.md`), `grammar` (an EBNF of the text form: the generic productions and one a command), `json` (every command's schema as one array) or `help` (with `name`: the usage line, the summary, each param with its type, limits and help, the reply, the job, the base version and the example of one command). The reply is `{format, text}`. An unknown `name` is `URSATZ_ERR_NOT_FOUND`, path `/params/name`; an unknown `format` is `URSATZ_ERR_REQUEST`, path `/params/format`.

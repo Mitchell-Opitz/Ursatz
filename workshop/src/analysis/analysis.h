@@ -187,7 +187,7 @@ UrsatzStatus workshop_analysis_get_piece_playback(const char *pieces_dir, const 
 /*
  * The piece's text export (the Analyzer's analyzer_text_export_piece, docs/text-export.md), under the piece lock: the
  * cached import, the stored analysis.json (as it is: a read writes nothing) and the title
- * from meta.json (the filename without its extension). first_measure and last_measure are an inclusive range of
+ * from meta.json (the filename without its extension) unless `title` (NULL for the default) gives one. first_measure and last_measure are an inclusive range of
  * measure numbers as written in the score; 0 and 0 export the whole piece. The GUI builds no line of the text.
  *
  * On URSATZ_OK, *out_text is newly allocated and caller-owned (free() it).
@@ -196,7 +196,7 @@ UrsatzStatus workshop_analysis_get_piece_playback(const char *pieces_dir, const 
  * document it will not read); URSATZ_ERR_INTERNAL if the export failed.
  */
 UrsatzStatus workshop_analysis_get_piece_export(const char *pieces_dir, const char *id,
-                                                              int first_measure, int last_measure, char **out_text);
+                                                              int first_measure, int last_measure, const char *title, char **out_text);
 
 /* ---- the Library route's answers (A20261109-76) ---- */
 

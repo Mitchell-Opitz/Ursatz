@@ -1,0 +1,1143 @@
+{
+  "format": "ursatz-reading",
+  "format_version": 1,
+  "source": {
+    "kind": "composer",
+    "name": "ursatz-composer",
+    "producer_key": "a8d10d936baccaa3",
+    "stages": 262143,
+    "knowledge_hash": "4e5764f2fc6e2592"
+  },
+  "target": {
+    "work": "w1",
+    "movement": "m1",
+    "digest": "d2680ca84bcae04f"
+  },
+  "regions": [{
+      "id": "region-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n40", "piano-n64", "piano-n65", "piano-n66", "piano-n41", "piano-n67", "piano-n68", "piano-n42", "piano-n69", "piano-n70", "piano-n71", "piano-n72", "piano-n73", "piano-n43", "piano-n74", "piano-n75", "piano-n76", "piano-n77", "piano-n78", "piano-n44", "piano-n79", "piano-n80", "piano-n81", "piano-n45", "piano-n82", "piano-n83", "piano-n46", "piano-n84", "piano-n85", "piano-n86", "piano-n87", "piano-n88", "piano-n47", "piano-n89", "piano-n90", "piano-n91", "piano-n48", "piano-n92", "piano-n93", "piano-n49", "piano-n94", "piano-n95", "piano-n96", "piano-n97", "piano-n98", "piano-n50", "piano-n99", "piano-n100", "piano-n101", "piano-n102", "piano-n103", "piano-n51", "piano-n104", "piano-n105", "piano-n106", "piano-n107", "piano-n108", "piano-n109", "piano-n110", "piano-n111", "piano-n52", "piano-n112", "piano-n53", "piano-n56", "piano-n57", "piano-n58", "piano-n54", "piano-n59", "piano-n60", "piano-n55", "piano-n61", "piano-n62", "piano-n63", "piano-n121", "piano-n123", "piano-n124", "piano-n125", "piano-n122", "piano-n126", "piano-n127"],
+      "center": 2,
+      "material": "omt.material.major",
+      "strength": "established",
+      "label": "D major"
+    }],
+  "chords": [{
+      "id": "chord-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 1,
+        "den": 2
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["piano-n40", "piano-n64", "piano-n65", "piano-n66"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-2",
+      "start": {
+        "num": 1,
+        "den": 2
+      },
+      "end": {
+        "num": 1,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["piano-n41", "piano-n67", "piano-n68"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-3",
+      "start": {
+        "num": 1,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": {
+        "num": 91053,
+        "den": 200000
+      },
+      "evidence": ["piano-n42", "piano-n69", "piano-n70", "piano-n71", "piano-n72", "piano-n73"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 530,
+        "bass": 9,
+        "members": [512, 2, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }, {
+      "id": "chord-4",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 3,
+        "den": 1
+      },
+      "confidence": {
+        "num": 3879,
+        "den": 250000
+      },
+      "evidence": ["piano-n43", "piano-n74", "piano-n75", "piano-n76", "piano-n77", "piano-n78"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 2,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi6",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-5",
+      "start": {
+        "num": 3,
+        "den": 1
+      },
+      "end": {
+        "num": 7,
+        "den": 2
+      },
+      "confidence": {
+        "num": 114641,
+        "den": 250000
+      },
+      "evidence": ["piano-n44", "piano-n79", "piano-n80", "piano-n81"],
+      "reading": {
+        "root": 1,
+        "type": "omt.chord-type.diminished-triad",
+        "pitch_classes": 146,
+        "bass": 4,
+        "members": [2, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vii°6",
+      "function": "dominant",
+      "label": "vii°"
+    }, {
+      "id": "chord-6",
+      "start": {
+        "num": 7,
+        "den": 2
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1443,
+        "den": 10000
+      },
+      "evidence": ["piano-n45", "piano-n82", "piano-n83"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 6,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I6",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-7",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 5,
+        "den": 1
+      },
+      "confidence": {
+        "num": 3879,
+        "den": 250000
+      },
+      "evidence": ["piano-n46", "piano-n84", "piano-n85", "piano-n86", "piano-n87", "piano-n88"],
+      "reading": {
+        "root": 11,
+        "type": "omt.chord-type.minor-triad",
+        "pitch_classes": 2116,
+        "bass": 2,
+        "members": [2048, 4, 64, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vi6",
+      "function": "predominant",
+      "label": "vi"
+    }, {
+      "id": "chord-8",
+      "start": {
+        "num": 5,
+        "den": 1
+      },
+      "end": {
+        "num": 11,
+        "den": 2
+      },
+      "confidence": {
+        "num": 114641,
+        "den": 250000
+      },
+      "evidence": ["piano-n47", "piano-n89", "piano-n90", "piano-n91"],
+      "reading": {
+        "root": 1,
+        "type": "omt.chord-type.diminished-triad",
+        "pitch_classes": 146,
+        "bass": 4,
+        "members": [2, 16, 128, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "vii°6",
+      "function": "dominant",
+      "label": "vii°"
+    }, {
+      "id": "chord-9",
+      "start": {
+        "num": 11,
+        "den": 2
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1443,
+        "den": 10000
+      },
+      "evidence": ["piano-n48", "piano-n92", "piano-n93"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 6,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I6",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-10",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 7,
+        "den": 1
+      },
+      "confidence": {
+        "num": 8521,
+        "den": 31250
+      },
+      "evidence": ["piano-n49", "piano-n94", "piano-n95", "piano-n96", "piano-n97", "piano-n98"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-11",
+      "start": {
+        "num": 7,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": {
+        "num": 332933,
+        "den": 1000000
+      },
+      "evidence": ["piano-n50", "piano-n99", "piano-n100", "piano-n101", "piano-n102", "piano-n103"],
+      "reading": {
+        "root": 7,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 2180,
+        "bass": 7,
+        "members": [128, 2048, 4, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "IV",
+      "function": "predominant",
+      "label": "IV"
+    }, {
+      "id": "chord-12",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 9,
+        "den": 1
+      },
+      "confidence": {
+        "num": 391499,
+        "den": 1000000
+      },
+      "evidence": ["piano-n51", "piano-n104", "piano-n105", "piano-n106", "piano-n107", "piano-n108", "piano-n109", "piano-n110", "piano-n111"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 530,
+        "bass": 9,
+        "members": [512, 2, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }, {
+      "id": "chord-13",
+      "start": {
+        "num": 9,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["piano-n52", "piano-n112"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-14",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 11,
+        "den": 1
+      },
+      "confidence": {
+        "num": 7811,
+        "den": 200000
+      },
+      "evidence": ["piano-n53", "piano-n56", "piano-n57", "piano-n58", "piano-n54", "piano-n59", "piano-n60"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-15",
+      "start": {
+        "num": 11,
+        "den": 1
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": {
+        "num": 29471,
+        "den": 100000
+      },
+      "evidence": ["piano-n55", "piano-n61", "piano-n62", "piano-n63", "piano-n121", "piano-n123", "piano-n124", "piano-n125"],
+      "reading": {
+        "root": 2,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 580,
+        "bass": 2,
+        "members": [4, 64, 512, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "I",
+      "function": "tonic",
+      "label": "I"
+    }, {
+      "id": "chord-16",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 25,
+        "den": 2
+      },
+      "confidence": {
+        "num": 1,
+        "den": 1
+      },
+      "evidence": ["piano-n122", "piano-n126", "piano-n127"],
+      "reading": {
+        "root": 9,
+        "type": "omt.chord-type.major-triad",
+        "pitch_classes": 530,
+        "bass": 9,
+        "members": [512, 2, 16, 0, 0, 0, 0, 0, 0, 0],
+        "borrowed_from": null,
+        "role": "functional",
+        "expected": null
+      },
+      "numeral": "V",
+      "function": "dominant",
+      "label": "V"
+    }],
+  "cadences": [{
+      "id": "cadence-1",
+      "start": {
+        "num": 1,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n42", "piano-n69", "piano-n70", "piano-n71", "piano-n72", "piano-n73"],
+      "type": "half",
+      "arrival": {
+        "num": 1,
+        "den": 1
+      },
+      "alternatives": []
+    }, {
+      "id": "cadence-2",
+      "start": {
+        "num": 9,
+        "den": 1
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n52", "piano-n112", "piano-n53", "piano-n56", "piano-n57", "piano-n58", "piano-n54", "piano-n59", "piano-n60", "piano-n55", "piano-n61", "piano-n62", "piano-n63", "piano-n121", "piano-n123", "piano-n124", "piano-n125"],
+      "type": "imperfect-authentic",
+      "arrival": {
+        "num": 9,
+        "den": 1
+      },
+      "alternatives": []
+    }, {
+      "id": "cadence-3",
+      "start": {
+        "num": 12,
+        "den": 1
+      },
+      "end": {
+        "num": 25,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["piano-n122", "piano-n126", "piano-n127"],
+      "type": "half",
+      "arrival": {
+        "num": 12,
+        "den": 1
+      },
+      "alternatives": []
+    }],
+  "groups": [{
+      "id": "group-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "section",
+      "parent": null,
+      "label": "A",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 10,
+      "phrase_count": 2,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-2",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "section",
+      "parent": null,
+      "label": "B",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 11,
+      "last_measure": 13,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-3",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n74", "piano-n75", "piano-n77", "piano-n78", "piano-n79", "piano-n82", "piano-n83", "piano-n84", "piano-n85", "piano-n87", "piano-n88", "piano-n89", "piano-n92", "piano-n93", "piano-n94", "piano-n95", "piano-n96", "piano-n98", "piano-n99", "piano-n100", "piano-n101", "piano-n103", "piano-n106", "piano-n110", "piano-n111", "piano-n112"],
+      "kind": "theme",
+      "parent": 0,
+      "label": "theme-1",
+      "form": "sentence",
+      "beginning": "presentation",
+      "ending": "continuation",
+      "commonality": "very-common",
+      "first_measure": 3,
+      "last_measure": 10,
+      "phrase_count": 1,
+      "part_cadences": ["unknown", "imperfect-authentic"],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-4",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "phrase",
+      "parent": 0,
+      "label": "beginning",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 2,
+      "phrase_count": 1,
+      "part_cadences": ["half"],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-5",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "phrase",
+      "parent": 2,
+      "label": "middle",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 3,
+      "last_measure": 10,
+      "phrase_count": 1,
+      "part_cadences": ["imperfect-authentic"],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-6",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": [],
+      "kind": "phrase",
+      "parent": 1,
+      "label": "ending",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 11,
+      "last_measure": 13,
+      "phrase_count": 1,
+      "part_cadences": ["half"],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-7",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n74", "piano-n75", "piano-n77", "piano-n78", "piano-n79", "piano-n82", "piano-n83", "piano-n84", "piano-n85", "piano-n87", "piano-n88", "piano-n89", "piano-n92", "piano-n93"],
+      "kind": "subphrase",
+      "parent": 2,
+      "label": "subphrase-1",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 3,
+      "last_measure": 6,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-8",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n94", "piano-n95", "piano-n96", "piano-n98", "piano-n99", "piano-n100", "piano-n101", "piano-n103", "piano-n106", "piano-n110", "piano-n111", "piano-n112"],
+      "kind": "subphrase",
+      "parent": 2,
+      "label": "subphrase-2",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 7,
+      "last_measure": 10,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-9",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 2,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n64", "piano-n65", "piano-n67", "piano-n68", "piano-n71", "piano-n72"],
+      "kind": "idea",
+      "parent": 0,
+      "label": "basic-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 1,
+      "last_measure": 2,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-10",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n74", "piano-n75", "piano-n77", "piano-n78", "piano-n79", "piano-n82", "piano-n83"],
+      "kind": "idea",
+      "parent": 2,
+      "label": "basic-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 3,
+      "last_measure": 4,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-11",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n84", "piano-n85", "piano-n87", "piano-n88", "piano-n89", "piano-n92", "piano-n93"],
+      "kind": "idea",
+      "parent": 2,
+      "label": "basic-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 5,
+      "last_measure": 6,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-12",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 8,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n94", "piano-n95", "piano-n96", "piano-n98", "piano-n99", "piano-n100", "piano-n101", "piano-n103"],
+      "kind": "idea",
+      "parent": 2,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 7,
+      "last_measure": 8,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-13",
+      "start": {
+        "num": 8,
+        "den": 1
+      },
+      "end": {
+        "num": 10,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n106", "piano-n110", "piano-n111", "piano-n112"],
+      "kind": "idea",
+      "parent": 2,
+      "label": "contrasting-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 9,
+      "last_measure": 10,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }, {
+      "id": "group-14",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 13,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n56", "piano-n57", "piano-n59", "piano-n60", "piano-n62", "piano-n124", "piano-n126", "piano-n127"],
+      "kind": "idea",
+      "parent": 1,
+      "label": "basic-idea",
+      "form": "",
+      "beginning": "",
+      "ending": "",
+      "commonality": "",
+      "first_measure": 11,
+      "last_measure": 13,
+      "phrase_count": 1,
+      "part_cadences": [],
+      "archetypal": false,
+      "fragmentation": false
+    }],
+  "motive_occurrences": [{
+      "id": "motive-1",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 7,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["piano-n74", "piano-n75", "piano-n76", "piano-n77", "piano-n78", "piano-n79", "piano-n80", "piano-n81"],
+      "motive": 0,
+      "kind": "exact"
+    }, {
+      "id": "motive-2",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 11,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["piano-n84", "piano-n85", "piano-n86", "piano-n87", "piano-n88", "piano-n89", "piano-n90", "piano-n91"],
+      "motive": 0,
+      "kind": "exact"
+    }, {
+      "id": "motive-3",
+      "start": {
+        "num": 23,
+        "den": 2
+      },
+      "end": {
+        "num": 25,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["piano-n123", "piano-n124", "piano-n125", "piano-n126", "piano-n127"],
+      "motive": 0,
+      "kind": "fragmented"
+    }, {
+      "id": "motive-4",
+      "start": {
+        "num": 2,
+        "den": 1
+      },
+      "end": {
+        "num": 3,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n74", "piano-n75", "piano-n76", "piano-n77", "piano-n78"],
+      "motive": 1,
+      "kind": "exact"
+    }, {
+      "id": "motive-5",
+      "start": {
+        "num": 4,
+        "den": 1
+      },
+      "end": {
+        "num": 5,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n84", "piano-n85", "piano-n86", "piano-n87", "piano-n88"],
+      "motive": 1,
+      "kind": "exact"
+    }, {
+      "id": "motive-6",
+      "start": {
+        "num": 10,
+        "den": 1
+      },
+      "end": {
+        "num": 11,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n56", "piano-n57", "piano-n58", "piano-n59", "piano-n60"],
+      "motive": 1,
+      "kind": "real-transposed"
+    }, {
+      "id": "motive-7",
+      "start": {
+        "num": 23,
+        "den": 2
+      },
+      "end": {
+        "num": 12,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n123", "piano-n124", "piano-n125"],
+      "motive": 1,
+      "kind": "fragmented"
+    }, {
+      "id": "motive-8",
+      "start": {
+        "num": 9,
+        "den": 4
+      },
+      "end": {
+        "num": 15,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n75", "piano-n76", "piano-n77", "piano-n78", "piano-n79", "piano-n80", "piano-n81", "piano-n82"],
+      "motive": 2,
+      "kind": "exact"
+    }, {
+      "id": "motive-9",
+      "start": {
+        "num": 17,
+        "den": 4
+      },
+      "end": {
+        "num": 23,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n85", "piano-n86", "piano-n87", "piano-n88", "piano-n89", "piano-n90", "piano-n91", "piano-n92"],
+      "motive": 2,
+      "kind": "exact"
+    }, {
+      "id": "motive-10",
+      "start": {
+        "num": 5,
+        "den": 2
+      },
+      "end": {
+        "num": 4,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n77", "piano-n78", "piano-n79", "piano-n80", "piano-n81", "piano-n82", "piano-n83"],
+      "motive": 3,
+      "kind": "exact"
+    }, {
+      "id": "motive-11",
+      "start": {
+        "num": 9,
+        "den": 2
+      },
+      "end": {
+        "num": 6,
+        "den": 1
+      },
+      "confidence": null,
+      "evidence": ["piano-n87", "piano-n88", "piano-n89", "piano-n90", "piano-n91", "piano-n92", "piano-n93"],
+      "motive": 3,
+      "kind": "exact"
+    }, {
+      "id": "motive-12",
+      "start": {
+        "num": 6,
+        "den": 1
+      },
+      "end": {
+        "num": 27,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n94", "piano-n95", "piano-n96", "piano-n97"],
+      "motive": 4,
+      "kind": "exact"
+    }, {
+      "id": "motive-13",
+      "start": {
+        "num": 7,
+        "den": 1
+      },
+      "end": {
+        "num": 31,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n99", "piano-n100", "piano-n101", "piano-n102"],
+      "motive": 4,
+      "kind": "tonal-transposed"
+    }],
+  "meters": [{
+      "id": "meter-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 25,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": [],
+      "time_signature": "4/4"
+    }],
+  "lines": [{
+      "id": "line-1",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 25,
+        "den": 2
+      },
+      "confidence": null,
+      "evidence": ["piano-n64", "piano-n65", "piano-n67", "piano-n68", "piano-n71", "piano-n74", "piano-n75", "piano-n77", "piano-n78", "piano-n79", "piano-n82", "piano-n83", "piano-n84", "piano-n85", "piano-n87", "piano-n88", "piano-n89", "piano-n92", "piano-n93", "piano-n94", "piano-n95", "piano-n98", "piano-n99", "piano-n100", "piano-n103", "piano-n106", "piano-n110", "piano-n111", "piano-n112", "piano-n56", "piano-n57", "piano-n59", "piano-n60", "piano-n62", "piano-n124", "piano-n126", "piano-n127"],
+      "role": "melody"
+    }, {
+      "id": "line-2",
+      "start": {
+        "num": 0,
+        "den": 1
+      },
+      "end": {
+        "num": 49,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n40", "piano-n41", "piano-n42", "piano-n43", "piano-n44", "piano-n45", "piano-n46", "piano-n47", "piano-n48", "piano-n49", "piano-n50", "piano-n51", "piano-n52", "piano-n53", "piano-n54", "piano-n121", "piano-n122"],
+      "role": "bass"
+    }],
+  "voice_faults": [{
+      "id": "fault-1",
+      "start": {
+        "num": 3,
+        "den": 1
+      },
+      "end": {
+        "num": 15,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n79", "piano-n82"],
+      "rule": "unresolved-leading-tone",
+      "hard": false,
+      "measure": 4
+    }, {
+      "id": "fault-2",
+      "start": {
+        "num": 5,
+        "den": 1
+      },
+      "end": {
+        "num": 23,
+        "den": 4
+      },
+      "confidence": null,
+      "evidence": ["piano-n89", "piano-n92"],
+      "rule": "unresolved-leading-tone",
+      "hard": false,
+      "measure": 6
+    }]
+}

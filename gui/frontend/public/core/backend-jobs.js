@@ -4,6 +4,7 @@
  * handling. No DOM. */
 
 import { events as Events } from "./events.js";
+import { commandRequest } from "./commands.js";
 
 const POLL_MS = 500;
 const CANCELLED_STATUS = 499;
@@ -59,7 +60,7 @@ async function runJob(request, options) {
   const cancel = () => {
     if (!cancelSent) {
       cancelSent = true;
-      send(fetchFn, { method: "DELETE", url: jobUrl(job.id) });
+      send(fetchFn, commandRequest("job.cancel", { target: job.id }));
     }
   };
   if (o.signal) {

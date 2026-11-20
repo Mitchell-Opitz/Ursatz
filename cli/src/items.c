@@ -172,6 +172,60 @@ int run_compose(const CliArgs *args) {
     return run_job(args, "item.compose", &address, params);
 }
 
+int run_restore(const CliArgs *args) {
+    CliAddress address;
+    int status = read_item_address(args, "restore", &address, true);
+    if (status != 0) {
+        return status;
+    }
+    if (address.version == 0) {
+        return cli_fail(CLI_EXIT_USAGE, "restore needs the version to copy: write item:<id>@v<n>\n%s", cli_usage_of("restore"));
+    }
+    const char *base_text = cli_value(args, "--base");
+    long long base_value = 0;
+    if (base_text && !read_whole(base_text, 1, 1000000, &base_value)) {
+        return cli_fail(CLI_EXIT_USAGE, "--base must be a version number from 1, not '%s'", base_text);
+    }
+    CliSession *session = NULL;
+    status = cli_session_open(cli_global(), &session);
+    if (status != 0) {
+        return status;
+    }
+    long base = (long)base_value;
+    if (base == 0) {
+        status = current_version(session, address.id, &base);
+    }
+    cJSON *command = status == 0 ? cJSON_CreateObject() : NULL;
+    cJSON *params = command ? cJSON_AddObjectToObject(command, "params") : NULL;
+    const char *note = cli_value(args, "--note");
+    if (status == 0 && (!params || !cJSON_AddStringToObject(command, "command", "item.restore") || !cJSON_AddStringToObject(command, "target", address.id) ||
+                        !cJSON_AddNumberToObject(command, "base_version", (double)base) || !cJSON_AddNumberToObject(params, "version", (double)address.version) ||
+                        (note && !cJSON_AddStringToObject(params, "note", note)))) {
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    if (status == 0) {
+        WorkshopReply reply;
+        UrsatzError error;
+        memset(&error, 0, sizeof error);
+        UrsatzStatus result = cli_session_command(session, command, NULL, &reply, &error);
+        if (result != URSATZ_OK) {
+            const cJSON *current = cJSON_GetObjectItemCaseSensitive(reply.json, "current_version");
+            if (cJSON_IsNumber(current)) {
+                status = cli_fail(result == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE, "%s%s%s (current version %.0f)", error.message,
+                                  error.path[0] ? " at " : "", error.path, current->valuedouble);
+            } else {
+                status = fail_call(result, &error);
+            }
+        } else {
+            printf("item %s version %.0f (restored v%.0f)\n", address.id, cli_json_number(reply.json, "version"), cli_json_number(reply.json, "restored_from"));
+        }
+        workshop_reply_destroy(&reply);
+    }
+    cJSON_Delete(command);
+    cli_session_close(session);
+    return status;
+}
+
 int run_regenerate_item(const CliArgs *args) {
     CliAddress address;
     int status = read_item_address(args, "regenerate", &address, false);

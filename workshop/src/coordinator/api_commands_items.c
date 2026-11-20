@@ -5,17 +5,10 @@
 
 #include <common/json.h>
 
+#include "composition/restore.h"
 #include "coordinator/dispatch.h"
 
 /* The commands over projects, items and subjects (R-646). */
-
-static bool require_target(const WorkshopCall *call, UrsatzError *error) {
-    if (call->target[0] == '\0') {
-        workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "the command needs a target");
-        return false;
-    }
-    return true;
-}
 
 static UrsatzStatus material_failure(UrsatzError *error, UrsatzStatus status) {
     return workshop_call_fail_service(error, status, "material store failure");
@@ -40,9 +33,6 @@ WORKSHOP_HANDLER(workshop_c_project_create) {
 }
 
 WORKSHOP_HANDLER(workshop_c_project_update) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     bool bad = false;
     const char *name = workshop_param_string(call->params, "name", &bad);
     const char *description = workshop_param_string(call->params, "description", &bad);
@@ -55,9 +45,6 @@ WORKSHOP_HANDLER(workshop_c_project_update) {
 }
 
 WORKSHOP_HANDLER(workshop_c_project_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     UrsatzStatus result = workshop_material_project_delete(call->target);
     return result == URSATZ_OK ? empty_reply(reply, error) : material_failure(error, result);
 }
@@ -116,9 +103,6 @@ WORKSHOP_HANDLER(workshop_c_item_create) {
 
 /* Renames an item and/or moves it to another project: params name and project_id. */
 WORKSHOP_HANDLER(workshop_c_item_update) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     bool bad = false;
     const char *name = workshop_param_string(call->params, "name", &bad);
     const char *project_id = workshop_param_string(call->params, "project_id", &bad);
@@ -150,9 +134,6 @@ WORKSHOP_HANDLER(workshop_c_item_update) {
 
 /* Deletes an item and its variants; params force (true, or "1") deletes it although other items use it. A refusal lists them as used_by. */
 WORKSHOP_HANDLER(workshop_c_item_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     const cJSON *force = cJSON_GetObjectItemCaseSensitive(call->params, "force");
     bool forced = false;
     if (!common_json_bool(call->params, "force", &forced)) {
@@ -172,9 +153,6 @@ WORKSHOP_HANDLER(workshop_c_item_delete) {
 
 /* A new version of an item: params body and note (every version of a motif or a theme says what changed). */
 WORKSHOP_HANDLER(workshop_c_item_save) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     bool bad = false;
     const char *note = workshop_param_string(call->params, "note", &bad);
     const cJSON *params_body = cJSON_GetObjectItemCaseSensitive(call->params, "body");
@@ -220,9 +198,6 @@ WORKSHOP_HANDLER(workshop_c_item_save) {
 /* Analyzes the current version of a motif again and saves the result as a new version (versions are never rewritten, R-130). A refusal
  * writes nothing. */
 WORKSHOP_HANDLER(workshop_c_item_reanalyze) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     cJSON *meta = NULL;
     cJSON *version_body = NULL;
     UrsatzStatus result = workshop_material_item_get(call->target, &meta, &version_body);
@@ -254,7 +229,7 @@ WORKSHOP_HANDLER(workshop_c_item_reanalyze) {
 /* An item's use of a source moves to the source's current version. params source_id. */
 WORKSHOP_HANDLER(workshop_c_item_update_use) {
     const char *source_id = NULL;
-    if (!require_target(call, error) || !workshop_param_require_string(call->params, "source_id", &source_id, error)) {
+    if (!workshop_param_require_string(call->params, "source_id", &source_id, error)) {
         return URSATZ_ERR_REQUEST;
     }
     cJSON *item = NULL;
@@ -287,9 +262,6 @@ static UrsatzStatus submit_compose(WorkshopReply *reply, WorkshopComposeJob *job
 /* Composes the theme or piece into a new version with its files (R-167, R-174): params seed? and update_uses? (every updated use moves to its
  * source's current version first). The reply is the job. */
 WORKSHOP_HANDLER(workshop_c_item_compose) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     const cJSON *update_uses = cJSON_GetObjectItemCaseSensitive(call->params, "update_uses");
     bool has_seed = false;
     long long seed = 0;
@@ -336,17 +308,18 @@ static bool read_version(const cJSON *params, const char *name, int *out, Ursatz
 /* Writes one section of a composed piece version again, as the next version (R-173, R-174): params version, section_id, lane?, seed?. */
 WORKSHOP_HANDLER(workshop_c_item_regenerate) {
     int version = 0;
-    if (!require_target(call, error) || !read_version(call->params, "version", &version, error)) {
+    if (!read_version(call->params, "version", &version, error)) {
         return error->message[0] ? error->path[0] ? URSATZ_ERR_NOT_FOUND : URSATZ_ERR_REQUEST : URSATZ_ERR_REQUEST;
     }
     const cJSON *section = cJSON_GetObjectItemCaseSensitive(call->params, "section_id");
     const cJSON *lane = cJSON_GetObjectItemCaseSensitive(call->params, "lane");
     long long seed = 0;
     bool has_seed = false;
-    if (!cJSON_IsString(section) || !section->valuestring[0] || (lane && !cJSON_IsNull(lane) && !cJSON_IsString(lane)) ||
-        !read_seed(call->params, &has_seed, &seed, error)) {
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params",
-                                  "section_id is a string; lane is a string; seed is a whole number from 0 to 4294967295");
+    if (!section->valuestring[0]) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/section_id", "section_id is required");
+    }
+    if (!read_seed(call->params, &has_seed, &seed, error)) {
+        return URSATZ_ERR_REQUEST;
     }
     WorkshopComposeJob *job = workshop_compose_job_new(WORKSHOP_COMPOSE_PIECE_REGENERATE, call->target);
     if (job) {
@@ -366,7 +339,7 @@ WORKSHOP_HANDLER(workshop_c_item_regenerate) {
 /* Makes variations of a section of a composed piece version into a new set: params version, section_id, lane, count (1 to 8), seed?. */
 WORKSHOP_HANDLER(workshop_c_item_variations) {
     int version = 0;
-    if (!require_target(call, error) || !read_version(call->params, "version", &version, error)) {
+    if (!read_version(call->params, "version", &version, error)) {
         return error->message[0] ? URSATZ_ERR_NOT_FOUND : URSATZ_ERR_REQUEST;
     }
     const cJSON *section = cJSON_GetObjectItemCaseSensitive(call->params, "section_id");
@@ -374,10 +347,11 @@ WORKSHOP_HANDLER(workshop_c_item_variations) {
     const cJSON *count = cJSON_GetObjectItemCaseSensitive(call->params, "count");
     long long seed = 0;
     bool has_seed = false;
-    if (!cJSON_IsString(section) || !section->valuestring[0] || !cJSON_IsString(lane) || !cJSON_IsNumber(count) || count->valuedouble < 1 ||
-        count->valuedouble > 8 || count->valuedouble != (double)(int)count->valuedouble || !read_seed(call->params, &has_seed, &seed, error)) {
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params",
-                                  "section_id and lane are strings; count is a whole number from 1 to 8; seed is a whole number from 0 to 4294967295");
+    if (!section->valuestring[0]) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/section_id", "section_id is required");
+    }
+    if (!read_seed(call->params, &has_seed, &seed, error)) {
+        return URSATZ_ERR_REQUEST;
     }
     WorkshopComposeJob *job = workshop_compose_job_new(WORKSHOP_COMPOSE_PIECE_VARIATIONS, call->target);
     if (job) {
@@ -399,9 +373,6 @@ WORKSHOP_HANDLER(workshop_c_item_variations) {
 WORKSHOP_HANDLER(workshop_c_item_choose) {
     int version = 0;
     int set = 0;
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!read_version(call->params, "version", &version, error) || !read_version(call->params, "set", &set, error)) {
         return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "", "variations not found");
     }
@@ -423,9 +394,6 @@ WORKSHOP_HANDLER(workshop_c_item_choose) {
 
 /* Reruns the stored chain on the source's stored version with a new seed and stores the result as a new version; the reply is the job. */
 WORKSHOP_HANDLER(workshop_c_item_reroll) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     WorkshopVariantsJob *job = NULL;
     UrsatzStatus result = workshop_variants_job_new(WORKSHOP_VARIANTS_REROLL, call->target, NULL, &job, error);
     if (result != URSATZ_OK) {
@@ -437,9 +405,6 @@ WORKSHOP_HANDLER(workshop_c_item_reroll) {
 /* A request body in, the item out: the four variant commands. */
 static UrsatzStatus variant_command(const WorkshopCall *call, WorkshopReply *reply, UrsatzError *error,
                                     UrsatzStatus (*command)(const char *, const cJSON *, cJSON **, UrsatzError *)) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     cJSON *item = NULL;
     UrsatzStatus result = command(call->target, call->params, &item, error);
     return result == URSATZ_OK ? workshop_reply_member(reply, "item", item, error) : result;
@@ -461,11 +426,24 @@ WORKSHOP_HANDLER(workshop_c_item_link_form) {
     return variant_command(call, reply, error, workshop_variants_link_form);
 }
 
+/* Makes the next version a copy of an older one (R-667): params version and note?. The reply is {version, restored_from}. */
+WORKSHOP_HANDLER(workshop_c_item_restore) {
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(call->params, "version");
+    bool bad = false;
+    const char *note = workshop_param_string(call->params, "note", &bad);
+    int number = 0;
+    UrsatzStatus status = workshop_material_item_restore(call->target, (int)version->valuedouble, note, &number, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    cJSON *answer = workshop_reply_object(reply);
+    return answer && cJSON_AddNumberToObject(answer, "version", number) && cJSON_AddNumberToObject(answer, "restored_from", version->valuedouble)
+               ? URSATZ_OK
+               : workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+}
+
 /* Replaces the marks of Try every operation (the file is not a version): params checks. */
 WORKSHOP_HANDLER(workshop_c_item_set_op_checks) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     UrsatzError failure = {{0}, {0}};
     cJSON *stored = NULL;
     UrsatzStatus result = workshop_material_op_checks_put(call->target, call->params, &failure, &stored);
@@ -495,9 +473,6 @@ WORKSHOP_HANDLER(workshop_c_subject_create) {
 }
 
 WORKSHOP_HANDLER(workshop_c_subject_update) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     bool bad = false;
     const char *name = workshop_param_string(call->params, "name", &bad);
     const char *kind = workshop_param_string(call->params, "kind", &bad);
@@ -511,9 +486,6 @@ WORKSHOP_HANDLER(workshop_c_subject_update) {
 }
 
 WORKSHOP_HANDLER(workshop_c_subject_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     UrsatzStatus result = workshop_subject_delete(call->target);
     return result == URSATZ_OK ? empty_reply(reply, error) : subject_failure(error, result);
 }
@@ -534,7 +506,7 @@ static UrsatzStatus subject_link(const WorkshopCall *call, WorkshopReply *reply,
                                  UrsatzStatus (*link)(const char *, const char *, bool *, cJSON **),
                                  UrsatzStatus (*unlink)(const char *, const char *, cJSON **)) {
     const char *other = NULL;
-    if (!require_target(call, error) || !workshop_param_require_string(call->params, member, &other, error)) {
+    if (!workshop_param_require_string(call->params, member, &other, error)) {
         return URSATZ_ERR_REQUEST;
     }
     bool already = false;

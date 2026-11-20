@@ -69,84 +69,11 @@ static char *exchange_with(const char *port, const char *method, const char *pat
     return response;
 }
 
-/*
- * The frontend sends the version it read with every write to an item that has versions (R-646). The route tests play the frontend: a write
- * of that kind that does not give base_version gets the item's current version, read with a GET first (in the JSON body, or the query of a
- * DELETE). A test of the refusal sends base_version itself, so it is left as given.
- */
-static bool writes_with_base_version(const char *method, const char *path, char *id, size_t id_size) {
-    static const char kPrefix[] = "/api/materials/items/";
-    if (strncmp(path, kPrefix, sizeof(kPrefix) - 1) != 0 || strstr(path, "base_version") != NULL) {
-        return false;
-    }
-    const char *start = path + sizeof(kPrefix) - 1;
-    size_t length = strcspn(start, "/?");
-    if (length == 0 || length >= id_size || memchr(start, '-', length) == NULL) {
-        return false;
-    }
-    memcpy(id, start, length);
-    id[length] = '\0';
-    const char *rest = start + length;
-    if (strcmp(method, "PATCH") == 0 || strcmp(method, "DELETE") == 0) {
-        return *rest == '\0' || *rest == '?';
-    }
-    if (strcmp(method, "POST") != 0) {
-        return false;
-    }
-    static const char *const kTails[] = {"/versions", "/compose", "/reanalyze", "/reroll", "/flag", "/promote", "/link-form"};
-    for (size_t i = 0; i < sizeof(kTails) / sizeof(kTails[0]); i++) {
-        if (strcmp(rest, kTails[i]) == 0) {
-            return true;
-        }
-    }
-    size_t rest_length = strlen(rest);
-    return (strncmp(rest, "/uses/", 6) == 0 && rest_length > 7 && strcmp(rest + rest_length - 7, "/update") == 0) ||
-           (strncmp(rest, "/versions/", 10) == 0 && ((rest_length > 11 && strcmp(rest + rest_length - 11, "/regenerate") == 0) ||
-                                                      (rest_length > 7 && strcmp(rest + rest_length - 7, "/choose") == 0)));
-}
-
-/* The current version of item id, -1 when it has none (a request for an item that is not there goes through as it was). */
-static long current_version_of(const char *port, const char *id) {
-    char path[320];
-    snprintf(path, sizeof path, "/api/materials/items/%s", id);
-    char *response = exchange_with(port, "GET", path, "", "", 0);
-    cJSON *answer = response ? cJSON_Parse(test_http_body(response)) : NULL;
-    const cJSON *item = answer ? cJSON_GetObjectItemCaseSensitive(answer, "item") : NULL;
-    const cJSON *current = item ? cJSON_GetObjectItemCaseSensitive(item, "current_version") : NULL;
-    long version = cJSON_IsNumber(current) ? (long)current->valuedouble : -1;
-    cJSON_Delete(answer);
-    free(response);
-    return version;
-}
-
 char *test_http_exchange(const char *port, const char *method, const char *path, const char *content_type,
                          const char *body, size_t body_size) {
-    char id[128];
-    char with_path[1024];
-    char *with_body = NULL;
-    if (writes_with_base_version(method, path, id, sizeof id)) {
-        long version = current_version_of(port, id);
-        if (version >= 0) {
-            if (strcmp(method, "DELETE") == 0) {
-                snprintf(with_path, sizeof with_path, "%s%cbase_version=%ld", path, strchr(path, '?') ? '&' : '?', version);
-                path = with_path;
-            } else {
-                cJSON *object = body_size > 0 ? cJSON_Parse(body) : cJSON_CreateObject();
-                if (cJSON_IsObject(object) && !cJSON_HasObjectItem(object, "base_version")) {
-                    cJSON_AddNumberToObject(object, "base_version", (double)version);
-                    with_body = cJSON_PrintUnformatted(object);
-                    body = with_body;
-                    body_size = strlen(with_body);
-                }
-                cJSON_Delete(object);
-            }
-        }
-    }
     char headers[256];
     snprintf(headers, sizeof headers, "Content-Type: %s\r\n", content_type ? content_type : "application/json");
-    char *response = exchange_with(port, method, path, headers, body, body_size);
-    free(with_body);
-    return response;
+    return exchange_with(port, method, path, headers, body, body_size);
 }
 
 char *test_http_exchange_headers(const char *port, const char *method, const char *path, const char *headers, const char *body, size_t body_size) {
@@ -233,15 +160,80 @@ cJSON *test_http_json_finish(const char *port, const char *method, const char *p
     return json;
 }
 
+/* A percent-encoded copy of text (every byte but a letter, a digit, "-", "_" and "."); the caller frees it. */
+static char *percent_encode(const char *text) {
+    size_t length = strlen(text);
+    char *out = malloc(length * 3 + 1);
+    size_t used = 0;
+    for (size_t i = 0; out && i < length; i++) {
+        unsigned char c = (unsigned char)text[i];
+        if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '-' || c == '_' || c == '.') {
+            out[used++] = (char)c;
+        } else {
+            used += (size_t)snprintf(out + used, 4, "%%%02X", c);
+        }
+    }
+    if (out) {
+        out[used] = '\0';
+    }
+    return out;
+}
+
+/* A percent-decoded copy of text; the caller frees it. */
+static char *percent_decode(const char *text) {
+    size_t length = strlen(text);
+    char *out = malloc(length + 1);
+    size_t used = 0;
+    for (size_t i = 0; out && i < length; i++) {
+        unsigned int value = 0;
+        if (text[i] == '%' && i + 2 < length && sscanf(text + i + 1, "%2x", &value) == 1) {
+            out[used++] = (char)value;
+            i += 2;
+        } else {
+            out[used++] = text[i];
+        }
+    }
+    if (out) {
+        out[used] = '\0';
+    }
+    return out;
+}
+
+char *test_http_command_file(const char *port, const char *command_json, const char *encoded_name, const char *data, size_t size) {
+    char *encoded_command = percent_encode(command_json);
+    if (!encoded_command) {
+        return NULL;
+    }
+    size_t capacity = strlen(encoded_command) + strlen(encoded_name) + 256;
+    char *headers = malloc(capacity);
+    char *response = NULL;
+    if (headers) {
+        snprintf(headers, capacity, "Content-Type: application/octet-stream\r\nX-Ursatz-Command: %s\r\nX-Filename: %s\r\n", encoded_command, encoded_name);
+        response = exchange_with(port, "POST", "/api/workshop/command", headers, data, size);
+    }
+    free(headers);
+    free(encoded_command);
+    return response;
+}
+
 char *test_http_upload(const char *port, const char *file_path, const char *encoded_name, char **response_out) {
     size_t size = 0;
     char *data = test_read_file(file_path, &size);
     if (!data) {
         return NULL;
     }
-    char headers[512];
-    snprintf(headers, sizeof headers, "Content-Type: application/json\r\nX-Filename: %s\r\n", encoded_name);
-    char *response = exchange_with(port, "POST", "/api/analyzer/pieces", headers, data, size);
+    char *name = percent_decode(encoded_name);
+    cJSON *command = cJSON_CreateObject();
+    cJSON *params = command ? cJSON_AddObjectToObject(command, "params") : NULL;
+    char *command_json = NULL;
+    if (params && name && cJSON_AddStringToObject(command, "command", "library.import") && cJSON_AddStringToObject(command, "actor", "michelle") &&
+        cJSON_AddStringToObject(params, "filename", name)) {
+        command_json = cJSON_PrintUnformatted(command);
+    }
+    cJSON_Delete(command);
+    free(name);
+    char *response = command_json ? test_http_command_file(port, command_json, encoded_name, data, size) : NULL;
+    free(command_json);
     free(data);
     response = test_http_finish(port, response); /* the import is a job: its answer is what the route answered before jobs */
     char *id = NULL;

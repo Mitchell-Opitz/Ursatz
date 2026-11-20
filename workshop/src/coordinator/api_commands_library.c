@@ -7,15 +7,6 @@
 /* The commands over the Library, collections, styles, motive links and jobs (R-646). Each is one change of the data folder, journaled
  * under its name; the long ones answer with the job that makes it. */
 
-/* The target of a command, or the failure naming /target. */
-static bool require_target(const WorkshopCall *call, UrsatzError *error) {
-    if (call->target[0] == '\0') {
-        workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "the command needs a target");
-        return false;
-    }
-    return true;
-}
-
 /* --- the Library ----------------------------------------------------------------------------------------------------------------- */
 
 /* Imports the file in bytes (a MIDI, MusicXML or compressed MusicXML file) as a Library piece; params filename. The reply is the job. */
@@ -37,9 +28,6 @@ WORKSHOP_HANDLER(workshop_c_library_import) {
 
 /* Changes a piece's filename, composer, source, tags or notation (params as workshop_library_patch reads them); the reply is the piece. */
 WORKSHOP_HANDLER(workshop_c_library_update) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     cJSON *piece = NULL;
     UrsatzError failure = {{0}, {0}};
     UrsatzStatus result = workshop_library_patch(WORKSHOP_DIR_PIECES, call->target, call->params, &piece, &failure);
@@ -58,9 +46,6 @@ WORKSHOP_HANDLER(workshop_c_library_update) {
 }
 
 WORKSHOP_HANDLER(workshop_c_library_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     UrsatzStatus result = workshop_library_delete(WORKSHOP_DIR_PIECES, call->target);
     if (result != URSATZ_OK) {
         return workshop_call_fail(error, result, "", result == URSATZ_ERR_NOT_FOUND ? "piece not found" : "failed to delete piece");
@@ -70,9 +55,6 @@ WORKSHOP_HANDLER(workshop_c_library_delete) {
 
 /* The Analyzer again on a piece's stored source; the reply is the job. */
 WORKSHOP_HANDLER(workshop_c_library_reanalyze) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     WorkshopAnalysisJob *job = workshop_analysis_job_reanalyze(call->target);
     if (!job) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
@@ -116,9 +98,6 @@ WORKSHOP_HANDLER(workshop_c_collection_create) {
 }
 
 WORKSHOP_HANDLER(workshop_c_collection_update) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!workshop_collection_is_valid_id(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "invalid id");
     }
@@ -138,9 +117,6 @@ WORKSHOP_HANDLER(workshop_c_collection_update) {
 }
 
 WORKSHOP_HANDLER(workshop_c_collection_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!workshop_collection_is_valid_id(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "invalid id");
     }
@@ -153,9 +129,6 @@ WORKSHOP_HANDLER(workshop_c_collection_delete) {
 
 /* The pieces of params piece_id or piece_ids join the collection; one already in it is counted, not an error: {"added", "already"}. */
 WORKSHOP_HANDLER(workshop_c_collection_add_pieces) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!workshop_collection_is_valid_id(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "invalid id");
     }
@@ -177,7 +150,7 @@ WORKSHOP_HANDLER(workshop_c_collection_add_pieces) {
 /* params piece_id leaves the collection. */
 WORKSHOP_HANDLER(workshop_c_collection_remove_piece) {
     const char *piece_id = NULL;
-    if (!require_target(call, error) || !workshop_param_require_string(call->params, "piece_id", &piece_id, error)) {
+    if (!workshop_param_require_string(call->params, "piece_id", &piece_id, error)) {
         return URSATZ_ERR_REQUEST;
     }
     if (!workshop_collection_is_valid_id(call->target)) {
@@ -223,9 +196,6 @@ WORKSHOP_HANDLER(workshop_c_style_build) {
 }
 
 WORKSHOP_HANDLER(workshop_c_style_rebuild) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!workshop_collection_is_valid_id(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "", "style not found");
     }
@@ -237,9 +207,6 @@ WORKSHOP_HANDLER(workshop_c_style_rebuild) {
 }
 
 WORKSHOP_HANDLER(workshop_c_style_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!workshop_collection_is_valid_id(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "", "style not found");
     }
@@ -289,9 +256,6 @@ WORKSHOP_HANDLER(workshop_c_links_run) {
 
 /* A run and its files leave the data folder; the run's job is cancelled first. */
 WORKSHOP_HANDLER(workshop_c_links_delete) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (!workshop_collection_is_valid_id(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "", "run not found");
     }
@@ -306,9 +270,6 @@ WORKSHOP_HANDLER(workshop_c_links_delete) {
 
 /* Asks the job to stop: a queued one is cancelled at once, a running one at the Composer's next report. A runtime control, not journaled. */
 WORKSHOP_HANDLER(workshop_c_job_cancel) {
-    if (!require_target(call, error)) {
-        return URSATZ_ERR_REQUEST;
-    }
     if (strlen(call->target) >= WORKSHOP_JOB_ID_BYTES || !workshop_job_cancel(call->target)) {
         return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "", "job not found");
     }

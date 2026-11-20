@@ -17,6 +17,10 @@
 #include <cJSON.h>
 
 #include "support/body_v2.h"
+
+/* The bodies the tests write are format 1; the commands take format 2 (request_with_request_body). */
+#define test_gui_send test_gui_send_body_v2
+#define test_gui_send_finish test_gui_send_finish_body_v2
 #include "support/server_support.h"
 #include "ursatz_check.h"
 #include "server.h"
@@ -117,7 +121,7 @@ static char *create_item(const char *type, const char *name, const char *body, i
     return NULL;
   }
   sprintf(request, "{\"type\":\"%s\",\"name\":\"%s\",\"project_id\":\"%s\",\"body\":%s}", type, name, g_project, body);
-  cJSON *answer = exchange("POST", "/api/materials/items", request, status);
+  cJSON *answer = test_gui_send(PORT, "item.create", "", request, status);
   const cJSON *item = member(answer, "item");
   if (*status == 200 && cJSON_IsString(member(item, "id"))) {
     id = copy_string(string_of(item, "id"));
@@ -246,9 +250,7 @@ static cJSON *finish_job(cJSON *accepted, int *status) {
 }
 
 static cJSON *compose(const char *id, const char *body, int *status) {
-  char path[160];
-  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", id);
-  cJSON *answer = finish_job(exchange("POST", path, body, status), status);
+  cJSON *answer = finish_job(test_gui_send(PORT, "item.compose", id, body, status), status);
   remember_request(id, answer, *status);
   return answer;
 }
@@ -899,8 +901,7 @@ static void test_files(const Items *m) {
   char dir[200];
   item_file(piece, "", dir, sizeof(dir));
   check(dir_exists(dir), "the item directory exists before the delete");
-  snprintf(path, sizeof(path), "/api/materials/items/%s", piece);
-  answer = exchange("DELETE", path, NULL, &status);
+  answer = test_gui_send(PORT, "item.delete", piece, NULL, &status);
   cJSON_Delete(answer);
   check(status == 200 && !dir_exists(dir), "deleting the item removes its directory and the version folders");
   free(piece);
@@ -990,8 +991,7 @@ static void test_update_uses(const Items *m) {
   create_piece("Updating", sections, "", &piece);
 
   /* A new version of motif A, analyzed by the real Composer, and a new composed version of the theme. */
-  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", m->a);
-  cJSON *answer = exchange("POST", path,
+  cJSON *answer = test_gui_send(PORT, "item.save", m->a,
                            "{\"note\":\"changed\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
                            "\"notes\":\"C4:e F4:e G4:e F4:e C4:e F4:e G4:e C5:e\",\"meter\":\"4/4\",\"key\":\"C minor\","
                            "\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}",
@@ -1063,10 +1063,50 @@ static void test_update_uses(const Items *m) {
   free(piece);
 }
 
+/* The command of a request for an item that the page used to make at id/tail: versions/<n>/regenerate, versions/<n>/variations and
+ * versions/<n>/variations/<set>/choose. The version and the set were the route's; they are members of the params now, a word that is no number
+ * as the text it is (the command refuses it at /params/version). */
+static void add_number_or_text(cJSON *params, const char *name, const char *text) {
+  char *end = NULL;
+  long number = strtol(text, &end, 10);
+  if (end != text && *end == '\0') {
+    cJSON_AddNumberToObject(params, name, (double)number);
+  } else {
+    cJSON_AddStringToObject(params, name, text);
+  }
+}
+
 static cJSON *post_json(const char *id, const char *tail, const char *body, int *status) {
-  char path[300];
-  snprintf(path, sizeof(path), "/api/materials/items/%s/%s", id, tail);
-  cJSON *answer = finish_job(exchange("POST", path, body, status), status);
+  char version[32] = "";
+  char set[32] = "";
+  const char *command = NULL;
+  int used = 0;
+  size_t length = strlen(tail);
+  if (sscanf(tail, "versions/%31[^/]/variations/%31[^/]/choose%n", version, set, &used) == 2 && (size_t)used == length) {
+    command = "item.choose";
+  } else if (sscanf(tail, "versions/%31[^/]/regenerate%n", version, &used) == 1 && (size_t)used == length) {
+    command = "item.regenerate";
+  } else if (sscanf(tail, "versions/%31[^/]/variations%n", version, &used) == 1 && (size_t)used == length) {
+    command = "item.variations";
+  } else if (strcmp(tail, "compose") == 0) {
+    command = "item.compose";
+  }
+  cJSON *params = cJSON_Parse(body ? body : "{}");
+  if (!command || !cJSON_IsObject(params)) {
+    cJSON_Delete(params);
+    *status = 0;
+    return NULL;
+  }
+  if (version[0]) {
+    add_number_or_text(params, "version", version);
+  }
+  if (set[0]) {
+    add_number_or_text(params, "set", set);
+  }
+  char *text = cJSON_PrintUnformatted(params);
+  cJSON_Delete(params);
+  cJSON *answer = finish_job(test_gui_send(PORT, command, id, text, status), status);
+  free(text);
   remember_request(id, answer, *status);
   return answer;
 }
@@ -1160,7 +1200,7 @@ static void test_regenerate(const Items *m) {
   check(post_status(piece, "versions/6/regenerate", "{\"section_id\":\"s1\",\"seed\":-1}") == 400, "a bad seed is 400");
   check(post_status(piece, "versions/1/regenerate", "{\"section_id\":\"s1\"}") == 400, "a version that was never composed is 400");
   check(post_status(piece, "versions/99/regenerate", "{\"section_id\":\"s1\"}") == 404, "a version that does not exist is 404");
-  check(post_status(piece, "versions/x/regenerate", "{\"section_id\":\"s1\"}") == 404, "a version that is no number is 404");
+  check(post_status(piece, "versions/x/regenerate", "{\"section_id\":\"s1\"}") == 400, "a version that is no number is 400");
   check(post_status("pce-0123456789abcdef", "versions/1/regenerate", "{\"section_id\":\"s1\"}") == 404, "a piece that does not exist is 404");
   check(post_status(m->theme, "versions/2/regenerate", "{\"section_id\":\"s1\"}") == 400, "a theme version is 400 for regenerate");
   check(post_status(m->theme, "versions/2/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":2}") == 400,
@@ -1275,8 +1315,7 @@ static void test_regenerate(const Items *m) {
 
   /* Deleting the item removes the variation sets with it. */
   item_file(piece, "", dir, sizeof(dir));
-  snprintf(path, sizeof(path), "/api/materials/items/%s", piece);
-  answer = exchange("DELETE", path, NULL, &status);
+  answer = test_gui_send(PORT, "item.delete", piece, NULL, &status);
   cJSON_Delete(answer);
   check(status == 200 && !dir_exists(dir), "deleting the item removes its variation sets");
   free(piece);

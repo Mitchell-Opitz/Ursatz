@@ -149,3 +149,62 @@ ursatz_test(workshop_body_migration SOURCES test_body_migration.c LIBS ursatz_wo
     DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
                 URSATZ_WORKSHOP_REQUESTS="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/requests"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_body_migration)
+
+# Ursatz Text from the workshop (P65 B3): the tool text on a tools workshop, and item.view and library.view on a migrated copy of the layout 0 fixture
+# folder. Each runs in its own working directory, which it clears.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
+ursatz_test(workshop_text SOURCES test_text.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_FIXTURES="${CMAKE_SOURCE_DIR}/library/text/tests/fixtures"
+                TEXT_SNAPSHOTS="${CMAKE_SOURCE_DIR}/library/text/tests/snapshots"
+                TEXT_FILL_PLAN="${CMAKE_SOURCE_DIR}/composer/tests/snapshots/fill.plan.json"
+                TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+                TEXT_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
+
+# Ursatz Text over generated layers (P65 B3, slow): the layers of a composed piece of every form but the game loop and of five analyzed pieces
+# read with their codecs, printed and read back. Three minutes in a debug build.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
+ursatz_test(workshop_text_generated SOURCES test_text_generated.c LIBS ursatz_workshop_internal ursatz_test_support LABELS slow
+    DEFINITIONS TEXT_FORMS="${CMAKE_SOURCE_DIR}/composer/forms"
+                TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
+                TEXT_CORPUS="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
+
+# The commands as schemas (P65 B5): the table and the schemas agree, the check of a command's params at its path, the actor in the version envelope.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_schemas)
+ursatz_test(workshop_command_schemas SOURCES test_command_schemas.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_schemas)
+
+# workshop/docs/command-reference.md is what the tool commands generates; the sheet stays short and every command has an example. The page is
+# written with URSATZ_UPDATE_GOLDENS=1.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/command_reference)
+ursatz_test(command_reference SOURCES test_command_reference.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_COMMAND_REFERENCE="${PROJECT_SOURCE_DIR}/workshop/docs/command-reference.md"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/command_reference LABELS golden)
+
+# Each workshop/commands/*.json against its meta-schema. Needs python3 with jsonschema (cmake/UrsatzTools.cmake).
+if(URSATZ_JSONSCHEMA_PYTHON)
+    file(GLOB URSATZ_COMMAND_FILES ${PROJECT_SOURCE_DIR}/workshop/commands/*.json)
+    ursatz_test(command_schemas_validate COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${PROJECT_SOURCE_DIR}/tests/support/validate_schema.py
+                     ${PROJECT_SOURCE_DIR}/workshop/schema/ursatz-commands.v1.schema.json ${URSATZ_COMMAND_FILES}
+        LABELS schema)
+endif()
+
+# Commands in Ursatz Text (P65 B6): the tool commands-parse on a tools workshop, every rule with its line and message.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
+ursatz_test(workshop_command_text SOURCES test_command_text.c LIBS ursatz_workshop ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
+
+# The section commands (P65 B7): the pure edits of a piece request on the game loop fixture, then the commands on a migrated copy of the layout 0
+# fixture folder (a version made and journaled, a stale base, the schema's limits, the Composer's refusal at its path, an overlay on a form piece).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_section_commands)
+ursatz_test(workshop_section_commands SOURCES test_section_commands.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
+                TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_section_commands)
+
+# Restore a version (P65 B8): the next version a copy of an older one, with its files, an envelope that says restored_from, and the refusals.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)
+ursatz_test(workshop_restore SOURCES test_restore.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)

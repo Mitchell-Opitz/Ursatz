@@ -1,0 +1,21 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "job",
+  "summary": "Jobs: the long work the workshop runs for a command.",
+  "commands": [
+    {
+      "name": "job.cancel",
+      "summary": "Ask a job to stop",
+      "target": "job",
+      "base": false,
+      "journaled": false,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object; a queued job stops at once, a running one at the Composer's next report.",
+      "job": null,
+      "example": "job.cancel job:job-1"
+    }
+  ]
+}

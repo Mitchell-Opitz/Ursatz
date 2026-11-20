@@ -2,6 +2,23 @@
 
 Newest first. [Docs index](README.md).
 
+## P65 B8: restore a version (2026-11)
+
+- **`item.restore`.** The next version of an item is a copy of an older one: its files, its body with the paths of its result in the new folder, the same uses; the envelope's `lineage` gains `restored_from` ([data folder](data-folder.md)). The commands are 49 ([commands](command-reference.md)).
+
+## P65 B7: section commands (2026-11)
+
+- **Section commands.** `section.insert`, `section.delete`, `section.move`, `section.resize` and `section.set` edit the sections of a piece version's request and save the next version ([commands](commands.md#the-section-commands)); the commands are 48. A param of the type `object` may name words that stand in place of the object (`words` in `workshop/commands`): `section.set`'s `region home` and `harmony none`.
+
+## P65 B5: command schemas (2026-11)
+
+- **Commands as schemas.** Each of the 43 commands is defined once in `workshop/commands/<family>.json` (meta-schema `workshop/schema/ursatz-commands.v1.schema.json`), embedded in the build by `cmake/embed_json.py`. `workshop_command` checks the target and the declared params from the schema (R-664; the messages are in [commands](commands.md#commands)), and `workshop_open` refuses a schema with no command or a command with no schema. The tool `commands` prints the generated [command reference](command-reference.md), the grammar and the help of each command ([tools](tools.md#commands)).
+- **The actor of a version.** The envelope of a version records the actor of the command that made it (it was always `michelle`); `item.get`'s versions and `item.version` answer `actor` and `lineage`.
+
+## P65 B3: Ursatz Text (2026-11)
+
+- **The text tool and the view queries.** The tool `text` ([tools](tools.md)) prints a layer file or a text as Ursatz Text, a view of it or its JSON. The queries `item.view` and `library.view` print the layers a version or a library piece holds ([commands](commands.md#views-of-ursatz-text)); `library.view` replaces `library.export`, whose text export is its `reading` view, framed. The `analyze` tool's `text` answer is framed the same way.
+
 ## P64: tools (2026-11)
 
 - **Tools.** A third call, `workshop_tool`, works on the files its params name and never on the data folder (R-656). `workshop_tools_open` opens a workshop with no data folder; `workshop_api.h` has 21 exported names. The tools: `composer` (every Composer API entry), `corpus-passages`, `pitch-names` and `versions`, then the Analyzer's `analyze`, `corpus` and `style-profile` ([tools](tools.md)). The analysis failure keeps its status (A20261115-79).

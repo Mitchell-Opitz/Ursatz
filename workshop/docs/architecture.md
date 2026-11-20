@@ -41,6 +41,10 @@ It holds no music logic: a query or command reads or changes files and asks the 
 
 Rules the layer table holds: `items/` does not reach up to `analysis/`, `composition/` or `rendering/`, so a function that needs the analysis layer to cascade (`workshop_library_piece_json`, `_patch`, `_delete`) lives in `analysis/analysis.c`; the Composer's vocabulary is not read by the store at all (R-649), only by the Composer client; the one cycle left between the store and the subjects is a registered callback (`workshop_store_set_forget_item`).
 
+## Commands as schemas
+
+Every command is defined once, as a schema in `workshop/commands/<family>.json` (embedded into the build): its target, base version, params with their types and limits, reply and an example. `workshop_command` checks a call against its schema before the handler runs and refuses a target, a param or a type the schema does not declare at its path (`/params/<name>`). The generated sheet [command-reference.md](command-reference.md), the text grammar of `commands` and `ursatz help` read the same schemas, so a command added in one place appears in all of them ([commands](commands.md#commands)).
+
 ## Locks
 
 The transaction is the outermost lock: a writer begins it (`workshop_txn_begin`, one per process, a mutex) before it takes its service's lock; commit and abort release it and free it. A reader never sees a half change: the piece lock (`items/piece_lock.c`, one mutex per piece folder) is held from the first read of a re-analysis, update or delete through its commit. The link run index lock is taken after the service lock, never before. The process lock is `.ursatz.lock`.

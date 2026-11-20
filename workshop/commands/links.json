@@ -1,0 +1,41 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "links",
+  "summary": "Motive links: runs that find the motives pieces share.",
+  "commands": [
+    {
+      "name": "links.run",
+      "summary": "Find the motive links between pieces",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "object",
+          "required": true,
+          "help": "The pieces to link: kind (all, collection, filter, subject or project), and collection_id, subject_id, project_id or filter {composer, source, tag} as the kind needs."
+        }
+      ],
+      "one_of": [],
+      "reply": "run: the run as queued; job: the job that does it.",
+      "job": "links",
+      "example": "links.run\n  scope kind collection collection_id col-1"
+    },
+    {
+      "name": "links.delete",
+      "summary": "Delete a link run and its files",
+      "target": "links",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [],
+      "one_of": [],
+      "reply": "An empty object.",
+      "job": null,
+      "example": "links.delete links:run-1"
+    }
+  ]
+}

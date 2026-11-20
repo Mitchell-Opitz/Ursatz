@@ -3,6 +3,7 @@
  * mount renders into the page. */
 
 import Req from "../core/request.js";
+import { commandRequest } from "../core/commands.js";
 import GroupedPanel from "./grouped-panel.js";
 
 const OPEN_KEY = "ursatz.subjectsPanel.open";
@@ -64,7 +65,7 @@ function buildCreateSubjectRequest(fields) {
   if (f.note && String(f.note).trim() !== "") {
     body.note = String(f.note).trim();
   }
-  return Req.jsonRequest("POST", SUBJECTS_URL, body);
+  return commandRequest("subject.create", { params: body });
 }
 
 /* Only the fields that are given go in; an empty note is sent so it can be cleared. */
@@ -80,19 +81,22 @@ function buildUpdateSubjectRequest(id, fields) {
   if (typeof f.note === "string") {
     body.note = f.note.trim();
   }
-  return Req.jsonRequest("PATCH", `${SUBJECTS_URL}/${encodeURIComponent(id)}`, body);
+  return commandRequest("subject.update", { target: id, params: body });
 }
 
 function buildDeleteSubjectRequest(id) {
-  return Req.jsonRequest("DELETE", `${SUBJECTS_URL}/${encodeURIComponent(id)}`);
+  return commandRequest("subject.delete", { target: id });
 }
 
 /* group is "items", "pieces" or "related"; add true links, false removes. */
 function buildLinkRequest(subjectId, group, otherId, add) {
-  return Req.jsonRequest(
-    add ? "POST" : "DELETE",
-    `${SUBJECTS_URL}/${encodeURIComponent(subjectId)}/${group}/${encodeURIComponent(otherId)}`,
-  );
+  const names = {
+    items: { add: "subject.link-item", remove: "subject.unlink-item", param: "item_id" },
+    pieces: { add: "subject.link-piece", remove: "subject.unlink-piece", param: "piece_id" },
+    related: { add: "subject.relate", remove: "subject.unrelate", param: "other_id" },
+  };
+  const kind = names[group];
+  return commandRequest(add ? kind.add : kind.remove, { target: subjectId, params: { [kind.param]: otherId } });
 }
 
 function kindOrder(kind) {

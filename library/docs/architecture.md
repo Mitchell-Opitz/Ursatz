@@ -2,7 +2,7 @@
 
 [Docs index](README.md): the Ursatz docs by topic.
 
-Ursatz is organized into eight groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `plan/` (the plan and the section description), `analysis/` (analyses and framework adapters), `io/` (import and export), `chain/` (the analysis chain) and `reading/` (what a reader says about a realization), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
+Ursatz is organized into nine groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `plan/` (the plan and the section description), `analysis/` (analyses and framework adapters), `io/` (import and export), `chain/` (the analysis chain), `reading/` (what a reader says about a realization) and `text/` (Ursatz Text, the text form of the layers), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
 
 ## Purpose
 
@@ -27,6 +27,7 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | `chain/` | The analysis chain, target `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `io/` | MIDI and MusicXML import and export, target `ursatz_io` | [io](modules/io.md) |
 | `reading/` | Readings: claims over a realization, the builder from a chain run, the JSON codec and `reading_to_plan`, above `chain` and `plan`, target `ursatz_reading` | [reading](modules/reading.md) |
+| `text/` | Ursatz Text: the tree form of any JSON object and the codecs of plans, readings, realizations and knowledge through it, above `plan` and `reading`, target `ursatz_text` | [text/README.md](../text/README.md) |
 | `<group>/tests/`, `tests/` | Tests beside the code they test; the accuracy harness, integration tests and test support in `tests/` | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
 | `cmake/`, `scripts/` | Public header staging, docs check | [Public surface](public-surface.md) |

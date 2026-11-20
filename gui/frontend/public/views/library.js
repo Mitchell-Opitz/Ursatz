@@ -8,7 +8,8 @@ import { showCorpusDetail } from "./collections.js";
 import { startStyleBuild } from "./styles.js";
 import { buildSubjectsField } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
-import { fetchJsonResult, postJsonResult } from "../core/api.js";
+import { commandResult, fetchJsonResult } from "../core/api.js";
+import { commandRequest } from "../core/commands.js";
 
 /* The Library's current filter: composer, source, tag, unassigned (list of
  * "composer"/"source"), untagged, plus client-side search and sort. */
@@ -270,14 +271,14 @@ async function saveLibraryAsCollection(button) {
   const ids = libraryShownPieces.map((piece) => piece.id);
   button.disabled = true;
   statusEl.classList.remove("error");
-  const created = await postJsonResult("/api/corpus", { name });
+  const created = await commandResult("collection.create", { params: { name } });
   if (!created.ok || !created.data || !created.data.ok) {
     statusEl.textContent = collectionResultError(created, "Could not create the collection.");
     statusEl.classList.add("error");
     button.disabled = false;
     return;
   }
-  const added = await postJsonResult(`/api/corpus/${created.data.id}/pieces`, PieceMetadata.addPiecesBody(ids));
+  const added = await commandResult("collection.add-pieces", { target: created.data.id, params: PieceMetadata.addPiecesBody(ids) });
   if (!added.ok || !added.data || !added.data.ok) {
     statusEl.textContent = `Created "${created.data.name}" but adding pieces failed: ${collectionResultError(added, "failed")}`;
     statusEl.classList.add("error");
@@ -373,11 +374,7 @@ async function applyBulkEdit(action, rawValue) {
   const labels = new Map(libraryShownPieces.map((piece) => [piece.id, piece.filename || piece.id]));
   let failure = "";
   for (const id of selectedLibraryIds()) {
-    const result = await fetchJsonResult(`/api/analyzer/pieces/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const result = await commandResult("library.update", { target: id, params: body });
     if (!result.ok || !result.data || !result.data.ok) {
       const reason = (result.data && result.data.error) || "failed";
       failure = `Stopped at ${labels.get(id) || id}: ${reason}`;
@@ -585,11 +582,7 @@ async function startLibraryEdit(row, piece) {
       source: source.value,
       tags: tagInput.getTags(),
     };
-    const result = await fetchJsonResult(`/api/analyzer/pieces/${piece.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const result = await commandResult("library.update", { target: piece.id, params: body });
     if (!result.ok || !result.data || !result.data.ok) {
       errorEl.textContent = (result.data && result.data.error) || "Save failed.";
       return;
@@ -626,7 +619,7 @@ async function handleDeleteLibraryPiece(id, rowEl) {
   const statusEl = document.getElementById("library-status");
 
   try {
-    const answer = await ApiRequest.apiRequest("DELETE", `/api/analyzer/pieces/${id}`);
+    const answer = await commandResult("library.delete", { target: id });
     const data = answer.data || {};
 
     if (!answer.ok) {
@@ -730,12 +723,9 @@ async function runUploadQueue(idPrefix, files, onUploaded) {
     show();
     try {
       const bytes = await files[i].arrayBuffer();
-      const res = await BackendJobs.runJob({
-        url: "/api/analyzer/pieces",
-        method: "POST",
-        headers: { "X-Filename": encodeURIComponent(files[i].name) },
-        body: bytes,
-      });
+      const res = await BackendJobs.runJob(
+        commandRequest("library.import", { params: { filename: files[i].name }, file: bytes, filename: files[i].name }),
+      );
       const data = res.body || {};
       if (!data.ok) {
         queue = UploadQueue.markFailed(queue, i, data.error || "Upload failed.");
