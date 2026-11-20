@@ -1,0 +1,28 @@
+ursatz-text 1 view harmony bach-114
+key G major from bar 1
+bar 1  I IV@4
+bar 2  vi ii@3 I@4
+bar 3  I iii6@2 I@3
+bar 4  I6 IV@4
+bar 5  vi ii6/5@2 vii°@4 I@4.5
+bar 6  I6
+bar 7  I IV6/4@3
+bar 8  vi ii@3 I@4
+bar 9  I iii6@2 I@3
+bar 10  I6 IV@4
+bar 11  vi ii6/5@2 vii°@4 I@4.5
+bar 12  I6
+bar 13  I7 vi@4
+bar 14  V6/4/V
+bar 15  V
+bar 16  iii V@1.5 IV@2 iii@4 ii@4.5
+bar 17  I vii∅7@4
+bar 18  I
+bar 19  I7 vi@4
+bar 20  V6/4/V
+bar 21  V
+bar 22  iii V@1.5 IV@2 iii@4 ii@4.5
+bar 23  I vii∅7@4
+bar 24  I
+# leaves out: notes, chord spellings, functions (--view full)
+# expand: ursatz show <address> --view line:melody

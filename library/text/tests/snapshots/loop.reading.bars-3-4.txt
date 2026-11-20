@@ -1,0 +1,17 @@
+ursatz-text 1 view reading loop
+bar 3
+  theme theme-1  bars 3-10
+  phrase middle  bars 3-10
+  subphrase subphrase-1  bars 3-6
+  idea basic-idea  bars 3-4
+  chord vi6  @1  c=0.02
+  motive 0 exact  @1-@3
+  motive 1 exact  @1-@1
+  motive 2 exact  @2-@4
+  motive 3 exact  @3-@1
+bar 4
+  chord vii°6  @1  c=0.46
+  chord I6  @3  c=0.14
+  fault unresolved-leading-tone  @1
+# leaves out: evidence, ids, chord detail (--view full), bars outside 3-4
+# expand: ursatz show <address> --view harmony

@@ -1,0 +1,97 @@
+ursatz-text 1 view part:piano loop
+bar 1
+  S1 V1  F#5:q A5:e F#5:e B5:q G5:q
+  S2 V2  D3:h G2:h
+bar 2
+  S1 V1  E4:q A4:e C#5:q B4:q A4:e
+  S2 V2  A2:w
+bar 3
+  S1 V1  F#4:q A4:e G4:e B4:q A4:q
+  S2 V2  D3:w
+bar 4
+  S1 V1  C#5:q C#4:e E4:e A4:q D4:q
+  S2 V2  E3:h F#3:h
+bar 5
+  S1 V1  F#4:q A4:e G4:e B4:q A4:q
+  S2 V2  D3:w
+bar 6
+  S1 V1  C#5:q C#4:e E4:e A4:q D4:q
+  S2 V2  E3:h F#3:h
+bar 7
+  S1 V1  F#5:q A5:e G5:q F#5:e D5:q
+  S2 V2  D3:w
+bar 8
+  S1 V1  G5:q B5:e A5:q G5:e D5:q
+  S2 V2  G3:w
+bar 9
+  S1 V1  E4:e A4:s A4:s E4:q C#4:e D4:s E4:s E4:q
+  S2 V2  A3:w
+bar 10
+  S1 V1  F#4:w
+  S2 V2  D3:w
+bar 11
+  S1 V1  F#5:q A5:e G5:e B5:q A5:q
+  S2 V2  D3:h A3:h
+bar 12
+  S1 V1  F#5:q F#5:e F#4:e F#4:q A4:e G4:e
+  S2 V2  D3:h D3:h
+bar 13
+  S1 V1  B4:q A4:q r:h
+  S2 V2  A2:h r:h
+bar 14
+bar 15
+bar 16
+bar 17
+bar 18
+bar 19
+bar 20
+bar 21
+bar 22
+bar 23
+bar 24
+bar 25
+bar 26
+bar 27
+bar 28
+bar 29
+bar 30
+bar 31
+bar 32
+bar 33
+bar 34
+bar 35
+bar 36
+bar 37
+bar 38
+bar 39
+bar 40
+bar 41
+bar 42
+bar 43
+bar 44
+bar 45
+bar 46
+bar 47
+bar 48
+bar 49
+bar 50
+bar 51
+bar 52
+bar 53
+bar 54
+bar 55
+bar 56
+bar 57
+bar 58
+bar 59
+bar 60
+bar 61
+bar 62
+bar 63
+bar 64
+bar 65
+bar 66
+bar 67
+bar 68
+# leaves out: ids, derivations, flags, pedals (--view full)
+# expand: ursatz show <address> --view reading

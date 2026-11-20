@@ -1,0 +1,12 @@
+ursatz-text 1 view harmony loop
+key D major from bar 1
+bar 3  I
+bar 4  viio6 I6@3
+bar 5  I
+bar 6  viio6 I6@3
+bar 7  I
+bar 8  IV
+bar 9  V
+bar 10  I
+# leaves out: notes, chord spellings, functions (--view full), bars outside 3-10
+# expand: ursatz show <address> --view line:melody

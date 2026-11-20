@@ -1,0 +1,40 @@
+ursatz-text 1 view line:melody fill
+bar 1  E4:e B4:e B4:q B4:q F5:q
+bar 2  D5:e D5:e D5:q C5:q G5:q
+bar 3  E4:e B4:e B4:q B4:q F5:q
+bar 4  D5:e D5:e D5:q C5:q G5:q
+bar 5  C5:q E5:q E4:q G4:q
+bar 6  A4:q C5:q C6:q A5:q
+bar 7  D4:s B4:s B4:e B4:q G5:s F5:s E5:e D5:q
+bar 8  C5:w
+bar 9  E5:e G4:e G4:q G4:q E4:q
+bar 10  G4:e F4:e E4:q E4:q C4:q
+bar 11  E5:e G4:e G4:q G4:q E4:q
+bar 12  G4:e E4:e E4:q E4:q C4:q
+bar 13  E5:e G4:e G4:q E4:e F4:e G4:q
+bar 14  C5:e F4:e F4:q F5:e C5:e A4:q
+bar 15  F5:s A4:s A4:e D5:q B4:s B4:s B4:e B4:q
+bar 16  C5:w
+bar 17  E4:e B4:e B4:q B4:q E5:q
+bar 18  E4:e A3:e A3:q A3:q E3:q
+bar 19  E5:e A4:e A4:q A4:q E4:q
+bar 20  E5:e A4:e A4:q r:h
+bar 21  D5:e G4:e G4:q r:h
+bar 22  E5:s A4:s A4:e C5:q r:h
+bar 23  E4:e A3:e A3:q r:h
+bar 24  E5:s A4:s A4:e C5:q r:h
+bar 25  E4:e B4:e B4:q B4:q E5:q
+bar 26  B4:q E5:q r:h
+bar 27  A4:q D5:q r:h
+bar 28  E4:s B4:s B4:e C5:q r:h
+bar 29  B4:q E5:q r:h
+bar 30  E4:s B4:s B4:e C5:q r:h
+bar 31  r:w
+bar 32  r:w
+bar 33  r:w
+bar 34  r:w
+bar 35  r:w
+bar 36  r:w
+bar 37  r:w
+# leaves out: ids, derivations, constraints (--view full)
+# expand: ursatz show <address> --view part:<name>

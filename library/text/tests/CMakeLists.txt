@@ -57,3 +57,10 @@ ursatz_test(text_layers LIBS ursatz_text ursatz_test_support VALGRIND
         TEXT_KNOWLEDGE_FILES="${CMAKE_CURRENT_BINARY_DIR}/text_knowledge_files.txt"
         TEXT_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
         TEXT_READING_MOZART="${CMAKE_SOURCE_DIR}/tests/fixtures/readings/mozart-545.michelle.json")
+
+# The views, against goldens in snapshots/ (URSATZ_UPDATE_GOLDENS=1 rewrites them).
+ursatz_test(text_views LIBS ursatz_text ursatz_test_support VALGRIND LABELS golden
+    DEFINITIONS
+        TEXT_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+        TEXT_SNAPSHOTS="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+        TEXT_SOURCE_ROOT="${CMAKE_SOURCE_DIR}")

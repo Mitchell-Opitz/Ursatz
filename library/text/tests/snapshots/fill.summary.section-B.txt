@@ -1,0 +1,5 @@
+ursatz-text 1 view summary fill
+fill  form binary  home C major  4/4  bars 1-37
+  B  bars 9-16  letter B  harmony I | - | I | - | I | IV | ii V | I
+# leaves out: notes, constraints, ids, spans (--view full), bars outside 9-16
+# expand: ursatz show <address>/<section> --view structure

@@ -1,0 +1,115 @@
+ursatz-text 1 view part:P1 bach-114
+bar 1
+  S1 V1  r:q B4:s C5:s D5:e G4:e G4:e r:q
+  S1 V2  r:h. E5:e C5:s D5:s
+  S1 V3  r:27/32 C5:1/64 B4:1/64 r:e
+  S1 V4  D5:e G4:s A4:s r:h.
+  S2 V1  D4:q r:h C4:q
+  S2 V2  B3:q A3:e B3:q r:q.
+  S2 V3  G3:q r:h.
+bar 2
+  S1 V1  E5:s F#5:s G5:e G4:e G4:e r:q B4:s A4:s B4:e
+  S1 V2  r:15/32 C5:1/64 B4:1/64 C5:e D5:s C5:s r:q
+  S2 V1  r:h A3:q r:q
+  S2 V2  r:e B3:q r:h G3:q
+bar 3
+  S1 V1  C5:s B4:s A4:s G4:s F#4:e G4:s A4:s B4:s G4:s B4:e A4:q
+  S2 V2  r:e D4:e B3:e G3:e D4:e D3:s C4:s B3:s A3:s
+bar 4
+  S1 V1  r:q B4:s C5:s D5:e r:h
+  S1 V2  D5:e G4:s A4:s r:q G4:e G4:e E5:e C5:s D5:s
+  S1 V3  r:27/32 C5:1/64 B4:1/64 r:e
+  S2 V1  B3:q r:q B3:e G3:e C4:q
+  S2 V2  r:q A3:e G3:e r:h
+bar 5
+  S1 V1  E5:s F#5:s G5:e r:h B4:s A4:s B4:e
+  S1 V2  r:q G4:e G4:e C5:e D5:s C5:s r:q
+  S1 V3  r:15/32 C5:1/64 B4:1/64 r:h
+  S2 V1  r:q C4:s B3:s A3:s G3:s A3:q r:q
+  S2 V2  r:e B3:e r:h F#3:e G3:e
+bar 6
+  S1 V1  C5:s B4:s A4:s G4:s A4:e B4:s A4:s G4:s F#4:s G4:q r:e
+  S2 V1  r:h.. G2:e
+  S2 V2  r:e B3:e C4:e D4:e D3:e G3:q r:e
+bar 7
+  S1 V1  r:q B4:s C5:s D5:e G4:e G4:e r:q
+  S1 V2  r:h. E5:e C5:s D5:s
+  S1 V3  r:27/32 C5:1/64 B4:1/64 r:e
+  S1 V4  D5:e G4:s A4:s r:h.
+  S2 V1  D4:q r:h C4:q
+  S2 V2  B3:q A3:e B3:e r:h
+  S2 V3  G3:q r:h.
+bar 8
+  S1 V1  E5:s F#5:s G5:e G4:e G4:e r:q B4:s A4:s B4:e
+  S1 V2  r:15/32 C5:1/64 B4:1/64 C5:e D5:s C5:s r:q
+  S2 V1  r:h A3:q r:q
+  S2 V2  r:e B3:q r:h G3:q
+bar 9
+  S1 V1  C5:s B4:s A4:s G4:s F#4:e G4:s A4:s B4:s G4:s B4:e A4:q
+  S2 V2  r:e D4:e B3:e G3:e D4:e D3:s C4:s B3:s A3:s
+bar 10
+  S1 V1  r:q B4:s C5:s D5:e r:h
+  S1 V2  D5:e G4:s A4:s r:q G4:e G4:e E5:e C5:s D5:s
+  S1 V3  r:27/32 C5:1/64 B4:1/64 r:e
+  S2 V1  B3:q r:q B3:e G3:e C4:q
+  S2 V2  r:q A3:e G3:e r:h
+bar 11
+  S1 V1  E5:s F#5:s G5:e r:h B4:s A4:s B4:e
+  S1 V2  r:q G4:e G4:e C5:e D5:s C5:s r:q
+  S1 V3  r:15/32 C5:1/64 B4:1/64 r:h
+  S2 V1  r:q C4:s B3:s A3:s G3:s A3:q r:q
+  S2 V2  r:e B3:e r:h F#3:e G3:e
+bar 12
+  S1 V1  C5:s B4:s A4:s G4:s A4:e B4:s A4:s G4:s F#4:s G4:q r:e
+  S2 V1  r:h.. G2:e
+  S2 V2  r:e B3:e C4:e D4:e D3:e G3:q r:e
+bar 13
+  S1 V1  B5:e G5:s A5:s B5:s G5:s A5:e D5:s E5:s F#5:s D5:s G5:e E5:s F#5:s
+  S2 V2  G3:q. F#3:q. E3:e G3:e
+bar 14
+  S1 V1  G5:s D5:s C#5:e B4:s C#5:s A4:e A4:s B4:s C#5:s D5:s E5:s F#5:s G5:e
+  S2 V2  E3:e A3:q A2:e A3:q. B3:e
+bar 15
+  S1 V1  F#5:e E5:e F#5:e A4:e C#5:e D5:e r:q
+  S2 V1  r:h. D3:e C4:e
+  S2 V2  D4:e C#4:e D4:e F#3:e A3:e D4:e r:q
+bar 16
+  S1 V1  D5:e G4:s F#4:s G4:e E5:e G4:s F#4:s G4:e D5:e C5:e
+  S2 V2  B3:e D4:e B3:e C4:e E4:e C4:e B3:e A3:e
+bar 17
+  S1 V1  B4:e A4:s G4:s F#4:s G4:s A4:e D4:s E4:s F#4:s G4:s A4:s B4:s C5:s r:s
+  S2 V2  G3:e D4:q r:e D3:q F#3:e E3:e
+bar 18
+  S1 V1  r:e A4:e B4:s D5:s G4:e F#4:e G4:q r:e
+  S1 V2  C5:1/64 B4:1/64 C5:1/64 B4:s r:57/64
+  S2 V1  G3:e r:h. G2:e
+  S2 V2  r:e F#3:e G3:e B2:e D3:e D4:q r:e
+  S2 V3  r:5/8 B3:q r:e
+  S2 V4  r:5/8 G3:q r:e
+  S2 V5  r:h. D3:e r:e
+bar 19
+  S1 V1  B5:e G5:s A5:s B5:s G5:s A5:e D5:s E5:s F#5:s D5:s G5:e E5:s F#5:s
+  S2 V2  G3:q. F#3:q. E3:e G3:e
+bar 20
+  S1 V1  G5:s D5:s C#5:e B4:s C#5:s A4:e A4:s B4:s C#5:s D5:s E5:s F#5:s G5:e
+  S2 V2  E3:e A3:q A2:e A3:q. B3:e
+bar 21
+  S1 V1  F#5:e E5:e F#5:e A4:e C#5:e D5:e r:q
+  S2 V1  r:h. D3:e C4:e
+  S2 V2  D4:e C#4:e D4:e F#3:e A3:e D4:e r:q
+bar 22
+  S1 V1  D5:e G4:s F#4:s G4:e E5:e G4:s F#4:s G4:e D5:e C5:e
+  S2 V2  B3:e D4:e B3:e C4:e E4:e C4:e B3:e A3:e
+bar 23
+  S1 V1  B4:e A4:s G4:s F#4:s G4:s A4:e D4:s E4:s F#4:s G4:s A4:s B4:s C5:s r:s
+  S2 V2  G3:e D4:q r:e D3:q F#3:e E3:e
+bar 24
+  S1 V1  r:e A4:e B4:s D5:s G4:e F#4:e G4:q r:e
+  S1 V2  C5:1/64 B4:1/64 C5:1/64 B4:s r:57/64
+  S2 V1  G3:e r:h. G2:e
+  S2 V2  r:e F#3:e G3:e B2:e D3:e D4:q r:e
+  S2 V3  r:5/8 B3:q r:e
+  S2 V4  r:5/8 G3:q r:e
+  S2 V5  r:h. D3:e r:e
+# leaves out: ids, derivations, flags, pedals (--view full)
+# expand: ursatz show <address> --view reading

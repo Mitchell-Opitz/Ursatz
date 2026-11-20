@@ -1,0 +1,72 @@
+ursatz-text 1 view harmony loop
+key D major from bar 1
+bar 1  I IV@3
+bar 2  V
+bar 3  I
+bar 4  viio6 I6@3
+bar 5  I
+bar 6  viio6 I6@3
+bar 7  I
+bar 8  IV
+bar 9  V
+bar 10  I
+bar 11  I V7@3
+bar 12  I I@3
+bar 13  I@3 V
+bar 14  -
+bar 15  -
+bar 16  -
+bar 17  -
+bar 18  -
+bar 19  -
+bar 20  -
+bar 21  -
+bar 22  -
+bar 23  -
+bar 24  -
+bar 25  -
+bar 26  -
+bar 27  -
+bar 28  -
+bar 29  -
+bar 30  -
+bar 31  -
+bar 32  -
+bar 33  -
+bar 34  -
+bar 35  -
+bar 36  -
+bar 37  -
+bar 38  -
+bar 39  -
+bar 40  -
+bar 41  -
+bar 42  -
+bar 43  -
+bar 44  -
+bar 45  -
+bar 46  -
+bar 47  -
+bar 48  -
+bar 49  -
+bar 50  -
+bar 51  -
+bar 52  -
+bar 53  -
+bar 54  -
+bar 55  -
+bar 56  -
+bar 57  -
+bar 58  -
+bar 59  -
+bar 60  -
+bar 61  -
+bar 62  -
+bar 63  -
+bar 64  -
+bar 65  -
+bar 66  -
+bar 67  -
+bar 68  -
+# leaves out: notes, chord spellings, functions (--view full)
+# expand: ursatz show <address> --view line:melody

@@ -1,0 +1,12 @@
+ursatz-text 1 view summary loop
+loop  form game-loop  home D major  4/4  bars 1-68
+  intro  bars 1-2  role intro  letter I  harmony I IV | V
+  a  bars 3-10  role body  letter A  harmony I | viio6 I6 | I | viio6 I6 | I | IV | V | I
+  b  bars 11-12  role body  letter B  harmony I V7 | I I
+  t  bars 12-13  role turnaround  letter T  harmony I I | I V
+  seam  bars 13-14  role seam  harmony I V | -
+  material  bars 15-68  role material
+lines melody | bass
+parts piano: melody bass
+# leaves out: notes, constraints, ids, spans (--view full)
+# expand: ursatz show <address>/<section> --view structure
