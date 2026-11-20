@@ -207,7 +207,7 @@ uses workshop-api common cjson
 uses workshop-base common composer-api analyzer-api theory pitch cjson
 uses workshop-jobs workshop-base common composer-api cjson
 uses workshop-items workshop-api workshop-base workshop-jobs common composer-api analyzer-api realization reading cjson
-uses workshop-analysis workshop-base workshop-items workshop-jobs common composer-api analyzer-api theory-style realization reading cjson
+uses workshop-analysis workshop-base workshop-items workshop-jobs common composer-api analyzer-api theory-style theory-knowledge io plan realization reading cjson
 uses workshop-composition workshop-base workshop-items workshop-analysis workshop-jobs common composer-api analyzer-api cjson
 uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
 uses workshop-coordinator workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering composer-api analyzer-api common cjson

@@ -53,3 +53,15 @@ workshop/src/analysis/passages.c workshop_corpus_passages  # behind the tool cor
 workshop/src/base/names.c workshop_pitch_names  # behind the tool pitch-names, which the command line calls from P64 B4
 workshop/src/composition/composer_tool.c workshop_composer_tool  # behind the tool composer, which the command line calls from P64 B4
 workshop/src/coordinator/tools.c add_text  # a helper of the tool composer, which the command line calls from P64 B4
+workshop/src/coordinator/tools.c workshop_t_analyze  # a tool the command line calls from P64 B6 (reached through workshop_tool until then)
+workshop/src/coordinator/tools.c workshop_t_corpus  # a tool the command line calls from P64 B6 (reached through workshop_tool until then)
+workshop/src/coordinator/tools.c workshop_t_style_profile  # a tool the command line calls from P64 B6 (reached through workshop_tool until then)
+workshop/src/coordinator/tools.c optional_string  # a helper of the analyze, corpus and style-profile tools, until P64 B6
+workshop/src/coordinator/tools.c optional_flag  # a helper of the analyze and corpus tools, until P64 B6
+workshop/src/analysis/analyze_tool.c workshop_analyze  # behind the tool analyze, which the command line calls from P64 B6
+workshop/src/analysis/corpus_tools.c workshop_corpus_run  # behind the tool corpus, which the command line calls from P64 B6
+workshop/src/analysis/corpus_tools.c workshop_style_profile  # behind the tool style-profile, which the command line calls from P64 B6
+workshop/src/analysis/analyze_tool.c add_text  # a helper of the tool analyze, which the command line calls from P64 B6
+workshop/src/analysis/analyze_tool.c model_plan_text  # a helper of the tool analyze, which the command line calls from P64 B6
+workshop/src/analysis/corpus_tools.c collect_piece  # a helper of the tool corpus, which the command line calls from P64 B6
+workshop/src/analysis/corpus_tools.c join  # a helper of the tools corpus and style-profile, which the command line calls from P64 B6
