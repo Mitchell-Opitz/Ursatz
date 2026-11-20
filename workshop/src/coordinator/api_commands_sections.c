@@ -47,7 +47,10 @@ static UrsatzStatus check_edited(const cJSON *body, UrsatzError *error) {
     }
     UrsatzStatus status = composer.status;
     if (status != URSATZ_OK) {
-        workshop_call_fail(error, status, composer.path, "%s", composer.message[0] ? composer.message : "the Composer refused the request");
+        /* the Composer's path points into the request; the request is the member /request of the body */
+        char path[160];
+        snprintf(path, sizeof path, "/request%s", composer.path);
+        workshop_call_fail(error, status, path, "%s", composer.message[0] ? composer.message : "the Composer refused the request");
     }
     workshop_composer_reply_destroy(&composer);
     return status;
