@@ -4,7 +4,7 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 ## Unreleased (phase P62)
 
-API 4.1 (R-649, P63 B14): the vocabulary lists `theme_developments` (`word`, `label`, `help`) and `lanes` and the limits `theme_motives` (16), `theme_extensions` (3), `piece_variations` (8) and `harmony_cells` (8), so a client holds no copy of them.
+API 4.1 (R-649, P63 B14): the vocabulary lists `theme_developments` (`value`, `label`, `help`) and `lanes` and the limits `theme_motives` (16), `theme_extensions` (3), `piece_variations` (8) and `harmony_cells` (8), so a client holds no copy of them.
 
 The Composer's hearing gives readings, and the critic reads them (R-633, B12; A20261115-655). `hearing_section_reading` and `hearing_piece_reading` (`check/hearing.c`) build a reading of a heard span with `reading_build` over the span's chain run: source the Composer (its composition key and the snapshot's hash), target `w1`, `m1` and no digest until `hearing_piece_reading_of` names it, evidence the performer note ids of the work (`piano-n<plan note id>`, `piano-e<n>` for a note with no plan note: `rendered_plan_note_id`). The analyzer check (`analyzer_check`), the form hearing (`form_hear`), the key check and the style measure read the reading's claims in place of the chain's result; `hearing_event_of_note` maps a performer note id back to a rendered event. `tools/ci/check-hearing.sh` also fails on `reading_build` or a chain result accessor outside `check/hearing.c`. `candidate_create` lost its two Interpretation arrays with the claim machinery (B11). Composed output does not move (the gate and the piece sweep hold). New: `test_hearing_reading`.
 

@@ -594,7 +594,7 @@ static bool add_theme_developments(cJSON *root) {
     cJSON *list = add_list(root, "theme_developments");
     for (size_t i = 0; list && i < sizeof(DEVELOPMENTS) / sizeof(DEVELOPMENTS[0]); i++) {
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !cJSON_AddStringToObject(entry, "word", DEVELOPMENTS[i].word) || !cJSON_AddStringToObject(entry, "label", DEVELOPMENTS[i].label) ||
+        if (!entry || !cJSON_AddStringToObject(entry, "value", DEVELOPMENTS[i].word) || !cJSON_AddStringToObject(entry, "label", DEVELOPMENTS[i].label) ||
             !cJSON_AddStringToObject(entry, "help", DEVELOPMENTS[i].help) || !cJSON_AddItemToArray(list, entry)) {
             cJSON_Delete(entry);
             return false;
