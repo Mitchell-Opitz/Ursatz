@@ -111,34 +111,26 @@ static int send_body_failure(struct mg_connection *conn, int status, const char 
   return ursatz_gui_send_failure(conn, status, message);
 }
 
-/* Reports a failure: sent when the caller asked for a status, silent otherwise. */
-static cJSON *fail(struct mg_connection *conn, int *status, int code, const char *reason, const char *message) {
-  if (status) {
-    *status = send_body_failure(conn, code, reason, message);
-  }
-  return NULL;
-}
-
-cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_bytes, int *status_or_null) {
+/* The request body the route reads, up to cap bytes: the one reader of every route (R-647). Over the cap is a REQUEST at /body/size (413), a body that cannot
+ * be read a REQUEST at /body (400). *data is NUL-terminated and the caller's (free it). */
+UrsatzStatus ursatz_gui_read_body(struct mg_connection *conn, size_t cap, char **data, size_t *size, UrsatzError *error) {
   size_t capacity = 4096;
-  char *buffer = malloc(capacity);
   size_t total = 0;
-  if (status_or_null) {
-    *status_or_null = 400;
-  }
+  char *buffer = malloc(capacity);
+  *data = NULL;
   if (!buffer) {
-    return fail(conn, status_or_null, 500, "Internal Server Error", "out of memory");
+    return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
   }
   for (;;) {
     if (total + 1 >= capacity) {
-      if (capacity > max_bytes) {
+      if (capacity > cap) {
         free(buffer);
-        return fail(conn, status_or_null, 413, "Payload Too Large", "request body too large");
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, "/body/size", "request body too large");
       }
       char *grown = realloc(buffer, capacity * 2);
       if (!grown) {
         free(buffer);
-        return fail(conn, status_or_null, 500, "Internal Server Error", "out of memory");
+        return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
       }
       buffer = grown;
       capacity *= 2;
@@ -146,28 +138,49 @@ cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_byte
     int n = mg_read(conn, buffer + total, capacity - total - 1);
     if (n < 0) {
       free(buffer);
-      return fail(conn, status_or_null, 400, "Bad Request", "cannot read the request body");
+      return ursatz_error_set(error, URSATZ_ERR_REQUEST, "/body", "cannot read the request body");
     }
     if (n == 0) {
       break;
     }
     total += (size_t)n;
-    if (total > max_bytes) {
+    if (total > cap) {
       free(buffer);
-      return fail(conn, status_or_null, 413, "Payload Too Large", "request body too large");
+      return ursatz_error_set(error, URSATZ_ERR_REQUEST, "/body/size", "request body too large");
     }
   }
   buffer[total] = '\0';
-  cJSON *body = cJSON_Parse(buffer);
-  free(buffer);
-  if (!cJSON_IsObject(body)) {
+  *data = buffer;
+  if (size) {
+    *size = total;
+  }
+  return URSATZ_OK;
+}
+
+/* The request body as a JSON object (caller frees), up to max_bytes; NULL after sending the failure envelope (status in *status_or_null when given,
+ * else nothing is sent and the caller answers). */
+cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_bytes, int *status_or_null) {
+  char *text = NULL;
+  UrsatzError error = {{0}, {0}};
+  UrsatzStatus read = ursatz_gui_read_body(conn, max_bytes, &text, NULL, &error);
+  cJSON *body = read == URSATZ_OK ? cJSON_Parse(text) : NULL;
+  free(text);
+  if (read == URSATZ_OK && !cJSON_IsObject(body)) {
     cJSON_Delete(body);
-    return fail(conn, status_or_null, 400, "Bad Request", "the body must be a JSON object");
+    body = NULL;
+    ursatz_error_set(&error, URSATZ_ERR_REQUEST, "/body", "the body must be a JSON object");
+    read = URSATZ_ERR_REQUEST;
+  }
+  if (body) {
+    if (status_or_null) {
+      *status_or_null = 200;
+    }
+    return body;
   }
   if (status_or_null) {
-    *status_or_null = 200;
+    *status_or_null = ursatz_gui_failed(conn, read, &error);
   }
-  return body;
+  return NULL;
 }
 
 cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null) {
@@ -175,6 +188,9 @@ cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null
 }
 
 int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
+  if (status == URSATZ_ERR_REQUEST && error && strcmp(error->path, "/body/size") == 0) {
+    return 413;
+  }
   switch (status) {
     case URSATZ_OK:
       return 200;
@@ -341,12 +357,12 @@ cJSON *ursatz_gui_request_params(struct mg_connection *conn, ...) {
 /* A path that points into the call itself ("/params/...", "/target", "/bytes") says what is wrong with the request's own members: a 400. A path into
  * the request the Composer reads (the body of a motif, a theme, a piece) is the member the Composer refused: a 422. */
 static int is_call_path(const char *path) {
-  return strncmp(path, "/params", 7) == 0 || strncmp(path, "/target", 7) == 0 || strncmp(path, "/bytes", 6) == 0 ||
+  return strncmp(path, "/params", 7) == 0 || strncmp(path, "/body", 5) == 0 || strncmp(path, "/target", 7) == 0 || strncmp(path, "/bytes", 6) == 0 ||
          strncmp(path, "/base_version", 13) == 0;
 }
 
 int ursatz_gui_failed(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  int http = ursatz_gui_http_status(status, is_call_path(error->path) ? NULL : error);
+  int http = ursatz_gui_http_status(status, is_call_path(error->path) && strcmp(error->path, "/body/size") != 0 ? NULL : error);
   return ursatz_gui_send_failure_at(conn, http, error->message, ursatz_status_name(status), error->path);
 }
 

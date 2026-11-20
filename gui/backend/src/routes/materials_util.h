@@ -16,7 +16,6 @@
 #include "jobs_routes.h"
 #include "route_util.h"
 
-static const size_t kMaxRequestBodySize = 256 * 1024;
 
 /* The failure envelope with a path (the request member the Composer refused, as a JSON Pointer) when it has one. */
 static inline int send_failure_at(struct mg_connection *conn, int status, const char *message, const char *path) {
@@ -49,9 +48,9 @@ static inline int send_ok(struct mg_connection *conn) {
 }
 
 /* Reads the request body as a JSON object. Returns NULL after sending the failure (400, or 413 past
- * kMaxRequestBodySize); *status is then what the caller returns. */
+ * URSATZ_GUI_JSON_BODY_MAX_BYTES); *status is then what the caller returns. */
 static inline cJSON *read_json_body(struct mg_connection *conn, int *status) {
-  return ursatz_gui_read_json_body_max(conn, kMaxRequestBodySize, status);
+  return ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, status);
 }
 
 /* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
@@ -82,10 +81,10 @@ static inline bool query_value(const struct mg_connection *conn, const char *nam
   ursatz_gui_answer_query((conn), (name), ursatz_gui_request_params((conn), __VA_ARGS__, NULL), NULL, (failed), (bare))
 
 /* Runs the query name with the request's JSON body as params (and the id of the path as "id" when given). The body's failures are
- * answered here (400, or 413 past kMaxRequestBodySize). */
+ * answered here (400, or 413 past URSATZ_GUI_JSON_BODY_MAX_BYTES). */
 static inline int query_with_body(struct mg_connection *conn, const char *name, UrsatzGuiFailureFn failed, bool bare, const char *id) {
   int status = 0;
-  cJSON *body = ursatz_gui_read_json_body_max(conn, kMaxRequestBodySize, &status);
+  cJSON *body = ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, &status);
   if (!body) {
     return status;
   }
@@ -97,10 +96,10 @@ static inline int query_with_body(struct mg_connection *conn, const char *name, 
 }
 
 /* Runs the command name on target with the request's JSON body as params. The body's failures are answered here (400, or 413 past
- * kMaxRequestBodySize). */
+ * URSATZ_GUI_JSON_BODY_MAX_BYTES). */
 static inline int command_with_body(struct mg_connection *conn, const char *name, const char *target, UrsatzGuiFailureFn failed) {
   int status = 0;
-  cJSON *body = ursatz_gui_read_json_body_max(conn, kMaxRequestBodySize, &status);
+  cJSON *body = ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, &status);
   if (!body) {
     return status;
   }

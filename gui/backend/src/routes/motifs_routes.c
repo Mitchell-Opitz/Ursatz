@@ -7,62 +7,22 @@
 
 #include "materials_util.h"
 
-/* Reads the raw request body (a file) of up to kMaxRequestBodySize bytes. NULL after sending the failure. */
-static unsigned char *read_file_body(struct mg_connection *conn, size_t *size, int *status) {
-  size_t capacity = 4096;
-  unsigned char *buffer = malloc(capacity);
-  size_t total = 0;
-  if (!buffer) {
-    *status = send_failure(conn, 500, "out of memory");
-    return NULL;
-  }
-  for (;;) {
-    if (total == capacity) {
-      unsigned char *grown = realloc(buffer, capacity * 2);
-      if (!grown) {
-        free(buffer);
-        *status = send_failure(conn, 500, "out of memory");
-        return NULL;
-      }
-      buffer = grown;
-      capacity *= 2;
-    }
-    int n = mg_read(conn, buffer + total, capacity - total);
-    if (n < 0) {
-      free(buffer);
-      *status = send_failure(conn, 400, "cannot read the request body");
-      return NULL;
-    }
-    if (n == 0) {
-      break;
-    }
-    total += (size_t)n;
-    if (total > kMaxRequestBodySize) {
-      free(buffer);
-      *status = send_failure(conn, 413, "request body too large");
-      return NULL;
-    }
-  }
-  if (total == 0) {
-    free(buffer);
-    *status = send_failure(conn, 400, "a MIDI file is required");
-    return NULL;
-  }
-  *size = total;
-  *status = 200;
-  return buffer;
-}
-
 /* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers {"ok":true,"notes_text":...,
    "meter":"4/4","key":"C minor","material":...,"moved_from":"D minor"|null,"pickup":"0","analysis":{...}} and saves nothing. */
 static int motifs_import_motif(struct mg_connection *conn) {
   int status = 0;
   size_t size = 0;
-  unsigned char *bytes = read_file_body(conn, &size, &status);
-  if (!bytes) {
-    return status;
+  char *bytes = NULL;
+  UrsatzError read_error = {{0}, {0}};
+  UrsatzStatus read = ursatz_gui_read_body(conn, URSATZ_GUI_MIDI_MAX_BYTES, &bytes, &size, &read_error);
+  if (read == URSATZ_OK && size == 0) {
+    free(bytes);
+    return ursatz_gui_send_failure(conn, 400, "a MIDI file is required");
   }
-  WorkshopBytes file = {bytes, size, NULL};
+  if (read != URSATZ_OK) {
+    return ursatz_gui_failed(conn, read, &read_error);
+  }
+  WorkshopBytes file = {(const uint8_t *)bytes, size, NULL};
   status = ursatz_gui_answer_query(conn, "composer.import-motif", ursatz_gui_request_params(conn, NULL), &file, ursatz_gui_failed, true);
   free(bytes);
   return status;

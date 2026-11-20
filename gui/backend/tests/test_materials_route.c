@@ -1738,7 +1738,7 @@ static void test_random_motifs(void) {
 }
 
 static void test_body_limit(void) {
-  size_t size = 300 * 1024;
+  size_t size = 1100 * 1024;
   char *big = malloc(size + 64);
   int status = 0;
   if (!big) {
@@ -1750,7 +1750,7 @@ static void test_body_limit(void) {
   length += size;
   length += (size_t)snprintf(big + length, 16, "\"}");
   cJSON *answer = test_http_json(PORT, "POST", "/api/materials/projects", big, &status);
-  check(status == 413, "a body over 256 KB is 413");
+  check(status == 413, "a body over 1 MB is 413");
   cJSON_Delete(answer);
   free(big);
 }

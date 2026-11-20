@@ -11,51 +11,6 @@
 
 #include "route_util.h"
 
-static const size_t kReadChunkSize = 65536;
-static const size_t kMaxUploadSize = 64 * 1024 * 1024;
-
-/* Reads the full request body into a newly allocated buffer (caller
- * frees). Grows in kReadChunkSize steps since a raw binary upload's
- * Content-Length is not required to be trusted ahead of read. Returns
- * NULL on allocation failure or if the body exceeds kMaxUploadSize. */
-static unsigned char *read_request_body(struct mg_connection *conn, size_t *out_size) {
-  size_t capacity = kReadChunkSize;
-  unsigned char *buffer = malloc(capacity);
-  if (!buffer) {
-    return NULL;
-  }
-
-  size_t total = 0;
-  for (;;) {
-    if (total == capacity) {
-      if (capacity >= kMaxUploadSize) {
-        free(buffer);
-        return NULL;
-      }
-      size_t new_capacity = capacity * 2;
-      unsigned char *grown = realloc(buffer, new_capacity);
-      if (!grown) {
-        free(buffer);
-        return NULL;
-      }
-      buffer = grown;
-      capacity = new_capacity;
-    }
-
-    int n = mg_read(conn, buffer + total, capacity - total);
-    if (n < 0) {
-      free(buffer);
-      return NULL;
-    }
-    if (n == 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-
-  *out_size = total;
-  return buffer;
-}
 
 static char *empty_string_copy(void) {
   char *copy = malloc(1);
@@ -99,9 +54,11 @@ static int failed_job_command(struct mg_connection *conn, UrsatzStatus status, c
 
 static int handle_post(struct mg_connection *conn) {
   size_t body_size = 0;
-  unsigned char *body_data = read_request_body(conn, &body_size);
-  if (!body_data) {
-    return ursatz_gui_send_failure(conn, 400, "failed to read request body");
+  char *body_data = NULL;
+  UrsatzError read_error = {{0}, {0}};
+  UrsatzStatus read = ursatz_gui_read_body(conn, URSATZ_GUI_UPLOAD_MAX_BYTES, &body_data, &body_size, &read_error);
+  if (read != URSATZ_OK) {
+    return ursatz_gui_failed(conn, read, &read_error);
   }
 
   char *filename = read_filename_header(conn);
@@ -115,7 +72,7 @@ static int handle_post(struct mg_connection *conn) {
   if (params) {
     cJSON_AddStringToObject(params, "filename", filename);
   }
-  WorkshopBytes file = {body_data, body_size, filename};
+  WorkshopBytes file = {(const uint8_t *)body_data, body_size, filename};
   int status = ursatz_gui_answer_command(conn, "library.import", "", params, &file, failed_job_command, false);
   free(body_data);
   free(filename);
@@ -140,52 +97,13 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   return run_library_query(conn, "library.piece", id);
 }
 
-static char *read_patch_body(struct mg_connection *conn) {
-  size_t capacity = 4096;
-  char *buffer = malloc(capacity);
-  if (!buffer) {
-    return NULL;
-  }
-
-  size_t total = 0;
-  for (;;) {
-    if (total == capacity) {
-      char *grown = realloc(buffer, capacity * 2);
-      if (!grown) {
-        free(buffer);
-        return NULL;
-      }
-      buffer = grown;
-      capacity *= 2;
-    }
-
-    int n = mg_read(conn, buffer + total, capacity - total - 1);
-    if (n < 0) {
-      free(buffer);
-      return NULL;
-    }
-    if (n == 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-
-  buffer[total] = '\0';
-  return buffer;
-}
-
 /* PATCH /api/analyzer/pieces/<id>: filename, composer, source, tags, add_tags, remove_tags, notation (an object, or null to clear; all
  * optional, unknown members ignored). A changed notation analyzes the piece again before the answer. */
 static int handle_patch_piece(struct mg_connection *conn, const char *id) {
-  char *body = read_patch_body(conn);
-  if (!body) {
-    return ursatz_gui_send_failure(conn, 400, "failed to read request body");
-  }
-  cJSON *root = cJSON_Parse(body);
-  free(body);
-  if (!cJSON_IsObject(root)) {
-    cJSON_Delete(root);
-    return ursatz_gui_send_failure(conn, 400, "invalid request body");
+  int status = 0;
+  cJSON *root = ursatz_gui_read_json_body(conn, &status);
+  if (!root) {
+    return status;
   }
   return ursatz_gui_answer_command(conn, "library.update", id, root, NULL, ursatz_gui_failed, false);
 }

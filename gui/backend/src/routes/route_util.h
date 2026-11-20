@@ -12,6 +12,13 @@
 
 /* The largest request body ursatz_gui_read_json_body accepts. */
 #define URSATZ_GUI_JSON_BODY_MAX_BYTES (1024 * 1024)
+/* The caps of the one body reader (R-647): JSON 1 MB, an upload 64 MB, a MIDI motif 256 KB. */
+#define URSATZ_GUI_UPLOAD_MAX_BYTES (64 * 1024 * 1024)
+#define URSATZ_GUI_MIDI_MAX_BYTES (256 * 1024)
+
+/* Reads the request body up to cap bytes into *data (NUL-terminated, the caller frees) and its length into *size (may be NULL). Over the cap is REQUEST at
+ * "/body/size" (413), an unreadable body REQUEST at "/body" (400). */
+UrsatzStatus ursatz_gui_read_body(struct mg_connection *conn, size_t cap, char **data, size_t *size, UrsatzError *error);
 
 /* The HTTP status of a failed workshop call (R-639): 200 for OK, 400 for a request refused (422 when the error names the request member at fault),
  * 422 for UNSATISFIABLE, 404 for NOT_FOUND, 409 for CONFLICT, 499 for CANCELLED, 500 for every other failure. error may be NULL (no path). */
