@@ -245,3 +245,10 @@ int workshop_job_workers(const Workshop *workshop) {
 int workshop_port(const Workshop *workshop) {
     return workshop->port;
 }
+
+UrsatzStatus workshop_announce(Workshop *workshop, int port) {
+    if (!workshop || workshop->tools_only || port < 1 || port > 65535) {
+        return URSATZ_ERR_REQUEST;
+    }
+    return workshop_data_lock_announce(workshop->lock_descriptor, port, NULL);
+}

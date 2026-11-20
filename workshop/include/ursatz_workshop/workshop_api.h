@@ -195,6 +195,18 @@ void workshop_stop(Workshop *workshop);
 void workshop_close(Workshop *workshop);
 
 /*
+ * The lock file of the data folder, ".ursatz.lock", holds "<pid>\n" or "<pid> <port>\n" (R-659): the pid of the process that holds the folder and,
+ * when it serves HTTP, the port it announced. workshop_announce rewrites the file of the lock this workshop holds as "<pid> <port>\n" (URSATZ_ERR_REQUEST
+ * for a tools workshop and for a port outside 1 to 65535), so another program that finds the folder in use knows where to connect.
+ *
+ * workshop_lock_holder asks whether another open file holds the lock of data_dir: URSATZ_OK with the holder's pid and port (0 when it announced
+ * none), URSATZ_ERR_NOT_FOUND when there is no lock file or nobody holds it (what it took to find out is released), URSATZ_ERR_IO for a file it cannot
+ * open. It never keeps the lock.
+ */
+UrsatzStatus workshop_announce(Workshop *workshop, int port);
+UrsatzStatus workshop_lock_holder(const char *data_dir, long *pid, int *port, UrsatzError *error);
+
+/*
  * The versions the workshop was built with, as a JSON object (caller deletes): composer_version, api_version, producer_key,
  * composition_key and plan_format_version from composer_api_versions, analyzer_version and analyzer_producer_key from the Analyzer,
  * and data_dir.

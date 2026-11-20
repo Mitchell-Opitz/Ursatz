@@ -30,4 +30,7 @@ struct Workshop {
 UrsatzStatus workshop_data_lock_acquire(const char *data_dir, int *descriptor, UrsatzError *error);
 void workshop_data_lock_release(int descriptor);
 
+/* Rewrites the lock file this descriptor holds as "<pid> <port>\n" (workshop_announce). */
+UrsatzStatus workshop_data_lock_announce(int descriptor, int port, UrsatzError *error);
+
 #endif

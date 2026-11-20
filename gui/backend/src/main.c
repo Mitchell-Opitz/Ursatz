@@ -104,6 +104,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  /* The lock file names the port, so a command line that finds the folder in use connects here (R-659). */
+  if (workshop_announce(workshop, workshop_port(workshop)) != URSATZ_OK) {
+    fprintf(stderr, "ursatz-gui-backend: cannot write the port into the lock file\n");
+  }
   printf("ursatz-gui-backend listening on http://localhost:%s\n", port);
   fflush(stdout);
 
