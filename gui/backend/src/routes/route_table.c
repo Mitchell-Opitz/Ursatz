@@ -7,6 +7,7 @@
 
 #include "collections_routes.h"
 #include "composer_routes.h"
+#include "events_routes.h"
 #include "jobs_routes.h"
 #include "library_routes.h"
 #include "links_routes.h"
@@ -80,7 +81,7 @@ static const RouteFile kRouteFiles[] = {
     /* the motif rows first: "/items/validate" is a word, and a pattern with a placeholder must not take it */
     ursatz_gui_motifs_routes,  ursatz_gui_library_routes, ursatz_gui_collections_routes, ursatz_gui_composer_routes,
     ursatz_gui_styles_routes,  ursatz_gui_links_routes,   ursatz_gui_jobs_routes,        ursatz_gui_subjects_routes,
-    ursatz_gui_materials_routes,
+    ursatz_gui_materials_routes,    ursatz_gui_events_routes,
 };
 
 /* civetweb's one handler for "/api": the row that fits the method and the path, else 405 when another method fits it, else 404. */

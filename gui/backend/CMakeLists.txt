@@ -7,6 +7,7 @@ set(URSATZ_GUI_CORE_SOURCES
   src/routes/library_routes.c
   src/routes/collections_routes.c
   src/routes/composer_routes.c
+  src/routes/events_routes.c
   src/routes/styles_routes.c
   src/routes/materials_routes.c
   src/routes/motifs_routes.c

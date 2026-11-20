@@ -3,6 +3,7 @@
 #include <civetweb.h>
 #include <stdio.h>
 
+#include "routes/events_routes.h"
 #include "routes/route_table.h"
 
 
@@ -38,11 +39,15 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
   /* Route registration: each tool module registers itself here. This is
    * the only place that wires tool routes into the running server. */
   g_workshop = workshop;
+  ursatz_gui_events_start();
   ursatz_gui_routes_register(ctx);
   return ctx;
 }
 
 void ursatz_gui_server_stop(struct mg_context *ctx) {
+  /* The streams wait for events on request threads of their own: they end first, so mg_stop does not wait for them. */
+  ursatz_gui_events_stop();
+  workshop_events_close(g_workshop);
   if (ctx) {
     mg_stop(ctx);
   }
