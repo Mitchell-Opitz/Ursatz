@@ -1736,7 +1736,7 @@ static void test_random_motifs(void) {
   cJSON_Delete(answer);
 
   answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
-  check(status == 400, "a count over 16 is refused");
+  check(status == 422, "a count over 16 is refused by the Composer");
   cJSON_Delete(answer);
   answer = test_http_json(PORT, "GET", "/api/materials/motifs/random", NULL, &status);
   check(status == 405, "random motifs take only POST");
@@ -1969,7 +1969,7 @@ static const ReplyCase kReplyCases[] = {
     {"random_3", "POST", "/api/materials/motifs/random", "{\"count\":1,\"form\":\"contour\",\"meter\":\"4/4\",\"mode\":\"major\",\"role\":\"accompaniment\",\"seed\":9}", NULL, 200, "motives,ok,seed"},
     {"random_4", "POST", "/api/materials/motifs/random", "{\"meter\":\"four\",\"mode\":\"major\"}", NULL, 422, ""},
     {"random_5", "POST", "/api/materials/motifs/random", "{\"meter\":\"4/4\",\"mode\":\"dorian\"}", NULL, 422, ""},
-    {"random_6", "POST", "/api/materials/motifs/random", "{\"count\":99,\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 400, ""},
+    {"random_6", "POST", "/api/materials/motifs/random", "{\"count\":99,\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 422, ""},
     {"status", "GET", "/api/composer/status", NULL, NULL, 200, "available,ok,version"},
 };
 
@@ -2118,7 +2118,7 @@ static void test_refusal_paths(void) {
   cJSON_Delete(answer);
 
   answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
-  check(status == 400 && string_of(answer, "path")[0] == '\0', "a request the route refuses has no path");
+  check(status == 422 && strcmp(string_of(answer, "path"), "/count") == 0, "a count over 16 is refused at /count");
   cJSON_Delete(answer);
 }
 

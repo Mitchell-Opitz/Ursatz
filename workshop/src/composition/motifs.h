@@ -66,8 +66,6 @@ const char *workshop_motif_harmony(const cJSON *motif);
  * migrated yet; NULL when it has neither. The text is written to out. */
 const char *workshop_motif_key_text(const cJSON *motif, char *out, size_t out_size);
 
-/* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
-const char *workshop_motif_role_option(const char *role);
 
 /* The result of workshop_motif_analyze_body. */
 #define WORKSHOP_MOTIF_ANALYSIS_ERROR_SIZE 400

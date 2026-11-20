@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MOTIF_FEATURES_MAX 8
-#define TONE_OVERRIDES_MAX 64
 
 /* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
 static const char *optional_string(const cJSON *body, const char *key, bool *bad) {
@@ -123,12 +121,6 @@ const char *workshop_motif_key_text(const cJSON *motif, char *out, size_t out_si
   return NULL;
 }
 
-/* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
-/* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
-const char *workshop_motif_role_option(const char *role) {
-  return role && (strcmp(role, "melodic") == 0 || strcmp(role, "accompaniment") == 0) ? role : NULL;
-}
-
 /* The motive request of the Composer API: input.text, and input.format / input.form when given, meter, key (when not
    NULL) and pickup. NULL on allocation failure. */
 cJSON *workshop_motif_motive_request(const char *format, const char *form, const char *text, const char *meter, const char *key,
@@ -148,7 +140,7 @@ cJSON *workshop_motif_motive_request(const char *format, const char *form, const
 }
 
 /* The harmony, features and role of a motif (R-140, R-141) as request members: "harmony" (a non-empty text), "features"
-   (one "label:first-last" per feature, at most 8) and "role" (when not NULL). harmony and role may be overridden (a
+   (one "label:first-last" per feature) and "role" (when not NULL). harmony and role may be overridden (a
    variant's own harmony, a render's role); NULL means none. False on allocation failure. */
 bool workshop_motif_add_extras(cJSON *request, const char *harmony, const cJSON *features, const char *role) {
   if (harmony && harmony[0] != '\0' && !cJSON_AddStringToObject(request, "harmony", harmony)) {
@@ -164,7 +156,7 @@ bool workshop_motif_add_extras(cJSON *request, const char *harmony, const cJSON 
     const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
     const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
     const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
-    if (count == MOTIF_FEATURES_MAX || !cJSON_IsString(label) || !cJSON_IsNumber(first) || !cJSON_IsNumber(last)) {
+    if (!cJSON_IsString(label) || !cJSON_IsNumber(first) || !cJSON_IsNumber(last)) {
       break;
     }
     char text[64];
@@ -186,7 +178,7 @@ bool workshop_motif_add_extras(cJSON *request, const char *harmony, const cJSON 
   return !role || role[0] == '\0' || cJSON_AddStringToObject(request, "role", role) != NULL;
 }
 
-/* "tones" of a motif's tone_overrides (R-196): one "n=role" per override, at most TONE_OVERRIDES_MAX. False on
+/* "tones" of a motif's tone_overrides (R-196): one "n=role" per override. False on
    allocation failure. */
 static bool add_tone_overrides(cJSON *request, const cJSON *motif) {
   const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides");
@@ -197,7 +189,7 @@ static bool add_tone_overrides(cJSON *request, const cJSON *motif) {
   int count = 0;
   const cJSON *entry = NULL;
   cJSON_ArrayForEach(entry, overrides) {
-    if (count == TONE_OVERRIDES_MAX || !entry->string || !cJSON_IsString(entry)) {
+    if (!entry->string || !cJSON_IsString(entry)) {
       break;
     }
     char text[40];
@@ -274,7 +266,7 @@ cJSON *workshop_motif_run_variants(const cJSON *motif, const cJSON *basic_body, 
                                   key, pickup);
   const char *role = optional_string(motif, "role", &(bool){false});
   bool ok = request && workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
-                                         workshop_motif_role_option(role));
+                                         role);
   /* The basic motive (the tree root) when this motif is derived: its list, pickup and harmony. */
   const cJSON *basic = cJSON_GetObjectItemCaseSensitive(basic_body, "motif");
   const char *basic_degrees = optional_string(basic, "degrees", &(bool){false});
@@ -564,16 +556,11 @@ UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int 
   if (role && role[0] == '\0') {
     role = NULL;
   }
-  bool valid = !bad && mode && !(material && old_mode) && (!role || workshop_motif_role_option(role)) && meter &&
-               (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
-               (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
-                                count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
-               (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
-                               seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
+  bool valid = !bad && mode && !(material && old_mode) && meter &&
+               (!count_item || cJSON_IsNumber(count_item)) && (!seed_item || cJSON_IsNumber(seed_item));
   if (!valid) {
     return refuse(http_status, 400, URSATZ_ERR_REQUEST, error, "",
-                  "material and meter are required, form full, rhythm or contour, role melodic or accompaniment, "
-                  "count 1 to 16 and seed a whole number from 0");
+                  "material and meter are required, and count and seed are numbers");
   }
   char style_path[1024] = "";
   if (style_id && workshop_style_model_path(style_id, style_path, sizeof(style_path)) != URSATZ_OK) {
@@ -583,7 +570,7 @@ UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int 
   bool built = request && cJSON_AddStringToObject(request, material ? "material" : "mode", mode) &&
                cJSON_AddStringToObject(request, "meter", meter) &&
                (!key || cJSON_AddStringToObject(request, "key", key)) &&
-               cJSON_AddStringToObject(request, "form", form ? form : "full") &&
+               (!form || cJSON_AddStringToObject(request, "form", form)) &&
                (!role || cJSON_AddStringToObject(request, "role", role)) &&
                (!style_id || cJSON_AddStringToObject(request, "style", style_path)) &&
                cJSON_AddNumberToObject(request, "count", count_item ? (int)count_item->valuedouble : 6) &&

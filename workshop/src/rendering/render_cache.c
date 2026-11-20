@@ -77,7 +77,7 @@ static UrsatzStatus render_motif(const RenderInput *in, char **out_xml, uint8_t 
   }
   bool full = strcmp(form, "full") == 0;
   cJSON *request = workshop_motif_motive_request(full ? "degrees" : form, form, in->degrees, in->meter, has_key ? in->key : NULL, in->pickup);
-  if (!request || !workshop_motif_add_extras(request, in->harmony, in->features, workshop_motif_role_option(in->role)) ||
+  if (!request || !workshop_motif_add_extras(request, in->harmony, in->features, in->role) ||
       !cJSON_AddStringToObject(request, "render_key", render_key) || !cJSON_AddTrueToObject(request, "musicxml") ||
       !cJSON_AddTrueToObject(request, "midi") ||
       (in->tempo && !cJSON_AddStringToObject(request, "tempo", in->tempo))) {

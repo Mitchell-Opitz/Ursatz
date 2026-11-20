@@ -261,7 +261,7 @@ UrsatzStatus workshop_variants_recognize(const cJSON *request, cJSON **document_
   bool full = strcmp(form, "full") == 0;
   cJSON *source_request = workshop_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, source_degrees, NULL, NULL, NULL);
   cJSON *target_request = workshop_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, target_degrees, NULL, NULL, NULL);
-  const char *role = workshop_motif_role_option(optional_string(source, "role", &(bool){false}));
+  const char *role = optional_string(source, "role", &(bool){false});
   cJSON *recognize = cJSON_CreateObject();
   bool built = source_request && target_request && recognize &&
                workshop_motif_add_extras(source_request, workshop_motif_harmony(source), cJSON_GetObjectItemCaseSensitive(source, "features"),
