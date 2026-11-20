@@ -18,13 +18,13 @@ Everything but `main.c` is built as the static library `ursatz_gui_core` (`backe
 
 The helpers of `route_util.c` are the only way a route reads or answers:
 
-- `ursatz_gui_read_body` (and `ursatz_gui_read_json_body`): the one body reader with its caps (JSON 1 MB, uploads 64 MB, MIDI motifs 256 KB); over the cap is `413`, unreadable `400`.
+- `ursatz_gui_read_body` (and `ursatz_gui_read_json_body_max`): the one body reader with its caps (JSON 1 MB, uploads 64 MB, MIDI motifs 256 KB); over the cap is `413`, unreadable `400`.
 - `ursatz_gui_query_params` and `ursatz_gui_request_params(conn, name, value, ..., NULL)`: the query variables of the request as a JSON object, with the path's arguments added.
-- `ursatz_gui_answer_query(conn, name, params, bytes, failure, ...)` and `ursatz_gui_answer_command(conn, name, target, params, bytes, failure, ...)`: build the call (a command carries the actor `michelle` and the `base_version` the page sent), run it on the workshop and send the reply (`ursatz_gui_send_reply_ok`, `_json` or `_bytes`) or the failure.
+- `ursatz_gui_answer_query(conn, name, params, bytes, failure, ...)`: build the query, run it on the workshop and send the reply (`ursatz_gui_send_reply_ok`, `_json` or `_bytes`) or the failure.
 - `ursatz_gui_failed(conn, status, error)` and `ursatz_gui_send_failure_at(conn, http, message, code, path)`: the envelope's failure, with the status of `ursatz_gui_http_status`, the one table that maps a workshop status to HTTP.
 - `ursatz_gui_valid_id`: an id of 1 to 64 letters, digits, hyphens or underscores.
 
-A route has no logic of its own: it names a workshop call and the shape of its params. What a query or command does is in the [workshop docs](../../workshop/docs/commands.md).
+A route has no logic of its own: it names a workshop query and the shape of its params. No route builds a command: a change is the command object the page posts to `/api/workshop/command` (`workshop_routes.c`), which runs it as given. What a query or command does is in the [workshop docs](../../workshop/docs/commands.md).
 
 ## Who calls the Composer
 

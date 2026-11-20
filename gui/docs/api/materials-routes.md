@@ -5,40 +5,41 @@ The routes for materials (motifs, themes, pieces) and subjects. [Docs index](../
 ## Materials and subjects routes
 
 Both stores are described under [Material store](../../../workshop/docs/data-folder.md#items-and-versions) and [Subjects](../../../workshop/docs/data-folder.md#layout-2); these
-routes only name queries and commands of the workshop (`routes/materials_routes.c`, `motifs_routes.c`, `subjects_routes.c`). Every answer is JSON in
+routes only name queries of the workshop (`routes/materials_routes.c`, `motifs_routes.c`, `subjects_routes.c`); every change is a command the frontend sends to `POST /api/workshop/command` (`core/commands.js`, [Workshop routes](workshop-routes.md)), listed below under the route that used to carry it. Every answer is JSON in
 the one envelope ([the envelope](envelope.md)): a success is `{"ok":true,...}`; a failure is
 `{"ok":false,"error":"...","code":"...","path"?}` with `400` for an invalid id, name, kind, type or body, `422` for a member of a
 Composer request the Composer refuses (its `path` names it), `404` for something not found, `409` for a project that still holds
 items, an item that other items use or an item changed since it was read, `405` for a method the route does not take and `413` for a
 request body over 1 MB.
 
-A write to an item that has versions (a save, a rename, a delete, a compose, a regenerate, a choose, a flag, a promote, a link, a
-reroll, a re-analysis and an update of a use) carries the version the page read as `base_version` in its JSON body (`?base_version=<n>`
-on a `DELETE`); an item that moved on answers `409` with `current_version`. `DELETE` also takes `?force=1`.
+A command on an item that has versions (a save, a rename, a delete, a compose, a regenerate, a choose, a flag, a promote, a link, a
+reroll, a re-analysis, a restore and an update of a use) carries the version the page read as `base_version` of the command object; an item that moved on answers `409` with `current_version`. `item.delete` also takes the param `force`.
 
 Projects:
 
 - `GET /api/materials/projects`: `{"projects":[{...,"item_count"}]}` by name.
-- `POST /api/materials/projects`: `{"name","description"?}` answers `{"project"}`.
-- `GET|PATCH|DELETE /api/materials/projects/<id>`: read, change `name` and/or
-  `description`, delete (`409` while it holds items).
+- `project.create`: params `{"name","description"?}`, answers `{"project"}`.
+- `GET /api/materials/projects/<id>`: read. `project.update` changes `name` and/or
+  `description`, `project.delete` deletes (`409` while it holds items).
 
 Items:
 
 - `GET /api/materials/items?project=<id>&type=<motif|theme|piece>`: `{"items"}`,
   newest update first; both filters are optional.
-- `POST /api/materials/items`: `{"type","name","project_id","body"}` answers
+- `item.create`: params `{"type","name","project_id","body"}`, answers
   `{"item"}` (the item meta) with the body stored as version 1.
 - `GET /api/materials/items/<id>`: `{"item","body","uses_status","used_by",
   "subjects"}`: the meta, the current version's body, how each use's source
   stands, the items that use this one and the subjects that link it.
-- `PATCH /api/materials/items/<id>`: `{"name"?,"project_id"?}` renames and/or
+- `item.update`: params `{"name"?,"project_id"?}` renames and/or
   moves (a missing project is `404` before anything changes).
-- `DELETE /api/materials/items/<id>`: `409` with `{"ok":false,"error",
-  "used_by":[...]}` while other items use it; `?force=1` deletes anyway and
+- `item.delete`: `409` with `{"ok":false,"error",
+  "used_by":[...]}` while other items use it; the param `force` deletes anyway and
   the users' uses then report `missing`.
-- `POST /api/materials/items/<id>/versions`: `{"body","note"?}` writes the next
+- `item.save`: params `{"body","note"?}` writes the next
   version and answers `{"item"}`.
+- `item.restore`: params `{"version","note"?}` makes the next version a copy of an older one (not the current one) and
+  answers `{"version","restored_from"}`; the versions list shows it as Restore.
 - `GET /api/materials/items/<id>/versions/<n>`: `{"number","body"}`; `404`
   outside 1 to the current version.
 - `GET /api/materials/items/<id>/export[?version=<n>]`: the Analyzer's text export of a motif, theme or piece
@@ -55,8 +56,8 @@ Items:
   for a game loop, `piece` for a form with sizes), from `<name>.musicxml`. A section whose file the version lacks (not composed) prints `not composed`.
   `404` for an unknown item or version, `400` for a `version` that is not a whole number from 1, `422` when the Composer
   refuses to render a motif (its message), `500` when the Analyzer or the store fails.
-- `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
-  of the item with every use of `<source>` moved to the source's current
+- `item.update-use`: params `{"source_id"}` writes a new version
+  of the item with every use of the source moved to the source's current
   version; answers `{"item"}`.
 - `GET /api/materials/items/<id>/versions/<n>/files/<name>`: one of the files of a composed theme or piece version.
   A theme version's: `request.json`, `brief.style.json` and `plan.json` as `application/json`, `theme.mid` as
@@ -68,7 +69,7 @@ Items:
 - `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|<name>`: the playback of the version's `theme.mid`
   or of `<name>.mid` for a version name of the piece's form (`loop`, `ending`, `piece`), built by the Analyzer. `400`
   for a `file` outside the version name pattern, `404` when the version has no such file.
-- `POST /api/materials/items/<thm-id>/compose`: `{"seed"?,"update_uses"?}` composes the theme into a new version
+- `item.compose` on a theme: params `{"seed"?,"update_uses"?}` composes the theme into a new version
   (R-166, R-167) and answers `{"item"}`. With `update_uses`, every updated use first moves to its source's current
   version (a version of its own each; they stay if the run then fails). The request is built from the current
   version: each slot motif from its use's copy; the pool, every motif item whose `derived` chain (at most 32 steps
@@ -84,7 +85,7 @@ Items:
   version and leaves no folder. A request the Composer refuses before seeding (a motif too long for the form, a chord that
   cannot end the cadence) answers `400` or `422` with the same message and `path` as `items/validate` (see
   [Composer routes](composer-routes.md)).
-- `POST /api/materials/items/<pce-id>/compose`: `{"seed"?,"update_uses"?}` composes the piece into a new version
+- `item.compose` on a piece: params `{"seed"?,"update_uses"?}` composes the piece into a new version
   (R-173, R-174) and answers `{"item"}`. `update_uses` is as for a theme. The request is built from the current
   version: the motive and each motif fill from their uses' copies (degrees, pickup, harmony, features, role), each
   motif fill with the pool of its saved forms as for a theme (the piece's `pool`), a theme fill as the absolute path
@@ -98,7 +99,7 @@ Items:
   `piece.mid`, `piece.musicxml`, with `result.loop` null). The new version is the body as it was plus
   `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, loop: {start, end}, files}` with the
   note `composed seed <n>`. Errors are those of a theme compose.
-- `POST /api/materials/items/<pce-id>/versions/<n>/regenerate`: `{"section_id","lane"?,"seed"?}` writes one section
+- `item.regenerate` on a piece: params `{"version","section_id","lane"?,"seed"?}` writes one section
   of a composed version (one with a `result`) again as the next version and answers `{"item"}`. `lane` is `harmony`,
   `bass`, `melody`, `inner` or `all` (default: the whole section); a section filled with a theme takes `harmony` or
   `bass` only, and an ending section is refused. For a form with sizes `section_id` is the `id` of a row of
@@ -108,7 +109,7 @@ Items:
   for an item that is not a piece, a version that was never composed, an unknown section or lane, a lane a theme
   section does not take, or a bad seed; `404` for an unknown item or version; `422`, `503`, `504` as for compose. A
   failed run writes no version and leaves no folder.
-- `POST /api/materials/items/<pce-id>/versions/<n>/variations`: `{"section_id","lane","count","seed"?}` (`count` 1 to
+- `item.variations` on a piece: params `{"version","section_id","lane","count","seed"?}` (`count` 1 to
   8) makes variations of a section into the set folder `v<n>/variations-<k>/` and answers `{"ok","set":k,"variations":
   [{"index","seed","score":{"numerator","denominator"},"seam","heard"}]}`, `heard` being the cadence heard at the end
   of the section. Fewer than `count` may come back. Nothing becomes a version. Harmonize is `lane` `harmony` (also on a
@@ -116,7 +117,7 @@ Items:
 - `GET /api/materials/items/<pce-id>/versions/<n>/variations/<k>/<file>`: `result.json` or `variation-<i>.json`,
   `.mid`, `.musicxml` of a set (`application/json`, `audio/midi`, `application/xml`); any other name, or a set the
   version does not hold, is `404`.
-- `POST /api/materials/items/<pce-id>/versions/<n>/variations/<k>/choose`: `{"index"}` makes variation `index` of set
+- `item.choose` on a piece: params `{"version","set","index"}` makes variation `index` of set
   `k` the next version and answers `{"item"}`: the variation's plan is the version's first plan (`plan.json`), and the later versions are
   built from it (`piece --from variation-<i>.json --request <new>/request.json --regenerate none`, the eight outputs).
   The result is the source's with the Composer's summary, the variation's first version (`loop`, or `piece` for a form
@@ -129,26 +130,27 @@ Items:
   `chain` is `{"steps":[{"op","params"?}]}` (random chains when absent),
   `count` 1 to 16 (default 6), `seed` a whole number from 0. Answers the
   Composer's `{seed, source, variants}` as the job's `result`; nothing is saved.
-- `POST /api/materials/items/<id>/variants/save`: `{"variant","name"?,
-  "flag"?}` with one candidate from the route above. Creates a motif in the
+- `item.save-variant`: params `{"variant","name"?,
+  "flag"?}` with one candidate from the variants route. Creates a motif in the
   source's project with the candidate's notes and degrees, the source's role,
   meter, key and pickup, and `derived` `{source_item, source_version,
   operations, seed, kind, kept, changed, harmony: null, functions: [], flag}`
   (`flag` `approved`, `rejected` or `unflagged`, default `unflagged`). The name
   defaults to `<source> <op>[ + <op>]`; version 1's note is the derivation
   line. Answers `{"item"}`.
-- `POST /api/materials/items/<id>/flag`: `{"flag","kind"?}` writes a new
+- `item.flag`: params `{"flag","kind"?}` writes a new
   version that changes only `derived.flag` (and `derived.kind`: `exact`,
   `motive-form` or `variant`); the note is the flag. `400` for a motif
   without `derived`.
 - `POST /api/materials/items/<id>/each-op`: `{"seed"?}`, see Try every operation.
-- `GET` and `PUT /api/materials/items/<id>/op-checks`: the operation marks.
-- `POST /api/materials/items/<id>/promote`: `{"name","project_id","note"?}` on a
+- `GET /api/materials/items/<id>/op-checks`: the operation marks; `item.set-op-checks` replaces them.
+- `item.link-form`: params `{"source","recognition"}` records a motif as a form of another motif and answers `{"item"}`.
+- `item.promote`: params `{"name","project_id","note"?}` on a
   variant writes a new version with `derived.standalone: true` (note default
   `Saved as new motif`), renames the item and moves it to the project. Answers
   `{"item"}`. `400` for an item that is not a variant or a body without a name
   and project, `404` for a project that is not there.
-- `POST /api/materials/items/<id>/reroll`: reruns the stored chain, with the
+- `item.reroll`: reruns the stored chain, with the
   parameters the seed drew drawn again, on the source's stored version with
   seed + 1000003 (+1 while the result equals the current one, 16 tries).
   Writes a new version with the new degrees, seed, kept, changed, kind and
@@ -165,13 +167,13 @@ Subjects:
 - `GET /api/subjects`: `{"subjects"}` with `item_count`, `piece_count` and
   `related_count`; `GET /api/subjects/groups`: `{"groups"}`, four kinds in the
   order character, place, idea, note.
-- `POST /api/subjects`: `{"name","kind","note"?}` answers `{"subject"}`.
-- `GET|PATCH|DELETE /api/subjects/<id>`: read, change `name`, `kind` and/or
-  `note`, delete.
-- `POST|DELETE /api/subjects/<id>/items/<item>`, `.../pieces/<piece>` and
-  `.../related/<other>`: link or unlink an item, a Library piece, or relate
-  two subjects. POST answers `{"subject","already"}` (`already` is true when
-  nothing changed); DELETE answers `{"subject"}`. A missing item, piece or
+- `subject.create`: params `{"name","kind","note"?}`, answers `{"subject"}`.
+- `GET /api/subjects/<id>`: read. `subject.update` changes `name`, `kind` and/or
+  `note`, `subject.delete` deletes.
+- `subject.link-item`, `subject.link-piece`, `subject.relate` and their `unlink-item`,
+  `unlink-piece`, `unrelate`: link or unlink an item, a Library piece, or relate
+  two subjects. A link answers `{"subject","already"}` (`already` is true when
+  nothing changed); an unlink answers `{"subject"}`. A missing item, piece or
   subject is `404`, unlinking something not linked is `404`, relating a
   subject to itself is `400`.
 
