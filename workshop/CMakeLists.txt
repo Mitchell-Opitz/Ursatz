@@ -22,6 +22,7 @@ add_library(ursatz_workshop_engine STATIC
     src/items/references.c
     src/items/body_rules.c
     src/items/body_migrate.c
+    src/items/body_requests.c
     src/items/op_checks.c
     src/items/version_files.c
     src/items/piece_lock.c

@@ -14,6 +14,7 @@
 #include <common/strings.h>
 
 #include "base/knowledge.h"
+#include "items/body_requests.h"
 #include "items/data_check.h"
 #include "items/formats.h"
 #include "items/layout.h"
@@ -353,6 +354,12 @@ static UrsatzStatus migrate_item(Run *run, const char *items_dir, const char *id
         }
         char *before = cJSON_PrintUnformatted(body);
         workshop_material_body_migrate(body);
+        if (WORKSHOP_LAYOUT_VERSION >= 2 && !workshop_body_requests_migrate(body)) {
+            cJSON_Delete(body);
+            free(before);
+            status = fail(run, URSATZ_ERR_ALLOC, body_path, "out of memory");
+            break;
+        }
         char *after = cJSON_PrintUnformatted(body);
         if (before && after && strcmp(before, after) != 0) {
             run->bodies_rewritten++;
@@ -799,9 +806,10 @@ UrsatzStatus workshop_data_folder_layout(const char *data_dir, int *layout, Ursa
         return URSATZ_OK;
     }
     cJSON *marker = NULL;
-    UrsatzStatus status = workshop_format_read(path, WORKSHOP_FORMAT_DATA_FOLDER, true, &marker, error);
+    UrsatzStatus status = workshop_format_read(path, WORKSHOP_FORMAT_DATA_FOLDER, false, &marker, error);
     if (status == URSATZ_OK) {
-        *layout = WORKSHOP_LAYOUT_VERSION;
+        long long version = 1;
+        *layout = common_json_long(marker, "format_version", &version) ? (int)version : 1;
         cJSON_Delete(marker);
     }
     return status;
@@ -820,6 +828,111 @@ static void backup_name(const char *root, char *out, size_t size) {
         trimmed[--length] = '\0';
     }
     snprintf(out, size, "%s-backup-%s", trimmed, stamp);
+}
+
+/* The backup is the first change: the whole folder is copied and compared before anything is built. */
+static UrsatzStatus make_backup(Run *run, const char *root, const WorkshopMigrateOptions *options, char *backup, size_t size) {
+    if (options && options->backup_dir && options->backup_dir[0] != '\0') {
+        snprintf(backup, size, "%s", options->backup_dir);
+    } else {
+        backup_name(root, backup, size);
+    }
+    if (common_path_exists(backup)) {
+        return fail(run, URSATZ_ERR_CONFLICT, backup, "the backup folder %s exists already: choose another with --backup", backup);
+    }
+    TreeStats before = {0, 0};
+    TreeStats after = {0, 0};
+    tree_stats(root, &before);
+    UrsatzStatus status = backup_tree(root, backup, run->error);
+    if (status == URSATZ_OK) {
+        tree_stats(backup, &after);
+        if (after.files != before.files || after.bytes != before.bytes) {
+            status = fail(run, URSATZ_ERR_IO, backup,
+                          "the backup %s does not match the data folder (%ld files and %lld bytes against %ld and %lld): nothing was changed",
+                          backup, after.files, after.bytes, before.files, before.bytes);
+        }
+    }
+    return status;
+}
+
+/* The theme and piece bodies of one version folder of a layout 1 data folder become format 2 in place (R-650); one already in format 2
+   is left, so a run that stopped is run again. */
+static UrsatzStatus migrate_body_file(Run *run, const char *path, const char *format) {
+    cJSON *body = NULL;
+    UrsatzStatus status = workshop_format_read(path, format, false, &body, run->error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    long long version = 0;
+    if (!common_json_long(body, "format_version", &version) || version >= 2) {
+        cJSON_Delete(body);
+        return URSATZ_OK;
+    }
+    workshop_format_strip(body);
+    if (!workshop_body_requests_migrate(body)) {
+        cJSON_Delete(body);
+        return fail(run, URSATZ_ERR_ALLOC, path, "out of memory");
+    }
+    run->bodies_rewritten++;
+    status = run->dry ? URSATZ_OK : workshop_format_write(path, format, body, run->error);
+    cJSON_Delete(body);
+    return status;
+}
+
+/* Layout 1 to layout 2: after the backup of a real run, every theme and piece body of format 1 is rewritten in place and
+   data-folder.json is written last (a run that stopped before it is a layout 1 folder still, and is run again). */
+static UrsatzStatus migrate_layout_1(Run *run, const WorkshopMigrateOptions *options, cJSON **report, UrsatzError *error) {
+    char backup[PATH_BYTES] = "";
+    UrsatzStatus status = run->dry ? URSATZ_OK : make_backup(run, run->root, options, backup, sizeof(backup));
+    char projects[PATH_BYTES];
+    CommonNames names = {0};
+    if (status == URSATZ_OK && join(projects, run->root, WORKSHOP_DIR_PROJECTS) && common_path_is_dir(projects)) {
+        status = common_dir_list(projects, &names, error);
+    }
+    for (size_t i = 0; status == URSATZ_OK && i < names.count; i++) {
+        CommonNames items = {0};
+        char items_dir[PATH_BYTES];
+        if (!workshop_layout_id_ok(names.items[i]) || !join(items_dir, projects, names.items[i]) || !join(items_dir, items_dir, "items") ||
+            !common_path_is_dir(items_dir)) {
+            continue;
+        }
+        status = common_dir_list(items_dir, &items, error);
+        for (size_t j = 0; status == URSATZ_OK && j < items.count; j++) {
+            const char *id = items.items[j];
+            const char *format = strncmp(id, "thm-", 4) == 0 ? WORKSHOP_FORMAT_THEME_BODY : strncmp(id, "pce-", 4) == 0 ? WORKSHOP_FORMAT_PIECE_BODY : NULL;
+            for (int number = 1; format && status == URSATZ_OK && number < 100000; number++) {
+                char path[PATH_BYTES];
+                if (!workshop_layout_version_file(names.items[i], id, number, WORKSHOP_FILE_BODY, path, sizeof(path))) {
+                    break;
+                }
+                char absolute[PATH_BYTES];
+                if (!join(absolute, run->root, path) || !common_path_exists(absolute)) {
+                    break;
+                }
+                status = migrate_body_file(run, absolute, format);
+                run->versions++;
+            }
+        }
+        common_names_free(&items);
+    }
+    common_names_free(&names);
+    if (status == URSATZ_OK && !run->dry) {
+        cJSON *marker = cJSON_CreateObject();
+        char now[32];
+        char path[PATH_BYTES];
+        common_utc_now(now);
+        if (!marker || !cJSON_AddStringToObject(marker, "created_at", now) || !cJSON_AddNumberToObject(marker, "migrated_from", 1) ||
+            !join(path, run->root, WORKSHOP_FILE_DATA_FOLDER)) {
+            cJSON_Delete(marker);
+            return fail(run, URSATZ_ERR_ALLOC, run->root, "out of memory");
+        }
+        status = workshop_format_write(path, WORKSHOP_FORMAT_DATA_FOLDER, marker, error);
+        cJSON_Delete(marker);
+    }
+    if (status == URSATZ_OK && report) {
+        *report = report_of(run, !run->dry, 1, backup[0] ? backup : NULL, false);
+    }
+    return status;
 }
 
 static UrsatzStatus migrate_run(const char *data_dir, const WorkshopMigrateOptions *options, cJSON **report, UrsatzError *error) {
@@ -849,6 +962,9 @@ static UrsatzStatus migrate_run(const char *data_dir, const WorkshopMigrateOptio
     UrsatzStatus status = workshop_data_folder_layout(root, &layout, error);
     if (status != URSATZ_OK) {
         return status;
+    }
+    if (layout == 1 && WORKSHOP_LAYOUT_VERSION >= 2) {
+        return migrate_layout_1(&run, options, report, error);
     }
     if (layout == WORKSHOP_LAYOUT_VERSION) {
         if (report) {
@@ -885,27 +1001,7 @@ static UrsatzStatus migrate_run(const char *data_dir, const WorkshopMigrateOptio
             if (common_path_is_dir(run.build)) {
                 common_dir_remove(run.build, NULL); /* an interrupted run that never got to its last moves */
             }
-            /* The backup is the first change: the whole folder is copied and compared before anything is built. */
-            if (options && options->backup_dir && options->backup_dir[0] != '\0') {
-                snprintf(backup, sizeof(backup), "%s", options->backup_dir);
-            } else {
-                backup_name(root, backup, sizeof(backup));
-            }
-            if (common_path_exists(backup)) {
-                return fail(&run, URSATZ_ERR_CONFLICT, backup, "the backup folder %s exists already: choose another with --backup", backup);
-            }
-            TreeStats before = {0, 0};
-            TreeStats after = {0, 0};
-            tree_stats(root, &before);
-            status = backup_tree(root, backup, error);
-            if (status == URSATZ_OK) {
-                tree_stats(backup, &after);
-                if (after.files != before.files || after.bytes != before.bytes) {
-                    status = fail(&run, URSATZ_ERR_IO, backup,
-                                  "the backup %s does not match the data folder (%ld files and %lld bytes against %ld and %lld): nothing was changed",
-                                  backup, after.files, after.bytes, before.files, before.bytes);
-                }
-            }
+            status = make_backup(&run, root, options, backup, sizeof(backup));
             if (status != URSATZ_OK) {
                 return status;
             }
@@ -964,6 +1060,12 @@ UrsatzStatus workshop_data_folder_prepare(const char *data_dir, UrsatzError *err
     UrsatzStatus status = workshop_data_folder_layout(data_dir, &layout, error);
     if (status != URSATZ_OK || layout == WORKSHOP_LAYOUT_VERSION) {
         return status;
+    }
+    if (layout == 1) {
+        return ursatz_error_set(error, URSATZ_ERR_FORMAT, data_dir,
+                                "the data folder %s is in layout 1 (theme and piece bodies the services translated on every compose); back it up "
+                                "and migrate it: ursatz-gui-backend --data %s --migrate --dry-run, then ursatz-gui-backend --data %s --migrate",
+                                data_dir, data_dir, data_dir);
     }
     char build[PATH_BYTES];
     if (has_old_entries(data_dir) || (join(build, data_dir, BUILD_DIR) && common_path_exists(build))) {

@@ -212,6 +212,7 @@ uses workshop-composition workshop-base workshop-items workshop-analysis worksho
 uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
 uses workshop-coordinator workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering composer-api analyzer-api common cjson
 allow workshop/src/items/body_migrate.c composition/composer_client.h -- the migration of the old mode and key words and the slot count of a theme's uses still read the Composer's words; B15 moves them
+allow workshop/src/items/body_requests.c composition/composer_client.h -- the migration of a format 1 body names the theme slots and the sized forms of the Composer's vocabulary once, in the migration only
 allow workshop/src/items/references.c composition/composer_client.h -- the migration of the old mode and key words and the slot count of a theme's uses still read the Composer's words; B15 moves them
 uses gui           cjson civetweb common workshop-api
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
