@@ -13,6 +13,8 @@ Every member is optional and its default is the value the Composer used before t
 | `composer_preferences_default(out)` | Writes the defaults. |
 | `composer_preferences_read(object, out, path, path_size, message, message_size)` | Starts from the defaults, applies every member present, and returns false at the first bad one with its `path` and a `message` naming the limit. |
 | `composer_preferences_write(preferences)` | The full document, every member, as a `cJSON` object the caller deletes. Ratios are `"n/d"` text and `nct_types` is in the order passing, neighbor, appoggiatura, suspension, anticipation. |
+| `composer_preferences_keys(count)` | The key table: one row per setting (below). Static. |
+| `composer_preferences_rules(count)` | The rule table: the 13 soft groups and the 7 hard rules of the melody stage. Static. |
 
 `ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif`, `GrowFidelityTable development` and, from 1.19, `GrowContrast contrast` (the development group's contrast settings). The API carries the document as the `preferences` member of the random motive and theme requests (below).
 
@@ -39,6 +41,8 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
 | `rhythm_repeat_bars` | 0 | 0 to 16 | The most bars of 2 or more notes in a row that may share one rhythm in a theme's line; 0 sets no cap. | new (R-479) |
 | `leaps` | 0 | 0 to 20 | How many times a melody's leaps count against it (`leap_weight`). 0 leaves them out. | new (R-481) |
 | `register` | 0 | 0 to 20 | How many times an idea's drift from the register of the span before it counts against it (`register_weight`). 0 leaves it out. | new (R-481) |
+| `waive` | `[]` | a list of `forbidden-leap`, `forbidden-outline`, `no-crossing`, `parallel-octaves`, `parallel-fifths`, `dissonance-against-bass`, `strong-beat-chord-tone`, no repeats | The hard rules the melody stage does not hold: a waived rule neither refuses a candidate nor scores it. Off by default; R-672. | new (R-672, API 4.3) |
+| `reverse` | `[]` | a list of the groups of `weights` and `closure`, `leaps`, `register`, no repeats | The soft rule groups whose score counts what a candidate breaks in place of what it holds, so a setting can ask for the opposite. Off by default; R-672. | new (R-672, API 4.3) |
 
 `weights` has ten keys. The score is the share of soft rules held: the sum of `weight * held` over the sum of `weight * total`. A weight of 0 leaves a group out; every weight 1 is the score before weights existed.
 
@@ -51,6 +55,10 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
 | `contour` | The one climax, its place, recovered leaps and few repeated notes. |
 | `ending_reduction`, `waves`, `central_range`, `monotony` | One shaping rule each (see [the shaping rules](melody-fill.md#the-shaping-rules)). |
 | `seam` | The rules at the seam of a loop. |
+
+`waive` and `reverse` are the overrides of the melody stage (R-672). A name that is no rule is refused at `/melody/waive/<i>` ("is not a rule the melody stage can waive: " and the names) or `/melody/reverse/<i>` ("is not a soft rule group: " and the names), a repeat at the same place, a value that is no list at `/melody/waive` or `/melody/reverse`. The range, the stable tone of the cadence, the non-chord tone types and the checks that are not named are never waived. A reversed group adds `total - held` to the score in place of `held`; with `reverse` empty the score is the same integers as before.
+
+What a waived rule leaves out of the checker: `strong-beat-chord-tone` the chord tone asked of a strong beat (the range stays hard); `forbidden-leap` and `forbidden-outline` the melodic check, in the relaxed run check too; `dissonance-against-bass` the refusal of a chord tone that is dissonant over the bass, which is not scored either; `no-crossing`, `parallel-octaves` and `parallel-fifths` the harmonic check, so a waived parallel does not score. The checker keeps the weighted score of each group apart and adds a reversed group as `total - held` where the verdict is finished ([melody-fill.md](melody-fill.md#the-checker)).
 
 ```json
 {
@@ -70,12 +78,22 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
     "closure": {"final": 0, "first": 0},
     "rhythm_repeat_bars": 0,
     "leaps": 0,
-    "register": 0
+    "register": 0,
+    "waive": [],
+    "reverse": []
   }
 }
 ```
 
 `start_cell` stays a parameter of the stage and is not a preference. The first melody attempt of a compose run uses `climax_position` and a retry uses its own position (`CLIMAX_RETRIES`, `compose_run.c`); the other melody settings apply to every attempt.
+
+## The key and rule tables (R-672)
+
+`composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.skips_per_motif`: 122 rows. A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
+
+A **hard** setting changes what a request may ask for or what a candidate may be: `melody.range.low`, `melody.range.high`, `melody.nct_types`, `melody.rhythm_repeat_bars`, `melody.waive`, `motif.leap.low`, `motif.leap.high`, `motif.leaps_per_motif`, `motif.skips_per_motif`, `motif.contrast_fidelity_min`, `motif.plan` and every `development.fidelity_minimum.*` (R-671). Every other setting is **soft**: a preference a listener can move.
+
+`composer_preferences_rules` lists the rules a setting can override, in enum order: the 13 soft groups (`melody.weights.<name>` for the ten weights, `melody.closure`, `melody.leaps`, `melody.register`) and the 7 hard rules (key `melody.waive`). The vocabulary serves both tables as `preference_keys` and `rules` ([api.md](api.md)).
 
 ## The motif group
 
