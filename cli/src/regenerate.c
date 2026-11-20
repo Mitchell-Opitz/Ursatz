@@ -7,7 +7,9 @@
 
 #include "cli_tools.h"
 
+#include "address.h"
 #include "cli_options.h"
+#include "items.h"
 #include "workflow.h"
 
 typedef struct {
@@ -163,6 +165,9 @@ static void print_reopened_text(const cJSON *reopened) {
 }
 
 int run_regenerate(const CliArgs *args) {
+    if (args->input_count > 0 && cli_is_address(args->inputs[0])) {
+        return run_regenerate_item(args);
+    }
     Options options;
     int status = read_options(args, &options);
     if (status != 0) {

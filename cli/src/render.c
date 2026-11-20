@@ -9,7 +9,9 @@
 
 #include <common/files.h>
 
+#include "address.h"
 #include "cli_options.h"
+#include "items.h"
 #include "cli_tools.h"
 
 /* Writes the file atomically (common_file_write_atomic), so a failure leaves no half-written file at path. */
@@ -52,30 +54,7 @@ static int report_export_error(const UrsatzError *error, const char *plan_path, 
     return 1;
 }
 
-int run_render(const CliArgs *args) {
-    const char *plan_path = args->input_count > 0 ? args->inputs[0] : NULL;
-    const char *midi_path = cli_value(args, "--midi");
-    const char *musicxml_path = cli_value(args, "--musicxml");
-    const char *tempo_text = cli_value(args, "--tempo");
-    bool plain_midi = cli_switch(args, "--plain-midi");
-    if (!plan_path || (!midi_path && !musicxml_path)) {
-        fprintf(stderr, "Error: render needs a plan file and at least one of --midi or --musicxml\n");
-        fprintf(stderr, "%s\n", cli_usage_of("render"));
-        return 1;
-    }
-
-    char *plan_text = NULL;
-    size_t plan_size = 0;
-    if (!cli_read_file(plan_path, &plan_text, &plan_size)) {
-        fprintf(stderr, "Error: cannot read plan '%s': could not open '%s'\n", plan_path, plan_path);
-        return 1;
-    }
-    cJSON *plan = cJSON_Parse(plan_text);
-    free(plan_text);
-    if (!plan) {
-        fprintf(stderr, "Error: cannot read plan '%s': not valid JSON\n", plan_path);
-        return 1;
-    }
+int cli_render_plan(cJSON *plan, const char *plan_path, const char *midi_path, const char *musicxml_path, const char *tempo_text, bool plain_midi) {
     cJSON *request = cJSON_CreateObject();
     if (!request || !cJSON_AddItemToObject(request, "plan", plan)) {
         fprintf(stderr, "Error: out of memory\n");
@@ -89,11 +68,6 @@ int run_render(const CliArgs *args) {
     if (tempo_text) {
         cJSON_AddStringToObject(request, "tempo", tempo_text);
     }
-    if (!request) {
-        fprintf(stderr, "Error: out of memory\n");
-        return 1;
-    }
-
     CliResponse response;
     UrsatzStatus api_status = cli_composer("export", request, NULL, &response);
     cJSON_Delete(request);
@@ -119,5 +93,35 @@ int run_render(const CliArgs *args) {
     }
     cli_response_destroy(&response);
     return status;
+}
+
+int run_render(const CliArgs *args) {
+    if (args->input_count > 0 && cli_is_address(args->inputs[0])) {
+        return run_render_item(args);
+    }
+    const char *plan_path = args->input_count > 0 ? args->inputs[0] : NULL;
+    const char *midi_path = cli_value(args, "--midi");
+    const char *musicxml_path = cli_value(args, "--musicxml");
+    const char *tempo_text = cli_value(args, "--tempo");
+    bool plain_midi = cli_switch(args, "--plain-midi");
+    if (!plan_path || (!midi_path && !musicxml_path)) {
+        fprintf(stderr, "Error: render needs a plan file and at least one of --midi or --musicxml\n");
+        fprintf(stderr, "%s\n", cli_usage_of("render"));
+        return 1;
+    }
+
+    char *plan_text = NULL;
+    size_t plan_size = 0;
+    if (!cli_read_file(plan_path, &plan_text, &plan_size)) {
+        fprintf(stderr, "Error: cannot read plan '%s': could not open '%s'\n", plan_path, plan_path);
+        return 1;
+    }
+    cJSON *plan = cJSON_Parse(plan_text);
+    free(plan_text);
+    if (!plan) {
+        fprintf(stderr, "Error: cannot read plan '%s': not valid JSON\n", plan_path);
+        return 1;
+    }
+    return cli_render_plan(plan, plan_path, midi_path, musicxml_path, tempo_text, plain_midi);
 }
 

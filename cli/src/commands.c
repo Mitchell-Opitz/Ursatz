@@ -21,6 +21,7 @@
 #include "progression.h"
 #include "random_motive.h"
 #include "recognize.h"
+#include "items.h"
 #include "regenerate.h"
 #include "theme.h"
 #include "variants_cmd.h"
@@ -50,7 +51,8 @@ static const char *const FLAGS_PIECE[] = {"--check", "--count", "--ending-midi",
 static const char *const FLAGS_PLAN[] = {"--accompaniment", "--at", "--bars", "--blend", "--blend-weight", "--blend-weights", "--cells", "--count", "--form", "--format", "--from-corpus", "--given-bass", "--given-melody", "--given-progression", "--key", "--like", "--like-progression", "--material", "--meter", "--modulate", "--motive", "--out", "--seed", "--style", "--style-weight", "--style-without", "--texture", NULL};
 static const char *const FLAGS_FILL[] = {"--blend", "--blend-weight", "--blend-weights", "--candidates", "--check", "--explain", "--format", "--layers", "--midi", "--musicxml", "--out", "--plain-midi", "--record", "--seed", "--style", "--style-weight", "--style-without", "--tempo", NULL};
 static const char *const FLAGS_LOCK[] = {"--format", "--lane", "--node", "--out", "--section", NULL};
-static const char *const FLAGS_REGENERATE[] = {"--format", "--lane", "--midi", "--musicxml", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", NULL};
+static const char *const FLAGS_REGENERATE[] = {"--base", "--format", "--lane", "--midi", "--musicxml", "--no-wait", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", "--version", NULL};
+static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
@@ -424,7 +426,8 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz lock piece.json --section A --out piece-locked.json",
      FLAGS_LOCK, 1, 1, run_lock},
     {"regenerate",
-    "regenerate <plan.json> (--node <id> | --section <letter>) [--lane <lane>] --out <file> [--seed <n>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]",
+    "regenerate <plan.json> (--node <id> | --section <letter>) [--lane <lane>] --out <file> [--seed <n>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]\n"
+    "regenerate item:<id> --section <id> [--lane <lane>] [--seed <n>] [--version <n>] [--base <n>] [--no-wait]",
      "Write one node of a filled plan again",
     "Writes one node of a filled plan again and nothing but what depends on it. A section is built again whole\n"
     "(its form and its returns too); a phrase or an idea keeps its shape and has its lanes written again; with\n"
@@ -441,11 +444,17 @@ const CliCommand CLI_COMMANDS[] = {
     "  default is from the clock; the seed used is always printed (if a seed gets stuck the next seeds are tried,\n"
     "  up to 16).\n"
     "\n"
+    "With an item address (a piece of the data folder) the section of --version (default: the current version) is\n"
+    "written again as the next version of the item, as a job the command waits for; --base is the version the\n"
+    "command is made against (default: the current one), --no-wait prints the job's id instead of waiting. The\n"
+    "item is named after --data: ursatz --data <dir> regenerate item:<id> --section B.\n"
+    "\n"
     "Exit status: 0 success; 1 usage or an invalid argument; 2 the plan cannot be read, the node is not found, is\n"
-    "Given or cannot be regenerated, or no seed completes the plan; 3 an output file could not be written.\n"
+    "Given or cannot be regenerated, or no seed completes the plan, or the job failed; 3 an output file could not be written.\n"
     "\n"
     "Example:\n"
-    "  ursatz regenerate piece.json --section B --seed 3 --out piece-2.json --midi piece-2.mid",
+    "  ursatz regenerate piece.json --section B --seed 3 --out piece-2.json --midi piece-2.mid\n"
+    "  ursatz --data ~/ursatz-data regenerate item:itm-3f2a --section B --seed 3",
      FLAGS_REGENERATE, 1, 1, run_regenerate},
     {"variations",
     "variations <plan.json> (--node <id> | --section <letter>) [--lane <lane>] --count <n> --out-dir <dir> [--seed <n>] [--write-midi] [--write-musicxml] [--tempo <bpm>] [--plain-midi] [--format <text|json>]",
@@ -492,15 +501,20 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz harmonize piece.json --section A --count 4 --seed 3 --out-dir harmonizations --write-midi",
      FLAGS_HARMONIZE, 1, 1, run_harmonize},
     {"render",
-    "render <plan.json> [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi]",
+    "render <plan.json> [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi]\n"
+    "render item:<id>[@v<n>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi]",
      "Render a plan to a MIDI or MusicXML file",
     "Renders a plan file (a plan from 'ursatz plan', 'fill', 'grow --out' and the like) to MIDI, MusicXML or both:\n"
     "at least one of --midi and --musicxml is needed. --tempo is a whole number or a fraction like 195/2.\n"
+    "With an item address, the plan of that version of a theme or piece of the data folder (the current version\n"
+    "when the address has none); a motif has no plan.\n"
     "\n"
-    "Exit status: 0 success; 1 usage or an invalid argument, or a plan that cannot be read or rendered.\n"
+    "Exit status: 0 success; 1 usage or an invalid argument, or a plan that cannot be read or rendered; 2 an item\n"
+    "version without a plan.\n"
     "\n"
     "Example:\n"
-    "  ursatz render piece.json --midi piece.mid --musicxml piece.xml --tempo 96",
+    "  ursatz render piece.json --midi piece.mid --musicxml piece.xml --tempo 96\n"
+    "  ursatz --data ~/ursatz-data render item:itm-3f2a@v2 --midi piece.mid",
      FLAGS_RENDER, 1, 1, run_render},
     {"listen",
     "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>]\n"
@@ -659,6 +673,16 @@ const CliCommand CLI_COMMANDS[] = {
     "  echo '{\"command\":\"project.create\",\"params\":{\"name\":\"Songs\"}}' | ursatz --data ~/ursatz-data apply\n"
     "  ursatz --data ~/ursatz-data --actor claude apply edits.jsonl --wait",
      FLAGS_APPLY, 0, 1, run_apply},
+    {"compose",
+    "compose item:<id> [--seed <n>] [--update-uses] [--base <n>] [--no-wait]",
+     "Compose a theme or piece of the data folder into its next version",
+    "Composes the theme or piece the address names into its next version, with its files, as a job the command waits for. It prints item <id> version <n> when the job is done. --seed makes the same composition again; without it the seed is new. --update-uses moves every updated use to its source's current version first. --base is the version the command is made against (default: the current one): a newer version refuses it. --no-wait prints the job's id and returns. The data folder is named before the subcommand: ursatz --data <dir> compose item:<id>.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or a command the workshop refuses (a stale --base, a motif); 2 the folder cannot be opened or the job failed.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data compose item:itm-3f2a --seed 7",
+     FLAGS_COMPOSE, 1, 1, run_compose},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);
