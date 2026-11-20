@@ -24,7 +24,7 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-The command is `build/composer/cli/ursatz-composer`. The library layout is in [docs/building.md](docs/building.md); the
+The command is `build/cli/ursatz`, the program of the [cli part](../cli/README.md). The library layout is in [docs/building.md](docs/building.md); the
 source directories are in [docs/structure.md](docs/structure.md).
 
 ## Tests
@@ -42,7 +42,7 @@ Tests are split by the `slow` label so a pull request run stays short.
 ## Usage
 
 ```sh
-ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
+ursatz grow theme.txt --into sentence --key "D minor" --meter 4/4 --seed 7 --out theme.json --midi theme.mid
 ```
 
 Every command, with an example each, is in [docs/cli.md](docs/cli.md).
