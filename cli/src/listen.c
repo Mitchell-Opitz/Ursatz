@@ -280,8 +280,8 @@ static char *seed_text(unsigned long seed, char *buffer, size_t size) {
     return buffer;
 }
 
-/* The request of a random motive: the sample's seed, the mode, meter, strategy, style and settings. */
-static cJSON *random_motive_request(const Options *options, unsigned long seed, const cJSON *preferences) {
+/* The request of a random motive: the sample's seed, the mode, meter, strategy, style and settings, and the motives to avoid (R-673). */
+static cJSON *random_motive_request(const Options *options, unsigned long seed, const cJSON *preferences, const cJSON *avoid) {
     char number[32];
     cJSON *request = cJSON_CreateObject();
     bool ok = request && cJSON_AddStringToObject(request, "material", options->material_text) &&
@@ -289,7 +289,8 @@ static cJSON *random_motive_request(const Options *options, unsigned long seed, 
               cJSON_AddStringToObject(request, "strategy", options->strategy_text) && cJSON_AddNumberToObject(request, "count", 1) &&
               cJSON_AddStringToObject(request, "seed", seed_text(seed, number, sizeof number)) &&
               (!options->style_path || cJSON_AddStringToObject(request, "style", options->style_path)) &&
-              (!preferences || cJSON_AddItemToObject(request, "preferences", cJSON_Duplicate(preferences, true)));
+              (!preferences || cJSON_AddItemToObject(request, "preferences", cJSON_Duplicate(preferences, true))) &&
+              (!avoid || cJSON_AddItemToObject(request, "avoid", cJSON_Duplicate(avoid, true)));
     if (!ok) {
         cJSON_Delete(request);
         return NULL;
@@ -326,10 +327,14 @@ static UrsatzStatus call(const char *entry, cJSON *request, CliResponse *respons
     return status;
 }
 
+/* The most motives a varied batch hands to the next sample: the API's limit of avoid. */
+#define LISTEN_AVOID_MAX 64
+
 /* One motif: a random motive, rendered to MIDI and MusicXML, and its API response as json. */
-static int make_motif(const Options *options, unsigned long index, unsigned long seed, const cJSON *preferences, Sample *sample) {
+static int make_motif(const Options *options, unsigned long index, unsigned long seed, const cJSON *preferences, cJSON *avoid,
+                      Sample *sample) {
     CliResponse drawn;
-    UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences), &drawn);
+    UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences, avoid), &drawn);
     if (status != URSATZ_OK) {
         refuse(sample, status, &drawn.error);
         cli_response_destroy(&drawn);
@@ -338,10 +343,14 @@ static int make_motif(const Options *options, unsigned long index, unsigned long
     cJSON *document = cJSON_Parse(drawn.json);
     cli_response_destroy(&drawn);
     const cJSON *first = document ? cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0) : NULL;
+    /* A varied batch (R-673) hands each written motive to the samples after it, the last AVOID_MAX of them. */
+    const cJSON *motive_document = cJSON_GetObjectItemCaseSensitive(first, "motive");
+    cJSON *kept = avoid && motive_document ? cJSON_Duplicate(motive_document, true) : NULL;
     CliResponse rendered;
     status = call("motive_render", render_request(options, cJSON_GetObjectItemCaseSensitive(first, "motive")), &rendered);
     cJSON_Delete(document);
     if (status != URSATZ_OK) {
+        cJSON_Delete(kept);
         refuse(sample, status, &rendered.error);
         cli_response_destroy(&rendered);
         return 0;
@@ -357,7 +366,16 @@ static int make_motif(const Options *options, unsigned long index, unsigned long
     if (result == 0) {
         sample->ok = true;
         snprintf(sample->status, sizeof sample->status, "ok");
+        if (kept) {
+            while (cJSON_GetArraySize(avoid) >= LISTEN_AVOID_MAX) {
+                cJSON_DeleteItemFromArray(avoid, 0);
+            }
+            if (cJSON_AddItemToArray(avoid, kept)) {
+                kept = NULL;
+            }
+        }
     }
+    cJSON_Delete(kept);
     return result;
 }
 
@@ -507,7 +525,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         request = theme_request_from_motive(options, motif_document, seed, preferences);
     } else {
         CliResponse drawn;
-        UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences), &drawn);
+        UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences, NULL), &drawn);
         if (status != URSATZ_OK) {
             refuse(sample, status, &drawn.error);
             cli_response_destroy(&drawn);
@@ -558,7 +576,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
 /* A request the API would refuse (the mode, meter, strategy, style or settings) is a usage error, not a refused sample. */
 static int validate_options(const Options *options, const cJSON *preferences) {
     CliResponse response;
-    cJSON *request = random_motive_request(options, options->seed, preferences);
+    cJSON *request = random_motive_request(options, options->seed, preferences, NULL);
     if (!request) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
@@ -633,11 +651,15 @@ int run_listen(const CliArgs *args) {
     }
     Manifest manifest = {file, &options, sent};
     unsigned long written = 0;
+    /* A varied batch (settings with candidates.variety above 0, R-673) collects its motives to hand to the samples after them. */
+    const cJSON *candidates = cJSON_GetObjectItemCaseSensitive(sent, "candidates");
+    const cJSON *variety = cJSON_GetObjectItemCaseSensitive(candidates, "variety");
+    cJSON *avoid = !options.themes && cJSON_IsNumber(variety) && variety->valuedouble > 0 ? cJSON_CreateArray() : NULL;
     for (unsigned long i = 0; status == 0 && i < options.count; i++) {
         Sample sample;
         memset(&sample, 0, sizeof sample);
         status = options.themes ? make_theme(&options, i + 1, options.seed + i, preferences, motif_document, theme_request, &sample)
-                                : make_motif(&options, i + 1, options.seed + i, preferences, &sample);
+                                : make_motif(&options, i + 1, options.seed + i, preferences, avoid, &sample);
         if (status == 0) {
             status = manifest_add(&manifest, i + 1, options.seed + i, &sample);
         }
@@ -649,6 +671,7 @@ int run_listen(const CliArgs *args) {
     if (file) {
         fclose(file);
     }
+    cJSON_Delete(avoid);
     cJSON_Delete(preferences);
     cJSON_Delete(theme_request);
     cJSON_Delete(motif_document);
