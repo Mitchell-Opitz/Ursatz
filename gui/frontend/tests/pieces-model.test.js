@@ -44,27 +44,27 @@ state.seed = "7";
 state.uses = [{ item_id: "mot-1", version: 2 }];
 const body = P.bodyFromState(state);
 check(Array.isArray(body.uses) && body.uses.length === 1, "the body keeps the uses");
-check(body.piece.structure.key === "D" && body.piece.structure.material === "omt.material.natural-minor" && !("mode" in body.piece.structure) && body.piece.structure.meter === "4/4", "the body holds key, material and meter");
-check(body.piece.structure.sections.length === 5 && body.piece.structure.sections[1].fill.item_id === "mot-1", "the body holds the sections in order");
-check(body.piece.structure.sections[1].fill.into === "sentence" && body.piece.structure.sections[1].fill.hybrid === null, "a motif of 8 bars keeps its theme form");
-check(body.piece.structure.sections[2].fill.into === "sentence", "a motif of 4 bars keeps its theme form");
+check(P.pieceOfBody(body).structure.key === "D" && P.pieceOfBody(body).structure.material === "omt.material.natural-minor" && !("mode" in P.pieceOfBody(body).structure) && P.pieceOfBody(body).structure.meter === "4/4", "the body holds key, material and meter");
+check(P.pieceOfBody(body).structure.sections.length === 5 && P.pieceOfBody(body).structure.sections[1].fill.item_id === "mot-1", "the body holds the sections in order");
+check(P.pieceOfBody(body).structure.sections[1].fill.into === "sentence" && P.pieceOfBody(body).structure.sections[1].fill.hybrid === undefined, "a motif of 8 bars keeps its theme form");
+check(P.pieceOfBody(body).structure.sections[2].fill.into === "sentence", "a motif of 4 bars keeps its theme form");
 const freeState = filled();
 freeState.sections[2].beats = 14;
-check(P.bodyFromState(freeState).piece.structure.sections[2].fill.into === undefined, "a motif of any other length is a free phrase and has no theme form");
-check(same(body.piece.structure.sections[4].harmony, { progression: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
-check(same(body.piece.motive, { item_id: "mot-9", version: 3 }) && body.piece.pool === "approved", "motive and pool are in the body");
-check(same(body.piece.accompaniment, { pattern: "alberti" }), "the accompaniment is a pattern");
-check(body.piece.brief.scopes.length === 1 && body.piece.brief.style_ids[0] === "sty-1", "the brief comes from the picks");
-check(same(body.piece.without, ["motive-rhythm"]) && body.piece.style_weight === "1", "the switches and the weight are in the body");
-check(body.piece.tempo === 170 && body.piece.seed === 7 && body.piece.check === true, "tempo, seed and check are in the body");
-check(body.piece.result === undefined, "the result is left out");
+check(P.pieceOfBody(P.bodyFromState(freeState)).structure.sections[2].fill.into === undefined, "a motif of any other length is a free phrase and has no theme form");
+check(same(P.pieceOfBody(body).structure.sections[4].harmony, { progression: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
+check(same(P.pieceOfBody(body).motive, { item_id: "mot-9", version: 3 }) && P.pieceOfBody(body).pool === "approved", "motive and pool are in the body");
+check(same(P.pieceOfBody(body).accompaniment, { pattern: "alberti" }), "the accompaniment is a pattern");
+check(P.pieceOfBody(body).brief.scopes.length === 1 && P.pieceOfBody(body).brief.style_ids[0] === "sty-1", "the brief comes from the picks");
+check(same(P.pieceOfBody(body).without, ["motive-rhythm"]) && P.pieceOfBody(body).style_weight === "1", "the switches and the weight are in the body");
+check(P.pieceOfBody(body).tempo === 170 && P.pieceOfBody(body).seed === 7 && P.pieceOfBody(body).check === true, "tempo, seed and check are in the body");
+check(P.pieceOfBody(body).result === undefined, "the result is left out");
 const back = P.stateFromBody(body, "pce-1");
 back.sections[1].fill.hybrid = "";
 check(same(P.bodyFromState(back), body), "the body round trips");
 check(back.tempo === "170" && back.seed === "7" && back.accompaniment.kind === "pattern", "the state reads text for tempo and seed");
 
 /* placeholders and unfinished fills */
-for (const placeholder of [{ uses: [], piece: { structure: null } }, { uses: [], piece: { structure: "x" } }, { uses: [], piece: { structure: [] } }, { uses: [], piece: { structure: { sections: null } } }, null]) {
+for (const placeholder of [P.requestBodyOf([], { structure: null }), P.requestBodyOf([], { structure: "x" }), P.requestBodyOf([], { structure: [] }), P.requestBodyOf([], { structure: { sections: null } }), null]) {
   const s = P.stateFromBody(placeholder, "pce-2");
   check(s.sections.length === 0 && s.material === "omt.material.major" && s.key === "C", `a placeholder gives the defaults (${JSON.stringify(placeholder)})`);
 }
@@ -73,8 +73,8 @@ unfinished.sections[1].fill = { kind: "motif", item_id: "", version: 0, into: "s
 unfinished.sections[2].fill = { kind: "theme", item_id: "", version: 0 };
 unfinished.sections[4].harmony = { kind: "progression", numerals: "  ", cells: "", schema: "", chords: [] };
 const unfinishedBody = P.bodyFromState(unfinished);
-check(unfinishedBody.piece.structure.sections.every((entry) => entry.fill.kind === "empty" && entry.harmony === undefined), "a fill that names nothing is saved empty, and so is a harmony");
-const old = P.stateFromBody({ uses: [], piece: { structure: { key: "F", mode: "minor", meter: "3/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 6, pickup: "1", cadence: "HC", fill: { kind: "motif", item_id: "m", version: 1, into: null, hybrid: null } }] } } }, "x");
+check(P.pieceOfBody(unfinishedBody).structure.sections.every((entry) => entry.fill.kind === "empty" && entry.harmony === undefined), "a fill that names nothing is saved empty, and so is a harmony");
+const old = P.stateFromBody(P.requestBodyOf([], { structure: { key: "F", mode: "minor", meter: "3/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 6, pickup: "1", cadence: "HC", fill: { kind: "motif", item_id: "m", version: 1, into: null, hybrid: null } }] } }), "x");
 check(old.meter === "3/4" && old.sections[0].cadence === "HC" && old.sections[0].pickup === "1", "meter, pickup and cadence are read");
 
 /* structure problems */
@@ -95,7 +95,7 @@ form.seed = "-1";
 form.material = "style";
 form.sections[4].fill.numerals = "I $ V";
 form.sections[4].fill.cells = "9";
-check(P.bodyFromState({ ...form, seed: "5", tempo: "10" }).piece.tempo === 10, "a tempo out of range is sent for the Composer to refuse");
+check(P.pieceOfBody(P.bodyFromState({ ...form, seed: "5", tempo: "10" })).tempo === 10, "a tempo out of range is sent for the Composer to refuse");
 check(P.fieldForPath("/key") === "key" && P.fieldForPath("/sections/2/pickup") === "sections" && P.fieldForPath("/x") === null, "request paths name the form fields");
 check(P.pickups("2/4").join() === "0,1/4,1/2,1,3/2" && P.pickups("4/4").includes("3"), "the pickups are the Composer's for each meter");
 check(P.barBeats("6/8") === 6 && P.barBeats("3/4") === 3, "the beats in a bar come from the meters");
@@ -147,7 +147,7 @@ check(JSON.parse(P.composeRequest(state, { seed: "12", update_uses: true }).body
 const blank = P.emptyState("pce-3");
 check(P.composeRequest(blank, {}).body === "{}", "no seed gives an empty body");
 const save = P.saveRequest(state, " first ");
-check(save.url === "/api/materials/items/pce-1/versions" && JSON.parse(save.body).note === "first" && JSON.parse(save.body).body.piece.structure.sections.length === 5, "save posts a version with the body and the note");
+check(save.url === "/api/materials/items/pce-1/versions" && JSON.parse(save.body).note === "first" && P.pieceOfBody(JSON.parse(save.body).body).structure.sections.length === 5, "save posts a version with the body and the note");
 check(P.versionFileUrl("pce-1", 3, "loop.mid") === "/api/materials/items/pce-1/versions/3/files/loop.mid", "version file url");
 const regenerate = P.regenerateRequest("pce-1", 2, { section_id: "s1", lane: "melody", seed: "9" });
 check(regenerate.request.url.endsWith("/versions/2/regenerate") && same(JSON.parse(regenerate.request.body), { section_id: "s1", lane: "melody", seed: 9 }), "regenerate request");
@@ -200,7 +200,7 @@ roundedState.modulate = true;
 roundedState.motive = { item_id: "mot-9", version: 3 };
 const roundedBody = P.bodyFromState(roundedState);
 check(
-  same(roundedBody.piece.structure, { form: "rounded-binary", key: "A", material: "omt.material.natural-minor", meter: "3/4", bars: 24, count: 0, modulate: true }),
+  same(P.pieceOfBody(roundedBody).structure, { form: "rounded-binary", key: "A", material: "omt.material.natural-minor", meter: "3/4", bars: 24, count: 0, modulate: true }),
   "a sized form's body holds its form, size and modulate and no sections",
 );
 const roundedBack = P.stateFromBody(roundedBody, "pce-2");
@@ -213,9 +213,9 @@ check(same(P.bodyFromState(roundedBack), roundedBody), "a rounded binary body ro
 const noModulate = P.withForm(roundedState, "loop");
 check(noModulate.form === "loop" && noModulate.modulate === false && noModulate.bars === 0, "a form that cannot modulate drops modulate and the size");
 const gameBody = P.bodyFromState(filled());
-check(gameBody.piece.structure.form === "game-loop" && gameBody.piece.structure.sections.length === 5 && gameBody.piece.structure.bars === undefined, "a game loop body names its form and keeps its sections");
+check(P.pieceOfBody(gameBody).structure.form === "game-loop" && P.pieceOfBody(gameBody).structure.sections.length === 5 && P.pieceOfBody(gameBody).structure.bars === undefined, "a game loop body names its form and keeps its sections");
 const oldBody = JSON.parse(JSON.stringify(gameBody));
-delete oldBody.piece.structure.form;
+delete P.pieceOfBody(oldBody).structure.form;
 const oldState = P.stateFromBody(oldBody, "pce-1");
 check(oldState.form === "game-loop" && oldState.sections.length === 5 && oldState.sections[4].part === "ending", "a body without a form is the game loop");
 const sizes = P.sizeOptions(P.formOf("variations"));
@@ -252,9 +252,9 @@ check(same(P.actionSections(roundedState, oneView.versions[0].view.rows).map((en
 /* sources and themes */
 const updates = P.updatedUses({ uses_status: [{ item_id: "mot-1", name: "Motif A", version: 1, current_version: 2 }, { item_id: "thm-1", version: 2, current_version: 2 }, { item_id: "x", version: 1, current_version: 4, missing: true }] });
 check(updates.length === 1 && updates[0].label === "Source updated: Motif A v2", "an updated source is offered");
-const themeBody = { theme: { form: { into: "hybrid", hybrid: "presentation+continuation", key: "D", material: "omt.material.natural-minor", meter: "4/4", bars: 8 }, result: { seed: 1 } } };
-check(P.themeLengthBeats(themeBody) === 32 && P.themeLengthBeats({ theme: { form: { bars: 4, meter: "3/4" } } }) === 12 && P.themeLengthBeats({}) === null, "a theme's length in beats");
-check(P.themeFormText(themeBody) === "hybrid (presentation+continuation) in D minor, 4/4, 8 bars" && P.themeComposed(themeBody) && !P.themeComposed({ theme: { form: {}, result: null } }), "a theme's form and whether it was composed");
+const themeBody = { request: { into: "hybrid", hybrid: "presentation+continuation", key: "D", material: "omt.material.natural-minor", meter: "4/4", bars: 8 }, result: { seed: 1 } };
+check(P.themeLengthBeats(themeBody) === 32 && P.themeLengthBeats({ request: { bars: 4, meter: "3/4" } }) === 12 && P.themeLengthBeats({}) === null, "a theme's length in beats");
+check(P.themeFormText(themeBody) === "hybrid (presentation+continuation) in D minor, 4/4, 8 bars" && P.themeComposed(themeBody) && !P.themeComposed({ request: {}, result: null }), "a theme's form and whether it was composed");
 check(P.motifIsFree(section("s", "body", "A", 6)) && !P.motifIsFree(section("s", "body", "A", 32)) && P.motifIsFree(section("s", "body", "A", 32, null, { pickup: "1" })), "a motif fill is free unless 4 or 8 bars without a pickup");
 
 /* the construction of a motif fill (P47, R-468) */
@@ -268,21 +268,21 @@ check(P.constructionPossible(sixBars({})) && !P.constructionPossible(section("s"
 check(P.constructionChoice(sixBars({}).fill) === "default" && P.constructionChoice(sixBars({ construction: "auto" }).fill) === "auto" && P.constructionChoice(sixBars({ construction: { ideas: {}, extensions: [] } }).fill) === "given", "the three choices read from the fill");
 const constructed = P.emptyState("c");
 constructed.sections = [sixBars({ construction: "auto" })];
-check(P.bodyFromState(constructed).piece.structure.sections[0].fill.construction === "auto", "a chosen construction is sent as auto");
+check(P.pieceOfBody(P.bodyFromState(constructed)).structure.sections[0].fill.construction === "auto", "a chosen construction is sent as auto");
 constructed.sections = [sixBars({ construction: { ideas: { "basic idea": 2, repetition: 1, "fragment 1": 1, "fragment 2": 1, cadential: 1, stray: 9 }, extensions: [{ kind: "evaded", idea: "", bars: 0, varied: false }] } })];
-const givenFill = P.bodyFromState(constructed).piece.structure.sections[0].fill;
+const givenFill = P.pieceOfBody(P.bodyFromState(constructed)).structure.sections[0].fill;
 check(same(givenFill.construction, { ideas: { "basic idea": 2, repetition: 1, "fragment 1": 1, "fragment 2": 1, cadential: 1 }, extensions: [{ kind: "evaded", bars: 0 }] }), "a given construction is sent as the ideas of the pairing and its extensions");
 check(same(P.bodyFromState(P.stateFromBody(P.bodyFromState(constructed), "c")), P.bodyFromState(constructed)), "a given construction round trips through the body");
 constructed.sections = [sixBars({ construction: "auto", into: "period" })];
 check(P.stateFromBody(P.bodyFromState(constructed), "c").sections[0].fill.construction === "auto", "a chosen construction reads back");
 constructed.sections = [sixBars({ construction: "auto", pickup: "1" })];
 constructed.sections[0].pickup = "1";
-check(P.bodyFromState(constructed).piece.structure.sections[0].fill.construction === undefined, "a free phrase sends no construction");
+check(P.pieceOfBody(P.bodyFromState(constructed)).structure.sections[0].fill.construction === undefined, "a free phrase sends no construction");
 constructed.sections = [section("s", "body", "A", 32, { kind: "motif", item_id: "m", version: 1, into: "sentence", hybrid: "" })];
-check(P.bodyFromState(constructed).piece.structure.sections[0].fill.construction === undefined, "a theme of 8 bars with no construction sends no member");
-const oldPiece = { uses: [], piece: { structure: { form: "game-loop", key: "C", mode: "minor", meter: "4/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 32, pickup: "0", cadence: null, fill: { kind: "motif", item_id: "m", version: 1, into: "sentence", hybrid: null } }] } } };
+check(P.pieceOfBody(P.bodyFromState(constructed)).structure.sections[0].fill.construction === undefined, "a theme of 8 bars with no construction sends no member");
+const oldPiece = P.requestBodyOf([], { structure: { form: "game-loop", key: "C", mode: "minor", meter: "4/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 32, pickup: "0", cadence: null, fill: { kind: "motif", item_id: "m", version: 1, into: "sentence", hybrid: null } }] } });
 check(P.stateFromBody(oldPiece, "o").sections[0].fill.construction === null, "a saved piece without the member reads as no construction");
-check(P.bodyFromState(P.stateFromBody(oldPiece, "o")).piece.structure.sections[0].fill.construction === undefined, "a saved piece without the member is sent as before");
+check(P.pieceOfBody(P.bodyFromState(P.stateFromBody(oldPiece, "o"))).structure.sections[0].fill.construction === undefined, "a saved piece without the member is sent as before");
 check(same(P.sectionConstruction({ construction: { halves: [4, 6], text: "A 10-bar period." } }), { halves: "4+6", text: "A 10-bar period." }), "a section's construction reads its halves and reason");
 check(P.sectionConstruction({ construction: "auto" }).text === "Chosen by the Composer" && P.sectionConstruction({}).text === "" && P.sectionConstruction(null).halves === "", "a section without a construction shows nothing");
 const rowView = P.resultView({ seed: 1, summary: { meter: "4/4", versions: { loop: { sections: [{ id: "s0", part: "body", start: "0", beats: 24, construction_text: "A 6-bar sentence." }, { id: "s1", part: "ending", start: "6", beats: 8 }] } } } }).versions[0].view;
@@ -399,7 +399,7 @@ functionState.sections[1].function = "transition";
 functionState.sections[2].function = "coda";
 const functionBody = P.bodyFromState(functionState);
 check(
-  functionBody.piece.structure.sections[1].function === "transition" && !("function" in functionBody.piece.structure.sections[2]) && !("function" in functionBody.piece.structure.sections[0]),
+  P.pieceOfBody(functionBody).structure.sections[1].function === "transition" && !("function" in P.pieceOfBody(functionBody).structure.sections[2]) && !("function" in P.pieceOfBody(functionBody).structure.sections[0]),
   "a section with a function writes it, a section without one or with one its part may not have writes none",
 );
 const functionBack = P.stateFromBody(functionBody, "pce-1");
@@ -408,8 +408,8 @@ check(
   "a game loop state with a transition body section round trips",
 );
 const unknownFunction = JSON.parse(JSON.stringify(functionBody));
-unknownFunction.piece.structure.sections[1].function = "bridge";
-unknownFunction.piece.structure.sections[4].function = "transition";
+unknownFunction.request.sections[1].function = "bridge";
+unknownFunction.request.sections[4].function = "transition";
 const unknownBack = P.stateFromBody(unknownFunction, "pce-1");
 check(unknownBack.sections[1].function === "" && unknownBack.sections[4].function === "", "a function the vocabulary lacks or the part may not have is dropped");
 check(P.newSection(functionState, "body").function === "", "a new section has no function");
@@ -481,28 +481,19 @@ placed.sections[2].region = { kind: "key", tonic: "Eb", material: "omt.material.
 placed.sections[3].region = { kind: "home", tonic: "", material: "", relation: "", anchor: "home" };
 placed.sections[1].harmony = { kind: "schema", numerals: "", cells: "", schema: "prinner", chords: [] };
 placed.sections[2].harmony = { kind: "chords", numerals: "", cells: "", schema: "", chords: [{ bar: "2", text: "V" }, { bar: "", text: "I" }, { bar: "3", text: "" }] };
-const placedBody = P.bodyFromState(placed).piece.structure.sections;
+const placedBody = P.pieceOfBody(P.bodyFromState(placed)).structure.sections;
 check(same(placedBody[1].region, { relation: "omt.relation.dominant", anchor: "home" }) && same(placedBody[2].region, { tonic: "Eb", material: "omt.material.major" }) && placedBody[3].region === "home", "a section's region is null, home, a key or a relation");
 check(placedBody[0].region === undefined && placedBody[0].harmony === undefined, "a section without a region or harmony has no member");
 check(same(placedBody[1].harmony, { schema: "prinner" }) && same(placedBody[2].harmony, { chords: [{ bar: 2, text: "V" }] }), "a schema is a name and chords with no bar or no text are left out");
-const placedBack = P.stateFromBody({ uses: [], piece: { structure: { key: "D", material: "omt.material.natural-minor", meter: "4/4", sections: placedBody } } }, "pce-3");
+const placedBack = P.stateFromBody(P.requestBodyOf([], { structure: { key: "D", material: "omt.material.natural-minor", meter: "4/4", sections: placedBody } }), "pce-3");
 check(placedBack.sections[1].region.kind === "relation" && placedBack.sections[2].region.tonic === "Eb" && placedBack.sections[3].region.kind === "home", "a region round trips through the state");
 check(placedBack.sections[1].harmony.schema === "prinner" && placedBack.sections[2].harmony.chords[0].bar === "2", "a harmony round trips through the state");
 const unfinishedPlace = filled();
 unfinishedPlace.sections[1].region = { kind: "key", tonic: "", material: "", relation: "", anchor: "home" };
 unfinishedPlace.sections[2].harmony = { kind: "progression", numerals: " ", cells: "", schema: "", chords: [] };
-check(P.bodyFromState(unfinishedPlace).piece.structure.sections.every((entry) => entry.region === undefined), "a region that names nothing is saved as none");
+check(P.pieceOfBody(P.bodyFromState(unfinishedPlace)).structure.sections.every((entry) => entry.region === undefined), "a region that names nothing is saved as none");
 
 /* a stored progression fill is the section's harmony */
-const stored = { uses: [], piece: { structure: { key: "D", material: "omt.material.natural-minor", meter: "4/4", sections: [
-  { id: "s0", part: "body", letter: "A", beats: 16, pickup: "0", cadence: null, fill: { kind: "progression", numerals: "i iv V i", cells: 2 } },
-  { id: "s1", part: "ending", letter: "E", beats: 8, pickup: "0", cadence: null, fill: { kind: "progression", numerals: "I V" }, harmony: { schema: "prinner" } },
-] } } };
-const migrated = P.stateFromBody(stored, "pce-4");
-check(migrated.sections[0].fill.kind === "empty" && migrated.sections[0].harmony.kind === "progression" && migrated.sections[0].harmony.numerals === "i iv V i" && migrated.sections[0].harmony.cells === "2", "a stored progression fill reads as harmony");
-check(migrated.sections[1].harmony.kind === "schema", "a stored harmony wins over a stored progression fill");
-check(same(P.bodyFromState(migrated).piece.structure.sections[0].harmony, { progression: "i iv V i", cells: 2 }) && P.bodyFromState(migrated).piece.structure.sections[0].fill.kind === "empty", "and it is saved as harmony");
-
 /* the overlays of a sized form */
 const ternaryState = P.emptyState("pce-5");
 ternaryState.form = "ternary";
@@ -511,12 +502,12 @@ ternaryState.overlays = [
   { name: "A", region: P.emptyRegion(), harmony: P.emptyHarmony(), fill: P.emptyFill() },
   { name: "A return", region: P.emptyRegion(), harmony: { kind: "schema", numerals: "", cells: "", schema: "prinner", chords: [] }, fill: P.emptyFill() },
 ];
-const ternaryBody = P.bodyFromState(ternaryState).piece.structure;
+const ternaryBody = P.pieceOfBody(P.bodyFromState(ternaryState)).structure;
 check(ternaryBody.sections.length === 2 && ternaryBody.sections[0].name === "B" && same(ternaryBody.sections[0].fill, { kind: "theme", item_id: "th-1", version: 2 }) && same(ternaryBody.sections[1], { name: "A return", harmony: { schema: "prinner" } }), "a sized form's sections are the overlays that have something");
-const ternaryBack = P.stateFromBody({ uses: [], piece: { structure: { form: "ternary", key: "C", material: "omt.material.major", meter: "4/4", bars: 0, count: 0, modulate: false, sections: ternaryBody.sections } } }, "pce-5");
+const ternaryBack = P.stateFromBody(P.requestBodyOf([], { structure: { form: "ternary", key: "C", material: "omt.material.major", meter: "4/4", bars: 0, count: 0, modulate: false, sections: ternaryBody.sections } }), "pce-5");
 check(ternaryBack.overlays.length === 2 && ternaryBack.overlays[0].region.anchor === "A" && ternaryBack.overlays[0].fill.item_id === "th-1" && ternaryBack.overlays[1].harmony.schema === "prinner", "the overlays round trip through the state");
-const bare = P.bodyFromState(Object.assign(P.emptyState("pce-6"), { form: "ternary" })).piece.structure;
-check(bare.sections === undefined && P.stateFromBody({ uses: [], piece: { structure: { form: "ternary", key: "C", material: "omt.material.major", meter: "4/4", bars: 0, count: 0 } } }, "pce-6").overlays.length === 0, "a sized form with no overlay has no sections member, and a body saved before reads the same");
+const bare = P.pieceOfBody(P.bodyFromState(Object.assign(P.emptyState("pce-6"), { form: "ternary" }))).structure;
+check(bare.sections === undefined && P.stateFromBody(P.requestBodyOf([], { structure: { form: "ternary", key: "C", material: "omt.material.major", meter: "4/4", bars: 0, count: 0 } }), "pce-6").overlays.length === 0, "a sized form with no overlay has no sections member, and a body saved before reads the same");
 
 /* the rows of a result show the region and the harmony */
 const placedRows = P.resultView({ summary: { versions: { loop: { sections: [

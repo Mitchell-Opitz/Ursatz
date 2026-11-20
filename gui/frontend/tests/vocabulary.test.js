@@ -67,10 +67,10 @@ async function main() {
         "theme request paths name the form fields");
   const themeRequest = T.validateRequest(T.emptyState("t"));
   check(themeRequest.method === "POST" && themeRequest.url === "/api/materials/items/validate" && JSON.parse(themeRequest.body).type === "theme" &&
-          JSON.parse(themeRequest.body).body.theme.form.meter === "4/4",
+          JSON.parse(themeRequest.body).body.request.meter === "4/4",
         "the theme form asks the validate route about its body");
   const pieceRequest = P.validateRequest(P.emptyState("p"));
-  check(JSON.parse(pieceRequest.body).type === "piece" && Array.isArray(JSON.parse(pieceRequest.body).body.piece.structure.sections),
+  check(JSON.parse(pieceRequest.body).type === "piece" && Array.isArray(JSON.parse(pieceRequest.body).body.request.sections),
         "the piece form asks the validate route about its body");
   check(M.fieldForPath("/input/text") === "notes" && M.fieldForPath("/harmony") === "harmony" && M.fieldForPath("/features/1") === "features" &&
           M.fieldForPath("/meter") === "meter" && M.fieldForPath("/tones/2") === "notes",
@@ -81,8 +81,8 @@ async function main() {
   const motif = M.validateRequest({ role: "melodic", form: "full", notes: "C4:q D4:q", meter: "4/4", material: "omt.material.natural-minor", pickup: "", harmony: "", features: [], toneOverrides: {} }, null);
   check(JSON.parse(motif.body).type === "motif" && JSON.parse(motif.body).body.motif.material === "omt.material.natural-minor", "the motif editor asks the validate route about its body");
   // a GUI spelling of a key is kept as stored in the body
-  check(T.formFromBody({ uses: [], theme: { form: { into: "period", meter: "6/8", bars: 4, cadence: "HC" }, slots: [] } }, "x").meter === "6/8" &&
-          P.stateFromBody({ uses: [], piece: { structure: { key: "C# major", material: "omt.material.major", meter: "4/4", sections: [] } } }, "x").key === "C# major",
+  check(T.formFromBody(T.requestBodyOf([], { form: { into: "period", meter: "6/8", bars: 4, cadence: "HC" }, slots: [] }), "x").meter === "6/8" &&
+          P.stateFromBody(P.requestBodyOf([], { structure: { key: "C# major", material: "omt.material.major", meter: "4/4", sections: [] } }), "x").key === "C# major",
         "an item saved with a GUI key spelling opens as stored");
 
   // the validator

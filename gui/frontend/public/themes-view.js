@@ -454,14 +454,14 @@ async function themeMountScore(host, id, version, title, options) {
 
 /*
  * The result of a theme version: the Composer's summary as rows, the score with playback and the MIDI download.
- * ctx: {id, version, theme (the version body's theme), nameOf, title}. Returns null when the version has no result.
+ * ctx: {id, version, theme (the version body: its request, result and check), nameOf, title}. Returns null when the version has no result.
  */
 function buildThemeResult(ctx) {
   const result = ctx.theme && ctx.theme.result;
   if (!result || typeof result !== "object") {
     return null;
   }
-  const state = ThemesModel.formFromBody({ uses: [], theme: ctx.theme }, ctx.id);
+  const state = ThemesModel.formFromBody(ctx.theme, ctx.id);
   const view = ThemesModel.resultView(result, {
     motiveNames: ThemesModel.motiveNames(state, ctx.nameOf),
     check: ctx.theme.check === true,
@@ -535,7 +535,6 @@ function buildThemeResult(ctx) {
 function themeVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.innerHTML = "";
   viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
-  const theme = body && body.theme ? body.theme : {};
   const state = ThemesModel.formFromBody(body, id);
   viewEl.appendChild(
     themeFacts([
@@ -545,7 +544,7 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
       ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
     ]),
   );
-  const result = buildThemeResult({ id, version: number, theme, nameOf, title });
+  const result = buildThemeResult({ id, version: number, theme: body, nameOf, title });
   viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
 }
 
@@ -1113,10 +1112,10 @@ function buildThemeEditor(ctx) {
     }
   }
 
-  /* Whether the form differs from the stored version, or the theme has no stored form yet. */
+  /* Whether the form differs from the stored version, or the theme has no stored request yet. */
   function bodyChanged() {
-    const stored = ctx.body && ctx.body.theme ? ctx.body.theme.form : null;
-    return JSON.stringify(ThemesModel.bodyFromForm(state)) !== initialJson || !stored || typeof stored !== "object";
+    const stored = ctx.body && ctx.body.request && typeof ctx.body.request === "object" ? ctx.body.request : null;
+    return JSON.stringify(ThemesModel.bodyFromForm(state)) !== initialJson || !stored || Object.keys(stored).length === 0;
   }
 
   /* Saves the form as a new version; the answer. */

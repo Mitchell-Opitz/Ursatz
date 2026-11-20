@@ -33,10 +33,10 @@ check(M.buildVersionGetRequest("mot-1", 2).url === "/api/materials/items/mot-1/v
 
 const motif = M.newItemBody("motif").motif;
 check(motif.notes !== "" && motif.pickup === "0" && same(motif.features, []) && motif.derived === null, "new motif body is valid");
-check(same(M.newItemBody("theme"), { uses: [], theme: { form: null, slots: [] } }), "new theme body");
-check(same(M.newItemBody("piece"), { uses: [], piece: { structure: null } }), "new piece body");
+check(same(M.newItemBody("theme"), { uses: [], request: {} }), "new theme body");
+check(same(M.newItemBody("piece"), { uses: [], request: {} }), "new piece body");
 const item = JSON.parse(M.buildCreateItemRequest("theme", " Main ", "prj-a").body);
-check(item.type === "theme" && item.name === "Main" && item.project_id === "prj-a" && item.body.theme, "create item body");
+check(item.type === "theme" && item.name === "Main" && item.project_id === "prj-a" && item.body.request, "create item body");
 check(same(JSON.parse(M.buildUpdateItemRequest("x", { name: " B ", project_id: "" }).body), { name: "B" }), "update item skips empty fields");
 
 check(M.errorText({ error: "project is not empty" }) === "project is not empty", "error text from the answer");

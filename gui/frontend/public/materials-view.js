@@ -1305,7 +1305,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     const resultEl = buildPieceResult({
       id,
       version: item.current_version,
-      piece: answer.data.body.piece,
+      piece: answer.data.body,
       nameOf: itemNameOf,
       title: item.name,
       statusEl,

@@ -427,8 +427,137 @@
     return halves.length === 2 && halves.every(Number.isInteger) ? `${halves[0]}+${halves[1]}` : "";
   }
 
-  /* The version body of a form state: {uses, theme}. The result is left out;
-   * the backend fills the uses of the slot and accompaniment motifs. */
+  /* --- the stored request (R-650) -------------------------------------------------------------------------------- */
+
+  /* A theme version body is the Composer request it composes with, {uses, request, brief, result, check, seed}: a motif version is
+   * {"$item": {item_id, version}} in the request's motives, the stored plan of a theme fill {"$item": {..., file}}. The form keeps its
+   * own state; these two turn it into the request and back (the same translation the workshop's migration makes, so a body saved by
+   * either composes the same request). */
+
+  const isReference = (entry) =>
+    Boolean(entry) && typeof entry === "object" && typeof entry.item_id === "string" && typeof entry.version === "number";
+
+  /* The id (M1, M2...) of the motive of a reference, adding the motive when it is new. */
+  function motiveId(motives, reference) {
+    let at = motives.findIndex((entry) => entry.$item.item_id === reference.item_id && entry.$item.version === reference.version);
+    if (at < 0) {
+      motives.push({ id: `M${motives.length + 1}`, $item: { item_id: reference.item_id, version: reference.version } });
+      at = motives.length - 1;
+    }
+    return motives[at].id;
+  }
+
+  const FORM_MEMBERS = ["into", "hybrid", "material", "mode", "meter", "bars", "cadence", "first_cadence", "development", "construction"];
+
+  /* The body of a theme version from the theme member the form builds ({form, slots, ideas, chords, accompaniment, brief, style_weight,
+   * without, tempo, check, seed}). */
+  function requestBodyOf(uses, theme) {
+    const form = theme.form && typeof theme.form === "object" ? theme.form : {};
+    const request = { schema: "ursatz-theme-request", schema_version: 2, key: "C" };
+    for (const name of FORM_MEMBERS) {
+      if (form[name] !== undefined && form[name] !== null) {
+        request[name] = form[name];
+      }
+    }
+    const motives = [];
+    const slots = {};
+    const ideas = {};
+    for (const entry of Array.isArray(theme.slots) ? theme.slots : []) {
+      if (isReference(entry) && typeof entry.slot === "string") {
+        slots[entry.slot] = motiveId(motives, entry);
+      }
+    }
+    for (const entry of Array.isArray(theme.ideas) ? theme.ideas : []) {
+      if (isReference(entry) && typeof entry.idea === "string") {
+        ideas[entry.idea] = motiveId(motives, entry);
+      }
+    }
+    for (const entry of Vocab.list("theme_slots")) {
+      if (!(entry.value in slots)) {
+        slots[entry.value] = null;
+      }
+    }
+    request.motives = motives;
+    request.slots = slots;
+    request.ideas = ideas;
+    request.chords = Array.isArray(theme.chords) ? theme.chords : [];
+    const acc = theme.accompaniment;
+    if (!acc || typeof acc !== "object") {
+      request.accompaniment = null;
+    } else if (acc.pattern === "motive" && isReference(acc)) {
+      request.accompaniment = { pattern: "motive", motive: { $item: { item_id: acc.item_id, version: acc.version } } };
+    } else {
+      request.accompaniment = { pattern: acc.pattern };
+    }
+    request.voicing = null;
+    if (theme.style_weight !== undefined && theme.style_weight !== null) {
+      request.style_weight = theme.style_weight;
+    }
+    if (Array.isArray(theme.without) && theme.without.length > 0) {
+      request.without = theme.without;
+    }
+    request.tempo = theme.tempo === undefined ? null : theme.tempo;
+    const body = { uses: Array.isArray(uses) ? uses : [], request };
+    if (theme.brief !== undefined && theme.brief !== null) {
+      body.brief = theme.brief;
+    }
+    if (theme.result && typeof theme.result === "object") {
+      body.result = theme.result;
+    }
+    if (typeof theme.check === "boolean") {
+      body.check = theme.check;
+    }
+    if (typeof theme.seed === "number") {
+      body.seed = theme.seed;
+    }
+    return body;
+  }
+
+  /* The theme member (the form's words, with the references by item and version) of a theme version body; {} for a placeholder. */
+  function themeOfBody(body) {
+    const request = body && body.request && typeof body.request === "object" ? body.request : {};
+    const references = {};
+    for (const motive of Array.isArray(request.motives) ? request.motives : []) {
+      if (motive && typeof motive === "object" && motive.$item && typeof motive.id === "string") {
+        references[motive.id] = motive.$item;
+      }
+    }
+    const referenced = (id) => (typeof id === "string" && references[id] ? { item_id: references[id].item_id, version: references[id].version } : null);
+    const entries = (members, name) =>
+      Object.entries(members && typeof members === "object" ? members : {}).flatMap(([key, id]) => {
+        const reference = referenced(id);
+        return reference ? [{ [name]: key, ...reference }] : [];
+      });
+    const form = {};
+    for (const name of FORM_MEMBERS) {
+      if (request[name] !== undefined) {
+        form[name] = request[name];
+      }
+    }
+    const acc = request.accompaniment;
+    let accompaniment = null;
+    if (acc && typeof acc === "object") {
+      const item = acc.motive && acc.motive.$item ? acc.motive.$item : null;
+      accompaniment = acc.pattern === "motive" && item ? { pattern: "motive", item_id: item.item_id, version: item.version } : { pattern: acc.pattern };
+    }
+    return {
+      form,
+      slots: entries(request.slots, "slot"),
+      ideas: entries(request.ideas, "idea"),
+      chords: Array.isArray(request.chords) ? request.chords : [],
+      accompaniment,
+      brief: body && body.brief !== undefined ? body.brief : null,
+      style_weight: request.style_weight,
+      without: request.without,
+      tempo: request.tempo,
+      check: body ? body.check : undefined,
+      seed: body ? body.seed : undefined,
+      result: body ? body.result : undefined,
+    };
+  }
+
+  /* The version body of a form state (the stored request, requestBodyOf). The result is left out;
+   * the backend fills the uses of the motifs the request names. */
   function bodyFromForm(state) {
     const s = state || emptyState();
     const hybrid = s.into === "hybrid";
@@ -464,14 +593,14 @@
       check: Boolean(s.check),
       seed: wholeNumber(s.seed, 0, Infinity),
     };
-    return { uses: Array.isArray(s.uses) ? s.uses.slice() : [], theme };
+    return requestBodyOf(s.uses, theme);
   }
 
   /* The form state of a version body. A placeholder theme (form null or a
    * string) gives the defaults. */
   function formFromBody(body, id) {
     const state = emptyState(id);
-    const theme = body && body.theme && typeof body.theme === "object" ? body.theme : {};
+    const theme = themeOfBody(body);
     state.uses = body && Array.isArray(body.uses) ? body.uses.slice() : [];
     const form = theme.form && typeof theme.form === "object" ? theme.form : {};
     if (intos().some((entry) => entry.value === form.into)) {
@@ -1001,6 +1130,8 @@
     applyBasicMaterial,
     withoutFromSwitches,
     switchesFromWithout,
+    themeOfBody,
+    requestBodyOf,
     briefFromPicks,
     picksFromBrief,
     pickLabel,

@@ -590,7 +590,7 @@ function buildPieceResult(ctx) {
   if (!result || typeof result !== "object") {
     return null;
   }
-  const state = PiecesModel.stateFromBody({ uses: [], piece: ctx.piece }, ctx.id);
+  const state = PiecesModel.stateFromBody(ctx.piece, ctx.id);
   const sourceNames = {};
   for (const section of state.sections) {
     if (section.fill.kind === "theme") {
@@ -669,7 +669,6 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.innerHTML = "";
   viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
   viewEl.appendChild(buildMaterialExport(id, number, title));
-  const piece = body && body.piece ? body.piece : {};
   const state = PiecesModel.stateFromBody(body, id);
   const form = PiecesModel.formOf(state.form);
   /* A sized form has no sections of its own: its size, whether it modulates and the sections the Composer plans. */
@@ -716,7 +715,7 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
       factsEl = next;
     }
   });
-  const result = buildPieceResult({ id, version: number, piece, nameOf, title });
+  const result = buildPieceResult({ id, version: number, piece: body, nameOf, title });
   viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
 }
 
@@ -1273,7 +1272,7 @@ function buildPieceEditor(ctx) {
   /* Saves the form first when it changed, then composes it into a new version. options: {update_uses}. */
   async function compose(options) {
     setBusy(true);
-    const structure = ctx.body && ctx.body.piece ? ctx.body.piece.structure : null;
+    const structure = ctx.body && ctx.body.request && Object.keys(ctx.body.request).length > 0 ? ctx.body.request : null;
     const changed =
       JSON.stringify(PiecesModel.bodyFromState(state)) !== savedJson ||
       !structure ||

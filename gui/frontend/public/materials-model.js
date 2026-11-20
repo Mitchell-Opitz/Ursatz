@@ -79,9 +79,9 @@
       };
     }
     if (type === "theme") {
-      return { uses: [], theme: { form: null, slots: [] } };
+      return { uses: [], request: {} };
     }
-    return { uses: [], piece: { structure: null } };
+    return { uses: [], request: {} };
   }
 
   function buildCreateItemRequest(type, name, projectId) {

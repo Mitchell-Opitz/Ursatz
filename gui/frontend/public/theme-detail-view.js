@@ -105,7 +105,7 @@ const ThemeDetailView = (function () {
     const resultEl = buildThemeResult({
       id,
       version: item.current_version,
-      theme: data.body.theme,
+      theme: data.body,
       nameOf: ctx.nameOf,
       title: item.name,
     });

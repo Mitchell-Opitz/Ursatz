@@ -569,19 +569,6 @@
     return emptyHarmony();
   }
 
-  /* A stored progression fill is the section's harmony (R-610): a body saved before P60 reads into harmony.progression. */
-  function legacyProgression(fill) {
-    if (!fill || fill.kind !== "progression" || typeof fill.numerals !== "string" || fill.numerals.trim() === "") {
-      return emptyHarmony();
-    }
-    return {
-      ...emptyHarmony(),
-      kind: "progression",
-      numerals: fill.numerals,
-      cells: Number.isInteger(fill.cells) && fill.cells > 0 ? String(fill.cells) : "",
-    };
-  }
-
   /* The overlays of a sized form as the body keeps them: {name, region?, harmony?, fill?} for each that has something. */
   function overlaysFromState(overlays) {
     const seen = new Set();
@@ -650,8 +637,176 @@
     return out;
   }
 
-  /* The version body of a form state: {uses, piece}. The result is left out; the backend fills the uses of the motif
-   * fills. */
+  /* --- the stored request (R-650) ---------------------------------------------------------------------------------- */
+
+  /* A piece version body is the Composer request it composes with, {uses, request, brief, result, check, seed}: a motif version is
+   * {"$item": {item_id, version}}, the saved forms of a motif {"$pool": {item_id, pool}} and the stored plan of a theme
+   * {"$item": {item_id, version, file: "plan.json"}}. The form keeps its own state; these two turn the piece member it builds
+   * ({structure, motive, pool, accompaniment, brief, style_weight, without, tempo, check, seed}) into the request and back (the
+   * translation the workshop's migration makes, so a body saved by either composes the same request). */
+
+  const isReference = (entry) =>
+    Boolean(entry) && typeof entry === "object" && typeof entry.item_id === "string" && typeof entry.version === "number";
+
+  const present = (value) => value !== undefined && value !== null;
+
+  function copyMembers(from, to, names) {
+    for (const name of names) {
+      if (present(from[name])) {
+        to[name] = from[name];
+      }
+    }
+  }
+
+  /* A section's fill as the request holds it. */
+  function fillToRequest(fill, pool) {
+    const kind = fill && typeof fill === "object" && typeof fill.kind === "string" ? fill.kind : "empty";
+    const out = { kind };
+    if (kind === "motif") {
+      out.motive = isReference(fill) ? { $item: { item_id: fill.item_id, version: fill.version } } : null;
+      out.forms = { $pool: { item_id: typeof fill.item_id === "string" ? fill.item_id : "", pool } };
+      copyMembers(fill, out, ["into", "hybrid", "construction"]);
+    } else if (kind === "theme") {
+      out.plan = {
+        $item: {
+          item_id: typeof fill.item_id === "string" ? fill.item_id : "",
+          version: typeof fill.version === "number" ? fill.version : 0,
+          file: "plan.json",
+        },
+      };
+    }
+    return out;
+  }
+
+  /* The fill the form keeps from a request's fill. */
+  function fillFromRequest(fill) {
+    if (!fill || typeof fill !== "object") {
+      return { kind: "empty" };
+    }
+    if (fill.kind === "motif") {
+      const reference = fill.motive && fill.motive.$item ? fill.motive.$item : {};
+      const out = { kind: "motif", item_id: reference.item_id, version: reference.version };
+      copyMembers(fill, out, ["into", "hybrid", "construction"]);
+      return out;
+    }
+    if (fill.kind === "theme") {
+      const reference = fill.plan && fill.plan.$item ? fill.plan.$item : {};
+      return { kind: "theme", item_id: reference.item_id, version: reference.version };
+    }
+    return { kind: typeof fill.kind === "string" ? fill.kind : "empty" };
+  }
+
+  /* The body of a piece version from the piece member the form builds. */
+  function requestBodyOf(uses, piece) {
+    const structure = piece.structure && typeof piece.structure === "object" && !Array.isArray(piece.structure) ? piece.structure : {};
+    const form = typeof structure.form === "string" ? structure.form : DEFAULT_FORM;
+    const sized = isSized(formOf(form));
+    const pool = typeof piece.pool === "string" ? piece.pool : "approved-and-unflagged";
+    const sections = [];
+    for (const section of Array.isArray(structure.sections) ? structure.sections : []) {
+      if (!section || typeof section !== "object") {
+        continue;
+      }
+      const fill = fillToRequest(section.fill, pool);
+      const entry = {};
+      if (sized) {
+        entry.name = present(section.name) ? section.name : null;
+        copyMembers(section, entry, ["region", "harmony"]);
+        if (fill.kind !== "empty") {
+          entry.fill = fill;
+        }
+      } else {
+        entry.id = present(section.id) ? section.id : null;
+        entry.part = present(section.part) ? section.part : null;
+        copyMembers(section, entry, ["letter"]);
+        entry.beats = present(section.beats) ? section.beats : null;
+        entry.pickup = typeof section.pickup === "string" ? section.pickup : "0";
+        entry.cadence = present(section.cadence) ? section.cadence : null;
+        copyMembers(section, entry, ["function", "region", "harmony"]);
+        entry.fill = fill;
+      }
+      sections.push(entry);
+    }
+    const request = { schema: "ursatz-piece-request", schema_version: 2, form };
+    copyMembers(structure, request, ["key", "material", "mode", "meter"]);
+    request.motive = isReference(piece.motive) ? { $item: { item_id: piece.motive.item_id, version: piece.motive.version } } : null;
+    if (sized) {
+      request.bars = typeof structure.bars === "number" ? structure.bars : 0;
+      request.count = typeof structure.count === "number" ? structure.count : 0;
+      request.modulate = structure.modulate === true;
+      if (sections.length > 0) {
+        request.sections = sections;
+      }
+    } else {
+      request.sections = sections;
+    }
+    const acc = piece.accompaniment;
+    request.accompaniment = acc && typeof acc === "object" ? { pattern: acc.pattern } : null;
+    if (!sized) {
+      request.voicing = null;
+    }
+    if (present(piece.style_weight)) {
+      request.style_weight = piece.style_weight;
+    }
+    if (Array.isArray(piece.without) && piece.without.length > 0) {
+      request.without = piece.without;
+    }
+    request.tempo = present(piece.tempo) ? piece.tempo : null;
+    const body = { uses: Array.isArray(uses) ? uses : [], request };
+    if (present(piece.brief)) {
+      body.brief = piece.brief;
+    }
+    if (piece.result && typeof piece.result === "object") {
+      body.result = piece.result;
+    }
+    if (typeof piece.check === "boolean") {
+      body.check = piece.check;
+    }
+    if (typeof piece.seed === "number") {
+      body.seed = piece.seed;
+    }
+    return body;
+  }
+
+  /* The piece member (the form's words, with the references by item and version) of a piece version body; {} for a placeholder. */
+  function pieceOfBody(body) {
+    const request = body && body.request && typeof body.request === "object" ? body.request : {};
+    const sized = isSized(formOf(request.form));
+    let pool;
+    const sections = (Array.isArray(request.sections) ? request.sections : [])
+      .filter((section) => section && typeof section === "object")
+      .map((section) => {
+        const forms = section.fill && section.fill.forms && section.fill.forms.$pool;
+        if (forms && typeof forms.pool === "string") {
+          pool = forms.pool;
+        }
+        return section.fill === undefined ? { ...section } : { ...section, fill: fillFromRequest(section.fill) };
+      });
+    const structure = {};
+    copyMembers(request, structure, ["form", "key", "material", "mode", "meter"]);
+    if (sized) {
+      copyMembers(request, structure, ["bars", "count", "modulate"]);
+    }
+    if (sections.length > 0 || !sized) {
+      structure.sections = sections;
+    }
+    return {
+      structure,
+      motive: request.motive && request.motive.$item ? { item_id: request.motive.$item.item_id, version: request.motive.$item.version } : null,
+      pool,
+      accompaniment: request.accompaniment,
+      brief: body && body.brief !== undefined ? body.brief : null,
+      style_weight: request.style_weight,
+      without: request.without,
+      tempo: request.tempo,
+      check: body ? body.check : undefined,
+      seed: body ? body.seed : undefined,
+      result: body ? body.result : undefined,
+    };
+  }
+
+  /* The version body of a form state (the stored request, requestBodyOf). The result is left out; the backend fills the uses of
+   * the motifs the request names. */
   function bodyFromState(state) {
     const s = state || emptyState();
     const acc = s.accompaniment || { kind: "none" };
@@ -680,14 +835,14 @@
       check: Boolean(s.check),
       seed: wholeNumber(s.seed, 0, Infinity),
     };
-    return { uses: Array.isArray(s.uses) ? s.uses.slice() : [], piece };
+    return requestBodyOf(s.uses, piece);
   }
 
   /* The form state of a version body. A placeholder piece (structure null, a string, an array or an object with no
    * sections) gives the defaults with no sections. */
   function stateFromBody(body, id) {
     const state = emptyState(id);
-    const piece = body && body.piece && typeof body.piece === "object" ? body.piece : {};
+    const piece = pieceOfBody(body);
     state.uses = body && Array.isArray(body.uses) ? body.uses.slice() : [];
     const structure = piece.structure && typeof piece.structure === "object" && !Array.isArray(piece.structure) ? piece.structure : {};
     const form = typeof structure.form === "string" ? formOf(structure.form) : null;
@@ -720,7 +875,7 @@
         fill: fillFromBody(section.fill),
         function: functionKept(section.function, section.part),
         region: regionFromBody(section.region),
-        harmony: section.harmony === undefined || section.harmony === null ? legacyProgression(section.fill) : harmonyFromBody(section.harmony),
+        harmony: harmonyFromBody(section.harmony),
       }));
     if (piece.motive && typeof piece.motive === "object" && text(piece.motive.item_id)) {
       state.motive = { item_id: piece.motive.item_id, version: Number(piece.motive.version) };
@@ -799,7 +954,7 @@
 
   /* The length in beats of a composed theme version body, or null when it has no form. */
   function themeLengthBeats(body) {
-    const form = body && body.theme && body.theme.form;
+    const form = body && body.request;
     if (!form || !Number.isInteger(form.bars)) {
       return null;
     }
@@ -808,8 +963,8 @@
 
   /* One line for a theme version body: "sentence in D minor, 4/4, 8 bars". */
   function themeFormText(body) {
-    const form = body && body.theme && body.theme.form;
-    if (!form) {
+    const form = body && body.request;
+    if (!form || !form.into) {
       return "";
     }
     const into = form.into === "hybrid" && form.hybrid ? `hybrid (${form.hybrid})` : form.into;
@@ -818,7 +973,7 @@
 
   /* True when the theme version body was composed (it has a result). */
   function themeComposed(body) {
-    return Boolean(body && body.theme && body.theme.result && typeof body.theme.result === "object");
+    return Boolean(body && body.result && typeof body.result === "object");
   }
 
   /* True when the section is whole bars (3 to 16) with no pickup: it may be a theme with a construction. */
@@ -1324,6 +1479,8 @@
     removeSection,
     moveSection,
     bodyFromState,
+    requestBodyOf,
+    pieceOfBody,
     stateFromBody,
     beatsLabel,
     sectionTimeline,
