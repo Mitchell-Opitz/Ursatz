@@ -845,6 +845,43 @@ static void expect_one_version(const cJSON *document, const char *const *ids, co
     }
 }
 
+/* Every row of the version has the position and the length as text in the meter (API 4.2): "bar 3" or "bar 3 beat 2", "2 bars" or "1 bar 2 beats". */
+static void expect_row_texts(const cJSON *document, const char *version, int per_bar, int unit) {
+    const cJSON *sections =
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), version), "sections");
+    assert(cJSON_GetArraySize(sections) > 0);
+    const cJSON *row = NULL;
+    cJSON_ArrayForEach(row, sections) {
+        long num = 0;
+        long den = 1;
+        assert(sscanf(cJSON_GetObjectItemCaseSensitive(row, "start")->valuestring, "%ld/%ld", &num, &den) == 2 && den > 0);
+        double start = (double)num * unit / (double)den;
+        double beats = cJSON_GetObjectItemCaseSensitive(row, "beats")->valuedouble;
+        char start_text[48];
+        char length[48] = "";
+        int bar = (int)(start / per_bar) + 1;
+        double beat = start - (double)(bar - 1) * per_bar;
+        if (beat < 1e-9) {
+            snprintf(start_text, sizeof start_text, "bar %d", bar);
+        } else {
+            snprintf(start_text, sizeof start_text, "bar %d beat %.15g", bar, (double)(long long)((beat + 1) * 100 + 0.5) / 100);
+        }
+        int bars = (int)(beats / per_bar);
+        double rest = beats - (double)bars * per_bar;
+        if (bars > 0) {
+            snprintf(length, sizeof length, "%d %s", bars, bars == 1 ? "bar" : "bars");
+        }
+        if (rest > 1e-9 || bars == 0) {
+            size_t used = strlen(length);
+            snprintf(length + used, sizeof length - used, "%s%.15g %s", used ? " " : "", rest, rest == 1 ? "beat" : "beats");
+        }
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(row, "start_text")->valuestring, start_text) == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(row, "length_text")->valuestring, length) == 0);
+    }
+    const cJSON *first = cJSON_GetArrayItem(sections, 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(first, "start_text")->valuestring, "bar 1") == 0);
+}
+
 static void expect_figure_rows(const cJSON *document);
 
 static void test_composed_forms(char **rounded_plan) {
@@ -857,6 +894,7 @@ static void test_composed_forms(char **rounded_plan) {
     char *printed = form_request("rounded-binary.json", NULL, NULL, 0, true);
     cJSON *document = composed_document(printed, &response);
     expect_one_version(document, RB_IDS, RB_ROLES, 3);
+    expect_row_texts(document, "piece", 4, 4);
     assert(response.midi && response.midi_size > 4 && memcmp(response.midi, "MThd", 4) == 0);
     cJSON_Delete(composed_document(printed, &again));
     assert(response.plan_json && again.plan_json && strcmp(response.plan_json, again.plan_json) == 0);
@@ -902,6 +940,20 @@ static void test_composed_forms(char **rounded_plan) {
     printed = form_request("rounded-binary.json", NULL, EDITS, 5, false);
     document = composed_document(printed, &response);
     expect_one_version(document, RB_IDS, RB_ROLES, 3);
+    expect_row_texts(document, "piece", 3, 4);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+    /* A game loop: the rows of its loop version say where they start and how long they are, and the seam names its four rules. */
+    printed = form_request("loop-and-ending.json", NULL, NULL, 0, false);
+    document = composed_document(printed, &response);
+    expect_row_texts(document, "loop", 4, 4);
+    const cJSON *seam = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "loop"), "seam");
+    const cJSON *rules = cJSON_GetObjectItemCaseSensitive(seam, "rules");
+    assert(cJSON_IsObject(seam) && cJSON_GetArraySize(rules) == 4);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(rules, 3), "id")->valuestring, "leading_tone") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(rules, 0), "label")->valuestring, "The chords lead back") == 0);
+    assert(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "loop"), "text")));
     cJSON_Delete(document);
     composer_response_destroy(&response);
     free(printed);

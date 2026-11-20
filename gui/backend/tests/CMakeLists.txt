@@ -8,12 +8,16 @@ ursatz_test_executable(gui_write_frontend_fixtures SOURCES write_frontend_fixtur
 set(URSATZ_GUI_GENERATED_FIXTURES ${CMAKE_BINARY_DIR}/gui/frontend/tests/fixtures CACHE INTERNAL "")
 add_custom_command(
     OUTPUT ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json
+           ${URSATZ_GUI_GENERATED_FIXTURES}/piece-ternary.json ${URSATZ_GUI_GENERATED_FIXTURES}/piece-rounded-binary.json
+           ${URSATZ_GUI_GENERATED_FIXTURES}/piece-minuet.json ${URSATZ_GUI_GENERATED_FIXTURES}/piece-scherzo.json
+           ${URSATZ_GUI_GENERATED_FIXTURES}/piece-variations.json ${URSATZ_GUI_GENERATED_FIXTURES}/piece-figured-variations.json
+           ${URSATZ_GUI_GENERATED_FIXTURES}/piece-sonatina.json ${URSATZ_GUI_GENERATED_FIXTURES}/piece-small-rondo-ababa.json
     COMMAND ${CMAKE_COMMAND} -E make_directory ${URSATZ_GUI_GENERATED_FIXTURES}
     COMMAND gui_write_frontend_fixtures ${URSATZ_GUI_GENERATED_FIXTURES}
     DEPENDS gui_write_frontend_fixtures
     COMMENT "Writing the frontend vocabulary and forms fixtures")
 add_custom_target(gui_frontend_fixtures ALL
-    DEPENDS ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json)
+    DEPENDS ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json ${URSATZ_GUI_GENERATED_FIXTURES}/piece-minuet.json)
 
 # Opens a workshop on the test's working directory and starts the server on it (support/server_support.h).
 ursatz_test_library(gui_server_support SOURCES support/server_support.c LIBS ursatz_gui_core)

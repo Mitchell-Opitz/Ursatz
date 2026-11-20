@@ -510,4 +510,20 @@ const placedRows = P.resultView({ summary: { versions: { loop: { sections: [
 ] } } } }).versions[0].view.rows;
 check(placedRows[0].region === "dominant of home" && placedRows[0].harmony === "i iv V i (2 cells each)" && placedRows[1].region === "" && placedRows[1].harmony === "", "the rows show the region and the harmony the request gave");
 
+/* The rows of a result are the Composer's words (P63 B16): the summaries the build composes for a piece of each form with sizes. */
+for (const name of ["ternary", "rounded-binary", "minuet", "scherzo", "variations", "figured-variations", "sonatina", "small-rondo-ababa"]) {
+  const composed = JSON.parse(fs.readFileSync(generated(`piece-${name}.json`), "utf8"));
+  const view = P.resultView({ seed: composed.seed, summary: composed }, { form: name });
+  const planned = composed.versions.piece.sections;
+  const rows = view.versions[0].view.rows;
+  check(
+    rows.length === planned.length &&
+      rows.every((row, at) => row.start === planned[at].start_text && row.length === planned[at].length_text && row.start !== "" && row.length !== ""),
+    `${name}: the rows show the position and the length the Composer wrote`,
+  );
+  check(rows[0].start === "bar 1", `${name}: the first section starts at bar 1`);
+  const forms = P.formOf(name);
+  check(forms.sizes.every((size) => typeof size.label === "string" && size.label !== "") && forms.sizes.every((size) => size.sections.every((section) => section.labels && typeof section.labels.role === "string")), `${name}: the form's sizes and sections carry the Composer's labels`);
+}
+
 finish();
