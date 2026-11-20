@@ -2820,6 +2820,51 @@ function mountSubjectsPanel() {
   subjectsPanel.refresh();
 }
 
+/* The open view follows the workshop (R-648): an event that says what the view shows changed reloads it, a burst of them once; "reset" (this page's
+ * queue overflowed) reloads whatever is open. The page's own saves reload their view too: the extra read is the price of one way to follow a change. */
+function activeToolId() {
+  const active = TOOLS.find((tool) => tool.active);
+  return active ? active.id : "";
+}
+
+function startFollowingEvents() {
+  if (typeof Events === "undefined" || !Events.available()) {
+    return;
+  }
+  const pending = new Map();
+  function later(key, fn) {
+    clearTimeout(pending.get(key));
+    pending.set(key, setTimeout(() => {
+      pending.delete(key);
+      fn();
+    }, 300));
+  }
+  const reloadLibrary = () => later("library", () => activeToolId() === "library" && loadLibraryPieces());
+  const reloadMaterials = () => later("materials", () => ["motifs", "themes", "pieces"].includes(activeToolId()) && refreshMaterialsView());
+  const reloadCollections = () => later("collections", () => activeToolId() === "corpus" && renderCorpusView());
+  const reloadSubjects = () =>
+    later("subjects", () => {
+      notifySubjectsChanged();
+      if (activeToolId() === "subjects") {
+        renderSubjectsView();
+      }
+    });
+  const reloadLinks = () => later("links", () => activeToolId() === "motive-links" && reloadMotiveLinkRuns && reloadMotiveLinkRuns());
+  Events.on("library-changed", reloadLibrary);
+  Events.on("item-changed", reloadMaterials);
+  Events.on("item-removed", reloadMaterials);
+  Events.on("collection-changed", reloadCollections);
+  Events.on("subject-changed", reloadSubjects);
+  Events.on("links-changed", reloadLinks);
+  Events.on("reset", () => {
+    reloadLibrary();
+    reloadMaterials();
+    reloadCollections();
+    reloadSubjects();
+    reloadLinks();
+  });
+}
+
 /* The Composer's words are loaded before any view mounts (the models read their lists from them). */
 async function boot() {
   try {
@@ -2832,6 +2877,7 @@ async function boot() {
   mountSubjectsPanel();
   mountProjectPicker();
   selectTool("library");
+  startFollowingEvents();
 }
 
 boot();

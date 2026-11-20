@@ -141,6 +141,9 @@ function renderMotiveLinksResult(target, result) {
   );
 }
 
+/* The open view's reload of its list of runs (set while the view is open; the event stream calls it when a run changes). */
+let reloadMotiveLinkRuns = null;
+
 async function renderMotiveLinksView() {
   stopMotiveLinksPolling();
   const content = getContentEl();
@@ -256,6 +259,7 @@ async function renderMotiveLinksView() {
     runsEl.appendChild(list);
   }
   loadRuns();
+  reloadMotiveLinkRuns = loadRuns;
 
   run.addEventListener("click", async () => {
     const body = MotiveLinksModel.scopeBody(selection);
