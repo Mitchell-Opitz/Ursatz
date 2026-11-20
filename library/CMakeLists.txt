@@ -15,6 +15,7 @@ add_subdirectory(analysis)
 add_subdirectory(chain)
 add_subdirectory(reading)
 add_subdirectory(io)
+add_subdirectory(text)
 
 ursatz_write_public_manifest()
 if(URSATZ_TESTS)
