@@ -21,13 +21,6 @@ typedef struct {
 } MotiveExtras;
 
 /*
- * If argv[*index] is --harmony, --feature or --role (only --role when role_only), takes it and its value into extras,
- * moves *index to the value, and returns true. *status is then 0, or the status of the usage error printed (a missing
- * value, an option given twice, more than the API allows features). Returns false for any other argument.
- */
-bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index, bool role_only, int *status);
-
-/*
  * Reads --harmony, --feature and --role (only --role when role_only) of the parsed arguments into extras. Returns 0, or the status of the
  * usage error printed (more features than the API allows).
  */

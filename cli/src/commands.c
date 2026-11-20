@@ -21,12 +21,6 @@
 
 #include "flags.h"
 
-/* Each command still reads its own argument list; the wrappers pass it on until the command reads the flag table. */
-#define WRAP(name, function) \
-    static int name(const CliArgs *args) { return function(args->argc, args->argv); }
-
-WRAP(wrap_listen, run_listen)
-
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
@@ -47,24 +41,24 @@ static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi
 static const char *const FLAGS_LISTEN[] = {"--bars", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--seed", "--settings", "--strategy", "--style", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
-    {"progression", "Write a chord progression with a bass line for one phrase", FLAGS_PROGRESSION, 0, 0, true, run_progression},
-    {"motive", "Analyze a motive: its intervals, contour, rhythm, range and harmony", FLAGS_MOTIVE, 1, 1, true, run_motive},
-    {"develop", "Make motives related to a motive by one operation", FLAGS_DEVELOP, 1, 1, true, run_develop},
-    {"variants", "Make variants of a motive, or list the operations", FLAGS_VARIANTS, 0, 1, true, run_variants},
-    {"recognize", "Name the operations that turn one motive into another", FLAGS_RECOGNIZE, 2, 2, true, run_recognize},
-    {"random-motive", "Make random motives that keep the hard melodic rules", FLAGS_RANDOM_MOTIVE, 0, 0, true, run_random_motive},
-    {"counterpoint", "Write a counter-melody against a line", FLAGS_COUNTERPOINT, 1, 1, true, run_counterpoint},
-    {"grow", "Grow a motive into a sentence, a period or a hybrid theme", FLAGS_GROW, 0, 1, true, run_grow},
-    {"theme", "Grow a theme from the motives of a request", FLAGS_THEME, 1, 1, true, run_theme},
-    {"piece", "Compose a piece from a request, or work on one section of it", FLAGS_PIECE, 0, 1, true, run_piece},
-    {"plan", "Write the plan of a whole short piece from a form template", FLAGS_PLAN, 0, 0, true, run_plan},
-    {"fill", "Realize a plan: compose every open theme section", FLAGS_FILL, 1, 1, true, run_fill},
-    {"lock", "Lock material of a plan as given", FLAGS_LOCK, 1, 1, true, run_lock},
-    {"regenerate", "Write one node of a filled plan again", FLAGS_REGENERATE, 1, 1, true, run_regenerate},
-    {"variations", "Write several versions of one node of a plan", FLAGS_VARIATIONS, 1, 1, true, run_variations},
-    {"harmonize", "Write several harmonizations of a melody that is given", FLAGS_HARMONIZE, 1, 1, true, run_harmonize},
-    {"render", "Render a plan to a MIDI or MusicXML file", FLAGS_RENDER, 1, 1, true, run_render},
-    {"listen", "Make batches of motifs or themes from fixed seeds for listening", FLAGS_LISTEN, 0, 0, false, wrap_listen},
+    {"progression", "Write a chord progression with a bass line for one phrase", FLAGS_PROGRESSION, 0, 0, run_progression},
+    {"motive", "Analyze a motive: its intervals, contour, rhythm, range and harmony", FLAGS_MOTIVE, 1, 1, run_motive},
+    {"develop", "Make motives related to a motive by one operation", FLAGS_DEVELOP, 1, 1, run_develop},
+    {"variants", "Make variants of a motive, or list the operations", FLAGS_VARIANTS, 0, 1, run_variants},
+    {"recognize", "Name the operations that turn one motive into another", FLAGS_RECOGNIZE, 2, 2, run_recognize},
+    {"random-motive", "Make random motives that keep the hard melodic rules", FLAGS_RANDOM_MOTIVE, 0, 0, run_random_motive},
+    {"counterpoint", "Write a counter-melody against a line", FLAGS_COUNTERPOINT, 1, 1, run_counterpoint},
+    {"grow", "Grow a motive into a sentence, a period or a hybrid theme", FLAGS_GROW, 0, 1, run_grow},
+    {"theme", "Grow a theme from the motives of a request", FLAGS_THEME, 1, 1, run_theme},
+    {"piece", "Compose a piece from a request, or work on one section of it", FLAGS_PIECE, 0, 1, run_piece},
+    {"plan", "Write the plan of a whole short piece from a form template", FLAGS_PLAN, 0, 0, run_plan},
+    {"fill", "Realize a plan: compose every open theme section", FLAGS_FILL, 1, 1, run_fill},
+    {"lock", "Lock material of a plan as given", FLAGS_LOCK, 1, 1, run_lock},
+    {"regenerate", "Write one node of a filled plan again", FLAGS_REGENERATE, 1, 1, run_regenerate},
+    {"variations", "Write several versions of one node of a plan", FLAGS_VARIATIONS, 1, 1, run_variations},
+    {"harmonize", "Write several harmonizations of a melody that is given", FLAGS_HARMONIZE, 1, 1, run_harmonize},
+    {"render", "Render a plan to a MIDI or MusicXML file", FLAGS_RENDER, 1, 1, run_render},
+    {"listen", "Make batches of motifs or themes from fixed seeds for listening", FLAGS_LISTEN, 0, 0, run_listen},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);

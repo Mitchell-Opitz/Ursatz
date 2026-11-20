@@ -4,35 +4,6 @@
 
 #include "cli_options.h"
 
-bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index, bool role_only, int *status) {
-    const char *argument = argv[*index];
-    bool harmony = !role_only && strcmp(argument, "--harmony") == 0;
-    bool feature = !role_only && strcmp(argument, "--feature") == 0;
-    bool role = strcmp(argument, "--role") == 0;
-    if (!harmony && !feature && !role) {
-        return false;
-    }
-    *status = 0;
-    if (*index + 1 >= argc) {
-        *status = cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
-        return true;
-    }
-    const char *value = argv[++*index];
-    const char **slot = harmony ? &extras->harmony_text : &extras->role_text;
-    if (feature) {
-        if (cli_list_full(extras->feature_count, "motive_features")) {
-            *status = cli_fail(CLI_EXIT_USAGE, "a motive has at most %ld features", cli_limit("motive_features"));
-            return true;
-        }
-        extras->feature_texts[extras->feature_count++] = value;
-    } else if (*slot) {
-        *status = cli_fail(CLI_EXIT_USAGE, "%s given twice", argument);
-    } else {
-        *slot = value;
-    }
-    return true;
-}
-
 int motive_extras_read(MotiveExtras *extras, const CliArgs *args, bool role_only) {
     extras->role_text = cli_value(args, "--role");
     if (role_only) {

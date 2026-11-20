@@ -190,14 +190,6 @@ int cli_fail_api(UrsatzStatus status, const UrsatzError *error, const char *inpu
     return cli_fail(status == URSATZ_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
 }
 
-int cli_style_without_add(CliStyleWithout *list, const char *name) {
-    if (list->count >= CLI_LIST_CAPACITY) {
-        return cli_fail(CLI_EXIT_USAGE, "--style-without is given at most %d times", CLI_LIST_CAPACITY);
-    }
-    list->names[list->count++] = name;
-    return 0;
-}
-
 int cli_style_without_read(CliStyleWithout *list, const CliArgs *args) {
     for (size_t i = 0; i < cli_repeat_count(args, "--style-without"); i++) {
         if (list->count >= CLI_LIST_CAPACITY) {

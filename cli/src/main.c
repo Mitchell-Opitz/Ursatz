@@ -34,18 +34,11 @@ static int print_version(void) {
     return 0;
 }
 
-/* Runs the command with its arguments: parsed against its row when it reads the flag table, raw otherwise. */
+/* Runs the command with its arguments parsed against its row; a parse failure is exit 1. */
 static int run_command(const CliCommand *command, int argc, char **argv) {
     CliArgs args;
-    if (command->reads_flags) {
-        if (!cli_parse_or_fail(command, argc, argv, &args)) {
-            return 1;
-        }
-    } else {
-        memset(&args, 0, sizeof args);
-        args.argc = argc;
-        args.argv = argv;
-        args.command = command;
+    if (!cli_parse_or_fail(command, argc, argv, &args)) {
+        return 1;
     }
     return command->run(&args);
 }

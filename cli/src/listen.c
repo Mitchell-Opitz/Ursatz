@@ -94,66 +94,29 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz listen --what motifs --count 10 --seed 1 --settings mine.json --out-dir round-1\n");
 }
 
-static int read_options(int argc, char **argv, Options *options) {
+static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    for (int i = 2; i < argc; i++) {
-        const char *arg = argv[i];
-        const char **target = NULL;
-        if (strcmp(arg, "--help") == 0) {
-            options->help = true;
-        } else if (strcmp(arg, "--print-settings") == 0) {
-            options->print_settings = true;
-        } else if (strcmp(arg, "--check") == 0) {
-            options->check = true;
-        } else if (strcmp(arg, "--what") == 0) {
-            target = &options->what_text;
-        } else if (strcmp(arg, "--count") == 0) {
-            target = &options->count_text;
-        } else if (strcmp(arg, "--seed") == 0) {
-            target = &options->seed_text;
-        } else if (strcmp(arg, "--out-dir") == 0) {
-            target = &options->out_dir;
-        } else if (strcmp(arg, "--settings") == 0) {
-            target = &options->settings_path;
-        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
-            target = &options->material_text;
-        } else if (strcmp(arg, "--meter") == 0) {
-            target = &options->meter_text;
-        } else if (strcmp(arg, "--style") == 0) {
-            target = &options->style_path;
-        } else if (strcmp(arg, "--tempo") == 0) {
-            target = &options->tempo_text;
-        } else if (strcmp(arg, "--strategy") == 0) {
-            target = &options->strategy_text;
-        } else if (strcmp(arg, "--into") == 0) {
-            target = &options->into_text;
-        } else if (strcmp(arg, "--development") == 0) {
-            target = &options->development_text;
-        } else if (strcmp(arg, "--bars") == 0) {
-            target = &options->bars_text;
-        } else if (strcmp(arg, "--motif") == 0) {
-            target = &options->motif_path;
-        } else if (strcmp(arg, "--theme-request") == 0) {
-            target = &options->theme_request_path;
-        } else if (strcmp(arg, "--blend") == 0) {
-            target = &options->blend_path;
-        } else if (strcmp(arg, "--blend-weight") == 0) {
-            target = &options->blend_weight_text;
-        } else if (strcmp(arg, "--blend-weights") == 0) {
-            target = &options->blend_weights_text;
-        } else {
-            return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz listen --help)", arg);
-        }
-        if (target) {
-            if (i + 1 >= argc) {
-                return cli_fail(CLI_EXIT_USAGE, "%s needs a value", arg);
-            }
-            if (*target) {
-                return cli_fail(CLI_EXIT_USAGE, "%s given twice", arg);
-            }
-            *target = argv[++i];
-        }
-    }
+    options->help = args->help;
+    options->print_settings = cli_switch(args, "--print-settings");
+    options->check = cli_switch(args, "--check");
+    options->what_text = cli_value(args, "--what");
+    options->count_text = cli_value(args, "--count");
+    options->seed_text = cli_value(args, "--seed");
+    options->out_dir = cli_value(args, "--out-dir");
+    options->settings_path = cli_value(args, "--settings");
+    options->material_text = cli_value(args, "--material");
+    options->meter_text = cli_value(args, "--meter");
+    options->style_path = cli_value(args, "--style");
+    options->tempo_text = cli_value(args, "--tempo");
+    options->strategy_text = cli_value(args, "--strategy");
+    options->into_text = cli_value(args, "--into");
+    options->development_text = cli_value(args, "--development");
+    options->bars_text = cli_value(args, "--bars");
+    options->motif_path = cli_value(args, "--motif");
+    options->theme_request_path = cli_value(args, "--theme-request");
+    options->blend_path = cli_value(args, "--blend");
+    options->blend_weight_text = cli_value(args, "--blend-weight");
+    options->blend_weights_text = cli_value(args, "--blend-weights");
     return 0;
 }
 
@@ -652,9 +615,9 @@ static int validate_options(const Options *options, const cJSON *preferences) {
     return result;
 }
 
-int run_listen(int argc, char **argv) {
+int run_listen(const CliArgs *args) {
     Options options;
-    int status = read_options(argc, argv, &options);
+    int status = read_options(args, &options);
     if (status != 0) {
         return status;
     }

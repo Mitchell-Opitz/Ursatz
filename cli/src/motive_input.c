@@ -87,27 +87,6 @@ cJSON *motive_input_request(const MotiveInput *options, const unsigned char *byt
     return request;
 }
 
-bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status) {
-    const char *argument = argv[*index];
-    const char **slot = strcmp(argument, "--basic") == 0           ? &basic->path
-                        : strcmp(argument, "--basic-format") == 0  ? &basic->format_text
-                        : strcmp(argument, "--basic-pickup") == 0  ? &basic->pickup_text
-                        : strcmp(argument, "--basic-harmony") == 0 ? &basic->harmony_text
-                                                                   : NULL;
-    if (!slot) {
-        return false;
-    }
-    *status = 0;
-    if (*index + 1 >= argc) {
-        *status = cli_fail(CLI_EXIT_USAGE, "%s needs a value", argument);
-    } else if (*slot) {
-        *status = cli_fail(CLI_EXIT_USAGE, "%s given twice", argument);
-    } else {
-        *slot = argv[++*index];
-    }
-    return true;
-}
-
 void motive_input_read_basic(BasicInput *basic, const CliArgs *args) {
     basic->path = cli_value(args, "--basic");
     basic->format_text = cli_value(args, "--basic-format");

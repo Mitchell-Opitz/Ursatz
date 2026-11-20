@@ -66,9 +66,6 @@ typedef struct {
     size_t count;
 } CliStyleWithout;
 
-/* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than the CLI has room for). */
-int cli_style_without_add(CliStyleWithout *list, const char *name);
-
 /* Reads the --style-without values of the parsed arguments. Returns 0, or the status of the usage error it printed (more than the CLI has room for). */
 int cli_style_without_read(CliStyleWithout *list, const CliArgs *args);
 

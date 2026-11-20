@@ -1,6 +1,8 @@
 #ifndef URSATZ_COMPOSER_CLI_LISTEN_H
 #define URSATZ_COMPOSER_CLI_LISTEN_H
 
+#include "commands.h"
+
 #define LISTEN_USAGE_LINE                                                                                              \
     "Usage: ursatz listen --what motifs|themes --out-dir <dir> [--count N] [--seed N] [--settings <file>] "   \
     "[--mode major|minor] [--meter n/m] [--style <file>] [--blend <file>] [--blend-weight <n/d>] "                     \
@@ -16,6 +18,6 @@
  *   2  no sample could be composed
  *   3  an output file could not be written
  */
-int run_listen(int argc, char **argv);
+int run_listen(const CliArgs *args);
 
 #endif

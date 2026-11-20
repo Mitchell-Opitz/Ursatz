@@ -48,13 +48,6 @@ typedef struct {
     const char *harmony_text;
 } BasicInput;
 
-/*
- * If argv[*index] is --basic, --basic-format, --basic-pickup or --basic-harmony, takes it and its value, moves *index to
- * the value and returns true; *status is then 0, or the status of the usage error printed (a missing value, an option
- * given twice). Returns false for any other argument.
- */
-bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status);
-
 /* Reads --basic, --basic-format, --basic-pickup and --basic-harmony of the parsed arguments. */
 void motive_input_read_basic(BasicInput *basic, const CliArgs *args);
 
