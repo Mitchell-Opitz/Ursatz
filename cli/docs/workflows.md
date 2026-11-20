@@ -16,19 +16,21 @@ ursatz render piece-2.json --midi again.mid --tempo 96
 
 ## Changing a piece in a data folder
 
-A piece or theme in a [data folder](data-folder.md) is read as text and composed again with commands written as text:
+A piece in a [data folder](data-folder.md) is read as text and changed with commands written as text. "Add a 4-bar phrase between A and B": insert B, insert the phrase after A, compose the new version (`edit.txt`):
+
+```
+# add B, then a 4-bar phrase between A (s0) and B
+section.insert item:pce-2c8d54834a9c499f@v2 after s0 id b bars 8 role body letter B
+section.insert item:pce-2c8d54834a9c499f@v3 after s0 id T0 bars 4 role body letter T function transition
+item.compose item:pce-2c8d54834a9c499f@v4 seed 1
+```
 
 ```sh
-ursatz --data ~/ursatz-data show item:pce-2c8d54834a9c499f --view structure
-ursatz --data ~/ursatz-data apply compose.txt --wait
+ursatz --data ~/ursatz-data apply edit.txt --wait
+ursatz --data ~/ursatz-data show item:pce-2c8d54834a9c499f --view summary
 ```
 
-`compose.txt` holds one command a line (see [apply](data-folder.md#apply) and the [command reference](../../workshop/docs/command-reference.md)); `--wait` waits for the job `item.compose` starts and prints the version it made:
-
-```
-# compose the current version again with another seed
-item.compose item:pce-2c8d54834a9c499f@v2 seed 3
-```
+Each command names the version it works from (`@v<n>`): the first makes version 3, the second version 4, and `--wait` waits for the compose job and prints the version it made (5). `show` then lists the rows `s0`, `T0` (`function transition`, bars 9-12) and `b` (bars 13-20). The section commands are in the [command reference](../../workshop/docs/command-reference.md); `ursatz help section.insert` shows one.
 
 ## MIDI files
 

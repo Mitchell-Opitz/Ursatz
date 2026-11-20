@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P65 B7: section commands (2026-11)
+
+- **Section commands.** `section.insert`, `section.delete`, `section.move`, `section.resize` and `section.set` edit the sections of a piece version's request and save the next version ([commands](commands.md#the-section-commands)); the commands are 48. A param of the type `object` may name words that stand in place of the object (`words` in `workshop/commands`): `section.set`'s `region home` and `harmony none`.
+
 ## P65 B5: command schemas (2026-11)
 
 - **Commands as schemas.** Each of the 43 commands is defined once in `workshop/commands/<family>.json` (meta-schema `workshop/schema/ursatz-commands.v1.schema.json`), embedded in the build by `cmake/embed_json.py`. `workshop_command` checks the target and the declared params from the schema (R-664; the messages are in [commands](commands.md#commands)), and `workshop_open` refuses a schema with no command or a command with no schema. The tool `commands` prints the generated [command reference](command-reference.md), the grammar and the help of each command ([tools](tools.md#commands)).
