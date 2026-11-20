@@ -1,10 +1,10 @@
 # GUI docs index
 
-Every doc of the Ursatz GUI, one line each. Back to the [README](../README.md).
+Every doc of the Ursatz GUI, one line each. Back to the [README](../README.md). The data, the commands, the jobs and the events are the [workshop's](../../workshop/docs/README.md).
 
 ## Start here
 
-- [architecture.md](architecture.md): what the GUI is, its route table, what it calls, the data flow across the four repos and the GUI action table.
+- [architecture.md](architecture.md): what the GUI is (a client of the workshop), its route table, what it calls and the data flow.
 
 ## Build and test
 
@@ -21,13 +21,12 @@ Every doc of the Ursatz GUI, one line each. Back to the [README](../README.md).
 
 ## API reference
 
+- [api/envelope.md](api/envelope.md): the one answer shape, the real statuses, the body caps, 202 jobs and base versions.
 - [api/analysis-routes.md](api/analysis-routes.md): the Analyzer, Corpus, Styles and Motive links routes.
 - [api/materials-routes.md](api/materials-routes.md): the materials and subjects routes.
-- [api/composer-routes.md](api/composer-routes.md): the Composer routes and the job queue.
+- [api/composer-routes.md](api/composer-routes.md): the Composer routes, the job routes and the event stream.
 
 ## How it works inside
 
-- [storage.md](../../workshop/docs/data-folder.md): the piece, material, theme, piece and subject stores and their files.
-- [motifs-backend.md](motifs-backend.md): motif analysis on save, the variant tree, comparing and linking motifs, motive-forms and random motifs.
-- [frontend.md](frontend.md): how the frontend is organized, the score layers and the score geometry.
-- [backend-modules.md](backend-modules.md): the backend helper modules, the backend services and who calls the Composer.
+- [backend-modules.md](backend-modules.md): the backend's files, the route table and the route helpers.
+- [frontend.md](frontend.md): how the frontend is organized (ES modules), the DOM harness, the score layers and the score geometry.

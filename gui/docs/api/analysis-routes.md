@@ -1,6 +1,6 @@
 # Analysis routes
 
-The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md).
+The Analyzer, Corpus, Styles and Motive links routes. Every route answers the one envelope and the real HTTP status ([the envelope](envelope.md)). [Docs index](../README.md).
 
 ## Analyzer routes
 
@@ -19,17 +19,18 @@ stops it between pieces and nothing is written.
   `{"error":"import failed"}`; nothing is stored in either case. (These are the job's status and result.)
 - `GET /api/analyzer/pieces`: the stored pieces, newest upload first, then by
   id: `{"ok":true,"pieces":[{"id","filename","format","uploaded_at","composer","source","tags":[...],"notation","analysis_status"}]}`.
-  `analysis_status` is `current`, `stale_schema`, `stale_analyzer`, `stale_ursatz` or `unreadable`, from `meta.json`
+  `analysis_status` is `current`, `stale_schema`, `stale_analyzer`, `stale_ursatz` or `unreadable`, from `piece.json`
   alone; the Library shows a stale badge for any other value.
   Optional query parameters filter the list, all given ones must match:
   `composer`, `source` and `tag` (case-insensitive, URL-decoded),
   `unassigned=composer` and `unassigned=source` (may appear twice) for pieces
-  with no composer or source, and `untagged=1` for pieces without tags.
+  with no composer or source, and `untagged=1` for pieces without tags. `collection=<id>` limits the list to that
+  collection's members (the same filters then apply to them; `404` for an unknown collection, `400` for an id that cannot be one).
 - `GET /api/analyzer/groups`: the Tags panel's data:
   `{"ok":true,"composers":[{"value","count"}],"sources":[...],"tags":[...],"unassigned":{"composer":n,"source":n},"untagged":n,"total":n}`.
   Values are distinct case-insensitively and sorted by count, then value; the
   shown spelling of a composer or source is the one most pieces use (ties by
-  byte order). A tag repeated within one piece counts once.
+  byte order). A tag repeated within one piece counts once. `collection=<id>` counts only that collection's members.
 - `GET /api/analyzer/pieces/<id>`:
   `{"ok":true,"id","filename","format","uploaded_at","notation","analysis_status","note_xml_ids":[...],"document":{...}}`.
   A read writes nothing: the stored document is served, and when it is not current `analysis_status` names why and `"stale":true` is
@@ -38,7 +39,7 @@ stops it between pieces and nothing is written.
   `notation` is the piece's notation override or `null`. `document` is the analysis document as stored. `note_xml_ids[i]` is the
   `<note xml:id>` the score export writes for note `i` of the source; a
   claim's `note_ids` are indices into this array. An unknown id returns
-  `{"ok":false,"message":"piece not found"}`.
+  `{"ok":false,"error":"piece not found"}`.
   With `?document=summary`, `document` holds only `schema_version`, `metadata` and `meter` (what the header and the
   Provenance list read) and the reply gains `"document_sections"`, the names of every section of the stored
   document. The note ids and the rest of the reply are the same.
@@ -50,18 +51,18 @@ stops it between pieces and nothing is written.
   (non-empty string), `composer`, `source` (strings; `""` clears), `tags`
   (array of strings, replaces all), `add_tags` and `remove_tags` (arrays of
   strings, applied after `tags`), and `notation` (see below). Unknown members
-  are ignored. `meta.json` is written once. Returns `{"ok":true,"piece":{...the list entry...}}`, `404`
-  for an unknown id, `400` with `{"ok":false,"message":"<reason>"}` for
+  are ignored. `piece.json` is written once. Returns `{"ok":true,"piece":{...the list entry...}}`, `404`
+  for an unknown id, `400` with `{"ok":false,"error":"<reason>"}` for
   invalid metadata (`"composer is too long"`, `"source is too long"`,
   `"invalid tag"`, `"too many tags"`, `"invalid notation"`) and nothing written, and
-  `{"ok":false,"message":"nothing to update"}` when none of the members is
+  `{"ok":false,"error":"nothing to update"}` when none of the members is
   given.
   - `notation`: `{"meter":"3/4","value_scale":"2","pickup":"1/4"}` or `null`
     to clear. Each member is optional and `""` leaves it unset: `meter` is
     `beats/beat_type`, `value_scale` one of `1/4`, `1/2`, `1`, `2`, `4` (every
     start and duration is multiplied by it), `pickup` a fraction of a whole
     note (after scaling) shorter than one measure. It is stored in
-    `meta.json` and read by the Analyzer's `imported_reading_*` functions; an
+    `piece.json` and read by the Analyzer's `imported_reading_*` functions; an
     invalid value, or a pickup that does not fit the meter, answers `400`
     `"invalid notation"` and the piece keeps its old reading. A changed
     notation analyzes the piece again before the answer. The analysis (meter
@@ -80,15 +81,15 @@ stops it between pieces and nothing is written.
   signatures; the GUI adds the title and the composer credit, which the
   Analyzer leaves out. Tempo markings and dynamics are left out. Errors are JSON with
   an error status: unknown id `404`; a stored source that no longer imports
-  `422` with `{"ok":false,"message":"could not import the stored source"}`;
+  `422` with `{"ok":false,"error":"could not import the stored source"}`;
   a failed export `500` with
-  `{"ok":false,"message":"failed to export piece","code":"<UrsatzStatus name>"}`;
-  anything else `500` with `{"ok":false,"message":"failed to export piece"}`.
+  `{"ok":false,"error":"failed to export piece","code":"<UrsatzStatus name>"}`;
+  anything else `500` with `{"ok":false,"error":"failed to export piece"}`.
 - `GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]`: the piece as measure-addressed text
   (`text/plain; charset=utf-8`), written by the Analyzer (`analyzer_text_export_piece`,
   [format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)) from the cached import and the stored `analysis.json`, so it shows what the Score
   and Analysis views show. `from` and `to` are measure numbers as written in the score; one alone means that end
-  only. A non-integer, `from` after `to` or a range with no measure is `400` with `{"ok":false,"message":...}`;
+  only. A non-integer, `from` after `to` or a range with no measure is `400` with `{"ok":false,"error":...}`;
   unknown id `404`; a source that no longer imports `422`; anything else `500`.
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`:
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
@@ -112,10 +113,10 @@ stops it between pieces and nothing is written.
     0, then one region per metronome mark (`qpm = bpm * beat unit * 4`; a mark
     at an earlier region's position replaces it), and `"score"`. A source with
     no tempo gives `[{"at":[0,1],"qpm":120}]` and `"default"`.
-  - Errors: unknown id `404` `{"ok":false,"message":"piece not found"}`; a
+  - Errors: unknown id `404` `{"ok":false,"error":"piece not found"}`; a
     stored source that no longer imports `422` with
-    `{"ok":false,"message":"could not import the stored source"}`; anything else
-    `500` with `{"ok":false,"message":"failed to build playback"}`.
+    `{"ok":false,"error":"could not import the stored source"}`; anything else
+    `500` with `{"ok":false,"error":"failed to build playback"}`.
 
 ## Corpus routes
 
@@ -126,7 +127,7 @@ the GUI (`workshop/src/items/collections.c`):
   `"description":"<text>"` and an optional `"id":"<collection-id>"` (accepted
   when it is a valid, unused id). Without an id, one is generated (`col-...`).
   Returns `{"ok":true,"id","name","description","piece_count","updated_at"}`
-  or `{"ok":false,"message":...}`. A duplicate id fails.
+  or the failure: `400` for a bad name or id, `409` for a duplicate id.
 - `GET /api/corpus`: lists all collections, sorted by name (ASCII
   case-insensitive), then id:
   `{"ok":true,"corpora":[{"id","name","description","piece_count","updated_at"},...]}`.
@@ -134,35 +135,33 @@ the GUI (`workshop/src/items/collections.c`):
   and `pieces` (the piece ids, in add order). `404` when absent.
 - `PATCH /api/corpus/<id>`: body with `name` and/or `description` (`""`
   clears the description). Answers with the list fields. A body with neither
-  answers `{"ok":false,"message":"nothing to update"}`; `404` when absent.
+  answers `{"ok":false,"error":"nothing to update"}`; `404` when absent.
 - `DELETE /api/corpus/<id>`: deletes the collection. Its pieces are not
   touched. `404` when absent.
 - `POST /api/corpus/<id>/pieces`: body `{"piece_id":"<id>"}` or
   `{"piece_ids":["<id>",...]}` (at most 5000). Adds the ones that are not
   members yet and answers `{"ok":true,"added":n,"already":n}`; a piece that is
   already a member (or repeated in the request) is counted, not an error. An
-  id with no `pieces/<id>/meta.json` is `400`
-  `{"ok":false,"message":"unknown piece: <id>"}` and nothing is added; an
+  id with no Library piece is `400`
+  `{"ok":false,"error":"unknown piece: <id>"}` and nothing is added; an
   unknown collection is `404`.
 - `DELETE /api/corpus/<id>/pieces/<piece_id>`: removes a piece id. Removing
-  one that is not a member fails with `{"ok":false,...}`.
+  one that is not a member is `400`.
 - `GET /api/corpus/<id>/pieces`: lists the piece ids in a collection:
   `{"ok":true,"pieces":[{"id":...},...]}`.
 
-Other failures (bad id, bad name, malformed body) return HTTP 200 with
-`{"ok":false,"message":...}`. `<id>` and `<piece_id>` path segments are
+Other failures are the envelope with a real status: `400` for a bad id, bad name or malformed body, `404` for a missing collection. `<id>` and `<piece_id>` path segments are
 validated against the same alnum, `-`, `_` whitelist the Analyzer uses for
 piece ids (1 to 64 characters). Names are normalized like piece metadata
 values (trimmed, whitespace collapsed, at most 120 bytes, never empty);
 descriptions the same with at most 500 bytes and may be empty.
 
-Storage: one file per collection, `collections/<id>.json`, with `id`, `name`,
+Storage: one file per collection, `library/collections/<id>.json` (format `ursatz-collection`), with `id`, `name`,
 `description`, `pieces` (ids in add order), `created_at` and `updated_at`
-(ISO 8601 UTC). A write goes to a temporary file that is renamed over the old
-one, and one mutex serializes the writes. A collection is a fixed set of
+(ISO 8601 UTC). A write is one transaction of the workshop ([the data folder](../../../workshop/docs/data-folder.md#changes-are-transactions)). A collection is a fixed set of
 piece ids: tagging a piece later does not add it.
 `DELETE /api/analyzer/pieces/<id>` also removes the id from every collection
-that holds it (a service call, `workshop_collection_remove_piece_everywhere`).
+that holds it, in the same transaction.
 
 A `data/corpus.db` of the old Corpus store is not read: the start refuses a folder that never imported it (see
 [Data check](../../../workshop/docs/data-folder.md#older-folders-and-migration)).
@@ -190,7 +189,7 @@ form labels over the pieces they were built from.
     unknown collection, subject, project or style is `404`).
 
   Answers `{"ok":true,"style":{list entry},"skipped":[{"id","reason"}]}`.
-  `422` `{"ok":false,"message":"no analyzable pieces"}` when no piece could be
+  `422` `{"ok":false,"error":"no analyzable pieces"}` when no piece could be
   added; nothing is written then. `name` is normalized like piece metadata
   values (at most 120 bytes, else `400`). When it is empty the default is
   `Composer: X`, `Source: X`, `Tag: x` joined with ` · ` for a filter,
@@ -213,7 +212,7 @@ form labels over the pieces they were built from.
   style stays as it was. A brief is resolved again.
 - `DELETE /api/styles/<id>`: `{"ok":true}`.
 
-An unknown style id is `404` `{"ok":false,"message":"style not found"}` on
+An unknown style id is `404` `{"ok":false,"error":"style not found"}` on
 every route.
 
 The backend can also build a style into one model file at a path without a
@@ -224,13 +223,12 @@ A piece that cannot be added is skipped with a reason and the build goes on:
 `not found` (no such piece), `re-analysis failed` or `unreadable analysis`.
 When a piece's stored analysis is not current (another schema, Analyzer version or producer key; see
 [Staleness keys](../../../workshop/docs/data-folder.md#the-library)), the piece is analyzed again first, so older pieces still count. Only analysis documents are read,
-never the scores. A build runs on the request thread and one mutex serializes
-the style store.
+never the scores. A build is a job (kind `style`) and one runs at a time.
 
-Storage: `styles/<id>/style-model.json` (written by `style_model_file_write`,
-the same bytes for the same pieces) and `styles/<id>/meta.json` (`id`, `name`,
+Storage: `settings/styles/<id>/style-model.json` (written by `style_model_file_write`,
+the same bytes for the same pieces) and `settings/styles/<id>/style.json` (`id`, `name`,
 `created_at`, `updated_at`, `source`, `pieces`, `skipped`, `piece_count`),
-each written to a temporary file and renamed. Ids are `sty-<16 lowercase hex>`.
+each written by one transaction. Ids are `sty-<16 lowercase hex>`.
 A style is a snapshot: tagging, untagging or deleting a piece later changes
 it only when it is rebuilt, and a Composer plan keeps naming the file, so a
 rebuild changes what that plan's later steps use.
@@ -255,20 +253,20 @@ A scope names the pieces to link:
 
 Pieces are taken in id order. A scope that names no piece is `422`.
 
-- `POST /api/links/runs`: body `{"scope": {...}}`. Starts a run on a worker thread and answers `202` `{"ok":true,
-  "run":{...}}`. `400` for a scope that cannot be one (an unknown kind, a missing id, a filter without a value),
-  `404` for an unknown collection, subject or project, `422` for an empty scope, `409` while another run is in
-  progress (one run at a time).
+- `POST /api/links/runs`: body `{"scope": {...}}`. Queues a run as a job (kind `links`) and answers `202` `{"ok":true,
+  "run":{...},"job":{...}}`; a second run waits in the queue behind the first (no `409`). `400` for a scope that cannot be
+  one (an unknown kind, a missing id, a filter without a value), `404` for an unknown collection, subject or project,
+  `422` for an empty scope.
 - `GET /api/links/runs`: `{"ok":true,"runs":[{"id","scope","status","created_at","finished_at","done","total"},...]}`,
   newest first.
 - `GET /api/links/runs/<id>`: `{"ok":true,"run":{...}}`, the whole run; `404` when unknown. While it runs, `done` and
   `total` are the pairs compared so far and the pairs to compare.
-- `DELETE /api/links/runs/<id>`: `{"ok":true}`; `404` when unknown, `409` while it runs.
+- `DELETE /api/links/runs/<id>`: `{"ok":true}`; `404` when unknown; a run that is queued or running is cancelled first.
 - `GET /api/links/pieces/<piece id>`: `{"ok":true,"links":[{"run","scope","link"},...]}`, the links with this piece on
   either side, taken from the newest done run of each scope.
 
 A run is `{"id","scope","created_at","finished_at","status","message","done","total","skipped","result"}`. `status`
-is `running`, `done` or `failed` (`message` says why: `no analyzable pieces`, `linking failed`, `interrupted`).
+is `queued`, `running`, `done` or `failed` (`message` says why: `no analyzable pieces`, `linking failed`, `interrupted`).
 `skipped` lists `{"id","reason"}` for each piece that was left out, as styles do: `not found`, `re-analysis failed` or
 `unreadable analysis`. On `done`, `result` is the Analyzer's `analyzer_links_render` output
 (`schema/motive-links.v1.schema.json`): `pieces`, `pairs`, `compared`, `cached`, `cache_reset`, the `links` (each
@@ -279,9 +277,9 @@ without its extension, or its id when the piece is gone.
 A piece whose stored analysis has no motive features (an older analyzer version) is analyzed again first, as the
 re-run route does, and added again; one that still fails is skipped.
 
-Storage: `links/motive-link-cache.json` is one cache for every scope, keyed by the two sketches' fingerprints and valid
+Storage: `cache/motive-link-cache.json` is one cache for every scope, keyed by the two sketches' fingerprints and valid
 only for the same producer key, analyzer version and link options, so a pair compared for one scope is not compared
 again for another and a second run over the same scope reports `compared` 0. Each run is
-`links/runs/<id>/run.json`, written to a temporary file and renamed; ids are `lnk-<16 lowercase hex>`. Progress is
-kept in memory and written to `run.json` at most once a second and at the end. A server restart marks a run left
-`running` as `failed` with `interrupted`.
+`library/links/<id>/run.json` (format `ursatz-link-run`); ids are `lnk-<16 lowercase hex>`. Its start, finish and delete are
+transactions; progress is written to `run.json` at most once a second. A server restart marks a run left
+`queued` or `running` as `failed` with `interrupted`.

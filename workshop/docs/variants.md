@@ -1,6 +1,6 @@
-# Motifs in the backend
+# Motifs and variants
 
-How the backend analyzes, varies, compares and links motifs. [Docs index](README.md).
+How the workshop analyzes, varies, compares and links motifs: the variant engine of `composition/variants.c` and the motif services behind the GUI's routes (`POST /api/materials/...`, see the [materials routes](../../gui/docs/api/materials-routes.md)). A route builds the call, the workshop does the work. [Docs index](README.md).
 
 ## Motif analysis on save
 
@@ -43,8 +43,8 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
 
 ## Variant tree
 
-The motif detail has a Variants section (`variant-tree-view.js`, rendering
-from the pure `variant-tree.js`, global `VariantTree`).
+The motif detail has a Variants section (`views/variant-tree-view.js`, rendering
+from the pure `models/variant-tree.js`, `VariantTree`).
 
 - Generate: a count (1 to 16, default 6), a seed (blank draws one) and an
   optional chain. The operation picker lists the registry grouped by category

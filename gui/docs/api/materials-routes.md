@@ -5,12 +5,16 @@ The routes for materials (motifs, themes, pieces) and subjects. [Docs index](../
 ## Materials and subjects routes
 
 Both stores are described under [Material store](../../../workshop/docs/data-folder.md#items-and-versions) and [Subjects](../../../workshop/docs/data-folder.md#layout-2); these
-routes only dispatch into them (`routes/materials.c`). Every answer is JSON.
-A success is `{"ok":true,...}`; a failure is `{"ok":false,"error":"..."}` with
-`400` for an invalid id, name, kind, type or body, `404` for something not
-found, `409` for a project that still holds items or an item that other items
-use, `405` for a method the route does not take and `413` for a request body
-over 256 KB.
+routes only name queries and commands of the workshop (`routes/materials_routes.c`, `motifs_routes.c`, `subjects_routes.c`). Every answer is JSON in
+the one envelope ([the envelope](envelope.md)): a success is `{"ok":true,...}`; a failure is
+`{"ok":false,"error":"...","code":"...","path"?}` with `400` for an invalid id, name, kind, type or body, `422` for a member of a
+Composer request the Composer refuses (its `path` names it), `404` for something not found, `409` for a project that still holds
+items, an item that other items use or an item changed since it was read, `405` for a method the route does not take and `413` for a
+request body over 1 MB.
+
+A write to an item that has versions (a save, a rename, a delete, a compose, a regenerate, a choose, a flag, a promote, a link, a
+reroll, a re-analysis and an update of a use) carries the version the page read as `base_version` in its JSON body (`?base_version=<n>`
+on a `DELETE`); an item that moved on answers `409` with `current_version`. `DELETE` also takes `?force=1`.
 
 Projects:
 

@@ -34,7 +34,7 @@ It holds no music logic: a query or command reads or changes files and asks the 
 | `jobs/` | the job queue ([jobs](jobs-and-events.md)) |
 | `items/` | the store: layout and formats, the transaction, journal and recovery, projects and items with their versions, bodies and references, layers, subjects, collections, the Library piece store and metadata, the migration and the data check |
 | `analysis/` | the Analyzer's services: import and re-analysis (and their jobs), styles, motive links, the import cache |
-| `composition/` | the Composer's services: compose jobs, themes, pieces, motifs, the variant engine (`variants.c`), the request resolver, the Composer client |
+| `composition/` | the Composer's services: compose jobs, themes, pieces, motifs, the variant engine ([variants](variants.md)), the request resolver, the Composer client |
 | `rendering/` | the render cache, playback of versions and pieces, the export of a version's files |
 | `coordinator/` | the API: `workshop.c` (open, start, stop), `dispatch.c` (the two tables of names), `api_*.c` (one file per family of handlers), `events.c`, `settings.c`, `data_lock.c` |
 

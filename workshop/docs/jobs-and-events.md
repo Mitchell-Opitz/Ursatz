@@ -51,4 +51,4 @@ An event is a name and a JSON object. Events about data are published after the 
 
 A subscriber has a queue of 256 events. A full queue is cleared and holds one `reset`. `workshop_events_next` waits up to `timeout_ms` and answers false on a timeout and once `workshop_events_close` ran; the server calls it before it stops, so the waiting stream threads come back. The bus is made by `workshop_start` and removed by `workshop_stop`; without one, publishing does nothing.
 
-The GUI serves the bus at `GET /api/events` as server-sent events (`gui/docs/api/composer-routes.md`); the page keeps one `EventSource` and reads again what an event says changed.
+The GUI serves the bus at `GET /api/events` as server-sent events ([the GUI API](../../gui/docs/api/composer-routes.md#events)); the page keeps one `EventSource` and reads again what an event says changed.

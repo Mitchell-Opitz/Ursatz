@@ -6,7 +6,7 @@ Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the r
 
 One rule: a fast-set test over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) warns about any fast-set test over 10 s.
 
-The frontend tests share `frontend/tests/support/check.js` (`check`, `same`, `near`, `finish`: call `finish()` last, it sets the exit code) and `frontend/tests/support/fixtures.js` (`generated(name)` and `analyzerSnapshot(name)`, below). The backend tests use `tests/support/ursatz_test.h` and the HTTP client `tests/support/test_http.h` at the repository root.
+The frontend tests share `frontend/tests/support/check.js` (`check`, `same`, `near`, `finish`: call `finish()` last, it sets the exit code), `support/fixtures.js` (`generated(name)`, `analyzerSnapshot(name)`, `readJson(path)`, `pageSource(...modules)` and `indexSource()`, below), `support/dom.js` and `support/page.js` ([Frontend tests](#frontend-tests)). The backend tests use `tests/support/ursatz_test.h` and the HTTP client `tests/support/test_http.h` at the repository root.
 
 The reference pieces and the link fixtures come from the root `tests/fixtures/` (`URSATZ_FIXTURES_DIR`).
 
@@ -14,9 +14,9 @@ Fixtures come in three kinds:
 
 - **Generated in the build.** `vocabulary.json`, `forms.json` and `piece-<form>.json` (the Composer's vocabulary, forms and the summary of a piece of each form with sizes) are written by the `gui_frontend_fixtures` target (part of `ALL`), which runs `gui_write_frontend_fixtures` (`backend/tests/write_frontend_fixtures.c`): it writes the exact strings the two routes serve, from the in-tree Composer, to `<build>/gui/frontend/tests/fixtures`. The frontend tests find that folder in `URSATZ_GUI_GENERATED_FIXTURES`, which `ursatz_test` sets for them, and read the files with `generated("vocabulary.json")`; run through `ctest`, as the variable is not set otherwise. `test_composer_route` compares each route answer with its generated file, so the files are what the routes give by construction.
 - **The Analyzer's own snapshots.** The Mozart 545 document that `analysis-view`, `inspector-model` and `score-layers` read is `analyzer/tests/snapshots/mozart-545.analysis.json` (`analyzerSnapshot("mozart-545.analysis.json")`); the Bach 114 playback that `test_piece_snapshot` compares is `analyzer/tests/snapshots/gui/bach-114.playback.json`. The Analyzer's tests own both. The snapshots drop the Analyzer's volatile members, so `analysis-view` sets `metadata.analyzer_version`, `producer_key` and `input` on its parsed copy.
-- **Captured.** What the GUI itself made stays in `backend/tests/fixtures` and `frontend/tests/fixtures`: the piece snapshots of `test_piece_snapshot` (`backend/tests/fixtures/pieces`; `update-goldens` (`URSATZ_UPDATE_GOLDENS=1`) rewrites them, the GUI adds the work title to the MusicXML), the piece summaries the Composer cannot recompose here (a style, a motive) and the theme summary, `theme.playback.json`, `theme.mid` and `multivoice.musicxml`, the GUI-computed defaults `backend/tests/fixtures/composer/b11_captures.json`, and the motif playback and export fixtures. They stay captured until the frontend moves onto the workshop API (P63).
+- **Captured.** What the GUI itself made stays in `backend/tests/fixtures` and `frontend/tests/fixtures`: the piece snapshots of `test_piece_snapshot` (`backend/tests/fixtures/pieces`; `update-goldens` (`URSATZ_UPDATE_GOLDENS=1`) rewrites them, the GUI adds the work title to the MusicXML), the piece summaries the Composer cannot recompose here (a style, a motive) and the theme summary, `theme.playback.json`, `theme.mid` and `multivoice.musicxml`, the GUI-computed defaults `backend/tests/fixtures/composer/b11_captures.json`, and the motif playback and export fixtures.
 
-`ctest` runs the backend tests (the startup data check, analyzer, corpus, styles, composer, materials, theme, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
+`ctest` runs the backend tests (the analyzer, corpus, styles, composer, materials, theme, piece, subjects, links, jobs and events routes, the route table and the status table), the workshop's tests (`workshop/tests/`: the services that moved there keep their names, see [workshop architecture](../../workshop/docs/architecture.md#tests)) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node the configure prints one status line
 and skips them (`-DURSATZ_REQUIRE=node` makes it fail instead). The frontend tests are plain Node scripts; the ones that read a generated fixture need `URSATZ_GUI_GENERATED_FIXTURES` (run them through `ctest`), the others also run directly, for example `node frontend/tests/analysis-view.test.js`.
@@ -33,7 +33,7 @@ model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 `test_link_service` resolves each scope kind (a project through its subjects), runs the four link fixtures
 (`tests/fixtures/links` at the repository root), checks that a second run over the same
 scope compares nothing, analyzes a document without features again and reads an interrupted run as failed.
-`test_links_route` starts runs over HTTP, polls them to done, and covers the `409`, `400`, `404` and `422` answers,
+`test_links_route` starts runs over HTTP as jobs, follows them to done, and covers the `400`, `404` and `422` answers (a second run waits in the queue),
 the list, delete and a piece's links.
 `test_piece_lock` covers the piece lock without a server: threads counting under one id, 50 PATCHes and 50
 re-analyses of one piece while a reader checks that each detail, score and playback reply parses and that the
@@ -52,6 +52,10 @@ brief of fixture pieces whose `plan.json`, `theme.mid` and `theme.musicxml` are 
 
 CI (`.github/workflows/ci.yml`) builds the whole repository once and runs the checks and the fast set on every push and
 pull request; no secret is needed.
+
+## Frontend tests
+
+`frontend/package.json` has `"type": "module"`, so every `frontend/tests/*.test.js` is an ES module that imports the modules it tests (`import ThemesModel from "../public/models/themes-model.js"`); `CMakeLists.txt` registers each as `frontend_<name>` and needs no list. The pure models and helpers are tested directly. Every view is mounted on a fake document: `support/dom.js` has elements with children, attributes, class lists, listeners, select options and `innerHTML` (a parser for the views' templates), the lookups the views use (`getElementById`, `querySelector(All)` by tag, class, id and attribute with descendant and child combinators), `installDom()` (sets `document`, `window` and a storage), `fakeFetch(handler)` and `byText`. `support/page.js` `openPage(routes)` builds the sidebar and content area of `index.html` on it, loads the generated vocabulary and forms, answers fetch by `"METHOD /path"` (a route not given is `404`) and logs the calls (`page.calls`, `page.callsTo(method, url)`); a view that needs the shell gets a fake from `page.setShell({...})`. A view test mounts one view, checks one render and one action: `shell`, `library-view`, `collections-view`, `analysis-view`, `materials-view`, `themes-view`, `pieces-view`, `subjects-view`, `motive-links-view`, `styles-view`, `variant-tree` and the two panels. `transport.test.js` runs the playback transport with a fake clock, timers and audio context; `score-overlay.test.js` draws the claim layers on the fake document; `sound-sources.test.js` uses a fake `MIDI` soundfont global and a recording audio context.
 
 ## Smoke runs
 

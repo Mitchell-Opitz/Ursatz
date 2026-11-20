@@ -15,6 +15,10 @@ The workshop is the process that holds the data folder, the jobs and the events,
 - [commands.md](commands.md): `workshop_query` and `workshop_command`, the 42 commands, the queries, base versions, actors and failures.
 - [jobs-and-events.md](jobs-and-events.md): the job queue, the job kinds, cancel, and the event bus with its events.
 
+## Behind the GUI
+
+- [variants.md](variants.md): motif analysis on save, the variant tree, comparing and linking motifs, motive forms and random motifs.
+
 ## Changes
 
 - [changelog.md](changelog.md): what changed in the workshop, newest first.
