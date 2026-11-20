@@ -182,8 +182,12 @@ int run_apply(const CliArgs *args) {
             workshop_reply_destroy(&reply);
             break;
         }
+        /* the job id is copied: the reply is destroyed before the job is waited on */
         const cJSON *job = cJSON_GetObjectItemCaseSensitive(reply.json, "job");
-        const char *job_id = cJSON_IsObject(job) ? cli_json_string(job, "id") : "";
+        char job_id[64] = "";
+        if (cJSON_IsObject(job)) {
+            snprintf(job_id, sizeof job_id, "%s", cli_json_string(job, "id"));
+        }
         if (json) {
             char *line = cJSON_PrintUnformatted(reply.json);
             printf("%s\n", line ? line : "{}");
