@@ -41,6 +41,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
 - [docs/modules/realization.md](modules/realization.md): Realization: lines, performer parts, scoring assignments.
 - [docs/modules/reading.md](modules/reading.md): Reading: what one reader says about one realization, as claims; the builder and the JSON codec.
+- [text/README.md](../text/README.md): Text: Ursatz Text, the lossless text form of plans, readings, realizations and knowledge (grammar 1, codecs, API).
 - [docs/modules/plan.md](modules/plan.md): Plan: the plan (nodes, lanes, constraints, states, edits, the JSON codec) and the section description.
 - [docs/modules/plan-format.md](modules/plan-format.md): the plan JSON file, its nodes, lanes, state and versions.
 - [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference and their callbacks.
