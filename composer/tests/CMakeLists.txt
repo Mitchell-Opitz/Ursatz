@@ -117,6 +117,8 @@ ursatz_test(test_preferences LIBS ursatz_composer_engine cjson composer_test_sup
 ursatz_test(test_melody_preferences LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+ursatz_test(test_motif_variety LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src)
+
 ursatz_test(test_melody_overrides LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
