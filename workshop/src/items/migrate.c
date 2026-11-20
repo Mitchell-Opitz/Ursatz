@@ -890,8 +890,9 @@ static UrsatzStatus migrate_layout_1(Run *run, const WorkshopMigrateOptions *opt
     }
     for (size_t i = 0; status == URSATZ_OK && i < names.count; i++) {
         CommonNames items = {0};
+        char project_dir[PATH_BYTES];
         char items_dir[PATH_BYTES];
-        if (!workshop_layout_id_ok(names.items[i]) || !join(items_dir, projects, names.items[i]) || !join(items_dir, items_dir, "items") ||
+        if (!workshop_layout_id_ok(names.items[i]) || !join(project_dir, projects, names.items[i]) || !join(items_dir, project_dir, "items") ||
             !common_path_is_dir(items_dir)) {
             continue;
         }

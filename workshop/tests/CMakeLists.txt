@@ -120,3 +120,16 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_events)
 ursatz_test(workshop_events SOURCES test_events.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS URSATZ_WORKSHOP_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_events)
+
+# The resolver of a stored request (P63 B15): references of each kind, the style of a brief, the refusals at their paths.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_request_resolve)
+ursatz_test(workshop_request_resolve SOURCES test_request_resolve.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_request_resolve)
+
+# The migration of theme and piece bodies to stored requests (P63 B15): every recorded body (fixtures/requests) resolves to the request it
+# composed with, and a layout 1 folder migrates in place to layout 2.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_body_migration)
+ursatz_test(workshop_body_migration SOURCES test_body_migration.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+                URSATZ_WORKSHOP_REQUESTS="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/requests"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_body_migration)
