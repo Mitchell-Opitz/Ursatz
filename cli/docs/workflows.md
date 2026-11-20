@@ -14,6 +14,22 @@ ursatz render piece-2.json --midi again.mid --tempo 96
 
 `plan` writes the plan of a short piece from a form template; `fill` realizes any plan ([cli-plan.md](cli-plan.md), [cli-fill.md](cli-fill.md)); `lock` makes a section, a phrase or one lane Given and `regenerate` writes one node again and only what depends on it ([cli-regenerate.md](cli-regenerate.md)); `render` writes the plan's Given and Realized notes as MIDI, MusicXML or both ([export.md](../../composer/docs/export.md)). `variations` and `harmonize` keep several versions of a node that sound different ([cli-variations.md](cli-variations.md)).
 
+## Changing a piece in a data folder
+
+A piece or theme in a [data folder](data-folder.md) is read as text and composed again with commands written as text:
+
+```sh
+ursatz --data ~/ursatz-data show item:pce-2c8d54834a9c499f --view structure
+ursatz --data ~/ursatz-data apply compose.txt --wait
+```
+
+`compose.txt` holds one command a line (see [apply](data-folder.md#apply) and the [command reference](../../workshop/docs/command-reference.md)); `--wait` waits for the job `item.compose` starts and prints the version it made:
+
+```
+# compose the current version again with another seed
+item.compose item:pce-2c8d54834a9c499f@v2 seed 3
+```
+
 ## MIDI files
 
 A MIDI file opens in a DAW with named tracks (`melody`, `bass`, `inner_voice_<n>`, the form on the conductor track), a
