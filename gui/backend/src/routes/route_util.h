@@ -10,7 +10,7 @@
 #include <common/status.h>
 #include <ursatz_workshop/workshop_api.h>
 
-/* The largest request body ursatz_gui_read_json_body accepts. */
+/* The largest request body ursatz_gui_read_json_body_max is given. */
 #define URSATZ_GUI_JSON_BODY_MAX_BYTES (1024 * 1024)
 /* The caps of the one body reader (R-647): JSON 1 MB, an upload 64 MB, a MIDI motif 256 KB. */
 #define URSATZ_GUI_UPLOAD_MAX_BYTES (64 * 1024 * 1024)
@@ -48,9 +48,6 @@ int ursatz_gui_send_object(struct mg_connection *conn, int status, cJSON *object
  * JSON, or is not an object. With status_or_null NULL nothing is sent and the caller answers. Otherwise the failure is
  * sent as {"ok":false,"error":...} (400, 413 or 500) and *status is what the caller returns; on success *status is 200. */
 cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_bytes, int *status_or_null);
-
-/* ursatz_gui_read_json_body_max with URSATZ_GUI_JSON_BODY_MAX_BYTES. */
-cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null);
 
 /* The query string of a request as a params object: every variable by name, a variable that repeats as an array of its values. */
 cJSON *ursatz_gui_query_params(const struct mg_request_info *info);

@@ -178,10 +178,6 @@ cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_byte
   return NULL;
 }
 
-cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null) {
-  return ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, status_or_null);
-}
-
 int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
   if (status == URSATZ_ERR_REQUEST && error && strcmp(error->path, "/body/size") == 0) {
     return 413;
