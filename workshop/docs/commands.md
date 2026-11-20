@@ -82,6 +82,7 @@ Names are `<family>.<what>`; params go in one JSON object. `id` names the thing 
 | Composer | `composer.status`, `composer.vocabulary`, `composer.forms`, `composer.variant-operations`, `composer.render`, `composer.random-motifs`, `composer.import-motif` (a MIDI file in `bytes`), `composer.recognize` |
 | Styles and links | `style.list`, `style.get`, `links.list`, `links.get`, `links.piece` |
 | Jobs | `job.get`, `job.list` (queued and running jobs, newest first) |
+| Journal | `journal.list` (`target`: a record's target, `limit`: 1 to 1000, default 20; the records newest first, each `{seq, id, command, actor, at, target, base_version, writes, removes}` with the final paths it wrote and removed) |
 | Projects and items | `project.list`, `project.get`, `item.list`, `item.get`, `item.version`, `item.export`, `item.score`, `item.playback`, `item.file`, `item.variation-file`, `item.variation-playback`, `item.op-checks`, `item.variant-tree`, `item.validate`, `item.variants`, `item.each-op` |
 | Subjects | `subject.list`, `subject.groups`, `subject.get` |
 

@@ -141,6 +141,9 @@ WORKSHOP_HANDLER(workshop_t_pitch_names);
 WORKSHOP_HANDLER(workshop_t_style_profile);
 WORKSHOP_HANDLER(workshop_t_versions);
 
+/* the journal (api_journal.c) */
+WORKSHOP_HANDLER(workshop_q_journal_list);
+
 /* subjects (api_subjects.c) */
 WORKSHOP_HANDLER(workshop_q_subject_list);
 WORKSHOP_HANDLER(workshop_q_subject_groups);

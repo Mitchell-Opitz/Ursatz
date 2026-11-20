@@ -40,6 +40,7 @@ static const QueryEntry kQueries[] = {
     {"links.list", workshop_q_links_list},
     {"links.get", workshop_q_links_get},
     {"links.piece", workshop_q_links_piece},
+    {"journal.list", workshop_q_journal_list},
     {"job.get", workshop_q_job_get},
     {"job.list", workshop_q_job_list},
     {"project.list", workshop_q_project_list},

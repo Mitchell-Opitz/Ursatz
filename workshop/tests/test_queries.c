@@ -224,6 +224,37 @@ static void test_collection_style_link_queries(void) {
     workshop_reply_destroy(&reply);
     check(ask("job.list", NULL, &reply, &error) && cJSON_IsArray(member(reply.json, "jobs")), "job.list lists the jobs that are queued or running");
     workshop_reply_destroy(&reply);
+
+    /* the journal: newest first, filtered by target, limited */
+    check(ask("journal.list", "{\"limit\":1000}", &reply, &error) && cJSON_IsArray(member(reply.json, "records")) &&
+              cJSON_GetArraySize(member(reply.json, "records")) >= 2,
+          "journal.list lists the records of the commands that changed the data folder");
+    const cJSON *records = member(reply.json, "records");
+    const cJSON *newest = cJSON_GetArrayItem(records, 0);
+    const cJSON *older = cJSON_GetArrayItem(records, 1);
+    check(num(newest, "seq") > num(older, "seq") && str(newest, "command")[0] && str(newest, "actor")[0] && str(newest, "at")[0] &&
+              cJSON_IsArray(member(newest, "writes")) && cJSON_IsArray(member(newest, "removes")) && !member(newest, "headers"),
+          "a record is {seq, id, command, actor, at, target, base_version, writes, removes}, newest first, without its headers");
+    char target_params[256];
+    const char *target = "";
+    const cJSON *record = NULL;
+    cJSON_ArrayForEach(record, records) {
+        if (str(record, "target")[0]) {
+            target = str(record, "target");
+            break;
+        }
+    }
+    snprintf(target_params, sizeof(target_params), "{\"target\":\"%s\"}", target);
+    WorkshopReply filtered;
+    check(target[0] && ask("journal.list", target_params, &filtered, &error) && cJSON_GetArraySize(member(filtered.json, "records")) >= 1 &&
+              strcmp(str(cJSON_GetArrayItem(member(filtered.json, "records"), 0), "target"), target) == 0,
+          "journal.list with a target lists the records about it");
+    workshop_reply_destroy(&filtered);
+    workshop_reply_destroy(&reply);
+    check(ask("journal.list", "{\"limit\":1}", &reply, &error) && cJSON_GetArraySize(member(reply.json, "records")) == 1, "journal.list with a limit stops there");
+    workshop_reply_destroy(&reply);
+    check(query("journal.list", "{\"limit\":0}", &reply, &error) == URSATZ_ERR_REQUEST && strcmp(error.path, "/params/limit") == 0, "a limit of 0 is refused");
+    workshop_reply_destroy(&reply);
 }
 
 static void test_composer_queries(void) {
