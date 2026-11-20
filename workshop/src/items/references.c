@@ -180,6 +180,14 @@ static UrsatzStatus prepare_uses_locked(const cJSON *body, cJSON **out) {
     const cJSON *refs[BODY_REFERENCES_MAX];
     ReferenceKind kinds[BODY_REFERENCES_MAX];
     size_t count = body_references(prepared, refs, kinds);
+    for (size_t i = 0; i < count; i++) {
+        const cJSON *id = cJSON_GetObjectItemCaseSensitive(refs[i], "item_id");
+        const cJSON *number = cJSON_GetObjectItemCaseSensitive(refs[i], "version");
+        if (!cJSON_IsString(id) || !cJSON_IsNumber(number)) {
+            cJSON_Delete(prepared);
+            return workshop_fail(URSATZ_ERR_REQUEST, "a reference needs item_id and version");
+        }
+    }
     if (count == 0) {
         *out = prepared;
         return URSATZ_OK;

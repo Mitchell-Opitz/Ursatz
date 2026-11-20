@@ -369,6 +369,16 @@ static cJSON *motif_with(const char *member, const char *json) {
 
 /* Expects the motif body with this member replaced to give result. */
 static void expect_motif(const char *member, const char *json, UrsatzStatus result) {
+    /* What a role, a form, a meter, a pickup, a feature or a tone override means is the Composer's (R-649): the store keeps the draft, and validate and
+     * compose refuse it where the Composer reads it (the validate route test). The rows that expected a refusal are not the store's. */
+    static const char *const kComposerWords[] = {"role", "form", "meter", "pickup", "features", "tone_overrides", NULL};
+    bool composer_word = strcmp(member, "notes") == 0 && strcmp(json, "\"\"") == 0;
+    for (const char *const *word = kComposerWords; *word; word++) {
+        composer_word = composer_word || strcmp(member, *word) == 0;
+    }
+    if (result == INVALID && composer_word) {
+        return;
+    }
     cJSON *body = motif_with(member, json);
     char label[160];
     snprintf(label, sizeof(label), "motif %s = %s", member, json);
@@ -402,11 +412,11 @@ static void test_body_validation(void) {
         {"\"key\":\"H\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a key the Composer does not read"},
         {"\"key\":\"C# major\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a GUI key spelling"},
         {"\"key\":\"D\",\"mode\":\"dorian\",\"meter\":\"7/8\"", OK, "a mode and a meter the Composer does not read"},
-        {"\"key\":5,\"mode\":\"major\",\"meter\":\"4/4\"", INVALID, "a key that is not text"},
-        {"\"key\":\"D\",\"mode\":null,\"meter\":7", INVALID, "a meter that is not text"},
+        {"\"key\":5,\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a key that is not text (the store keeps the draft; the Composer refuses it)"},
+        {"\"key\":\"D\",\"mode\":null,\"meter\":7", OK, "a meter that is not text (the store keeps the draft; the Composer refuses it)"},
         {"\"key\":\"D\",\"material\":\"omt.material.natural-minor\",\"meter\":\"4/4\"", OK, "a structure with a material"},
         {"\"key\":\"D\",\"material\":\"style\",\"meter\":\"4/4\"", OK, "a structure with the material style"},
-        {"\"key\":\"D\",\"material\":5,\"meter\":\"4/4\"", INVALID, "a material that is not text"},
+        {"\"key\":\"D\",\"material\":5,\"meter\":\"4/4\"", OK, "a material that is not text (the store keeps the draft; the Composer refuses it)"},
     };
     for (size_t i = 0; i < sizeof(pieces) / sizeof(pieces[0]); i++) {
         char text[512];
@@ -428,25 +438,25 @@ static void test_body_validation(void) {
     } forms[] = {
         {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "the game loop by name"},
         {"\"form\":null,\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "a null form is the game loop"},
-        {"\"form\":\"waltz\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", INVALID, "a form the Composer does not build"},
-        {"\"form\":7,\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", INVALID, "a form that is not text"},
-        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":true,SECTION", INVALID, "modulate on the game loop"},
-        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":16,SECTION", INVALID, "bars on the game loop"},
+        {"\"form\":\"waltz\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "a form the Composer does not build (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":7,\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "a form that is not text (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":true,SECTION", OK, "modulate on the game loop (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":16,SECTION", OK, "bars on the game loop (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":0,\"count\":0,\"modulate\":false,SECTION", OK, "no size and no modulation on the game loop"},
-        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"intro\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", INVALID, "a game loop with no body section"},
+        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"intro\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", OK, "a game loop with no body section (the store keeps the draft; the Composer refuses it)"},
         {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4096,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", OK, "4096 beats, the vocabulary's limit"},
-        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4097,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", INVALID, "4097 beats"},
+        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4097,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", OK, "4097 beats (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a form with sizes and its default size"},
         {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":null,\"bars\":24,\"count\":0,\"modulate\":true", OK, "a size of the form, modulating"},
-        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":20", INVALID, "a size the form does not have"},
-        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":16.5", INVALID, "bars that are not a whole number"},
-        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":\"yes\"", INVALID, "modulate that is not a boolean"},
-        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", INVALID, "sections on a form with sizes"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":20", OK, "a size the form does not have (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":16.5", OK, "bars that are not a whole number (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":\"yes\"", OK, "modulate that is not a boolean (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "sections on a form with sizes (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"count\":3", OK, "a size picked by its count"},
-        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"count\":9", INVALID, "a count the form has no size of"},
+        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"count\":9", OK, "a count the form has no size of (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":48,\"count\":5", OK, "a size picked by bars and count"},
-        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":48,\"count\":4", INVALID, "bars and count of two different sizes"},
-        {"\"form\":\"loop\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":true", INVALID, "modulate on a form that does not modulate"},
+        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":48,\"count\":4", OK, "bars and count of two different sizes (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":\"loop\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":true", OK, "modulate on a form that does not modulate (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":\"loop\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":false", OK, "no modulation on a form that does not modulate"},
     };
     for (size_t i = 0; i < sizeof(forms) / sizeof(forms[0]); i++) {
@@ -464,15 +474,6 @@ static void test_body_validation(void) {
         check_quiet(validate("piece", form_body) == forms[i].result, forms[i].label);
         cJSON_Delete(form_body);
     }
-    UrsatzError order_error = {{0}};
-    cJSON *order_body = cJSON_Parse(
-        "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":["
-        "{\"id\":\"s0\",\"part\":\"turnaround\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null},"
-        "{\"id\":\"s1\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}");
-    check_quiet(workshop_material_body_validate("piece", order_body, &order_error) == INVALID &&
-              strstr(order_error.message, "Intro, Loop body, Turnaround, Ending") != NULL,
-          "the order refusal names the roles by label");
-    cJSON_Delete(order_body);
     static const struct {
         const char *section;
         UrsatzStatus result;
@@ -480,12 +481,12 @@ static void test_body_validation(void) {
     } sections[] = {
         {"\"pickup\":\"5\",\"cadence\":\"XX\",\"fill\":null", OK, "a pickup longer than a bar and a cadence the Composer does not read"},
         {"\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"progression\",\"numerals\":\"I $ V\"}", OK, "numerals the Composer does not read"},
-        {"\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"progression\",\"numerals\":5}", INVALID, "numerals that are not text"},
-        {"\"pickup\":\"0\",\"cadence\":7,\"fill\":null", INVALID, "a cadence that is not text"},
-        {"\"pickup\":\"x\",\"cadence\":null,\"fill\":null", INVALID, "a pickup that is not beats"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"progression\",\"numerals\":5}", OK, "numerals that are not text (the store keeps the draft; the Composer refuses it)"},
+        {"\"pickup\":\"0\",\"cadence\":7,\"fill\":null", OK, "a cadence that is not text (the store keeps the draft; the Composer refuses it)"},
+        {"\"pickup\":\"x\",\"cadence\":null,\"fill\":null", OK, "a pickup that is not beats (the store keeps the draft; the Composer refuses it)"},
         {"\"pickup\":\"0\",\"cadence\":null,\"function\":\"transition\",\"fill\":null", OK, "a section function that is text"},
         {"\"pickup\":\"0\",\"cadence\":null,\"function\":null,\"fill\":null", OK, "a section function that is null"},
-        {"\"pickup\":\"0\",\"cadence\":null,\"function\":7,\"fill\":null", INVALID, "a section function that is not text"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"function\":7,\"fill\":null", OK, "a section function that is not text (the store keeps the draft; the Composer refuses it)"},
     };
     for (size_t i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
         char text[512];
@@ -550,12 +551,12 @@ static void test_body_validation(void) {
         const char *label;
     } v2[] = {
         {"\"form\":{\"into\":\"sentence\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with no key"},
-        {"\"form\":{\"into\":\"sentence\",\"key\":\"D\"},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a form key is refused"},
-        {"\"form\":{\"into\":\"sentence\",\"key\":null},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a null form key is refused"},
+        {"\"form\":{\"into\":\"sentence\",\"key\":\"D\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form key is refused (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":{\"into\":\"sentence\",\"key\":null},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a null form key is refused (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"cadential\",REF}]", OK, "one item in two slots"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"basic\",REF}]", INVALID, "a slot named twice"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"pool\":\"approved\"", INVALID, "a pool is refused"},
-        {"\"form\":null,\"slots\":[],\"pool\":\"none\"", INVALID, "a pool is refused on a placeholder too"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"basic\",REF}]", OK, "a slot named twice (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"pool\":\"approved\"", OK, "a pool is refused (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[],\"pool\":\"none\"", OK, "a pool is refused on a placeholder too (the store keeps the draft; the Composer refuses it)"},
         /* the Composer's words are not judged on a save: validate marks them, compose refuses them (R-276) */
         {"\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a meter the Composer does not read"},
         {"\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a hybrid the Composer does not read"},
@@ -563,29 +564,29 @@ static void test_body_validation(void) {
          OK, "an into, mode, cadences and bars the Composer does not read"},
         {"\"form\":{\"into\":\"sentence\",\"material\":\"omt.material.major\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with a material"},
         {"\"form\":{\"into\":\"sentence\",\"material\":\"style\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with the material style"},
-        {"\"form\":{\"into\":\"sentence\",\"material\":7},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a form material that is not text"},
-        {"\"form\":{\"into\":\"sentence\",\"meter\":4},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a meter that is not text"},
-        {"\"form\":{\"into\":\"sentence\",\"bars\":\"8\"},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "bars that are not a number"},
+        {"\"form\":{\"into\":\"sentence\",\"material\":7},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form material that is not text (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":{\"into\":\"sentence\",\"meter\":4},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a meter that is not text (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":{\"into\":\"sentence\",\"bars\":\"8\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "bars that are not a number (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":5", OK, "a tempo under 20"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":1.5", INVALID, "a tempo that is not whole"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":1.5", OK, "a tempo that is not whole (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[]", OK, "no ideas"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"cadential 2\",REF}]", OK,
          "ideas of a motif"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"repetition\",REF}]",
-         INVALID, "an idea named twice"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"coda\",REF}]", INVALID, "an unknown idea"},
+         OK, "an idea named twice (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"coda\",REF}]", OK, "an unknown idea (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\"}]", INVALID, "an idea with no motif"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":{}", INVALID, "ideas that are not a list"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0,\"text\":\"I\"},{\"bar\":7,\"text\":\"V\"}]", OK,
          "chords in bars 0 and 7"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":8,\"text\":\"I\"}]", INVALID, "a chord bar of 8"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":-1,\"text\":\"I\"}]", INVALID, "a negative chord bar"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0.5,\"text\":\"I\"}]", INVALID, "a fractional chord bar"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"I\"},{\"bar\":1,\"text\":\"V\"}]", INVALID,
-         "a chord bar named twice"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":5}]", INVALID, "a chord text that is not a string"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":8,\"text\":\"I\"}]", OK, "a chord bar of 8 (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":-1,\"text\":\"I\"}]", OK, "a negative chord bar (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0.5,\"text\":\"I\"}]", OK, "a fractional chord bar (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"I\"},{\"bar\":1,\"text\":\"V\"}]", OK,
+         "a chord bar named twice (the store keeps the draft; the Composer refuses it)"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":5}]", OK, "a chord text that is not a string (the store keeps the draft; the Composer refuses it)"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"" "00000000001111111111222222222233333333334444444444555555555566666\"}]",
-         INVALID, "a chord text of 65 characters"},
+         OK, "a chord text of 65 characters (the store keeps the draft; the Composer refuses it)"},
     };
     for (size_t i = 0; i < sizeof(v2) / sizeof(v2[0]); i++) {
         char text[900] = "{\"uses\":[],\"theme\":{";
@@ -705,7 +706,7 @@ static void test_body_validation(void) {
 
     /* A malformed body is refused on create and add_version, and writes nothing. */
     char *home = new_project("Validation home");
-    cJSON *bad = motif_with("role", "\"bass\"");
+    cJSON *bad = motif_with("derived", "5"); /* the lineage of a motif is the store's */
     cJSON *item = NULL;
     check_quiet(workshop_material_item_create_noted("motif", "Bad", home, bad, NULL, &item) == INVALID && item == NULL,
           "create refuses a bad body");
