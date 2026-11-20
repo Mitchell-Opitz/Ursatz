@@ -120,6 +120,101 @@ char *analyzer_document_to_json(const AnalysisDocument *document);
 
 void analyzer_document_destroy(AnalysisDocument *document);
 
+/* ------------------------------------------------------------------ run a file */
+
+/*
+ * One file, start to end: the import, an optional notation reading and the analysis (what `ursatz analyze` and the corpus run do for each
+ * piece; R-656).
+ */
+typedef enum {
+    ANALYZER_RUN_FILE_OK = 0,
+    ANALYZER_RUN_FILE_ERR_IMPORT,  /* *import_status says why */
+    ANALYZER_RUN_FILE_ERR_READING, /* *reading_status says why */
+    ANALYZER_RUN_FILE_ERR_ANALYZE  /* *analyze_status says why */
+} AnalyzerRunFileResult;
+
+/*
+ * Imports path, applies reading when it is not NULL, and analyzes the notes (analyzer_analyze, all stages) with the pitch materials of
+ * `knowledge`, which must outlive the result. On ANALYZER_RUN_FILE_OK the caller owns *notes and *result (the result borrows the notes); on any
+ * other result both are already released. import_status, reading_status and analyze_status may be NULL; they receive the importer's, the
+ * reading's and the analysis's own result when that step fails, and import_error (NULL for none) the importer's message of a failed import
+ * (URSATZ_ERR_FORMAT, the file as its path). Nothing is printed: the warnings of an import that worked are in notes->source.warnings, for the
+ * caller to say.
+ */
+AnalyzerRunFileResult analyzer_run_file(const char *path, ImportedFormat format, const ImportedReading *reading,
+                                        const KnowledgeSnapshot *knowledge, ImportedScore *notes, AnalyzerResult **result,
+                                        ImportedScoreResult *import_status, ImportedReadingResult *reading_status,
+                                        UrsatzStatus *analyze_status, UrsatzError *import_error);
+
+/* Builds the analysis document of a run and releases *result and *notes. NULL on allocation failure. */
+AnalysisDocument *analyzer_run_file_document(const char *path, ImportedScore *notes, AnalyzerResult *result);
+
+/* The analysis document path for input_path: "<stem>.analysis.json" next to it. Caller frees; NULL on allocation failure. */
+char *analyzer_document_path_for(const char *input_path);
+
+/* ------------------------------------------------------------------ corpus */
+
+/* Corpus run: analyzes every piece in a folder, one analysis document each, written under an output directory. */
+typedef enum {
+    ANALYZER_CORPUS_PIECE_ANALYZED = 0,
+    ANALYZER_CORPUS_PIECE_SKIPPED, /* resume: unchanged since the last run */
+    ANALYZER_CORPUS_PIECE_FAILED
+} AnalyzerCorpusPieceStatus;
+
+/*
+ * What a piece said besides its status, for the caller to say (the run prints nothing): the importer's own text of a failed import (NULL when
+ * none) and the warnings an import that worked raised. Valid during the callback.
+ */
+typedef struct {
+    const char *message;
+    const char *const *warnings;
+    size_t warning_count;
+} AnalyzerCorpusPieceReport;
+
+/* Called once per piece, in path order, as soon as the piece is done. path is relative to input_dir; error is NULL unless the piece failed. */
+typedef void (*AnalyzerCorpusPieceCallback)(const char *path, AnalyzerCorpusPieceStatus status, const char *error,
+                                            const AnalyzerCorpusPieceReport *report, void *user);
+
+typedef struct {
+    const char *input_dir;
+    /* NULL means "<input_dir>/.ursatz-corpus". */
+    const char *output_dir;
+    bool resume;
+    /* Optional progress callback (NULL for none) and its user pointer. */
+    AnalyzerCorpusPieceCallback on_piece;
+    void *user;
+    /* The knowledge snapshot every piece is analyzed with (borrowed); required (URSATZ_ERR_REQUEST without it). */
+    const KnowledgeSnapshot *knowledge;
+} AnalyzerCorpusOptions;
+
+typedef struct {
+    size_t analyzed;
+    size_t skipped;
+    size_t failed;
+} AnalyzerCorpusSummary;
+
+/*
+ * Walks input_dir recursively and takes the files with the extensions .mid, .midi, .musicxml and .xml (case-insensitive), sorted by relative
+ * path so a run is reproducible. Each piece is imported (format detected), analyzed and written to "<output_dir>/<relative path>.analysis.json",
+ * with directories created as needed. A piece that cannot be imported or analyzed is counted as failed; that is not a failed run.
+ *
+ * out may be NULL. On any result other than URSATZ_OK, error (NULL for none) holds the message; nothing is printed.
+ */
+UrsatzStatus analyzer_corpus_run(const AnalyzerCorpusOptions *options, AnalyzerCorpusSummary *out, UrsatzError *error);
+
+/*
+ * Counts the analyzed pieces of the corpus index at index_path (<output dir>/corpus-index.json) whose document was not written by this build
+ * (ANALYZER_DOCUMENT_CURRENT is the other status). URSATZ_ERR_IO for an index or a document that cannot be read, URSATZ_ERR_FORMAT for a file
+ * that is not a corpus index.
+ */
+UrsatzStatus analyzer_corpus_stale_count(const char *index_path, size_t *stale);
+
+/*
+ * Reads "<output_dir>/corpus-index.json" and adds every piece the index lists as analyzed, through the index's document paths. The index's
+ * input_dir becomes the profile's training corpus (several corpora join with ';').
+ */
+StyleProfileResult analyzer_style_profile_add_corpus(StyleProfile *profile, const char *output_dir);
+
 /* ------------------------------------------------------------------ staleness */
 
 /*

@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <ursatz_analyzer_internal/analysis_document.h>
-#include <ursatz_analyzer_internal/corpus.h>
 #include <ursatz_analyzer_internal/input_pipeline.h>
 #include <ursatz_analyzer_internal/motive_links.h>
 #include <ursatz_analyzer_internal/similar_material.h>
@@ -22,7 +21,6 @@
 
 #include "corpus/corpus_internal.h"
 #include "store/corpus_walk.h"
-#include "result/run_file.h"
 #include <common/files.h>
 
 typedef char *(*RenderOutput)(const AnalysisDocument *document);
@@ -130,7 +128,7 @@ static void print_import_warnings(const ImportedScore *notes) {
     }
 }
 
-static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, const CorpusPieceReport *report, void *user) {
+static void print_corpus_piece(const char *path, AnalyzerCorpusPieceStatus status, const char *error, const AnalyzerCorpusPieceReport *report, void *user) {
     (void)user;
     if (report->message) {
         fprintf(stderr, "%s\n", report->message);
@@ -138,7 +136,7 @@ static void print_corpus_piece(const char *path, CorpusPieceStatus status, const
     for (size_t i = 0; i < report->warning_count; i++) {
         fprintf(stderr, "%s\n", report->warnings[i]);
     }
-    const char *word = status == CORPUS_PIECE_ANALYZED ? "analyzed" : (status == CORPUS_PIECE_SKIPPED ? "skipped" : "failed");
+    const char *word = status == ANALYZER_CORPUS_PIECE_ANALYZED ? "analyzed" : (status == ANALYZER_CORPUS_PIECE_SKIPPED ? "skipped" : "failed");
     if (error) {
         printf("%s %s: %s\n", word, path, error);
     } else {
@@ -147,10 +145,10 @@ static void print_corpus_piece(const char *path, CorpusPieceStatus status, const
 }
 
 static int run_corpus(const char *input_dir, const char *output_dir, bool resume, const KnowledgeSnapshot *knowledge) {
-    CorpusRunOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL, knowledge};
-    CorpusRunSummary summary;
+    AnalyzerCorpusOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL, knowledge};
+    AnalyzerCorpusSummary summary;
     UrsatzError failure = {{0}};
-    if (corpus_run(&options, &summary, &failure) != URSATZ_OK) {
+    if (analyzer_corpus_run(&options, &summary, &failure) != URSATZ_OK) {
         fprintf(stderr, "Error: %s\n", failure.message);
         return 2;
     }
@@ -165,7 +163,7 @@ static void report_stale_documents(const char *corpus_output_dir) {
     size_t stale = 0;
     if (index_path) {
         sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
-        if (corpus_walk_stale_count(index_path, &stale) == CORPUS_WALK_OK && stale > 0) {
+        if (analyzer_corpus_stale_count(index_path, &stale) == URSATZ_OK && stale > 0) {
             fprintf(stderr, "Warning: %zu stale documents in '%s' (analyzed by another version; run the corpus again)\n",
                     stale, corpus_output_dir);
         }
@@ -326,7 +324,7 @@ static int run_style_profile(const char *corpus_output_dir, const char *name, co
         return 2;
     }
     report_stale_documents(corpus_output_dir);
-    StyleProfileResult added = style_profile_add_corpus(profile, corpus_output_dir);
+    StyleProfileResult added = analyzer_style_profile_add_corpus(profile, corpus_output_dir);
     if (added != STYLE_PROFILE_OK) {
         fprintf(stderr, "Error: cannot read the corpus in '%s'\n", corpus_output_dir);
         style_profile_destroy(profile);
@@ -661,13 +659,13 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
     AnalyzerResult *result = NULL;
     UrsatzError import_error = {{0}};
     switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL, NULL, &import_error)) {
-    case RUN_FILE_OK:
+    case ANALYZER_RUN_FILE_OK:
         print_import_warnings(&notes);
         break;
-    case RUN_FILE_ERR_IMPORT:
+    case ANALYZER_RUN_FILE_ERR_IMPORT:
         fprintf(stderr, "%s\n", import_error.message);
         return 1;
-    case RUN_FILE_ERR_ANALYZE:
+    case ANALYZER_RUN_FILE_ERR_ANALYZE:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
     default:
@@ -922,19 +920,19 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     UrsatzStatus analyze_status = URSATZ_OK;
     switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, knowledge, &notes, &result, &import_status,
                               &reading_status, &analyze_status, &import_error)) {
-    case RUN_FILE_OK:
+    case ANALYZER_RUN_FILE_OK:
         print_import_warnings(&notes);
         break;
-    case RUN_FILE_ERR_IMPORT:
+    case ANALYZER_RUN_FILE_ERR_IMPORT:
         fprintf(stderr, "%s\n", import_error.message);
         return 1;
-    case RUN_FILE_ERR_READING:
+    case ANALYZER_RUN_FILE_ERR_READING:
         fprintf(stderr, "Error: cannot apply the notation reading to '%s': %s\n", path,
                 reading_status == IMPORTED_READING_ERR_INVALID
                     ? "the pickup must be shorter than one measure of the meter"
                     : (reading_status == IMPORTED_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
         return 1;
-    case RUN_FILE_ERR_ANALYZE:
+    case ANALYZER_RUN_FILE_ERR_ANALYZE:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
     }
@@ -958,7 +956,7 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     }
 
     bool ok = write_output(path, "analysis document", "Analysis document", analyzer_document_to_json,
-                           derive_analysis_document_path, document);
+                           analyzer_document_path_for, document);
 
     analyzer_document_destroy(document);
     return ok ? 0 : 1;

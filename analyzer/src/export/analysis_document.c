@@ -105,6 +105,6 @@ void analyzer_document_destroy(AnalysisDocument *document) {
     free(document);
 }
 
-char *derive_analysis_document_path(const char *input_path) {
+char *analyzer_document_path_for(const char *input_path) {
     return path_with_suffix(input_path, ".analysis.json");
 }

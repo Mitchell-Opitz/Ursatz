@@ -26,7 +26,4 @@ typedef bool (*CorpusDocumentVisitor)(const char *piece_path, const char *docume
 CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVisitor visit, void *context,
                                        char **input_dir);
 
-/* Counts the analyzed pieces of the index at index_path whose document is not ANALYZER_DOCUMENT_CURRENT. */
-CorpusWalkResult corpus_walk_stale_count(const char *index_path, size_t *stale);
-
 #endif

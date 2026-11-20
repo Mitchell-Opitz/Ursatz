@@ -117,7 +117,7 @@ int main(void) {
     assert(strcmp(json, again) == 0);
     free(again);
 
-    char *document_path = derive_analysis_document_path(path);
+    char *document_path = analyzer_document_path_for(path);
     assert(strcmp(document_path, expected_document_path) == 0);
     free(document_path);
 

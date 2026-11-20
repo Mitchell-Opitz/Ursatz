@@ -16,7 +16,6 @@
 #include "model/core/rational.h"
 #include "corpus/chord_sequence_internal.h"
 #include "store/corpus_walk.h"
-#include "result/run_file.h"
 #include "analysis/similarity/similarity_model.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
@@ -177,12 +176,12 @@ UrsatzStatus similar_query_from_file(const char *path, const KnowledgeSnapshot *
     AnalyzerResult *result = NULL;
     UrsatzStatus analyzed = URSATZ_ERR_ALLOC;
     UrsatzError import_error = {{0}};
-    RunFileResult ran = analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &imported, &result, NULL, NULL, &analyzed, &import_error);
-    if (ran != RUN_FILE_OK) {
-        if (ran == RUN_FILE_ERR_IMPORT) {
+    AnalyzerRunFileResult ran = analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &imported, &result, NULL, NULL, &analyzed, &import_error);
+    if (ran != ANALYZER_RUN_FILE_OK) {
+        if (ran == ANALYZER_RUN_FILE_ERR_IMPORT) {
             fprintf(stderr, "%s\n", import_error.message);
         }
-        return ran == RUN_FILE_ERR_IMPORT ? URSATZ_ERR_IO : analyzed;
+        return ran == ANALYZER_RUN_FILE_ERR_IMPORT ? URSATZ_ERR_IO : analyzed;
     }
     for (size_t i = 0; i < imported.source.warning_line_count; i++) {
         fprintf(stderr, "%s\n", imported.source.warnings[i]);

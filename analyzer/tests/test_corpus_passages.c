@@ -6,7 +6,7 @@
 
 #include "cJSON.h"
 
-#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer/analyzer_api.h>
 
 #include "test_support.h"
@@ -62,9 +62,9 @@ static bool make_corpus(const char *name, char *corpus, size_t size) {
         return false;
     }
     free(data);
-    CorpusRunOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
-    CorpusRunSummary summary;
-    return corpus_run(&run, &summary, NULL) == URSATZ_OK && summary.analyzed == 1;
+    AnalyzerCorpusOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    return analyzer_corpus_run(&run, &summary, NULL) == URSATZ_OK && summary.analyzed == 1;
 }
 
 static bool ascending(const AnalyzerCorpusPassage *passage) {
@@ -215,9 +215,9 @@ static void test_no_match(void) {
     char broken[1400];
     snprintf(broken, sizeof broken, "%s/broken.mid", input);
     CHECK(test_write_file(broken, "not a midi file", 15));
-    CorpusRunOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
-    CorpusRunSummary summary;
-    CHECK(corpus_run(&run, &summary, NULL) == URSATZ_OK && summary.analyzed == 0);
+    AnalyzerCorpusOptions run = {input, corpus, false, NULL, NULL, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    CHECK(analyzer_corpus_run(&run, &summary, NULL) == URSATZ_OK && summary.analyzed == 0);
     AnalyzerCorpusPassages none;
     CHECKF(analyzer_corpus_passages_numerals(corpus, test_knowledge(), "I IV V I", 100, &none) == URSATZ_OK && none.count == 0 &&
                none.passages == NULL,

@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include <ursatz_analyzer_internal/corpus.h>
+#include <ursatz_analyzer/analyzer_api.h>
 #include <ursatz_analyzer_internal/similar_material.h>
 
 #include "test_support.h"
@@ -303,9 +303,9 @@ int main(int argc, char **argv) {
         free(bytes);
     }
 
-    CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
-    CorpusRunSummary summary;
-    if (corpus_run(&run, &summary, NULL) != URSATZ_OK || summary.analyzed != corpus_pieces) {
+    AnalyzerCorpusOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
+    AnalyzerCorpusSummary summary;
+    if (analyzer_corpus_run(&run, &summary, NULL) != URSATZ_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");
         return 1;
     }
