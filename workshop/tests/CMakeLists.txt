@@ -149,3 +149,14 @@ ursatz_test(workshop_body_migration SOURCES test_body_migration.c LIBS ursatz_wo
     DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
                 URSATZ_WORKSHOP_REQUESTS="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/requests"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_body_migration)
+
+# Ursatz Text from the workshop (P65 B3): the tool text on a tools workshop, and item.view and library.view on a migrated copy of the layout 0 fixture
+# folder. Each runs in its own working directory, which it clears.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
+ursatz_test(workshop_text SOURCES test_text.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS TEXT_FIXTURES="${CMAKE_SOURCE_DIR}/library/text/tests/fixtures"
+                TEXT_SNAPSHOTS="${CMAKE_SOURCE_DIR}/library/text/tests/snapshots"
+                TEXT_FILL_PLAN="${CMAKE_SOURCE_DIR}/composer/tests/snapshots/fill.plan.json"
+                TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+                TEXT_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
