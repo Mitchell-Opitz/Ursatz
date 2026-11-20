@@ -106,6 +106,58 @@ static int check_command(const cJSON *command, size_t number) {
     return 0;
 }
 
+/* The version a reply (or a finished job's result) carries: `version` as a number, `version.number`, `item.current_version` or `current_version`;
+ * 0 when it holds none. */
+static long reply_version(const cJSON *object) {
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(object, "version");
+    if (cJSON_IsNumber(version)) {
+        return (long)version->valuedouble;
+    }
+    if (cJSON_IsObject(version) && cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(version, "number"))) {
+        return (long)cJSON_GetObjectItemCaseSensitive(version, "number")->valuedouble;
+    }
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "item");
+    const cJSON *current = cJSON_GetObjectItemCaseSensitive(cJSON_IsObject(item) ? item : object, "current_version");
+    return cJSON_IsNumber(current) ? (long)current->valuedouble : 0;
+}
+
+/* Commands written as Ursatz Text, read by the workshop's tool commands-parse into the objects `apply` sends. NULL after printing the failure. */
+static cJSON *parse_text_commands(const char *text) {
+    Workshop *workshop = cli_tools();
+    cJSON *params = cJSON_CreateObject();
+    if (!workshop || !params || !cJSON_AddStringToObject(params, "text", text)) {
+        cJSON_Delete(params);
+        cli_fail(CLI_EXIT_UNSATISFIABLE, workshop ? "out of memory" : "a knowledge snapshot is required");
+        return NULL;
+    }
+    WorkshopReply reply;
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    UrsatzStatus status = workshop_tool(workshop, "commands-parse", params, NULL, &reply, &error);
+    cJSON_Delete(params);
+    if (status != URSATZ_OK) {
+        cli_fail(CLI_EXIT_USAGE, "%s", error.message);
+        workshop_reply_destroy(&reply);
+        return NULL;
+    }
+    cJSON *commands = cJSON_DetachItemFromObjectCaseSensitive(reply.json, "commands");
+    workshop_reply_destroy(&reply);
+    if (!cJSON_IsArray(commands)) {
+        cJSON_Delete(commands);
+        cli_fail(CLI_EXIT_UNSATISFIABLE, "the text commands did not parse into a list");
+        return NULL;
+    }
+    return commands;
+}
+
+/* Whether the input is JSON (a command object, a list or JSON Lines) rather than Ursatz Text: its first character is { or [. */
+static bool is_json_input(const char *text) {
+    while (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n') {
+        text++;
+    }
+    return *text == '{' || *text == '[';
+}
+
 int run_apply(const CliArgs *args) {
     const char *format = cli_value(args, "--format");
     bool json = false;
@@ -126,11 +178,30 @@ int run_apply(const CliArgs *args) {
         free(text);
         return cli_fail(CLI_EXIT_USAGE, "cannot read the commands '%s'", source);
     }
-    cJSON *commands = parse_commands(text);
-    free(text);
-    if (!commands) {
-        return CLI_EXIT_USAGE;
+    /* JSON input is read here; text is read by the workshop once the session is open (its tools are the session's, or this process's own) */
+    bool json_input = is_json_input(text);
+    CliSession *session = NULL;
+    cJSON *commands = NULL;
+    if (json_input) {
+        commands = parse_commands(text);
+        if (!commands) {
+            free(text);
+            return CLI_EXIT_USAGE;
+        }
+    } else {
+        int opened = cli_session_open(cli_global(), &session);
+        if (opened != 0) {
+            free(text);
+            return opened;
+        }
+        commands = parse_text_commands(text);
+        if (!commands) {
+            free(text);
+            cli_session_close(session);
+            return CLI_EXIT_USAGE;
+        }
     }
+    free(text);
     size_t count = (size_t)cJSON_GetArraySize(commands);
     /* Every command is checked, and every file it names read, before the first one runs: a mistake in the input applies nothing. */
     uint8_t **files = calloc(count ? count : 1, sizeof *files);
@@ -157,8 +228,7 @@ int run_apply(const CliArgs *args) {
             free(absolute);
         }
     }
-    CliSession *session = NULL;
-    if (status == 0) {
+    if (status == 0 && !session) {
         status = cli_session_open(cli_global(), &session);
     }
     for (size_t i = 0; status == 0 && i < count; i++) {
@@ -195,6 +265,10 @@ int run_apply(const CliArgs *args) {
         } else {
             printf("%zu  %s  %s  journal %.0f", i + 1, name->valuestring, cJSON_IsString(target) ? target->valuestring : "-",
                    cli_json_number(reply.json, "journal_seq"));
+            long made = reply_version(reply.json);
+            if (made > 0) {
+                printf("  v%ld", made);
+            }
             if (job_id[0] != '\0') {
                 printf("  job %s", job_id);
             }
@@ -212,6 +286,10 @@ int run_apply(const CliArgs *args) {
             const char *state = cli_json_string(finished, "state");
             if (!json) {
                 printf("  %s", state);
+                long job_version = reply_version(cJSON_GetObjectItemCaseSensitive(finished, "result"));
+                if (strcmp(state, "done") == 0 && job_version > 0) {
+                    printf("  v%ld", job_version);
+                }
             }
             if (strcmp(state, "done") != 0) {
                 const char *why = cli_json_string(cJSON_GetObjectItemCaseSensitive(finished, "result"), "error");
