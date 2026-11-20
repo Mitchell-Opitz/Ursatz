@@ -69,11 +69,8 @@ UrsatzStatus store_invalid_body(UrsatzError *error, const char *message);
 /* A member that is absent or null. */
 bool store_is_absent_or_null(const cJSON *object, const char *name);
 
-/* True when the theme is a placeholder: form null, absent or a string, no new member, and no slot written as an object with a slot name. */
-bool store_theme_is_placeholder(const cJSON *theme);
-
-/* True when the piece is a placeholder: no new member and a structure that is not an object with a list of sections. */
-bool store_piece_is_placeholder(const cJSON *piece);
+/* True when the body of a theme or a piece is a placeholder: its request is absent or has no member (a new item). */
+bool store_request_is_placeholder(const cJSON *body);
 
 /* An id like s0, s12 or end. */
 bool store_piece_section_id_ok(const char *id);

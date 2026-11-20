@@ -53,12 +53,6 @@ UrsatzStatus workshop_theme_validate(const cJSON *body, bool *complete, cJSON **
 /* Moves every updated use of the item id to its source's current version, once for each source. */
 UrsatzStatus workshop_theme_update_sources(const char *id, UrsatzError *error);
 
-/* A motive of the request from a motif's members: with item (a pool form), else with id (a slot motive), else neither. */
-cJSON *workshop_theme_motive_json(const char *id, const char *item, const cJSON *motif, const char *role);
-
-/* Adds to forms the saved forms of the motif item slot_item under the pool setting (at most 64 in all). */
-UrsatzStatus workshop_theme_add_pool(const cJSON *list, const char *slot_item, const char *pool, cJSON *forms);
-
 /* Builds a brief into path. *out_summary is {piece_count, skipped: [{id, reason}]}, caller-owned. */
 UrsatzStatus workshop_theme_build_brief(const cJSON *brief_json, const char *name, const char *path,
                                                   cJSON **out_summary, UrsatzError *error);

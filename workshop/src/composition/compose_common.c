@@ -17,6 +17,7 @@
 #include <common/status.h>
 
 #include "items/store.h"
+#include "request_resolve.h"
 
 #define PATH_BYTES 800
 
@@ -229,8 +230,7 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
                    ? workshop_fail(URSATZ_ERR_NOT_FOUND, NULL)
                    : workshop_fail(URSATZ_ERR_INTERNAL, NULL);
     }
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(body, kind->member);
-    const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(member, "brief");
+    const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(body, "brief");
     bool has_brief = brief_json && !cJSON_IsNull(brief_json);
     cJSON *request = NULL;
     cJSON *summary = NULL;
@@ -241,10 +241,10 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
     bool made = false;
     int number = cJSON_GetObjectItemCaseSensitive(meta, "current_version")->valueint + 1;
 
-    if (strcmp(common_json_string(meta, "type"), kind->member) != 0 || !cJSON_IsObject(member)) {
+    if (strcmp(common_json_string(meta, "type"), kind->member) != 0 || !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(body, "request"))) {
         workshop_error_text(error, kind->not_kind_text);
         result = workshop_fail(URSATZ_ERR_REQUEST, NULL);
-    } else if (!kind->composable(member, has_brief, error)) {
+    } else if (!kind->composable(body, error)) {
         result = workshop_fail(URSATZ_ERR_REQUEST, NULL);
     } else {
         /* The files are made in a folder of their own: another compose of this item may be running, and the number
@@ -261,7 +261,7 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
         result = kind->build_brief(brief_json, name, style_path, &brief_summary, error);
     }
     if (result == URSATZ_OK) {
-        result = kind->build_request(body, stage.absolute, has_brief ? style_path : NULL, &request, error);
+        result = workshop_request_resolve(kind->member, body, stage.absolute, has_brief ? style_path : NULL, &request, error);
         if (result == URSATZ_OK) {
             dump_request(kind, body, request, stage.absolute);
         }
@@ -277,10 +277,10 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
         free(text);
     }
     if (result == URSATZ_OK) {
-        const cJSON *body_seed = cJSON_GetObjectItemCaseSensitive(member, "seed");
+        const cJSON *body_seed = cJSON_GetObjectItemCaseSensitive(body, "seed");
         bool use_seed = has_seed || cJSON_IsNumber(body_seed);
         long long chosen = has_seed ? seed : use_seed ? (long long)body_seed->valuedouble : 0;
-        WorkshopComposeRun run = {stage.absolute, stage.named, request, member, use_seed, chosen, job};
+        WorkshopComposeRun run = {stage.absolute, stage.named, request, body, use_seed, chosen, job};
         result = kind->run(&run, &summary, error);
     }
     if (result == URSATZ_OK) {

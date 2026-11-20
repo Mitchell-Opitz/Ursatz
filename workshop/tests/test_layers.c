@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <cJSON.h>
+#include "theme_body.h"
 
 #include <common/files.h>
 #include <common/json.h>
@@ -153,11 +154,7 @@ static void test_theme(const char *general) {
     motif("A", general, "C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e", a);
     motif("B", general, "G4:e F4:e Eb4:e D4:e F4:e Eb4:e D4:e C4:e", b);
     char json[2048];
-    snprintf(json, sizeof(json),
-             "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"material\":\"omt.material.natural-minor\",\"meter\":\"4/4\","
-             "\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},"
-             "{\"slot\":\"cadential\",\"item_id\":\"%s\",\"version\":1}],\"seed\":5}}",
-             a, b);
+    theme_body_text(json, sizeof(json), a, b, 5);
     cJSON *body = cJSON_Parse(json);
     cJSON *theme = NULL;
     assert(workshop_material_item_create_noted("theme", "Theme", general, body, NULL, &theme) == URSATZ_OK);

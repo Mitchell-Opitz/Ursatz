@@ -30,8 +30,8 @@ static const char *kMotifBody =
     "\"meter\":\"4/4\",\"key\":\"D minor\",\"pickup\":\"0\",\"features\":[{\"label\":\"a\",\"first\":0,\"last\":2}],"
     "\"analysis\":null,\"derived\":null}}";
 
-static const char *kThemeBody = "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}";
-static const char *kPieceBody = "{\"uses\":[],\"piece\":{\"structure\":null}}";
+static const char *kThemeBody = "{\"uses\":[],\"request\":{}}";
+static const char *kPieceBody = "{\"uses\":[],\"request\":{}}";
 
 static const char *str(const cJSON *object, const char *name) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
@@ -421,7 +421,7 @@ static void test_body_validation(void) {
     for (size_t i = 0; i < sizeof(pieces) / sizeof(pieces[0]); i++) {
         char text[512];
         snprintf(text, sizeof(text),
-                 "{\"uses\":[],\"piece\":{\"structure\":{%s,\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}",
+                 "{\"uses\":[],\"request\":{%s,\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}",
                  pieces[i].structure);
         cJSON *piece_body = cJSON_Parse(text);
         check_quiet(piece_body != NULL, "the piece test body parses");
@@ -468,7 +468,7 @@ static void test_body_validation(void) {
             snprintf(structure, sizeof(structure), "%s", forms[i].structure);
         }
         char text[1400];
-        snprintf(text, sizeof(text), "{\"uses\":[],\"piece\":{\"structure\":{%s}}}", structure);
+        snprintf(text, sizeof(text), "{\"uses\":[],\"request\":{%s}}", structure);
         cJSON *form_body = cJSON_Parse(text);
         check_quiet(form_body != NULL, "the form test body parses");
         check_quiet(validate("piece", form_body) == forms[i].result, forms[i].label);
@@ -491,7 +491,7 @@ static void test_body_validation(void) {
     for (size_t i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
         char text[512];
         snprintf(text, sizeof(text),
-                 "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,%s}]}}}",
+                 "{\"uses\":[],\"request\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,%s}]}}",
                  sections[i].section);
         cJSON *section_body = cJSON_Parse(text);
         check_quiet(section_body != NULL, "the section test body parses");
@@ -513,84 +513,63 @@ static void test_body_validation(void) {
     body = cJSON_Parse("{\"motif\":{}}");
     check_quiet(validate("motif", body) == INVALID, "uses is required");
     cJSON_Delete(body);
-    body = cJSON_Parse("{\"uses\":{},\"theme\":{\"form\":null,\"slots\":[]}}");
+    body = cJSON_Parse("{\"uses\":{},\"request\":{}}");
     check_quiet(validate("theme", body) == INVALID, "uses must be an array");
     cJSON_Delete(body);
     body = cJSON_Parse("{\"uses\":[{\"item_id\":\"mot-0123456789abcdef\",\"version\":1,\"copy\":{}}],"
-                       "\"theme\":{\"form\":null,\"slots\":[]}}");
+                       "\"request\":{}}");
     check_quiet(validate("theme", body) == OK, "a use with a copy");
     cJSON_Delete(body);
     body = cJSON_Parse("{\"uses\":[{\"item_id\":\"mot-0123456789abcdef\",\"version\":0}],"
-                       "\"theme\":{\"form\":null,\"slots\":[]}}");
+                       "\"request\":{}}");
     check_quiet(validate("theme", body) == INVALID, "a use needs a version of 1 or more");
     cJSON_Delete(body);
-    body = cJSON_Parse("{\"uses\":[{\"item_id\":\"../x\",\"version\":1}],\"theme\":{\"form\":null,\"slots\":[]}}");
+    body = cJSON_Parse("{\"uses\":[{\"item_id\":\"../x\",\"version\":1}],\"request\":{}}");
     check_quiet(validate("theme", body) == INVALID, "a use needs a valid item id");
     cJSON_Delete(body);
 
     /* one type's member in another type's body */
-    body = cJSON_Parse("{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]},\"piece\":{\"structure\":null}}");
+    body = cJSON_Parse("{\"uses\":[],\"request\":{},\"piece\":{\"structure\":null}}");
     check_quiet(validate("theme", body) == INVALID, "a theme body must not carry a piece member");
     cJSON_Delete(body);
-    body = cJSON_Parse("{\"uses\":[],\"motif\":{},\"piece\":{\"structure\":null}}");
+    body = cJSON_Parse("{\"uses\":[],\"request\":{},\"motif\":{}}");
     check_quiet(validate("piece", body) == INVALID, "a piece body must not carry a motif member");
     cJSON_Delete(body);
     body = cJSON_Parse(kThemeBody);
     check_quiet(validate("motif", body) == INVALID, "a motif body needs a motif member");
-    check_quiet(validate("piece", body) == INVALID, "a piece body needs a piece member");
     cJSON_Delete(body);
-    body = cJSON_Parse("{\"uses\":[],\"theme\":{\"form\":null}}");
-    check_quiet(validate("theme", body) == INVALID, "a theme needs slots");
+    body = cJSON_Parse("{\"uses\":[],\"piece\":{\"structure\":null}}");
+    check_quiet(validate("piece", body) == INVALID, "a body of format 1 (a piece member, no request) is refused");
+    cJSON_Delete(body);
+    body = cJSON_Parse("{\"uses\":[],\"request\":[]}");
+    check_quiet(validate("theme", body) == INVALID, "a request is an object");
     cJSON_Delete(body);
 
-    /* the v2 theme body: no key or pool, repeated slot items, ideas and chords */
+    /* a stored request (R-650): any words (the Composer judges them, R-276); the store checks that a reference is one */
     static const char *const kRef = "\"item_id\":\"mot-0123456789abcdef\",\"version\":1";
     struct {
-        const char *theme;
+        const char *request;
         UrsatzStatus result;
         const char *label;
-    } v2[] = {
-        {"\"form\":{\"into\":\"sentence\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with no key"},
-        {"\"form\":{\"into\":\"sentence\",\"key\":\"D\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form key is refused (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":{\"into\":\"sentence\",\"key\":null},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a null form key is refused (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"cadential\",REF}]", OK, "one item in two slots"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"basic\",REF}]", OK, "a slot named twice (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"pool\":\"approved\"", OK, "a pool is refused (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[],\"pool\":\"none\"", OK, "a pool is refused on a placeholder too (the store keeps the draft; the Composer refuses it)"},
-        /* the Composer's words are not judged on a save: validate marks them, compose refuses them (R-276) */
-        {"\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a meter the Composer does not read"},
-        {"\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a hybrid the Composer does not read"},
-        {"\"form\":{\"into\":\"rondo\",\"mode\":\"dorian\",\"cadence\":\"DC\",\"first_cadence\":\"PAC\",\"bars\":6},\"slots\":[{\"slot\":\"basic\",REF}]",
-         OK, "an into, mode, cadences and bars the Composer does not read"},
-        {"\"form\":{\"into\":\"sentence\",\"material\":\"omt.material.major\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with a material"},
-        {"\"form\":{\"into\":\"sentence\",\"material\":\"style\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with the material style"},
-        {"\"form\":{\"into\":\"sentence\",\"material\":7},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form material that is not text (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":{\"into\":\"sentence\",\"meter\":4},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a meter that is not text (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":{\"into\":\"sentence\",\"bars\":\"8\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "bars that are not a number (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":5", OK, "a tempo under 20"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":1.5", OK, "a tempo that is not whole (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[]", OK, "no ideas"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"cadential 2\",REF}]", OK,
-         "ideas of a motif"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"repetition\",REF}]",
-         OK, "an idea named twice (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"coda\",REF}]", OK, "an unknown idea (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\"}]", INVALID, "an idea with no motif"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":{}", INVALID, "ideas that are not a list"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0,\"text\":\"I\"},{\"bar\":7,\"text\":\"V\"}]", OK,
-         "chords in bars 0 and 7"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":8,\"text\":\"I\"}]", OK, "a chord bar of 8 (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":-1,\"text\":\"I\"}]", OK, "a negative chord bar (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0.5,\"text\":\"I\"}]", OK, "a fractional chord bar (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"I\"},{\"bar\":1,\"text\":\"V\"}]", OK,
-         "a chord bar named twice (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":5}]", OK, "a chord text that is not a string (the store keeps the draft; the Composer refuses it)"},
-        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"" "00000000001111111111222222222233333333334444444444555555555566666\"}]",
-         OK, "a chord text of 65 characters (the store keeps the draft; the Composer refuses it)"},
+    } requests[] = {
+        {"", OK, "an empty request is a placeholder"},
+        {"\"into\":\"rondo\",\"mode\":\"dorian\",\"meter\":\"5/4\",\"bars\":6,\"cadence\":\"DC\"", OK, "words the Composer does not read"},
+        {"\"into\":\"sentence\",\"material\":7,\"bars\":\"8\",\"tempo\":1.5", OK, "values of the wrong type (the store keeps the draft; the Composer refuses it)"},
+        {"\"motives\":[{\"id\":\"M1\",\"$item\":{REF}}],\"slots\":{\"basic\":\"M1\",\"cadential\":\"M1\"}", OK, "one motif in two slots"},
+        {"\"slots\":{\"basic\":\"M1\",\"coda\":\"M9\"},\"ideas\":{\"repetition\":\"M7\"}", OK, "ids no motive has (the store keeps the draft; the Composer refuses it)"},
+        {"\"chords\":[{\"bar\":8,\"text\":5},{\"bar\":-1,\"text\":\"I\"}]", OK, "chords the Composer does not read"},
+        {"\"motive\":{\"$item\":{REF}}", OK, "a motive by reference"},
+        {"\"sections\":[{\"id\":\"s0\",\"fill\":{\"kind\":\"theme\",\"plan\":{\"$item\":{REF,\"file\":\"plan.json\"}}}}]", OK, "a theme plan by reference"},
+        {"\"sections\":[{\"id\":\"s0\",\"fill\":{\"kind\":\"motif\",\"forms\":{\"$pool\":{\"item_id\":\"mot-0123456789abcdef\",\"pool\":\"approved\"}}}}]", OK, "a pool of saved forms"},
+        {"\"motives\":[{\"id\":\"M1\",\"$item\":{\"item_id\":\"mot-0123456789abcdef\"}}]", INVALID, "a reference with no version"},
+        {"\"motive\":{\"$item\":{\"version\":1}}", INVALID, "a reference with no item"},
+        {"\"motive\":{\"$item\":5}", INVALID, "a reference that is not an object"},
+        {"\"sections\":[{\"fill\":{\"plan\":{\"$item\":{REF,\"file\":5}}}}]", INVALID, "a plan file that is not text"},
+        {"\"sections\":[{\"fill\":{\"forms\":{\"$pool\":{\"pool\":\"all\"}}}}]", INVALID, "a pool with no item"},
     };
-    for (size_t i = 0; i < sizeof(v2) / sizeof(v2[0]); i++) {
-        char text[900] = "{\"uses\":[],\"theme\":{";
-        for (const char *c = v2[i].theme; *c && strlen(text) + 80 < sizeof(text); c++) {
+    for (size_t i = 0; i < sizeof(requests) / sizeof(requests[0]); i++) {
+        char text[900] = "{\"uses\":[],\"request\":{";
+        for (const char *c = requests[i].request; *c && strlen(text) + 80 < sizeof(text); c++) {
             if (strncmp(c, "REF", 3) == 0) {
                 strcat(text, kRef);
                 c += 2;
@@ -600,8 +579,9 @@ static void test_body_validation(void) {
         }
         strcat(text, "}}");
         body = cJSON_Parse(text);
-        check_quiet(body != NULL, "the v2 test body parses");
-        check_quiet(validate("theme", body) == v2[i].result, v2[i].label);
+        check_quiet(body != NULL, "the request test body parses");
+        check_quiet(validate("theme", body) == requests[i].result, requests[i].label);
+        check_quiet(validate("piece", body) == requests[i].result, requests[i].label);
         cJSON_Delete(body);
     }
 
@@ -1148,19 +1128,13 @@ static cJSON *member_of(const cJSON *object, const char *name) {
     return cJSON_GetObjectItemCaseSensitive(object, name);
 }
 
-/* Bodies with the old members (a motif's key text, a theme form's and a piece structure's mode) are read with the new
-   ones (R-597): the stored file keeps what was written, a read gives `material`, a new version writes it, and a body that
+/* A motif body with the old key text is read with the new member (R-597); the theme and piece bodies of the old members are
+   migrated once, with the data folder (workshop_migrate): the stored file keeps what was written, a read gives `material`, a new version writes it, and a body that
    has both keeps the new one. */
 static void test_old_and_new_bodies(void) {
     static const char *const kOldMotif =
         "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
         "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}";
-    static const char *const kOldTheme =
-        "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"mode\":\"minor\",\"meter\":\"4/4\"},"
-        "\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]}}";
-    static const char *const kOldPiece =
-        "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"%s\",\"meter\":\"4/4\",\"sections\":["
-        "{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}";
     char *home = new_project("Old and new");
     char *motif = new_item("motif", "Old motif", home, kOldMotif);
     check_quiet(motif != NULL, "an old motif body is saved");
@@ -1217,70 +1191,6 @@ static void test_old_and_new_bodies(void) {
                 "a key on another tonic stays as it was");
     cJSON_Delete(off_c);
 
-    /* a theme form's mode and its copies of the motifs */
-    char old_theme[900];
-    snprintf(old_theme, sizeof(old_theme), kOldTheme, motif);
-    char *theme = new_item("theme", "Old theme", home, old_theme);
-    check_quiet(theme != NULL, "an old theme body is saved");
-    stored = theme ? stored_body(theme, 1) : NULL;
-    check_quiet(stored && strcmp(str(member_of(member_of(stored, "theme"), "form"), "material"), "omt.material.natural-minor") == 0 &&
-                    !member_of(member_of(member_of(stored, "theme"), "form"), "mode"),
-                "a save of an old theme body writes the form material and no mode");
-    cJSON_Delete(stored);
-    body = NULL;
-    check_quiet(theme && workshop_material_item_get_version(theme, 1, &body) == OK, "the saved theme is read");
-    const cJSON *form = member_of(member_of(body, "theme"), "form");
-    check_quiet(strcmp(str(form, "material"), "omt.material.natural-minor") == 0 && !member_of(form, "mode") &&
-                    strcmp(str(form, "into"), "sentence") == 0,
-                "a theme form mode minor is saved as the material natural minor");
-    cJSON_Delete(body);
-
-    /* a piece structure's mode: major and minor by word, style by itself, a word with no material stays */
-    static const struct {
-        const char *mode;
-        const char *expect;
-    } pieces[] = {
-        {"major", "omt.material.major"},
-        {"minor", "omt.material.natural-minor"},
-        {"style", "style"},
-        {"dorian", NULL},
-    };
-    for (size_t i = 0; i < sizeof(pieces) / sizeof(pieces[0]); i++) {
-        char old_piece[700];
-        snprintf(old_piece, sizeof(old_piece), kOldPiece, pieces[i].mode);
-        char *piece = new_item("piece", "Old piece", home, old_piece);
-        check_quiet(piece != NULL, "an old piece body is saved");
-        body = NULL;
-        check_quiet(piece && workshop_material_item_get_version(piece, 1, &body) == OK, "the old piece is read");
-        const cJSON *structure = member_of(member_of(body, "piece"), "structure");
-        if (pieces[i].expect) {
-            check_quiet(strcmp(str(structure, "material"), pieces[i].expect) == 0 && !member_of(structure, "mode") &&
-                            strcmp(str(structure, "key"), "D") == 0,
-                        "a piece structure mode is read as its material, the key stays");
-        } else {
-            check_quiet(strcmp(str(structure, "mode"), "dorian") == 0 && !member_of(structure, "material"),
-                        "a piece structure mode that names no material stays as it was");
-        }
-        cJSON_Delete(body);
-        free(piece);
-    }
-    /* a piece and a theme saved with the material, as the pages send them, are read as they are */
-    static const char *const kNewPiece =
-        "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"material\":\"omt.material.major\",\"meter\":\"4/4\",\"sections\":["
-        "{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}";
-    char *fresh = new_item("piece", "New piece", home, kNewPiece);
-    body = NULL;
-    check_quiet(fresh && workshop_material_item_get_version(fresh, 1, &body) == OK &&
-                    strcmp(str(member_of(member_of(body, "piece"), "structure"), "material"), "omt.material.major") == 0,
-                "a new piece body is read with its material");
-    cJSON_Delete(body);
-    stored = fresh ? stored_body(fresh, 1) : NULL;
-    check_quiet(stored && strcmp(str(member_of(member_of(stored, "piece"), "structure"), "material"), "omt.material.major") == 0 &&
-                    !member_of(member_of(stored, "piece"), "mode") && !member_of(member_of(member_of(stored, "piece"), "structure"), "mode"),
-                "a new piece body is stored with its material and no mode");
-    cJSON_Delete(stored);
-    free(fresh);
-    free(theme);
     free(motif);
     free(home);
 }

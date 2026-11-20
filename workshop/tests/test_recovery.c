@@ -92,7 +92,7 @@ int main(void) {
     /* a layout 1 folder: the marker, a project, a motif with an old header, two subjects, a collection, a piece */
     char path[512];
     snprintf(path, sizeof(path), "%s/data-folder.json", root);
-    write_text(path, "{\"format\":\"ursatz-data-folder\",\"format_version\":1,\"created_at\":\"2026-01-01T00:00:00Z\"}");
+    write_text(path, "{\"format\":\"ursatz-data-folder\",\"format_version\":2,\"created_at\":\"2026-01-01T00:00:00Z\"}");
     snprintf(path, sizeof(path), "%s/projects/prj-1/project.json", root);
     write_text(path, "{\"format\":\"ursatz-project\",\"format_version\":1,\"id\":\"prj-1\",\"name\":\"One\",\"description\":\"\","
                      "\"created_at\":\"2026-01-01T00:00:00Z\",\"updated_at\":\"2026-01-01T00:00:00Z\"}");

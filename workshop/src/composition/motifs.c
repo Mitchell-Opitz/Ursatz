@@ -515,10 +515,9 @@ bool workshop_motif_tonic_ok(const cJSON *version_body) {
   return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
 }
 
-bool workshop_motif_version_note_ok(const cJSON *version_body, const char *note) {
+bool workshop_motif_version_note_ok(const char *type, const char *note) {
   /* Every new version of a motif or a theme says what changed. */
-  return has_text(note) || !(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "motif")) ||
-                             cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "theme")));
+  return has_text(note) || !type || !(strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0);
 }
 
 const char *workshop_motif_first_note(const char *type, const char *note) {

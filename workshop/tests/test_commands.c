@@ -5,6 +5,7 @@
  * directory. */
 
 #include "api_harness.h"
+#include "theme_body.h"
 
 #include <ursatz_test.h>
 
@@ -247,10 +248,7 @@ static void test_projects_and_items(void) {
 
     /* A theme that uses the motif, composed after the motif got a new version. */
     char body[1500];
-    snprintf(body, sizeof(body),
-             "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\",\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\","
-             "\"first_cadence\":null},\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},{\"slot\":\"cadential\",\"item_id\":\"%s\",\"version\":1}]}}",
-             g_motif, g_motif);
+    theme_body_text(body, sizeof(body), g_motif, g_motif, -1);
     snprintf(params, sizeof(params), "{\"type\":\"theme\",\"name\":\"Theme\",\"project_id\":\"%s\",\"body\":%s}", g_project, body);
     check(run("item.create", NULL, params, -1, &reply), "item.create makes a theme that uses the motif");
     snprintf(g_theme, sizeof(g_theme), "%s", str(member(reply.json, "item"), "id"));

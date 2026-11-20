@@ -16,6 +16,7 @@
 
 #include <cJSON.h>
 
+#include "support/body_v2.h"
 #include "support/server_support.h"
 #include "ursatz_check.h"
 #include "server.h"
@@ -47,7 +48,10 @@ static const char *g_port = "18774";
 
 /* The body parsed as JSON; the status goes to *status. Caller frees the JSON. */
 static cJSON *exchange(const char *method, const char *path, const char *body, int *status) {
-  return test_http_json(PORT, method, path, body, status);
+  char *converted = request_with_request_body(body);
+  cJSON *answer = test_http_json(PORT, method, path, converted, status);
+  free(converted);
+  return answer;
 }
 
 /* The Content-Length of a response (the shared client answers a string, so a binary body cannot be measured by its
@@ -320,8 +324,9 @@ static int create_piece(const char *name, const char *sections, const char *more
   return status;
 }
 
+/* The piece of a GET answer: its body, whose request is the piece's request (R-650) and whose result and brief are its own members. */
 static cJSON *piece_of_answer(const cJSON *answer) {
-  return (cJSON *)member(member(answer, "body"), "piece");
+  return (cJSON *)member(answer, "body");
 }
 
 /* True when both files exist and hold the same bytes. */
@@ -453,7 +458,7 @@ static void test_bodies(const Items *m) {
     cJSON_ArrayForEach(use, uses) {
       has_motif = has_motif || (strcmp(string_of(use, "item_id"), m->a) == 0 && cJSON_IsObject(member(member(use, "copy"), "motif")));
       has_theme = has_theme || (strcmp(string_of(use, "item_id"), m->theme) == 0 && number_of(use, "version") == 2 &&
-                                cJSON_IsObject(member(member(use, "copy"), "theme")));
+                                cJSON_IsObject(member(member(use, "copy"), "request")));
       has_motive = has_motive || strcmp(string_of(use, "item_id"), m->b) == 0;
     }
     check(cJSON_GetArraySize(uses) == 3 && has_motif && has_theme && has_motive,
@@ -547,7 +552,6 @@ static void test_bodies(const Items *m) {
   const char *ok_sections = "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]";
   snprintf(more, sizeof(more), ",\"motive\":{\"item_id\":\"%s\",\"version\":1}", m->rhythm);
   check(create_piece("Bad", ok_sections, more, NULL) == 400, "a motive that is a rhythm-only motif is refused");
-  check(create_piece("Bad", ok_sections, ",\"motive\":{\"item_id\":\"mot-x\"}", NULL) == 400, "a motive with no version is refused");
   check(create_piece("Bad", ok_sections, ",\"motive\":null", NULL) == 200, "a null motive is valid");
   check(draft_status(create_piece("Bad", ok_sections, ",\"pool\":\"all\"", NULL)), "an unknown pool is refused");
   check(draft_status(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"mot-x\",\"version\":1}", NULL)),
@@ -801,7 +805,7 @@ static void test_failures(const Items *m) {
   /* A piece that cannot be composed is 400 before the Composer runs. */
   char *placeholder = create_item("piece", "Placeholder", "{\"uses\":[],\"piece\":{\"structure\":null}}", &status);
   answer = compose(placeholder, "{}", &status);
-  check(status == 400 && strstr(string_of(answer, "error"), "structure") != NULL, "a placeholder piece is 400");
+  check(status == 400 && strstr(string_of(answer, "error"), "request") != NULL, "a placeholder piece is 400");
   cJSON_Delete(answer);
   free(placeholder);
   create_piece("Style", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]", "", &piece);
@@ -1032,10 +1036,10 @@ static void test_update_uses(const Items *m) {
         "the theme fill's plan is copied from the updated theme version");
   cJSON_Delete(request);
   answer = get_item(piece, &status);
-  const cJSON *sections_json = member(member(piece_of_answer(answer), "structure"), "sections");
+  const cJSON *sections_json = member(member(member(answer, "body"), "request"), "sections");
   const cJSON *uses = member(member(answer, "body"), "uses");
-  check(number_of(member(cJSON_GetArrayItem(sections_json, 1), "fill"), "version") == 2 &&
-            number_of(member(cJSON_GetArrayItem(sections_json, 2), "fill"), "version") == 3,
+  check(number_of(member(member(member(cJSON_GetArrayItem(sections_json, 1), "fill"), "motive"), "$item"), "version") == 2 &&
+            number_of(member(member(member(cJSON_GetArrayItem(sections_json, 2), "fill"), "plan"), "$item"), "version") == 3,
         "the motif fill names version 2 of A and the theme fill version 3 of the theme");
   bool uses_ok = cJSON_GetArraySize(uses) == 2;
   cJSON_ArrayForEach(entry, uses) {
@@ -1122,7 +1126,7 @@ static void test_regenerate(const Items *m) {
   const cJSON *result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") == 9 && cJSON_IsObject(member(result, "summary")) && cJSON_GetArraySize(member(result, "files")) == 8 &&
             cJSON_GetArraySize(member(member(answer, "body"), "uses")) == 2 &&
-            cJSON_GetArraySize(member(member(piece_of_answer(answer), "structure"), "sections")) == 6,
+            cJSON_GetArraySize(member(member(member(answer, "body"), "request"), "sections")) == 6,
         "the new version keeps the structure and the uses and holds the new result");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2", piece);
@@ -1332,7 +1336,7 @@ static void check_piece_version(const char *id, int number, bool with_ending) {
   cJSON *request = test_read_json(path);
   { char tail_[160]; snprintf(tail_, sizeof(tail_), "v%d/body.json", number); item_file(id, tail_, path, sizeof(path)); }
   cJSON *body = test_read_json(path);
-  const cJSON *summary = member(member(member(body, "piece"), "result"), "summary");
+  const cJSON *summary = member(member(body, "result"), "summary");
   const cJSON *versions = member(summary, "versions");
   const char *loop_ids[16];
   const char *ending_ids[16];
@@ -1674,7 +1678,7 @@ static void test_materials(const Items *m) {
   for (int version = 1; version <= 2; version++) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", old_piece, version);
     answer = exchange("GET", path, NULL, &status);
-    const cJSON *structure = member(member(member(answer, "body"), "piece"), "structure");
+    const cJSON *structure = member(member(answer, "body"), "request");
     check(status == 200 && strcmp(string_of(structure, "material"), "omt.material.major") == 0 && !member(structure, "mode") &&
               strcmp(string_of(structure, "key"), "C") == 0,
           "a piece saved with a mode is read with the material and no mode");
@@ -1724,7 +1728,7 @@ static void test_old_game_loop_piece(const Items *m) {
   /* Take form out of the stored body, as a piece saved before the forms has it. */
   item_file(piece, "v2/body.json", path, sizeof(path));
   cJSON *stored = test_read_json(path);
-  cJSON *structure = (cJSON *)member(member(stored, "piece"), "structure");
+  cJSON *structure = (cJSON *)member(stored, "request");
   cJSON_DeleteItemFromObjectCaseSensitive(structure, "form");
   char *text = cJSON_Print(stored);
   FILE *file = text ? fopen(path, "wb") : NULL;

@@ -21,7 +21,7 @@ static char g_piece_dir[100];
 static char g_piece_meta[120];
 static char g_project[64];
 
-static const char *kPieceBody = "{\"uses\":[],\"piece\":{\"structure\":null}}";
+static const char *kPieceBody = "{\"uses\":[],\"request\":{}}";
 
 static const char *str(const cJSON *object, const char *name) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);

@@ -3,7 +3,7 @@
 Usage: validate_formats.py <schema folder> <data folder>...
 Each file the layout names (data-folder.json, project.json, item.json, envelope.json, body.json, op-checks.json, subject files, piece.json,
 collection files, run.json, style.json, render.json) must carry "format" and "format_version", name the format its place in the layout
-says, and match workshop/schema/<format>.v1.schema.json. A folder must hold at least one file of each format the first data folder is
+says, and match workshop/schema/<format>.v<N>.schema.json, N the version this build writes (2 for the data folder and the theme and piece bodies, else 1). A folder must hold at least one file of each format the first data folder is
 expected to have (the migrated fixture holds every kind but the render cache). Exits 0 when all is valid, 1 otherwise.
 """
 
@@ -29,6 +29,7 @@ PLACES = [
     (re.compile(r"^cache/renders/[^/]+/v\d+/render\.json$"), "ursatz-render"),
     (re.compile(r"^ursatz\.json$"), "ursatz-config"),
 ]
+CURRENT = {"ursatz-data-folder": 2, "ursatz-theme-body": 2, "ursatz-piece-body": 2}  # every other format is at version 1
 BODIES = {"motif": "ursatz-motif-body", "theme": "ursatz-theme-body", "piece": "ursatz-piece-body"}
 REQUIRED = {"ursatz-data-folder", "ursatz-project", "ursatz-item", "ursatz-item-version", "ursatz-motif-body", "ursatz-theme-body",
             "ursatz-piece-body", "ursatz-op-checks", "ursatz-subject", "ursatz-library-piece", "ursatz-collection", "ursatz-style",
@@ -41,8 +42,8 @@ def main(argv):
         return 2
     schemas = {}
     for name in os.listdir(argv[1]):
-        match = re.match(r"^(ursatz-[a-z-]+)\.v1\.schema\.json$", name)
-        if match:
+        match = re.match(r"^(ursatz-[a-z-]+)\.v(\d+)\.schema\.json$", name)
+        if match and int(match.group(2)) == CURRENT.get(match.group(1), 1):
             with open(os.path.join(argv[1], name), encoding="utf-8") as handle:
                 schema = json.load(handle)
             jsonschema.Draft202012Validator.check_schema(schema)
@@ -73,7 +74,7 @@ def main(argv):
                     print("%s: format is %r, the layout says %r" % (relative, named, expected))
                     failures += 1
                     continue
-                if document.get("format_version") != 1:
+                if document.get("format_version") != CURRENT.get(expected, 1):
                     print("%s: format_version is %r" % (relative, document.get("format_version")))
                     failures += 1
                     continue

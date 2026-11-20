@@ -14,13 +14,13 @@
  * the steps around the Composer run. Composes of one item may run at once (each makes its files in a staging folder). */
 
 /* What a kind's run is given: the folder the files go to while the run is going (stage), the folder the version will
- * have (named; the summary names its files there), the request as the Composer command read it (paths and all) and
- * the options. */
+ * have (named; the summary names its files there), the request as the Composer command read it (paths and all), the
+ * body it came from (its options, check and seed) and the options. */
 typedef struct {
     const char *stage;
     const char *named;
     const cJSON *request;
-    const cJSON *member;
+    const cJSON *body;
     bool use_seed;
     long long seed;
     const UrsatzJob *job;
@@ -30,11 +30,8 @@ typedef struct {
 typedef struct {
     const char *member;         /* the body's member and the item type: "theme" or "piece" */
     const char *not_kind_text;  /* the reason when the item has another type */
-    /* True when the member can be composed; else it says why in message. */
-    bool (*composable)(const cJSON *member, bool has_brief, UrsatzError *error);
-    /* Builds the Composer request from the body; style_path is the brief's style file or NULL. */
-    UrsatzStatus (*build_request)(const cJSON *body, const char *dir, const char *style_path, cJSON **out_request,
-                                          UrsatzError *error);
+    /* True when the body's request can be composed; else it says why in message. */
+    bool (*composable)(const cJSON *body, UrsatzError *error);
     /* Runs the Composer API on run->request and writes the version's files into run->stage. */
     UrsatzStatus (*run)(const WorkshopComposeRun *run, cJSON **out_summary, UrsatzError *error);
     /* Brings the uses of item id up to their latest versions (the compose of a piece or a theme with update_uses). */

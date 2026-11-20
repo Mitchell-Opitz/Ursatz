@@ -12,37 +12,44 @@ typedef struct {
     const char *name;
     const char *members[10];
     const char *types;
+    int since; /* the first version of the format this row describes; a file is checked against the newest row at or below its own version */
 } Format;
 
 static const Format kFormats[] = {
-    {WORKSHOP_FORMAT_DATA_FOLDER, {"created_at"}, "s"},
-    {WORKSHOP_FORMAT_CONFIG, {NULL}, ""},
-    {WORKSHOP_FORMAT_PROJECT, {"id", "name", "description", "created_at", "updated_at"}, "sssss"},
-    {WORKSHOP_FORMAT_ITEM, {"id", "type", "name", "current_version", "created_at", "updated_at"}, "sssnss"},
-    {WORKSHOP_FORMAT_ITEM_VERSION, {"id", "kind", "version", "note", "lineage", "actor", "created_at"}, "ssnsoss"},
-    {WORKSHOP_FORMAT_MOTIF_BODY, {"uses", "motif"}, "ao"},
-    {WORKSHOP_FORMAT_THEME_BODY, {"uses", "theme"}, "ao"},
-    {WORKSHOP_FORMAT_PIECE_BODY, {"uses", "piece"}, "ao"},
-    {WORKSHOP_FORMAT_OP_CHECKS, {"checks"}, "o"},
-    {WORKSHOP_FORMAT_SUBJECT, {"id", "name", "kind", "note", "items", "pieces", "related", "created_at", "updated_at"}, "ssssaaass"},
-    {WORKSHOP_FORMAT_LIBRARY_PIECE, {"filename", "source_format", "uploaded_at", "analyzer_version", "document_schema_version"}, "ssssn"},
-    {WORKSHOP_FORMAT_COLLECTION, {"id", "name", "description", "pieces", "created_at", "updated_at"}, "sssass"},
-    {WORKSHOP_FORMAT_STYLE, {"id", "name", "created_at", "updated_at", "source", "pieces"}, "ssssoa"},
-    {WORKSHOP_FORMAT_LINK_RUN, {"id", "scope", "status", "created_at"}, "soss"},
-    {WORKSHOP_FORMAT_RENDER, {"api_version", "composer_version", "composition_key", "render_key", "tempo"}, "ssssn"},
+    {WORKSHOP_FORMAT_DATA_FOLDER, {"created_at"}, "s", 1},
+    {WORKSHOP_FORMAT_DATA_FOLDER, {"created_at"}, "s", 2},
+    {WORKSHOP_FORMAT_CONFIG, {NULL}, "", 1},
+    {WORKSHOP_FORMAT_PROJECT, {"id", "name", "description", "created_at", "updated_at"}, "sssss", 1},
+    {WORKSHOP_FORMAT_ITEM, {"id", "type", "name", "current_version", "created_at", "updated_at"}, "sssnss", 1},
+    {WORKSHOP_FORMAT_ITEM_VERSION, {"id", "kind", "version", "note", "lineage", "actor", "created_at"}, "ssnsoss", 1},
+    {WORKSHOP_FORMAT_MOTIF_BODY, {"uses", "motif"}, "ao", 1},
+    {WORKSHOP_FORMAT_THEME_BODY, {"uses", "theme"}, "ao", 1},
+    {WORKSHOP_FORMAT_THEME_BODY, {"uses", "request"}, "ao", 2},
+    {WORKSHOP_FORMAT_PIECE_BODY, {"uses", "piece"}, "ao", 1},
+    {WORKSHOP_FORMAT_PIECE_BODY, {"uses", "request"}, "ao", 2},
+    {WORKSHOP_FORMAT_OP_CHECKS, {"checks"}, "o", 1},
+    {WORKSHOP_FORMAT_SUBJECT, {"id", "name", "kind", "note", "items", "pieces", "related", "created_at", "updated_at"}, "ssssaaass", 1},
+    {WORKSHOP_FORMAT_LIBRARY_PIECE, {"filename", "source_format", "uploaded_at", "analyzer_version", "document_schema_version"}, "ssssn", 1},
+    {WORKSHOP_FORMAT_COLLECTION, {"id", "name", "description", "pieces", "created_at", "updated_at"}, "sssass", 1},
+    {WORKSHOP_FORMAT_STYLE, {"id", "name", "created_at", "updated_at", "source", "pieces"}, "ssssoa", 1},
+    {WORKSHOP_FORMAT_LINK_RUN, {"id", "scope", "status", "created_at"}, "soss", 1},
+    {WORKSHOP_FORMAT_RENDER, {"api_version", "composer_version", "composition_key", "render_key", "tempo"}, "ssssn", 1},
 };
 
-static const Format *find_format(const char *name) {
+/* The row of format for a file of version (0: the newest), or NULL for a name that is not a format. */
+static const Format *find_format(const char *name, int version) {
+    const Format *found = NULL;
     for (size_t i = 0; name && i < sizeof(kFormats) / sizeof(kFormats[0]); i++) {
-        if (strcmp(kFormats[i].name, name) == 0) {
-            return &kFormats[i];
+        if (strcmp(kFormats[i].name, name) == 0 && (version == 0 || kFormats[i].since <= version) && (!found || kFormats[i].since > found->since)) {
+            found = &kFormats[i];
         }
     }
-    return NULL;
+    return found;
 }
 
 int workshop_format_version(const char *format) {
-    return find_format(format) ? 1 : 0;
+    const Format *newest = find_format(format, 0);
+    return newest ? newest->since : 0;
 }
 
 void workshop_format_strip(cJSON *object) {
@@ -96,7 +103,7 @@ UrsatzStatus workshop_format_check(const cJSON *object, const char *format, cons
     if (format && strcmp(named, format) != 0) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, where, "%s is not a %s file: its format is \"%s\"", where, format, named);
     }
-    const Format *known = find_format(named);
+    const Format *known = find_format(named, 0);
     if (!known) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, where, "%s has no workshop format: its format is \"%s\"", where, named);
     }
@@ -109,6 +116,7 @@ UrsatzStatus workshop_format_check(const cJSON *object, const char *format, cons
                                 "%s is format_version %lld of %s: this build reads up to version %d; use a newer Ursatz", where, version,
                                 known->name, workshop_format_version(known->name));
     }
+    known = find_format(named, (int)version);
     for (size_t i = 0; known->members[i]; i++) {
         const cJSON *member = cJSON_GetObjectItemCaseSensitive(object, known->members[i]);
         if (!member || !type_ok(member, known->types[i])) {

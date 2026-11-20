@@ -123,7 +123,7 @@ static void check_counts(const cJSON *report, bool dry) {
                   number(counts, "subjects") == 2 && number(counts, "library_pieces") == 2 && number(counts, "collections") == 1 &&
                   number(counts, "styles") == 1 && number(counts, "link_runs") == 1,
               dry ? "the dry run counts every kind of the fixture" : "the run counts every kind of the fixture");
-  check_quiet(number(counts, "bodies_rewritten") == 3, "three bodies hold the old member forms");
+  check_quiet(number(counts, "bodies_rewritten") == 10, "ten bodies are rewritten: a motif with the old key and the nine theme and piece bodies, which become stored requests");
 }
 
 static void test_dry_run(void) {
@@ -197,6 +197,7 @@ static void check_item_content(const char *old_root, const char *new_root) {
       snprintf(old_body, sizeof(old_body), "materials/items/%s/v%d.json", items.items[i], number_of_version);
       cJSON *body = read_at(old_root, old_body);
       workshop_material_body_migrate(body);
+      workshop_body_requests_migrate(body);
       snprintf(relative, sizeof(relative), "projects/%s/items/%s/v%d/body.json", project, items.items[i], number_of_version);
       cJSON *new_body = read_at(new_root, relative);
       if (body && new_body && same_json(body, new_body, "format,format_version")) {
@@ -400,9 +401,11 @@ static void check_old_forms(const char *root) {
       snprintf(relative, sizeof(relative), "projects/%s/items/%s/v1/body.json", projects.items[p], items.items[i]);
       cJSON *body = read_at(root, relative);
       const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
-      const cJSON *form = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "theme"), "form");
-      const cJSON *sections =
-          cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "piece"), "structure"), "sections");
+      /* a theme or piece body is a stored request now: its form members are the request's and its sections the request's */
+      const cJSON *form = strncmp(items.items[i], "thm-", 4) == 0 ? cJSON_GetObjectItemCaseSensitive(body, "request") : NULL;
+      const cJSON *sections = strncmp(items.items[i], "pce-", 4) == 0
+                                  ? cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "request"), "sections")
+                                  : NULL;
       if (motif) {
         key_gone += !cJSON_GetObjectItemCaseSensitive(motif, "key") && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(motif, "material"));
       }
@@ -447,9 +450,9 @@ static void test_real_run(void) {
   check_quiet(common_path_exists("run/data-folder.json") && !common_path_exists("run/.migrate-1") && common_path_is_dir("run/.pre-1"),
               "data-folder.json is written, .migrate-1 is gone and the old entries are in .pre-1");
   cJSON *marker = read_at("run", "data-folder.json");
-  check_quiet(strcmp(text(marker, "format"), "ursatz-data-folder") == 0 && number(marker, "format_version") == 1 &&
+  check_quiet(strcmp(text(marker, "format"), "ursatz-data-folder") == 0 && number(marker, "format_version") == 2 &&
                   number(marker, "migrated_from") == 0,
-              "the marker names format 1 and where it came from");
+              "the marker names format 2 and where it came from");
   cJSON_Delete(marker);
   check_quiet(!common_path_exists("run/materials") && !common_path_exists("run/pieces") && !common_path_exists("run/styles") &&
                   common_path_is_dir("run/.pre-1/materials") && common_path_is_dir("run/.pre-1/subjects"),
@@ -563,7 +566,7 @@ static void test_refusals(void) {
   check_quiet(strcmp(text(marker, "format"), "ursatz-data-folder") == 0 && !cJSON_GetObjectItemCaseSensitive(marker, "migrated_from"),
               "and is layout 1 from its first open");
   cJSON_Delete(marker);
-  write_text("fresh/data-folder.json", "{\"format\":\"ursatz-data-folder\",\"format_version\":2,\"created_at\":\"2030-01-01T00:00:00Z\"}");
+  write_text("fresh/data-folder.json", "{\"format\":\"ursatz-data-folder\",\"format_version\":3,\"created_at\":\"2030-01-01T00:00:00Z\"}");
   check_quiet(workshop_open(&resolved, &workshop, &error) == URSATZ_ERR_FORMAT && strstr(error.message, "data-folder.json") != NULL,
               "a marker of a newer version is refused, naming the file");
   write_text("fresh/data-folder.json", "{\"format\":\"ursatz-project\",\"format_version\":1}");

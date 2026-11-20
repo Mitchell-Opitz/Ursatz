@@ -21,12 +21,13 @@
 typedef struct Workshop Workshop;
 
 /*
- * The data folder layout and its formats (R-642). The folder holds data-folder.json (format WORKSHOP_FORMAT_DATA_FOLDER); every
+ * The data folder layout and its formats (R-642). The folder holds data-folder.json (format WORKSHOP_FORMAT_DATA_FOLDER; its
+ * format_version is the layout: 2 since theme and piece bodies are stored Composer requests, R-650); every
  * file the workshop owns carries "format" (one of the names below) and "format_version" (a whole number from 1, the version
  * this build writes and the newest it reads). Files other parts own keep their own versions: the analysis document, the style
  * model, the motive link cache and a composed version's request.json.
  */
-#define WORKSHOP_LAYOUT_VERSION 1
+#define WORKSHOP_LAYOUT_VERSION 2
 #define WORKSHOP_FORMAT_DATA_FOLDER "ursatz-data-folder"
 #define WORKSHOP_FORMAT_CONFIG "ursatz-config"
 #define WORKSHOP_FORMAT_PROJECT "ursatz-project"
@@ -77,15 +78,17 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
 
 /*
  * Migrates a data folder of the GUI before the workshop (layout 0: pieces/, materials/, subjects/, collections/, styles/, links/) to
- * layout 1 (R-642). The folder must not be open by a workshop. It first asks the data check (items/data_check.h) and refuses a folder the
+ * layout 2 (R-642, R-650), and a layout 1 folder to layout 2. A layout 1 folder takes the same backup, then each theme and piece body of
+ * format 1 is rewritten in place as format 2 (workshop_body_requests_migrate; one already in format 2 is left, so a run that stopped is run
+ * again) and data-folder.json is written last. What follows is the migration of layout 0 (it writes the bodies as format 2 at once). The folder must not be open by a workshop. It first asks the data check (items/data_check.h) and refuses a folder the
  * GUI's one-time migrations never ran on, with the check's message. A dry run writes nothing and reports every planned move and
  * rewrite. A real run copies the whole folder to backup_dir (NULL: "<data_dir>-backup-<YYYYMMDDTHHMMSSZ>" beside it), compares file
- * count and sizes and stops on a difference, builds layout 1 in <data_dir>/.migrate-1/, rewrites every body as format 1 (the mode, motif
+ * count and sizes and stops on a difference, builds the new layout in <data_dir>/.migrate-1/, rewrites every body in its current format (a theme or piece body as format 2) (the mode, motif
  * key and progression-fill members written new), renames a Library piece's ursatz_commit to producer_key (R-554), moves the motif
  * render caches to cache/renders, moves the old top-level entries into <data_dir>/.pre-1/ and the new ones into place, and writes
  * data-folder.json last. A run that stopped before the last moves leaves .migrate-1/ without its .complete marker: it is deleted and the
- * migration runs again; one that stopped during the last moves is finished from where it stopped. A layout 1 folder is a no-op, and an
- * empty or absent folder is made layout 1. *report (caller deletes; may be NULL) is {dry_run, data_dir, from_layout, to_layout, changed,
+ * migration runs again; one that stopped during the last moves is finished from where it stopped. A layout 2 folder is a no-op, and an
+ * empty or absent folder is made layout 2. *report (caller deletes; may be NULL) is {dry_run, data_dir, from_layout, to_layout, changed,
  * backup, counts {...}, moves [{from, to}]}.
  */
 typedef struct {
@@ -94,6 +97,18 @@ typedef struct {
 } WorkshopMigrateOptions;
 
 UrsatzStatus workshop_migrate(const char *data_dir, const WorkshopMigrateOptions *options, cJSON **report, UrsatzError *error);
+
+/*
+ * The migration of a theme or piece body from format 1 (a `theme` or `piece` member the services translated into a Composer request
+ * on every compose) to format 2 (R-650): {uses, request, brief, result, check, seed}, where `request` is the Composer request
+ * (ursatz-theme-request or ursatz-piece-request, version 2) with {"$item": {item_id, version[, file]}} in place of a motif version or a
+ * stored plan and {"$pool": {item_id, pool}} in place of the saved forms of a motif (composition/request_resolve.h). The translation is
+ * the one the services made until P63 B15, kept here so that a body written before the migration composes the same request after it.
+ * Nothing is judged: a draft keeps what it holds. A body that is not a format 1 theme or piece body is left as it is. false on
+ * allocation failure (the body is then unchanged).
+ */
+bool workshop_body_requests_migrate(cJSON *body);
+
 
 /*
  * Queries and commands (R-646). Every read of the GUI is a query and every change a command; the GUI and, later, the command line give

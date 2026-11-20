@@ -191,8 +191,8 @@ static void test_scopes(void) {
     check_quiet(workshop_material_project_create("Score", "", &project) == URSATZ_OK, "project");
     check_quiet(workshop_material_project_create("Quiet", "", &quiet) == URSATZ_OK, "quiet project");
     const char *project_id = str(project, "id");
-    cJSON *body_a = cJSON_Parse("{\"uses\":[],\"piece\":{\"structure\":null}}");
-    cJSON *body_b = cJSON_Parse("{\"uses\":[],\"piece\":{\"structure\":null}}");
+    cJSON *body_a = cJSON_Parse("{\"uses\":[],\"request\":{}}");
+    cJSON *body_b = cJSON_Parse("{\"uses\":[],\"request\":{}}");
     cJSON *item_a = NULL;
     cJSON *item_b = NULL;
     check_quiet(workshop_material_item_create_noted("piece", "First", project_id, body_a, NULL, &item_a) ==

@@ -181,9 +181,6 @@ WORKSHOP_HANDLER(workshop_c_item_save) {
     if (bad || !cJSON_IsObject(params_body)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "an object body is required; note is a string");
     }
-    if (!workshop_motif_version_note_ok(params_body, note)) {
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/note", "give a version note");
-    }
     if (!workshop_motif_tonic_ok(params_body)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/body", "motifs are written with C as the tonic");
     }
@@ -200,7 +197,13 @@ WORKSHOP_HANDLER(workshop_c_item_save) {
     if (workshop_material_item_get(call->target, &previous_meta, &previous_body) != URSATZ_OK) {
         previous_body = NULL;
     }
+    bool noted = workshop_motif_version_note_ok(common_json_string(previous_meta, "type"), note);
     cJSON_Delete(previous_meta);
+    if (!noted) {
+        cJSON_Delete(previous_body);
+        cJSON_Delete(version_body);
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/note", "give a version note");
+    }
     WorkshopMotifAnalysis analysis = workshop_motif_analyze_body(version_body, previous_body, analysis_error, refusal, sizeof(refusal),
                                                                  refusal_path, sizeof(refusal_path));
     cJSON_Delete(previous_body);

@@ -3,6 +3,7 @@
  * refused; the journal holds the actor and the version. Runs in its own working directory. */
 
 #include "api_harness.h"
+#include "theme_body.h"
 
 static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e\","
@@ -99,14 +100,8 @@ static void test_refusals(void) {
 }
 
 static bool make_theme(void) {
-    char slots[400];
     char body[1200];
-    snprintf(slots, sizeof(slots), "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},{\"slot\":\"cadential\",\"item_id\":\"%s\",\"version\":1}]",
-             g_other, g_other);
-    snprintf(body, sizeof(body),
-             "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\",\"meter\":\"4/4\",\"bars\":8,"
-             "\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":%s}}",
-             slots);
+    theme_body_text(body, sizeof(body), g_other, g_other, -1);
     snprintf(g_theme_body, sizeof(g_theme_body), "%s", body);
     return make_item("theme", "Theme", body, g_theme, sizeof(g_theme));
 }
@@ -137,7 +132,7 @@ static void test_compose(void) {
     UrsatzError compose_error;
     UrsatzStatus queued = command("item.compose", g_theme, "{\"seed\":4}", 2, &composing, &compose_error);
     char params[1500];
-    snprintf(params, sizeof(params), "{\"note\":\"by hand\",\"body\":{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}}");
+    snprintf(params, sizeof(params), "{\"note\":\"by hand\",\"body\":{\"uses\":[],\"request\":{}}}");
     UrsatzStatus saved = command("item.save", g_theme, params, 2, &reply, &error);
     cJSON *finished = queued == URSATZ_OK ? finish_job(&composing) : NULL;
     bool compose_done = finished && strcmp(str(finished, "state"), "done") == 0;

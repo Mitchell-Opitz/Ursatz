@@ -18,6 +18,7 @@
 
 #include "compose_common.h"
 #include "composer_client.h"
+#include "request_resolve.h"
 #include "items/store.h"
 #include "items/txn.h"
 
@@ -35,288 +36,35 @@ static bool copy_file(const char *from, const char *to) {
 
 /* --- the request --------------------------------------------------------- */
 
-/* The copy of a used motif version, from the body's uses. NULL when the use is not there. */
-static const cJSON *used_motif(const cJSON *body, const char *item_id, int version) {
-    const cJSON *use = NULL;
-    cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
-        const cJSON *number = cJSON_GetObjectItemCaseSensitive(use, "version");
-        if (strcmp(common_json_string(use, "item_id"), item_id) == 0 && cJSON_IsNumber(number) && number->valueint == version) {
-            return cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(use, "copy"), "motif");
-        }
-    }
-    return NULL;
-}
-
-/* The motive of a reference {item_id, version}, or NULL when its copy has no degrees. */
-static cJSON *motive_of(const cJSON *body, const cJSON *reference, UrsatzError *error, const char *what) {
-    const cJSON *version = cJSON_GetObjectItemCaseSensitive(reference, "version");
-    const cJSON *motif = used_motif(body, common_json_string(reference, "item_id"), cJSON_IsNumber(version) ? version->valueint : 0);
-    if (!motif || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(motif, "degrees"))) {
-        workshop_error_printf(error, "the motif of %s has no degrees", what);
-        return NULL;
-    }
-    return workshop_theme_motive_json(NULL, NULL, motif, "melodic");
-}
-
-/* A section's fill as the request holds it. The plan of a theme fill is copied into dir (NULL: not copied, the request
-   names the source plan). */
-static UrsatzStatus build_fill(const cJSON *body, const cJSON *derived_list, const char *pool, const cJSON *section,
-                                       const char *dir, cJSON **out, UrsatzError *error) {
-    const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
-    /* A section of a game loop has an id, an overlay of a sized form a name (R-610). */
-    const char *id = common_json_string(section, "id");
-    id = id[0] != '\0' ? id : common_json_string(section, "name");
-    const char *kind = cJSON_IsObject(fill) ? common_json_string(fill, "kind") : "empty";
-    cJSON *object = cJSON_CreateObject();
-    bool ok = object && cJSON_AddStringToObject(object, "kind", kind);
-    UrsatzStatus result = URSATZ_OK;
-    if (ok && strcmp(kind, "motif") == 0) {
-        char what[64];
-        snprintf(what, sizeof(what), "section %s", id);
-        cJSON *motive = motive_of(body, fill, error, what);
-        cJSON *forms = cJSON_CreateArray();
-        if (!motive) {
-            cJSON_Delete(forms);
-            cJSON_Delete(object);
-            return workshop_fail(URSATZ_ERR_REQUEST, NULL);
-        }
-        ok = common_json_add(object, "motive", motive);
-        ok = common_json_add(object, "forms", forms) && ok;
-        if (ok) {
-            result = workshop_theme_add_pool(derived_list, common_json_string(fill, "item_id"), pool, forms);
-        }
-        ok = ok && common_json_add_copy_if(object, fill, "into") && common_json_add_copy_if(object, fill, "hybrid") &&
-             common_json_add_copy_if(object, fill, "construction");
-    } else if (ok && strcmp(kind, "theme") == 0) {
-        char source[PATH_BYTES];
-        char plan[PATH_BYTES + 16];
-        char copy[PATH_BYTES + 64];
-        const cJSON *version = cJSON_GetObjectItemCaseSensitive(fill, "version");
-        if (!workshop_material_version_dir(common_json_string(fill, "item_id"), cJSON_IsNumber(version) ? version->valueint : 0, source,
-                                             sizeof(source))) {
-            workshop_error_text(error, "a theme fill names no version");
-            result = workshop_fail(URSATZ_ERR_REQUEST, NULL);
-        } else {
-            snprintf(plan, sizeof(plan), "%s/plan.json", source);
-            snprintf(copy, sizeof(copy), "%s/theme-%s.plan.json", dir ? dir : "", id);
-            if (!dir) {
-                /* A check writes nothing: the request names the version's own plan. */
-                snprintf(copy, sizeof(copy), "%s", plan);
-                ok = cJSON_AddStringToObject(object, "plan", copy) != NULL;
-            } else if (!copy_file(plan, copy)) {
-                workshop_error_printf(error, "the plan of the theme in section %s could not be copied", id);
-                result = workshop_fail(URSATZ_ERR_REQUEST, NULL);
-            } else {
-                ok = cJSON_AddStringToObject(object, "plan", copy) != NULL;
-            }
-        }
-    } else if (ok && strcmp(kind, "progression") == 0) {
-        ok = common_json_add_copy_or_null(object, fill, "numerals") && common_json_add_copy_if(object, fill, "cells");
-    }
-    if (!ok || result != URSATZ_OK) {
-        cJSON_Delete(object);
-        return result == URSATZ_OK ? workshop_fail(URSATZ_ERR_ALLOC, NULL) : result;
-    }
-    *out = object;
-    return URSATZ_OK;
-}
-
-static cJSON *section_json(const cJSON *section, cJSON *fill) {
-    cJSON *object = cJSON_CreateObject();
-    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(section, "pickup");
-    bool ok = object && common_json_add_copy_or_null(object, section, "id") && common_json_add_copy_or_null(object, section, "part") &&
-              common_json_add_copy_if(object, section, "letter") && common_json_add_copy_or_null(object, section, "beats") &&
-              common_json_add(object, "pickup", cJSON_IsString(pickup) ? cJSON_Duplicate(pickup, 1) : cJSON_CreateString("0")) &&
-              common_json_add_copy_or_null(object, section, "cadence") && common_json_add_copy_if(object, section, "function") &&
-              common_json_add_copy_if(object, section, "region") && common_json_add_copy_if(object, section, "harmony");
-    /* A progression fill of a body not migrated yet is the section's harmony (R-610). */
-    if (ok && fill && strcmp(common_json_string(fill, "kind"), "progression") == 0) {
-        const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
-        const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
-        cJSON *harmony = cJSON_IsString(numerals) && cJSON_GetObjectItemCaseSensitive(object, "harmony") == NULL ? cJSON_CreateObject() : NULL;
-        if (harmony && cJSON_AddStringToObject(harmony, "progression", numerals->valuestring) &&
-            (!cJSON_IsNumber(cells) || cJSON_AddNumberToObject(harmony, "cells", cells->valuedouble)) &&
-            cJSON_AddItemToObject(object, "harmony", harmony)) {
-            harmony = NULL;
-        }
-        cJSON_Delete(harmony);
-        cJSON *empty = cJSON_CreateObject();
-        if (empty && cJSON_AddStringToObject(empty, "kind", "empty")) {
-            cJSON_Delete(fill);
-            fill = empty;
-        } else {
-            cJSON_Delete(empty);
-        }
-    }
-    ok = common_json_add(object, "fill", fill) && ok;
-    if (!ok) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
-
-/* An overlay of a sized form as the request holds it: its name, its region and harmony, and a fill when it has one (R-610). */
-static cJSON *overlay_json(const cJSON *overlay, cJSON *fill) {
-    cJSON *object = cJSON_CreateObject();
-    bool ok = object && common_json_add_copy_or_null(object, overlay, "name") && common_json_add_copy_if(object, overlay, "region") &&
-              common_json_add_copy_if(object, overlay, "harmony");
-    if (ok && fill && strcmp(common_json_string(fill, "kind"), "empty") != 0) {
-        ok = common_json_add(object, "fill", fill);
-    } else {
-        cJSON_Delete(fill);
-    }
-    if (!ok) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
-
-/* The name of the form of a piece structure: structure.form, or game-loop for a piece saved before the forms. */
-static const char *structure_form(const cJSON *structure) {
-    const cJSON *form = cJSON_GetObjectItemCaseSensitive(structure, "form");
-    return cJSON_IsString(form) ? form->valuestring : "game-loop";
-}
-
-/* True when the form of the structure has sizes in place of the request's own sections. */
-static bool structure_sized(const cJSON *structure) {
-    const cJSON *form = workshop_composer_form(structure_form(structure));
-    const char *sections = common_json_string(form, "sections");
-    return form && sections && strcmp(sections, "request") != 0;
-}
-
-/* The material of a structure as text: its id (or style), or the old mode word of a body not migrated; NULL when it has none. */
-static const char *structure_material(const cJSON *structure) {
-    const cJSON *material = cJSON_GetObjectItemCaseSensitive(structure, "material");
-    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(structure, "mode");
+/* The request is the body's own (R-650): the resolver replaces its references (composition/request_resolve.c). A piece is
+   composable when its request names what the Composer cannot do without: key, material and meter, and, for a form that is not
+   sized, its sections. */
+static const char *request_material(const cJSON *request) {
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(request, "material");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(request, "mode");
     return cJSON_IsString(material) ? material->valuestring : cJSON_IsString(mode) ? mode->valuestring : NULL;
 }
 
-/* Whether the structure has the members a request is made of: a draft that has not is no request yet (validate says it is incomplete). A form with sizes
- * asks only key, material and meter. The Composer refuses the rest at its path (R-649). */
-static bool composable(const cJSON *piece, bool has_brief, UrsatzError *error) {
-    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    bool sized = cJSON_IsObject(structure) && structure_sized(structure);
-    if (!cJSON_IsObject(structure) || (!sized && !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections"))) ||
-        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "key")) ||
-        !structure_material(structure) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "meter"))) {
-        workshop_error_text(error, sized ? "the piece structure needs key, material and meter"
-                                                             : "the piece structure needs key, material, meter and sections");
+static bool request_sized(const cJSON *request) {
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(request, "form");
+    const cJSON *sized = workshop_composer_form(cJSON_IsString(form) ? form->valuestring : "game-loop");
+    const char *sections = common_json_string(sized, "sections");
+    return sized && sections && strcmp(sections, "request") != 0;
+}
+
+static bool composable(const cJSON *body, UrsatzError *error) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    bool sized = cJSON_IsObject(request) && request_sized(request);
+    if (!cJSON_IsObject(request) || (!sized && !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(request, "sections"))) ||
+        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "key")) || !request_material(request) ||
+        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "meter"))) {
+        workshop_error_text(error, sized ? "the piece request needs key, material and meter"
+                                         : "the piece request needs key, material, meter and sections");
         return false;
     }
-    (void)has_brief; /* the material style without a brief and a hybrid fill without its parts are the Composer's to refuse, with their paths (R-649) */
     return true;
 }
 
-/*
- * The piece request of the Composer (docs/piece-request.md) for the current version of a piece. dir is the new version's
- * folder (absolute), where theme plans are copied; NULL writes nothing (validate). style_path is the brief's style file, or NULL without a brief.
- */
-static UrsatzStatus build_request(const cJSON *body, const char *dir, const char *style_path, cJSON **out,
-                                          UrsatzError *error) {
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
-    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    const char *pool = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(piece, "pool")) ? common_json_string(piece, "pool")
-                                                                                       : "approved-and-unflagged";
-    bool sized = structure_sized(structure);
-    cJSON *request = cJSON_CreateObject();
-    cJSON *sections = cJSON_CreateArray();
-    cJSON *derived_list = NULL;
-    UrsatzStatus result = URSATZ_OK;
-    if (!request || !sections) {
-        result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
-    }
-    if (result == URSATZ_OK && workshop_material_derived_motifs(&derived_list) != URSATZ_OK) {
-        workshop_error_text(error, "the saved forms could not be read");
-        result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
-    }
-    const cJSON *section = NULL;
-    /* A game loop's sections, or a sized form's overlays: the sections of its size that were given something (R-610). */
-    const cJSON *own_sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
-    cJSON_ArrayForEach(section, own_sections) {
-        if (result != URSATZ_OK) {
-            break;
-        }
-        cJSON *fill = NULL;
-        result = build_fill(body, derived_list, pool, section, dir, &fill, error);
-        cJSON *entry = result == URSATZ_OK ? (sized ? overlay_json(section, fill) : section_json(section, fill)) : NULL;
-        if (result == URSATZ_OK && (!entry || !cJSON_AddItemToArray(sections, entry))) {
-            cJSON_Delete(entry);
-            result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
-        }
-    }
-
-    bool ok = result == URSATZ_OK && cJSON_AddStringToObject(request, "schema", "ursatz-piece-request") &&
-              cJSON_AddNumberToObject(request, "schema_version", 2) &&
-              cJSON_AddStringToObject(request, "form", structure_form(structure)) && common_json_add_copy_if(request, structure, "key") &&
-              common_json_add_copy_if(request, structure, "material") && common_json_add_copy_if(request, structure, "mode") &&
-              common_json_add_copy_if(request, structure, "meter");
-    const cJSON *motive_ref = cJSON_GetObjectItemCaseSensitive(piece, "motive");
-    if (ok && cJSON_IsObject(motive_ref)) {
-        cJSON *motive = motive_of(body, motive_ref, error, "the piece motive");
-        if (!motive) {
-            result = workshop_fail(URSATZ_ERR_REQUEST, NULL);
-            ok = false;
-        } else {
-            ok = common_json_add(request, "motive", motive);
-        }
-    } else if (ok) {
-        ok = cJSON_AddNullToObject(request, "motive") != NULL;
-    }
-    if (ok && sized) {
-        const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
-        const cJSON *count = cJSON_GetObjectItemCaseSensitive(structure, "count");
-        ok = cJSON_AddNumberToObject(request, "bars", cJSON_IsNumber(bars) ? bars->valuedouble : 0) &&
-             cJSON_AddNumberToObject(request, "count", cJSON_IsNumber(count) ? count->valuedouble : 0) &&
-             cJSON_AddBoolToObject(request, "modulate", cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(structure, "modulate")));
-        if (ok && cJSON_GetArraySize(sections) > 0) {
-            ok = common_json_add(request, "sections", sections);
-            sections = NULL;
-        }
-    } else if (ok) {
-        ok = common_json_add(request, "sections", sections);
-        sections = NULL;
-    }
-
-    /* The accompaniment: nothing or a pattern; the pattern motive is not available in a piece. */
-    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(piece, "accompaniment");
-    if (ok && (!accompaniment || cJSON_IsNull(accompaniment))) {
-        ok = cJSON_AddNullToObject(request, "accompaniment") != NULL;
-    } else if (ok) {
-        cJSON *pattern = cJSON_CreateObject();
-        ok = pattern && cJSON_AddStringToObject(pattern, "pattern", common_json_string(accompaniment, "pattern"));
-        if (ok) {
-            ok = common_json_add(request, "accompaniment", pattern);
-        } else {
-            cJSON_Delete(pattern);
-        }
-    }
-    ok = ok && (sized || cJSON_AddNullToObject(request, "voicing") != NULL);
-    if (ok && style_path) {
-        cJSON *without = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(piece, "without"), 1);
-        ok = cJSON_AddStringToObject(request, "style", style_path) && common_json_add_copy_if(request, piece, "style_weight");
-        if (ok && without && cJSON_GetArraySize(without) > 0) {
-            ok = common_json_add(request, "without", without);
-        } else {
-            cJSON_Delete(without);
-        }
-    }
-    ok = ok && common_json_add_copy_or_null(request, piece, "tempo");
-
-    cJSON_Delete(derived_list);
-    cJSON_Delete(sections);
-    if (!ok) {
-        cJSON_Delete(request);
-        return result == URSATZ_OK ? workshop_fail(URSATZ_ERR_ALLOC, NULL) : result;
-    }
-    *out = request;
-    return URSATZ_OK;
-}
-
-/* --- composing ----------------------------------------------------------- */
-
-/* The files every version has besides those of the versions of its form (<name>.mid and the rest, R-430). */
 static const char *const kFileNames[] = {"request.json", "brief.style.json"};
 #define FILE_NAME_COUNT 2
 #define VERSIONS_MAX 4
@@ -526,15 +274,14 @@ static const cJSON *reported_seed(const cJSON *summary) {
     return cJSON_IsNumber(seed) ? seed : NULL;
 }
 
-/* The body of the new version: body plus piece.result. Takes ownership of summary and brief_summary. */
+/* The body of the new version: body plus result. Takes ownership of summary and brief_summary. */
 static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_summary, bool has_brief) {
     cJSON *copy = cJSON_Duplicate(body, 1);
-    cJSON *piece = cJSON_GetObjectItemCaseSensitive(copy, "piece");
     cJSON *result = cJSON_CreateObject();
     cJSON *files = cJSON_CreateArray();
     const cJSON *seed = reported_seed(summary);
     const cJSON *loop = cJSON_GetObjectItemCaseSensitive(summary, "loop");
-    bool ok = copy && piece && result && files &&
+    bool ok = copy && result && files &&
               common_json_add(result, "seed", seed ? cJSON_CreateNumber(seed->valuedouble) : cJSON_CreateNull()) &&
               common_json_add(result, "loop", loop ? cJSON_Duplicate(loop, 1) : cJSON_CreateNull());
     for (int i = 0; ok && i < FILE_NAME_COUNT; i++) {
@@ -551,7 +298,7 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
         }
     }
     const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "request"), "sections")) {
         const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
         if (ok && cJSON_IsObject(fill) && strcmp(common_json_string(fill, "kind"), "theme") == 0) {
             char name[64];
@@ -572,8 +319,8 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
         files = NULL;
     }
     if (ok) {
-        cJSON_DeleteItemFromObjectCaseSensitive(piece, "result");
-        ok = cJSON_AddItemToObject(piece, "result", result);
+        cJSON_DeleteItemFromObjectCaseSensitive(copy, "result");
+        ok = cJSON_AddItemToObject(copy, "result", result);
         result = ok ? NULL : result;
     }
     cJSON_Delete(summary);
@@ -588,7 +335,7 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
 }
 
 static UrsatzStatus run_piece_item(const WorkshopComposeRun *run, cJSON **out_summary, UrsatzError *error) {
-    return run_piece(run->stage, run->named, run->request, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(run->member, "check")),
+    return run_piece(run->stage, run->named, run->request, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(run->body, "check")),
                      run->use_seed, run->seed, NULL, NULL, NULL, run->job, out_summary, error);
 }
 
@@ -602,7 +349,7 @@ static void piece_note(const cJSON *summary, char *note, size_t note_size) {
 }
 
 static const WorkshopComposeKind kPieceKind = {"piece",       "the item is not a piece", composable,
-                                                build_request, run_piece_item,            workshop_theme_update_sources,
+                                                run_piece_item,            workshop_theme_update_sources,
                                                 workshop_theme_build_brief, piece_note,
                                                 body_with_result};
 
@@ -610,24 +357,22 @@ UrsatzStatus workshop_piece_validate(const cJSON *body, bool *complete, cJSON **
     *complete = false;
     *out_request = NULL;
     workshop_error_text(error, "");
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
-    if (!cJSON_IsObject(piece)) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    if (!cJSON_IsObject(request)) {
         workshop_error_text(error, "the body is not a piece");
         return URSATZ_OK;
     }
-    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(piece, "brief");
-    bool has_brief = brief && !cJSON_IsNull(brief);
-    if (!composable(piece, has_brief, error)) {
+    if (!composable(body, error)) {
         return URSATZ_OK;
     }
-    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (has_brief && strcmp(structure_material(structure), "style") == 0) {
+    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(body, "brief");
+    if (brief && !cJSON_IsNull(brief) && strcmp(request_material(request), "style") == 0) {
         /* The style of the brief is built only when composing. */
         workshop_error_text(error, "");
         return URSATZ_OK;
     }
     cJSON *built = NULL;
-    UrsatzStatus result = build_request(body, NULL, NULL, &built, error);
+    UrsatzStatus result = workshop_request_resolve("piece", body, NULL, NULL, &built, error);
     if (result == URSATZ_OK) {
         result = request_with_plans(built, out_request, error);
     }
@@ -730,7 +475,7 @@ static UrsatzStatus open_source(const char *id, int version, const char *section
         workshop_error_text(error, "version not found");
         return read == URSATZ_ERR_NOT_FOUND ? workshop_fail(URSATZ_ERR_NOT_FOUND, NULL) : workshop_fail(URSATZ_ERR_INTERNAL, NULL);
     }
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source->body, "piece");
+    const cJSON *piece = source->body; /* the body: result, brief and check are its members, request its structure */
     char relative[PATH_BYTES];
     char path[PATH_BYTES + 32];
     char resolved[PATH_MAX];
@@ -752,15 +497,15 @@ static UrsatzStatus open_source(const char *id, int version, const char *section
         return URSATZ_OK;
     }
     /* A form with sizes has no sections in its structure: its sections are the rows of its first version. */
-    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(piece, "request");
     const cJSON *rows =
-        structure_sized(structure)
+        request_sized(request)
             ? cJSON_GetObjectItemCaseSensitive(
                   cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(
                                                        cJSON_GetObjectItemCaseSensitive(piece, "result"), "summary"), "versions"),
                                                    first_version_name(piece)),
                   "sections")
-            : cJSON_GetObjectItemCaseSensitive(structure, "sections");
+            : cJSON_GetObjectItemCaseSensitive(request, "sections");
     const cJSON *section = NULL;
     cJSON_ArrayForEach(section, rows) {
         if (strcmp(common_json_string(section, "id"), section_id) == 0) {
@@ -837,7 +582,7 @@ static UrsatzStatus carry_request(const char *from_dir, const char *dir, UrsatzE
 
 /* A copy of the brief summary the source version kept, else the empty one. NULL on allocation failure. */
 static cJSON *kept_brief_summary(const Source *source) {
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source->body, "piece");
+    const cJSON *piece = source->body; /* the body: result, brief and check are its members, request its structure */
     const cJSON *brief = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "result"), "brief");
     if (cJSON_IsObject(brief)) {
         return cJSON_Duplicate(brief, 1);
@@ -915,7 +660,7 @@ static UrsatzStatus regenerate_locked(const char *id, int version, const char *s
     if (result != URSATZ_OK) {
         return result;
     }
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
+    const cJSON *piece = source.body; /* the body: result, brief and check are its members, request its structure */
     const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(piece, "brief");
     bool has_brief = brief_json && !cJSON_IsNull(brief_json);
     WorkshopComposeStage stage;
@@ -1206,7 +951,7 @@ static UrsatzStatus variations_locked(const char *id, int version, const char *s
     if (result != URSATZ_OK) {
         return result;
     }
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
+    const cJSON *piece = source.body; /* the body: result, brief and check are its members, request its structure */
     char out_dir[PATH_BYTES + 64];
     char final_dir[PATH_BYTES + 32];
     char plan_path[PATH_BYTES + 32];
@@ -1290,7 +1035,7 @@ static UrsatzStatus choose_locked(const char *id, int version, int set, int inde
     if (result != URSATZ_OK) {
         return result;
     }
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
+    const cJSON *piece = source.body; /* the body: result, brief and check are its members, request its structure */
     const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(piece, "brief");
     bool has_brief = brief_json && !cJSON_IsNull(brief_json);
     char path[PATH_BYTES + 96];

@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <cJSON.h>
+#include "theme_body.h"
 
 #include <common/files.h>
 #include <common/json.h>
@@ -172,11 +173,7 @@ static void make_base(void) {
     new_motif("Delete", g_base.general, "C4:q D4:q E4:h", g_base.del);
 
     char theme_json[2048];
-    snprintf(theme_json, sizeof(theme_json),
-             "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"material\":\"omt.material.natural-minor\",\"meter\":\"4/4\","
-             "\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},"
-             "{\"slot\":\"cadential\",\"item_id\":\"%s\",\"version\":1}],\"seed\":5}}",
-             g_base.motif_a, g_base.motif_b);
+    theme_body_text(theme_json, sizeof(theme_json), g_base.motif_a, g_base.motif_b, 5);
     cJSON *theme_body = parse(theme_json);
     cJSON *theme = NULL;
     assert(workshop_material_item_create_noted("theme", "Theme", g_base.general, theme_body, NULL, &theme) == URSATZ_OK);

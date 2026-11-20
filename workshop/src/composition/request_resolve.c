@@ -9,10 +9,13 @@
 #include <common/files.h>
 #include <common/json.h>
 
+#include "base/last_error.h"
 #include "items/store.h"
-#include "themes.h"
 
 #define PATH_BYTES 800
+#define POOL_MAX 64
+#define CHAIN_MAX_STEPS 32
+#define CHAIN_TEXT_MAX 400
 
 /* The copy of a used motif version, from the body's uses. NULL when the use is not there. */
 static const cJSON *used_motif(const cJSON *body, const char *item_id, int version) {
@@ -52,10 +55,148 @@ static const cJSON *motif_of(const cJSON *body, const cJSON *reference, const ch
     return motif;
 }
 
+/* A motive of the request from a motif's members: with item (a pool form), else with id (a slot motive); the accompaniment
+   motive has neither. */
+static cJSON *motive_json(const char *id, const char *item, const cJSON *motif, const char *role) {
+    cJSON *object = cJSON_CreateObject();
+    bool ok = object && (item ? cJSON_AddStringToObject(object, "item", item) != NULL
+                              : !id || cJSON_AddStringToObject(object, "id", id) != NULL);
+    ok = ok && cJSON_AddStringToObject(object, "form", "full") && common_json_add_copy_or_null(object, motif, "degrees") &&
+         common_json_add_copy_or_null(object, motif, "pickup") && common_json_add_copy_or_null(object, motif, "harmony") &&
+         common_json_add_copy_or_null(object, motif, "features") && cJSON_AddStringToObject(object, "role", role);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* "op k=v k=v + op k=v" from the stored operations. */
+static void chain_text(const cJSON *operations, char *out, size_t size) {
+    size_t used = 0;
+    out[0] = '\0';
+    const cJSON *step = NULL;
+    cJSON_ArrayForEach(step, operations) {
+        const cJSON *op = cJSON_GetObjectItemCaseSensitive(step, "op");
+        if (!cJSON_IsString(op)) {
+            continue;
+        }
+        used += (size_t)snprintf(out + used, size - used, "%s%s", used ? " + " : "", op->valuestring);
+        const cJSON *param = NULL;
+        cJSON_ArrayForEach(param, cJSON_GetObjectItemCaseSensitive(step, "params")) {
+            if (used >= size - 1 || !param->string) {
+                break;
+            }
+            if (cJSON_IsNumber(param)) {
+                used += (size_t)snprintf(out + used, size - used, " %s=%g", param->string, param->valuedouble);
+            } else if (cJSON_IsString(param)) {
+                used += (size_t)snprintf(out + used, size - used, " %s=%s", param->string, param->valuestring);
+            } else if (cJSON_IsBool(param)) {
+                used += (size_t)snprintf(out + used, size - used, " %s=%s", param->string,
+                                         cJSON_IsTrue(param) ? "true" : "false");
+            }
+        }
+        if (used >= size - 1) {
+            used = size - 1;
+            break;
+        }
+    }
+}
+
+static const cJSON *find_derived(const cJSON *list, const char *id) {
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list) {
+        if (strcmp(common_json_string(entry, "id"), id) == 0) {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+/* True when the derived chain of start_id, followed through source_item for at most 32 steps, reaches target. A
+   standalone motif (R-192) is a motif of its own: the chain stops at it, so it and its variants never lead to the
+   motif it was promoted from. */
+static bool leads_to(const cJSON *list, const char *start_id, const char *target) {
+    const char *current = start_id;
+    for (int step = 0; step < CHAIN_MAX_STEPS; step++) {
+        const cJSON *entry = find_derived(list, current);
+        if (!entry) {
+            return false;
+        }
+        const cJSON *derived = cJSON_GetObjectItemCaseSensitive(entry, "derived");
+        if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"))) {
+            return false;
+        }
+        const char *source = common_json_string(derived, "source_item");
+        if (strcmp(source, target) == 0) {
+            return true;
+        }
+        current = source;
+    }
+    return false;
+}
+
+/*
+ * Adds to forms the saved forms of the motif item slot_item: the motifs whose derived chain leads to it, approved
+ * first, then unflagged when the pool takes them; never rejected, at most 64. pool is the theme's pool setting.
+ */
+static UrsatzStatus add_pool(const cJSON *list, const char *slot_item, const char *pool, cJSON *forms) {
+    const char *const flags[2] = {"approved", "unflagged"};
+    int passes = strcmp(pool, "none") == 0 ? 0 : strcmp(pool, "approved") == 0 ? 1 : 2;
+    for (int pass = 0; pass < passes; pass++) {
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, list) {
+            if (cJSON_GetArraySize(forms) >= POOL_MAX) {
+                return URSATZ_OK;
+            }
+            const char *id = common_json_string(entry, "id");
+            if (strcmp(id, slot_item) == 0 || !leads_to(list, id, slot_item)) {
+                continue;
+            }
+            cJSON *meta = NULL;
+            cJSON *body = NULL;
+            if (workshop_material_item_get(id, &meta, &body) != URSATZ_OK) {
+                cJSON_Delete(meta);
+                cJSON_Delete(body);
+                continue;
+            }
+            const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
+            const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+            const cJSON *degrees = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
+            UrsatzStatus result = URSATZ_OK;
+            if (strcmp(common_json_string(derived, "flag"), flags[pass]) == 0 && strcmp(common_json_string(motif, "form"), "full") == 0 &&
+                strcmp(common_json_string(motif, "role"), "melodic") == 0 && cJSON_IsString(degrees)) {
+                cJSON *form = motive_json(NULL, id, motif, "melodic");
+                char chain[CHAIN_TEXT_MAX];
+                chain_text(cJSON_GetObjectItemCaseSensitive(derived, "operations"), chain, sizeof(chain));
+                const cJSON *functions = cJSON_GetObjectItemCaseSensitive(derived, "functions");
+                cJSON *functions_copy = functions ? cJSON_Duplicate(functions, 1) : cJSON_CreateArray();
+                if (!form || !functions_copy || !cJSON_AddStringToObject(form, "chain", chain) ||
+                    !cJSON_AddItemToObject(form, "functions", functions_copy) ||
+                    !cJSON_AddStringToObject(form, "flag", flags[pass])) {
+                    if (form && !cJSON_GetObjectItemCaseSensitive(form, "functions")) {
+                        cJSON_Delete(functions_copy);
+                    }
+                    cJSON_Delete(form);
+                    result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
+                } else {
+                    cJSON_AddItemToArray(forms, form);
+                }
+            }
+            cJSON_Delete(meta);
+            cJSON_Delete(body);
+            if (result != URSATZ_OK) {
+                return result;
+            }
+        }
+    }
+    return URSATZ_OK;
+}
+
 /* A motive of a theme request: the motif's degrees, pickup and features, its base harmony (its own harmony when it has one,
    else the proposed one of its analysis) and its tone overrides. */
 static cJSON *theme_motive(const char *id, const cJSON *motif) {
-    cJSON *motive = workshop_theme_motive_json(id, NULL, motif, "melodic");
+    cJSON *motive = motive_json(id, NULL, motif, "melodic");
     if (!motive) {
         return NULL;
     }
@@ -149,7 +290,7 @@ static UrsatzStatus resolve_fill(const cJSON *body, cJSON *fill, const char *sec
         if (!motif) {
             return URSATZ_ERR_NOT_FOUND;
         }
-        if (!replace_member(fill, "motive", workshop_theme_motive_json(NULL, NULL, motif, "melodic"))) {
+        if (!replace_member(fill, "motive", motive_json(NULL, NULL, motif, "melodic"))) {
             return out_of_memory(error);
         }
     }
@@ -161,7 +302,7 @@ static UrsatzStatus resolve_fill(const cJSON *body, cJSON *fill, const char *sec
             cJSON_Delete(forms);
             return ursatz_error_set(error, forms ? URSATZ_ERR_INTERNAL : URSATZ_ERR_ALLOC, NULL, "the saved forms could not be read");
         }
-        UrsatzStatus added = workshop_theme_add_pool(derived_list, common_json_string(pool, "item_id"),
+        UrsatzStatus added = add_pool(derived_list, common_json_string(pool, "item_id"),
                                                      cJSON_IsString(cJSON_GetObjectItemCaseSensitive(pool, "pool")) ? common_json_string(pool, "pool") : "approved-and-unflagged", forms);
         cJSON_Delete(derived_list);
         if (added != URSATZ_OK || !replace_member(fill, "forms", forms)) {
@@ -179,7 +320,7 @@ static UrsatzStatus resolve_piece(const cJSON *body, cJSON *request, const char 
         if (!motif) {
             return URSATZ_ERR_NOT_FOUND;
         }
-        if (!replace_member(request, "motive", workshop_theme_motive_json(NULL, NULL, motif, "melodic"))) {
+        if (!replace_member(request, "motive", motive_json(NULL, NULL, motif, "melodic"))) {
             return out_of_memory(error);
         }
     }
@@ -227,7 +368,7 @@ static UrsatzStatus resolve_theme(const cJSON *body, cJSON *request, UrsatzError
         if (!motif) {
             return URSATZ_ERR_NOT_FOUND;
         }
-        if (!replace_member(accompaniment, "motive", workshop_theme_motive_json(NULL, NULL, motif, "accompaniment"))) {
+        if (!replace_member(accompaniment, "motive", motive_json(NULL, NULL, motif, "accompaniment"))) {
             return out_of_memory(error);
         }
     }

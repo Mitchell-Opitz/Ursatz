@@ -16,6 +16,7 @@
 
 #include <cJSON.h>
 
+#include "support/body_v2.h"
 #include "support/server_support.h"
 #include "ursatz_check.h"
 #include "server.h"
@@ -47,7 +48,10 @@ static const char *g_port = "18773";
 
 /* The body parsed as JSON; the status goes to *status. Caller frees the JSON. */
 static cJSON *exchange(const char *method, const char *path, const char *body, int *status) {
-  return test_http_json(PORT, method, path, body, status);
+  char *converted = request_with_request_body(body);
+  cJSON *answer = test_http_json(PORT, method, path, converted, status);
+  free(converted);
+  return answer;
 }
 
 /* The Content-Length of a response (the shared client answers a string, so a binary body cannot be measured by its
@@ -195,9 +199,9 @@ static int current_version(const char *id) {
   return version;
 }
 
-/* The theme member of a GET answer's body. */
+/* The theme of a GET answer: its body, whose request is the theme's request (R-650) and whose result and brief are its own members. */
 static const cJSON *theme_of(const cJSON *answer) {
-  return member(member(answer, "body"), "theme");
+  return member(answer, "body");
 }
 
 /* Waits for the job an accepted request names; its result is the answer the route gave before jobs, and *status the
@@ -971,9 +975,9 @@ static void test_update_uses(const Motifs *m) {
   check(strcmp(string_of(motive, "degrees"), "1:e 4:e 5:e 4:e 1:e 4:e 5:e 1':e") == 0, "the request is built from the updated copy");
   cJSON_Delete(request);
   answer = get_item(theme, &status);
-  const cJSON *slots_json = member(theme_of(answer), "slots");
+  const cJSON *motives = member(member(theme_of(answer), "request"), "motives");
   const cJSON *uses = member(member(answer, "body"), "uses");
-  check(number_of(cJSON_GetArrayItem(slots_json, 0), "version") == 2 && number_of(cJSON_GetArrayItem(uses, 0), "version") == 2,
+  check(number_of(member(cJSON_GetArrayItem(motives, 0), "$item"), "version") == 2 && number_of(cJSON_GetArrayItem(uses, 0), "version") == 2,
         "the slot and the use name version 2 of A");
   const cJSON *versions = member(member(answer, "item"), "versions");
   check(strncmp(string_of(cJSON_GetArrayItem(versions, 2), "note"), "updated A to v2", 15) == 0,
@@ -1198,7 +1202,7 @@ static void test_materials(const Motifs *m) {
   for (int version = 1; version <= 2; version++) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", old_theme, version);
     answer = exchange("GET", path, NULL, &status);
-    const cJSON *form = member(theme_of(answer), "form");
+    const cJSON *form = member(theme_of(answer), "request");
     check(status == 200 && strcmp(string_of(form, "material"), "omt.material.natural-minor") == 0 && !member(form, "mode"),
           "a theme saved with a mode is read with the material and no mode");
     cJSON_Delete(answer);

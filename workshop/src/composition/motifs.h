@@ -96,9 +96,9 @@ WorkshopMotifAnalysis workshop_motif_analyze_body(cJSON *version_body, const cJS
  * "C minor" is read as before). Bodies without a motif pass. */
 bool workshop_motif_tonic_ok(const cJSON *version_body);
 
-/* True when a new version of a body that holds a motif or a theme has a version note (every such version says what changed); other
- * bodies need none. */
-bool workshop_motif_version_note_ok(const cJSON *version_body, const char *note);
+/* True when a new version of an item of type "motif" or "theme" has a version note (every such version says what changed); a piece
+ * needs none. */
+bool workshop_motif_version_note_ok(const char *type, const char *note);
 
 /* The note of an item's first version: note when it has text, "Created" for a motif or a theme, else NULL. */
 const char *workshop_motif_first_note(const char *type, const char *note);

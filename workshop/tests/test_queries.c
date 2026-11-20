@@ -3,6 +3,7 @@
  * directory. */
 
 #include "api_harness.h"
+#include "theme_body.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -87,10 +88,7 @@ static bool setup(void) {
     snprintf(g_motif, sizeof(g_motif), "%s", str(member(reply.json, "item"), "id"));
     workshop_reply_destroy(&reply);
     char body[1500];
-    snprintf(body, sizeof(body),
-             "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\",\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\","
-             "\"first_cadence\":null},\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1},{\"slot\":\"cadential\",\"item_id\":\"%s\",\"version\":1}]}}",
-             g_motif, g_motif);
+    theme_body_text(body, sizeof(body), g_motif, g_motif, -1);
     snprintf(params, sizeof(params), "{\"type\":\"theme\",\"name\":\"Theme\",\"project_id\":\"%s\",\"body\":%s}", g_project, body);
     ok = ok && command("item.create", NULL, params, -1, &reply, &error) == URSATZ_OK;
     snprintf(g_theme, sizeof(g_theme), "%s", str(member(reply.json, "item"), "id"));

@@ -12,7 +12,7 @@ static UrsatzStatus fill_uses_locked(const char *self_id, const cJSON *body, cJS
     if (!filled) {
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    workshop_material_body_migrate(filled);
+    workshop_material_body_migrate(filled); /* a motif written with its old key text keeps the material that replaced it */
     UrsatzStatus result = URSATZ_OK;
     cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(filled, "uses")) {
@@ -57,53 +57,38 @@ static UrsatzStatus fill_uses_locked(const char *self_id, const cJSON *body, cJS
 typedef enum { REF_MELODIC_MOTIF, REF_ACCOMPANIMENT_MOTIF, REF_THEME } ReferenceKind;
 
 /*
- * The references a body makes to versions of other items: a theme's slots in order, its ideas, then its accompaniment when its
- * pattern is "motive"; a piece's motive, then the motif and theme fills of its sections in order. Placeholders make
- * none. refs receives up to BODY_REFERENCES_MAX pointers into body, kinds the kind of each; the count is returned.
+ * The references a body makes to versions of other items (R-650): the `$item` references of its request in order, a theme's
+ * motives, then its accompaniment motive; a piece's motive, then the motive and the theme plan of each section's fill. Placeholders
+ * make none. refs receives up to BODY_REFERENCES_MAX pointers to the {item_id, version} objects inside body, kinds the kind of each;
+ * the count is returned.
  */
+static void add_reference(const cJSON *wrapper, ReferenceKind kind, const cJSON *refs[BODY_REFERENCES_MAX],
+                          ReferenceKind kinds[BODY_REFERENCES_MAX], size_t *count) {
+    const cJSON *inner = cJSON_IsObject(wrapper) ? cJSON_GetObjectItemCaseSensitive(wrapper, "$item") : NULL;
+    if (cJSON_IsObject(inner) && *count < BODY_REFERENCES_MAX) {
+        kinds[*count] = kind;
+        refs[(*count)++] = inner;
+    }
+}
+
 static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENCES_MAX], ReferenceKind kinds[BODY_REFERENCES_MAX]) {
     size_t count = 0;
-    const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
-    if (cJSON_IsObject(theme) && !store_theme_is_placeholder(theme)) {
-        const cJSON *slot = NULL;
-        int slot_cap = cJSON_GetArraySize(workshop_composer_vocabulary_list("theme_slots"));
-        cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-            if (count < (size_t)slot_cap) {
-                kinds[count] = REF_MELODIC_MOTIF;
-                refs[count++] = slot;
-            }
-        }
-        const cJSON *idea = NULL;
-        cJSON_ArrayForEach(idea, cJSON_GetObjectItemCaseSensitive(theme, "ideas")) {
-            if (count < BODY_REFERENCES_MAX) {
-                kinds[count] = REF_MELODIC_MOTIF;
-                refs[count++] = idea;
-            }
-        }
-        const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
-        const cJSON *pattern = cJSON_GetObjectItemCaseSensitive(accompaniment, "pattern");
-        if (cJSON_IsObject(accompaniment) && cJSON_IsString(pattern) && strcmp(pattern->valuestring, "motive") == 0) {
-            kinds[count] = REF_ACCOMPANIMENT_MOTIF;
-            refs[count++] = accompaniment;
-        }
+    if (store_request_is_placeholder(body)) {
+        return 0;
     }
-    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
-    if (cJSON_IsObject(piece) && !store_piece_is_placeholder(piece)) {
-        const cJSON *motive = cJSON_GetObjectItemCaseSensitive(piece, "motive");
-        if (cJSON_IsObject(motive)) {
-            kinds[count] = REF_MELODIC_MOTIF;
-            refs[count++] = motive;
-        }
-        const cJSON *section = NULL;
-        cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
-            const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
-            const char *kind = common_json_string(fill, "kind");
-            bool theme_fill = strcmp(kind, "theme") == 0;
-            if (count < BODY_REFERENCES_MAX && (theme_fill || strcmp(kind, "motif") == 0)) {
-                kinds[count] = theme_fill ? REF_THEME : REF_MELODIC_MOTIF;
-                refs[count++] = fill;
-            }
-        }
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    const cJSON *motive = NULL;
+    cJSON_ArrayForEach(motive, cJSON_GetObjectItemCaseSensitive(request, "motives")) {
+        add_reference(motive, REF_MELODIC_MOTIF, refs, kinds, &count);
+    }
+    add_reference(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(request, "accompaniment"), "motive"), REF_ACCOMPANIMENT_MOTIF,
+                  refs, kinds, &count);
+    add_reference(cJSON_GetObjectItemCaseSensitive(request, "motive"), REF_MELODIC_MOTIF, refs, kinds, &count);
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(request, "sections")) {
+        const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+        add_reference(cJSON_GetObjectItemCaseSensitive(fill, "motive"), REF_MELODIC_MOTIF, refs, kinds, &count);
+        add_reference(cJSON_GetObjectItemCaseSensitive(fill, "plan"), REF_THEME, refs, kinds, &count);
     }
     return count;
 }
@@ -126,7 +111,7 @@ static UrsatzStatus check_reference_locked(const cJSON *reference, ReferenceKind
     }
     if (result == URSATZ_OK && theme) {
         char plan[PATH_BYTES];
-        const cJSON *composed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version, "theme"), "result");
+        const cJSON *composed = cJSON_GetObjectItemCaseSensitive(version, "result");
         if (!cJSON_IsObject(composed) ||
             !workshop_layout_version_file(common_json_string(source, "project_id"), source_id, number, "plan.json", plan, sizeof(plan)) ||
             !common_path_exists(plan)) {

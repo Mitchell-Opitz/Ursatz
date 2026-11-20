@@ -173,20 +173,6 @@ static bool reference_ok(const cJSON *reference) {
            is_whole_number(cJSON_GetObjectItemCaseSensitive(reference, "version"), 1);
 }
 
-/* A list of references (slots, ideas): at most LIST_MAX, each an object with item_id and version. */
-static bool references_ok(const cJSON *list) {
-    if (!cJSON_IsArray(list) || cJSON_GetArraySize(list) > LIST_MAX) {
-        return false;
-    }
-    const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, list) {
-        if (!reference_ok(entry) || !all_text_within(entry, TEXT_WORD_MAX)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 static bool theme_id_list_ok(const cJSON *brief, const char *name, size_t max) {
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(brief, name);
     if (!list) {
@@ -231,46 +217,10 @@ static bool theme_brief_ok(const cJSON *brief) {
     return entries > 0;
 }
 
-/* The members a placeholder theme (form null or a string, slots of anything) does not have. */
-static const char *const kThemeNewMembers[] = {"ideas", "chords", "accompaniment", "brief", "style_weight",
-                                               "without", "tempo", "check",         "seed",  "result", NULL};
-/* The members a placeholder piece (structure null, a string, an array or an object without sections) does not have. */
-static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment", "brief", "style_weight", "without",
-                                               "tempo",  "check", "seed",          "result", NULL};
-
-/* True when the theme is a placeholder: form null, absent or a string, no new member, and no slot written as an object with a slot name. */
-bool store_theme_is_placeholder(const cJSON *theme) {
-    const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
-    if (cJSON_IsObject(form)) {
-        return false;
-    }
-    for (const char *const *name = kThemeNewMembers; *name; name++) {
-        if (cJSON_GetObjectItemCaseSensitive(theme, *name)) {
-            return false;
-        }
-    }
-    const cJSON *slot = NULL;
-    cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-        if (cJSON_IsObject(slot) && cJSON_GetObjectItemCaseSensitive(slot, "slot")) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/* True when the piece is a placeholder: no new member and a structure that is not an object with a list of sections. */
-bool store_piece_is_placeholder(const cJSON *piece) {
-    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (cJSON_IsObject(structure) && (cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections")) ||
-                                      cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "form")))) {
-        return false;
-    }
-    for (const char *const *name = kPieceNewMembers; *name; name++) {
-        if (cJSON_GetObjectItemCaseSensitive(piece, *name)) {
-            return false;
-        }
-    }
-    return true;
+/* True when the body's request is a placeholder: no request, or one with no member (a new theme or piece). */
+bool store_request_is_placeholder(const cJSON *body) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    return !cJSON_IsObject(request) || request->child == NULL;
 }
 
 /* An id like s0, s12 or end. */
@@ -322,84 +272,57 @@ static UrsatzStatus validate_motif(const cJSON *motif, UrsatzError *error) {
                : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error);
 }
 
-/* The members the theme and the piece share: the references, the brief the GUI keeps and the sizes of the rest; what the Composer reads is its own. */
-static UrsatzStatus validate_request_members(const cJSON *object, const char *what, UrsatzError *error) {
-    static const char *const kReferences[] = {"slots", "ideas", NULL};
-    for (const char *const *name = kReferences; *name; name++) {
-        const cJSON *list = cJSON_GetObjectItemCaseSensitive(object, *name);
-        if (list && !cJSON_IsNull(list) && (strcmp(*name, "slots") == 0 || strcmp(*name, "ideas") == 0) && !references_ok(list)) {
-            char message[96];
-            snprintf(message, sizeof(message), "each %s %s needs item_id and version", what, *name);
-            return store_invalid_body(error, message);
+/* Whether every reference inside a stored request is well formed (R-650): {"$item": {item_id, version[, file]}} or
+   {"$pool": {item_id, pool}}. What the request means is the Composer's. */
+static bool request_references_ok(const cJSON *node, int depth) {
+    if (depth > 16) {
+        return false;
+    }
+    if (cJSON_IsObject(node)) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(node, "$item");
+        const cJSON *pool = cJSON_GetObjectItemCaseSensitive(node, "$pool");
+        if (item) {
+            const cJSON *file = cJSON_GetObjectItemCaseSensitive(item, "file");
+            return reference_ok(item) && (!file || cJSON_IsString(file));
+        }
+        if (pool) {
+            return cJSON_IsObject(pool) && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(pool, "item_id")) &&
+                   (!cJSON_GetObjectItemCaseSensitive(pool, "pool") || cJSON_IsString(cJSON_GetObjectItemCaseSensitive(pool, "pool")));
         }
     }
-    const cJSON *motive = cJSON_GetObjectItemCaseSensitive(object, "motive");
-    if (motive && !cJSON_IsNull(motive) && !reference_ok(motive)) {
-        return store_invalid_body(error, "a piece motive needs item_id and version");
+    const cJSON *child = NULL;
+    cJSON_ArrayForEach(child, node) {
+        if ((cJSON_IsObject(child) || cJSON_IsArray(child)) && !request_references_ok(child, depth + 1)) {
+            return false;
+        }
     }
-    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(object, "accompaniment");
-    if (accompaniment && !cJSON_IsNull(accompaniment) &&
-        (!cJSON_IsObject(accompaniment) || !all_text_within(accompaniment, TEXT_WORD_MAX) ||
-         (strcmp(common_json_string(accompaniment, "pattern") ? common_json_string(accompaniment, "pattern") : "", "motive") == 0 &&
-          !reference_ok(accompaniment)))) {
-        return store_invalid_body(error, "an accompaniment needs a pattern and, for a motive, item_id and version");
+    return true;
+}
+
+/* A theme or piece body: the request the Composer reads (any object: a draft may hold any word, R-276), the brief the GUI keeps and
+   what the last compose left; the store checks the references and the sizes. */
+static UrsatzStatus validate_request_body(const cJSON *body, const char *what, UrsatzError *error) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    if (!cJSON_IsObject(request)) {
+        char message[96];
+        snprintf(message, sizeof(message), "a %s body needs a request object", what);
+        return store_invalid_body(error, message);
     }
-    if (!store_is_absent_or_null(object, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(object, "brief"))) {
+    if (!request_references_ok(request, 0)) {
+        return store_invalid_body(error, "a reference of the request needs item_id and version (a pool, item_id)");
+    }
+    if (!store_is_absent_or_null(body, "brief") && !theme_brief_ok(cJSON_GetObjectItemCaseSensitive(body, "brief"))) {
         char message[96];
         snprintf(message, sizeof(message), "%s brief needs scopes, piece_ids or style_ids within the limits", what);
         return store_invalid_body(error, message);
     }
-    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(object, "chords");
-    if (chords && !cJSON_IsNull(chords) && (!cJSON_IsArray(chords) || cJSON_GetArraySize(chords) > LIST_MAX)) {
-        return store_invalid_body(error, "chords must be a list");
-    }
-    const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(object, "result");
+    const cJSON *result_member = cJSON_GetObjectItemCaseSensitive(body, "result");
     if (result_member && !cJSON_IsNull(result_member) && !cJSON_IsObject(result_member)) {
         char message[96];
         snprintf(message, sizeof(message), "%s result must be null or an object", what);
         return store_invalid_body(error, message);
     }
     return URSATZ_OK;
-}
-
-static UrsatzStatus validate_theme(const cJSON *theme, UrsatzError *error) {
-    const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
-    const cJSON *slots = cJSON_GetObjectItemCaseSensitive(theme, "slots");
-    if (!cJSON_IsObject(theme) || (form && !cJSON_IsNull(form) && !cJSON_IsString(form) && !cJSON_IsObject(form)) || !cJSON_IsArray(slots)) {
-        return store_invalid_body(error, "a theme body needs a theme object with form and slots");
-    }
-    if (store_theme_is_placeholder(theme)) {
-        return URSATZ_OK;
-    }
-    if (cJSON_IsObject(form) && !all_text_within(form, TEXT_WORD_MAX)) {
-        return store_invalid_body(error, "the words of a theme form must be text of at most 80 characters");
-    }
-    return validate_request_members(theme, "theme", error);
-}
-
-static UrsatzStatus validate_piece(const cJSON *piece, UrsatzError *error) {
-    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (!cJSON_IsObject(piece) ||
-        (structure && !cJSON_IsNull(structure) && !cJSON_IsString(structure) && !cJSON_IsObject(structure) && !cJSON_IsArray(structure))) {
-        return store_invalid_body(error, "a piece body needs a piece object with a structure");
-    }
-    if (store_piece_is_placeholder(piece)) {
-        return URSATZ_OK;
-    }
-    const cJSON *sections = cJSON_IsObject(structure) ? cJSON_GetObjectItemCaseSensitive(structure, "sections") : NULL;
-    if (sections && !cJSON_IsNull(sections) && (!cJSON_IsArray(sections) || cJSON_GetArraySize(sections) > MEMBERS_MAX)) {
-        return store_invalid_body(error, "piece sections must be a list");
-    }
-    /* A fill that names a motif or a theme names it by reference: the store resolves the uses from them. */
-    const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_IsArray(sections) ? sections : NULL) {
-        const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
-        const char *kind = cJSON_IsObject(fill) ? common_json_string(fill, "kind") : NULL;
-        if (kind && (strcmp(kind, "motif") == 0 || strcmp(kind, "theme") == 0) && !reference_ok(fill)) {
-            return store_invalid_body(error, "a motif or theme fill needs item_id and version");
-        }
-    }
-    return validate_request_members(piece, "piece", error);
 }
 
 UrsatzStatus workshop_material_body_validate(const char *type, const cJSON *body, UrsatzError *error) {
@@ -414,15 +337,14 @@ UrsatzStatus workshop_material_body_validate(const char *type, const cJSON *body
     if (result != URSATZ_OK) {
         return result;
     }
-    static const char *const members[] = {"motif", "theme", "piece"};
+    /* a motif body holds `motif`; a theme or piece body holds `request` (and neither holds the members of a format 1 body) */
+    bool motif = strcmp(type, "motif") == 0;
+    static const char *const members[] = {"motif", "theme", "piece", "request"};
     for (size_t i = 0; i < sizeof(members) / sizeof(members[0]); i++) {
-        if (strcmp(members[i], type) != 0 && cJSON_GetObjectItemCaseSensitive(body, members[i])) {
+        bool own = motif ? strcmp(members[i], "motif") == 0 : strcmp(members[i], "request") == 0;
+        if (!own && cJSON_GetObjectItemCaseSensitive(body, members[i])) {
             return store_invalid_body(error, "a body must not carry another type's member");
         }
     }
-    const cJSON *own = cJSON_GetObjectItemCaseSensitive(body, type);
-    if (strcmp(type, "motif") == 0) {
-        return validate_motif(own, error);
-    }
-    return strcmp(type, "theme") == 0 ? validate_theme(own, error) : validate_piece(own, error);
+    return motif ? validate_motif(cJSON_GetObjectItemCaseSensitive(body, "motif"), error) : validate_request_body(body, type, error);
 }

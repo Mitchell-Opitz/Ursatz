@@ -445,18 +445,42 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
   return NULL;
 }
 
+/* The slots of a theme request as {slot, item_id, version} entries: each slot names the id of a motive, and the motive the motif version
+   it was made from. The list is kept with the build. */
+static const cJSON *theme_slots(Build *build, const cJSON *request) {
+  cJSON *list = keep_document(build, cJSON_CreateArray());
+  const cJSON *slot = NULL;
+  cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(request, "slots")) {
+    if (!list || !cJSON_IsString(slot) || !slot->string) {
+      continue;
+    }
+    const cJSON *motive = NULL;
+    cJSON_ArrayForEach(motive, cJSON_GetObjectItemCaseSensitive(request, "motives")) {
+      const cJSON *reference = cJSON_GetObjectItemCaseSensitive(motive, "$item");
+      cJSON *entry = strcmp(common_json_string(motive, "id"), slot->valuestring) == 0 && cJSON_IsObject(reference) ? cJSON_CreateObject() : NULL;
+      if (entry && cJSON_AddStringToObject(entry, "slot", slot->string) &&
+          cJSON_AddStringToObject(entry, "item_id", common_json_string(reference, "item_id")) &&
+          cJSON_AddNumberToObject(entry, "version", cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(reference, "version"))
+                                                       ? cJSON_GetObjectItemCaseSensitive(reference, "version")->valuedouble : 0)) {
+        cJSON_AddItemToArray(list, entry);
+      } else {
+        cJSON_Delete(entry);
+      }
+    }
+  }
+  return list;
+}
+
 static void build_theme(Build *build, const char *id, int version, const cJSON *body) {
-  const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
+  const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "request");
   if (!cJSON_IsObject(theme)) {
     fail(build, URSATZ_ERR_INTERNAL, "the item has no theme");
     return;
   }
-  const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
-  const cJSON *member = NULL;
-  if (cJSON_IsObject(form)) {
-    cJSON_ArrayForEach(member, form) {
-      add_fact(build, &build->material_facts, member->string, scalar_text(build, member));
-    }
+  /* the way the theme is made, as the request holds it */
+  static const char *const form_members[] = {"into", "hybrid", "material", "mode", "meter", "bars", "cadence", "first_cadence", "development"};
+  for (size_t i = 0; i < sizeof(form_members) / sizeof(form_members[0]); i++) {
+    add_fact(build, &build->material_facts, form_members[i], scalar_text(build, cJSON_GetObjectItemCaseSensitive(theme, form_members[i])));
   }
   const cJSON *chord = NULL;
   cJSON_ArrayForEach(chord, cJSON_GetObjectItemCaseSensitive(theme, "chords")) {
@@ -467,7 +491,7 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
     }
   }
   /* The slots, each with the motif's name: one fact now, one section after the theme's. */
-  const cJSON *slots = cJSON_GetObjectItemCaseSensitive(theme, "slots");
+  const cJSON *slots = theme_slots(build, theme);
   const cJSON *slot = NULL;
   cJSON_ArrayForEach(slot, slots) {
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(slot, "slot");
@@ -521,12 +545,12 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
 }
 
 static void build_piece(Build *build, const char *id, int version, const cJSON *body) {
-  const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
-  if (!cJSON_IsObject(piece)) {
+  const cJSON *piece = body; /* the result is a member of the body, the structure is its request */
+  const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "request");
+  if (!cJSON_IsObject(structure)) {
     fail(build, URSATZ_ERR_INTERNAL, "the item has no piece");
     return;
   }
-  const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
   if (cJSON_IsObject(structure)) {
     const char *form = common_json_string(structure, "form");
     if (form && strcmp(form, "game-loop") != 0) {

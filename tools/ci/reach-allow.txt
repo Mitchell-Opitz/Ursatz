@@ -43,15 +43,3 @@ workshop/src/analysis/analysis.c workshop_analysis_delete_piece  # test hook: te
 workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_queue limits a kind of its own (links and style start limited)
 workshop/src/coordinator/workshop.c workshop_data_dir  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
 workshop/src/coordinator/workshop.c workshop_job_workers  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
-workshop/src/composition/request_resolve.c workshop_request_resolve  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c motif_of  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c out_of_memory  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c reference_of  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c reference_version  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c replace_member  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c resolve_fill  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c resolve_piece  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c resolve_plan  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c resolve_theme  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c theme_motive  # until P63 B15 commit 4: the compose reads the stored request through the resolver
-workshop/src/composition/request_resolve.c used_motif  # until P63 B15 commit 4: the compose reads the stored request through the resolver

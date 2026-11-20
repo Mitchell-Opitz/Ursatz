@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-data-folder.v2.schema.json",
+  "title": "Data folder marker, format version 2",
+  "description": "data-folder.json: the data folder holds layout 2 (R-642, R-650): theme and piece bodies are stored Composer requests. Written last by a migration.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-data-folder"
+    },
+    "format_version": {
+      "const": 2
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "migrated_from": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

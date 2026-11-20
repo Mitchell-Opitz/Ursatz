@@ -1,11 +1,13 @@
-#include "body_requests.h"
 
+
+#include <ursatz_workshop/workshop_api.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <common/json.h>
 
 #include "composition/composer_client.h"
+#include "items/store.h"
 
 #define MOTIVE_ID_BYTES 16
 
@@ -313,6 +315,7 @@ bool workshop_body_requests_migrate(cJSON *body) {
     if (!member) {
         return true;
     }
+    workshop_material_body_migrate(body); /* the old mode words of the member become materials before it is translated */
     const cJSON *old = cJSON_GetObjectItemCaseSensitive(body, member);
     cJSON *request = strcmp(member, "theme") == 0 ? theme_request(old) : piece_request(old);
     if (!request) {

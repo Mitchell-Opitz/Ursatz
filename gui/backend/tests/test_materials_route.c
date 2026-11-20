@@ -53,6 +53,16 @@ static bool ok_true(const cJSON *json) {
 #include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"
+#include "support/body_v2.h"
+
+/* The bodies of themes and pieces the tests write are format 1 (a theme or piece member); the routes take format 2 (request_with_request_body). */
+static cJSON *test_http_json_body_v2(const char *port, const char *method, const char *path, const char *json, int *status) {
+  char *converted = request_with_request_body(json);
+  cJSON *answer = test_http_json(port, method, path, converted, status);
+  free(converted);
+  return answer;
+}
+#define test_http_json test_http_json_body_v2
 
 #define PORT "18770"
 #include "playback_check.h"
