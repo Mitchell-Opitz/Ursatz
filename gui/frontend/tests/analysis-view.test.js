@@ -16,7 +16,11 @@
  * `node frontend/tests/analysis-view.test.js`. */
 import fs from "fs";
 import * as tabs from "../public/models/analysis-tabs.js";
+import { buildPieceTable } from "../public/views/library-parts.js";
+import { renderAnalysisTool } from "../public/views/analysis.js";
+import { setShell } from "../public/views/shell-context.js";
 import { check, finish } from "./support/check.js";
+import { installDom } from "./support/dom.js";
 import { analyzerSnapshot, indexSource, pageSource } from "./support/fixtures.js";
 
 const APP_MODULES = ["views/shell.js", "views/library.js", "views/analysis.js", "views/collections.js", "views/styles.js"];
@@ -185,39 +189,27 @@ check(appSource.includes("content--workspace") && appSource.includes("leaveWorks
 const indexHtml = indexSource();
 check(/<script type="module" src="main\.js"><\/script>/.test(indexHtml) && indexHtml.indexOf("opensheetmusicdisplay.min.js") < indexHtml.indexOf("main.js"), "index.html loads the OSMD script, then main.js as a module");
 
-/* Mirrors the Library's buildPieceRow onFilenameClick wiring -- Library rows
- * call showAnalysisView(piece.id) on filename click; Collections rows
- * (also built via buildPieceRow) pass no onFilenameClick and stay
- * unaffected. */
-function filenameCellIsClickable(onFilenameClick) {
-  return Boolean(onFilenameClick);
-}
+/* The Library's piece rows open the Analysis view on a filename click; a row built without onOpen (a picker) has no clickable filename. */
+installDom();
+const piece = { id: "piece-1788837459-41", filename: "sonata.mid", tags: [] };
+const opened = [];
+const withOpen = document.createElement("div");
+buildPieceTable(withOpen, { pieces: [piece], columns: ["composer", "source", "tags"], onOpen: (row) => opened.push(row.id) });
+const filenameCell = withOpen.querySelector("tbody tr td span");
+check(filenameCell !== null && filenameCell.classList.contains("clickable"), "Library's filename cell is clickable (navigates to the Analysis view)");
+filenameCell.click();
+check(opened.length === 1 && opened[0] === piece.id, "clicking the filename opens that piece");
+const withoutOpen = document.createElement("div");
+buildPieceTable(withoutOpen, { pieces: [piece], columns: ["composer", "source", "tags"] });
+check(!withoutOpen.querySelector("tbody tr td span").classList.contains("clickable"), "a piece row built without onOpen has no clickable filename cell");
 
-check(
-  filenameCellIsClickable((piece) => piece.id) === true,
-  "Library's filename cell is clickable (navigates to the Analysis view)",
-);
-check(
-  filenameCellIsClickable(undefined) === false,
-  "a piece row built without onFilenameClick (e.g. Collections) has no clickable filename cell",
-);
-
-/* Mirrors the Analysis tool's renderAnalysisTool: the top-level Analysis nav tab
- * reopens lastAnalysisPieceId when set, and otherwise shows an empty
- * state rather than guessing a piece. */
-function resolveAnalysisToolTarget(lastAnalysisPieceId) {
-  return lastAnalysisPieceId ? { kind: "piece", id: lastAnalysisPieceId } : { kind: "empty" };
-}
-
-check(
-  resolveAnalysisToolTarget("piece-1788837459-41").kind === "piece" &&
-    resolveAnalysisToolTarget("piece-1788837459-41").id === "piece-1788837459-41",
-  "the Analysis nav tab reopens the last piece viewed when one is set",
-);
-check(
-  resolveAnalysisToolTarget(null).kind === "empty",
-  "the Analysis nav tab shows an empty state, not a guessed piece, before any piece has been opened",
-);
+/* The Analysis tab before any piece has been opened shows an empty state, not a guessed piece; its link goes back to the Library. */
+const selected = [];
+setShell({ contentEl: () => document.body, selectTool: (id) => selected.push(id) });
+renderAnalysisTool();
+check(document.body.textContent.includes("No piece selected yet"), "the Analysis nav tab shows an empty state before any piece has been opened");
+document.body.querySelector("a.back-link").click();
+check(selected.length === 1 && selected[0] === "library", "the empty state links back to the Library");
 
 /* The document per tab: a cache that starts from the summary, loads only the sections a tab lacks, and builds the
  * same tab state as the whole document does. */

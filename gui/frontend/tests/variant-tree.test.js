@@ -9,6 +9,7 @@ import Vocabulary from "../public/core/vocabulary.js";
 import { generated, readJson } from "./support/fixtures.js";
 import V from "../public/models/variant-tree.js";
 import { check, same, finish } from "./support/check.js";
+import { byText, installDom } from "./support/dom.js";
 import fs from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -240,66 +241,11 @@ const queued = Array.from({ length: 10 }, (_, n) =>
 );
 check(V.RENDER_LIMIT === 4 && queue.active() === 4 && queue.waiting() === 6, "ten tasks: four run, six wait");
 
-/* A minimal DOM, enough for VariantTreeView to build and click. */
-class FakeEl {
-  constructor(tag) {
-    this.tag = tag;
-    this.children = [];
-    this.listeners = {};
-    this.attributes = {};
-    this.style = {};
-    this.className = "";
-    this.textContent = "";
-    const owner = this;
-    this.classList = {
-      toggle(name, on) {
-        const names = new Set(owner.className.split(" ").filter(Boolean));
-        if (on) {
-          names.add(name);
-        } else {
-          names.delete(name);
-        }
-        owner.className = [...names].join(" ");
-      },
-      add(name) {
-        this.toggle(name, true);
-      },
-      remove(name) {
-        this.toggle(name, false);
-      },
-    };
-  }
-  set innerHTML(value) {
-    this.children = [];
-  }
-  append(...nodes) {
-    this.children.push(...nodes);
-  }
-  appendChild(node) {
-    this.children.push(node);
-    return node;
-  }
-  setAttribute(name, value) {
-    this.attributes[name] = value;
-  }
-  addEventListener(name, fn) {
-    (this.listeners[name] = this.listeners[name] || []).push(fn);
-  }
-  click() {
-    for (const fn of this.listeners.click || []) {
-      fn({});
-    }
-  }
-  all() {
-    return [this, ...this.children.flatMap((child) => (child instanceof FakeEl ? child.all() : []))];
-  }
-}
-const named = (root, tag, text) => root.all().filter((node) => node.tag === tag && node.textContent === text);
+const named = byText;
 
 const mounts = [];
 const destroyed = [];
-globalThis.document = { createElement: (tag) => new FakeEl(tag) };
-globalThis.window = { localStorage: { getItem: () => null, setItem: () => {} } };
+installDom();
 const View = (await import("../public/views/variant-tree-view.js")).default;
 const fakeWorkspace = {
   mount(host, options) {
@@ -347,7 +293,7 @@ const ctx = {
   },
 };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-const parent = new FakeEl("div");
+const parent = document.createElement("div");
 
 
 const withHarmony = (text, tones, warnings) => ({

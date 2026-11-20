@@ -4,6 +4,7 @@
  * Plain Node script: `node frontend/tests/tags-panel.test.js`. */
 import P from "../public/views/tags-panel.js";
 import { check, same, finish } from "./support/check.js";
+import { installDom } from "./support/dom.js";
 
 const groups = {
   composers: [
@@ -75,5 +76,29 @@ check(P.isActiveFilter({ untagged: true }, { ...blank, untagged: true }), "Untag
 check(P.isActiveFilter({ tag: "etude" }, { ...blank, tag: "etude", search: "x", sort: "title" }), "search and sort do not affect the active row");
 check(!P.isActiveFilter({ tag: "etude" }, null), "a missing Library filter matches nothing");
 
+/* The mounted panel (the grouped panel it is built from): groups, rows, the Show all button, the picked filter and the active row. */
+const { document } = installDom();
+const section = document.createElement("section");
+document.body.appendChild(section);
+const manyTags = Array.from({ length: 14 }, (_, i) => ({ value: `tag-${String(i).padStart(2, "0")}`, count: 20 - i }));
+const picked = [];
+const panel = P.mount(section, { fetchGroups: async () => ({ ...groups, tags: manyTags }), onSelect: (filter) => picked.push(filter) });
+await panel.refresh();
+const summaries = section.querySelectorAll("details summary").map((el) => el.textContent);
+check(same(summaries, ["Composer", "Source", "Tags"]), "the panel has a group for composer, source and tags");
+check(section.querySelectorAll("details")[2].querySelectorAll("li").length === 13, "a group shows 12 values and Untagged, the rest behind Show all");
+const showAll = section.querySelector("button.tags-panel-more");
+check(showAll !== null && showAll.textContent === "Show all (14)", "Show all names the number of values");
+showAll.click();
+check(section.querySelectorAll("details")[2].querySelectorAll("li").length === 15 && section.querySelector("button.tags-panel-more") === null, "Show all lists every value and goes away");
+section.querySelectorAll("details")[0].querySelectorAll("li button.tags-panel-row")[0].click();
+check(same(picked, [{ composer: "John Field" }]), "a row reports its filter");
+panel.setActive({ composer: "John Field" });
+check(section.querySelectorAll("button.tags-panel-row")[0].getAttribute("aria-current") === "true", "the row of the Library's filter is marked");
+panel.setActive(null);
+check(section.querySelectorAll("button.tags-panel-row")[0].getAttribute("aria-current") === null, "and unmarked when the filter is cleared");
+const failing = document.createElement("section");
+await P.mount(failing, { fetchGroups: async () => null }).refresh();
+check(failing.textContent === "Tags unavailable", "a panel whose groups cannot be read says so");
+
 finish();
-console.log("tags-panel checks passed");
