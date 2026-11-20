@@ -7,7 +7,7 @@ ursatz analyze <input> [--input-format <format>] [--meter <n/m>] [--value-scale 
 ursatz analyze <input> --view text [--measures <first>-<last>] [--title <text>] [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>]
 ```
 
-Without `--view`, the command writes one file next to the input, `<stem>.analysis.json`: the analysis document, the form, phrases, cadences, harmony, keys and motives the Analyzer hears. See [analysis-document.md](../../analyzer/docs/analysis-document.md) and the [schema](../../analyzer/schema/analysis-document.v13.schema.json). It runs the workshop's `analyze` tool in the command's own process.
+Without `--view`, the command writes one file next to the input, `<stem>.analysis.json`: the analysis document, the form, phrases, cadences, harmony, keys and motives the Analyzer hears. See [analysis-document.md](../../analyzer/docs/analysis-document.md) and the [schema](../../analyzer/schema/analysis-document.schema.json). It runs the workshop's `analyze` tool in the command's own process.
 
 With `--view text` it prints the measure-addressed text export of the piece to standard output and writes nothing: the notes of each measure and the claims of the analysis, in the text a person can paste into a conversation to say "measure 27 is flagged as X, I read it as Y". See [text-export.md](../../analyzer/docs/text-export.md).
 
