@@ -1,4 +1,4 @@
-/* Confirms the small decision points in the Library view (app.js): the
+/* Confirms the small decision points in the Library view (views/library.js): the
  * title column falls back to the bare id, the Edit editor rejects an empty
  * title before the PATCH, composer and source show a muted dash when empty,
  * and renderLibraryView(filter) merges a passed filter over the defaults.

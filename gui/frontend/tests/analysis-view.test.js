@@ -2,7 +2,7 @@
  * directly) against a real analysis document: the tab table, a row for every
  * item of a tab's sections, disabled empty tabs, row labels and locations,
  * the header and provenance fields, and the mapping of a claim's note_ids to
- * xml:ids. Also checks that app.js no longer carries the claim actions that
+ * xml:ids. Also checks that the page no longer carries the claim actions that
  * have no backend, that the view is the score workspace (no Score tab), and
  * the Library/Analysis navigation decisions.
  *
@@ -18,6 +18,8 @@ import fs from "fs";
 import * as tabs from "../public/models/analysis-tabs.js";
 import { check, finish } from "./support/check.js";
 import { analyzerSnapshot, indexSource, pageSource } from "./support/fixtures.js";
+
+const APP_MODULES = ["views/shell.js", "views/library.js", "views/analysis.js", "views/collections.js", "views/styles.js"];
 
 
 const doc = JSON.parse(fs.readFileSync(analyzerSnapshot("mozart-545.analysis.json"), "utf8"));
@@ -161,8 +163,8 @@ check(
   "the provenance panel lists the document's metadata fields",
 );
 
-/* app.js carries no claim actions without a backend. */
-const appSource = pageSource("views/app.js");
+/* The page carries no claim actions without a backend. */
+const appSource = pageSource(...APP_MODULES);
 check(!/Accept|Dispute/.test(appSource), "the page has no Accept or Dispute buttons");
 check(!/ANALYZERS|harmony 2\.4\.1/.test(appSource), "the page has no static analyzer list");
 check(appSource.includes('accept=".mid,.midi,.musicxml,.xml,.mxl"'), "the upload picker accepts MusicXML files");
@@ -183,7 +185,7 @@ check(appSource.includes("content--workspace") && appSource.includes("leaveWorks
 const indexHtml = indexSource();
 check(/<script type="module" src="main\.js"><\/script>/.test(indexHtml) && indexHtml.indexOf("opensheetmusicdisplay.min.js") < indexHtml.indexOf("main.js"), "index.html loads the OSMD script, then main.js as a module");
 
-/* Mirrors app.js's buildPieceRow onFilenameClick wiring -- Library rows
+/* Mirrors the Library's buildPieceRow onFilenameClick wiring -- Library rows
  * call showAnalysisView(piece.id) on filename click; Collections rows
  * (also built via buildPieceRow) pass no onFilenameClick and stay
  * unaffected. */
@@ -200,7 +202,7 @@ check(
   "a piece row built without onFilenameClick (e.g. Collections) has no clickable filename cell",
 );
 
-/* Mirrors app.js's renderAnalysisTool: the top-level Analysis nav tab
+/* Mirrors the Analysis tool's renderAnalysisTool: the top-level Analysis nav tab
  * reopens lastAnalysisPieceId when set, and otherwise shows an empty
  * state rather than guessing a piece. */
 function resolveAnalysisToolTarget(lastAnalysisPieceId) {

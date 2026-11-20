@@ -6,7 +6,7 @@ import VariantTree from "../models/variant-tree.js";
 import Vocabulary from "../core/vocabulary.js";
 import { attachFormValidation, materialsElement, materialsState, sendMaterialsRequest } from "./materials-common.js";
 import { loadMotiveLinksChoices } from "./motive-links-view.js";
-import { shell } from "./shell-context.js";
+import { fetchJsonResult } from "../core/api.js";
 
 /* The Themes view's editor (P16, R-167): the form, slot motifs and
  * accompaniment of a theme, mounted in the theme detail of materials-view.js.
@@ -241,8 +241,8 @@ export function buildThemePoolSection(state, itemName, onPool, entries) {
 async function loadThemeBriefChoices() {
   const [choices, pieces, styles] = await Promise.all([
     loadMotiveLinksChoices(),
-    shell().send("/api/analyzer/pieces"),
-    shell().send("/api/styles"),
+    fetchJsonResult("/api/analyzer/pieces"),
+    fetchJsonResult("/api/styles"),
   ]);
   choices.pieces = pieces.ok && pieces.data && Array.isArray(pieces.data.pieces) ? pieces.data.pieces : [];
   choices.styles = styles.ok && styles.data && Array.isArray(styles.data.styles) ? styles.data.styles : [];

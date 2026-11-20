@@ -1,9 +1,9 @@
 import Vocabulary from "../core/vocabulary.js";
-import { shell } from "./shell-context.js";
 import ApiRequest from "../core/request.js";
 import MaterialsModel from "../models/materials-model.js";
 import BackendJobs from "../core/backend-jobs.js";
 import ExportControl from "./export-control.js";
+import { shell } from "./shell-context.js";
 
 /* What the materials views share (P12): their page state, the request that carries a base version, the job bar, the field validation, the export
  * control and the uses, used-by and versions lists. */

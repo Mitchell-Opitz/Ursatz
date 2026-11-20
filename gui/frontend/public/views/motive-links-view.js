@@ -5,6 +5,7 @@ import PieceMetadata from "../models/piece-metadata.js";
 import { materialsElement, sendMaterialsRequest } from "./materials-common.js";
 import { loadSubjectList, subjectsState } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
+import { fetchJsonResult } from "../core/api.js";
 
 /* The Motive links tool (R-154, R-156): pick a scope, run the link search over
  * its pieces, and follow the run. Pure parts are in motive-links-model.js;
@@ -43,8 +44,8 @@ function motiveLinksSelect(options, placeholder) {
 /* The pickers of the scope kinds, filled from the existing lists. */
 export async function loadMotiveLinksChoices() {
   const [collections, pieces, subjects, projects] = await Promise.all([
-    shell().send("/api/corpus"),
-    shell().send("/api/analyzer/pieces"),
+    fetchJsonResult("/api/corpus"),
+    fetchJsonResult("/api/analyzer/pieces"),
     loadSubjectList(),
     sendMaterialsRequest(MaterialsModel.buildProjectListRequest()),
   ]);
@@ -219,7 +220,7 @@ export async function renderMotiveLinksView() {
   }
 
   async function openRun(id) {
-    const answer = await shell().send(`/api/links/runs/${id}`);
+    const answer = await fetchJsonResult(`/api/links/runs/${id}`);
     if (!answer.ok || !answer.data || !answer.data.run) {
       progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not read the run";
       progressEl.classList.add("error");
@@ -234,7 +235,7 @@ export async function renderMotiveLinksView() {
   }
 
   async function deleteRun(id) {
-    const answer = await shell().send(`/api/links/runs/${id}`, { method: "DELETE" });
+    const answer = await fetchJsonResult(`/api/links/runs/${id}`, { method: "DELETE" });
     if (!answer.ok) {
       progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not delete the run";
       progressEl.classList.add("error");
@@ -244,7 +245,7 @@ export async function renderMotiveLinksView() {
   }
 
   async function loadRuns() {
-    const answer = await shell().send("/api/links/runs");
+    const answer = await fetchJsonResult("/api/links/runs");
     runsEl.innerHTML = "";
     const rows = MotiveLinksModel.runRows(answer.ok && answer.data ? answer.data.runs : [], names);
     if (rows.length === 0) {

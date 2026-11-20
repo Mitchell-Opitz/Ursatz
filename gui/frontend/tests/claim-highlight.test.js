@@ -11,6 +11,8 @@ import ScoreNotes from "../public/score/score-notes.js";
 import { check, finish } from "./support/check.js";
 import { pageSource } from "./support/fixtures.js";
 
+const APP_MODULES = ["views/shell.js", "views/library.js", "views/analysis.js", "views/collections.js", "views/styles.js"];
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* Minimal XML reader giving the element shape score-notes.js needs
@@ -117,9 +119,9 @@ const sameNoteOtherVoice = graphicalNote(0, 1, 1, 2, 0, 1, 0, 0, 5);
 ({ unmatched } = ScoreNotes.buildNoteIndex(entries, [sameNoteOtherVoice]));
 check(unmatched === 1, "the same pitch and onset in another voice is not the same note");
 
-/* The workspace selects claims itself: the old app.js highlight path (a
+/* The workspace selects claims itself: the old highlight path (a
  * pending claim colored through NoteheadColor and a re-render) is gone. */
-const appSource = pageSource("views/app.js");
+const appSource = pageSource(...APP_MODULES);
 check(
   !/pendingHighlightClaim|applyPendingHighlight|HIGHLIGHT_NOTEHEAD_COLOR|NoteheadColor|highlightPending/.test(appSource),
   "the page no longer colors a claim's notes through OSMD NoteheadColor",

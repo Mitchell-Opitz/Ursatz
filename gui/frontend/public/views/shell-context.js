@@ -6,8 +6,8 @@ export function setShell(context) {
   current = context;
 }
 
-/* {contentEl(), send(url, options), showAnalysis(id, options), openItem(type, id, analysisError), setActiveTool(id), activeToolId(), leaveWorkspace(),
- *  drawScore(url, containerEl, statusEl, zoom), fetchExportText(url), notifySubjectsChanged()} */
+/* {contentEl(), showAnalysis(id, options), openItem(type, id, analysisError), setActiveTool(id), activeToolId(), leaveWorkspace(),
+ *  drawScore(url, containerEl, statusEl, zoom), fetchExportText(url), notifySubjectsChanged(), setTagsActive(filter), refreshTags(), selectTool(id), showCollections()} */
 export function shell() {
   if (current === null) {
     throw new Error("the shell has not been set");

@@ -8,10 +8,10 @@ import Vocabulary from "../core/vocabulary.js";
 import MaterialsModel from "../models/materials-model.js";
 import MotifCompareView from "./motif-compare-view.js";
 import VariantTreeView from "./variant-tree-view.js";
+import ScoreWorkspace from "../score/score-workspace.js";
 import { buildMaterialExport, buildUsedByTable, buildUsesSection, buildVersionsList, materialsElement, materialsState, sendMaterialsRequest } from "./materials-common.js";
 import { buildSubjectsField } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
-import ScoreWorkspace from "../score/score-workspace.js";
 
 /* ctx: {id, item, data (the item answer), analysisError, statusEl, allItems, headerEl, rerender(reason)}.
  * Appends the tab bar and panes to content, inside a `motifs-section` wrapper (up to 1200px wide). */

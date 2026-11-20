@@ -1,3 +1,4 @@
+
 /* Sidebar Tags panel (issue 6): groups pieces by composer, source and tag
  * from the groups route and reports which group was picked. groupRows and
  * isActiveFilter are pure; mount renders into the page. */
