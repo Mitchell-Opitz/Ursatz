@@ -364,6 +364,20 @@ export function buildVersionsList(item, viewEl, statusEl, renderBody) {
       viewEl.appendChild(element("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
     });
     cell.appendChild(view);
+    if (!row.current) {
+      const restore = element("button", "", "Restore");
+      restore.type = "button";
+      restore.addEventListener("click", async () => {
+        const answer = await sendMaterialsRequest(MaterialsModel.buildRestoreRequest(item.id, row.number));
+        if (!answer.ok) {
+          statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not restore the version");
+          statusEl.classList.add("error");
+          return;
+        }
+        shell().openItem(item.type, item.id);
+      });
+      cell.appendChild(restore);
+    }
     tr.appendChild(cell);
     table.appendChild(tr);
   }

@@ -397,6 +397,11 @@ function composerAvailable(answer) {
   return Boolean(answer && answer.ok && answer.data && answer.data.available);
 }
 
+/* Makes the next version a copy of an older one; the answer is {version, restored_from}. */
+function buildRestoreRequest(id, version) {
+  return commandRequest("item.restore", { target: id, params: { version } });
+}
+
 /* Analyzes the current version of a motif again; the answer is the new version. */
 function buildReanalyzeRequest(id) {
   return commandRequest("item.reanalyze", { target: id });
@@ -895,6 +900,7 @@ const api = {
   bodyWithUse,
   buildAddVersionRequest,
   buildReanalyzeRequest,
+  buildRestoreRequest,
   MOTIF_TABS,
   motifBodyChanged,
   motifSaveDecision,

@@ -331,6 +331,7 @@ check(M.analysisRows({ analysis: null, analysis_error: "stored" }, "given").mess
 check(M.analysisRows({ analysis: null, analysis_error: null }).message === "Not analyzed", "no stored reason gives a bare status");
 check(M.analysisRows(heard).message === "Analyzed", "an analyzed motif reads Analyzed");
 check(isCommand(M.buildReanalyzeRequest("mot-1"), "item.reanalyze", "mot-1"), "re-analyze is the item.reanalyze command");
+check(isCommand(M.buildRestoreRequest("mot-1", 2), "item.restore", "mot-1") && params(M.buildRestoreRequest("mot-1", 2)).version === 2, "restore is the item.restore command with the version");
 check(M.composerAvailable({ ok: true, data: { available: true } }) && !M.composerAvailable({ ok: true, data: { available: false } }) && !M.composerAvailable({ ok: false }), "the Composer counts as available only when the status says so");
 
 /* The motif tabs, the single Save and the Used by table (P18 B3). */
