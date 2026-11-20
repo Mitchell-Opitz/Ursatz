@@ -43,3 +43,6 @@ workshop/src/analysis/analysis.c workshop_analysis_delete_piece  # test hook: te
 workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_queue limits a kind of its own (links and style start limited)
 workshop/src/coordinator/workshop.c workshop_data_dir  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
 workshop/src/coordinator/workshop.c workshop_job_workers  # an accessor of the workshop API (the settings it opened with); the command line of P64 reads it, the workshop tests call it
+workshop/src/coordinator/workshop.c workshop_tools_open  # no application calls it until P64 B4 (the command line runs its tools on it)
+workshop/src/coordinator/dispatch.c workshop_tool  # no application calls it until P64 B4 (the command line calls the tools)
+workshop/src/coordinator/tools.c workshop_t_versions  # a tool the command line calls from P64 B4 (reached through workshop_tool until then)

@@ -19,6 +19,7 @@ struct Workshop {
     int lock_descriptor; /* the data folder's lock, held until close */
     char recovery[512];  /* what the open recovered from the journal, "" when nothing (workshop_recovery_summary) */
     bool started;        /* workshop_start ran and workshop_stop has not */
+    bool tools_only;     /* workshop_tools_open: no data folder, no lock, no services; answers tools only (R-656) */
 };
 
 /*

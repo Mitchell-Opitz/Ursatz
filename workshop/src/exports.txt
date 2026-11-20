@@ -17,3 +17,5 @@ workshop_settings_resolve
 workshop_start
 workshop_status
 workshop_stop
+workshop_tool
+workshop_tools_open

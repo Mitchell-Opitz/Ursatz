@@ -57,6 +57,7 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/dispatch.c
     src/coordinator/events.c
     src/coordinator/settings.c
+    src/coordinator/tools.c
     src/coordinator/workshop.c
 )
 ursatz_public_headers(ursatz_workshop_engine
