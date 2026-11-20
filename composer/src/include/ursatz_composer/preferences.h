@@ -89,4 +89,38 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
  */
 cJSON *composer_preferences_write(const ComposerPreferences *preferences);
 
+/*
+ * The setting keys (R-672), for an application that edits settings by their dotted key ("melody.weights.melodic"). One
+ * row per leaf of the default document, in document order, and motif.plan last of the motif group's (the one setting the
+ * default document does not hold). type says how the value reads: an integer from min to max, a boolean, a ratio "n/d"
+ * (max is its denominator limit), a list of words (words, NULL-ended, the names it may hold) or a chord plan. hard is
+ * true for a setting that changes what a request may ask for or what a candidate may be, false for a preference (R-671).
+ */
+typedef enum { COMPOSER_KEY_INTEGER, COMPOSER_KEY_BOOLEAN, COMPOSER_KEY_RATIO, COMPOSER_KEY_WORDS, COMPOSER_KEY_PLAN } ComposerKeyType;
+
+typedef struct {
+    const char *key;
+    ComposerKeyType type;
+    int min;
+    int max;
+    bool hard;
+    const char *const *words;
+} ComposerPreferenceKey;
+
+/* The key table, and in *count the number of rows. Static: the caller never frees it. */
+const ComposerPreferenceKey *composer_preferences_keys(size_t *count);
+
+/*
+ * The rules a setting can override (R-672): the 13 soft groups of the melody stage, then its 7 hard rules, in enum
+ * order. key is the setting that holds the rule: the weight of a soft group, melody.waive for a hard rule.
+ */
+typedef struct {
+    const char *name;
+    bool hard;
+    const char *key;
+} ComposerRule;
+
+/* The rule table, and in *count the number of rows. Static: the caller never frees it. */
+const ComposerRule *composer_preferences_rules(size_t *count);
+
 #endif

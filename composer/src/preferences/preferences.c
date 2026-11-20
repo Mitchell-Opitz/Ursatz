@@ -1236,3 +1236,176 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
     return document;
 }
 
+/* ------------------------------------------------------------------- the key and rule tables (R-672) */
+
+static const char *const WORDS_NCT[] = {"passing", "neighbor", "appoggiatura", "suspension", "anticipation", NULL};
+static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-outline",      "no-crossing", "parallel-octaves",
+                                          "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
+static const char *const WORDS_REVERSE[] = {"melodic",  "against_bass", "tendency", "climax",   "contour", "ending_reduction", "waves",
+                                            "central_range", "monotony", "seam",    "closure", "leaps",   "register", NULL};
+
+/*
+ * One row per leaf of the default document, in the order the document writes them, then motif.plan (the one setting the
+ * default document does not hold). A hard key shapes what a request can ask for or what a candidate may be (R-671); the
+ * rest are soft: a preference a listener can move.
+ */
+static const ComposerPreferenceKey KEYS[] = {
+    {"melody.range.low", COMPOSER_KEY_INTEGER, RANGE_LOW_MIN, RANGE_LOW_MAX, true, NULL},
+    {"melody.range.high", COMPOSER_KEY_INTEGER, RANGE_LOW_MIN + RANGE_SPAN_MIN, RANGE_HIGH_MAX, true, NULL},
+    {"melody.nct_types", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_NCT},
+    {"melody.density", COMPOSER_KEY_INTEGER, 0, DENSITY_MAX, false, NULL},
+    {"melody.climax_position", COMPOSER_KEY_INTEGER, 0, SCALE_MAX, false, NULL},
+    {"melody.climax_rise", COMPOSER_KEY_INTEGER, CLIMAX_RISE_MIN, CLIMAX_RISE_MAX, false, NULL},
+    {"melody.climax_slack", COMPOSER_KEY_INTEGER, 0, SCALE_MAX, false, NULL},
+    {"melody.second_nearest_chord_tone", COMPOSER_KEY_RATIO, 0, RATIO_DENOMINATOR_MAX, false, NULL},
+    {"melody.attempts", COMPOSER_KEY_INTEGER, 1, ATTEMPTS_MAX, false, NULL},
+    {"melody.keep", COMPOSER_KEY_INTEGER, 1, MELODY_KEEP_MAX, false, NULL},
+    {"melody.plain_shaping", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"melody.weights.melodic", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.against_bass", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.tendency", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.climax", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.contour", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.ending_reduction", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.waves", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.central_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.monotony", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.seam", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.closure.final", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.closure.first", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.rhythm_repeat_bars", COMPOSER_KEY_INTEGER, 0, RHYTHM_REPEAT_BARS_MAX, true, NULL},
+    {"melody.leaps", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.register", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.waive", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_WAIVE},
+    {"melody.reverse", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_REVERSE},
+    {"motif.bars.one", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.bars.two", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.pickup_one_in", COMPOSER_KEY_INTEGER, 0, PICKUP_ONE_IN_MAX, false, NULL},
+    {"motif.shapes_one_bar.repeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_one_bar.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_two_bars.repeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_two_bars.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_two_bars.repeat_contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_two.I-V", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_two.I-IV", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_two.I-I", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_three.I-V-I", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_three.I-IV-I", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.features.dotted", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.features.leap", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.features.repeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.leap.low", COMPOSER_KEY_INTEGER, LEAP_MIN, LEAP_MAX, true, NULL},
+    {"motif.leap.high", COMPOSER_KEY_INTEGER, LEAP_MIN, LEAP_MAX, true, NULL},
+    {"motif.rung_moves.step", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.rung_moves.skip", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.chord_tone", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.passing", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.neighbor", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.escape", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.half_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.two_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.quarter_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.long_short", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.short_long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.triplet", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.triplet_two_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.accented_one_in", COMPOSER_KEY_INTEGER, 0, ACCENTED_ONE_IN_MAX, false, NULL},
+    {"motif.accented_types.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.accented_types.passing", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.accented_types.suspension", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.avoid_repeats", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.leaps_per_motif", COMPOSER_KEY_INTEGER, 0, LEAPS_PER_MOTIF_MAX, true, NULL},
+    {"motif.leap_recovery", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.pickup_from_accent", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.contrast_fidelity_min", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"motif.long_on_weak", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.final_long", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.compound_beats", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.endings.free", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.endings.closed", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.endings.open", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.endings.lead_in", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_one_in", COMPOSER_KEY_INTEGER, 0, LONG_NCT_ONE_IN_MAX, false, NULL},
+    {"motif.long_nct_types.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.suspension", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.retardation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.passing", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.neighbor", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.second", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.fourth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.sixth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.seventh", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_beats.downbeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_beats.middle", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_beats.other", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_lengths.beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_lengths.dotted_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_lengths.two_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_one_in", COMPOSER_KEY_INTEGER, 0, SYNCOPATION_ONE_IN_MAX, false, NULL},
+    {"motif.syncopation_types.off_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_types.tie_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_types.tie_bar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_types.anticipation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_levels.eighth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_levels.sixteenth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.skips_per_motif", COMPOSER_KEY_INTEGER, 0, SKIPS_PER_MOTIF_MAX, true, NULL},
+    {"motif.plan", COMPOSER_KEY_PLAN, 0, 0, true, NULL},
+    {"development.fidelity_minimum.melody.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.melody.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.melody.cadential", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.balanced.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.balanced.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.balanced.cadential", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.theme.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.theme.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.theme.cadential", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.continuation.every_segment", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.continuation.fragment_lengths.segment", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.continuation.fragment_lengths.half_bar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.continuation.fragment_lengths.beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.continuation.diminish", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.continuation.liquidate", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.continuation.faster_harmony", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.basic_as_written", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.contrast.distance.similar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.contrast.distance.distant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.contrast.new_material", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL}};
+
+const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
+    if (count) {
+        *count = sizeof(KEYS) / sizeof(KEYS[0]);
+    }
+    return KEYS;
+}
+
+/* The 13 soft groups, then the 7 hard rules, in enum order; each names the setting that holds it (R-672). */
+static const ComposerRule RULES[] = {
+    {"melodic", false, "melody.weights.melodic"},
+    {"against_bass", false, "melody.weights.against_bass"},
+    {"tendency", false, "melody.weights.tendency"},
+    {"climax", false, "melody.weights.climax"},
+    {"contour", false, "melody.weights.contour"},
+    {"ending_reduction", false, "melody.weights.ending_reduction"},
+    {"waves", false, "melody.weights.waves"},
+    {"central_range", false, "melody.weights.central_range"},
+    {"monotony", false, "melody.weights.monotony"},
+    {"seam", false, "melody.weights.seam"},
+    {"closure", false, "melody.closure"},
+    {"leaps", false, "melody.leaps"},
+    {"register", false, "melody.register"},
+    {"forbidden-leap", true, "melody.waive"},
+    {"forbidden-outline", true, "melody.waive"},
+    {"no-crossing", true, "melody.waive"},
+    {"parallel-octaves", true, "melody.waive"},
+    {"parallel-fifths", true, "melody.waive"},
+    {"dissonance-against-bass", true, "melody.waive"},
+    {"strong-beat-chord-tone", true, "melody.waive"}};
+
+const ComposerRule *composer_preferences_rules(size_t *count) {
+    if (count) {
+        *count = sizeof(RULES) / sizeof(RULES[0]);
+    }
+    return RULES;
+}

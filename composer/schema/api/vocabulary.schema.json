@@ -37,6 +37,8 @@
     "tone_labels",
     "variant_operations",
     "preferences",
+    "preference_keys",
+    "rules",
     "relations",
     "schemas",
     "theme_developments",
@@ -440,6 +442,87 @@
     "preferences": {
       "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
       "description": "The default settings document."
+    },
+    "preference_keys": {
+      "type": "array",
+      "description": "The setting keys (Composer API 4.3): one per leaf of the default preferences document, in its order, and motif.plan, which the default document does not hold.",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "type",
+          "class"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The dotted key, for example melody.weights.melodic."
+          },
+          "type": {
+            "enum": [
+              "integer",
+              "boolean",
+              "ratio",
+              "words",
+              "plan"
+            ]
+          },
+          "min": {
+            "type": "integer",
+            "description": "The least value of an integer key."
+          },
+          "max": {
+            "type": "integer",
+            "description": "The greatest value of an integer key, or the denominator limit of a ratio key."
+          },
+          "words": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The words a words key may name."
+          },
+          "class": {
+            "enum": [
+              "hard",
+              "soft"
+            ],
+            "description": "A hard setting changes what a request may ask for or what a candidate may be; a soft one is a preference."
+          },
+          "default": {
+            "description": "The value the default document holds; absent for motif.plan."
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "The rules a setting can override (Composer API 4.3): the soft groups and the hard rules of the melody stage.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "class",
+          "key"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "class": {
+            "enum": [
+              "hard",
+              "soft"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "description": "The setting that holds the rule: a weight for a soft group, melody.waive for a hard rule."
+          }
+        }
+      }
     }
   },
   "$defs": {
