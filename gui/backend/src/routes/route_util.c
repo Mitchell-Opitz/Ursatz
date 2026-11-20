@@ -106,11 +106,6 @@ int ursatz_gui_send_object(struct mg_connection *conn, int status, cJSON *object
   return status;
 }
 
-static int send_body_failure(struct mg_connection *conn, int status, const char *reason, const char *message) {
-  (void)reason;
-  return ursatz_gui_send_failure(conn, status, message);
-}
-
 /* The request body the route reads, up to cap bytes: the one reader of every route (R-647). Over the cap is a REQUEST at /body/size (413), a body that cannot
  * be read a REQUEST at /body (400). *data is NUL-terminated and the caller's (free it). */
 UrsatzStatus ursatz_gui_read_body(struct mg_connection *conn, size_t cap, char **data, size_t *size, UrsatzError *error) {
