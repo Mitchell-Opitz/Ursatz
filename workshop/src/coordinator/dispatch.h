@@ -168,6 +168,11 @@ WORKSHOP_HANDLER(workshop_c_style_rebuild);
 WORKSHOP_HANDLER(workshop_c_style_delete);
 WORKSHOP_HANDLER(workshop_c_links_run);
 WORKSHOP_HANDLER(workshop_c_links_delete);
+WORKSHOP_HANDLER(workshop_c_section_insert);
+WORKSHOP_HANDLER(workshop_c_section_delete);
+WORKSHOP_HANDLER(workshop_c_section_move);
+WORKSHOP_HANDLER(workshop_c_section_resize);
+WORKSHOP_HANDLER(workshop_c_section_set);
 WORKSHOP_HANDLER(workshop_c_job_cancel);
 
 /* projects, items, subjects commands (api_commands_items.c) */

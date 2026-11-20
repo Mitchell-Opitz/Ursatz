@@ -116,6 +116,11 @@ static const CommandEntry kCommands[] = {
     {"subject.unlink-piece", workshop_c_subject_unlink_piece},
     {"subject.relate", workshop_c_subject_relate},
     {"subject.unrelate", workshop_c_subject_unrelate},
+    {"section.insert", workshop_c_section_insert},
+    {"section.delete", workshop_c_section_delete},
+    {"section.move", workshop_c_section_move},
+    {"section.resize", workshop_c_section_resize},
+    {"section.set", workshop_c_section_set},
     {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };
 

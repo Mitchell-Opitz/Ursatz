@@ -326,6 +326,10 @@ char *workshop_command_sheet_help(const cJSON *command) {
         if (cJSON_IsString(items)) {
             common_text_appendf(&out, ", of %s", items->valuestring);
         }
+        const cJSON *words = cJSON_GetObjectItemCaseSensitive(param, "words");
+        if (cJSON_IsArray(words) && cJSON_GetArraySize(words) > 0) {
+            common_text_appendf(&out, ", or the word %s", cJSON_GetArrayItem(words, 0)->valuestring);
+        }
         if (cJSON_IsNumber(minimum) && cJSON_IsNumber(maximum)) {
             common_text_appendf(&out, ", from %.0f to %.0f", minimum->valuedouble, maximum->valuedouble);
         } else if (cJSON_IsNumber(minimum)) {

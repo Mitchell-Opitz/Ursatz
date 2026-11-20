@@ -137,6 +137,11 @@ static const char *type_words(const cJSON *param, char *buffer, size_t size) {
         return "a rational like 3/4";
     }
     if (strcmp(type, "object") == 0) {
+        const cJSON *words = cJSON_GetObjectItemCaseSensitive(param, "words");
+        if (cJSON_IsArray(words) && cJSON_GetArraySize(words) > 0) {
+            snprintf(buffer, size, "an object or the word %s", cJSON_GetArrayItem(words, 0)->valuestring);
+            return buffer;
+        }
         return "an object";
     }
     if (strcmp(type, "array") == 0) {
@@ -207,6 +212,12 @@ static bool type_holds(const char *type, const cJSON *param, const cJSON *value)
         return is_rational(value);
     }
     if (strcmp(type, "object") == 0) {
+        const cJSON *word;
+        cJSON_ArrayForEach(word, cJSON_GetObjectItemCaseSensitive(param, "words")) {
+            if (cJSON_IsString(value) && strcmp(word->valuestring, value->valuestring) == 0) {
+                return true; /* a word in place of the object (a region `home`, a harmony `none`) */
+            }
+        }
         return cJSON_IsObject(value);
     }
     if (strcmp(type, "array") == 0) {

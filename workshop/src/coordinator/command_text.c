@@ -82,6 +82,12 @@ static cJSON *convert(const char *type, const cJSON *param, const cJSON *unit, c
         return cJSON_IsString(unit) ? cJSON_CreateString(unit->valuestring) : NULL;
     }
     if (strcmp(type, "object") == 0) {
+        const cJSON *word;
+        cJSON_ArrayForEach(word, cJSON_GetObjectItemCaseSensitive(param, "words")) {
+            if (cJSON_IsString(unit) && strcmp(word->valuestring, unit->valuestring) == 0) {
+                return cJSON_CreateString(unit->valuestring); /* a word in place of the object */
+            }
+        }
         return cJSON_IsObject(unit) && !is_rational_unit(unit) ? cJSON_Duplicate(unit, true) : NULL;
     }
     if (strcmp(type, "array") == 0) {
@@ -103,12 +109,13 @@ static cJSON *convert(const char *type, const cJSON *param, const cJSON *unit, c
     return NULL;
 }
 
-static const char *type_words(const char *type) {
+static const char *type_words(const char *type, const cJSON *param) {
     return strcmp(type, "string") == 0     ? "a string"
            : strcmp(type, "integer") == 0  ? "a whole number"
            : strcmp(type, "boolean") == 0  ? "true or false"
            : strcmp(type, "rational") == 0 ? "a rational like 3/4"
-           : strcmp(type, "object") == 0   ? "an object (write its members below the command)"
+           : strcmp(type, "object") == 0   ? (cJSON_GetObjectItemCaseSensitive(param, "words") ? "an object (write its members below the command) or one of its words"
+                                                                                                 : "an object (write its members below the command)")
            : strcmp(type, "array") == 0    ? "a list like [a b]"
                                            : "one of its words";
 }
@@ -212,13 +219,13 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
         }
         const char *type = cJSON_GetObjectItemCaseSensitive(param, "type")->valuestring;
         if (!value) {
-            status = refuse(error, line->number, "%s needs a value: %s", param_name, type_words(type));
+            status = refuse(error, line->number, "%s needs a value: %s", param_name, type_words(type, param));
             break;
         }
         const cJSON *items = cJSON_GetObjectItemCaseSensitive(param, "items");
         cJSON *converted = convert(type, param, value, cJSON_IsString(items) ? items->valuestring : NULL);
         if (!converted) {
-            status = refuse(error, line->number, "%s must be %s", param_name, type_words(type));
+            status = refuse(error, line->number, "%s must be %s", param_name, type_words(type, param));
             break;
         }
         if (!add_param(params, param_name, converted, line->number, error)) {
@@ -252,15 +259,14 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
                         cJSON *taken = cJSON_DetachItemFromObjectCaseSensitive(block, key);
                         const char *type = cJSON_GetObjectItemCaseSensitive(param, "type")->valuestring;
                         const cJSON *items = cJSON_GetObjectItemCaseSensitive(param, "items");
-                        cJSON *converted = strcmp(type, "object") == 0 || strcmp(type, "array") == 0
-                                               ? (strcmp(type, "object") == 0 ? (cJSON_IsObject(taken) ? taken : NULL)
-                                                                              : (cJSON_IsArray(taken) ? taken : NULL))
-                                               : convert(type, param, taken, cJSON_IsString(items) ? items->valuestring : NULL);
+                        cJSON *converted = strcmp(type, "array") == 0 ? (cJSON_IsArray(taken) ? taken : NULL)
+                                           : strcmp(type, "object") == 0 && cJSON_IsObject(taken) ? taken
+                                                                                                  : convert(type, param, taken, cJSON_IsString(items) ? items->valuestring : NULL);
                         if (converted != taken) {
                             cJSON_Delete(taken);
                         }
                         if (!converted) {
-                            status = refuse(error, at, "%s must be %s", key, type_words(type));
+                            status = refuse(error, at, "%s must be %s", key, type_words(type, param));
                         } else if (!add_param(params, key, converted, at, error)) {
                             status = URSATZ_ERR_REQUEST;
                         }

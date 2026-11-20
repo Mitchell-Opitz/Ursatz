@@ -86,6 +86,18 @@ Projects: the folders that hold items.
 | `project.update` | `project:<id>` | `[name string] [description string]` | Rename a project or change its description |
 | `project.delete` | `project:<id>` | none | Delete a project |
 
+## Section
+
+Sections: add, remove, move, resize and set the sections of a piece version's request.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `section.insert` | `item:<id>@v<n>` | `id string [after string] [before string] [bars int] [beats int] [role intro\|body\|turnaround\|ending] [letter string] [function transition\|coda] [cadence PAC\|IAC\|HC\|DC\|PC] [pickup n/d] [fill empty\|motif] [region object] [harmony object] [note string]` | Add a section to a piece's request after or before another |
+| `section.delete` | `item:<id>@v<n>` | `id string [note string]` | Remove a section from a piece's request |
+| `section.move` | `item:<id>@v<n>` | `id string [after string] [before string] [note string]` | Move a section after or before another |
+| `section.resize` | `item:<id>@v<n>` | `id string [bars int] [beats int] [note string]` | Change the length of a section |
+| `section.set` | `item:<id>@v<n>` | `id string [role intro\|body\|turnaround\|ending] [letter string] [function transition\|coda\|none] [cadence PAC\|IAC\|HC\|DC\|PC\|none] [pickup n/d] [fill empty\|motif] [region object] [harmony object] [note string]` | Change the role, letter, function, cadence, pickup, fill, region or harmony |
+
 ## Style
 
 Styles: style models built from library pieces or a brief.
