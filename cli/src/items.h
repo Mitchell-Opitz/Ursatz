@@ -13,6 +13,9 @@
 /* `compose item:<id>`: composes the theme or piece into its next version and waits for the job (--no-wait prints the job's id). */
 int run_compose(const CliArgs *args);
 
+/* `restore item:<id>@v<n>`: makes the next version a copy of version n (the command item.restore) and prints the new version. */
+int run_restore(const CliArgs *args);
+
 /* `regenerate item:<id> --section <id>`: writes one section of a piece version again, as the next version. Called by run_regenerate when its input is
  * an address. */
 int run_regenerate_item(const CliArgs *args);

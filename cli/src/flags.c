@@ -85,6 +85,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--no-bass", NULL, CLI_FLAG_SWITCH, NULL, "write only the chords"},
     {"--no-wait", NULL, CLI_FLAG_SWITCH, NULL, "do not wait for the job a command starts: print its id"},
     {"--node", NULL, CLI_FLAG_VALUE, "<id>", "the node's id in the plan file"},
+    {"--note", NULL, CLI_FLAG_VALUE, "<text>", "restore: the note of the new version (default: restore v<n>)"},
     {"--op", NULL, CLI_FLAG_VALUE, "<name>", "the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish"},
     {"--out", NULL, CLI_FLAG_VALUE, "<file>", "where the output is written: a plan, a corpus output folder or a style model"},
     {"--out-dir", NULL, CLI_FLAG_VALUE, "<dir>", "where the files are written; created if missing"},

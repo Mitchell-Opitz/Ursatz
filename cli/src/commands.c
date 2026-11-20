@@ -55,6 +55,7 @@ static const char *const FLAGS_LOCK[] = {"--format", "--lane", "--node", "--out"
 static const char *const FLAGS_REGENERATE[] = {"--base", "--format", "--lane", "--midi", "--musicxml", "--no-wait", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", "--version", NULL};
 static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
+static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
@@ -683,6 +684,17 @@ const CliCommand CLI_COMMANDS[] = {
     "Example:\n"
     "  ursatz --data ~/ursatz-data compose item:itm-3f2a --seed 7",
      FLAGS_COMPOSE, 1, 1, run_compose},
+    {"restore",
+    "restore item:<id>@v<n> [--base <n>] [--note <text>]",
+     "Make the next version of an item a copy of an older one",
+    "Makes the next version of the item a copy of version n, with its files: the version is not rewritten, the item gains a new one that holds what version n held (restoring is an undo that keeps the history). It prints item <id> version <new> (restored v<n>). The note of the new version is restore v<n> unless --note gives one. --base is the version the command is made against (default: the current one): a newer version refuses it. The current version cannot be restored. The data folder is named before the subcommand: ursatz --data <dir> restore item:<id>@v<n>.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or a command the workshop refuses (a stale --base, the current version, a version that is not there); 2 the folder cannot be opened, or any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data restore item:itm-3f2a@v2\n"
+    "  ursatz --data ~/ursatz-data restore item:itm-3f2a@v2 --note \"back to the short ending\"",
+     FLAGS_RESTORE, 1, 1, run_restore},
     {"migrate",
     "migrate [--dry-run] [--backup <dir>]",
      "Migrate a data folder from an older layout to the current one",

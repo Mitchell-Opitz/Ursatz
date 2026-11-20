@@ -15,7 +15,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--axis <pitch>` | invert: the pitch to mirror around, D4 or a MIDI number | `develop` |
 | `--backup <dir>` | migrate: where the copy of the whole folder goes before the migration (default: beside it, named <folder>-backup-<time>) | `migrate` |
 | `--bars <n>` | the length in bars | `progression`, `grow`, `plan`, `listen` |
-| `--base <n>` | the version of the item a command is made against (default: its current version); a newer one refuses the command | `regenerate`, `compose` |
+| `--base <n>` | the version of the item a command is made against (default: its current version); a newer one refuses the command | `regenerate`, `compose`, `restore` |
 | `--basic <file>` | the basic motive the family of forms comes from; remoteness is measured from it | `variants`, `recognize` |
 | `--basic-format <format>` | the format of the basic motive's file, as --input-format | `variants`, `recognize` |
 | `--basic-harmony <text>` | the basic motive's own chords, as --harmony | `variants`, `recognize` |
@@ -85,6 +85,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--no-bass` | write only the chords | `progression` |
 | `--no-wait` | do not wait for the job a command starts: print its id | `regenerate`, `compose` |
 | `--node <id>` | the node's id in the plan file | `lock`, `regenerate`, `variations` |
+| `--note <text>` | restore: the note of the new version (default: restore v<n>) | `restore` |
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
