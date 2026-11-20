@@ -7,12 +7,17 @@
 #include "cli_tools.h"
 #include "commands.h"
 #include "flags.h"
+#include "help.h"
 #include "session.h"
 
 /* The list of commands: the usage line and one line for each command. */
 static void print_commands(FILE *out) {
     fprintf(out, "Usage: ursatz <command> [options]\n");
     fprintf(out, "       ursatz help <command>\n");
+    fprintf(out, "       ursatz help commands [--format <text|markdown|json>]\n");
+    fprintf(out, "       ursatz help grammar\n");
+    fprintf(out, "       ursatz help flags [--format <text|markdown>]\n");
+    fprintf(out, "       ursatz help <name>      (the help of one workshop command, as item.save)\n");
     fprintf(out, "       ursatz --version\n");
     fprintf(out, "\nCommands:\n");
     for (size_t i = 0; i < CLI_COMMAND_COUNT; i++) {
@@ -104,6 +109,11 @@ int main(int argc, char **argv) {
         return print_version();
     }
     if (strcmp(name, "help") == 0) {
+        /* "ursatz help commands|grammar|flags|<workshop command>": generated from the command schemas and the flag table. */
+        int topic = cli_help_topic(argc, argv);
+        if (topic >= 0) {
+            return topic;
+        }
         /* "ursatz help <command>": the command's own help. */
         const CliCommand *command = cli_command_find(argv[2]);
         if (!command) {
