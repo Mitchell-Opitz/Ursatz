@@ -185,8 +185,8 @@ UrsatzStatus composer_api_random_motive(const ComposerContext *context, const ch
  * inline ("degrees" text; a motive with a "path" or "file" is refused with its path) and the options the command takes:
  * "seed", "suggest" (1 to 16 themes), "check", "style" (a style model path), "blend", "blend_weight", "blend_weights",
  * "tempo", "plain_midi", "preferences" (the settings document, docs/preferences.md: the melody group and the development
- * group's fidelity minimums apply, the motif group is accepted and has no effect, since the motives come from the
- * request), and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
+ * group's fidelity minimums apply, the motif group shapes the rhythms and new material a theme draws, not the motives,
+ * which come from the request), and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
  * (each theme's plan in the document), "explain" ("text" or "json": each theme's explanation in the document).
  * json: what `theme --format json` prints (without the files it wrote), and "preferences" (the full document the settings
  * made) when the request had the member. plan_json: the first theme's plan. midi and

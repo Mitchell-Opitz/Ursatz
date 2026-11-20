@@ -2,7 +2,7 @@
 
 The composer's settings as one document (R-411, R-413): the numbers that shape what it makes, so that a listening session can change one and compose again with no code change and no rebuild. Back to the [docs index](README.md).
 
-Header: `<ursatz_composer/preferences.h>`. Source: `src/preferences/preferences.c`.
+Header: `<ursatz_composer/preferences.h>`. Source: `src/preferences/preferences.c`. Schema: [`schema/api/preferences.schema.json`](../schema/api/preferences.schema.json), the one definition the theme and random motive requests and responses and the vocabulary refer to.
 
 Every member is optional and its default is the value the Composer used before the document existed. With no preferences every output is byte-identical to what it was (R-413). A member that is unknown, of the wrong type or outside its limit is refused with its JSON path, for example `/preferences/melody/keep`; the functions give the path relative to the object (`/melody/keep`). A value is a whole number unless the table says otherwise; `null` is a wrong type.
 

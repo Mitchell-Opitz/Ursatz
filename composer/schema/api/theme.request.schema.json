@@ -350,7 +350,7 @@
     },
     "preferences": {
       "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
-      "description": "The settings; the melody group and the development group apply, the motif group is accepted and has no effect (the motives come from the request)."
+      "description": "The settings; the melody group and the development group apply, the motif group shapes the rhythms and new material a theme draws, not its motives (they come from the request)."
     }
   },
   "$defs": {
