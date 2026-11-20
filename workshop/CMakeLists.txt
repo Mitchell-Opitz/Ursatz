@@ -26,6 +26,7 @@ add_library(ursatz_workshop_engine STATIC
     src/items/body_requests.c
     src/items/op_checks.c
     src/items/version_files.c
+    src/items/views.c
     src/items/piece_lock.c
     src/items/subjects.c
     src/analysis/analysis.c
@@ -78,7 +79,7 @@ ursatz_public_headers(ursatz_workshop_engine
 # ursatz_workshop and ursatz_workshop_internal into one executable.
 target_include_directories(ursatz_workshop_engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(ursatz_workshop_engine
-    PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory ursatz_realization ursatz_reading cjson
+    PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory ursatz_realization ursatz_reading ursatz_text cjson
 )
 target_compile_options(ursatz_workshop_engine PRIVATE -Wall -Wextra -Wpedantic)
 if(URSATZ_TESTS)

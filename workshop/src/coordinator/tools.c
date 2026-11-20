@@ -5,6 +5,7 @@
 #include "analysis/passages.h"
 #include "base/names.h"
 #include "composition/composer_tool.h"
+#include "items/views.h"
 #include "coordinator/dispatch.h"
 
 /* The tools (R-656): the calls that work on the files their params name and never on the data folder or the journal. dispatch.c lists them. */
@@ -187,5 +188,27 @@ WORKSHOP_HANDLER(workshop_t_style_profile) {
     }
     cJSON *answer = NULL;
     UrsatzStatus status = workshop_style_profile(dir, name, out, &answer, error);
+    return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
+}
+
+/* A file or a text of any layer kind as Ursatz Text, a view of it or its JSON (items/views.h). */
+WORKSHOP_HANDLER(workshop_t_text) {
+    const char *path = NULL;
+    const char *text = NULL;
+    const char *view = NULL;
+    if (!optional_string(call->params, "path", &path, error) || !optional_string(call->params, "text", &text, error) ||
+        !optional_string(call->params, "view", &view, error)) {
+        return URSATZ_ERR_REQUEST;
+    }
+    if ((path == NULL) == (text == NULL)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "give exactly one of path (a file) and text");
+    }
+    TextViewLimits limits;
+    UrsatzStatus status = workshop_view_limits(call->params, &limits, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    cJSON *answer = NULL;
+    status = workshop_view_input(path, text, view && view[0] ? view : "full", &limits, &answer, error);
     return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
 }

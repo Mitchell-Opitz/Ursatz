@@ -435,6 +435,7 @@ static const ToolEntry WORKSHOP_TOOLS[] = {
     {"corpus-passages", workshop_t_corpus_passages},
     {"pitch-names", workshop_t_pitch_names},
     {"style-profile", workshop_t_style_profile},
+    {"text", workshop_t_text},
     {"versions", workshop_t_versions},
 };
 

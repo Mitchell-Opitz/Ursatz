@@ -139,6 +139,7 @@ WORKSHOP_HANDLER(workshop_t_corpus);
 WORKSHOP_HANDLER(workshop_t_corpus_passages);
 WORKSHOP_HANDLER(workshop_t_pitch_names);
 WORKSHOP_HANDLER(workshop_t_style_profile);
+WORKSHOP_HANDLER(workshop_t_text);
 WORKSHOP_HANDLER(workshop_t_versions);
 
 /* the journal (api_journal.c) */
