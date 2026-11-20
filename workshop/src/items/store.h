@@ -196,6 +196,10 @@ UrsatzStatus workshop_material_item_add_version_staged(const char *id, const cJS
 /* The body of version number (1 to current_version). NOT_FOUND otherwise. Caller-owned. */
 UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSON **out_body);
 
+/* The envelope of version number (1 to current_version): {format, format_version, id, kind, version, note, lineage, actor, created_at}. NOT_FOUND
+ * otherwise. Caller-owned. */
+UrsatzStatus workshop_material_version_envelope(const char *id, int number, cJSON **out_envelope);
+
 /*
  * Reports, for every use in the item's current version, how its source stands.
  * *out_status is a caller-owned array of {item_id, version (the used one),

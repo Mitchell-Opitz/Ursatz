@@ -539,7 +539,7 @@ int store_current_version_of(const cJSON *item) {
     return cJSON_IsNumber(number) ? number->valueint : 0;
 }
 
-/* The versions of an item, {number, created_at, note} each, from the envelopes of its version folders. */
+/* The versions of an item, {number, created_at, note, actor, lineage} each, from the envelopes of its version folders. */
 static cJSON *versions_from_envelopes(const char *project, const char *id, int current) {
     cJSON *versions = cJSON_CreateArray();
     for (int number = 1; versions && number <= current; number++) {
@@ -550,9 +550,12 @@ static cJSON *versions_from_envelopes(const char *project, const char *id, int c
             continue;
         }
         cJSON *entry = cJSON_CreateObject();
+        const cJSON *lineage = cJSON_GetObjectItemCaseSensitive(envelope, "lineage");
         if (!entry || !cJSON_AddNumberToObject(entry, "number", number) ||
             !cJSON_AddStringToObject(entry, "created_at", common_json_string(envelope, "created_at")) ||
-            !cJSON_AddStringToObject(entry, "note", common_json_string(envelope, "note"))) {
+            !cJSON_AddStringToObject(entry, "note", common_json_string(envelope, "note")) ||
+            !cJSON_AddStringToObject(entry, "actor", common_json_string(envelope, "actor")) ||
+            !cJSON_AddItemToObject(entry, "lineage", lineage ? cJSON_Duplicate(lineage, true) : cJSON_CreateNull())) {
             cJSON_Delete(entry);
             cJSON_Delete(versions);
             versions = NULL;
@@ -670,9 +673,11 @@ static UrsatzStatus write_version_files_locked(const char *dir, const char *id, 
     cJSON *envelope = cJSON_CreateObject();
     cJSON *lineage = lineage_of(type, body);
     bool attached = false;
+    /* the command's actor (a job runs under the one that queued it); a version written with no command (a migration) is Michelle's */
+    const WorkshopCommandContext *context = workshop_command_context();
     bool ok = envelope && lineage && cJSON_AddStringToObject(envelope, "id", id) && cJSON_AddStringToObject(envelope, "kind", type) &&
               cJSON_AddNumberToObject(envelope, "version", number) && cJSON_AddStringToObject(envelope, "note", note) &&
-              (attached = cJSON_AddItemToObject(envelope, "lineage", lineage)) && cJSON_AddStringToObject(envelope, "actor", "michelle") &&
+              (attached = cJSON_AddItemToObject(envelope, "lineage", lineage)) && cJSON_AddStringToObject(envelope, "actor", context ? context->actor : "michelle") &&
               cJSON_AddStringToObject(envelope, "created_at", now);
     if (!ok) {
         cJSON_Delete(envelope);
@@ -936,6 +941,29 @@ UrsatzStatus workshop_material_item_get_version(const char *id, int number, cJSO
     if (result == URSATZ_OK) {
         result = number >= 1 && number <= store_current_version_of(item) ? store_read_version_locked(id, number, out_body)
                                                                     : workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
+    cJSON_Delete(item);
+    UNLOCK();
+    return result;
+}
+
+UrsatzStatus workshop_material_version_envelope(const char *id, int number, cJSON **out_envelope) {
+    *out_envelope = NULL;
+    LOCK();
+    if (!store_ready) {
+        UNLOCK();
+        return workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
+    }
+    cJSON *item = NULL;
+    UrsatzStatus result = store_load_item_locked(id, &item);
+    char path[PATH_BYTES];
+    if (result == URSATZ_OK &&
+        (number < 1 || number > store_current_version_of(item) ||
+         !workshop_layout_version_file(common_json_string(item, "project_id"), id, number, WORKSHOP_FILE_ENVELOPE, path, sizeof(path)))) {
+        result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
+    }
+    if (result == URSATZ_OK && workshop_format_read(path, WORKSHOP_FORMAT_ITEM_VERSION, true, out_envelope, NULL) != URSATZ_OK) {
+        result = workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
     }
     cJSON_Delete(item);
     UNLOCK();

@@ -98,7 +98,7 @@ WORKSHOP_HANDLER(workshop_q_item_get) {
     return URSATZ_OK;
 }
 
-/* {number, body, layers?}: params id and version. */
+/* {number, body, actor, lineage, layers?}: params id and version; actor and lineage are the version envelope's. */
 WORKSHOP_HANDLER(workshop_q_item_version) {
     const char *id = NULL;
     long long number = 0;
@@ -119,6 +119,13 @@ WORKSHOP_HANDLER(workshop_q_item_version) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     cJSON_AddItemToObject(object, "body", version_body);
+    cJSON *envelope = NULL;
+    if (workshop_material_version_envelope(id, (int)number, &envelope) == URSATZ_OK) {
+        const cJSON *lineage = cJSON_GetObjectItemCaseSensitive(envelope, "lineage");
+        cJSON_AddStringToObject(object, "actor", cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(envelope, "actor")));
+        cJSON_AddItemToObject(object, "lineage", lineage ? cJSON_Duplicate(lineage, true) : cJSON_CreateNull());
+        cJSON_Delete(envelope);
+    }
     cJSON *layers = NULL;
     if (workshop_material_version_layers(id, (int)number, &layers) == URSATZ_OK) {
         cJSON_AddItemToObject(object, "layers", layers);
