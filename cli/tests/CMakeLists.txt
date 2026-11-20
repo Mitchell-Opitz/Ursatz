@@ -11,3 +11,8 @@ if(URSATZ_GUI)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_connect)
     add_dependencies(test_cli_connect ursatz ursatz-gui-backend)
 endif()
+
+# The data folder subcommands (P64 B8): migrate, query, show, compose, history, render and apply on a copy of the layout 0 fixture folder.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_data_commands)
+ursatz_test(cli_data_commands COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DDATA_V0=${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0
+    -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_data_commands/work -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_data_commands.cmake)

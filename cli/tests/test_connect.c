@@ -162,6 +162,25 @@ static void test_the_backend_serves_the_folder(void) {
     assert(status == 1 && strstr(out, "Error: unknown query"));
     free(out);
 
+    /* a command goes to the process that holds the folder: it is journaled there as the actor of the command line */
+    char commands[200];
+    snprintf(commands, sizeof(commands), "%s/commands.jsonl", g_root);
+    FILE *file = fopen(commands, "w");
+    assert(file);
+    fputs("{\"command\":\"project.create\",\"params\":{\"name\":\"Remote\"}}\n", file);
+    fclose(file);
+    snprintf(arguments, sizeof(arguments), "--data \"%s\" apply \"%s\"", data, commands);
+    out = run(arguments, &status);
+    assert(status == 0 && strstr(out, "journal"));
+    free(out);
+    char journal[260];
+    snprintf(journal, sizeof(journal), "%s/journal/journal.jsonl", data);
+    char *record = NULL;
+    size_t record_size = 0;
+    assert(common_file_read(journal, &record, &record_size, NULL) == URSATZ_OK);
+    assert(strstr(record, "project.create") && strstr(record, "\"actor\":\"claude\""));
+    free(record);
+
     kill(child, SIGTERM);
     int wait_status = 0;
     assert(waitpid(child, &wait_status, 0) == child);
