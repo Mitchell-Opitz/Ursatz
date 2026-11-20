@@ -1,5 +1,5 @@
 # Checks the CLI's input format choice and its errors. Run with cmake -P and
-# -DCLI=<ursatz-analyzer> -DMIDI_FIXTURE=<midi file> -DMUSICXML_DIR=<dir of
+# -DCLI=<ursatz> -DMIDI_FIXTURE=<midi file> -DMUSICXML_DIR=<dir of
 # MusicXML fixtures> -DWORK_DIR=<scratch dir>.
 
 foreach(var CLI MIDI_FIXTURE MUSICXML_DIR WORK_DIR)
@@ -15,7 +15,7 @@ function(check_case label source name expected_exit expect_outputs)
     file(MAKE_DIRECTORY "${WORK_DIR}")
     configure_file("${source}" "${WORK_DIR}/${name}" COPYONLY)
 
-    execute_process(COMMAND "${CLI}" ${ARGN} "${WORK_DIR}/${name}"
+    execute_process(COMMAND "${CLI}" analyze ${ARGN} "${WORK_DIR}/${name}"
                     RESULT_VARIABLE result OUTPUT_QUIET ERROR_VARIABLE error)
     if(NOT result EQUAL expected_exit)
         message(FATAL_ERROR "${label}: expected exit ${expected_exit}, got ${result}: ${error}")

@@ -17,7 +17,7 @@ ursatz_test(test_long_labels LIBS ursatz_analyzer_engine analyzer_test_support
 ursatz_test(test_analysis_document LIBS ursatz_analyzer_engine analyzer_test_support cjson)
 
 ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DFIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
@@ -25,7 +25,7 @@ ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
 if(URSATZ_JSONSCHEMA_PYTHON)
     # The smoke validates the Bach 114 document only.
     ursatz_test(test_analysis_document_schema_smoke COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
@@ -36,7 +36,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema)
     # Over 10 s in the fast set (about 49 s of CPU measured): runs nightly.
     ursatz_test(test_analysis_document_schema COMMAND ${CMAKE_COMMAND}
-                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DCLI=$<TARGET_FILE:ursatz>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
@@ -231,7 +231,7 @@ ursatz_test(test_notation_reading LIBS ursatz_analyzer_engine
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
 ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
@@ -240,7 +240,7 @@ ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
 
 ursatz_test(test_cli_input_formats COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCLI=$<TARGET_FILE:ursatz>
                  -DMIDI_FIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
@@ -443,13 +443,13 @@ ursatz_test(test_material_export LIBS ursatz_analyzer_engine analyzer_test_suppo
 # The layers of Mozart 545 (R-630): the CLI's --layers folder and Michelle's reading beside the Analyzer's (the full test runs the CLI and
 # analyzes the piece: nightly; the smoke reads only the stored fixture).
 ursatz_test_executable(test_layers_two_readings LIBS ursatz_analyzer_engine analyzer_test_support
-    DEFINITIONS URSATZ_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>")
-add_dependencies(test_layers_two_readings ursatz-analyzer)
+    DEFINITIONS URSATZ_ANALYZER_CLI="$<TARGET_FILE:ursatz>")
+add_dependencies(test_layers_two_readings ursatz)
 ursatz_test(test_layers_two_readings_smoke TARGET test_layers_two_readings ARGS smoke)
 ursatz_test(test_layers_two_readings TARGET test_layers_two_readings LABELS slow)
 
 # The model plan of Mozart 545 (R-635): --model-plan on a copy, the plan validated against its schema.
-ursatz_test(cli_model_plan COMMAND ${CMAKE_COMMAND} -DANALYZER=$<TARGET_FILE:ursatz-analyzer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_model_plan
+ursatz_test(cli_model_plan COMMAND ${CMAKE_COMMAND} -DANALYZER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_model_plan
                      "-DMIDI=${CMAKE_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/Mozart 545.mid"
                      -DSCHEMA=${CMAKE_SOURCE_DIR}/library/plan/schema/plan.v6.schema.json
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json

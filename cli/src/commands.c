@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "render.h"
+#include "analyze.h"
 #include "counterpoint.h"
 #include "develop.h"
 #include "fill.h"
@@ -23,6 +24,7 @@
 #include "flags.h"
 
 
+static const char *const FLAGS_ANALYZE[] = {"--input-format", "--layers", "--measures", "--meter", "--model-plan", "--pickup", "--title", "--value-scale", "--view", NULL};
 static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
@@ -516,6 +518,31 @@ const CliCommand CLI_COMMANDS[] = {
     "Example:\n"
     "  ursatz listen --what motifs --count 10 --seed 1 --settings mine.json --out-dir round-1",
      FLAGS_LISTEN, 0, 0, run_listen},
+    {"analyze",
+    "analyze <input> [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>] [--layers <dir>] [--model-plan <file>]\n"
+    "analyze <input> --view text [--measures <first>-<last>] [--title <text>] [--input-format <format>] [--meter <n/m>] [--value-scale <n or n/d>] [--pickup <beats>]",
+     "Analyze a MIDI or MusicXML file into an analysis document, or print its text export",
+    "Analyzes a MIDI or MusicXML file with the Ursatz Analyzer and writes the analysis document, <stem>.analysis.json,\n"
+    "next to the input (a JSON document: the form, phrases, cadences, harmony, keys and motives it hears). With --view text\n"
+    "it prints the measure-addressed text export of the piece instead, the text a person can paste into a conversation to\n"
+    "say \"measure 27 is flagged as X, I read it as Y\", and writes nothing.\n"
+    "\n"
+    "--layers <dir> also writes the layers of the analysis: realization.json and readings/analyzer.json. --model-plan <file>\n"
+    "also writes the minimal plan of the Analyzer's reading (its sections, keys and chords). Neither goes with --view text.\n"
+    "\n"
+    "Notes on options:\n"
+    "  --input-format is auto (the default), midi or musicxml. --meter, --value-scale and --pickup are a notation reading\n"
+    "  for a file whose meter or note values are not what it means: --meter 3/4, --value-scale 2 or 1/2, --pickup 1/4 (the\n"
+    "  pickup must be shorter than one measure of the meter). --measures and --title need --view text: --measures 12-16\n"
+    "  exports those measure numbers as written in the score (a pickup measure is number 0).\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, an input that cannot be read, a notation reading that cannot be applied or an analysis\n"
+    "that failed; 2 an output file (the layers, the model plan) could not be written.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz analyze song.mid\n"
+    "  ursatz analyze song.mid --view text --measures 1-4",
+     FLAGS_ANALYZE, 1, 1, run_analyze},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);

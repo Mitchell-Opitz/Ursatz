@@ -115,7 +115,7 @@ static void check_layers(void) {
             fclose(out);
         }
     }
-    snprintf(command, sizeof(command), "\"%s\" --layers \"%s\" \"%s\" > /dev/null", URSATZ_ANALYZER_CLI, dir, input);
+    snprintf(command, sizeof(command), "\"%s\" analyze --layers \"%s\" \"%s\" > /dev/null", URSATZ_ANALYZER_CLI, dir, input);
     CHECKF(midi_size > 0 && system(command) == 0, "the CLI could not write the layers: %s", command);
 
     char path[1024];

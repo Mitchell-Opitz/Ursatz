@@ -20,7 +20,7 @@ foreach(fixture IN LISTS fixtures)
     file(MAKE_DIRECTORY "${WORK_DIR}")
     configure_file("${fixture}" "${WORK_DIR}/piece.mid" COPYONLY)
 
-    execute_process(COMMAND "${CLI}" --json "${WORK_DIR}/piece.mid" RESULT_VARIABLE result OUTPUT_QUIET)
+    execute_process(COMMAND "${CLI}" analyze "${WORK_DIR}/piece.mid" RESULT_VARIABLE result OUTPUT_QUIET)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "${fixture}: CLI exited ${result}")
     endif()

@@ -2,7 +2,7 @@
 # call is the tool composer, the corpus seeding the tool corpus-passages and the pitch names the tool pitch-names.
 # The commands and the tables are the static library ursatz_cli, so the tests link the flag table and the command table; the program is main.c over it.
 set(URSATZ_CLI_SOURCES
-    commands.c flags.c render.c cli_tools.c cli_options.c progression.c motive.c develop.c grow.c grow_text.c theme.c piece.c piece_text.c counterpoint.c
+    commands.c flags.c analyze.c render.c cli_tools.c cli_options.c progression.c motive.c develop.c grow.c grow_text.c theme.c piece.c piece_text.c counterpoint.c
     plan.c fill.c regenerate.c variations.c listen.c workflow.c variants_cmd.c random_motive.c motive_extras.c motive_input.c motive_text.c
     recognize.c)
 list(TRANSFORM URSATZ_CLI_SOURCES PREPEND src/)
