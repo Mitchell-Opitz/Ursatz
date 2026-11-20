@@ -475,11 +475,130 @@ static void limits_are_refused(void) {
     cJSON_Delete(list);
 }
 
+/* The dotted keys of the document's leaves (objects descended into, lists and values as leaves), in document order. */
+static size_t document_leaves(const cJSON *object, const char *prefix, char leaves[][96], size_t count) {
+    for (const cJSON *item = object->child; item; item = item->next) {
+        char key[96];
+        snprintf(key, sizeof(key), "%s%s%s", prefix, prefix[0] ? "." : "", item->string);
+        if (cJSON_IsObject(item)) {
+            count = document_leaves(item, key, leaves, count);
+        } else {
+            assert(count < 200);
+            snprintf(leaves[count++], 96, "%s", key);
+        }
+    }
+    return count;
+}
+
+/* Every leaf of the default document has a key row, in order; the rows are the leaves plus motif.plan; the rules are the enums. */
+static void key_and_rule_tables(void) {
+    static char leaves[200][96];
+    ComposerPreferences defaults;
+    composer_preferences_default(&defaults);
+    cJSON *document = composer_preferences_write(&defaults);
+    assert(document);
+    size_t leaf_count = document_leaves(document, "", leaves, 0);
+    cJSON_Delete(document);
+    size_t key_count = 0;
+    const ComposerPreferenceKey *keys = composer_preferences_keys(&key_count);
+    assert(keys && leaf_count == 121 && key_count == leaf_count + 1);
+    size_t at = 0;
+    for (size_t i = 0; i < key_count; i++) {
+        if (strcmp(keys[i].key, "motif.plan") == 0) {
+            assert(keys[i].type == COMPOSER_KEY_PLAN && keys[i].hard && i > 0 && strcmp(keys[i - 1].key, "motif.skips_per_motif") == 0);
+            continue;
+        }
+        assert(at < leaf_count && strcmp(keys[i].key, leaves[at]) == 0);
+        at++;
+        assert(keys[i].type != COMPOSER_KEY_WORDS || (keys[i].words && keys[i].words[0]));
+        assert(keys[i].type != COMPOSER_KEY_INTEGER || keys[i].min <= keys[i].max);
+    }
+    assert(at == leaf_count);
+    /* The hard keys are the ones R-671 names; the weights and every other preference are soft. */
+    size_t hard = 0;
+    for (size_t i = 0; i < key_count; i++) {
+        hard += keys[i].hard;
+    }
+    assert(hard == 11 + 9);
+    for (size_t i = 0; i < key_count; i++) {
+        if (strcmp(keys[i].key, "melody.waive") == 0) {
+            for (unsigned rule = 0; rule < MELODY_RULE_COUNT; rule++) {
+                assert(keys[i].words[rule] && strcmp(keys[i].words[rule], melody_hard_rule_name((MelodyHardRule)rule)) == 0);
+            }
+            assert(keys[i].words[MELODY_RULE_COUNT] == NULL && keys[i].hard);
+        } else if (strcmp(keys[i].key, "melody.reverse") == 0) {
+            for (unsigned group = 0; group < MELODY_GROUP_COUNT; group++) {
+                assert(keys[i].words[group] && strcmp(keys[i].words[group], melody_soft_group_name((MelodySoftGroup)group)) == 0);
+            }
+            assert(keys[i].words[MELODY_GROUP_COUNT] == NULL && !keys[i].hard);
+        }
+    }
+    size_t rule_count = 0;
+    const ComposerRule *rules = composer_preferences_rules(&rule_count);
+    assert(rules && rule_count == MELODY_GROUP_COUNT + MELODY_RULE_COUNT);
+    for (unsigned group = 0; group < MELODY_GROUP_COUNT; group++) {
+        assert(!rules[group].hard && strcmp(rules[group].name, melody_soft_group_name((MelodySoftGroup)group)) == 0);
+    }
+    for (unsigned rule = 0; rule < MELODY_RULE_COUNT; rule++) {
+        const ComposerRule *row = &rules[MELODY_GROUP_COUNT + rule];
+        assert(row->hard && strcmp(row->name, melody_hard_rule_name((MelodyHardRule)rule)) == 0 && strcmp(row->key, "melody.waive") == 0);
+    }
+    /* Every rule's key is a row of the key table, or the group of rows under it. */
+    for (size_t i = 0; i < rule_count; i++) {
+        bool found = false;
+        for (size_t k = 0; k < key_count; k++) {
+            size_t length = strlen(rules[i].key);
+            /* A rule's key is a row, or the group of rows under it (melody.closure holds final and first). */
+            found = found || strcmp(keys[k].key, rules[i].key) == 0 ||
+                    (strncmp(keys[k].key, rules[i].key, length) == 0 && keys[k].key[length] == '.');
+        }
+        assert(found);
+    }
+}
+
+/* waive and reverse: read, written back as read, each a change from the defaults, and refused with a path and the names. */
+static void waive_and_reverse(void) {
+    ComposerPreferences read;
+    ComposerPreferences again;
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    assert(read_text("{\"melody\":{\"waive\":[\"parallel-fifths\",\"strong-beat-chord-tone\"],\"reverse\":[\"leaps\",\"melodic\"]}}", &read,
+                     path, message));
+    assert(read.melody.waive == ((1u << MELODY_RULE_PARALLEL_FIFTHS) | (1u << MELODY_RULE_STRONG_BEAT_CHORD_TONE)));
+    assert(read.melody.reverse == ((1u << MELODY_GROUP_LEAPS) | (1u << MELODY_GROUP_MELODIC)));
+    assert(!test_preferences_are_default(&read));
+    cJSON *document = composer_preferences_write(&read);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(again.melody.waive == read.melody.waive && again.melody.reverse == read.melody.reverse);
+    /* Written in the order of the enums, whatever order they were read in. */
+    char *text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "melody"));
+    assert(text && strstr(text, "\"waive\":[\"parallel-fifths\",\"strong-beat-chord-tone\"],\"reverse\":[\"melodic\",\"leaps\"]"));
+    cJSON_free(text);
+    cJSON_Delete(document);
+    assert(read_text("{\"melody\":{\"waive\":[\"no-crossing\"]}}", &read, path, message) && !test_preferences_are_default(&read));
+    assert(read_text("{\"melody\":{\"reverse\":[\"seam\"]}}", &read, path, message) && !test_preferences_are_default(&read));
+    assert(read_text("{\"melody\":{\"waive\":[],\"reverse\":[]}}", &read, path, message) && test_preferences_are_default(&read));
+
+    refused("{\"melody\":{\"waive\":[\"range\"]}}", "/melody/waive/0");
+    refused("{\"melody\":{\"waive\":[\"no-crossing\",\"no-crossing\"]}}", "/melody/waive/1");
+    refused("{\"melody\":{\"waive\":\"no-crossing\"}}", "/melody/waive");
+    refused("{\"melody\":{\"waive\":[3]}}", "/melody/waive/0");
+    refused("{\"melody\":{\"reverse\":[\"waves\",\"nothing\"]}}", "/melody/reverse/1");
+    refused("{\"melody\":{\"reverse\":[\"leaps\",\"leaps\"]}}", "/melody/reverse/1");
+    refused("{\"melody\":{\"reverse\":{}}}", "/melody/reverse");
+    assert(!read_text("{\"melody\":{\"waive\":[\"range\"]}}", &read, path, message));
+    assert(strstr(message, "is not a rule the melody stage can waive: forbidden-leap, forbidden-outline, no-crossing"));
+    assert(!read_text("{\"melody\":{\"reverse\":[\"range\"]}}", &read, path, message));
+    assert(strstr(message, "is not a soft rule group: melodic, against_bass") && strstr(message, "leaps, register"));
+}
+
 int main(void) {
     defaults_round_trip();
     l4_members_round_trip();
     members_read_over_defaults();
     limits_are_refused();
+    key_and_rule_tables();
+    waive_and_reverse();
     printf("test_preferences: ok\n");
     return 0;
 }
