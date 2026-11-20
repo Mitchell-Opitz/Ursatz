@@ -22,6 +22,9 @@ typedef struct {
 const CliGlobal *cli_global(void);
 void cli_global_set(const CliGlobal *global);
 
+/* The data folder of the process as an absolute path (--data, else URSATZ_DATA) into out: 0, or the exit status after printing the failure. */
+int cli_data_folder(const CliGlobal *global, char *out, size_t size);
+
 typedef struct CliSession CliSession;
 
 /*

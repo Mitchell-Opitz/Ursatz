@@ -62,20 +62,28 @@ static bool data_folder(const char *given, char *out, size_t size) {
     return ok;
 }
 
-int cli_session_open(const CliGlobal *global, CliSession **out) {
-    *out = NULL;
+int cli_data_folder(const CliGlobal *global, char *out, size_t size) {
     const char *given = global->data && global->data[0] ? global->data : getenv("URSATZ_DATA");
     if (!given || !given[0]) {
         return cli_fail(CLI_EXIT_USAGE, "name the data folder with --data <dir> or URSATZ_DATA");
     }
+    if (!data_folder(given, out, size)) {
+        return cli_fail(CLI_EXIT_USAGE, "the data folder path is too long");
+    }
+    return 0;
+}
+
+int cli_session_open(const CliGlobal *global, CliSession **out) {
+    *out = NULL;
     CliSession *session = calloc(1, sizeof *session);
     if (!session) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     snprintf(session->actor, sizeof session->actor, "%s", global->actor && global->actor[0] ? global->actor : "claude");
-    if (!data_folder(given, session->data, sizeof session->data)) {
+    int named = cli_data_folder(global, session->data, sizeof session->data);
+    if (named != 0) {
         free(session);
-        return cli_fail(CLI_EXIT_USAGE, "the data folder path is too long");
+        return named;
     }
 
     WorkshopConfig flags = {session->data, NULL, global->port, 0, 0};

@@ -136,7 +136,7 @@ static void test_the_messages(void) {
 }
 
 int main(void) {
-    assert(CLI_COMMAND_COUNT == 27);
+    assert(CLI_COMMAND_COUNT == 28);
     test_the_table();
     test_switch_value_and_inputs();
     test_repeated_flags_keep_their_positions();

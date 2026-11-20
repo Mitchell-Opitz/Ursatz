@@ -545,8 +545,8 @@ static void test_refusals(void) {
   check_quiet(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "settings resolve");
   Workshop *workshop = NULL;
   check_quiet(workshop_open(&resolved, &workshop, &error) == URSATZ_ERR_FORMAT && workshop == NULL, "an unmigrated folder is refused by open");
-  check_quiet(strstr(error.message, "is in the GUI's old layout") != NULL && strstr(error.message, "--migrate --dry-run") != NULL &&
-                  strstr(error.message, "ursatz-gui-backend --data open --migrate") != NULL,
+  check_quiet(strstr(error.message, "is in the GUI's old layout") != NULL && strstr(error.message, "migrate --dry-run") != NULL &&
+                  strstr(error.message, "ursatz --data open migrate") != NULL,
               "the refusal says how to back it up and migrate it");
   check_quiet(!common_path_exists("open/data-folder.json"), "and writes nothing");
   check_quiet(workshop_migrate("open", &options, &report, &error) == URSATZ_OK, "the folder migrates");

@@ -22,6 +22,7 @@
 #include "random_motive.h"
 #include "recognize.h"
 #include "items.h"
+#include "migrate.h"
 #include "regenerate.h"
 #include "theme.h"
 #include "variants_cmd.h"
@@ -52,6 +53,7 @@ static const char *const FLAGS_PLAN[] = {"--accompaniment", "--at", "--bars", "-
 static const char *const FLAGS_FILL[] = {"--blend", "--blend-weight", "--blend-weights", "--candidates", "--check", "--explain", "--format", "--layers", "--midi", "--musicxml", "--out", "--plain-midi", "--record", "--seed", "--style", "--style-weight", "--style-without", "--tempo", NULL};
 static const char *const FLAGS_LOCK[] = {"--format", "--lane", "--node", "--out", "--section", NULL};
 static const char *const FLAGS_REGENERATE[] = {"--base", "--format", "--lane", "--midi", "--musicxml", "--no-wait", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", "--version", NULL};
+static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
@@ -683,6 +685,17 @@ const CliCommand CLI_COMMANDS[] = {
     "Example:\n"
     "  ursatz --data ~/ursatz-data compose item:itm-3f2a --seed 7",
      FLAGS_COMPOSE, 1, 1, run_compose},
+    {"migrate",
+    "migrate [--dry-run] [--backup <dir>]",
+     "Migrate a data folder from an older layout to the current one",
+    "Migrates the data folder to the current layout (2): a folder of the GUI's old layout (layout 0), or one in layout 1. It first checks the folder and refuses one the GUI's one-time migrations never ran on, with the check's message. --dry-run writes nothing and reports every planned move and rewrite. A real run copies the whole folder to --backup first (default: beside it, named <folder>-backup-<time>), then migrates, and prints the report as JSON. The folder must not be open: while a process holds it, stop that process first. The data folder is named before the subcommand: ursatz --data <dir> migrate.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage; 2 the folder is in use by another process, or the migration was refused or failed.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data migrate --dry-run\n"
+    "  ursatz --data ~/ursatz-data migrate",
+     FLAGS_MIGRATE, 0, 0, run_migrate},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);

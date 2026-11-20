@@ -12,7 +12,7 @@
 
 #include "server.h"
 
-#define USAGE "usage: ursatz-gui-backend [--data <dir>] [--port <n>] [--migrate [--dry-run] [--backup <dir>]]\n"
+#define USAGE "usage: ursatz-gui-backend [--data <dir>] [--port <n>]\n"
 
 static void sleep_100ms(void) {
   struct timespec ts = {0, 100 * 1000 * 1000};
@@ -26,16 +26,10 @@ static void handle_signal(int sig) {
   keep_running = false;
 }
 
-/* --data <dir>, --port <n> and the migration's --migrate, --dry-run and --backup <dir>; anything else is a usage error. */
-static bool parse_flags(int argc, char **argv, WorkshopConfig *flags, bool *migrate, WorkshopMigrateOptions *options) {
+/* --data <dir> and --port <n>; anything else is a usage error. */
+static bool parse_flags(int argc, char **argv, WorkshopConfig *flags) {
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--migrate") == 0) {
-      *migrate = true;
-    } else if (strcmp(argv[i], "--dry-run") == 0) {
-      options->dry_run = true;
-    } else if (strcmp(argv[i], "--backup") == 0 && i + 1 < argc) {
-      options->backup_dir = argv[++i];
-    } else if (strcmp(argv[i], "--data") == 0 && i + 1 < argc) {
+    if (strcmp(argv[i], "--data") == 0 && i + 1 < argc) {
       flags->data_dir = argv[++i];
     } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
       char *end = NULL;
@@ -56,11 +50,7 @@ static bool parse_flags(int argc, char **argv, WorkshopConfig *flags, bool *migr
 int main(int argc, char **argv) {
   WorkshopConfig flags;
   memset(&flags, 0, sizeof(flags));
-  bool migrate = false;
-  WorkshopMigrateOptions migrate_options;
-  memset(&migrate_options, 0, sizeof(migrate_options));
-  if (!parse_flags(argc, argv, &flags, &migrate, &migrate_options) ||
-      (!migrate && (migrate_options.dry_run || migrate_options.backup_dir))) {
+  if (!parse_flags(argc, argv, &flags)) {
     fputs(USAGE, stderr);
     return 2;
   }
@@ -69,20 +59,6 @@ int main(int argc, char **argv) {
   char storage[2048];
   UrsatzError error = {{0}};
   Workshop *workshop = NULL;
-  if (migrate) {
-    /* The migration of the GUI's data folder to layout 1 (R-642): the report is printed, then the process exits. */
-    cJSON *report = NULL;
-    if (workshop_settings_resolve(&flags, &settings, storage, sizeof(storage), &error) != URSATZ_OK ||
-        workshop_migrate(settings.data_dir, &migrate_options, &report, &error) != URSATZ_OK) {
-      fprintf(stderr, "ursatz-gui-backend: %s\n", error.message);
-      return 1;
-    }
-    char *text = report ? cJSON_Print(report) : NULL;
-    printf("%s\n", text ? text : "{}");
-    free(text);
-    cJSON_Delete(report);
-    return 0;
-  }
   if (workshop_settings_resolve(&flags, &settings, storage, sizeof(storage), &error) != URSATZ_OK ||
       workshop_open(&settings, &workshop, &error) != URSATZ_OK) {
     fprintf(stderr, "ursatz-gui-backend: %s\n", error.message);
