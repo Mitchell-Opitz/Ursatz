@@ -3,6 +3,7 @@
 # (the include closure, R-578): none is yet, the workshop stages them (P65 B3).
 add_library(ursatz_text
     text.c
+    text_tree.c
 )
 ursatz_public_headers(ursatz_text
     BASE ${PROJECT_SOURCE_DIR}
