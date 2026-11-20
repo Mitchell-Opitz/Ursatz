@@ -1,0 +1,15 @@
+workshop_close
+workshop_command
+workshop_data_dir
+workshop_http_threads
+workshop_job_workers
+workshop_migrate
+workshop_open
+workshop_port
+workshop_query
+workshop_recovery_summary
+workshop_reply_destroy
+workshop_settings_resolve
+workshop_start
+workshop_status
+workshop_stop

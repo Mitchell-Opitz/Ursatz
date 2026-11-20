@@ -4,7 +4,7 @@
 # The frontend's vocabulary.json and forms.json are written at build time by the in-tree Composer (the strings the two
 # routes serve), so the frontend tests and composer_route read what the Composer says now. gui/CMakeLists.txt adds this
 # folder before frontend/tests, so the variable is set when the frontend tests are registered.
-ursatz_test_executable(gui_write_frontend_fixtures SOURCES write_frontend_fixtures.c LIBS ursatz_gui_core ursatz_workshop_internal)
+ursatz_test_executable(gui_write_frontend_fixtures SOURCES write_frontend_fixtures.c LIBS ursatz_gui_core_internal)
 set(URSATZ_GUI_GENERATED_FIXTURES ${CMAKE_BINARY_DIR}/gui/frontend/tests/fixtures CACHE INTERNAL "")
 add_custom_command(
     OUTPUT ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json
@@ -17,9 +17,10 @@ add_custom_target(gui_frontend_fixtures ALL
 
 # Opens a workshop on the test's working directory and starts the server on it (support/server_support.h).
 ursatz_test_library(gui_server_support SOURCES support/server_support.c LIBS ursatz_gui_core)
+ursatz_test_library(gui_server_support_internal SOURCES support/server_support.c LIBS ursatz_gui_core_internal)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route_smoke)
-ursatz_test_executable(test_analyzer_route LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_http gui_server_support)
+ursatz_test_executable(test_analyzer_route LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal)
 ursatz_test(analyzer_route TARGET test_analyzer_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 # Slow: about 363 s in a -j4 run (R-307).
@@ -35,7 +36,7 @@ ursatz_test(corpus_route LIBS ursatz_gui_core ursatz_test_http gui_server_suppor
 # The test creates collections/ and pieces/ in its own working directory.
 
 # The one status-to-HTTP table of the routes and the last error the services keep for them (R-639).
-ursatz_test(gui_http_status SOURCES test_http_status.c LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_support)
+ursatz_test(gui_http_status SOURCES test_http_status.c LIBS ursatz_gui_core_internal ursatz_test_support)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
 ursatz_test(composer_route LIBS ursatz_gui_core ursatz_test_http gui_server_support
@@ -48,7 +49,7 @@ add_dependencies(test_composer_route gui_frontend_fixtures)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route_smoke)
-ursatz_test_executable(test_styles_route LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_http gui_server_support)
+ursatz_test_executable(test_styles_route LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal)
 ursatz_test(styles_route TARGET test_styles_route LABELS slow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
 # Slow: about 260 s in a -j4 run (R-307).
 # styles_route_smoke (argument smoke, port 18779, its own working directory) uploads Clementi 36 alone, builds a style from
@@ -59,7 +60,7 @@ ursatz_test(styles_route_smoke TARGET test_styles_route ARGS smoke
 # working directory.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/materials_route)
-ursatz_test(materials_route LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_http gui_server_support
+ursatz_test(materials_route LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal
     DEFINITIONS URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
     URSATZ_GUI_TEST_EXPORT_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/export"
     URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
@@ -80,7 +81,7 @@ ursatz_test(links_route LIBS ursatz_gui_core ursatz_test_http gui_server_support
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route_smoke)
-ursatz_test_executable(test_theme_route LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_http gui_server_support
+ursatz_test_executable(test_theme_route LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal
     DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
 ursatz_test(theme_route TARGET test_theme_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
@@ -95,7 +96,7 @@ ursatz_test(theme_route_smoke TARGET test_theme_route ARGS smoke
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route_smoke)
-ursatz_test_executable(test_piece_route LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_http gui_server_support
+ursatz_test_executable(test_piece_route LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal
     DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
 ursatz_test(piece_route TARGET test_piece_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
@@ -118,7 +119,7 @@ ursatz_test(piece_snapshot LIBS ursatz_gui_core ursatz_test_http gui_server_supp
 # The routes on the migrated version 0 fixture (P63 B7): the test copies workshop/tests/fixtures/data-v0 into its working directory, migrates it
 # and serves it. The folder it leaves is validated by workshop_formats.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/migrated_routes)
-ursatz_test(migrated_routes SOURCES test_migrated_routes.c LIBS ursatz_gui_core ursatz_workshop_internal ursatz_test_http gui_server_support
+ursatz_test(migrated_routes SOURCES test_migrated_routes.c LIBS ursatz_gui_core_internal ursatz_test_http gui_server_support_internal
     DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0"
     PROPERTIES FIXTURES_SETUP migrated_routes_files RESOURCE_LOCK migrated_routes_files
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/migrated_routes)
