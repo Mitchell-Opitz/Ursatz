@@ -114,7 +114,7 @@ static void duration_name(long long num, long long den, char *out, size_t size) 
 
 /* The notes of a line as a note list, gaps as rests, a bar line between bars. bar is the length of a bar. names are the pitch names of the
  * notes, in order, from the one pitch-names call of the document. */
-static void print_line(const cJSON *notes, const char (*names)[8], long long bar_num, long long bar_den) {
+static void print_line(const cJSON *notes, char (*names)[8], long long bar_num, long long bar_den) {
     size_t index = 0;
     long long at_num = 0;
     long long at_den = 1;
@@ -180,7 +180,7 @@ static void print_result_text(const Options *options, const cJSON *document, con
     }
     cli_pitch_names(midi, total, names);
     free(midi);
-    const char(*next)[8] = names;
+    char(*next)[8] = names;
     size_t k = 0;
     cJSON_ArrayForEach(result, results) {
         if (options->suggest_text) {
