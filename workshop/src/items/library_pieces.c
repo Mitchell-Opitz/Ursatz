@@ -689,6 +689,19 @@ static void free_summaries(WorkshopPieceSummary *pieces, size_t count) {
     free(pieces);
 }
 
+/* Whether the filter keeps the piece id: always, unless it is for a collection's members and the id is not one of them. */
+static bool in_members(const WorkshopPieceFilter *filter, const char *id) {
+    if (!filter || !filter->members_only) {
+        return true;
+    }
+    for (size_t i = 0; i < filter->member_count; i++) {
+        if (strcmp(filter->member_ids[i], id) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 UrsatzStatus workshop_library_list_json(const char *pieces_dir, const WorkshopPieceFilter *filter, cJSON **out) {
     *out = NULL;
     WorkshopPieceSummary *pieces = NULL;
@@ -699,7 +712,7 @@ UrsatzStatus workshop_library_list_json(const char *pieces_dir, const WorkshopPi
     }
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < count; i++) {
-        if (filter && !workshop_meta_matches(&pieces[i], filter)) {
+        if (!in_members(filter, pieces[i].id) || (filter && !workshop_meta_matches(&pieces[i], filter))) {
             continue;
         }
         cJSON *entry = piece_entry(&pieces[i]);
@@ -760,7 +773,7 @@ static cJSON *group_array(const WorkshopMetaGroup *groups, size_t count) {
     return array;
 }
 
-UrsatzStatus workshop_library_groups_json(const char *pieces_dir, cJSON **out) {
+UrsatzStatus workshop_library_groups_json(const char *pieces_dir, const WorkshopPieceFilter *scope, cJSON **out) {
     *out = NULL;
     WorkshopPieceSummary *pieces = NULL;
     size_t count = 0;
@@ -768,8 +781,21 @@ UrsatzStatus workshop_library_groups_json(const char *pieces_dir, cJSON **out) {
     if (result != URSATZ_OK) {
         return result;
     }
+    /* The pieces outside the scope are left out of the groups (a copy of the summaries that stay is not needed: the kept ones are compacted to the front
+     * and the rest are freed with the others). */
+    size_t kept = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (in_members(scope, pieces[i].id)) {
+            if (kept != i) {
+                WorkshopPieceSummary moved = pieces[kept];
+                pieces[kept] = pieces[i];
+                pieces[i] = moved;
+            }
+            kept++;
+        }
+    }
     WorkshopMetaGroups groups;
-    UrsatzStatus grouped = workshop_meta_group(pieces, count, &groups);
+    UrsatzStatus grouped = workshop_meta_group(pieces, kept, &groups);
     free_summaries(pieces, count);
     if (grouped != URSATZ_OK) {
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");

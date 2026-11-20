@@ -129,15 +129,18 @@ typedef struct {
     bool composer_unassigned; /* match an empty composer */
     bool source_unassigned;   /* match an empty source */
     bool untagged;            /* match a piece without tags */
+    bool members_only;        /* keep only the pieces whose id is one of member_ids (a collection's members) */
+    const char *const *member_ids;
+    size_t member_count;
 } WorkshopPieceFilter;
 
-/* The pieces of pieces_dir that match filter (NULL: all) as the Library list shows them: *out is a JSON array of {id, filename, format,
+/* The pieces of pieces_dir that match filter (NULL: all; members_only keeps a collection's members) as the Library list shows them: *out is a JSON array of {id, filename, format,
  * uploaded_at, composer, source, tags, notation, analysis_status}. */
 UrsatzStatus workshop_library_list_json(const char *pieces_dir, const WorkshopPieceFilter *filter, cJSON **out);
 
 /* The distinct composers, sources and tags with piece counts: {composers: [{value, count}], sources, tags, unassigned: {composer,
- * source}, untagged, total} in *out. */
-UrsatzStatus workshop_library_groups_json(const char *pieces_dir, cJSON **out);
+ * source}, untagged, total} in *out. Only members_only, member_ids and member_count of scope count (NULL: every piece). */
+UrsatzStatus workshop_library_groups_json(const char *pieces_dir, const WorkshopPieceFilter *scope, cJSON **out);
 
 /* One piece as the list shows it, in *out (JSON null when the piece is not in the list). */
 UrsatzStatus workshop_library_entry_json(const char *pieces_dir, const char *id, cJSON **out);

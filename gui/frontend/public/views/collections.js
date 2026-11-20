@@ -64,22 +64,15 @@ export async function renderCorpusView() {
   }
 }
 
-/* Resolves to Map(collection id -> collectionSummary) by joining each
- * collection's piece ids against the Library list. A failed lookup leaves
- * that card without a summary. */
+/* Resolves to Map(collection id -> collectionSummary) from each collection's groups (the groups route limited to its members). A failed lookup
+ * leaves that card without a summary. */
 async function loadCollectionSummaries(collections) {
   const summaries = new Map();
-  const library = await fetchJsonResult("/api/analyzer/pieces");
-  if (!(library.ok && library.data && library.data.ok)) {
-    return summaries;
-  }
-  const byId = new Map(library.data.pieces.map((piece) => [piece.id, piece]));
   await Promise.all(
     collections.map(async (corpus) => {
-      const detail = await fetchJsonResult(`/api/corpus/${corpus.id}`);
-      if (detail.ok && detail.data && detail.data.ok) {
-        const members = detail.data.pieces.map((id) => byId.get(id)).filter(Boolean);
-        summaries.set(corpus.id, PieceMetadata.collectionSummary(members));
+      const grouped = await fetchJsonResult(`/api/analyzer/groups?${PieceMetadata.filterQuery({}, corpus.id)}`);
+      if (grouped.ok && grouped.data && grouped.data.ok) {
+        summaries.set(corpus.id, PieceMetadata.collectionSummary(grouped.data));
       }
     }),
   );
@@ -248,12 +241,12 @@ async function handleCreateCorpus() {
   }
 }
 
-/* State of the open collection detail: its members joined with Library
- * metadata, the filter on them and the shared table. */
+/* State of the open collection detail: the ids of its members, the members the filter keeps (as the backend lists them), the groups of all its
+ * members (for the filter selects), the filter and the shared table. */
 let collectionView = null;
 
 export function showCorpusDetail(id, name) {
-  collectionView = { id, name, members: [], libraryPieces: [], filter: emptyLibraryFilter(), table: null };
+  collectionView = { id, name, memberIds: [], members: [], groups: emptyGroups(), filter: emptyLibraryFilter(), table: null };
   const content = shell().contentEl();
   content.innerHTML = `
     <div id="corpus-back-container"></div>
@@ -312,7 +305,7 @@ function wireCollectionFilterRow() {
   const change = (id, apply) => {
     document.getElementById(id).addEventListener("change", (event) => {
       apply(event.target.value);
-      showCollectionMembers();
+      loadCollectionMembers();
     });
   };
   change("corpus-filter-composer", (value) => {
@@ -333,7 +326,7 @@ function wireCollectionFilterRow() {
   });
   document.getElementById("corpus-clear-filters").addEventListener("click", () => {
     collectionView.filter = emptyLibraryFilter();
-    showCollectionMembers();
+    loadCollectionMembers();
   });
 }
 
@@ -347,7 +340,7 @@ function isCollectionFilterOn() {
 function showCollectionMembers(refillSelects = true) {
   const view = collectionView;
   const f = view.filter;
-  const groups = PieceMetadata.groupValues(view.members);
+  const groups = view.groups;
   if (refillSelects) {
     fillFilterSelect(
       document.getElementById("corpus-filter-composer"),
@@ -379,18 +372,18 @@ function showCollectionMembers(refillSelects = true) {
     document.getElementById("corpus-search").value = f.search;
   }
 
-  const shown = PieceMetadata.sortPieces(PieceMetadata.matchPieces(view.members, f), "title");
+  const shown = PieceMetadata.sortPieces(PieceMetadata.searchPieces(view.members, f.search), "title");
   const statusEl = document.getElementById("corpus-piece-status");
   const tableEl = document.getElementById("corpus-piece-table-container");
   document.getElementById("corpus-count").textContent = isCollectionFilterOn()
-    ? `${shown.length} of ${view.members.length} pieces`
+    ? `${shown.length} of ${view.memberIds.length} pieces`
     : "";
   view.table = null;
   tableEl.innerHTML = "";
   updateCollectionBulkBar();
   statusEl.classList.remove("error");
   if (shown.length === 0) {
-    statusEl.textContent = view.members.length === 0 ? "No pieces yet." : "No pieces match.";
+    statusEl.textContent = view.memberIds.length === 0 ? "No pieces yet." : "No pieces match.";
     tableEl.hidden = true;
     return;
   }
@@ -527,17 +520,40 @@ async function loadCollectionHeading(id, fallbackName) {
   }
 }
 
-/* A collection stores piece ids only; this joins them against
- * /api/analyzer/pieces for the same columns the Library shows, falling back
- * to the bare id for a piece not found. */
+/* The groups of a collection's members with no pieces: what the filter selects show before the groups are read. */
+function emptyGroups() {
+  return { composers: [], sources: [], tags: [], unassigned: { composer: 0, source: 0 }, untagged: 0, total: 0 };
+}
+
+/* The members the filter keeps, listed by the backend (the Library list limited to this collection), then drawn; the search box narrows them
+ * in the page. */
+async function loadCollectionMembers() {
+  const view = collectionView;
+  const query = PieceMetadata.filterQuery(view.filter, view.id);
+  const listed = await fetchJsonResult(`/api/analyzer/pieces?${query}`);
+  if (collectionView !== view) {
+    return;
+  }
+  if (!listed.ok || !listed.data || !listed.data.ok) {
+    const statusEl = document.getElementById("corpus-piece-status");
+    statusEl.textContent = `Failed to load pieces: ${collectionResultError(listed, "unknown error")}`;
+    statusEl.classList.add("error");
+    return;
+  }
+  view.members = listed.data.pieces;
+  showCollectionMembers();
+}
+
+/* The open collection from the backend: its name and member ids, the groups of its members for the filter selects and the members the filter
+ * keeps (the Library list and groups limited to this collection). */
 async function loadCorpusPieces(id, name) {
   const statusEl = document.getElementById("corpus-piece-status");
   statusEl.textContent = "Loading pieces...";
   statusEl.classList.remove("error");
 
-  const [detail, library] = await Promise.all([
+  const [detail, grouped] = await Promise.all([
     fetchJsonResult(`/api/corpus/${id}`),
-    fetchJsonResult("/api/analyzer/pieces"),
+    fetchJsonResult(`/api/analyzer/groups?${PieceMetadata.filterQuery({}, id)}`),
   ]);
   if (!collectionView || collectionView.id !== id) {
     return;
@@ -547,13 +563,11 @@ async function loadCorpusPieces(id, name) {
     statusEl.classList.add("error");
     return;
   }
-  const libraryPieces = library.ok && library.data && library.data.ok ? library.data.pieces : [];
-  const byId = new Map(libraryPieces.map((piece) => [piece.id, piece]));
   collectionView.name = detail.data.name || name;
-  collectionView.libraryPieces = libraryPieces;
-  collectionView.members = detail.data.pieces.map((pieceId) => byId.get(pieceId) || { id: pieceId, filename: "" });
-  showCollectionMembers();
-  if (collectionView.picker) {
+  collectionView.memberIds = detail.data.pieces;
+  collectionView.groups = grouped.ok && grouped.data && grouped.data.ok ? grouped.data : emptyGroups();
+  await loadCollectionMembers();
+  if (collectionView && collectionView.id === id && collectionView.picker) {
     loadPickerPieces();
   }
 }
@@ -676,7 +690,7 @@ async function loadPickerPieces() {
   }
   picker.fetched = PieceMetadata.pickerCandidates(
     result.data.pieces,
-    view.members.map((piece) => piece.id),
+    view.memberIds,
   );
   showPickerPieces();
 }

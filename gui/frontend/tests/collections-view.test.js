@@ -1,5 +1,5 @@
 /* Covers the Collections view's data decisions through the pure helpers in
- * public/piece-metadata.js: card text, the add-pieces picker, the add body
+: card text, the add-pieces picker, the add body
  * and result line, and the name given to Save as collection. Plain Node
  * script: `node frontend/tests/collections-view.test.js`. */
 import M from "../public/models/piece-metadata.js";
@@ -12,7 +12,10 @@ const library = [
 ];
 
 /* Card text, as buildCollectionCard assembles it. */
-const summary = M.collectionSummary(library.slice(0, 2));
+const summary = M.collectionSummary({
+  composers: [{ value: "John Field", count: 2 }],
+  tags: [{ value: "slow", count: 1 }, { value: "whimsical", count: 2 }],
+});
 const lines = [
   M.pieceCountText(2),
   M.summaryLine("Composers", summary.composers),
@@ -29,9 +32,9 @@ check(same(M.searchPieces(candidates, "chopin").map((piece) => piece.id), ["p3"]
 check(same(M.addPiecesBody(candidates.map((piece) => piece.id)), { piece_ids: ["p1", "p3"] }), "Add all matching sends every candidate in one body");
 check(M.addResultText(5, 2) === "Added 5, 2 were already in it", "the result line reports added and already");
 
-/* Detail filters over members. */
-check(same(M.matchPieces(library, { tag: "slow" }).map((piece) => piece.id), ["p2"]), "member filter by tag");
-check(same(M.matchPieces(library, { untagged: true }).map((piece) => piece.id), ["p3"]), "member filter untagged");
+/* Detail filters over members are the backend's: the same query as the Library's, limited to the collection. */
+check(M.filterQuery({ tag: "slow", untagged: false }, "col-1") === "collection=col-1&tag=slow", "member filter by tag is a query on the collection");
+check(M.filterQuery({ untagged: true }, "col-1") === "collection=col-1&untagged=1", "member filter untagged is a query on the collection");
 
 /* Save as collection. */
 check(M.collectionNameFromFilter({ composer: "John Field" }) === "John Field", "Save as collection names a composer filter");

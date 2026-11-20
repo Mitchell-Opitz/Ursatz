@@ -45,10 +45,36 @@ static bool has_text(const cJSON *params, const char *name, const char *value) {
     return false;
 }
 
-/* The filter of the Library list: composer, source, tag, unassigned (composer or source, may repeat) and untagged=1. */
+/* The collection the query is limited to (param collection, optional): its members' ids go into filter, which points into *collection until
+ * it is destroyed. Fails for an id that names no collection. */
+static UrsatzStatus limit_to_collection(const cJSON *params, WorkshopPieceFilter *filter, WorkshopCollection **collection, UrsatzError *error) {
+    *collection = NULL;
+    const char *id = first_text(params, "collection");
+    if (!id) {
+        return URSATZ_OK;
+    }
+    if (!workshop_collection_is_valid_id(id)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/collection", "invalid id");
+    }
+    UrsatzStatus result = workshop_collection_get(id, collection);
+    if (result != URSATZ_OK) {
+        return workshop_call_fail_service(error, result, "collection operation failed");
+    }
+    filter->members_only = true;
+    filter->member_ids = (const char *const *)(*collection)->pieces;
+    filter->member_count = (*collection)->piece_count;
+    return URSATZ_OK;
+}
+
+/* The filter of the Library list: composer, source, tag, unassigned (composer or source, may repeat), untagged=1 and collection (its members only). */
 WORKSHOP_HANDLER(workshop_q_library_list) {
     WorkshopPieceFilter filter;
     memset(&filter, 0, sizeof(filter));
+    WorkshopCollection *collection = NULL;
+    UrsatzStatus limited = limit_to_collection(call->params, &filter, &collection, error);
+    if (limited != URSATZ_OK) {
+        return limited;
+    }
     filter.composer = first_text(call->params, "composer");
     filter.source = first_text(call->params, "source");
     filter.tag = first_text(call->params, "tag");
@@ -58,17 +84,25 @@ WORKSHOP_HANDLER(workshop_q_library_list) {
     filter.untagged = untagged && strcmp(untagged, "1") == 0;
     cJSON *pieces = NULL;
     UrsatzStatus result = workshop_library_list_json(piece_dir(), &filter, &pieces);
+    workshop_collection_destroy(collection);
     if (result != URSATZ_OK) {
         return workshop_call_fail(error, result, "", result == URSATZ_ERR_ALLOC ? "out of memory" : "failed to list pieces");
     }
     return workshop_reply_member(reply, "pieces", pieces, error);
 }
 
-/* The distinct composers, sources and tags with piece counts. */
+/* The distinct composers, sources and tags with piece counts, of the pieces of param collection when it is given. */
 WORKSHOP_HANDLER(workshop_q_library_groups) {
-    (void)call;
+    WorkshopPieceFilter scope;
+    memset(&scope, 0, sizeof(scope));
+    WorkshopCollection *collection = NULL;
+    UrsatzStatus limited = limit_to_collection(call->params, &scope, &collection, error);
+    if (limited != URSATZ_OK) {
+        return limited;
+    }
     cJSON *groups = NULL;
-    UrsatzStatus result = workshop_library_groups_json(piece_dir(), &groups);
+    UrsatzStatus result = workshop_library_groups_json(piece_dir(), &scope, &groups);
+    workshop_collection_destroy(collection);
     if (result != URSATZ_OK) {
         return workshop_call_fail(error, result, "", result == URSATZ_ERR_ALLOC ? "out of memory" : "failed to list pieces");
     }

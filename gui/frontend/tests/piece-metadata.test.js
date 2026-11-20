@@ -8,6 +8,7 @@ check(same(M.parseTagInput(""), []), "empty tag text gives no tags");
 check(same(M.parseTagInput(undefined), []), "missing tag text gives no tags");
 
 check(M.filterQuery({}) === "", "empty filter gives an empty query");
+check(M.filterQuery({}, "col-1") === "collection=col-1" && M.filterQuery({ tag: "etude" }, "col-1") === "collection=col-1&tag=etude", "a collection limits the query to its members");
 check(M.filterQuery({ composer: "John Field", tag: "a&b" }) === "composer=John%20Field&tag=a%26b", "values are encoded");
 check(
   M.filterQuery({ source: "Op. 1", unassigned: ["composer", "source"], untagged: true }) ===
@@ -38,21 +39,26 @@ check(same(M.bulkPatch("add-tag", ["a"]), { add_tags: ["a"] }), "add-tag body");
 check(same(M.bulkPatch("remove-tag", "a"), { remove_tags: ["a"] }), "remove-tag body wraps a single tag");
 check(M.bulkPatch("nope", "x") === null, "unknown action gives null");
 
-const summaryPieces = [
-  { id: "a", composer: "Field", tags: ["etude", "slow"] },
-  { id: "b", composer: "field", tags: ["etude"] },
-  { id: "c", composer: "Clementi", tags: ["slow", "zeta"] },
-  { id: "d", composer: "Mozart", tags: ["alpha", "etude"] },
-  { id: "e", composer: "Bach", tags: [] },
-  { id: "f", composer: "", tags: [] },
-];
-const summary = M.collectionSummary(summaryPieces);
+const summaryGroups = {
+  composers: [
+    { value: "Clementi", count: 1 },
+    { value: "Field", count: 2 },
+    { value: "Mozart", count: 1 },
+    { value: "Bach", count: 1 },
+  ],
+  tags: [
+    { value: "zeta", count: 1 },
+    { value: "slow", count: 2 },
+    { value: "etude", count: 3 },
+    { value: "alpha", count: 1 },
+  ],
+};
+const summary = M.collectionSummary(summaryGroups);
 check(summary.composers.length === 3, "summary keeps the top 3 composers");
-check(summary.composers[0].value === "Field" && summary.composers[0].count === 2, "composers are counted case-insensitively");
+check(summary.composers[0].value === "Field" && summary.composers[0].count === 2, "composers are ordered by count");
 check(same(summary.composers.slice(1).map((c) => c.value), ["Bach", "Clementi"]), "composer ties are ordered by name");
 check(same(summary.tags.map((t) => [t.value, t.count]), [["etude", 3], ["slow", 2], ["alpha", 1]]), "top 3 tags by count, ties by name");
-check(same(M.collectionSummary([]), { composers: [], tags: [] }), "an empty collection has an empty summary");
-check(same(M.collectionSummary([{ id: "x", composer: "" }]).composers, []), "unassigned composers are not counted");
+check(same(M.collectionSummary({ composers: [], tags: [] }), { composers: [], tags: [] }) && same(M.collectionSummary(null), { composers: [], tags: [] }), "an empty collection has an empty summary");
 
 check(M.pieceCountText(1) === "1 piece" && M.pieceCountText(5) === "5 pieces", "piece count text");
 check(M.summaryLine("Tags", summary.tags) === "Tags: etude, slow, alpha", "summary line lists values");
@@ -63,15 +69,6 @@ const members = [
   { id: "m2", filename: "b.mid", composer: "", source: "", tags: [] },
   { id: "m3", filename: "c.mid", composer: "Mozart", source: "Op 1", tags: ["etude", "slow"] },
 ];
-check(M.matchPieces(members, { composer: "field" }).length === 1, "client filter matches composer case-insensitively");
-check(M.matchPieces(members, { tag: "ETUDE" }).length === 2, "client filter matches a tag");
-check(M.matchPieces(members, { unassigned: ["composer"] })[0].id === "m2", "client filter unassigned composer");
-check(M.matchPieces(members, { untagged: true })[0].id === "m2", "client filter untagged");
-check(M.matchPieces(members, { source: "op 1", search: "mozart" }).length === 1, "client filter combines fields and search");
-check(M.matchPieces(members, {}).length === 3, "empty client filter keeps all");
-const groups = M.groupValues(members);
-check(same(groups.tags.map((t) => [t.value, t.count]), [["etude", 2], ["slow", 1]]), "member groups count tags");
-check(groups.unassigned.composer === 1 && groups.untagged === 1 && groups.total === 3, "member groups count unassigned and untagged");
 
 check(same(M.pickerCandidates(members, ["m2"]).map((p) => p.id), ["m1", "m3"]), "picker excludes members");
 check(same(M.addPiecesBody(["a", "b"]), { piece_ids: ["a", "b"] }), "add body uses piece_ids");

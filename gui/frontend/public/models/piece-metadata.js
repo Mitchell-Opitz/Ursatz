@@ -15,9 +15,13 @@ function parseTagInput(text) {
   return tags;
 }
 
-function filterQuery(filter) {
+/* The query of the Library list and groups routes for a filter; collection (an id) limits them to that collection's members. */
+function filterQuery(filter, collection) {
   const f = filter || {};
   const params = [];
+  if (collection) {
+    params.push(`collection=${encodeURIComponent(collection)}`);
+  }
   if (f.composer) {
     params.push(`composer=${encodeURIComponent(f.composer)}`);
   }
@@ -89,75 +93,19 @@ function bulkPatch(action, value) {
   }
 }
 
-function topCounts(values, limit) {
-  const counts = new Map();
-  for (const value of values) {
-    const key = value.toLowerCase();
-    const entry = counts.get(key) || { value, count: 0 };
-    entry.count += 1;
-    counts.set(key, entry);
-  }
-  return Array.from(counts.values())
+/* The values of a group by count, then name (case-insensitive), at most limit of them. */
+function topGroupValues(values, limit) {
+  return (Array.isArray(values) ? values : [])
+    .map((entry) => ({ value: entry.value, count: entry.count }))
     .sort((a, b) => b.count - a.count || compareText(a.value.toLowerCase(), b.value.toLowerCase()))
     .slice(0, limit);
 }
 
-/* The top 3 composers and top 3 tags among a collection's pieces, by count
- * then name (case-insensitive). Unassigned composers are not counted. */
-function collectionSummary(pieces) {
-  const list = pieces || [];
-  return {
-    composers: topCounts(list.map((piece) => String(piece.composer || "")).filter(Boolean), 3),
-    tags: topCounts(list.flatMap((piece) => piece.tags || []), 3),
-  };
-}
-
-function sameText(a, b) {
-  return String(a || "").toLowerCase() === String(b || "").toLowerCase();
-}
-
-/* Client-side version of the backend's filter (same fields as
- * filterQuery) plus the free-text search, for lists already in memory. */
-function matchPieces(pieces, filter) {
-  const f = filter || {};
-  const unassigned = f.unassigned || [];
-  const kept = pieces.filter((piece) => {
-    if (f.composer && !sameText(piece.composer, f.composer)) {
-      return false;
-    }
-    if (f.source && !sameText(piece.source, f.source)) {
-      return false;
-    }
-    if (f.tag && !(piece.tags || []).some((tag) => sameText(tag, f.tag))) {
-      return false;
-    }
-    if (unassigned.includes("composer") && piece.composer) {
-      return false;
-    }
-    if (unassigned.includes("source") && piece.source) {
-      return false;
-    }
-    return !(f.untagged && (piece.tags || []).length > 0);
-  });
-  return searchPieces(kept, f.search);
-}
-
-/* Distinct composers, sources and tags with counts, in the shape of the
- * backend's groups route, over pieces already in memory. */
-function groupValues(pieces) {
-  const count = (values) => topCounts(values, Infinity);
-  const list = pieces || [];
-  return {
-    composers: count(list.map((piece) => String(piece.composer || "")).filter(Boolean)),
-    sources: count(list.map((piece) => String(piece.source || "")).filter(Boolean)),
-    tags: count(list.flatMap((piece) => piece.tags || [])),
-    unassigned: {
-      composer: list.filter((piece) => !piece.composer).length,
-      source: list.filter((piece) => !piece.source).length,
-    },
-    untagged: list.filter((piece) => !(piece.tags || []).length).length,
-    total: list.length,
-  };
+/* The top 3 composers and top 3 tags of a collection from its groups (the groups route's {composers, tags}), by count then name
+ * (case-insensitive). Unassigned composers are not counted. */
+function collectionSummary(groups) {
+  const g = groups || {};
+  return { composers: topGroupValues(g.composers, 3), tags: topGroupValues(g.tags, 3) };
 }
 
 /* Pieces not yet in the collection, for the add-pieces picker. */
@@ -317,7 +265,5 @@ const api = {
   searchPieces,
   bulkPatch,
   collectionSummary,
-  matchPieces,
-  groupValues,
 };
 export default api;

@@ -2,7 +2,6 @@ import BackendJobs from "../core/backend-jobs.js";
 import { el as element } from "../core/dom.js";
 import MaterialsModel from "../models/materials-model.js";
 import MotiveLinksModel from "../models/motive-links-model.js";
-import PieceMetadata from "../models/piece-metadata.js";
 import { sendMaterialsRequest } from "./materials-common.js";
 import { loadSubjectList, subjectsState } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
@@ -44,19 +43,19 @@ function motiveLinksSelect(options, placeholder) {
 
 /* The pickers of the scope kinds, filled from the existing lists. */
 export async function loadMotiveLinksChoices() {
-  const [collections, pieces, subjects, projects] = await Promise.all([
+  const [collections, grouped, subjects, projects] = await Promise.all([
     fetchJsonResult("/api/corpus"),
-    fetchJsonResult("/api/analyzer/pieces"),
+    fetchJsonResult("/api/analyzer/groups"),
     loadSubjectList(),
     sendMaterialsRequest(MaterialsModel.buildProjectListRequest()),
   ]);
-  const groups = PieceMetadata.groupValues(pieces.ok && pieces.data && Array.isArray(pieces.data.pieces) ? pieces.data.pieces : []);
+  const groups = grouped.ok && grouped.data ? grouped.data : {};
   const valueOptions = (list) => list.map((entry) => ({ value: entry.value, label: entry.value }));
   return {
     collections: collections.ok && collections.data && Array.isArray(collections.data.corpora) ? collections.data.corpora : [],
-    composers: valueOptions(groups.composers),
-    sources: valueOptions(groups.sources),
-    tags: valueOptions(groups.tags),
+    composers: valueOptions(groups.composers || []),
+    sources: valueOptions(groups.sources || []),
+    tags: valueOptions(groups.tags || []),
     subjects: subjectsState.subjects,
     projects: projects.ok ? MaterialsModel.projectsFrom(projects.data) : [],
   };

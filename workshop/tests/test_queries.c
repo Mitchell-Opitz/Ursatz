@@ -18,7 +18,7 @@ static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e\","
     "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}";
 
-static char g_piece[64], g_collection[64], g_project[64], g_motif[64], g_theme[64], g_subject[64], g_style[64], g_run[64];
+static char g_piece[64], g_collection[64], g_empty_collection[64], g_project[64], g_motif[64], g_theme[64], g_subject[64], g_style[64], g_run[64];
 
 /* A fingerprint of the folder outside cache/: every file's path, size and modification time, summed into one number. */
 static unsigned long long fingerprint(const char *path) {
@@ -80,6 +80,9 @@ static bool setup(void) {
     workshop_reply_destroy(&reply);
     ok = ok && command("collection.add-pieces", g_collection, params, -1, &reply, &error) == URSATZ_OK;
     workshop_reply_destroy(&reply);
+    ok = ok && command("collection.create", NULL, "{\"name\":\"Empty\"}", -1, &reply, &error) == URSATZ_OK;
+    snprintf(g_empty_collection, sizeof(g_empty_collection), "%s", str(reply.json, "id"));
+    workshop_reply_destroy(&reply);
     ok = ok && command("project.create", NULL, "{\"name\":\"Work\"}", -1, &reply, &error) == URSATZ_OK;
     snprintf(g_project, sizeof(g_project), "%s", str(member(reply.json, "project"), "id"));
     workshop_reply_destroy(&reply);
@@ -131,6 +134,25 @@ static void test_library_queries(void) {
     workshop_reply_destroy(&reply);
     check(ask("library.groups", NULL, &reply, &error) && num(reply.json, "total") == 1 && cJSON_IsArray(member(reply.json, "composers")), "library.groups counts composers, sources and tags");
     workshop_reply_destroy(&reply);
+    snprintf(params, sizeof(params), "{\"collection\":\"%s\"}", g_collection);
+    check(ask("library.list", params, &reply, &error) && cJSON_GetArraySize(member(reply.json, "pieces")) == 1 &&
+              strcmp(str(cJSON_GetArrayItem(member(reply.json, "pieces"), 0), "id"), g_piece) == 0,
+          "library.list with a collection lists its members");
+    workshop_reply_destroy(&reply);
+    check(ask("library.groups", params, &reply, &error) && num(reply.json, "total") == 1, "library.groups with a collection counts its members");
+    workshop_reply_destroy(&reply);
+    snprintf(params, sizeof(params), "{\"collection\":\"%s\",\"composer\":\"Nobody\"}", g_collection);
+    check(ask("library.list", params, &reply, &error) && cJSON_GetArraySize(member(reply.json, "pieces")) == 0, "a collection and a filter both hold");
+    workshop_reply_destroy(&reply);
+    snprintf(params, sizeof(params), "{\"collection\":\"%s\"}", g_empty_collection);
+    check(ask("library.list", params, &reply, &error) && cJSON_GetArraySize(member(reply.json, "pieces")) == 0, "an empty collection lists no pieces");
+    workshop_reply_destroy(&reply);
+    check(ask("library.groups", params, &reply, &error) && num(reply.json, "total") == 0, "and has no groups");
+    workshop_reply_destroy(&reply);
+    check(query("library.list", "{\"collection\":\"col-nothing\"}", &reply, &error) == URSATZ_ERR_NOT_FOUND, "a collection that is not there is not found");
+    workshop_reply_destroy(&reply);
+    check(query("library.groups", "{\"collection\":\"a/b\"}", &reply, &error) == URSATZ_ERR_REQUEST, "and an id that cannot name one is refused");
+    workshop_reply_destroy(&reply);
     ids(params, sizeof(params), g_piece);
     check(ask("library.piece", params, &reply, &error) && strcmp(str(reply.json, "id"), g_piece) == 0 && member(reply.json, "document") != NULL,
           "library.piece is the piece with its analysis document");
@@ -165,8 +187,9 @@ static void test_collection_style_link_queries(void) {
     WorkshopReply reply;
     UrsatzError error;
     char params[256];
-    check(ask("collection.list", NULL, &reply, &error) && cJSON_GetArraySize(member(reply.json, "corpora")) == 1 &&
-              num(cJSON_GetArrayItem(member(reply.json, "corpora"), 0), "piece_count") == 1,
+    check(ask("collection.list", NULL, &reply, &error) && cJSON_GetArraySize(member(reply.json, "corpora")) == 2 &&
+              num(cJSON_GetArrayItem(member(reply.json, "corpora"), 0), "piece_count") == 0 &&
+              num(cJSON_GetArrayItem(member(reply.json, "corpora"), 1), "piece_count") == 1,
           "collection.list lists the collections with their counts");
     workshop_reply_destroy(&reply);
     ids(params, sizeof(params), g_collection);
