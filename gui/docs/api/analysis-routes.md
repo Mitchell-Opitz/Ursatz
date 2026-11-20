@@ -85,12 +85,13 @@ stops it between pieces and nothing is written.
   a failed export `500` with
   `{"ok":false,"error":"failed to export piece","code":"<UrsatzStatus name>"}`;
   anything else `500` with `{"ok":false,"error":"failed to export piece"}`.
-- `GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]`: the piece as measure-addressed text
-  (`text/plain; charset=utf-8`), written by the Analyzer (`analyzer_text_export_piece`,
+- `GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]`: the reading view of the piece (`library.view`, view `reading`) as text
+  (`text/plain; charset=utf-8`): the first line `ursatz-text 1 view reading piece:<id>`, the piece as measure-addressed text written by the
+  Analyzer (`analyzer_text_export_piece`,
   [format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)) from the cached import and the stored `analysis.json`, so it shows what the Score
-  and Analysis views show. `from` and `to` are measure numbers as written in the score; one alone means that end
-  only. A non-integer, `from` after `to` or a range with no measure is `400` with `{"ok":false,"error":...}`;
-  unknown id `404`; a source that no longer imports `422`; anything else `500`.
+  and Analysis views show, and the trailing lines `# leaves out: ...` and `# expand: ...`. `from` and `to` are measure numbers as written in the score (the
+  view's `measures`); one alone means that end only. A non-integer, `from` after `to` or a range with no measure is `400` with
+  `{"ok":false,"error":...}`; unknown id `404`; a source that no longer imports `422`; anything else `500`.
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`:
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
   and the barlines come from a default 4/4 (the export then carries

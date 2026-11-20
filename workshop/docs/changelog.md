@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P65 B3: Ursatz Text (2026-11)
+
+- **The text tool and the view queries.** The tool `text` ([tools](tools.md)) prints a layer file or a text as Ursatz Text, a view of it or its JSON. The queries `item.view` and `library.view` print the layers a version or a library piece holds ([commands](commands.md#views-of-ursatz-text)); `library.view` replaces `library.export`, whose text export is its `reading` view, framed. The `analyze` tool's `text` answer is framed the same way.
+
 ## P64: tools (2026-11)
 
 - **Tools.** A third call, `workshop_tool`, works on the files its params name and never on the data folder (R-656). `workshop_tools_open` opens a workshop with no data folder; `workshop_api.h` has 21 exported names. The tools: `composer` (every Composer API entry), `corpus-passages`, `pitch-names` and `versions`, then the Analyzer's `analyze`, `corpus` and `style-profile` ([tools](tools.md)). The analysis failure keeps its status (A20261115-79).

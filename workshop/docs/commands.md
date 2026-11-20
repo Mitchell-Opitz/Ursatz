@@ -77,13 +77,13 @@ Names are `<family>.<what>`; params go in one JSON object. `id` names the thing 
 
 | Family | Queries |
 |---|---|
-| Library | `library.list` (filters `composer`, `source`, `tag`, `unassigned`, `untagged`, and `collection`: its members only), `library.groups` (composers, sources, tags and their counts, `collection` as above), `library.piece` (`id`, `document=summary` for the summary only), `library.document` (`id`, `sections`), `library.export`, `library.musicxml`, `library.meter-defaulted`, `library.playback` |
+| Library | `library.list` (filters `composer`, `source`, `tag`, `unassigned`, `untagged`, and `collection`: its members only), `library.groups` (composers, sources, tags and their counts, `collection` as above), `library.piece` (`id`, `document=summary` for the summary only), `library.document` (`id`, `sections`), `library.view`, `library.musicxml`, `library.meter-defaulted`, `library.playback` |
 | Collections | `collection.list`, `collection.get`, `collection.pieces` |
 | Composer | `composer.status`, `composer.vocabulary`, `composer.forms`, `composer.variant-operations`, `composer.render`, `composer.random-motifs`, `composer.import-motif` (a MIDI file in `bytes`), `composer.recognize` |
 | Styles and links | `style.list`, `style.get`, `links.list`, `links.get`, `links.piece` |
 | Jobs | `job.get`, `job.list` (queued and running jobs, newest first) |
 | Journal | `journal.list` (`target`: a record's target, `limit`: 1 to 1000, default 20; the records newest first, each `{seq, id, command, actor, at, target, base_version, writes, removes}` with the final paths it wrote and removed) |
-| Projects and items | `project.list`, `project.get`, `item.list`, `item.get`, `item.version`, `item.export`, `item.score`, `item.playback`, `item.file`, `item.variation-file`, `item.variation-playback`, `item.op-checks`, `item.variant-tree`, `item.validate`, `item.variants`, `item.each-op` |
+| Projects and items | `project.list`, `project.get`, `item.list`, `item.get`, `item.version`, `item.view`, `item.export`, `item.score`, `item.playback`, `item.file`, `item.variation-file`, `item.variation-playback`, `item.op-checks`, `item.variant-tree`, `item.validate`, `item.variants`, `item.each-op` |
 | Subjects | `subject.list`, `subject.groups`, `subject.get` |
 
 `item.validate` resolves the references of a body and calls `composer_api_validate`; it answers the Composer's refusal with its path (`/request/...`). `item.variants` and `item.each-op` run the Composer's variant engine on a motif body and answer the candidates without storing them (the page stores one with `item.save-variant`). `library.piece` also publishes `analysis-stale` when the piece's analysis is stale.
@@ -91,3 +91,12 @@ Names are `<family>.<what>`; params go in one JSON object. `id` names the thing 
 ## Failures
 
 A failure is a `UrsatzStatus` and a `UrsatzError {message, path}` (`common/status.h`): `REQUEST` (malformed or invalid input), `UNSATISFIABLE` (valid, but nothing satisfies it), `NOT_FOUND`, `CONFLICT` (exists, still referenced, busy, or changed since read), `FORMAT` (a stored or imported file that does not read), `IO`, `CANCELLED`, `ALLOC`, `INTERNAL`. A `path` is a JSON Pointer into the call (`/params/...`, `/target`, `/bytes`, `/base_version`) or into the request the Composer reads (`/request/...`); the GUI maps the pair to an HTTP status in one table (`REQUEST` 400, or 422 when the path points into a Composer request; `UNSATISFIABLE` 422; `NOT_FOUND` 404; `CONFLICT` 409; `CANCELLED` 499; the rest 500; a body over its cap 413).
+
+## Views of Ursatz Text
+
+Two queries print the layers a version or a library piece holds as Ursatz Text views ([text](../../library/text/README.md)).
+
+- `item.view` (`id`, `version` (the current one when absent), `view` (default `summary`), `measures` (`{first, last}`), `section`) reads the version folder's `plan.json`, `realization.json` and `readings/composer.json` (the ones present) and answers `{id, view, text}`. `full` is each present layer's text, plan first, joined by a blank line; a version with no layer gives its body as a `json` document. `json` answers what `item.version` answers. A version with no layer refuses the other views with `URSATZ_ERR_NOT_FOUND`, path `/params/view`, `this version holds no plan, realization or reading`.
+- `library.view` (`id`, `view` (default `summary`), `measures`, `section`, `title`) replaces `library.export`. `reading` is the Analyzer's text export as it was (`measures` and `title` as `from`, `to` and the file name were), framed as a view: `ursatz-text 1 view reading piece:<id>`, the export, `# leaves out: nothing the analysis document holds; the notes are the import's`, `# expand: ...`. `summary`, `structure`, `harmony` and `part:<name>` read the piece's `readings/analyzer.json` and `realization.json`; `full` is their texts; `json` answers what `library.piece` answers. A piece analyzed before the layers were stored refuses the layer views with `URSATZ_ERR_NOT_FOUND`, path `/params/view`, `re-analyze the piece to store its layers`.
+
+Both refuse as the tool `text` does: a view a layer cannot give at `/params/view`, an unknown section at `/params/section`, a measure range outside the piece at `/params/measures`.
