@@ -74,6 +74,8 @@ At open, `workshop_recover` finishes the entries of committed records, deletes o
 
 One process holds a folder: `.ursatz.lock` is taken with `flock`, and a second open fails with `URSATZ_ERR_CONFLICT` naming the holder's pid.
 
+The lock file has two forms (R-659): `<pid>\n` while the process serves nothing, and `<pid> <port>\n` once it announced the HTTP port it serves (`workshop_announce`; the GUI backend does when its server is up). A program that finds the folder in use asks `workshop_lock_holder`: it answers the holder's pid and port (0 for none) when another open file holds the lock, `URSATZ_ERR_NOT_FOUND` when nobody does, and never keeps the lock. The command line connects to the port; with none it says the folder takes no connections.
+
 ## Older folders and migration
 
 A folder from before the workshop (layout 0: `pieces/`, `materials/`, `subjects/`, `collections/`, `styles/`, `links/`) and a layout 1 folder are refused when opened, with the commands to run:

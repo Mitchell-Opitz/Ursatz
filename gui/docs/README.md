@@ -25,6 +25,7 @@ Every doc of the Ursatz GUI, one line each. Back to the [README](../README.md). 
 - [api/analysis-routes.md](api/analysis-routes.md): the Analyzer, Corpus, Styles and Motive links routes.
 - [api/materials-routes.md](api/materials-routes.md): the materials and subjects routes.
 - [api/composer-routes.md](api/composer-routes.md): the Composer routes, the job routes and the event stream.
+- [api/workshop-routes.md](api/workshop-routes.md): any query or command by its name and the workshop status, which the command line calls (R-659).
 
 ## How it works inside
 
