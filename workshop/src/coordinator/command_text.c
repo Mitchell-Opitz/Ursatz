@@ -133,21 +133,24 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
     if (!units) {
         return refuse(error, line->number, "%s", text_error.message);
     }
-    const cJSON *name = units->child;
-    if (!cJSON_IsString(name)) {
+    const cJSON *name_unit = units->child;
+    if (!cJSON_IsString(name_unit)) {
         cJSON_Delete(units);
         return refuse(error, line->number, "a command starts with its name");
     }
-    const cJSON *schema = workshop_command_schema(name->valuestring);
+    char name_text[96];
+    snprintf(name_text, sizeof name_text, "%s", name_unit->valuestring);
+    const cJSON *schema = workshop_command_schema(name_text);
     if (!schema) {
-        UrsatzStatus status = refuse(error, line->number, "unknown command '%s'", name->valuestring);
+        UrsatzStatus status = refuse(error, line->number, "unknown command '%s'", name_text);
         cJSON_Delete(units);
         return status;
     }
+    const cJSON *name = name_unit;
     cJSON *command = cJSON_CreateObject();
     cJSON *params = cJSON_CreateObject();
     UrsatzStatus status = URSATZ_OK;
-    if (!command || !params || !cJSON_AddStringToObject(command, "command", name->valuestring)) {
+    if (!command || !params || !cJSON_AddStringToObject(command, "command", name_text)) {
         cJSON_Delete(command);
         cJSON_Delete(params);
         cJSON_Delete(units);
@@ -160,7 +163,7 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
         size_t kind_length = strlen(kind);
         if (!cJSON_IsString(unit) || strncmp(unit->valuestring, kind, kind_length) != 0 || unit->valuestring[kind_length] != ':' ||
             unit->valuestring[kind_length + 1] == '\0' || unit->valuestring[kind_length + 1] == '@') {
-            status = refuse(error, line->number, "%s works on %s:<id>", name->valuestring, kind);
+            status = refuse(error, line->number, "%s works on %s:<id>", name_text, kind);
         } else {
             const char *id = unit->valuestring + kind_length + 1;
             const char *at = strstr(id, "@v");
@@ -204,7 +207,7 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
         }
         const cJSON *param = find_param(schema, param_name);
         if (!param) {
-            status = refuse(error, line->number, "%s takes no param '%s'", name->valuestring, param_name);
+            status = refuse(error, line->number, "%s takes no param '%s'", name_text, param_name);
             break;
         }
         const char *type = cJSON_GetObjectItemCaseSensitive(param, "type")->valuestring;
@@ -238,12 +241,15 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
             } else {
                 cJSON *member = block->child;
                 while (status == URSATZ_OK && member) {
-                    const cJSON *param = find_param(schema, member->string);
+                    char key[128];
+                    snprintf(key, sizeof key, "%s", member->string);
                     cJSON *next = member->next;
+                    const cJSON *param = find_param(schema, key);
+                    int at = lines->lines[*pos - 1].number;
                     if (!param) {
-                        status = refuse(error, lines->lines[*pos - 1].number, "%s takes no param '%s'", name->valuestring, member->string);
+                        status = refuse(error, at, "%s takes no param '%s'", name_text, key);
                     } else {
-                        cJSON *taken = cJSON_DetachItemFromObjectCaseSensitive(block, member->string);
+                        cJSON *taken = cJSON_DetachItemFromObjectCaseSensitive(block, key);
                         const char *type = cJSON_GetObjectItemCaseSensitive(param, "type")->valuestring;
                         const cJSON *items = cJSON_GetObjectItemCaseSensitive(param, "items");
                         cJSON *converted = strcmp(type, "object") == 0 || strcmp(type, "array") == 0
@@ -254,8 +260,8 @@ static UrsatzStatus parse_command(const TextLines *lines, size_t *pos, cJSON *co
                             cJSON_Delete(taken);
                         }
                         if (!converted) {
-                            status = refuse(error, lines->lines[*pos - 1].number, "%s must be %s", member->string, type_words(type));
-                        } else if (!add_param(params, member->string, converted, lines->lines[*pos - 1].number, error)) {
+                            status = refuse(error, at, "%s must be %s", key, type_words(type));
+                        } else if (!add_param(params, key, converted, at, error)) {
                             status = URSATZ_ERR_REQUEST;
                         }
                     }
