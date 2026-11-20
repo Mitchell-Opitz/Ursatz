@@ -23,7 +23,25 @@
 #define MELODY_FILL_PARAMS_INIT                                                                                      \
     {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
      DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
-     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0}
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0, 0}
+
+static const char *const HARD_RULE_NAMES[MELODY_RULE_COUNT] = {
+    "forbidden-leap",   "forbidden-outline",       "no-crossing",          "parallel-octaves",
+    "parallel-fifths",  "dissonance-against-bass", "strong-beat-chord-tone"};
+
+const char *melody_hard_rule_name(MelodyHardRule rule) {
+    return (unsigned)rule < MELODY_RULE_COUNT ? HARD_RULE_NAMES[rule] : NULL;
+}
+
+bool melody_hard_rule_find(const char *name, MelodyHardRule *rule) {
+    for (unsigned i = 0; name && i < MELODY_RULE_COUNT; i++) {
+        if (strcmp(name, HARD_RULE_NAMES[i]) == 0) {
+            *rule = (MelodyHardRule)i;
+            return true;
+        }
+    }
+    return false;
+}
 
 MelodyFillParams melody_fill_params_default(void) {
     MelodyFillParams params = MELODY_FILL_PARAMS_INIT;

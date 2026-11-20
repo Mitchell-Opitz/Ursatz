@@ -171,6 +171,22 @@
           "minimum": 0,
           "maximum": 20,
           "description": "How many times an idea's drift from the register of the span before it counts against it. 0 leaves it out."
+        },
+        "waive": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "forbidden-leap",
+              "forbidden-outline",
+              "no-crossing",
+              "parallel-octaves",
+              "parallel-fifths",
+              "dissonance-against-bass",
+              "strong-beat-chord-tone"
+            ]
+          },
+          "description": "The hard rules of the melody stage that are not held (R-672): a waived rule neither refuses a candidate nor scores it. Empty by default."
         }
       }
     },

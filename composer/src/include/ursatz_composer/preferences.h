@@ -67,7 +67,7 @@ typedef struct {
 #define COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX 16
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
-#define COMPOSER_PREFERENCES_MESSAGE_MAX 160
+#define COMPOSER_PREFERENCES_MESSAGE_MAX 256
 
 /* Writes the defaults, every setting the Composer used before preferences existed, into *out. */
 void composer_preferences_default(ComposerPreferences *out);
