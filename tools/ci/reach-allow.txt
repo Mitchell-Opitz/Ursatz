@@ -25,7 +25,6 @@ library/plan/section_json.c section_json_member_uses  # no app calls it until P6
 library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P65 (note flags are set by a command on a text form of the realization, which the codec reads and writes but no app edits); its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 
 library/chain/chain_collect.c chain_result_take  # only analyzer_result_take_report calls it, which the Analyzer's tests use (P61 B9); its tests call it
@@ -45,3 +44,4 @@ analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261
 analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
 analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
 library/analysis/similarity/similarity_model.c similarity_dimension_name  # the front end of the old --similar printed the dimension names; kept with the similarity search (A20261115-607); its test calls it
+library/text/text_tree.c text_block_parse  # no app reads a block of lines until P65 B6 (the command parser reads object params with it); its tests call it
