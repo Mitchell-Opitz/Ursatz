@@ -671,7 +671,7 @@ static void check_metadata(const char *a, const char *b, const char *c, const ch
         "an empty body says \"nothing to update\"");
   free(response);
   response = patch_piece(a, "{\"unknown\":\"member\"}");
-  check(strstr(test_http_body(response), "nothing to update"), "unknown members are ignored");
+  check(test_http_status(response) == 400 && strstr(test_http_body(response), "takes no param 'unknown'"), "an unknown member is refused by name");
   free(response);
   response = patch_piece("no-such-piece", "{\"composer\":\"X\"}");
   check(test_http_status(response) == 404, "PATCH of an unknown piece is 404");
