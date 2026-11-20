@@ -1,3 +1,5 @@
+import { isClaimArray, isPlainObject } from "../core/values.js";
+
 /* The claim layers of the score workspace (R-099, R-101): which layers
  * exist, their colors and groups. A layer is drawn as one of three kinds:
  *
@@ -69,19 +71,6 @@ function rat(value) {
     return value.num / value.den;
   }
   return NaN;
-}
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-/* The isClaim rule of analysis-tabs.js: an object on the measure grid. */
-function isClaim(item) {
-  return isPlainObject(item) && ("span" in item || "location" in item);
-}
-
-function isClaimArray(value) {
-  return Array.isArray(value) && value.length > 0 && value.every(isClaim);
 }
 
 function arrayOf(value) {

@@ -4,8 +4,9 @@
  * materials-view.js and themes-view.js. */
 
 import MaterialsModel from "../models/materials-model.js";
+import { el as element } from "../core/dom.js";
 import ThemesModel from "../models/themes-model.js";
-import { buildMaterialExport, buildUsedByTable, buildUsesSection, buildVersionsList, materialsElement } from "./materials-common.js";
+import { buildMaterialExport, buildUsedByTable, buildUsesSection, buildVersionsList } from "./materials-common.js";
 import { buildSubjectsField } from "./subjects-view.js";
 import { buildThemeEditor, buildThemeResult, themeVersionView } from "./themes-view.js";
 
@@ -13,7 +14,7 @@ import { buildThemeEditor, buildThemeResult, themeVersionView } from "./themes-v
  * Appends the tab bar and panes to content, inside a `themes-section` wrapper. */
 function render(content, ctx) {
   const { id, item, data } = ctx;
-  const bar = materialsElement("div", "analysis-tabs");
+  const bar = element("div", "analysis-tabs");
   bar.setAttribute("role", "tablist");
   const panes = {};
   const buttons = {};
@@ -47,16 +48,16 @@ function render(content, ctx) {
   }
 
   for (const tab of ThemesModel.THEME_TABS) {
-    const button = materialsElement("button", "", tab.label);
+    const button = element("button", "", tab.label);
     button.type = "button";
     button.setAttribute("role", "tab");
     button.addEventListener("click", () => show(tab.id));
     buttons[tab.id] = button;
     bar.appendChild(button);
-    panes[tab.id] = materialsElement("div", "materials-tab-pane");
+    panes[tab.id] = element("div", "materials-tab-pane");
     panes[tab.id].setAttribute("role", "tabpanel");
   }
-  const wrapper = materialsElement("div", "themes-section");
+  const wrapper = element("div", "themes-section");
   wrapper.appendChild(buildMaterialExport(id, item.current_version, item.name));
   wrapper.appendChild(bar);
   wrapper.append(editorOf(ctx).sections.result, statusLine);
@@ -69,7 +70,7 @@ function render(content, ctx) {
 
 /* The status line of the page: saves, errors and progress of every section show here, whatever tab is open. */
 function buildStatusArea() {
-  const area = materialsElement("div", "motif-tab-status");
+  const area = element("div", "motif-tab-status");
   area.setAttribute("role", "status");
   area.style.whiteSpace = "pre-wrap";
   return area;
@@ -105,8 +106,8 @@ function buildThemePane(pane, ctx) {
   const sections = editorOf(ctx).sections;
   pane.appendChild(sections.notices);
   const subjectsField = buildSubjectsField("items", id, data.subjects);
-  const subjectsRow = materialsElement("div", "materials-subjects-row");
-  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+  const subjectsRow = element("div", "materials-subjects-row");
+  subjectsRow.append(element("h2", "section-title", "Subjects"), subjectsField.el);
   pane.append(subjectsRow, sections.theme, sections.advanced);
   const resultEl = buildThemeResult({
     id,
@@ -128,7 +129,7 @@ function buildStructurePane(pane, ctx) {
 /* Versions with their notes and Derived from (the motifs the theme uses, with update notices). */
 function buildOtherPane(pane, ctx) {
   const { id, item, data, statusEl } = ctx;
-  const versionEl = materialsElement("div");
+  const versionEl = element("div");
   const openVersion = (number, body) => themeVersionView(versionEl, id, number, body, ctx.nameOf, item.name);
   pane.appendChild(buildVersionsList(item, versionEl, statusEl, openVersion));
   pane.appendChild(versionEl);

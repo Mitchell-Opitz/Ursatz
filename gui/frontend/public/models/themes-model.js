@@ -10,6 +10,7 @@
 
 import Req from "../core/request.js";
 import Vocab from "../core/vocabulary.js";
+import { itemUrl, text, wholeNumber } from "../core/values.js";
 
 /* The Composer's words (R-270, R-276): every list below is read from the vocabulary when asked, so the model keeps no
  * table of music. The form state holds the words as the Composer spells them. */
@@ -58,10 +59,6 @@ const THEME_TABS = [
 ];
 const THEME_TAB_KEY = "ursatz.theme.tab";
 const maxSlots = () => Vocab.list("theme_slots").length;
-
-function text(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 function allSwitches(on) {
   return Object.fromEntries(motiveCategories().map((entry) => [entry.category, on]));
@@ -261,15 +258,6 @@ function briefLabel(brief) {
 }
 
 /* --- body and form --------------------------------------------------- */
-
-function wholeNumber(value, min, max) {
-  const t = text(String(value === undefined || value === null ? "" : value));
-  if (!/^\d+$/.test(t)) {
-    return null;
-  }
-  const n = Number(t);
-  return n >= min && n <= max ? n : null;
-}
 
 /* The entries of ideas in the order of the form's ideas, those of other forms and `basic idea` left out. */
 function ideaEntries(ideas, allowed) {
@@ -829,10 +817,6 @@ function validateRequest(state) {
 }
 
 /* --- requests -------------------------------------------------------- */
-
-function itemUrl(id, tail) {
-  return `/api/materials/items/${encodeURIComponent(id)}${tail}`;
-}
 
 /* A new version of the theme holding the form (no result). */
 function saveRequest(state, note) {

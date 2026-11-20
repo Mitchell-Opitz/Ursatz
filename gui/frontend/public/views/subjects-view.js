@@ -1,10 +1,11 @@
 import SubjectsPanel from "./subjects-panel.js";
-import { materialsElement, openLinkedItem, sendMaterialsRequest } from "./materials-common.js";
+import { el as element } from "../core/dom.js";
+import { openLinkedItem, sendMaterialsRequest } from "./materials-common.js";
 import { shell } from "./shell-context.js";
 
 /* The Subjects tool (R-117): list, create, and a detail with related
  * subjects and linked items and pieces. Pure parts are in subjects-panel.js;
- * sendMaterialsRequest, materialsElement and the page globals come from
+ * sendMaterialsRequest, element and the page globals come from
  * materials-view.js and app.js. */
 export const subjectsState = { subjects: [] };
 
@@ -15,7 +16,7 @@ export async function loadSubjectList() {
 }
 
 function subjectStatus(text, isError) {
-  const el = materialsElement("div", isError ? "upload-status error" : "upload-status", text || "");
+  const el = element("div", isError ? "upload-status error" : "upload-status", text || "");
   el.setAttribute("role", "status");
   return el;
 }
@@ -23,7 +24,7 @@ function subjectStatus(text, isError) {
 function fillKindSelect(select, selected) {
   select.innerHTML = "";
   for (const entry of SubjectsPanel.KINDS) {
-    const option = materialsElement("option", "", entry.title);
+    const option = element("option", "", entry.title);
     option.value = entry.kind;
     select.appendChild(option);
   }
@@ -33,18 +34,18 @@ function fillKindSelect(select, selected) {
 export async function renderSubjectsView() {
   const content = shell().contentEl();
   content.innerHTML = "";
-  content.appendChild(materialsElement("h1", "view-title", "Subjects"));
+  content.appendChild(element("h1", "view-title", "Subjects"));
 
-  const controls = materialsElement("div", "upload-controls");
-  const name = materialsElement("input");
+  const controls = element("div", "upload-controls");
+  const name = element("input");
   name.type = "text";
   name.placeholder = "New subject name";
-  const kind = materialsElement("select");
+  const kind = element("select");
   fillKindSelect(kind);
-  const note = materialsElement("input");
+  const note = element("input");
   note.type = "text";
   note.placeholder = "Note (optional)";
-  const create = materialsElement("button", "", "New");
+  const create = element("button", "", "New");
   create.type = "button";
   const statusEl = subjectStatus("");
   async function submit() {
@@ -71,35 +72,35 @@ export async function renderSubjectsView() {
   controls.append(name, kind, note, create);
   content.append(controls, statusEl);
 
-  const listEl = materialsElement("div");
+  const listEl = element("div");
   content.appendChild(listEl);
   const answer = await loadSubjectList();
   if (!answer.ok) {
     listEl.appendChild(
-      materialsElement("div", "piece-list-status error", SubjectsPanel.errorText(answer.data, "Could not load subjects")),
+      element("div", "piece-list-status error", SubjectsPanel.errorText(answer.data, "Could not load subjects")),
     );
     return;
   }
   const rows = SubjectsPanel.subjectRows(subjectsState.subjects);
   if (rows.length === 0) {
-    listEl.appendChild(materialsElement("div", "piece-list-status", "No subjects yet."));
+    listEl.appendChild(element("div", "piece-list-status", "No subjects yet."));
     return;
   }
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of ["Name", "Kind", "Items", "Pieces", "Related"]) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const row of rows) {
-    const tr = materialsElement("tr", "clickable");
+    const tr = element("tr", "clickable");
     for (const value of [row.name, row.kindLabel, row.items, row.pieces, row.related]) {
-      tr.appendChild(materialsElement("td", "", String(value)));
+      tr.appendChild(element("td", "", String(value)));
     }
     tr.addEventListener("click", () => renderSubjectDetail(row.id));
     table.appendChild(tr);
   }
-  const panel = materialsElement("section", "panel library-panel");
+  const panel = element("section", "panel library-panel");
   panel.appendChild(table);
   listEl.appendChild(panel);
 }
@@ -112,24 +113,24 @@ export function openSubject(id) {
 }
 
 function buildLinkList(title, rows, emptyText, onOpen, onRemove) {
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", title));
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", title));
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", emptyText));
+    section.appendChild(element("div", "piece-list-status", emptyText));
     return section;
   }
-  const list = materialsElement("ul", "materials-list");
+  const list = element("ul", "materials-list");
   for (const row of rows) {
-    const li = materialsElement("li");
+    const li = element("li");
     if (onOpen && !row.missing) {
-      const open = materialsElement("a", "clickable", row.label);
+      const open = element("a", "clickable", row.label);
       open.addEventListener("click", () => onOpen(row));
       li.appendChild(open);
     } else {
-      li.appendChild(materialsElement("span", row.missing ? "error" : "", row.missing ? `${row.label} (missing)` : row.label));
+      li.appendChild(element("span", row.missing ? "error" : "", row.missing ? `${row.label} (missing)` : row.label));
     }
     li.appendChild(document.createTextNode(" "));
-    const remove = materialsElement("button", "", "Remove");
+    const remove = element("button", "", "Remove");
     remove.type = "button";
     remove.addEventListener("click", () => onRemove(row));
     li.appendChild(remove);
@@ -142,7 +143,7 @@ function buildLinkList(title, rows, emptyText, onOpen, onRemove) {
 async function renderSubjectDetail(id) {
   const content = shell().contentEl();
   content.innerHTML = "";
-  const back = materialsElement("a", "back-link clickable", "Back to Subjects");
+  const back = element("a", "back-link clickable", "Back to Subjects");
   back.addEventListener("click", () => renderSubjectsView());
   content.appendChild(back);
 
@@ -159,7 +160,7 @@ async function renderSubjectDetail(id) {
   const subject = subjectAnswer.data.subject;
   const items = itemsAnswer.ok && Array.isArray(itemsAnswer.data.items) ? itemsAnswer.data.items : [];
   const pieces = piecesAnswer.ok && Array.isArray(piecesAnswer.data.pieces) ? piecesAnswer.data.pieces : [];
-  content.appendChild(materialsElement("h1", "view-title", subject.name));
+  content.appendChild(element("h1", "view-title", subject.name));
   const statusEl = subjectStatus("");
 
   const fail = (answer, fallback) => {
@@ -171,17 +172,17 @@ async function renderSubjectDetail(id) {
     renderSubjectDetail(id);
   };
 
-  const controls = materialsElement("div", "upload-controls");
-  const name = materialsElement("input");
+  const controls = element("div", "upload-controls");
+  const name = element("input");
   name.type = "text";
   name.value = subject.name;
-  const kind = materialsElement("select");
+  const kind = element("select");
   fillKindSelect(kind, subject.kind);
-  const note = materialsElement("input");
+  const note = element("input");
   note.type = "text";
   note.value = subject.note || "";
   note.placeholder = "Note";
-  const save = materialsElement("button", "", "Save");
+  const save = element("button", "", "Save");
   save.type = "button";
   save.addEventListener("click", async () => {
     const answer = await sendMaterialsRequest(
@@ -193,7 +194,7 @@ async function renderSubjectDetail(id) {
     }
     changed();
   });
-  const del = materialsElement("button", "", "Delete");
+  const del = element("button", "", "Delete");
   del.type = "button";
   del.addEventListener("click", async () => {
     if (!window.confirm(`Delete subject "${subject.name}"? Its links are removed.`)) {
@@ -227,14 +228,14 @@ async function renderSubjectDetail(id) {
   );
   const options = SubjectsPanel.pickerOptions(subjectsState.subjects, [id, ...(subject.related || [])]);
   if (options.length > 0) {
-    const picker = materialsElement("div", "upload-controls");
-    const select = materialsElement("select");
+    const picker = element("div", "upload-controls");
+    const select = element("select");
     for (const option of options) {
-      const o = materialsElement("option", "", option.label);
+      const o = element("option", "", option.label);
       o.value = option.value;
       select.appendChild(o);
     }
-    const add = materialsElement("button", "", "Add related");
+    const add = element("button", "", "Add related");
     add.type = "button";
     add.addEventListener("click", () => link("related", select.value, true));
     picker.append(select, add);
@@ -266,10 +267,10 @@ async function renderSubjectDetail(id) {
  * targetId (an item not saved yet) the chosen subjects stay in a pending list
  * and applyTo(id) links each of them, answering the names that failed. */
 export function buildSubjectsField(group, targetId, initial) {
-  const el = materialsElement("div", "materials-subjects");
+  const el = element("div", "materials-subjects");
   let current = Array.isArray(initial) ? initial.slice() : null;
   let all = [];
-  const errorEl = materialsElement("div", "materials-field-error");
+  const errorEl = element("div", "materials-field-error");
 
   async function changeLink(subjectId, add, chosen) {
     if (targetId === null || targetId === undefined) {
@@ -295,14 +296,14 @@ export function buildSubjectsField(group, targetId, initial) {
   async function draw() {
     el.innerHTML = "";
     if (current === null) {
-      el.appendChild(materialsElement("span", "piece-list-status", "Loading..."));
+      el.appendChild(element("span", "piece-list-status", "Loading..."));
       return;
     }
-    const chips = materialsElement("div", "materials-chips");
+    const chips = element("div", "materials-chips");
     for (const chip of SubjectsPanel.chipRows(current)) {
-      const span = materialsElement("span", "materials-chip", chip.label);
+      const span = element("span", "materials-chip", chip.label);
       span.title = chip.title;
-      const remove = materialsElement("button", "", "×");
+      const remove = element("button", "", "×");
       remove.type = "button";
       remove.setAttribute("aria-label", `Remove ${chip.label}`);
       remove.addEventListener("click", async () => {
@@ -314,20 +315,20 @@ export function buildSubjectsField(group, targetId, initial) {
       chips.appendChild(span);
     }
     if (current.length === 0) {
-      chips.appendChild(materialsElement("span", "piece-list-status", "No subjects."));
+      chips.appendChild(element("span", "piece-list-status", "No subjects."));
     }
     el.appendChild(chips);
 
     const options = SubjectsPanel.pickerOptions(all, current.map((entry) => entry.id));
     if (options.length > 0) {
-      const picker = materialsElement("div", "upload-controls");
-      const select = materialsElement("select");
+      const picker = element("div", "upload-controls");
+      const select = element("select");
       for (const option of options) {
-        const o = materialsElement("option", "", option.label);
+        const o = element("option", "", option.label);
         o.value = option.value;
         select.appendChild(o);
       }
-      const add = materialsElement("button", "", "Add subject");
+      const add = element("button", "", "Add subject");
       add.type = "button";
       add.addEventListener("click", async () => {
         const picked = all.find((entry) => entry.id === select.value);
@@ -339,13 +340,13 @@ export function buildSubjectsField(group, targetId, initial) {
       el.appendChild(picker);
     }
 
-    const create = materialsElement("div", "upload-controls");
-    const name = materialsElement("input");
+    const create = element("div", "upload-controls");
+    const name = element("input");
     name.type = "text";
     name.placeholder = "New subject name";
-    const kind = materialsElement("select");
+    const kind = element("select");
     fillKindSelect(kind);
-    const make = materialsElement("button", "", "Create and add");
+    const make = element("button", "", "Create and add");
     make.type = "button";
     make.addEventListener("click", async () => {
       if (name.value.trim() === "") {

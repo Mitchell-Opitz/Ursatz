@@ -18,6 +18,7 @@
 import Req from "../core/request.js";
 import Themes from "./themes-model.js";
 import Vocab from "../core/vocabulary.js";
+import { itemUrl, text, wholeNumber } from "../core/values.js";
 
 /* The Composer's words (R-270, R-276), read when asked: the vocabulary is loaded after the scripts. */
 const DEFAULT_FORM = "game-loop";
@@ -35,19 +36,6 @@ const pickups = (meter) => (Vocab.get().pickups || {})[meter] || [];
 /* The limits the Composer serves: the cells of a chord, the variations of a section. */
 const maxCells = () => Vocab.limit("harmony_cells", 0);
 const maxVariations = () => Vocab.limit("piece_variations", 0);
-
-function text(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function wholeNumber(value, min, max) {
-  const t = text(String(value === undefined || value === null ? "" : value));
-  if (!/^\d+$/.test(t)) {
-    return null;
-  }
-  const n = Number(t);
-  return n >= min && n <= max ? n : null;
-}
 
 function emptyFill() {
   return { kind: "empty" };
@@ -958,17 +946,13 @@ function validateRequest(state) {
 
 /* --- requests -------------------------------------------------------- */
 
-function itemUrl(id, tail) {
-  return `/api/materials/items/${encodeURIComponent(id)}${tail}`;
-}
-
 /* A new version of the piece holding the form (no result). */
 function saveRequest(state, note) {
   const request = { body: bodyFromState(state) };
   if (text(note)) {
     request.note = text(note);
   }
-  return { method: "POST", url: itemUrl(state.id, "/versions"), headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) };
+  return Req.jsonRequest("POST", itemUrl(state.id, "/versions"), request);
 }
 
 /* POST compose for the form state. options: {seed, update_uses}; a seed in options wins over the form's. */
@@ -983,7 +967,7 @@ function composeRequest(state, options) {
   if (o.update_uses) {
     body.update_uses = true;
   }
-  return { method: "POST", url: itemUrl(state.id, "/compose"), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true };
+  return Object.assign(Req.jsonRequest("POST", itemUrl(state.id, "/compose"), body), { job: true });
 }
 
 function versionFileUrl(id, number, name) {
@@ -1050,7 +1034,7 @@ function regenerateRequest(id, number, options) {
     body.seed = seed.value;
   }
   return {
-    request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/regenerate`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true },
+    request: Object.assign(Req.jsonRequest("POST", itemUrl(id, `/versions/${Number(number)}/regenerate`), body), { job: true }),
   };
 }
 
@@ -1073,19 +1057,13 @@ function variationsRequest(id, number, options) {
     body.seed = seed.value;
   }
   return {
-    request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/variations`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true },
+    request: Object.assign(Req.jsonRequest("POST", itemUrl(id, `/versions/${Number(number)}/variations`), body), { job: true }),
   };
 }
 
 /* POST choose: variation index of set becomes the next version. */
 function chooseRequest(id, number, set, index) {
-  return {
-    method: "POST",
-    url: itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/choose`),
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ index: Number(index) }),
-    job: true,
-  };
+  return Object.assign(Req.jsonRequest("POST", itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/choose`), { index: Number(index) }), { job: true });
 }
 
 /* A file of a variations set: variation-<i>.musicxml, .mid, .json or result.json. */

@@ -1,25 +1,26 @@
 import MaterialsModel from "../models/materials-model.js";
+import { el as element } from "../core/dom.js";
 import PiecesModel from "../models/pieces-model.js";
 import ThemesModel from "../models/themes-model.js";
 import Vocabulary from "../core/vocabulary.js";
-import { attachFormValidation, buildMaterialExport, materialsElement, materialsState, sendMaterialsRequest } from "./materials-common.js";
+import { attachFormValidation, buildMaterialExport, materialsState, sendMaterialsRequest } from "./materials-common.js";
 import { buildConstructionBlock, buildThemeAccompanimentSection, buildThemeBriefSection, buildThemeMotifPicker, buildThemePoolSection, themeButton, themeFacts, themeField, themeInput, themeMountScore, themeSelect } from "./themes-view.js";
 import { shell } from "./shell-context.js";
 
 /* The Pieces view's editor (P17, R-169, R-174): the header, the structure strip and the section editor of a piece,
  * mounted in the piece detail of materials-view.js. Pure parts are in pieces-model.js; the field builders
- * (themeField, themeSelect, themeInput, themeButton) come from themes-view.js, materialsElement,
+ * (themeField, themeSelect, themeInput, themeButton) come from themes-view.js, element,
  * sendMaterialsRequest and renderMaterialsDetail from materials-view.js. */
 
 const PIECE_PICKUP_LIST = "piece-pickup-values";
 
 /* One lane of the strip: its label, a spacer to the first section and a block for each section, wide by its beats. */
 function pieceLane(part, entries, total, state, selected, onSelect, onAdd) {
-  const lane = materialsElement("div", "piece-lane");
-  lane.appendChild(materialsElement("div", "piece-lane-label", part.label));
-  const track = materialsElement("div", "piece-lane-track");
+  const lane = element("div", "piece-lane");
+  lane.appendChild(element("div", "piece-lane-label", part.label));
+  const track = element("div", "piece-lane-track");
   if (entries.length > 0) {
-    const spacer = materialsElement("div", "piece-lane-spacer");
+    const spacer = element("div", "piece-lane-spacer");
     spacer.style.flex = `0 0 ${(entries[0].start / total) * 100}%`;
     track.appendChild(spacer);
   }
@@ -46,9 +47,9 @@ function pieceSizedStrip(form, bars, count) {
     return pieceSectionStrip(PiecesModel.sectionsOf(form, bars, count));
   }
   /* A compound form (R-485): the sections of each part under a heading; a part that plays another again has none. */
-  const box = materialsElement("div");
+  const box = element("div");
   for (const part of parts) {
-    box.appendChild(materialsElement("h3", "section-title", `${part.name}: ${part.text}`));
+    box.appendChild(element("h3", "section-title", `${part.name}: ${part.text}`));
     const partForm = part.form ? PiecesModel.formOf(part.form) : null;
     if (partForm) {
       box.appendChild(pieceSectionStrip(PiecesModel.sectionsOf(partForm, bars, count)));
@@ -59,23 +60,23 @@ function pieceSizedStrip(form, bars, count) {
 
 /* The blocks and the table of the Composer's planned sections of a sized form (or of one part of a compound form). */
 function pieceSectionStrip(sections) {
-  const box = materialsElement("div");
+  const box = element("div");
   if (sections.length === 0) {
-    box.appendChild(materialsElement("div", "piece-list-status", "The Composer has no sections for this size."));
+    box.appendChild(element("div", "piece-list-status", "The Composer has no sections for this size."));
     return box;
   }
   const lengthOf = (section) => (Number.isFinite(section.bars) ? `${section.bars} bars` : Number.isFinite(section.beats) ? `${section.beats} beats` : "");
   const total = Math.max(1, sections.reduce((sum, section) => sum + (Number.isFinite(section.bars) ? section.bars : 0), 0));
-  const track = materialsElement("div", "piece-lane-track");
+  const track = element("div", "piece-lane-track");
   for (const section of sections) {
     const halves = PiecesModel.sectionConstruction(section).halves;
     const label = `${section.letter} · ${lengthOf(section)}${halves ? ` · ${halves}` : ""}`;
-    const block = materialsElement("div", "piece-block", label);
+    const block = element("div", "piece-block", label);
     block.title = `${section.role ? section.role.label : ""} ${label}`.trim();
     block.style.flex = `0 0 ${((Number.isFinite(section.bars) ? section.bars : 0) / total) * 100}%`;
     track.appendChild(block);
   }
-  const lane = materialsElement("div", "piece-lane");
+  const lane = element("div", "piece-lane");
   lane.appendChild(track);
   box.appendChild(lane);
   /* The Construction column is there only when a section has one. */
@@ -112,23 +113,23 @@ function pieceSectionStrip(sections) {
  * beats}) for every theme version now shown}. Returns {el, setValue({item_id, version})}.
  */
 function buildPieceThemePicker(options) {
-  const el = materialsElement("div", "theme-motif-picker");
-  const controls = materialsElement("div", "upload-controls");
+  const el = element("div", "theme-motif-picker");
+  const controls = element("div", "upload-controls");
   const query = themeInput("Search themes by name");
-  const choice = materialsElement("select", "materials-use-choice");
-  const versionSelect = materialsElement("select");
-  const infoEl = materialsElement("div", "piece-list-status");
+  const choice = element("select", "materials-use-choice");
+  const versionSelect = element("select");
+  const infoEl = element("div", "piece-list-status");
   let bodies = {};
   let loading = 0;
 
   function fillChoices(keep) {
     const found = MaterialsModel.pickerItems(options.items(), materialsState.projects, { query: query.value, type: "theme" });
     choice.innerHTML = "";
-    const blank = materialsElement("option", "", found.length === 0 ? "No themes" : "Choose a theme");
+    const blank = element("option", "", found.length === 0 ? "No themes" : "Choose a theme");
     blank.value = "";
     choice.appendChild(blank);
     for (const item of found) {
-      const option = materialsElement("option", "", item.label);
+      const option = element("option", "", item.label);
       option.value = item.id;
       choice.appendChild(option);
     }
@@ -172,7 +173,7 @@ function buildPieceThemePicker(options) {
       }
       if (got.ok && PiecesModel.themeComposed(got.data.body)) {
         bodies[row.number] = got.data.body;
-        const option = materialsElement("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
+        const option = element("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
         option.value = String(row.number);
         versionSelect.appendChild(option);
       }
@@ -242,7 +243,7 @@ function pieceOverlayFill(kind) {
  * owner.region in place and calls onChange after each edit.
  */
 function pieceRegionControl(owner, anchors, onChange) {
-  const box = materialsElement("div", "upload-controls");
+  const box = element("div", "upload-controls");
   if (!owner.region || typeof owner.region !== "object") {
     owner.region = PiecesModel.emptyRegion();
   }
@@ -299,12 +300,12 @@ function pieceRegionControl(owner, anchors, onChange) {
  * schema of the Composer's vocabulary, or chords at bars. It edits owner.harmony in place and calls onChange after each edit.
  */
 function pieceHarmonyControl(owner, onChange) {
-  const box = materialsElement("div");
+  const box = element("div");
   if (!owner.harmony || typeof owner.harmony !== "object") {
     owner.harmony = PiecesModel.emptyHarmony();
   }
   const harmony = owner.harmony;
-  const row = materialsElement("div", "upload-controls");
+  const row = element("div", "upload-controls");
   const kinds = [
     { value: "none", label: "The Composer writes it" },
     { value: "progression", label: "A progression" },
@@ -312,7 +313,7 @@ function pieceHarmonyControl(owner, onChange) {
     { value: "chords", label: "Chords at bars" },
   ];
   const kind = themeField(row, "Harmony", themeSelect(kinds, harmony.kind));
-  const body = materialsElement("div", "upload-controls");
+  const body = element("div", "upload-controls");
   box.append(row, body);
   function draw() {
     body.innerHTML = "";
@@ -326,7 +327,7 @@ function pieceHarmonyControl(owner, onChange) {
           onChange();
         });
       }
-      body.appendChild(materialsElement("div", "piece-list-status", "The harmony stage fills what the progression leaves of the section."));
+      body.appendChild(element("div", "piece-list-status", "The harmony stage fills what the progression leaves of the section."));
     } else if (harmony.kind === "schema") {
       const schemas = Vocabulary.list("schemas");
       const schema = themeField(body, "Schema", themeSelect(schemas, harmony.schema || (schemas[0] || {}).value));
@@ -336,11 +337,11 @@ function pieceHarmonyControl(owner, onChange) {
         onChange();
       });
     } else if (harmony.kind === "chords") {
-      const list = materialsElement("div");
+      const list = element("div");
       const drawChords = () => {
         list.innerHTML = "";
         harmony.chords.forEach((chord, at) => {
-          const line = materialsElement("div", "upload-controls");
+          const line = element("div", "upload-controls");
           const bar = themeField(line, "Bar (from 1)", themeInput("1", chord.bar));
           const text = themeField(line, "Chord", themeInput("I V@3/2", chord.text));
           for (const control of [bar, text]) {
@@ -382,16 +383,16 @@ function pieceHarmonyControl(owner, onChange) {
 
 /* A table of header cells and rows of text. */
 function pieceTable(headers, rows) {
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of headers) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const row of rows) {
-    const tr = materialsElement("tr");
+    const tr = element("tr");
     for (const cell of row) {
-      tr.appendChild(materialsElement("td", "", cell === null || cell === undefined ? "" : String(cell)));
+      tr.appendChild(element("td", "", cell === null || cell === undefined ? "" : String(cell)));
     }
     table.appendChild(tr);
   }
@@ -400,8 +401,8 @@ function pieceTable(headers, rows) {
 
 /* One version of a piece result: its section rows, seam rules, score, Analyzer check and style distance. */
 function pieceVersionTables(view, heading, check, sized, performed, modulating) {
-  const box = materialsElement("div", "piece-version");
-  box.appendChild(materialsElement("h3", "section-title", heading));
+  const box = element("div", "piece-version");
+  box.appendChild(element("h3", "section-title", heading));
   /* The Construction column is there only when a section has one (P47). */
   const withConstruction = view.rows.some((row) => row.construction !== "");
   /* The Figure column (P50) is there only when a row has a figure: the Composer's sentence, which names the skeleton. */
@@ -490,14 +491,14 @@ function pieceVersionTables(view, heading, check, sized, performed, modulating) 
  * is the form state of the version's body. A regenerate or a chosen variation becomes the next version (ctx.saved).
  */
 function buildPieceActions(ctx, state, rows) {
-  const box = materialsElement("div", "piece-actions");
-  box.appendChild(materialsElement("h3", "section-title", "Regenerate and variations"));
+  const box = element("div", "piece-actions");
+  box.appendChild(element("h3", "section-title", "Regenerate and variations"));
   /* A performed form is composed once and performed in order: the Composer refuses regenerate and variations (R-485). */
   if (PiecesModel.isPerformed(PiecesModel.formOf(state.form))) {
-    box.appendChild(materialsElement("div", "piece-list-status", "Regenerate and variations of a written-out form are Later."));
+    box.appendChild(element("div", "piece-list-status", "Regenerate and variations of a written-out form are Later."));
     return box;
   }
-  const results = materialsElement("div", "composer-variation-grid");
+  const results = element("div", "composer-variation-grid");
   const buttons = [];
 
   function setBusy(busy, text) {
@@ -534,15 +535,15 @@ function buildPieceActions(ctx, state, rows) {
     results.innerHTML = "";
     const cards = PiecesModel.variationCards(data);
     if (cards.length === 0) {
-      results.appendChild(materialsElement("div", "piece-list-status", "No different version was found."));
+      results.appendChild(element("div", "piece-list-status", "No different version was found."));
       return;
     }
     for (const card of cards) {
-      const el = materialsElement("div", "composer-variation");
-      el.appendChild(materialsElement("div", "", `Section ${section.letter || section.id} ${card.title}`));
-      el.appendChild(materialsElement("div", "claim-row-where", [card.score && `score ${card.score}`, card.seam, card.heard && `heard ${card.heard}`].filter(Boolean).join(", ")));
-      const scoreStatus = materialsElement("div", "piece-list-status");
-      const score = materialsElement("div", "analysis-score-container");
+      const el = element("div", "composer-variation");
+      el.appendChild(element("div", "", `Section ${section.letter || section.id} ${card.title}`));
+      el.appendChild(element("div", "claim-row-where", [card.score && `score ${card.score}`, card.seam, card.heard && `heard ${card.heard}`].filter(Boolean).join(", ")));
+      const scoreStatus = element("div", "piece-list-status");
+      const score = element("div", "analysis-score-container");
       const choose = themeButton("Choose", () =>
         run({ request: PiecesModel.chooseRequest(ctx.id, ctx.version, data.set, card.index) }, "Choosing...", "Could not choose the variation", ctx.saved),
       );
@@ -556,8 +557,8 @@ function buildPieceActions(ctx, state, rows) {
   for (const section of PiecesModel.actionSections(state, rows)) {
     const lanes = section.lanes;
     const whole = lanes.length === PiecesModel.lanes().length;
-    const row = materialsElement("div", "upload-controls piece-action-row");
-    row.appendChild(materialsElement("strong", "", `${section.letter} (${section.length})`));
+    const row = element("div", "upload-controls piece-action-row");
+    row.appendChild(element("strong", "", `${section.letter} (${section.length})`));
     const regenLane = themeSelect([...(whole ? [{ value: "", label: "All lanes" }] : []), ...lanes], whole ? "" : lanes[0]);
     const regenSeed = themeInput("seed", "");
     const regenerate = themeButton("Regenerate", () =>
@@ -606,8 +607,8 @@ export function buildPieceResult(ctx) {
     }
   }
   const view = PiecesModel.resultView(result, { sourceNames, form: state.form, bars: state.bars, count: state.count });
-  const section = materialsElement("section", "panel materials-analysis piece-result");
-  section.appendChild(materialsElement("h2", "section-title", "Result"));
+  const section = element("section", "panel materials-analysis piece-result");
+  section.appendChild(element("h2", "section-title", "Result"));
   section.appendChild(
     themeFacts([
       ["Seed", view.seed === null ? "" : String(view.seed)],
@@ -625,13 +626,13 @@ export function buildPieceResult(ctx) {
       pieceVersionTables(version.view, version.label, ctx.piece.check === true, PiecesModel.isSized(PiecesModel.formOf(state.form)), PiecesModel.isPerformed(PiecesModel.formOf(state.form)), PiecesModel.isModulating(PiecesModel.formOf(state.form))),
     );
   }
-  const downloads = materialsElement("div", "upload-controls");
+  const downloads = element("div", "upload-controls");
   for (const version of view.versions) {
     for (const [label, name] of [
       [`Download ${version.name} MIDI`, `${version.name}.mid`],
       [`Download ${version.name} MusicXML`, `${version.name}.musicxml`],
     ]) {
-      const link = materialsElement("a", "back-link clickable", label);
+      const link = element("a", "back-link clickable", label);
       link.href = PiecesModel.versionFileUrl(ctx.id, ctx.version, name);
       link.download = name;
       downloads.appendChild(link);
@@ -641,8 +642,8 @@ export function buildPieceResult(ctx) {
 
   /* The scores: a tab for each version, the first shown. A version that loops repeats its loop and plays the version
    * that comes after it (its `after`) as its ending. */
-  const tabs = materialsElement("div", "upload-controls");
-  const scoreHost = materialsElement("div", "materials-score-mount");
+  const tabs = element("div", "upload-controls");
+  const scoreHost = element("div", "materials-score-mount");
   function showScore(version) {
     const looping = version.loop && view.playLoop;
     const ending = looping ? view.versions.find((other) => other.after === version.name) : null;
@@ -675,7 +676,7 @@ export function buildPieceResult(ctx) {
 /* Shows an older version read only: its structure, then its result. */
 export function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.innerHTML = "";
-  viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
+  viewEl.appendChild(element("h2", "section-title", `Version ${number} (read only)`));
   viewEl.appendChild(buildMaterialExport(id, number, title));
   const state = PiecesModel.stateFromBody(body, id);
   const form = PiecesModel.formOf(state.form);
@@ -724,7 +725,7 @@ export function pieceVersionView(viewEl, id, number, body, nameOf, title) {
     }
   });
   const result = buildPieceResult({ id, version: number, piece: body, nameOf, title });
-  viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
+  viewEl.appendChild(result || element("div", "piece-list-status", "This version was not composed."));
 }
 
 /*
@@ -737,7 +738,7 @@ export function buildPieceEditor(ctx) {
   if (state.sections.length === 0 && !PiecesModel.isSized(PiecesModel.formOf(state.form))) {
     state.sections = [PiecesModel.newSection(state, PiecesModel.defaultRole(PiecesModel.formOf(state.form)))];
   }
-  const el = materialsElement("section", "panel materials-editor piece-editor");
+  const el = element("section", "panel materials-editor piece-editor");
   const nameOf = (itemId) => {
     const found = ctx.items.find((item) => item.id === itemId);
     return found ? found.name : itemId;
@@ -749,10 +750,10 @@ export function buildPieceEditor(ctx) {
   let savedJson = JSON.stringify(PiecesModel.bodyFromState(state));
 
   /* Sources (motifs and themes) with a newer version */
-  const notices = materialsElement("div");
+  const notices = element("div");
   for (const use of PiecesModel.updatedUses({ uses_status: ctx.usesStatus })) {
-    const notice = materialsElement("div", "piece-list-status");
-    notice.appendChild(materialsElement("span", "", `${use.label} `));
+    const notice = element("div", "piece-list-status");
+    notice.appendChild(element("span", "", `${use.label} `));
     notice.appendChild(themeButton("Update and compose", () => compose({ update_uses: true })));
     notice.appendChild(themeButton("Keep", () => notice.remove()));
     notices.appendChild(notice);
@@ -760,11 +761,11 @@ export function buildPieceEditor(ctx) {
   el.appendChild(notices);
 
   /* Header */
-  el.appendChild(materialsElement("h2", "section-title", "Piece"));
+  el.appendChild(element("h2", "section-title", "Piece"));
   if (ctx.version) {
     el.appendChild(buildMaterialExport(ctx.id, ctx.version, ctx.title));
   }
-  const header = materialsElement("div", "upload-controls");
+  const header = element("div", "upload-controls");
   const formSelect = themeField(
     header,
     "Form",
@@ -785,7 +786,7 @@ export function buildPieceEditor(ctx) {
     if (JSON.stringify(Array.from(meter.options, (option) => option.value)) !== JSON.stringify(choices)) {
       meter.innerHTML = "";
       for (const choice of choices) {
-        const option = materialsElement("option", "", choice);
+        const option = element("option", "", choice);
         option.value = choice;
         meter.appendChild(option);
       }
@@ -809,15 +810,15 @@ export function buildPieceEditor(ctx) {
   el.appendChild(header);
 
   /* The strip: the lanes of a form whose request lists its sections, the Composer's sections of a sized form */
-  el.appendChild(materialsElement("h2", "section-title", "Structure"));
-  const sizeRow = materialsElement("div", "upload-controls");
+  el.appendChild(element("h2", "section-title", "Structure"));
+  const sizeRow = element("div", "upload-controls");
   const sizeSelect = themeSelect([], "");
   themeField(sizeRow, "Size", sizeSelect);
-  const modulateBox = materialsElement("input");
+  const modulateBox = element("input");
   modulateBox.type = "checkbox";
   themeField(sizeRow, "Modulate", modulateBox);
-  const stripEl = materialsElement("div", "piece-strip");
-  const editorEl = materialsElement("div", "piece-section-editor");
+  const stripEl = element("div", "piece-strip");
+  const editorEl = element("div", "piece-section-editor");
   el.append(sizeRow, stripEl, editorEl);
 
   /* The size and modulate controls of a sized form (hidden for any other); a size is its bars and count. */
@@ -830,7 +831,7 @@ export function buildPieceEditor(ctx) {
     const options = PiecesModel.sizeOptions(form);
     sizeSelect.innerHTML = "";
     for (const option of options) {
-      const el = materialsElement("option", "", option.label);
+      const el = element("option", "", option.label);
       el.value = option.value;
       sizeSelect.appendChild(el);
     }
@@ -904,25 +905,25 @@ export function buildPieceEditor(ctx) {
       return;
     }
     if (index < 0) {
-      editorEl.appendChild(materialsElement("div", "piece-list-status", "Select a section to edit it."));
+      editorEl.appendChild(element("div", "piece-list-status", "Select a section to edit it."));
       return;
     }
     const section = state.sections[index];
     editorEl.appendChild(
-      materialsElement("h3", "section-title", `Section ${section.letter || section.id} (${PiecesModel.roleLabel(PiecesModel.formOf(state.form), section.part)})`),
+      element("h3", "section-title", `Section ${section.letter || section.id} (${PiecesModel.roleLabel(PiecesModel.formOf(state.form), section.part)})`),
     );
-    const controls = materialsElement("div", "upload-controls");
+    const controls = element("div", "upload-controls");
     const letter = themeField(controls, "Letter", themeInput("A", section.letter));
     const per = PiecesModel.barBeats(state.meter);
     const bars = themeField(controls, "Bars", themeInput("0", String(Math.floor(section.beats / per))));
     const extra = themeField(controls, "Beats", themeInput("0", String(section.beats % per)));
-    const lengthEl = materialsElement("span", "piece-list-status", PiecesModel.beatsLabel(section.beats, state.meter));
+    const lengthEl = element("span", "piece-list-status", PiecesModel.beatsLabel(section.beats, state.meter));
     const pickup = themeField(controls, "Pickup (beats)", themeInput("none", section.pickup));
     pickup.setAttribute("list", PIECE_PICKUP_LIST);
-    const list = materialsElement("datalist");
+    const list = element("datalist");
     list.id = PIECE_PICKUP_LIST;
     for (const value of PiecesModel.pickups(state.meter)) {
-      const option = materialsElement("option");
+      const option = element("option");
       option.value = value;
       list.appendChild(option);
     }
@@ -972,7 +973,7 @@ export function buildPieceEditor(ctx) {
       control.addEventListener("input", syncSection);
     }
     controls.append(lengthEl, list);
-    const actions = materialsElement("div", "upload-controls");
+    const actions = element("div", "upload-controls");
     const left = themeButton("Move left", () => {
       state.sections = PiecesModel.moveSection(state, section.id, -1).sections;
       redraw();
@@ -992,10 +993,10 @@ export function buildPieceEditor(ctx) {
     editorEl.append(controls, actions);
 
     /* The fill */
-    const fillBox = materialsElement("div", "piece-fill");
-    fillBox.appendChild(materialsElement("h3", "section-title", "Fill"));
+    const fillBox = element("div", "piece-fill");
+    fillBox.appendChild(element("h3", "section-title", "Fill"));
     const kind = themeField(fillBox, "Fill with", themeSelect(PiecesModel.FILL_KINDS, section.fill.kind));
-    const fillBody = materialsElement("div");
+    const fillBody = element("div");
     fillBox.appendChild(fillBody);
 
     function drawFill() {
@@ -1013,13 +1014,13 @@ export function buildPieceEditor(ctx) {
           },
         });
         picker.setValue(fill);
-        const intoEl = materialsElement("div", "upload-controls");
+        const intoEl = element("div", "upload-controls");
         drawInto = () => {
           intoEl.innerHTML = "";
           const free = PiecesModel.motifIsFree(section, state.meter);
           if (free) {
             intoEl.appendChild(
-              materialsElement(
+              element(
                 "span",
                 "piece-list-status",
                 "Free phrase: a theme needs 4 or 8 bars, or a construction, and no pickup.",
@@ -1110,7 +1111,7 @@ export function buildPieceEditor(ctx) {
         picker.setValue(fill);
         fillBody.appendChild(picker.el);
       } else {
-        fillBody.appendChild(materialsElement("div", "piece-list-status", "Empty: the Composer invents this section."));
+        fillBody.appendChild(element("div", "piece-list-status", "Empty: the Composer invents this section."));
       }
     }
     kind.addEventListener("input", () => {
@@ -1121,8 +1122,8 @@ export function buildPieceEditor(ctx) {
     editorEl.appendChild(fillBox);
 
     /* The key and the harmony of the section (R-610): the anchors of a relation are the sections before this one. */
-    const placeBox = materialsElement("div", "piece-fill");
-    placeBox.appendChild(materialsElement("h3", "section-title", "Key and harmony"));
+    const placeBox = element("div", "piece-fill");
+    placeBox.appendChild(element("h3", "section-title", "Key and harmony"));
     const earlier = state.sections
       .slice(0, index)
       .map((entry) => ({ value: entry.id, label: `Section ${entry.letter || entry.id}` }));
@@ -1141,7 +1142,7 @@ export function buildPieceEditor(ctx) {
     if (PiecesModel.performedParts(form).length > 0 || sections.length === 0) {
       return;
     }
-    editorEl.appendChild(materialsElement("h3", "section-title", "Sections"));
+    editorEl.appendChild(element("h3", "section-title", "Sections"));
     sections.forEach((planned, at) => {
       const name = String(planned.name || planned.letter || at);
       let overlay = state.overlays.find((entry) => entry.name === name);
@@ -1149,18 +1150,18 @@ export function buildPieceEditor(ctx) {
         overlay = { name, region: PiecesModel.emptyRegion(), harmony: PiecesModel.emptyHarmony(), fill: PiecesModel.emptyFill() };
         state.overlays.push(overlay);
       }
-      const details = materialsElement("details", "piece-fill");
-      details.appendChild(materialsElement("summary", "", `${planned.letter || name} · ${name}`));
+      const details = element("details", "piece-fill");
+      details.appendChild(element("summary", "", `${planned.letter || name} · ${name}`));
       const fixed = Boolean(planned.returns);
       const earlier = sections.slice(0, at).map((entry) => ({ value: String(entry.name), label: String(entry.name) }));
       details.appendChild(pieceRegionControl(overlay, earlier, () => {}));
       if (fixed) {
         details.appendChild(
-          materialsElement("div", "piece-list-status", "This section returns another: give its fill and harmony to the section it returns."),
+          element("div", "piece-list-status", "This section returns another: give its fill and harmony to the section it returns."),
         );
       } else {
         details.appendChild(pieceHarmonyControl(overlay, () => {}));
-        const fillBody = materialsElement("div");
+        const fillBody = element("div");
         const kind = themeField(details, "Fill with", themeSelect(PiecesModel.FILL_KINDS, overlay.fill.kind));
         details.appendChild(fillBody);
         const drawOverlayFill = () => {
@@ -1180,7 +1181,7 @@ export function buildPieceEditor(ctx) {
             picker.setValue(fill);
             fillBody.appendChild(picker.el);
           } else {
-            fillBody.appendChild(materialsElement("div", "piece-list-status", "As the form has it."));
+            fillBody.appendChild(element("div", "piece-list-status", "As the form has it."));
           }
         };
         kind.addEventListener("input", () => {
@@ -1194,7 +1195,7 @@ export function buildPieceEditor(ctx) {
   }
 
   /* The basic motive */
-  el.appendChild(materialsElement("h2", "section-title", "Basic motive (optional)"));
+  el.appendChild(element("h2", "section-title", "Basic motive (optional)"));
   const motivePicker = buildThemeMotifPicker({
     role: "melodic",
     items: () => ctx.items,
@@ -1253,7 +1254,7 @@ export function buildPieceEditor(ctx) {
     return answer;
   }
 
-  const saveRow = materialsElement("div", "upload-controls");
+  const saveRow = element("div", "upload-controls");
   const noteInput = themeInput("Version note (optional)", "");
   const saveButton = themeButton("Save as new version", async () => {
     const answer = await save(noteInput.value);
@@ -1262,7 +1263,7 @@ export function buildPieceEditor(ctx) {
     }
   });
   const composeButton = themeButton("Compose", () => compose({}));
-  const spinner = materialsElement("span", "theme-spinner");
+  const spinner = element("span", "theme-spinner");
   spinner.hidden = true;
   saveRow.append(noteInput, saveButton, composeButton, spinner);
   el.appendChild(saveRow);

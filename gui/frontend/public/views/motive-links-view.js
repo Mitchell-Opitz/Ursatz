@@ -1,20 +1,21 @@
 import BackendJobs from "../core/backend-jobs.js";
+import { el as element } from "../core/dom.js";
 import MaterialsModel from "../models/materials-model.js";
 import MotiveLinksModel from "../models/motive-links-model.js";
 import PieceMetadata from "../models/piece-metadata.js";
-import { materialsElement, sendMaterialsRequest } from "./materials-common.js";
+import { sendMaterialsRequest } from "./materials-common.js";
 import { loadSubjectList, subjectsState } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
 import { fetchJsonResult } from "../core/api.js";
 
 /* The Motive links tool (R-154, R-156): pick a scope, run the link search over
  * its pieces, and follow the run. Pure parts are in motive-links-model.js;
- * fetchJsonResult, materialsElement, getContentEl, subjectsState and the page
+ * fetchJsonResult, element, getContentEl, subjectsState and the page
  * globals come from app.js, materials-view.js and subjects-view.js. */
 const motiveLinksState = { timer: null };
 
 function motiveLinksStatus(text, isError) {
-  const el = materialsElement("div", isError ? "upload-status error" : "upload-status", text || "");
+  const el = element("div", isError ? "upload-status error" : "upload-status", text || "");
   el.setAttribute("role", "status");
   return el;
 }
@@ -27,14 +28,14 @@ function stopMotiveLinksPolling() {
 }
 
 function motiveLinksSelect(options, placeholder) {
-  const select = materialsElement("select");
+  const select = element("select");
   if (placeholder !== undefined) {
-    const blank = materialsElement("option", "", placeholder);
+    const blank = element("option", "", placeholder);
     blank.value = "";
     select.appendChild(blank);
   }
   for (const option of options) {
-    const el = materialsElement("option", "", option.label);
+    const el = element("option", "", option.label);
     el.value = option.value;
     select.appendChild(el);
   }
@@ -77,16 +78,16 @@ function openMotiveFamily(pieceId, family) {
 }
 
 function motiveLinksTable(headings, rows) {
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of headings) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const cells of rows) {
-    const tr = materialsElement("tr");
+    const tr = element("tr");
     for (const cell of cells) {
-      const td = materialsElement("td");
+      const td = element("td");
       if (cell instanceof Node) {
         td.appendChild(cell);
       } else {
@@ -96,13 +97,13 @@ function motiveLinksTable(headings, rows) {
     }
     table.appendChild(tr);
   }
-  const panel = materialsElement("section", "panel library-panel");
+  const panel = element("section", "panel library-panel");
   panel.appendChild(table);
   return panel;
 }
 
 function motiveLinksPieceLink(row) {
-  const link = materialsElement("a", "clickable", row.title);
+  const link = element("a", "clickable", row.title);
   link.addEventListener("click", () => openMotiveFamily(row.piece, row.family));
   return link;
 }
@@ -111,9 +112,9 @@ function motiveLinksPieceLink(row) {
 function renderMotiveLinksResult(target, result) {
   target.innerHTML = "";
   const groups = MotiveLinksModel.groupRows(result);
-  target.appendChild(materialsElement("h2", "section-title", "Groups"));
+  target.appendChild(element("h2", "section-title", "Groups"));
   if (groups.length === 0) {
-    target.appendChild(materialsElement("div", "piece-list-status", "No linked families."));
+    target.appendChild(element("div", "piece-list-status", "No linked families."));
   } else {
     const rows = [];
     groups.forEach((group, i) => {
@@ -124,10 +125,10 @@ function renderMotiveLinksResult(target, result) {
     target.appendChild(motiveLinksTable(["Group", "Piece", "Measures", "Degrees"], rows));
   }
 
-  target.appendChild(materialsElement("h2", "section-title", "Links"));
+  target.appendChild(element("h2", "section-title", "Links"));
   const links = MotiveLinksModel.linkRows(result);
   if (links.length === 0) {
-    target.appendChild(materialsElement("div", "piece-list-status", "No links found."));
+    target.appendChild(element("div", "piece-list-status", "No links found."));
     return;
   }
   const rows = links.map((link) => [
@@ -157,25 +158,25 @@ export async function renderMotiveLinksView() {
   stopMotiveLinksPolling();
   const content = shell().contentEl();
   content.innerHTML = "";
-  content.appendChild(materialsElement("h1", "view-title", "Motive links"));
+  content.appendChild(element("h1", "view-title", "Motive links"));
 
   const choices = await loadMotiveLinksChoices();
   const selection = { kind: "all" };
 
-  const controls = materialsElement("div", "upload-controls");
+  const controls = element("div", "upload-controls");
   const kind = motiveLinksSelect(
     MotiveLinksModel.SCOPE_KINDS.map((entry) => ({ value: entry.kind, label: entry.title })),
   );
-  const pickers = materialsElement("span");
-  const run = materialsElement("button", "", "Run");
+  const pickers = element("span");
+  const run = element("button", "", "Run");
   run.type = "button";
   controls.append(kind, pickers, run);
 
   const progressEl = motiveLinksStatus("");
-  const skippedEl = materialsElement("div", "piece-list-status");
-  const resultEl = materialsElement("div");
-  const runsEl = materialsElement("div");
-  content.append(controls, progressEl, skippedEl, resultEl, materialsElement("h2", "section-title", "Earlier runs"), runsEl);
+  const skippedEl = element("div", "piece-list-status");
+  const resultEl = element("div");
+  const runsEl = element("div");
+  content.append(controls, progressEl, skippedEl, resultEl, element("h2", "section-title", "Earlier runs"), runsEl);
   const names = motiveLinksNames(choices);
 
   function drawPickers() {
@@ -249,16 +250,16 @@ export async function renderMotiveLinksView() {
     runsEl.innerHTML = "";
     const rows = MotiveLinksModel.runRows(answer.ok && answer.data ? answer.data.runs : [], names);
     if (rows.length === 0) {
-      runsEl.appendChild(materialsElement("div", "piece-list-status", "No earlier runs."));
+      runsEl.appendChild(element("div", "piece-list-status", "No earlier runs."));
       return;
     }
-    const list = materialsElement("ul", "materials-list");
+    const list = element("ul", "materials-list");
     for (const row of rows) {
-      const li = materialsElement("li");
-      const open = materialsElement("a", "clickable", row.label);
+      const li = element("li");
+      const open = element("a", "clickable", row.label);
       open.addEventListener("click", () => openRun(row.id));
       li.append(open, document.createTextNode(row.progress ? ` (${row.progress}) ` : " "));
-      const del = materialsElement("button", "", "Delete");
+      const del = element("button", "", "Delete");
       del.type = "button";
       del.disabled = row.status === "running";
       del.addEventListener("click", () => deleteRun(row.id));

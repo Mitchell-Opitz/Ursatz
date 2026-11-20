@@ -1,9 +1,10 @@
 import MaterialsModel from "../models/materials-model.js";
+import { el as element } from "../core/dom.js";
 import MotifDetailView from "./motif-detail-view.js";
 import ScoreWorkspace from "../score/score-workspace.js";
 import ThemeDetailView from "./theme-detail-view.js";
 import VariantTree from "../models/variant-tree.js";
-import { buildUsesSection, buildVersionsList, markUpdatedUses, materialsElement, materialsState, materialsViewActive, openLinkedItem, sendMaterialsRequest } from "./materials-common.js";
+import { buildUsesSection, buildVersionsList, markUpdatedUses, materialsState, materialsViewActive, openLinkedItem, sendMaterialsRequest } from "./materials-common.js";
 import { buildSubjectsField } from "./subjects-view.js";
 import { buildPieceEditor, buildPieceResult, pieceVersionView } from "./pieces-view.js";
 import { shell } from "./shell-context.js";
@@ -121,7 +122,7 @@ export async function mountProjectPicker() {
 function fillProjectSelect(select, selected) {
   select.innerHTML = "";
   for (const project of materialsState.projects) {
-    const option = materialsElement("option", "", project.name);
+    const option = element("option", "", project.name);
     option.value = project.id;
     select.appendChild(option);
   }
@@ -129,13 +130,13 @@ function fillProjectSelect(select, selected) {
 }
 
 function buildNewItemControls(type, info, statusEl, reload) {
-  const controls = materialsElement("div", "upload-controls");
-  const name = materialsElement("input");
+  const controls = element("div", "upload-controls");
+  const name = element("input");
   name.type = "text";
   name.placeholder = `New ${info.singular} name`;
-  const project = materialsElement("select");
+  const project = element("select");
   fillProjectSelect(project, MaterialsModel.defaultProject(materialsState.filter, materialsState.projects));
-  const create = materialsElement("button", "", "New");
+  const create = element("button", "", "New");
   create.type = "button";
   create.disabled = materialsState.projects.length === 0;
   async function submit() {
@@ -165,17 +166,17 @@ function buildNewItemControls(type, info, statusEl, reload) {
 }
 
 function buildItemTable(rows, onOpen) {
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of ["Name", "Project", "Version", "Updated"]) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const row of rows) {
-    const tr = materialsElement("tr", "clickable");
+    const tr = element("tr", "clickable");
     tr.dataset.id = row.id;
     for (const value of [row.name, row.project, row.version, row.updated]) {
-      tr.appendChild(materialsElement("td", "", value));
+      tr.appendChild(element("td", "", value));
     }
     tr.addEventListener("click", () => onOpen(row.id));
     table.appendChild(tr);
@@ -187,18 +188,18 @@ function buildItemTable(rows, onOpen) {
  * drawn) and shows its score and playback in the score workspace. Pressing it again draws another; "Use" hands the
  * motif's form values to onUse(values) to fill the editor. Nothing is stored. */
 function buildRandomMotifs(statusEl, onUse) {
-  const section = materialsElement("section", "panel materials-random");
-  section.appendChild(materialsElement("h2", "section-title", "Random"));
-  const buttons = materialsElement("div", "button-row");
-  const draw = materialsElement("button", "", "Random");
-  const use = materialsElement("button", "", "Use");
+  const section = element("section", "panel materials-random");
+  section.appendChild(element("h2", "section-title", "Random"));
+  const buttons = element("div", "button-row");
+  const draw = element("button", "", "Random");
+  const use = element("button", "", "Use");
   for (const button of [draw, use]) {
     button.type = "button";
   }
   use.hidden = true;
   buttons.append(draw, use);
-  const infoEl = materialsElement("div", "variant-meta");
-  const selectedEl = materialsElement("div", "materials-score-mount");
+  const infoEl = element("div", "variant-meta");
+  const selectedEl = element("div", "materials-score-mount");
   let workspace = null;
   let blobUrls = [];
   let current = null;
@@ -265,11 +266,11 @@ export async function renderMaterialsView(type) {
   materialsState.type = type;
   const page = shell().contentEl();
   page.innerHTML = "";
-  const content = type === "motif" ? page.appendChild(materialsElement("div", "motifs-section")) : page;
-  content.appendChild(materialsElement("h1", "view-title", info.label));
-  const statusEl = materialsElement("div", "upload-status");
+  const content = type === "motif" ? page.appendChild(element("div", "motifs-section")) : page;
+  content.appendChild(element("h1", "view-title", info.label));
+  const statusEl = element("div", "upload-status");
   statusEl.setAttribute("role", "status");
-  const listEl = materialsElement("div");
+  const listEl = element("div");
   const reload = () => renderMaterialsView(type);
 
   if (!materialsState.loaded) {
@@ -289,16 +290,16 @@ export async function renderMaterialsView(type) {
   }
   if (!answer.ok) {
     listEl.appendChild(
-      materialsElement("div", "piece-list-status error", MaterialsModel.errorText(answer.data, "Could not load items")),
+      element("div", "piece-list-status error", MaterialsModel.errorText(answer.data, "Could not load items")),
     );
     return;
   }
   const rows = MaterialsModel.itemRows(answer.data.items, materialsState.projects);
   if (rows.length === 0) {
-    listEl.appendChild(materialsElement("div", "piece-list-status", `No ${info.label.toLowerCase()} yet.`));
+    listEl.appendChild(element("div", "piece-list-status", `No ${info.label.toLowerCase()} yet.`));
     return;
   }
-  const panel = materialsElement("section", "panel library-panel");
+  const panel = element("section", "panel library-panel");
   const table = buildItemTable(rows, (id) => renderMaterialsDetail(type, id));
   panel.appendChild(table);
   listEl.appendChild(panel);
@@ -308,16 +309,16 @@ export async function renderMaterialsView(type) {
 /* The Used by section: the items that use this one; each opens its detail. */
 function buildUsedBySection(users) {
   const rows = MaterialsModel.usedByRows(users, materialsState.projects);
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Used by"));
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", "Used by"));
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", "Not used by any item."));
+    section.appendChild(element("div", "piece-list-status", "Not used by any item."));
     return section;
   }
-  const list = materialsElement("ul", "materials-list");
+  const list = element("ul", "materials-list");
   for (const row of rows) {
-    const li = materialsElement("li");
-    const open = materialsElement("a", "clickable", row.label);
+    const li = element("li");
+    const open = element("a", "clickable", row.label);
     open.addEventListener("click", () => openLinkedItem(row.type, row.id));
     li.appendChild(open);
     li.appendChild(document.createTextNode(row.project ? ` · ${row.project}` : ""));
@@ -330,27 +331,27 @@ function buildUsedBySection(users) {
 function renderNewMotif(draftName, draftProject) {
   const page = shell().contentEl();
   page.innerHTML = "";
-  const content = page.appendChild(materialsElement("div", "motifs-section"));
-  const back = materialsElement("a", "back-link clickable", "Back to Motifs");
+  const content = page.appendChild(element("div", "motifs-section"));
+  const back = element("a", "back-link clickable", "Back to Motifs");
   back.addEventListener("click", () => renderMaterialsView("motif"));
   content.appendChild(back);
-  content.appendChild(materialsElement("h1", "view-title", "New motif"));
-  const statusEl = materialsElement("div", "upload-status");
+  content.appendChild(element("h1", "view-title", "New motif"));
+  const statusEl = element("div", "upload-status");
   statusEl.setAttribute("role", "status");
 
-  const meta = materialsElement("div", "upload-controls");
-  const name = materialsElement("input");
+  const meta = element("div", "upload-controls");
+  const name = element("input");
   name.type = "text";
   name.placeholder = "Motif name";
   name.value = draftName || "";
-  const project = materialsElement("select");
+  const project = element("select");
   fillProjectSelect(project, draftProject);
   meta.append(name, project);
   content.append(meta, statusEl);
 
   const subjectsField = buildSubjectsField("items", null, []);
-  const subjectsRow = materialsElement("div", "materials-subjects-row");
-  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+  const subjectsRow = element("div", "materials-subjects-row");
+  subjectsRow.append(element("h2", "section-title", "Subjects"), subjectsField.el);
   content.appendChild(subjectsRow);
 
   const editor = buildMotifEditor(null);
@@ -391,10 +392,10 @@ export async function renderMaterialsDetail(type, id, analysisError) {
   const info = MaterialsModel.typeInfo(type);
   const content = shell().contentEl();
   content.innerHTML = "";
-  const back = materialsElement("a", "back-link clickable", `Back to ${info.label}`);
+  const back = element("a", "back-link clickable", `Back to ${info.label}`);
   back.addEventListener("click", () => renderMaterialsView(type));
   content.appendChild(back);
-  const statusEl = materialsElement("div", "upload-status");
+  const statusEl = element("div", "upload-status");
   statusEl.setAttribute("role", "status");
   const answer = await sendMaterialsRequest(MaterialsModel.buildItemGetRequest(id));
   if (!answer.ok) {
@@ -410,15 +411,15 @@ export async function renderMaterialsDetail(type, id, analysisError) {
     renderMaterialsDetail("motif", item.variant_of, analysisError);
     return;
   }
-  content.appendChild(materialsElement("h1", "view-title", item.name));
+  content.appendChild(element("h1", "view-title", item.name));
 
-  const controls = materialsElement("div", "upload-controls");
-  const name = materialsElement("input");
+  const controls = element("div", "upload-controls");
+  const name = element("input");
   name.type = "text";
   name.value = item.name;
-  const project = materialsElement("select");
+  const project = element("select");
   fillProjectSelect(project, item.project_id);
-  const save = materialsElement("button", "", "Save");
+  const save = element("button", "", "Save");
   save.type = "button";
   save.addEventListener("click", async () => {
     const fields = {};
@@ -439,7 +440,7 @@ export async function renderMaterialsDetail(type, id, analysisError) {
     }
     renderMaterialsDetail(type, id);
   });
-  const del = materialsElement("button", "button-danger", "Delete");
+  const del = element("button", "button-danger", "Delete");
   del.type = "button";
   del.addEventListener("click", async () => {
     const variants = type === "motif" && allItemsAnswer.ok ? MaterialsModel.variantCount(allItemsAnswer.data.items, id) : 0;
@@ -469,11 +470,11 @@ export async function renderMaterialsDetail(type, id, analysisError) {
   }
   content.append(controls, statusEl);
 
-  const versionEl = materialsElement("div");
+  const versionEl = element("div");
   if (type !== "motif" && type !== "theme") {
     const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
-    const subjectsRow = materialsElement("div", "materials-subjects-row");
-    subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+    const subjectsRow = element("div", "materials-subjects-row");
+    subjectsRow.append(element("h2", "section-title", "Subjects"), subjectsField.el);
     content.appendChild(subjectsRow);
   }
   const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
@@ -484,7 +485,7 @@ export async function renderMaterialsDetail(type, id, analysisError) {
   if (type === "motif") {
     const composerStatus = await sendMaterialsRequest({ method: "GET", url: "/api/composer/status" });
     if (!MaterialsModel.composerAvailable(composerStatus)) {
-      const banner = materialsElement("div", "upload-status error", MaterialsModel.COMPOSER_MISSING_TEXT);
+      const banner = element("div", "upload-status error", MaterialsModel.COMPOSER_MISSING_TEXT);
       banner.setAttribute("role", "alert");
       content.insertBefore(banner, content.children[1]);
     }

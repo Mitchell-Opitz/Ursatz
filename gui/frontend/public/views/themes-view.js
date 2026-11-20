@@ -1,30 +1,31 @@
 import ApiRequest from "../core/request.js";
+import { el as element } from "../core/dom.js";
 import MaterialsModel from "../models/materials-model.js";
 import ScoreWorkspace from "../score/score-workspace.js";
 import ThemesModel from "../models/themes-model.js";
 import VariantTree from "../models/variant-tree.js";
 import Vocabulary from "../core/vocabulary.js";
-import { attachFormValidation, materialsElement, materialsState, sendMaterialsRequest } from "./materials-common.js";
+import { attachFormValidation, materialsState, sendMaterialsRequest } from "./materials-common.js";
 import { loadMotiveLinksChoices } from "./motive-links-view.js";
 import { fetchJsonResult } from "../core/api.js";
 
 /* The Themes view's editor (P16, R-167): the form, slot motifs and
  * accompaniment of a theme, mounted in the theme detail of materials-view.js.
- * Pure parts are in themes-model.js; materialsElement, sendMaterialsRequest,
+ * Pure parts are in themes-model.js; element, sendMaterialsRequest,
  * materialsState and renderMaterialsDetail come from materials-view.js. */
 
 export function themeField(parent, labelText, control) {
-  const label = materialsElement("label", "filter-field", `${labelText} `);
+  const label = element("label", "filter-field", `${labelText} `);
   label.appendChild(control);
   parent.appendChild(label);
   return control;
 }
 
 export function themeSelect(options, value) {
-  const select = materialsElement("select");
+  const select = element("select");
   for (const option of options) {
     const entry = typeof option === "object" ? option : { value: option, label: String(option) };
-    const el = materialsElement("option", "", entry.label);
+    const el = element("option", "", entry.label);
     el.value = String(entry.value);
     select.appendChild(el);
   }
@@ -33,7 +34,7 @@ export function themeSelect(options, value) {
 }
 
 export function themeInput(placeholder, value) {
-  const el = materialsElement("input");
+  const el = element("input");
   el.type = "text";
   el.placeholder = placeholder;
   el.value = value || "";
@@ -41,7 +42,7 @@ export function themeInput(placeholder, value) {
 }
 
 export function themeButton(text, onClick) {
-  const button = materialsElement("button", "", text);
+  const button = element("button", "", text);
   button.type = "button";
   button.addEventListener("click", onClick);
   return button;
@@ -80,15 +81,15 @@ async function themePlayMotif(host, title, body, statusEl) {
  */
 export function buildThemeMotifPicker(options) {
   const role = options.role;
-  const el = materialsElement("div", "theme-motif-picker");
-  const controls = materialsElement("div", "upload-controls");
+  const el = element("div", "theme-motif-picker");
+  const controls = element("div", "upload-controls");
   const projectSelect = themeSelect(MaterialsModel.projectOptions(materialsState.projects), MaterialsModel.ALL_PROJECTS);
   const query = themeInput("Search motifs by name");
-  const choice = materialsElement("select", "materials-use-choice");
-  const versionSelect = materialsElement("select");
-  const infoEl = materialsElement("div", "piece-list-status");
-  const playHost = materialsElement("div");
-  const playStatus = materialsElement("div", "upload-status");
+  const choice = element("select", "materials-use-choice");
+  const versionSelect = element("select");
+  const infoEl = element("div", "piece-list-status");
+  const playHost = element("div");
+  const playStatus = element("div", "upload-status");
   playStatus.setAttribute("role", "status");
   const play = themeButton("Play", () => themePlayMotif(playHost, infoEl.dataset.name || "Motif", current.body, playStatus));
   const clear = themeButton("Clear", () => {
@@ -109,11 +110,11 @@ export function buildThemeMotifPicker(options) {
       project: projectSelect.value,
     });
     choice.innerHTML = "";
-    const blank = materialsElement("option", "", found.length === 0 ? "No motifs" : "Choose a motif");
+    const blank = element("option", "", found.length === 0 ? "No motifs" : "Choose a motif");
     blank.value = "";
     choice.appendChild(blank);
     for (const item of found) {
-      const option = materialsElement("option", "", item.label);
+      const option = element("option", "", item.label);
       option.value = item.id;
       option.dataset.name = item.name;
       choice.appendChild(option);
@@ -166,7 +167,7 @@ export function buildThemeMotifPicker(options) {
     }
     const item = answer.data.item;
     for (const row of MaterialsModel.versionRows(item)) {
-      const option = materialsElement("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
+      const option = element("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
       option.value = String(row.number);
       versionSelect.appendChild(option);
     }
@@ -199,7 +200,7 @@ export function buildThemeMotifPicker(options) {
     if (answer.ok) {
       versionSelect.innerHTML = "";
       for (const row of MaterialsModel.versionRows(answer.data.item)) {
-        const option = materialsElement("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
+        const option = element("option", "", row.current ? `v${row.number} (current)` : `v${row.number}`);
         option.value = String(row.number);
         versionSelect.appendChild(option);
       }
@@ -214,19 +215,19 @@ export function buildThemeMotifPicker(options) {
  * defaults to the slots of the theme. */
 export function buildThemePoolSection(state, itemName, onPool, entries) {
   const motifs = entries || (() => state.slots.map((entry) => ({ label: ThemesModel.SLOT_LABELS[entry.slot], item_id: entry.item_id })));
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h3", "section-title", "Pool"));
+  const section = element("div");
+  section.appendChild(element("h3", "section-title", "Pool"));
   const poolSelect = themeSelect(ThemesModel.POOLS, state.pool);
   poolSelect.addEventListener("change", () => onPool(poolSelect.value));
   themeField(section, "Saved forms", poolSelect);
-  const list = materialsElement("ul", "materials-list");
+  const list = element("ul", "materials-list");
   section.appendChild(list);
 
   /* Redraws the counts for the slots now chosen. */
   async function refresh() {
     list.innerHTML = "";
     for (const entry of motifs()) {
-      const li = materialsElement("li", "", `${entry.label}: ${itemName(entry.item_id)} · `);
+      const li = element("li", "", `${entry.label}: ${itemName(entry.item_id)} · `);
       list.appendChild(li);
       const answer = await sendMaterialsRequest({ method: "GET", url: `/api/materials/items/${encodeURIComponent(entry.item_id)}/variant-tree` });
       li.appendChild(
@@ -253,11 +254,11 @@ async function loadThemeBriefChoices() {
  * options: {emptyText (shown without a brief), tempo (false when the tempo is set elsewhere)}. */
 export function buildThemeBriefSection(state, options) {
   const o = options || {};
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Brief"));
-  const chipsEl = materialsElement("div", "theme-chips");
-  const emptyEl = materialsElement("div", "piece-list-status", o.emptyText || "No brief: the theme is grown without a style.");
-  const picker = materialsElement("div", "upload-controls");
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", "Brief"));
+  const chipsEl = element("div", "theme-chips");
+  const emptyEl = element("div", "piece-list-status", o.emptyText || "No brief: the theme is grown without a style.");
+  const picker = element("div", "upload-controls");
   let names = {};
   let choices = null;
 
@@ -265,7 +266,7 @@ export function buildThemeBriefSection(state, options) {
     chipsEl.innerHTML = "";
     emptyEl.hidden = state.picks.length > 0;
     state.picks.forEach((pick, index) => {
-      const chip = materialsElement("span", "theme-chip", ThemesModel.pickLabel(pick, names));
+      const chip = element("span", "theme-chip", ThemesModel.pickLabel(pick, names));
       chip.appendChild(
         themeButton("Remove", () => {
           state.picks.splice(index, 1);
@@ -287,22 +288,22 @@ export function buildThemeBriefSection(state, options) {
     ],
     "collection",
   );
-  const valueSelect = materialsElement("select");
+  const valueSelect = element("select");
   const filterSelects = {
-    composer: materialsElement("select"),
-    source: materialsElement("select"),
-    tag: materialsElement("select"),
+    composer: element("select"),
+    source: element("select"),
+    tag: element("select"),
   };
 
   function fillSelect(select, options, blank) {
     select.innerHTML = "";
     if (blank !== undefined) {
-      const o = materialsElement("option", "", blank);
+      const o = element("option", "", blank);
       o.value = "";
       select.appendChild(o);
     }
     for (const option of options) {
-      const o = materialsElement("option", "", option.label);
+      const o = element("option", "", option.label);
       o.value = option.value;
       select.appendChild(o);
     }
@@ -373,11 +374,11 @@ export function buildThemeBriefSection(state, options) {
   section.append(chipsEl, emptyEl, picker);
 
   /* Motive switches */
-  const switches = materialsElement("div");
-  switches.appendChild(materialsElement("div", "", ThemesModel.SWITCH_TEXT));
+  const switches = element("div");
+  switches.appendChild(element("div", "", ThemesModel.SWITCH_TEXT));
   for (const entry of ThemesModel.MOTIVE_CATEGORIES) {
-    const label = materialsElement("label", "filter-field", `${entry.label} `);
-    const box = materialsElement("input");
+    const label = element("label", "filter-field", `${entry.label} `);
+    const box = element("input");
     box.type = "checkbox";
     box.checked = state.switches[entry.category] !== false;
     box.addEventListener("change", () => {
@@ -388,7 +389,7 @@ export function buildThemeBriefSection(state, options) {
   }
   section.appendChild(switches);
 
-  const controls = materialsElement("div", "upload-controls");
+  const controls = element("div", "upload-controls");
   const weight = themeField(controls, "Weight", themeSelect(ThemesModel.WEIGHTS, state.weight));
   weight.addEventListener("input", () => {
     state.weight = weight.value;
@@ -403,8 +404,8 @@ export function buildThemeBriefSection(state, options) {
   seed.addEventListener("input", () => {
     state.seed = seed.value;
   });
-  const checkLabel = materialsElement("label", "filter-field", "Check with the Analyzer ");
-  const check = materialsElement("input");
+  const checkLabel = element("label", "filter-field", "Check with the Analyzer ");
+  const check = element("input");
   check.type = "checkbox";
   check.checked = state.check;
   check.addEventListener("change", () => {
@@ -418,11 +419,11 @@ export function buildThemeBriefSection(state, options) {
 
 /* A two-column table of label and text rows. */
 export function themeFacts(rows) {
-  const list = materialsElement("dl", "materials-analysis-list");
+  const list = element("dl", "materials-analysis-list");
   for (const [label, text] of rows) {
     if (text !== "" && text !== undefined) {
-      list.appendChild(materialsElement("dt", "", label));
-      list.appendChild(materialsElement("dd", "", text));
+      list.appendChild(element("dt", "", label));
+      list.appendChild(element("dd", "", text));
     }
   }
   return list;
@@ -476,8 +477,8 @@ export function buildThemeResult(ctx) {
     motiveNames: ThemesModel.motiveNames(state, ctx.nameOf),
     check: ctx.theme.check === true,
   });
-  const section = materialsElement("section", "panel materials-analysis theme-result");
-  section.appendChild(materialsElement("h2", "section-title", "Result"));
+  const section = element("section", "panel materials-analysis theme-result");
+  section.appendChild(element("h2", "section-title", "Result"));
   section.appendChild(
     themeFacts([
       ["Seed", view.seed === null ? "" : String(view.seed)],
@@ -493,49 +494,49 @@ export function buildThemeResult(ctx) {
       ...view.distance.map((entry) => [`Style distance, ${entry.label}`, entry.value]),
     ]),
   );
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of ["Idea", "Slot", "Motif", "Source", "Chain", "Connection"]) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const row of view.rows) {
-    const tr = materialsElement("tr");
+    const tr = element("tr");
     const source = row.item ? `${row.source}: ${ctx.nameOf(row.item)}` : row.source;
     for (const cell of [row.idea, row.slot, row.motive, source, row.chain, row.connection]) {
-      tr.appendChild(materialsElement("td", "", cell));
+      tr.appendChild(element("td", "", cell));
     }
     table.appendChild(tr);
   }
   section.appendChild(table);
   if (view.developments.length > 0) {
-    section.appendChild(materialsElement("h3", "section-title", "Development"));
-    const list = materialsElement("ul", "theme-developments");
+    section.appendChild(element("h3", "section-title", "Development"));
+    const list = element("ul", "theme-developments");
     for (const entry of view.developments) {
-      const item = materialsElement("li", entry.mismatch ? "theme-development-mismatch" : "");
+      const item = element("li", entry.mismatch ? "theme-development-mismatch" : "");
       if (entry.heard !== "") {
-        item.append(`intended: ${entry.intended}`, materialsElement("br"), `heard: ${entry.heard}`);
+        item.append(`intended: ${entry.intended}`, element("br"), `heard: ${entry.heard}`);
         if (entry.fidelity !== "") {
           const minimum = entry.minimum !== "" ? ` (min ${entry.minimum})` : "";
-          item.append(materialsElement("br"), `${entry.fidelity}${minimum}`);
+          item.append(element("br"), `${entry.fidelity}${minimum}`);
         }
       } else {
         item.append(entry.text);
       }
       if (entry.mismatch) {
-        item.append(" ", materialsElement("span", "materials-tag", "mismatch"));
+        item.append(" ", element("span", "materials-tag", "mismatch"));
       }
       if (entry.segment !== "") {
-        item.append(" ", materialsElement("span", "materials-tag", entry.segment));
+        item.append(" ", element("span", "materials-tag", entry.segment));
       }
       list.appendChild(item);
     }
     section.appendChild(list);
   }
-  const midi = materialsElement("a", "back-link clickable", "Download MIDI");
+  const midi = element("a", "back-link clickable", "Download MIDI");
   midi.href = ThemesModel.versionFileUrl(ctx.id, ctx.version, "theme.mid");
   midi.download = "theme.mid";
-  const scoreHost = materialsElement("div", "materials-score-mount");
+  const scoreHost = element("div", "materials-score-mount");
   section.append(midi, scoreHost);
   themeMountScore(scoreHost, ctx.id, ctx.version, ctx.title);
   return section;
@@ -544,7 +545,7 @@ export function buildThemeResult(ctx) {
 /* Shows an older version read only: its form and slots, then its result. */
 export function themeVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.innerHTML = "";
-  viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
+  viewEl.appendChild(element("h2", "section-title", `Version ${number} (read only)`));
   const state = ThemesModel.formFromBody(body, id);
   viewEl.appendChild(
     themeFacts([
@@ -555,16 +556,16 @@ export function themeVersionView(viewEl, id, number, body, nameOf, title) {
     ]),
   );
   const result = buildThemeResult({ id, version: number, theme: body, nameOf, title });
-  viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
+  viewEl.appendChild(result || element("div", "piece-list-status", "This version was not composed."));
 }
 
 /* The accompaniment section: none, a pattern or (when options.motif is not false) a motif. state.accompaniment is
  * {kind, pattern, item_id, version}; itemsOf() lists the items for the motif picker. */
 export function buildThemeAccompanimentSection(state, itemsOf, options) {
   const withMotif = !options || options.motif !== false;
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Accompaniment"));
-  const accompaniment = materialsElement("div", "upload-controls");
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", "Accompaniment"));
+  const accompaniment = element("div", "upload-controls");
   const accKind = themeField(
     accompaniment,
     "Accompaniment",
@@ -604,7 +605,7 @@ export function buildThemeAccompanimentSection(state, itemsOf, options) {
  * items. onUse(value) gets {item_id, version} of the choice. Returns {el, setMotif(motif, keep)}: the motif the picker
  * holds ({item_id, version}, or null) and the {item_id, version} of the variant to select. */
 function buildThemeUseSelect(itemsOf, onUse) {
-  const select = materialsElement("select", "theme-use");
+  const select = element("select", "theme-use");
   select.title = "Use the motif or one of its saved variants";
   let motif = null;
   let choices = [];
@@ -612,17 +613,17 @@ function buildThemeUseSelect(itemsOf, onUse) {
 
   function fill(keep) {
     select.innerHTML = "";
-    const base = materialsElement("option", "", "The motif");
+    const base = element("option", "", "The motif");
     base.value = "";
     select.appendChild(base);
     for (const choice of choices) {
-      const option = materialsElement("option", "", choice.label);
+      const option = element("option", "", choice.label);
       option.value = choice.value;
       option.title = choice.title;
       select.appendChild(option);
     }
     if (keep && !choices.some((choice) => choice.value === keep.item_id)) {
-      const option = materialsElement("option", "", "Saved variant");
+      const option = element("option", "", "Saved variant");
       option.value = keep.item_id;
       select.appendChild(option);
       choices = [...choices, { value: keep.item_id, version: Number(keep.version), label: "Saved variant", title: "" }];
@@ -681,7 +682,7 @@ function buildThemeMotifUse(itemsOf, stored, set, picked) {
       use.setMotif(motif, stored);
     }
   }
-  const el = materialsElement("div", "theme-slot-row");
+  const el = element("div", "theme-slot-row");
   el.append(picker.el, use.el);
   return el;
 }
@@ -691,13 +692,13 @@ function buildThemeMotifUse(itemsOf, stored, set, picked) {
  * More slots (closed) gives single ideas a motif of their own, kept in state.ideas. Returns the section element;
  * refreshSlots() shows the slots and ideas the form has. */
 function buildThemeSlotsSection(state, itemsOf, basicSet) {
-  const section = materialsElement("section", "panel materials-editor theme-editor");
-  section.appendChild(materialsElement("h2", "section-title", "Slots"));
+  const section = element("section", "panel materials-editor theme-editor");
+  section.appendChild(element("h2", "section-title", "Slots"));
   const rows = {};
   const ideaRows = {};
   for (const slot of ThemesModel.SLOT_NAMES) {
-    const row = materialsElement("div", "theme-slot");
-    row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === ThemesModel.REQUIRED_SLOT ? " (required)" : ""}`));
+    const row = element("div", "theme-slot");
+    row.appendChild(element("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === ThemesModel.REQUIRED_SLOT ? " (required)" : ""}`));
     let hadBasic = false;
     const set = (value) => {
       hadBasic = state.slots.some((entry) => entry.slot === ThemesModel.REQUIRED_SLOT);
@@ -716,9 +717,9 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
     rows[slot] = row;
     section.appendChild(row);
   }
-  const more = materialsElement("details", "theme-more-slots");
-  more.appendChild(materialsElement("summary", "section-title", "More slots"));
-  const ideasHost = materialsElement("div");
+  const more = element("details", "theme-more-slots");
+  more.appendChild(element("summary", "section-title", "More slots"));
+  const ideasHost = element("div");
   more.appendChild(ideasHost);
   section.appendChild(more);
 
@@ -738,8 +739,8 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
       if (idea === ThemesModel.REQUIRED_IDEA) {
         continue;
       }
-      const row = materialsElement("div", "theme-slot");
-      const heading = materialsElement("h3", "section-title");
+      const row = element("div", "theme-slot");
+      const heading = element("h3", "section-title");
       const own = () => state.ideas.find((entry) => entry.idea === idea);
       const title = () => {
         heading.textContent = `${idea}: ${own() ? "Own motif" : `From ${ThemesModel.SLOT_LABELS[slot].toLowerCase()}`}`;
@@ -791,10 +792,10 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
  *   modeHidden     true to leave out the chosen/given select (the host has its own).
  * Returns {element, refresh()}; refresh re-reads the host (bars, pairing, state) and opens the block when the bars need one. */
 export function buildConstructionBlock(host) {
-  const element = materialsElement("details", "theme-construction");
-  element.appendChild(materialsElement("summary", "section-title", "Construction"));
-  const body = materialsElement("div");
-  const modeRow = materialsElement("div", "upload-controls");
+  const element = element("details", "theme-construction");
+  element.appendChild(element("summary", "section-title", "Construction"));
+  const body = element("div");
+  const modeRow = element("div", "upload-controls");
   body.appendChild(modeRow);
   const mode = themeField(
     modeRow,
@@ -809,9 +810,9 @@ export function buildConstructionBlock(host) {
   );
   /* host.modeHidden: the host has its own choice between chosen and given and shows the block only for given. */
   mode.parentElement.hidden = host.modeHidden === true;
-  const ideasRow = materialsElement("div", "upload-controls");
-  const extensionsRow = materialsElement("div", "theme-extensions");
-  const hint = materialsElement("div", "materials-hint");
+  const ideasRow = element("div", "upload-controls");
+  const extensionsRow = element("div", "theme-extensions");
+  const hint = element("div", "materials-hint");
   body.appendChild(ideasRow);
   body.appendChild(extensionsRow);
   element.appendChild(body);
@@ -838,14 +839,14 @@ export function buildConstructionBlock(host) {
     extensionsRow.replaceChildren();
     const names = host.ideaNames();
     construction.extensions.forEach((extension, at) => {
-      const row = materialsElement("div", "upload-controls");
+      const row = element("div", "upload-controls");
       const kind = themeField(row, `Extension ${at + 1}`, themeSelect(ThemesModel.EXTENSIONS, extension.kind));
       const idea = themeSelect(ThemesModel.extensionIdeas(extension.kind, names), extension.idea);
       const ideaField = themeField(row, "After", idea);
       const bars = themeInput("0 = default", extension.bars ? String(extension.bars) : "");
       bars.size = 6;
       themeField(row, "Bars", bars);
-      const varied = materialsElement("input");
+      const varied = element("input");
       varied.type = "checkbox";
       varied.checked = extension.varied === true;
       const variedLabel = themeField(row, "Varied", varied);
@@ -860,7 +861,7 @@ export function buildConstructionBlock(host) {
         const kinds = ThemesModel.extensionIdeas(extension.kind, names);
         ideaField.parentElement.hidden = kinds.length === 0;
         if (!kinds.includes(idea.value)) {
-          idea.replaceChildren(...kinds.map((name) => Object.assign(materialsElement("option", "", name), { value: name })));
+          idea.replaceChildren(...kinds.map((name) => Object.assign(element("option", "", name), { value: name })));
         }
         extension.idea = kinds.length === 0 ? "" : idea.value;
         extension.bars = Number(bars.value) || 0;
@@ -926,9 +927,9 @@ export function buildConstructionBlock(host) {
 
 /* The chord row: one text field per bar of the theme, empty bars left to the Composer. Returns {element, refresh()}. */
 function buildThemeChordRow(state) {
-  const element = materialsElement("div", "theme-chords");
-  element.appendChild(materialsElement("h3", "section-title", "Chords"));
-  const row = materialsElement("div", "upload-controls");
+  const element = element("div", "theme-chords");
+  element.appendChild(element("h3", "section-title", "Chords"));
+  const row = element("div", "upload-controls");
   const fields = [];
   for (let bar = 0; bar < ThemesModel.chordBars(); bar++) {
     const input = themeInput("Composer", state.chords[bar]);
@@ -938,7 +939,7 @@ function buildThemeChordRow(state) {
     fields.push(themeField(row, `Bar ${bar + 1}`, input).parentElement);
   }
   element.appendChild(row);
-  const hint = materialsElement("div", "materials-hint");
+  const hint = element("div", "materials-hint");
   element.appendChild(hint);
   /* Marks the field of one bar (from 0) a refusal names; no bar clears the mark. */
   function mark(bar) {
@@ -956,8 +957,8 @@ function buildThemeChordRow(state) {
 }
 
 function buildThemeAdvancedSection(state, itemsOf) {
-  const section = materialsElement("details", "panel materials-editor theme-editor theme-advanced");
-  section.appendChild(materialsElement("summary", "section-title", "Advanced"));
+  const section = element("details", "panel materials-editor theme-editor theme-advanced");
+  section.appendChild(element("summary", "section-title", "Advanced"));
   section.appendChild(buildThemeAccompanimentSection(state, itemsOf));
   section.appendChild(buildThemeBriefSection(state, { tempo: false }));
   return section;
@@ -977,10 +978,10 @@ export function buildThemeEditor(ctx) {
   const sections = {};
 
   /* Sources with a newer version */
-  const notices = materialsElement("div");
+  const notices = element("div");
   for (const use of ThemesModel.updatedUses({ uses_status: ctx.usesStatus })) {
-    const notice = materialsElement("div", "piece-list-status");
-    notice.appendChild(materialsElement("span", "", `${use.label} `));
+    const notice = element("div", "piece-list-status");
+    notice.appendChild(element("span", "", `${use.label} `));
     notice.appendChild(themeButton("Update and compose", () => compose({ update_uses: true })));
     notice.appendChild(themeButton("Keep", () => notice.remove()));
     notices.appendChild(notice);
@@ -988,9 +989,9 @@ export function buildThemeEditor(ctx) {
   sections.notices = notices;
 
   /* Theme tab: mode, meter and tempo */
-  const theme = materialsElement("section", "panel materials-editor theme-editor");
-  theme.appendChild(materialsElement("h2", "section-title", "Theme"));
-  const main = materialsElement("div", "upload-controls");
+  const theme = element("section", "panel materials-editor theme-editor");
+  theme.appendChild(element("h2", "section-title", "Theme"));
+  const main = element("div", "upload-controls");
   const mode = themeField(main, "Mode", themeSelect(ThemesModel.MATERIALS, state.material));
   const meter = themeField(main, "Meter", themeSelect(ThemesModel.METERS, state.meter));
   const tempo = themeField(main, "Tempo", themeInput("from the brief", state.tempo));
@@ -1001,9 +1002,9 @@ export function buildThemeEditor(ctx) {
   sections.theme = theme;
 
   /* Structure tab: the form */
-  const structure = materialsElement("section", "panel materials-editor theme-editor");
-  structure.appendChild(materialsElement("h2", "section-title", "Form"));
-  const form = materialsElement("div", "upload-controls");
+  const structure = element("section", "panel materials-editor theme-editor");
+  structure.appendChild(element("h2", "section-title", "Form"));
+  const form = element("div", "upload-controls");
   const into = themeField(form, "Into", themeSelect(ThemesModel.INTOS, state.into));
   const [beginning, ending] = state.hybrid.split("+");
   const beginningSelect = themeField(form, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
@@ -1016,7 +1017,7 @@ export function buildThemeEditor(ctx) {
     themeSelect([{ value: "", label: "Default" }, ...ThemesModel.FIRST_CADENCES], state.firstCadence),
   );
   const development = themeField(form, "Development", themeSelect(ThemesModel.developmentChoices(), state.development));
-  const developmentHint = materialsElement("div", "materials-hint");
+  const developmentHint = element("div", "materials-hint");
   form.appendChild(developmentHint);
   function syncForm() {
     state.into = into.value;
@@ -1138,13 +1139,13 @@ export function buildThemeEditor(ctx) {
   }
 
   /* The one Save row of the page: the note, Save, Compose. */
-  const saveRow = materialsElement("div", "upload-controls button-row");
+  const saveRow = element("div", "upload-controls button-row");
   const noteInput = themeInput("What changed? (required)", "");
   noteInput.size = 40;
   const saveButton = themeButton("Save", () => saveAll());
   saveButton.classList.add("button-primary");
   const composeButton = themeButton("Compose", () => compose({}));
-  const spinner = materialsElement("span", "theme-spinner");
+  const spinner = element("span", "theme-spinner");
   spinner.hidden = true;
   saveRow.append(validation.element, noteInput, saveButton, composeButton, spinner);
   sections.result = saveRow;

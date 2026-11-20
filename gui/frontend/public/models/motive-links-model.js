@@ -1,3 +1,5 @@
+import { text } from "../core/values.js";
+
 /* Pure helpers for the Motive links view (R-154, R-156): the scope body of a
  * run, the progress line, and rows for links, groups, earlier runs and a
  * piece's motive families. No DOM. A run is the answer of GET
@@ -15,10 +17,6 @@ const DIMENSIONS = ["rhythm", "intervals", "contour", "harmony"];
 function scopeTitle(kind) {
   const found = SCOPE_KINDS.find((entry) => entry.kind === kind);
   return found ? found.title : String(kind || "");
-}
-
-function text(value) {
-  return typeof value === "string" ? value.trim() : "";
 }
 
 /* The body of POST /api/links/runs for a picker selection {kind,

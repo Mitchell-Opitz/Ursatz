@@ -41,6 +41,7 @@ import ScoreNotes from "./score-notes.js";
 import ScoreOverlay from "./score-overlay.js";
 import SoundSources from "./sound-sources.js";
 import WorkspaceState from "../models/workspace-state.js";
+import { el } from "../core/dom.js";
 
 const RESIZE_DELAY_MS = 150;
 /* Most notehead halos drawn for one selection (a whole-piece claim can
@@ -88,17 +89,6 @@ function layoutFor(opts) {
     transport,
     body: ["rail", "main", "data", "inspector"],
   };
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
 }
 
 function safeStorage() {

@@ -9,20 +9,13 @@
 
 import * as tabs from "../models/analysis-tabs.js";
 import layers from "./score-layers.js";
+import { isClaim, isPlainObject } from "../core/values.js";
 
 /* Fields shown elsewhere in the Inspector, not as evidence rows. */
 const SKIPPED_FIELDS = [
   "framework", "span", "location", "note_ids", "label", "share", "alternative",
   "uncertainty", "score", "confidence",
 ];
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function isClaim(value) {
-  return isPlainObject(value) && ("span" in value || "location" in value);
-}
 
 function spanOf(item) {
   return item.end - item.start;

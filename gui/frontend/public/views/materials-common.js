@@ -1,4 +1,5 @@
 import Vocabulary from "../core/vocabulary.js";
+import { el as element } from "../core/dom.js";
 import ApiRequest from "../core/request.js";
 import MaterialsModel from "../models/materials-model.js";
 import BackendJobs from "../core/backend-jobs.js";
@@ -125,7 +126,7 @@ export function attachFormValidation(options) {
 /* The Export control of one item version (P31 B5): the Analyzer's text of a motif, theme or piece, to Copy or Download.
  * version is the stored version number; the file is named after the item. */
 export function buildMaterialExport(id, version, name) {
-  const wrap = materialsElement("div", "materials-export");
+  const wrap = element("div", "materials-export");
   wrap.appendChild(
     ExportControl.create({
       fetchText: () => shell().fetchExportText(`/api/materials/items/${encodeURIComponent(id)}/export?version=${Number(version)}`),
@@ -135,26 +136,15 @@ export function buildMaterialExport(id, version, name) {
   return wrap;
 }
 
-export function materialsElement(tag, className, text) {
-  const el = document.createElement(tag);
-  if (className) {
-    el.className = className;
-  }
-  if (text !== undefined) {
-    el.textContent = text;
-  }
-  return el;
-}
-
 /* The Uses section: the uses of this version, remove, and an Add use picker
  * over the items of every project. Adding or removing writes a new version.
  * ctx: {id, type, body, statuses, allItems, statusEl}. */
 export function buildUsesSection(ctx) {
   const rows = MaterialsModel.useRows(ctx.statuses, materialsState.projects);
   const derived = ctx.type === "motif";
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", derived ? "Derived from" : "Uses"));
-  const compareEl = materialsElement("div");
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", derived ? "Derived from" : "Uses"));
+  const compareEl = element("div");
 
   async function change(sourceId, version, add, note) {
     const next = MaterialsModel.bodyWithUse(ctx.body, sourceId, version, add);
@@ -168,24 +158,24 @@ export function buildUsesSection(ctx) {
   }
 
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", derived ? "Not derived from anything yet." : "Uses nothing yet."));
+    section.appendChild(element("div", "piece-list-status", derived ? "Not derived from anything yet." : "Uses nothing yet."));
   } else {
-    const table = materialsElement("table", "library-table");
-    const head = materialsElement("tr");
+    const table = element("table", "library-table");
+    const head = element("tr");
     for (const label of ["Name", "Type", "Project", "Used version", "Source", ""]) {
-      head.appendChild(materialsElement("th", "", label));
+      head.appendChild(element("th", "", label));
     }
     table.appendChild(head);
     for (const row of rows) {
-      const tr = materialsElement("tr");
-      tr.appendChild(materialsElement("td", row.missing ? "error" : "", row.name));
-      tr.appendChild(materialsElement("td", "", row.type));
-      tr.appendChild(materialsElement("td", "", row.project));
-      tr.appendChild(materialsElement("td", "", `v${row.version}`));
-      tr.appendChild(materialsElement("td", row.missing ? "error" : "", row.note));
-      const actions = materialsElement("td");
+      const tr = element("tr");
+      tr.appendChild(element("td", row.missing ? "error" : "", row.name));
+      tr.appendChild(element("td", "", row.type));
+      tr.appendChild(element("td", "", row.project));
+      tr.appendChild(element("td", "", `v${row.version}`));
+      tr.appendChild(element("td", row.missing ? "error" : "", row.note));
+      const actions = element("td");
       if (row.stale) {
-        const update = materialsElement("button", "", "Update");
+        const update = element("button", "", "Update");
         update.type = "button";
         update.addEventListener("click", async () => {
           const answer = await sendMaterialsRequest(MaterialsModel.buildUpdateUseRequest(ctx.id, row.item_id));
@@ -196,12 +186,12 @@ export function buildUsesSection(ctx) {
           }
           shell().openItem(ctx.type, ctx.id, answer.data.item.analysis_error);
         });
-        const compare = materialsElement("button", "", "Compare");
+        const compare = element("button", "", "Compare");
         compare.type = "button";
         compare.addEventListener("click", () => showUseComparison(compareEl, row, ctx.statusEl));
         actions.append(update, compare);
       }
-      const remove = materialsElement("button", "button-secondary", "Remove");
+      const remove = element("button", "button-secondary", "Remove");
       remove.type = "button";
       remove.addEventListener("click", () => change(row.item_id, row.version, false, `Removed use of ${row.name}`));
       actions.appendChild(remove);
@@ -211,24 +201,24 @@ export function buildUsesSection(ctx) {
     section.appendChild(table);
   }
 
-  const picker = materialsElement("div", "upload-controls");
-  const query = materialsElement("input");
+  const picker = element("div", "upload-controls");
+  const query = element("input");
   query.type = "text";
   query.placeholder = "Search items by name";
-  const typeSelect = materialsElement("select");
+  const typeSelect = element("select");
   for (const entry of [{ type: "all", label: "All types" }, ...MaterialsModel.TYPES]) {
-    const option = materialsElement("option", "", entry.label);
+    const option = element("option", "", entry.label);
     option.value = entry.type;
     typeSelect.appendChild(option);
   }
-  const projectSelect = materialsElement("select");
+  const projectSelect = element("select");
   for (const option of MaterialsModel.projectOptions(materialsState.projects)) {
-    const o = materialsElement("option", "", option.label);
+    const o = element("option", "", option.label);
     o.value = option.value;
     projectSelect.appendChild(o);
   }
-  const choice = materialsElement("select", "materials-use-choice");
-  const add = materialsElement("button", "", "Add use");
+  const choice = element("select", "materials-use-choice");
+  const add = element("button", "", "Add use");
   add.type = "button";
 
   function fillChoices() {
@@ -240,7 +230,7 @@ export function buildUsesSection(ctx) {
     });
     choice.innerHTML = "";
     for (const item of found) {
-      const option = materialsElement("option", "", item.label);
+      const option = element("option", "", item.label);
       option.value = item.id;
       option.dataset.version = String(item.version);
       option.dataset.name = item.name;
@@ -277,7 +267,7 @@ export async function markUpdatedUses(table, rows, type) {
     if (answer.ok && MaterialsModel.hasUpdatedUse(answer.data.uses_status)) {
       const cell = table.querySelector(`tr[data-id="${row.id}"] td`);
       if (cell) {
-        cell.appendChild(materialsElement("span", "materials-badge", "uses updated"));
+        cell.appendChild(element("span", "materials-badge", "uses updated"));
       }
     }
   });
@@ -296,12 +286,12 @@ async function showUseComparison(el, row, statusEl) {
     return;
   }
   el.innerHTML = "";
-  el.appendChild(materialsElement("h3", "", `${row.name}: v${row.version} (used) and v${row.current} (current), read only`));
-  const grid = materialsElement("div", "materials-compare");
+  el.appendChild(element("h3", "", `${row.name}: v${row.version} (used) and v${row.current} (current), read only`));
+  const grid = element("div", "materials-compare");
   for (const [title, answer] of [[`v${row.version} (used)`, used], [`v${row.current} (current)`, current]]) {
-    const column = materialsElement("div");
-    column.appendChild(materialsElement("h4", "", title));
-    column.appendChild(materialsElement("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
+    const column = element("div");
+    column.appendChild(element("h4", "", title));
+    column.appendChild(element("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
     grid.appendChild(column);
   }
   el.appendChild(grid);
@@ -311,29 +301,29 @@ async function showUseComparison(el, row, statusEl) {
  * behind currentVersion. */
 export function buildUsedByTable(users, currentVersion, noun) {
   const rows = MaterialsModel.usedByTable(users, materialsState.projects, currentVersion);
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Used by"));
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", "Used by"));
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", `Nothing uses this ${noun || "motif"} yet.`));
+    section.appendChild(element("div", "piece-list-status", `Nothing uses this ${noun || "motif"} yet.`));
     return section;
   }
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of ["Name", "Type", "Version used", "Project", ""]) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const row of rows) {
-    const tr = materialsElement("tr");
-    const nameCell = materialsElement("td");
-    const open = materialsElement("a", "clickable", row.name);
+    const tr = element("tr");
+    const nameCell = element("td");
+    const open = element("a", "clickable", row.name);
     open.addEventListener("click", () => openLinkedItem(row.type, row.id));
     nameCell.appendChild(open);
     tr.appendChild(nameCell);
-    tr.appendChild(materialsElement("td", "", row.type));
-    tr.appendChild(materialsElement("td", "", `v${row.version}`));
-    tr.appendChild(materialsElement("td", "", row.project));
-    tr.appendChild(materialsElement("td", "", row.updateAvailable ? "update available" : ""));
+    tr.appendChild(element("td", "", row.type));
+    tr.appendChild(element("td", "", `v${row.version}`));
+    tr.appendChild(element("td", "", row.project));
+    tr.appendChild(element("td", "", row.updateAvailable ? "update available" : ""));
     table.appendChild(tr);
   }
   section.appendChild(table);
@@ -341,21 +331,21 @@ export function buildUsedByTable(users, currentVersion, noun) {
 }
 
 export function buildVersionsList(item, viewEl, statusEl, renderBody) {
-  const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Versions"));
-  const table = materialsElement("table", "library-table");
-  const head = materialsElement("tr");
+  const section = element("div");
+  section.appendChild(element("h2", "section-title", "Versions"));
+  const table = element("table", "library-table");
+  const head = element("tr");
   for (const label of ["Version", "Date", "Note", ""]) {
-    head.appendChild(materialsElement("th", "", label));
+    head.appendChild(element("th", "", label));
   }
   table.appendChild(head);
   for (const row of MaterialsModel.versionRows(item)) {
-    const tr = materialsElement("tr");
-    tr.appendChild(materialsElement("td", "", row.current ? `v${row.number} (current)` : `v${row.number}`));
-    tr.appendChild(materialsElement("td", "", row.date));
-    tr.appendChild(materialsElement("td", "", row.note));
-    const cell = materialsElement("td");
-    const view = materialsElement("button", "", "View");
+    const tr = element("tr");
+    tr.appendChild(element("td", "", row.current ? `v${row.number} (current)` : `v${row.number}`));
+    tr.appendChild(element("td", "", row.date));
+    tr.appendChild(element("td", "", row.note));
+    const cell = element("td");
+    const view = element("button", "", "View");
     view.type = "button";
     view.addEventListener("click", async () => {
       const answer = await sendMaterialsRequest(MaterialsModel.buildVersionGetRequest(item.id, row.number));
@@ -371,8 +361,8 @@ export function buildVersionsList(item, viewEl, statusEl, renderBody) {
         return;
       }
       viewEl.innerHTML = "";
-      viewEl.appendChild(materialsElement("h2", "section-title", `Version ${row.number} (read only)`));
-      viewEl.appendChild(materialsElement("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
+      viewEl.appendChild(element("h2", "section-title", `Version ${row.number} (read only)`));
+      viewEl.appendChild(element("pre", "materials-version-body", JSON.stringify(answer.data.body, null, 2)));
     });
     cell.appendChild(view);
     tr.appendChild(cell);

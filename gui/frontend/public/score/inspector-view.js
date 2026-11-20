@@ -20,20 +20,10 @@
  * DOM only; the facts come from InspectorModel. */
 
 import InspectorModel from "./inspector-model.js";
+import { el } from "../core/dom.js";
 
 const PAGE = 500;
 const EMPTY_TEXT = "Nothing selected. Click a colored mark or note on the score, or pick a claim from the List.";
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
-}
 
 function button(className, text, onClick) {
   const node = el("button", className, text);

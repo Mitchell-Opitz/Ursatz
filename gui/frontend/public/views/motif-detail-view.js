@@ -5,11 +5,12 @@
  * are page globals from materials-view.js and the other view files. */
 
 import Vocabulary from "../core/vocabulary.js";
+import { el as element } from "../core/dom.js";
 import MaterialsModel from "../models/materials-model.js";
 import MotifCompareView from "./motif-compare-view.js";
 import VariantTreeView from "./variant-tree-view.js";
 import ScoreWorkspace from "../score/score-workspace.js";
-import { buildMaterialExport, buildUsedByTable, buildUsesSection, buildVersionsList, materialsElement, materialsState, sendMaterialsRequest } from "./materials-common.js";
+import { buildMaterialExport, buildUsedByTable, buildUsesSection, buildVersionsList, materialsState, sendMaterialsRequest } from "./materials-common.js";
 import { buildSubjectsField } from "./subjects-view.js";
 import { shell } from "./shell-context.js";
 
@@ -17,7 +18,7 @@ import { shell } from "./shell-context.js";
  * Appends the tab bar and panes to content, inside a `motifs-section` wrapper (up to 1200px wide). */
 function render(content, ctx) {
   const { id, item, data } = ctx;
-  const bar = materialsElement("div", "analysis-tabs");
+  const bar = element("div", "analysis-tabs");
   bar.setAttribute("role", "tablist");
   const panes = {};
   const buttons = {};
@@ -51,16 +52,16 @@ function render(content, ctx) {
   }
 
   for (const tab of MaterialsModel.MOTIF_TABS) {
-    const button = materialsElement("button", "", tab.label);
+    const button = element("button", "", tab.label);
     button.type = "button";
     button.setAttribute("role", "tab");
     button.addEventListener("click", () => show(tab.id));
     buttons[tab.id] = button;
     bar.appendChild(button);
-    panes[tab.id] = materialsElement("div", "materials-tab-pane");
+    panes[tab.id] = element("div", "materials-tab-pane");
     panes[tab.id].setAttribute("role", "tabpanel");
   }
-  const wrapper = materialsElement("div", "motifs-section");
+  const wrapper = element("div", "motifs-section");
   wrapper.appendChild(buildMaterialExport(id, item.current_version, item.name));
   wrapper.appendChild(bar);
   for (const tab of MaterialsModel.MOTIF_TABS) {
@@ -82,8 +83,8 @@ function buildMotifPane(pane, ctx) {
   const editor = buildMotifEditor(data.body, status);
   pane.appendChild(editor.el);
   const subjectsField = buildSubjectsField("items", id, data.subjects);
-  const subjectsRow = materialsElement("div", "materials-subjects-row");
-  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+  const subjectsRow = element("div", "materials-subjects-row");
+  subjectsRow.append(element("h2", "section-title", "Subjects"), subjectsField.el);
   pane.appendChild(subjectsRow);
   pane.appendChild(
     buildAnalysisPanel(data.body, ctx.analysisError, {
@@ -101,7 +102,7 @@ function buildMotifPane(pane, ctx) {
 
 /* The status area at the top of a tab: saves, errors and progress of every section of the tab show here. */
 function buildStatusArea(pane) {
-  const area = materialsElement("div", "motif-tab-status");
+  const area = element("div", "motif-tab-status");
   area.setAttribute("role", "status");
   pane.appendChild(area);
   return area;
@@ -112,12 +113,12 @@ function buildStatusArea(pane) {
 function buildSaveRow(editor, ctx) {
   const { id, item, data } = ctx;
   const status = ctx.motifStatus;
-  const row = materialsElement("div", "upload-controls button-row");
-  const note = materialsElement("input");
+  const row = element("div", "upload-controls button-row");
+  const note = element("input");
   note.type = "text";
   note.placeholder = "What changed? (required)";
   note.size = 40;
-  const save = materialsElement("button", "button-primary", "Save");
+  const save = element("button", "button-primary", "Save");
   save.type = "button";
   row.append(note, save);
 
@@ -191,7 +192,7 @@ function buildVariantsPane(pane, ctx) {
 /* Versions, Derived from and Compare. */
 function buildOtherPane(pane, ctx) {
   const { id, item, data, statusEl } = ctx;
-  const versionEl = materialsElement("div");
+  const versionEl = element("div");
   pane.appendChild(buildVersionsList(item, versionEl, statusEl, null));
   pane.appendChild(versionEl);
   pane.appendChild(
@@ -223,30 +224,30 @@ function buildOtherPane(pane, ctx) {
  * body is the version body being edited, or null for a new motif. */
 export function buildMotifEditor(body, tabStatus) {
   const initial = MaterialsModel.motifFormValues(body);
-  const el = materialsElement("section", "panel materials-editor");
+  const el = element("section", "panel materials-editor");
   /* On the motif tab the MIDI upload writes to the tab's status area (tabStatus, a
    * MaterialsModel.motifTabStatus writer). The new-motif page has none and keeps a status line at the end of the
    * panel. */
   let status = tabStatus;
   if (!status) {
-    const line = materialsElement("div", "upload-status");
+    const line = element("div", "upload-status");
     line.setAttribute("role", "status");
     el.appendChild(line);
     status = MaterialsModel.motifTabStatus(line);
   }
   /* The fields sit in a two-column grid: the label in the first, the control with its hints and error under it in
    * the second (R-191). Rows that belong to no field (the MIDI upload) take the control column. */
-  const grid = materialsElement("div", "motif-form-grid");
+  const grid = element("div", "motif-form-grid");
   el.appendChild(grid);
   const errors = {};
 
   function field(labelText, control, key) {
     control.id = `motif-field-${key}`;
-    const label = materialsElement("label", "motif-form-label", labelText);
+    const label = element("label", "motif-form-label", labelText);
     label.htmlFor = control.id;
-    const cell = materialsElement("div", "motif-form-control");
+    const cell = element("div", "motif-form-control");
     cell.appendChild(control);
-    errors[key] = materialsElement("div", "materials-field-error");
+    errors[key] = element("div", "materials-field-error");
     cell.appendChild(errors[key]);
     grid.append(label, cell);
     return control;
@@ -254,7 +255,7 @@ export function buildMotifEditor(body, tabStatus) {
 
   /* A hint under the control of the field with this key, above its error. */
   function hintUnder(key, text) {
-    const hintEl = materialsElement("div", "materials-hint", text);
+    const hintEl = element("div", "materials-hint", text);
     errors[key].before(hintEl);
     return hintEl;
   }
@@ -264,18 +265,18 @@ export function buildMotifEditor(body, tabStatus) {
     grid.appendChild(row);
   }
 
-  const role = materialsElement("select");
+  const role = element("select");
   for (const option of MaterialsModel.motifRoles()) {
-    const o = materialsElement("option", "", option.label);
+    const o = element("option", "", option.label);
     o.value = option.value;
     role.appendChild(o);
   }
   role.value = initial.role;
   field("Role", role, "role");
 
-  const form = materialsElement("select");
+  const form = element("select");
   for (const option of MaterialsModel.motifForms()) {
-    const o = materialsElement("option", "", option.label);
+    const o = element("option", "", option.label);
     o.value = option.value;
     form.appendChild(o);
   }
@@ -283,7 +284,7 @@ export function buildMotifEditor(body, tabStatus) {
   field("Form", form, "form");
   const hint = hintUnder("form", MaterialsModel.formHint(initial.form));
 
-  const notes = materialsElement("textarea", "materials-notes");
+  const notes = element("textarea", "materials-notes");
   notes.rows = 4;
   notes.spellcheck = false;
   notes.classList.add("motif-form-wide");
@@ -295,7 +296,7 @@ export function buildMotifEditor(body, tabStatus) {
   });
 
   /* One chip per note with its tone label (R-195); the row is hidden when the analysis has no tones. */
-  const toneChips = materialsElement("div", "materials-chips motif-tone-chips");
+  const toneChips = element("div", "materials-chips motif-tone-chips");
   field("Tones", toneChips, "tones");
   let toneOverrides = { ...initial.toneOverrides };
   let openTone = null;
@@ -307,8 +308,8 @@ export function buildMotifEditor(body, tabStatus) {
     for (const chip of chips) {
       const pending = toneOverrides[String(chip.note)];
       const pendingLabel = pending ? MaterialsModel.toneRoleLabel(pending) : null;
-      const el = materialsElement("span", "materials-chip motif-tone-chip");
-      const button = materialsElement("button", "motif-tone-button", pendingLabel ? `${chip.note} ${pendingLabel}` : chip.text);
+      const el = element("span", "materials-chip motif-tone-chip");
+      const button = element("button", "motif-tone-button", pendingLabel ? `${chip.note} ${pendingLabel}` : chip.text);
       button.type = "button";
       button.setAttribute("aria-label", `Note ${chip.note} tone label`);
       el.classList.toggle("motif-tone-unresolved", chip.unresolved && !pending);
@@ -320,10 +321,10 @@ export function buildMotifEditor(body, tabStatus) {
       });
       el.appendChild(button);
       if (openTone === chip.note) {
-        const select = materialsElement("select");
+        const select = element("select");
         select.setAttribute("aria-label", `Note ${chip.note} label`);
         for (const option of MaterialsModel.TONE_ROLE_OPTIONS) {
-          const o = materialsElement("option", "", option.label);
+          const o = element("option", "", option.label);
           o.value = option.value;
           select.appendChild(o);
         }
@@ -340,10 +341,10 @@ export function buildMotifEditor(body, tabStatus) {
   }
   drawToneChips();
 
-  const importRow = materialsElement("div", "upload-controls");
-  const importButton = materialsElement("button", "button-secondary", "Upload MIDI");
+  const importRow = element("div", "upload-controls");
+  const importButton = element("button", "button-secondary", "Upload MIDI");
   importButton.type = "button";
-  const importFile = materialsElement("input");
+  const importFile = element("input");
   importFile.type = "file";
   importFile.accept = ".mid,.midi";
   importFile.hidden = true;
@@ -379,28 +380,28 @@ export function buildMotifEditor(body, tabStatus) {
     pickup.value = filled.pickup;
   }
 
-  const meter = materialsElement("input");
+  const meter = element("input");
   meter.type = "text";
   meter.value = initial.meter;
   meter.size = 6;
   field("Meter", meter, "meter");
 
-  const material = materialsElement("select");
+  const material = element("select");
   for (const option of MaterialsModel.MOTIF_MATERIALS) {
-    const o = materialsElement("option", "", String(option.label));
+    const o = element("option", "", String(option.label));
     o.value = option.value;
     material.appendChild(o);
   }
   material.value = initial.material;
   field("Mode", material, "material");
 
-  const pickup = materialsElement("input");
+  const pickup = element("input");
   pickup.type = "text";
   pickup.value = initial.pickup;
   pickup.size = 6;
   field("Pickup (beats)", pickup, "pickup");
 
-  const harmony = materialsElement("input");
+  const harmony = element("input");
   harmony.type = "text";
   harmony.value = initial.harmony;
   harmony.size = 30;
@@ -410,14 +411,14 @@ export function buildMotifEditor(body, tabStatus) {
   field("Base harmony", harmony, "harmony");
   hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
-  const segmentsTitle = materialsElement("h2", "section-title", "Segments");
-  const proposedTag = materialsElement("span", "materials-tag", "Proposed");
+  const segmentsTitle = element("h2", "section-title", "Segments");
+  const proposedTag = element("span", "materials-tag", "Proposed");
   segmentsTitle.append(" ", proposedTag);
   el.appendChild(segmentsTitle);
-  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
-  const featureTable = materialsElement("table", "library-table materials-features");
+  el.appendChild(element("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
+  const featureTable = element("table", "library-table materials-features");
   el.appendChild(featureTable);
-  errors.features = materialsElement("div", "materials-field-error");
+  errors.features = element("div", "materials-field-error");
   el.appendChild(errors.features);
   let featureRows = initial.features.map((feature) => ({ ...feature }));
   /* True while the segments are the Composer's proposal; any edit of the rows makes them the motif's own. */
@@ -432,16 +433,16 @@ export function buildMotifEditor(body, tabStatus) {
   function drawFeatures() {
     featureTable.innerHTML = "";
     if (featureRows.length > 0) {
-      const head = materialsElement("tr");
+      const head = element("tr");
       for (const label of ["Segment", "First note", "Last note", ""]) {
-        head.appendChild(materialsElement("th", "", label));
+        head.appendChild(element("th", "", label));
       }
       featureTable.appendChild(head);
     }
     featureRows.forEach((row, index) => {
-      const tr = materialsElement("tr");
+      const tr = element("tr");
       for (const prop of ["label", "first", "last"]) {
-        const input = materialsElement("input");
+        const input = element("input");
         input.type = "text";
         input.size = prop === "label" ? 8 : 4;
         input.value = String(row[prop]);
@@ -450,25 +451,25 @@ export function buildMotifEditor(body, tabStatus) {
           row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
           setProposed(false);
         });
-        const cell = materialsElement("td");
+        const cell = element("td");
         cell.appendChild(input);
         tr.appendChild(cell);
       }
-      const remove = materialsElement("button", "", "Remove");
+      const remove = element("button", "", "Remove");
       remove.type = "button";
       remove.addEventListener("click", () => {
         featureRows.splice(index, 1);
         setProposed(false);
         drawFeatures();
       });
-      const last = materialsElement("td");
+      const last = element("td");
       last.appendChild(remove);
       tr.appendChild(last);
       featureTable.appendChild(tr);
     });
   }
   drawFeatures();
-  const addFeature = materialsElement("button", "button-secondary", "Add segment");
+  const addFeature = element("button", "button-secondary", "Add segment");
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
@@ -477,7 +478,7 @@ export function buildMotifEditor(body, tabStatus) {
   });
   el.appendChild(addFeature);
   /* Clears the rows and marks them proposed: the save then takes the Composer's proposal. */
-  const useProposal = materialsElement("button", "button-secondary", "Use proposal");
+  const useProposal = element("button", "button-secondary", "Use proposal");
   useProposal.type = "button";
   useProposal.addEventListener("click", () => {
     featureRows = [];
@@ -534,11 +535,11 @@ export function buildMotifEditor(body, tabStatus) {
  * button. onSave(values, note) resolves to the answer; its error text shows
  * beside the note list and the input stays. */
 export function buildMotifSaveControls(editor, statusEl, label, withNote, onSave) {
-  const controls = materialsElement("div", "upload-controls");
-  const note = materialsElement("input");
+  const controls = element("div", "upload-controls");
+  const note = element("input");
   note.type = "text";
   note.placeholder = "Version note (optional)";
-  const save = materialsElement("button", "", label);
+  const save = element("button", "", label);
   save.type = "button";
   save.addEventListener("click", async () => {
     const values = editor.values();
@@ -561,11 +562,11 @@ export function buildMotifSaveControls(editor, statusEl, label, withNote, onSave
 /* The score and playback of a motif version in the score workspace, sounded in its stored key. Nothing here is saved. */
 function buildMotifScore(id, item, body) {
   const motif = (body && body.motif) || {};
-  const section = materialsElement("section", "panel materials-score");
+  const section = element("section", "panel materials-score");
   if (typeof motif.degrees !== "string" || motif.degrees === "") {
     return null;
   }
-  const mountEl = materialsElement("div", "materials-score-mount");
+  const mountEl = element("div", "materials-score-mount");
   let workspace = null;
   function mountScore() {
     if (workspace) {
@@ -580,7 +581,7 @@ function buildMotifScore(id, item, body) {
       playbackUrl: urls.playbackUrl,
     });
   }
-  section.appendChild(materialsElement("h2", "section-title", "Score"));
+  section.appendChild(element("h2", "section-title", "Score"));
   section.appendChild(mountEl);
   mountScore();
   return section;
@@ -589,11 +590,11 @@ function buildMotifScore(id, item, body) {
 /* The Composer's analysis of a motif version body, or why there is none. */
 function buildAnalysisPanel(body, analysisError, onReanalyzed) {
   const info = MaterialsModel.analysisRows(body && body.motif, analysisError);
-  const section = materialsElement("section", "panel materials-analysis");
-  section.appendChild(materialsElement("h2", "section-title", "Analysis"));
-  const statusRow = materialsElement("div", "upload-controls");
-  statusRow.appendChild(materialsElement("div", "piece-list-status", info.message));
-  const again = materialsElement("button", "button-secondary", "Re-analyze");
+  const section = element("section", "panel materials-analysis");
+  section.appendChild(element("h2", "section-title", "Analysis"));
+  const statusRow = element("div", "upload-controls");
+  statusRow.appendChild(element("div", "piece-list-status", info.message));
+  const again = element("button", "button-secondary", "Re-analyze");
   again.type = "button";
   again.addEventListener("click", async () => {
     again.disabled = true;
@@ -611,10 +612,10 @@ function buildAnalysisPanel(body, analysisError, onReanalyzed) {
   if (!info.analyzed) {
     return section;
   }
-  const list = materialsElement("dl", "materials-analysis-list");
+  const list = element("dl", "materials-analysis-list");
   for (const row of info.rows) {
-    list.appendChild(materialsElement("dt", "", row.label));
-    list.appendChild(materialsElement("dd", "", row.text));
+    list.appendChild(element("dt", "", row.label));
+    list.appendChild(element("dd", "", row.text));
   }
   section.appendChild(list);
   return section;

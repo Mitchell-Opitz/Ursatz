@@ -3,6 +3,7 @@
 // so frontend/tests/analysis-view.test.js loads this file directly.
 
 import MotiveLinksModel from "./motive-links-model.js";
+import { isClaimArray, isPlainObject } from "../core/values.js";
 
 /* One tab per group of document sections, in display order. */
 const ANALYSIS_TABS = [
@@ -20,20 +21,6 @@ const ANALYSIS_TABS = [
   { id: "markings", label: "Markings", sections: ["markings"] },
   { id: "notes", label: "Notes", sections: ["notes"] },
 ];
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-/* An array item that sits on the measure grid. Arrays inside an object
- * section only become rows when their items are claims. */
-function isClaim(item) {
-  return isPlainObject(item) && ("span" in item || "location" in item);
-}
-
-function isClaimArray(value) {
-  return Array.isArray(value) && value.length > 0 && value.every(isClaim);
-}
 
 function sectionIsEmpty(value) {
   return value === null || value === undefined || (Array.isArray(value) && value.length === 0);

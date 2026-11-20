@@ -8,17 +8,7 @@ import ApiRequest from "../core/request.js";
 import MaterialsModel from "../models/materials-model.js";
 import ScoreWorkspace from "../score/score-workspace.js";
 import VariantTree from "../models/variant-tree.js";
-
-function h(tag, className, text) {
-  const el = document.createElement(tag);
-  if (className) {
-    el.className = className;
-  }
-  if (text !== undefined) {
-    el.textContent = text;
-  }
-  return el;
-}
+import { el as element } from "../core/dom.js";
 
 function setStatus(el, text, isError) {
   el.textContent = text;
@@ -28,9 +18,9 @@ function setStatus(el, text, isError) {
 const errorText = ApiRequest.errorText;
 
 function chipRow(chips) {
-  const row = h("span", "variant-chips");
+  const row = element("span", "variant-chips");
   for (const chip of chips) {
-    row.appendChild(h("span", `variant-chip variant-chip-${chip.state}`, chip.text));
+    row.appendChild(element("span", `variant-chip variant-chip-${chip.state}`, chip.text));
   }
   return row;
 }
@@ -39,13 +29,13 @@ function chipRow(chips) {
  * Appends nothing for what the variant does not have. */
 function harmonyAndTones(parent, view) {
   if (view.harmony) {
-    parent.appendChild(h("div", "variant-harmony", view.harmony));
+    parent.appendChild(element("div", "variant-harmony", view.harmony));
   }
   const chips = view.toneBody ? MaterialsModel.toneChips(view.toneBody) : [];
   if (chips.length > 0) {
-    const row = h("div", "materials-chips motif-tone-chips");
+    const row = element("div", "materials-chips motif-tone-chips");
     for (const chip of chips) {
-      const el = h("span", "materials-chip motif-tone-chip", chip.text);
+      const el = element("span", "materials-chip motif-tone-chip", chip.text);
       el.classList.toggle("motif-tone-unresolved", chip.unresolved);
       el.classList.toggle("motif-tone-overridden", chip.overridden);
       row.appendChild(el);
@@ -53,26 +43,26 @@ function harmonyAndTones(parent, view) {
     parent.appendChild(row);
   }
   for (const warning of view.warnings || []) {
-    parent.appendChild(h("div", "variant-warning", warning));
+    parent.appendChild(element("div", "variant-warning", warning));
   }
 }
 
 /* One control per parameter of the chosen operation; an empty text leaves it open. */
 function paramControls(operation, values, features) {
-  const box = h("div", "variant-params");
+  const box = element("div", "variant-params");
   for (const param of operation.params) {
-    const label = h("label", "filter-field", `${param.name === "feature" ? "segment" : param.name} `);
+    const label = element("label", "filter-field", `${param.name === "feature" ? "segment" : param.name} `);
     let control;
     if (param.kind === "bool") {
-      control = h("input");
+      control = element("input");
       control.type = "checkbox";
       control.addEventListener("change", () => {
         values[param.name] = control.checked;
       });
     } else if (param.name === "feature" && param.kind === "int") {
-      control = h("select");
+      control = element("select");
       for (const option of VariantTree.featureOptions(features)) {
-        const o = h("option", "", option.text);
+        const o = element("option", "", option.text);
         o.value = option.value;
         control.appendChild(o);
       }
@@ -80,9 +70,9 @@ function paramControls(operation, values, features) {
         values[param.name] = control.value;
       });
     } else if (param.kind === "position") {
-      control = h("select");
+      control = element("select");
       for (const name of ["", "leading", "trailing", "middle"]) {
-        const o = h("option", "", name === "" ? "drawn" : name);
+        const o = element("option", "", name === "" ? "drawn" : name);
         o.value = name;
         control.appendChild(o);
       }
@@ -90,7 +80,7 @@ function paramControls(operation, values, features) {
         values[param.name] = control.value;
       });
     } else {
-      control = h("input");
+      control = element("input");
       control.type = "text";
       control.size = 8;
       control.placeholder = param.kind === "ratio" ? "drawn, or 2:1" : "drawn";
@@ -106,24 +96,24 @@ function paramControls(operation, values, features) {
 }
 
 function buildPicker(groups, steps, onChange, features) {
-  const box = h("div", "variant-picker");
-  const list = h("ol", "variant-steps");
-  const select = h("select");
+  const box = element("div", "variant-picker");
+  const list = element("ol", "variant-steps");
+  const select = element("select");
   const byName = new Map();
   for (const group of groups) {
-    const optgroup = h("optgroup");
+    const optgroup = element("optgroup");
     optgroup.label = group.title;
     for (const operation of group.operations) {
       byName.set(operation.name, operation);
-      const o = h("option", "", `${operation.label} (${operation.citation})`);
+      const o = element("option", "", `${operation.label} (${operation.citation})`);
       o.value = operation.name;
       optgroup.appendChild(o);
     }
     select.appendChild(optgroup);
   }
   const values = {};
-  const paramBox = h("div");
-  const error = h("div", "upload-status");
+  const paramBox = element("div");
+  const error = element("div", "upload-status");
   function showParams() {
     const operation = byName.get(select.value);
     for (const key of Object.keys(values)) {
@@ -137,14 +127,14 @@ function buildPicker(groups, steps, onChange, features) {
   function drawSteps() {
     list.innerHTML = "";
     steps.forEach((step, index) => {
-      const item = h("li", "variant-step");
+      const item = element("li", "variant-step");
       const params = step.params
         ? ` (${Object.keys(step.params)
             .map((name) => `${name} ${step.params[name]}`)
             .join(", ")})`
         : "";
-      item.appendChild(h("span", "", `${byName.has(step.op) ? byName.get(step.op).label : step.op}${params} `));
-      const remove = h("button", "button-secondary", "Remove");
+      item.appendChild(element("span", "", `${byName.has(step.op) ? byName.get(step.op).label : step.op}${params} `));
+      const remove = element("button", "button-secondary", "Remove");
       remove.type = "button";
       remove.addEventListener("click", () => {
         steps.splice(index, 1);
@@ -156,7 +146,7 @@ function buildPicker(groups, steps, onChange, features) {
     });
     onChange();
   }
-  const add = h("button", "button-secondary", "Add step");
+  const add = element("button", "button-secondary", "Add step");
   add.type = "button";
   add.addEventListener("click", () => {
     const operation = byName.get(select.value);
@@ -179,7 +169,7 @@ function buildPicker(groups, steps, onChange, features) {
 }
 
 function actionButton(text, onClick, variant) {
-  const button = h("button", variant || "button-secondary", text);
+  const button = element("button", variant || "button-secondary", text);
   button.type = "button";
   button.addEventListener("click", onClick);
   return button;
@@ -189,23 +179,23 @@ function actionButton(text, onClick, variant) {
  * harmony text. */
 function candidateCard(candidate, actions, sourceHarmony) {
   const view = VariantTree.candidateView(candidate, sourceHarmony);
-  const card = h("li", "variant-candidate");
-  card.appendChild(h("div", "variant-derivation", view.derivation));
-  card.scoreHost = h("div", "variant-score");
+  const card = element("li", "variant-candidate");
+  card.appendChild(element("div", "variant-derivation", view.derivation));
+  card.scoreHost = element("div", "variant-score");
   card.appendChild(card.scoreHost);
-  const meta = h("div", "variant-meta");
-  meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
+  const meta = element("div", "variant-meta");
+  meta.appendChild(element("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
   meta.appendChild(chipRow(view.chips));
   if (view.recognizability) {
-    meta.appendChild(h("span", "variant-recognizability", view.recognizability));
+    meta.appendChild(element("span", "variant-recognizability", view.recognizability));
   }
   if (view.remoteness) {
-    meta.appendChild(h("span", "variant-remoteness", view.remoteness));
+    meta.appendChild(element("span", "variant-remoteness", view.remoteness));
   }
   card.appendChild(meta);
-  card.appendChild(h("div", "variant-suits-line", view.suits));
+  card.appendChild(element("div", "variant-suits-line", view.suits));
   harmonyAndTones(card, view);
-  const buttons = h("div", "variant-actions");
+  const buttons = element("div", "variant-actions");
   buttons.append(
     actionButton("Play", actions.play),
     actionButton("Approve", actions.approve),
@@ -219,19 +209,19 @@ function candidateCard(candidate, actions, sourceHarmony) {
 /* The inline Save as new motif form of a saved variant: its name, the project (the parent's to start with) and
  * Save, which calls actions.promote(row, name, projectId). Returns the elements to append. */
 function promoteFields(row, actions) {
-  const name = h("input");
+  const name = element("input");
   name.type = "text";
   name.value = row.name;
-  const nameLabel = h("label", "filter-field", "Name ");
+  const nameLabel = element("label", "filter-field", "Name ");
   nameLabel.appendChild(name);
-  const project = h("select");
+  const project = element("select");
   for (const entry of actions.projects()) {
-    const option = h("option", "", entry.name);
+    const option = element("option", "", entry.name);
     option.value = entry.id;
     project.appendChild(option);
   }
   project.value = actions.projectId();
-  const projectLabel = h("label", "filter-field", "Project ");
+  const projectLabel = element("label", "filter-field", "Project ");
   projectLabel.appendChild(project);
   const save = actionButton("Save", () => actions.promote(row, name.value, project.value), "button-primary");
   return [nameLabel, projectLabel, save];
@@ -240,19 +230,19 @@ function promoteFields(row, actions) {
 /* The Promoted list under the saved variants: each promoted motif as "<name> (opens it)" with its derivation.
  * open(id) opens that motif. */
 function promotedList(promoted, open) {
-  const box = h("div", "variant-promoted");
+  const box = element("div", "variant-promoted");
   if (promoted.length === 0) {
     return box;
   }
-  box.appendChild(h("h3", "section-title", "Promoted"));
-  const list = h("ul", "variant-promoted-list");
+  box.appendChild(element("h3", "section-title", "Promoted"));
+  const list = element("ul", "variant-promoted-list");
   for (const entry of promoted) {
-    const item = h("li", "variant-promoted-item");
-    const link = h("a", "clickable", VariantTree.promotedText(entry));
+    const item = element("li", "variant-promoted-item");
+    const link = element("a", "clickable", VariantTree.promotedText(entry));
     link.addEventListener("click", () => open(entry.id));
     item.appendChild(link);
     if (entry.derivation) {
-      item.appendChild(h("div", "variant-derivation", entry.derivation));
+      item.appendChild(element("div", "variant-derivation", entry.derivation));
     }
     list.appendChild(item);
   }
@@ -264,33 +254,33 @@ function promotedList(promoted, open) {
  * actions: {flag(id, flag), kind(id, kind), reroll(id), play(row), toggle(row)}; isOpen is whether
  * its notation is shown. The row's scoreHost is where the compact score mounts. */
 function treeRow(row, actions, isOpen) {
-  const item = h("li", `variant-node variant-flag-${row.flag.value}`);
+  const item = element("li", `variant-node variant-flag-${row.flag.value}`);
   item.style.marginLeft = `${row.depth * 1.5}rem`;
-  const title = h("div", "variant-node-title");
-  title.appendChild(h("strong", "", row.name));
-  title.appendChild(h("span", "variant-badge", `v${row.version}`));
+  const title = element("div", "variant-node-title");
+  title.appendChild(element("strong", "", row.name));
+  title.appendChild(element("span", "variant-badge", `v${row.version}`));
   if (!row.isRoot) {
-    title.appendChild(h("span", `variant-badge variant-flag-badge-${row.flag.value}`, row.flag.text));
+    title.appendChild(element("span", `variant-badge variant-flag-badge-${row.flag.value}`, row.flag.text));
   }
   item.appendChild(title);
   if (row.isRoot) {
     return item;
   }
   if (row.derivation) {
-    item.appendChild(h("div", "variant-derivation", row.derivation));
+    item.appendChild(element("div", "variant-derivation", row.derivation));
   }
   item.appendChild(chipRow(row.chips));
-  const meta = h("div", "variant-meta");
+  const meta = element("div", "variant-meta");
   if (row.remoteness) {
-    meta.appendChild(h("span", "variant-remoteness", row.remoteness));
+    meta.appendChild(element("span", "variant-remoteness", row.remoteness));
   }
   item.appendChild(meta);
-  item.appendChild(h("div", "variant-suits-line", row.suits));
+  item.appendChild(element("div", "variant-suits-line", row.suits));
   harmonyAndTones(item, row);
-  const buttons = h("div", "variant-actions");
-  const kind = h("select");
+  const buttons = element("div", "variant-actions");
+  const kind = element("select");
   for (const value of VariantTree.KINDS) {
-    const o = h("option", "", VariantTree.KIND_LABELS[value]);
+    const o = element("option", "", VariantTree.KIND_LABELS[value]);
     o.value = value;
     kind.appendChild(o);
   }
@@ -305,7 +295,7 @@ function treeRow(row, actions, isOpen) {
     ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
   );
   buttons.appendChild(actionButton(isOpen ? "Hide notation" : "Show notation", () => actions.toggle(row)));
-  const promoteForm = h("div", "variant-promote-form");
+  const promoteForm = element("div", "variant-promote-form");
   promoteForm.hidden = true;
   buttons.appendChild(
     actionButton("Save as new motif", () => {
@@ -315,7 +305,7 @@ function treeRow(row, actions, isOpen) {
   item.appendChild(buttons);
   item.appendChild(promoteForm);
   promoteForm.append(...promoteFields(row, actions));
-  item.scoreHost = h("div", "variant-score");
+  item.scoreHost = element("div", "variant-score");
   item.appendChild(item.scoreHost);
   return item;
 }
@@ -340,45 +330,45 @@ function storeShowRejected(value) {
 
 function mount(parent, ctx) {
   const workspaces = ctx.scoreWorkspace || ScoreWorkspace;
-  const section = h("section", "panel materials-variants");
-  section.appendChild(h("h2", "section-title", "Variants"));
+  const section = element("section", "panel materials-variants");
+  section.appendChild(element("h2", "section-title", "Variants"));
   /* The tab's one status area, above the panel (R-191). */
-  const status = h("div", "motif-tab-status");
+  const status = element("div", "motif-tab-status");
   status.setAttribute("role", "status");
   const steps = [];
-  const controls = h("div", "upload-controls");
-  const count = h("input");
+  const controls = element("div", "upload-controls");
+  const count = element("input");
   count.type = "number";
   count.min = "1";
   count.max = String(VariantTree.MAX_COUNT);
   count.value = String(VariantTree.DEFAULT_COUNT);
-  const seed = h("input");
+  const seed = element("input");
   seed.type = "text";
   seed.size = 10;
   seed.placeholder = "seed (random)";
-  const summary = h("span", "variant-chain-summary", "Random operations");
-  const generate = h("button", "button-primary", "Generate");
+  const summary = element("span", "variant-chain-summary", "Random operations");
+  const generate = element("button", "button-primary", "Generate");
   generate.type = "button";
-  const countLabel = h("label", "filter-field", "Count ");
+  const countLabel = element("label", "filter-field", "Count ");
   countLabel.appendChild(count);
-  const rejectedLabel = h("label", "filter-field", "Show rejected ");
-  const rejectedBox = h("input");
+  const rejectedLabel = element("label", "filter-field", "Show rejected ");
+  const rejectedBox = element("input");
   rejectedBox.type = "checkbox";
   rejectedBox.checked = loadShowRejected();
   rejectedLabel.appendChild(rejectedBox);
-  const distance = h("select");
+  const distance = element("select");
   for (const option of VariantTree.distances()) {
-    const o = h("option", "", option.text);
+    const o = element("option", "", option.text);
     o.value = option.value;
     distance.appendChild(o);
   }
-  const distanceLabel = h("label", "filter-field", "Distance ");
+  const distanceLabel = element("label", "filter-field", "Distance ");
   distanceLabel.appendChild(distance);
   const functionBoxes = new Map();
-  const functionFilter = h("span", "variant-function-filter", "Only variants that suit ");
+  const functionFilter = element("span", "variant-function-filter", "Only variants that suit ");
   for (const name of VariantTree.functions()) {
-    const label = h("label", "filter-field", `${name} `);
-    const box = h("input");
+    const label = element("label", "filter-field", `${name} `);
+    const box = element("input");
     box.type = "checkbox";
     label.appendChild(box);
     functionFilter.appendChild(label);
@@ -387,24 +377,24 @@ function mount(parent, ctx) {
   controls.append(countLabel, distanceLabel, seed, generate, summary, rejectedLabel);
   controls.appendChild(functionFilter);
 
-  const pickerHost = h("details", "variant-picker-host");
-  pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
+  const pickerHost = element("details", "variant-picker-host");
+  pickerHost.appendChild(element("summary", "", "Choose the operations (empty: random chains)"));
   /* The Suits filter narrows the candidates and the saved variants shown, not what is generated or stored. */
-  const suitsRow = h("div", "variant-suits");
-  const suits = h("select");
+  const suitsRow = element("div", "variant-suits");
+  const suits = element("select");
   for (const option of VariantTree.suitsFilters()) {
-    const o = h("option", "", option.text);
+    const o = element("option", "", option.text);
     o.value = option.value;
     suits.appendChild(o);
   }
-  const suitsLabel = h("label", "filter-field", "Suits ");
+  const suitsLabel = element("label", "filter-field", "Suits ");
   suitsLabel.appendChild(suits);
-  suitsRow.append(suitsLabel, h("div", "piece-list-status", VariantTree.SUITS_EXPLANATION));
-  const candidates = h("ol", "variant-candidates");
-  const tree = h("ul", "variant-tree");
-  const treeNote = h("div", "piece-list-status");
-  const promotedHost = h("div");
-  section.append(controls, pickerHost, suitsRow, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
+  suitsRow.append(suitsLabel, element("div", "piece-list-status", VariantTree.SUITS_EXPLANATION));
+  const candidates = element("ol", "variant-candidates");
+  const tree = element("ul", "variant-tree");
+  const treeNote = element("div", "piece-list-status");
+  const promotedHost = element("div");
+  section.append(controls, pickerHost, suitsRow, candidates, element("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
   parent.appendChild(status);
   parent.appendChild(section);
 
@@ -707,19 +697,19 @@ function mount(parent, ctx) {
 
   /* Try every operation (R-190): each registry operation on this motif, marked Works or Wrong. The marks live in
    * the motif's op-checks file, not in a version. Scores render through the same queue as the candidates. */
-  const eachOp = h("div", "variant-each-op");
-  eachOp.appendChild(h("h3", "section-title", "Try every operation"));
-  const eachOpControls = h("div", "upload-controls");
-  const eachOpSeed = h("input");
+  const eachOp = element("div", "variant-each-op");
+  eachOp.appendChild(element("h3", "section-title", "Try every operation"));
+  const eachOpControls = element("div", "upload-controls");
+  const eachOpSeed = element("input");
   eachOpSeed.type = "text";
   eachOpSeed.size = 10;
   eachOpSeed.placeholder = "seed (random)";
-  const eachOpRun = h("button", "button-primary", "Run");
+  const eachOpRun = element("button", "button-primary", "Run");
   eachOpRun.type = "button";
-  const eachOpCopy = h("button", "button-secondary", "Copy findings");
+  const eachOpCopy = element("button", "button-secondary", "Copy findings");
   eachOpCopy.type = "button";
   eachOpControls.append(eachOpSeed, eachOpRun, eachOpCopy);
-  const eachOpList = h("div", "variant-each-op-results");
+  const eachOpList = element("div", "variant-each-op-results");
   eachOp.append(eachOpControls, eachOpList);
   section.appendChild(eachOp);
 
@@ -787,34 +777,34 @@ function mount(parent, ctx) {
   }
 
   function eachOpEntry(entry, generation) {
-    const item = h("div", "variant-each-op-entry");
-    item.appendChild(h("strong", "", `${entry.label}${entry.citation ? ` (${entry.citation})` : ""}`));
+    const item = element("div", "variant-each-op-entry");
+    item.appendChild(element("strong", "", `${entry.label}${entry.citation ? ` (${entry.citation})` : ""}`));
     const view = VariantTree.candidateView(entry.variant, VariantTree.sourceHarmonyText(ctx.body));
     if (view.derivation) {
-      item.appendChild(h("div", "variant-derivation", view.derivation));
+      item.appendChild(element("div", "variant-derivation", view.derivation));
     }
     harmonyAndTones(item, view);
     const score = { workspace: null, urls: [] };
     opScores.push(score);
-    const host = h("div", "variant-score");
+    const host = element("div", "variant-score");
     item.appendChild(host);
     const mark = VariantTree.markView(opChecks[entry.op], entry.variant);
     if (mark) {
-      const line = h("div", `variant-mark variant-mark-${mark.verdict}`);
-      line.appendChild(h("span", "variant-badge", mark.text));
-      line.appendChild(h("span", "", `${mark.comment ? `${mark.comment} ` : ""}(${mark.date})`));
+      const line = element("div", `variant-mark variant-mark-${mark.verdict}`);
+      line.appendChild(element("span", "variant-badge", mark.text));
+      line.appendChild(element("span", "", `${mark.comment ? `${mark.comment} ` : ""}(${mark.date})`));
       if (mark.changed) {
-        line.appendChild(h("span", "variant-badge variant-mark-changed", "changed since"));
+        line.appendChild(element("span", "variant-badge variant-mark-changed", "changed since"));
       }
       item.appendChild(line);
     }
-    const comment = h("input");
+    const comment = element("input");
     comment.type = "text";
     comment.size = 30;
     comment.maxLength = VariantTree.COMMENT_MAX;
     comment.placeholder = "comment";
     comment.value = opChecks[entry.op] ? String(opChecks[entry.op].comment || "") : "";
-    const buttons = h("div", "variant-actions");
+    const buttons = element("div", "variant-actions");
     buttons.append(
       actionButton("Play", () => (score.workspace ? score.workspace.play() : setStatus(status, "The notation is still rendering", false))),
       actionButton("Works", () => markOperation(entry.op, "works", comment.value, entry.variant)),
@@ -834,17 +824,17 @@ function mount(parent, ctx) {
       return;
     }
     for (const group of VariantTree.eachOpGroups(eachOpResults.variants, operationList)) {
-      eachOpList.appendChild(h("h4", "section-title", group.title));
+      eachOpList.appendChild(element("h4", "section-title", group.title));
       for (const entry of group.entries) {
         eachOpList.appendChild(eachOpEntry(entry, generation));
       }
     }
     const skipped = Array.isArray(eachOpResults.skipped) ? eachOpResults.skipped : [];
     if (skipped.length > 0) {
-      eachOpList.appendChild(h("h4", "section-title", "Skipped"));
-      const list = h("ul", "variant-skipped");
+      eachOpList.appendChild(element("h4", "section-title", "Skipped"));
+      const list = element("ul", "variant-skipped");
       for (const entry of skipped) {
-        list.appendChild(h("li", "", `${entry.op}: ${entry.reason}`));
+        list.appendChild(element("li", "", `${entry.op}: ${entry.reason}`));
       }
       eachOpList.appendChild(list);
     }

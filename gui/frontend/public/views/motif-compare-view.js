@@ -6,17 +6,7 @@
 import ApiRequest from "../core/request.js";
 import MaterialsModel from "../models/materials-model.js";
 import VariantTree from "../models/variant-tree.js";
-
-function h(tag, className, text) {
-  const el = document.createElement(tag);
-  if (className) {
-    el.className = className;
-  }
-  if (text !== undefined) {
-    el.textContent = text;
-  }
-  return el;
-}
+import { el as element } from "../core/dom.js";
 
 const errorText = ApiRequest.errorText;
 
@@ -26,24 +16,24 @@ function setStatus(el, text, isError) {
 }
 
 function mount(parent, ctx) {
-  const section = h("div", "materials-compare");
-  section.appendChild(h("h2", "section-title", "Compare"));
-  const picker = h("div", "upload-controls");
-  const query = h("input");
+  const section = element("div", "materials-compare");
+  section.appendChild(element("h2", "section-title", "Compare"));
+  const picker = element("div", "upload-controls");
+  const query = element("input");
   query.type = "text";
   query.placeholder = "Search motifs by name";
-  const projectSelect = h("select");
+  const projectSelect = element("select");
   for (const option of MaterialsModel.projectOptions(ctx.projects)) {
-    const o = h("option", "", option.label);
+    const o = element("option", "", option.label);
     o.value = option.value;
     projectSelect.appendChild(o);
   }
   projectSelect.value = ctx.projectId;
-  const choice = h("select", "materials-use-choice");
-  const compare = h("button", "", "Compare with");
+  const choice = element("select", "materials-use-choice");
+  const compare = element("button", "", "Compare with");
   compare.type = "button";
-  const status = h("div", "piece-list-status");
-  const result = h("div", "compare-result");
+  const status = element("div", "piece-list-status");
+  const result = element("div", "compare-result");
 
   function fillChoices() {
     const found = MaterialsModel.pickerItems(ctx.items, ctx.projects, {
@@ -54,7 +44,7 @@ function mount(parent, ctx) {
     });
     choice.innerHTML = "";
     for (const item of found) {
-      const option = h("option", "", item.label);
+      const option = element("option", "", item.label);
       option.value = item.id;
       option.dataset.version = String(item.version);
       option.dataset.name = item.name;
@@ -69,21 +59,21 @@ function mount(parent, ctx) {
     result.innerHTML = "";
     const view = VariantTree.compareView(recognition);
     if (!view.found) {
-      result.appendChild(h("div", "compare-unrelated", view.text));
+      result.appendChild(element("div", "compare-unrelated", view.text));
       return;
     }
-    const title = h("div", "compare-title");
-    title.appendChild(h("strong", "", `${target.name} from this motif`));
-    title.appendChild(h("span", "variant-badge", view.related));
+    const title = element("div", "compare-title");
+    title.appendChild(element("strong", "", `${target.name} from this motif`));
+    title.appendChild(element("span", "variant-badge", view.related));
     result.appendChild(title);
-    result.appendChild(h("div", "variant-derivation", view.chain));
-    result.appendChild(h("div", "variant-meta", view.derivation));
-    const row = h("span", "variant-chips");
+    result.appendChild(element("div", "variant-derivation", view.chain));
+    result.appendChild(element("div", "variant-meta", view.derivation));
+    const row = element("span", "variant-chips");
     for (const chip of view.chips) {
-      row.appendChild(h("span", `variant-chip variant-chip-${chip.state}`, chip.text));
+      row.appendChild(element("span", `variant-chip variant-chip-${chip.state}`, chip.text));
     }
     result.appendChild(row);
-    const link = h("button", "", "Link as a form of this motif");
+    const link = element("button", "", "Link as a form of this motif");
     link.type = "button";
     link.addEventListener("click", async () => {
       const answer = await ctx.send(
