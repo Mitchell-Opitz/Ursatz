@@ -5,6 +5,7 @@
 
 #include "cli_tools.h"
 #include "commands.h"
+#include "flags.h"
 
 /* The list of commands: the usage line and one line for each command. */
 static void print_commands(FILE *out) {
@@ -33,6 +34,22 @@ static int print_version(void) {
     return 0;
 }
 
+/* Runs the command with its arguments: parsed against its row when it reads the flag table, raw otherwise. */
+static int run_command(const CliCommand *command, int argc, char **argv) {
+    CliArgs args;
+    if (command->reads_flags) {
+        if (!cli_parse_or_fail(command, argc, argv, &args)) {
+            return 1;
+        }
+    } else {
+        memset(&args, 0, sizeof args);
+        args.argc = argc;
+        args.argv = argv;
+        args.command = command;
+    }
+    return command->run(&args);
+}
+
 int main(int argc, char **argv) {
     if (argc == 1) {
         print_commands(stderr);
@@ -54,14 +71,12 @@ int main(int argc, char **argv) {
             return 1;
         }
         char *help_argv[] = {argv[0], argv[2], (char *)"--help", NULL};
-        CliArgs args = {3, help_argv};
-        return command->run(&args);
+        return run_command(command, 3, help_argv);
     }
     const CliCommand *command = cli_command_find(name);
     if (!command) {
         fprintf(stderr, "Error: unknown command '%s' (see ursatz --help)\n", name);
         return 1;
     }
-    CliArgs args = {argc, argv};
-    return command->run(&args);
+    return run_command(command, argc, argv);
 }

@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "export.h"
 #include "counterpoint.h"
 #include "develop.h"
 #include "fill.h"
@@ -17,6 +18,8 @@
 #include "theme.h"
 #include "variants_cmd.h"
 #include "variations.h"
+
+#include "flags.h"
 
 /* Each command still reads its own argument list; the wrappers pass it on until the command reads the flag table. */
 #define WRAP(name, function) \
@@ -41,25 +44,44 @@ WRAP(wrap_harmonize, run_harmonize)
 WRAP(wrap_export, run_export)
 WRAP(wrap_listen, run_listen)
 
+static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
+static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
+static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
+static const char *const FLAGS_VARIANTS[] = {"--basic", "--basic-format", "--basic-harmony", "--basic-pickup", "--chain", "--count", "--distance", "--each-op", "--feature", "--form", "--format", "--function", "--harmony", "--input-format", "--key", "--list-ops", "--meter", "--pickup", "--role", "--seed", NULL};
+static const char *const FLAGS_RECOGNIZE[] = {"--basic", "--basic-format", "--basic-harmony", "--basic-pickup", "--depth", "--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--pickup", "--role", "--target-feature", "--target-format", "--target-harmony", "--target-pickup", NULL};
+static const char *const FLAGS_RANDOM_MOTIVE[] = {"--count", "--form", "--format", "--key", "--material", "--meter", "--role", "--seed", "--strategy", "--style", "--style-without", NULL};
+static const char *const FLAGS_COUNTERPOINT[] = {"--above", "--below", "--format", "--key", "--material", "--meter", "--midi", "--musicxml", "--out", "--plain-midi", "--seed", "--species", "--suggest", "--tempo", NULL};
+static const char *const FLAGS_GROW[] = {"--accompaniment", "--accompaniment-format", "--accompaniment-motive", "--accompaniment-pickup", "--bars", "--blend", "--blend-weight", "--blend-weights", "--cadence", "--check", "--explain", "--feature", "--first-cadence", "--format", "--from-corpus", "--harmony", "--hybrid", "--into", "--key", "--like", "--material", "--meter", "--midi", "--musicxml", "--out", "--plain-midi", "--role", "--seed", "--style", "--style-weight", "--style-without", "--suggest", "--tempo", "--texture", "--voicing", NULL};
+static const char *const FLAGS_THEME[] = {"--check", "--explain", "--format", "--layers", "--midi", "--musicxml", "--out", "--plain-midi", "--seed", "--suggest", NULL};
+static const char *const FLAGS_PIECE[] = {"--check", "--count", "--ending-midi", "--ending-musicxml", "--ending-out", "--explain", "--format", "--from", "--lane", "--layers", "--midi", "--musicxml", "--out", "--out-dir", "--plain-midi", "--regenerate", "--request", "--seed", "--variations", NULL};
+static const char *const FLAGS_PLAN[] = {"--accompaniment", "--at", "--bars", "--blend", "--blend-weight", "--blend-weights", "--cells", "--count", "--form", "--format", "--from-corpus", "--given-bass", "--given-melody", "--given-progression", "--key", "--like", "--like-progression", "--material", "--meter", "--modulate", "--motive", "--out", "--seed", "--style", "--style-weight", "--style-without", "--texture", NULL};
+static const char *const FLAGS_FILL[] = {"--blend", "--blend-weight", "--blend-weights", "--candidates", "--check", "--explain", "--format", "--layers", "--midi", "--musicxml", "--out", "--plain-midi", "--record", "--seed", "--style", "--style-weight", "--style-without", "--tempo", NULL};
+static const char *const FLAGS_LOCK[] = {"--format", "--lane", "--node", "--out", "--section", NULL};
+static const char *const FLAGS_REGENERATE[] = {"--format", "--lane", "--midi", "--musicxml", "--node", "--out", "--plain-midi", "--section", "--seed", "--tempo", NULL};
+static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
+static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
+static const char *const FLAGS_EXPORT[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
+static const char *const FLAGS_LISTEN[] = {"--bars", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--seed", "--settings", "--strategy", "--style", "--tempo", "--theme-request", "--what", NULL};
+
 const CliCommand CLI_COMMANDS[] = {
-    {"progression", "Write a chord progression with a bass line for one phrase", 0, 0, wrap_progression},
-    {"motive", "Analyze a motive: its intervals, contour, rhythm, range and harmony", 1, 1, wrap_motive},
-    {"develop", "Make motives related to a motive by one operation", 1, 1, wrap_develop},
-    {"variants", "Make variants of a motive, or list the operations", 0, 1, wrap_variants},
-    {"recognize", "Name the operations that turn one motive into another", 2, 2, wrap_recognize},
-    {"random-motive", "Make random motives that keep the hard melodic rules", 0, 0, wrap_random_motive},
-    {"counterpoint", "Write a counter-melody against a line", 1, 1, wrap_counterpoint},
-    {"grow", "Grow a motive into a sentence, a period or a hybrid theme", 0, 1, wrap_grow},
-    {"theme", "Grow a theme from the motives of a request", 1, 1, wrap_theme},
-    {"piece", "Compose a piece from a request, or work on one section of it", 0, 1, wrap_piece},
-    {"plan", "Write the plan of a whole short piece from a form template", 0, 0, wrap_plan},
-    {"fill", "Realize a plan: compose every open theme section", 1, 1, wrap_fill},
-    {"lock", "Lock material of a plan as given", 1, 1, wrap_lock},
-    {"regenerate", "Write one node of a filled plan again", 1, 1, wrap_regenerate},
-    {"variations", "Write several versions of one node of a plan", 1, 1, wrap_variations},
-    {"harmonize", "Write several harmonizations of a melody that is given", 1, 1, wrap_harmonize},
-    {"export", "Render a plan to a MIDI or MusicXML file", 1, 1, wrap_export},
-    {"listen", "Make batches of motifs or themes from fixed seeds for listening", 0, 0, wrap_listen},
+    {"progression", "Write a chord progression with a bass line for one phrase", FLAGS_PROGRESSION, 0, 0, false, wrap_progression},
+    {"motive", "Analyze a motive: its intervals, contour, rhythm, range and harmony", FLAGS_MOTIVE, 1, 1, false, wrap_motive},
+    {"develop", "Make motives related to a motive by one operation", FLAGS_DEVELOP, 1, 1, false, wrap_develop},
+    {"variants", "Make variants of a motive, or list the operations", FLAGS_VARIANTS, 0, 1, false, wrap_variants},
+    {"recognize", "Name the operations that turn one motive into another", FLAGS_RECOGNIZE, 2, 2, false, wrap_recognize},
+    {"random-motive", "Make random motives that keep the hard melodic rules", FLAGS_RANDOM_MOTIVE, 0, 0, false, wrap_random_motive},
+    {"counterpoint", "Write a counter-melody against a line", FLAGS_COUNTERPOINT, 1, 1, false, wrap_counterpoint},
+    {"grow", "Grow a motive into a sentence, a period or a hybrid theme", FLAGS_GROW, 0, 1, false, wrap_grow},
+    {"theme", "Grow a theme from the motives of a request", FLAGS_THEME, 1, 1, false, wrap_theme},
+    {"piece", "Compose a piece from a request, or work on one section of it", FLAGS_PIECE, 0, 1, false, wrap_piece},
+    {"plan", "Write the plan of a whole short piece from a form template", FLAGS_PLAN, 0, 0, false, wrap_plan},
+    {"fill", "Realize a plan: compose every open theme section", FLAGS_FILL, 1, 1, false, wrap_fill},
+    {"lock", "Lock material of a plan as given", FLAGS_LOCK, 1, 1, false, wrap_lock},
+    {"regenerate", "Write one node of a filled plan again", FLAGS_REGENERATE, 1, 1, false, wrap_regenerate},
+    {"variations", "Write several versions of one node of a plan", FLAGS_VARIATIONS, 1, 1, false, wrap_variations},
+    {"harmonize", "Write several harmonizations of a melody that is given", FLAGS_HARMONIZE, 1, 1, false, wrap_harmonize},
+    {"export", "Render a plan to a MIDI or MusicXML file", FLAGS_EXPORT, 1, 1, false, wrap_export},
+    {"listen", "Make batches of motifs or themes from fixed seeds for listening", FLAGS_LISTEN, 0, 0, false, wrap_listen},
 };
 
 const size_t CLI_COMMAND_COUNT = sizeof(CLI_COMMANDS) / sizeof(CLI_COMMANDS[0]);
