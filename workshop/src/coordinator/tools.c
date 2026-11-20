@@ -40,7 +40,8 @@ WORKSHOP_HANDLER(workshop_t_composer) {
     UrsatzStatus status = workshop_composer_tool(entry, cJSON_GetObjectItemCaseSensitive(call->params, "request"), kind,
                                                  call->bytes ? call->bytes->data : NULL, call->bytes ? call->bytes->size : 0, &response,
                                                  error);
-    if (status == URSATZ_OK) {
+    /* A refusal may still carry an answer (a plan that could not be completed lists what is stuck): the reply holds it too. */
+    if (status == URSATZ_OK || response.json || response.plan_json || response.musicxml) {
         cJSON *object = workshop_reply_object(reply);
         if (!object || !add_text(object, "json", response.json) || !add_text(object, "plan_json", response.plan_json) ||
             !add_text(object, "musicxml", response.musicxml)) {

@@ -43,7 +43,7 @@ The entries: `export`, `motive`, `motive_from_midi` (the bytes are the MIDI file
 
 The reply's `json` member is `{"json": <text>, "plan_json": <text>, "musicxml": <text>}`, each a string exactly as the Composer wrote it, or null when the response has none. The MIDI file is the reply's bytes (`audio/midi`). `vocabulary` answers the cached text.
 
-A refusal answers the Composer's status and error unchanged: the path points into the request (for example `/preferences/melody/keep`), never prefixed with `/params`. An unknown entry is `URSATZ_ERR_REQUEST`, path `/params/entry`.
+A refusal answers the Composer's status and error unchanged: the path points into the request (for example `/preferences/melody/keep`), never prefixed with `/params`. A refusal that carries an answer (a plan that cannot be completed lists what is stuck) fills the reply's `json` as well. An unknown entry is `URSATZ_ERR_REQUEST`, path `/params/entry`.
 
 ### corpus-passages
 
