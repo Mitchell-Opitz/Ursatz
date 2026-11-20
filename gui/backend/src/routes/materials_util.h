@@ -13,11 +13,10 @@
 #include <cJSON.h>
 #include <civetweb.h>
 
-#include "jobs.h"
+#include "jobs_routes.h"
 #include "route_util.h"
 
 static const size_t kMaxRequestBodySize = 256 * 1024;
-static const int kMaxSegments = 8;
 
 /* Sends {"ok":false,"error":...} with the given status. The message goes through cJSON, so it is escaped. */
 /* The failure answer {"ok":false,"error":...}; a non-empty path (the request member the Composer refused, as a JSON
@@ -63,14 +62,6 @@ static inline int send_ok(struct mg_connection *conn) {
   return 200;
 }
 
-static inline int send_method_not_allowed(struct mg_connection *conn) {
-  return send_failure(conn, 405, "method not allowed");
-}
-
-static inline int send_not_found(struct mg_connection *conn) {
-  return send_failure(conn, 404, "not found");
-}
-
 /* Reads the request body as a JSON object. Returns NULL after sending the failure (400, or 413 past
  * kMaxRequestBodySize); *status is then what the caller returns. */
 static inline cJSON *read_json_body(struct mg_connection *conn, int *status) {
@@ -97,40 +88,6 @@ static inline bool query_value(const struct mg_connection *conn, const char *nam
     return false;
   }
   return mg_get_var(info->query_string, strlen(info->query_string), name, out, out_size) > 0;
-}
-
-/*
- * Splits the part of local_uri after prefix into path segments (copied into
- * storage). Returns the segment count, or -1 when there are too many, an
- * empty segment, or a segment of 256 characters or more.
- */
-static inline int split_path(const char *rest, char segments[][256]) {
-  int count = 0;
-  if (*rest == '\0') {
-    return 0;
-  }
-  if (*rest != '/') {
-    return -1;
-  }
-  rest++;
-  while (*rest != '\0') {
-    const char *slash = strchr(rest, '/');
-    size_t len = slash ? (size_t)(slash - rest) : strlen(rest);
-    if (len == 0 || len >= 256 || count >= kMaxSegments) {
-      return -1;
-    }
-    memcpy(segments[count], rest, len);
-    segments[count][len] = '\0';
-    count++;
-    rest += len;
-    if (*rest == '/') {
-      rest++;
-      if (*rest == '\0') {
-        return -1;
-      }
-    }
-  }
-  return count;
 }
 
 /* Runs the query name for the route (its query variables and the path parameters given as name/value pairs, NULL ending them) and answers

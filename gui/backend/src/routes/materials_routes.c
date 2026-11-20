@@ -1,4 +1,4 @@
-#include "materials.h"
+#include "materials_routes.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -18,9 +18,8 @@
 #include <common/status.h>
 
 #include "materials_util.h"
-#include "motifs.h"
+#include "route_table.h"
 
-static const char *kMaterialsPrefix = "/api/materials";
 
 static int failed_version(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
 static int failed_export(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
@@ -278,170 +277,65 @@ static int handle_get_item_export(struct mg_connection *conn, const char *id) {
   return QUERY(conn, "item.export", failed_export, false, "id", id);
 }
 
-static int route_items(struct mg_connection *conn, const char *method, char segments[][256], int count) {
-  bool get = strcmp(method, "GET") == 0;
-  bool post = strcmp(method, "POST") == 0;
-  if (count == 1) {
-    if (get) {
-      return handle_list_items(conn);
-    }
-    return post ? handle_create_item(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 2 && strcmp(segments[1], "validate") == 0) {
-    return post ? ursatz_gui_motifs_validate(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 2) {
-    if (get) {
-      return handle_get_item(conn, segments[1]);
-    }
-    if (strcmp(method, "PATCH") == 0) {
-      return handle_patch_item(conn, segments[1]);
-    }
-    return strcmp(method, "DELETE") == 0 ? handle_delete_item(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "versions") == 0) {
-    return post ? handle_add_version(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "export") == 0) {
-    return get ? handle_get_item_export(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "reanalyze") == 0) {
-    return post ? handle_reanalyze(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 4 && strcmp(segments[2], "versions") == 0) {
-    return get ? handle_get_version(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
-  }
-  if (count == 5 && strcmp(segments[2], "versions") == 0 &&
-      (strcmp(segments[4], "score") == 0 || strcmp(segments[4], "playback") == 0)) {
-    return get ? handle_version_render(conn, segments[1], segments[3], strcmp(segments[4], "playback") == 0)
-               : send_method_not_allowed(conn);
-  }
-  if (count == 5 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "regenerate") == 0) {
-    return post ? handle_piece_regenerate(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
-  }
-  if (count == 5 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0) {
-    return post ? handle_piece_variations(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
-  }
-  if (count == 8 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0 &&
-      strcmp(segments[7], "playback") == 0) {
-    return get ? handle_piece_variation_playback(conn, segments[1], segments[3], segments[5], segments[6])
-               : send_method_not_allowed(conn);
-  }
-  if (count == 7 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0) {
-    if (strcmp(segments[6], "choose") == 0) {
-      return post ? handle_piece_choose(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
-    }
-    return get ? handle_piece_variation_file(conn, segments[1], segments[3], segments[5], segments[6])
-               : send_method_not_allowed(conn);
-  }
-  if (count == 6 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "files") == 0) {
-    return get ? handle_version_file(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "compose") == 0) {
-    return post ? handle_compose(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "variants") == 0) {
-    return post ? ursatz_gui_motifs_variants(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "op-checks") == 0) {
-    if (get) {
-      return ursatz_gui_motifs_op_checks_get(conn, segments[1]);
-    }
-    return strcmp(method, "PUT") == 0 ? ursatz_gui_motifs_op_checks_put(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "each-op") == 0) {
-    return post ? ursatz_gui_motifs_each_op(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 4 && strcmp(segments[2], "variants") == 0 && strcmp(segments[3], "save") == 0) {
-    return post ? ursatz_gui_motifs_item_command(conn, segments[1], "item.save-variant") : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "variant-tree") == 0) {
-    return get ? ursatz_gui_motifs_variant_tree(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "reroll") == 0) {
-    return post ? ursatz_gui_motifs_reroll(conn, segments[1]) : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "link-form") == 0) {
-    return post ? ursatz_gui_motifs_item_command(conn, segments[1], "item.link-form") : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "promote") == 0) {
-    return post ? ursatz_gui_motifs_item_command(conn, segments[1], "item.promote") : send_method_not_allowed(conn);
-  }
-  if (count == 3 && strcmp(segments[2], "flag") == 0) {
-    return post ? ursatz_gui_motifs_item_command(conn, segments[1], "item.flag") : send_method_not_allowed(conn);
-  }
-  if (count == 5 && strcmp(segments[2], "uses") == 0 && strcmp(segments[4], "update") == 0) {
-    return post ? handle_update_use(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
-  }
-  return send_not_found(conn);
+#define ARG(args, i) ((args)->values[i])
+
+static int route_projects(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_list_projects(conn); }
+static int route_project_create(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_create_project(conn); }
+static int route_project(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_project(conn, ARG(args, 0)); }
+static int route_project_patch(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_patch_project(conn, ARG(args, 0)); }
+static int route_project_delete(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_delete_project(conn, ARG(args, 0)); }
+static int route_items(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_list_items(conn); }
+static int route_item_create(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_create_item(conn); }
+static int route_item(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_item(conn, ARG(args, 0)); }
+static int route_item_patch(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_patch_item(conn, ARG(args, 0)); }
+static int route_item_delete(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_delete_item(conn, ARG(args, 0)); }
+static int route_save(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_add_version(conn, ARG(args, 0)); }
+static int route_export(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_item_export(conn, ARG(args, 0)); }
+static int route_reanalyze(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_reanalyze(conn, ARG(args, 0)); }
+static int route_version(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_version(conn, ARG(args, 0), ARG(args, 1)); }
+static int route_score(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_version_render(conn, ARG(args, 0), ARG(args, 1), false); }
+static int route_playback(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_version_render(conn, ARG(args, 0), ARG(args, 1), true); }
+static int route_regenerate(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_piece_regenerate(conn, ARG(args, 0), ARG(args, 1)); }
+static int route_variations(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_piece_variations(conn, ARG(args, 0), ARG(args, 1)); }
+static int route_choose(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_piece_choose(conn, ARG(args, 0), ARG(args, 1), ARG(args, 2)); }
+static int route_variation_file(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  return handle_piece_variation_file(conn, ARG(args, 0), ARG(args, 1), ARG(args, 2), ARG(args, 3));
 }
-
-
-static int route_projects(struct mg_connection *conn, const char *method, char segments[][256], int count) {
-  if (count == 1) {
-    if (strcmp(method, "GET") == 0) {
-      return handle_list_projects(conn);
-    }
-    if (strcmp(method, "POST") == 0) {
-      return handle_create_project(conn);
-    }
-    return send_method_not_allowed(conn);
-  }
-  if (count == 2) {
-    if (strcmp(method, "GET") == 0) {
-      return handle_get_project(conn, segments[1]);
-    }
-    if (strcmp(method, "PATCH") == 0) {
-      return handle_patch_project(conn, segments[1]);
-    }
-    if (strcmp(method, "DELETE") == 0) {
-      return handle_delete_project(conn, segments[1]);
-    }
-    return send_method_not_allowed(conn);
-  }
-  return send_not_found(conn);
+static int route_variation_playback(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  return handle_piece_variation_playback(conn, ARG(args, 0), ARG(args, 1), ARG(args, 2), ARG(args, 3));
 }
+static int route_file(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_version_file(conn, ARG(args, 0), ARG(args, 1), ARG(args, 2)); }
+static int route_compose(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_compose(conn, ARG(args, 0)); }
+static int route_update_use(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_update_use(conn, ARG(args, 0), ARG(args, 1)); }
 
+static const UrsatzGuiRoute kRoutes[] = {
+    {"GET", "/api/materials/projects", route_projects},
+    {"POST", "/api/materials/projects", route_project_create},
+    {"GET", "/api/materials/projects/<id>", route_project},
+    {"PATCH", "/api/materials/projects/<id>", route_project_patch},
+    {"DELETE", "/api/materials/projects/<id>", route_project_delete},
+    {"GET", "/api/materials/items", route_items},
+    {"POST", "/api/materials/items", route_item_create},
+    {"GET", "/api/materials/items/<id>", route_item},
+    {"PATCH", "/api/materials/items/<id>", route_item_patch},
+    {"DELETE", "/api/materials/items/<id>", route_item_delete},
+    {"POST", "/api/materials/items/<id>/versions", route_save},
+    {"GET", "/api/materials/items/<id>/export", route_export},
+    {"POST", "/api/materials/items/<id>/reanalyze", route_reanalyze},
+    {"GET", "/api/materials/items/<id>/versions/<n>", route_version},
+    {"GET", "/api/materials/items/<id>/versions/<n>/score", route_score},
+    {"GET", "/api/materials/items/<id>/versions/<n>/playback", route_playback},
+    {"POST", "/api/materials/items/<id>/versions/<n>/regenerate", route_regenerate},
+    {"POST", "/api/materials/items/<id>/versions/<n>/variations", route_variations},
+    {"POST", "/api/materials/items/<id>/versions/<n>/variations/<n>/choose", route_choose},
+    {"GET", "/api/materials/items/<id>/versions/<n>/variations/<n>/<name>", route_variation_file},
+    {"GET", "/api/materials/items/<id>/versions/<n>/variations/<n>/<name>/playback", route_variation_playback},
+    {"GET", "/api/materials/items/<id>/versions/<n>/files/<name>", route_file},
+    {"POST", "/api/materials/items/<id>/compose", route_compose},
+    {"POST", "/api/materials/items/<id>/uses/<id>/update", route_update_use},
+};
 
-
-/*
- * Handler registered at "/api/materials". civetweb sends the exact prefix
- * and any "prefix/something" URI here (see the note in styles.c), so every
- * materials route is dispatched by its path segments.
- */
-static int materials_handler(struct mg_connection *conn, void *cbdata) {
-  (void)cbdata;
-  const struct mg_request_info *info = mg_get_request_info(conn);
-  const char *method = info->request_method;
-  char segments[8][256];
-  int count = split_path(info->local_uri + strlen(kMaterialsPrefix), segments);
-  if (count < 1) {
-    return send_not_found(conn);
-  }
-  if (strcmp(segments[0], "projects") == 0) {
-    return route_projects(conn, method, segments, count);
-  }
-  if (strcmp(segments[0], "items") == 0) {
-    return route_items(conn, method, segments, count);
-  }
-  if (count == 1 && strcmp(segments[0], "variant-operations") == 0) {
-    return strcmp(method, "GET") == 0 ? ursatz_gui_motifs_variant_operations(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 1 && strcmp(segments[0], "recognize") == 0) {
-    return strcmp(method, "POST") == 0 ? ursatz_gui_motifs_recognize(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 1 && strcmp(segments[0], "render") == 0) {
-    return strcmp(method, "POST") == 0 ? ursatz_gui_motifs_render(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "random") == 0) {
-    return strcmp(method, "POST") == 0 ? ursatz_gui_motifs_random_motifs(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "import") == 0) {
-    return strcmp(method, "POST") == 0 ? ursatz_gui_motifs_import_motif(conn) : send_method_not_allowed(conn);
-  }
-  return send_not_found(conn);
-}
-
-void ursatz_gui_materials_register(struct mg_context *ctx) {
-  mg_set_request_handler(ctx, kMaterialsPrefix, materials_handler, NULL);
+const UrsatzGuiRoute *ursatz_gui_materials_routes(size_t *count) {
+  *count = sizeof(kRoutes) / sizeof(kRoutes[0]);
+  return kRoutes;
 }

@@ -2,16 +2,17 @@
 # the route tests that call the workshop's internals link the second copy of the same sources, built on the engine (never both).
 set(URSATZ_GUI_CORE_SOURCES
   src/server.c
+  src/routes/route_table.c
   src/routes/route_util.c
-  src/routes/analyzer.c
-  src/routes/corpus.c
-  src/routes/composer.c
-  src/routes/styles.c
-  src/routes/materials.c
-  src/routes/motifs.c
-  src/routes/subjects.c
-  src/routes/links.c
-  src/routes/jobs.c
+  src/routes/library_routes.c
+  src/routes/collections_routes.c
+  src/routes/composer_routes.c
+  src/routes/styles_routes.c
+  src/routes/materials_routes.c
+  src/routes/motifs_routes.c
+  src/routes/subjects_routes.c
+  src/routes/links_routes.c
+  src/routes/jobs_routes.c
 )
 
 foreach(core ursatz_gui_core ursatz_gui_core_internal)

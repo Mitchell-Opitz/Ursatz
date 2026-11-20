@@ -1,4 +1,4 @@
-#include "analyzer.h"
+#include "library_routes.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -9,9 +9,7 @@
 #include <civetweb.h>
 #include <cJSON.h>
 
-#include "jobs.h"
 #include "route_util.h"
-#include "materials.h"
 
 static const size_t kReadChunkSize = 65536;
 static const size_t kMaxUploadSize = 64 * 1024 * 1024;
@@ -188,18 +186,6 @@ static int handle_get_groups(struct mg_connection *conn) {
   return run_library_query(conn, "library.groups", NULL, failed_200);
 }
 
-static int groups_handler(struct mg_connection *conn, void *cbdata) {
-  (void)cbdata;
-  const struct mg_request_info *info = mg_get_request_info(conn);
-  if (strcmp(info->request_method, "GET") == 0) {
-    return handle_get_groups(conn);
-  }
-  mg_send_http_error(conn, 405, "Method Not Allowed");
-  return 405;
-}
-
-static const char *kPieceDetailPrefix = "/api/analyzer/pieces/";
-
 static int handle_get_piece(struct mg_connection *conn, const char *id) {
   return run_library_query(conn, "library.piece", id, failed_200);
 }
@@ -259,18 +245,12 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
   return ursatz_gui_answer_command(conn, "library.delete", id, NULL, NULL, failed_library_write, false);
 }
 
-static const char *kReanalyzeSuffix = "/reanalyze";
 
 /* POST /api/analyzer/pieces/<id>/reanalyze: an "analysis" job; the answer is 202 with the job. */
 static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
   return ursatz_gui_answer_command(conn, "library.reanalyze", id, NULL, NULL, failed_job_command, false);
 }
 
-static const char *kMusicXmlSuffix = "/musicxml";
-static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
-static const char *kPlaybackSuffix = "/playback";
-static const char *kDocumentSuffix = "/document";
-static const char *kExportSuffix = "/export";
 
 /* GET /api/analyzer/pieces/<id>/document?sections=a,b: only those sections of the stored analysis document, read without importing the
    source. */
@@ -296,134 +276,37 @@ static int handle_get_piece_playback(struct mg_connection *conn, const char *id)
   return run_library_query(conn, "library.playback", id, failed_piece_read);
 }
 
-/*
- * civetweb routes both the exact "/api/analyzer/pieces" URI and any
- * "/api/analyzer/pieces/<something>" URI to a single handler registered
- * at "/api/analyzer/pieces" (its request-matching tries an exact match,
- * then a "registered-uri/something" partial match, before ever trying
- * wildcard patterns -- so a separate "/api/analyzer/pieces/*"
- * registration would never actually be reached for a subpath GET).
- * This handler itself distinguishes the two cases by local_uri.
- */
-static int pieces_handler(struct mg_connection *conn, void *cbdata) {
-  (void)cbdata;
-  const struct mg_request_info *info = mg_get_request_info(conn);
-  const char *uri = info->local_uri;
-  size_t prefix_len = strlen(kPieceDetailPrefix);
+#define ARG(args, i) ((args)->values[i])
 
-  if (strncmp(uri, kPieceDetailPrefix, prefix_len) == 0 && uri[prefix_len] != '\0') {
-    const char *rest = uri + prefix_len;
-    size_t rest_len = strlen(rest);
-    size_t meta_suffix_len = strlen(kMusicXmlMetaSuffix);
-    size_t xml_suffix_len = strlen(kMusicXmlSuffix);
-    size_t reanalyze_suffix_len = strlen(kReanalyzeSuffix);
-    size_t playback_suffix_len = strlen(kPlaybackSuffix);
-    size_t document_suffix_len = strlen(kDocumentSuffix);
-    size_t export_suffix_len = strlen(kExportSuffix);
+static int route_list(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_get(conn); }
+static int route_groups(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_get_groups(conn); }
+static int route_upload(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_post(conn); }
+static int route_piece(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_piece(conn, ARG(args, 0)); }
+static int route_patch(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_patch_piece(conn, ARG(args, 0)); }
+static int route_delete(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_delete_piece(conn, ARG(args, 0)); }
+static int route_reanalyze(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_reanalyze_piece(conn, ARG(args, 0)); }
+static int route_document(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_piece_document(conn, ARG(args, 0)); }
+static int route_export(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_piece_export(conn, ARG(args, 0)); }
+static int route_musicxml(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_piece_musicxml(conn, ARG(args, 0)); }
+static int route_meter(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_piece_musicxml_meta(conn, ARG(args, 0)); }
+static int route_playback(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get_piece_playback(conn, ARG(args, 0)); }
 
-    if (strcmp(info->request_method, "POST") == 0 && rest_len > reanalyze_suffix_len &&
-        strcmp(rest + rest_len - reanalyze_suffix_len, kReanalyzeSuffix) == 0) {
-      char id[256];
-      size_t id_len = rest_len - reanalyze_suffix_len;
-      if (id_len >= sizeof(id)) {
-        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-        return 404;
-      }
-      memcpy(id, rest, id_len);
-      id[id_len] = '\0';
-      return handle_reanalyze_piece(conn, id);
-    }
+static const UrsatzGuiRoute kRoutes[] = {
+    {"POST", "/api/analyzer/pieces", route_upload},
+    {"GET", "/api/analyzer/pieces", route_list},
+    {"GET", "/api/analyzer/groups", route_groups},
+    {"GET", "/api/analyzer/pieces/<id>", route_piece},
+    {"PATCH", "/api/analyzer/pieces/<id>", route_patch},
+    {"DELETE", "/api/analyzer/pieces/<id>", route_delete},
+    {"POST", "/api/analyzer/pieces/<id>/reanalyze", route_reanalyze},
+    {"GET", "/api/analyzer/pieces/<id>/document", route_document},
+    {"GET", "/api/analyzer/pieces/<id>/export", route_export},
+    {"GET", "/api/analyzer/pieces/<id>/musicxml", route_musicxml},
+    {"GET", "/api/analyzer/pieces/<id>/musicxml/meta", route_meter},
+    {"GET", "/api/analyzer/pieces/<id>/playback", route_playback},
+};
 
-    if (strcmp(info->request_method, "GET") == 0 && rest_len > meta_suffix_len &&
-        strcmp(rest + rest_len - meta_suffix_len, kMusicXmlMetaSuffix) == 0) {
-      char id[256];
-      size_t id_len = rest_len - meta_suffix_len;
-      if (id_len >= sizeof(id)) {
-        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-        return 404;
-      }
-      memcpy(id, rest, id_len);
-      id[id_len] = '\0';
-      return handle_get_piece_musicxml_meta(conn, id);
-    }
-
-    if (strcmp(info->request_method, "GET") == 0 && rest_len > xml_suffix_len &&
-        strcmp(rest + rest_len - xml_suffix_len, kMusicXmlSuffix) == 0) {
-      char id[256];
-      size_t id_len = rest_len - xml_suffix_len;
-      if (id_len >= sizeof(id)) {
-        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-        return 404;
-      }
-      memcpy(id, rest, id_len);
-      id[id_len] = '\0';
-      return handle_get_piece_musicxml(conn, id);
-    }
-
-    if (strcmp(info->request_method, "GET") == 0 && rest_len > document_suffix_len &&
-        strcmp(rest + rest_len - document_suffix_len, kDocumentSuffix) == 0) {
-      char id[256];
-      size_t id_len = rest_len - document_suffix_len;
-      if (id_len >= sizeof(id)) {
-        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-        return 404;
-      }
-      memcpy(id, rest, id_len);
-      id[id_len] = '\0';
-      return handle_get_piece_document(conn, id);
-    }
-
-    if (strcmp(info->request_method, "GET") == 0 && rest_len > export_suffix_len &&
-        strcmp(rest + rest_len - export_suffix_len, kExportSuffix) == 0) {
-      char id[256];
-      size_t id_len = rest_len - export_suffix_len;
-      if (id_len >= sizeof(id)) {
-        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-        return 404;
-      }
-      memcpy(id, rest, id_len);
-      id[id_len] = '\0';
-      return handle_get_piece_export(conn, id);
-    }
-
-    if (strcmp(info->request_method, "GET") == 0 && rest_len > playback_suffix_len &&
-        strcmp(rest + rest_len - playback_suffix_len, kPlaybackSuffix) == 0) {
-      char id[256];
-      size_t id_len = rest_len - playback_suffix_len;
-      if (id_len >= sizeof(id)) {
-        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-        return 404;
-      }
-      memcpy(id, rest, id_len);
-      id[id_len] = '\0';
-      return handle_get_piece_playback(conn, id);
-    }
-
-    if (strcmp(info->request_method, "GET") == 0) {
-      return handle_get_piece(conn, uri + prefix_len);
-    }
-    if (strcmp(info->request_method, "DELETE") == 0) {
-      return handle_delete_piece(conn, uri + prefix_len);
-    }
-    if (strcmp(info->request_method, "PATCH") == 0) {
-      return handle_patch_piece(conn, uri + prefix_len);
-    }
-    mg_send_http_error(conn, 405, "Method Not Allowed");
-    return 405;
-  }
-
-  if (strcmp(info->request_method, "POST") == 0) {
-    return handle_post(conn);
-  }
-  if (strcmp(info->request_method, "GET") == 0) {
-    return handle_get(conn);
-  }
-
-  mg_send_http_error(conn, 405, "Method Not Allowed");
-  return 405;
-}
-
-void ursatz_gui_analyzer_register(struct mg_context *ctx) {
-  mg_set_request_handler(ctx, "/api/analyzer/pieces", pieces_handler, NULL);
-  mg_set_request_handler(ctx, "/api/analyzer/groups", groups_handler, NULL);
+const UrsatzGuiRoute *ursatz_gui_library_routes(size_t *count) {
+  *count = sizeof(kRoutes) / sizeof(kRoutes[0]);
+  return kRoutes;
 }

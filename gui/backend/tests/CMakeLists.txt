@@ -123,3 +123,6 @@ ursatz_test(migrated_routes SOURCES test_migrated_routes.c LIBS ursatz_gui_core_
     DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0"
     PROPERTIES FIXTURES_SETUP migrated_routes_files RESOURCE_LOCK migrated_routes_files
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/migrated_routes)
+
+# The one parser of the route table (R-647); no server is started.
+ursatz_test(route_table SOURCES test_route_table.c LIBS ursatz_gui_core ursatz_test_support)

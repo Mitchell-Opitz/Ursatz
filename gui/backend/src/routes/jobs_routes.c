@@ -1,4 +1,4 @@
-#include "jobs.h"
+#include "jobs_routes.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -10,10 +10,6 @@
 #include "route_util.h"
 #include "../server.h"
 
-static const char *kJobsPrefix = "/api/jobs";
-
-/* A job id is shorter than this (the workshop checks it again). */
-static const size_t kJobIdBytes = 32;
 
 static int send_error(struct mg_connection *conn, int status, const char *error) {
   cJSON *object = cJSON_CreateObject();
@@ -54,25 +50,15 @@ static int handle_delete(struct mg_connection *conn, const char *id) {
   return 204;
 }
 
-static int jobs_handler(struct mg_connection *conn, void *cbdata) {
-  (void)cbdata;
-  const struct mg_request_info *info = mg_get_request_info(conn);
-  const char *uri = info->local_uri;
-  size_t prefix_len = strlen(kJobsPrefix);
-  if (strncmp(uri, kJobsPrefix, prefix_len) != 0 || uri[prefix_len] != '/' || uri[prefix_len + 1] == '\0' ||
-      strchr(uri + prefix_len + 1, '/') != NULL || strlen(uri + prefix_len + 1) >= kJobIdBytes) {
-    return send_error(conn, 404, "not found");
-  }
-  const char *id = uri + prefix_len + 1;
-  if (strcmp(info->request_method, "GET") == 0) {
-    return handle_get(conn, id);
-  }
-  if (strcmp(info->request_method, "DELETE") == 0) {
-    return handle_delete(conn, id);
-  }
-  return send_error(conn, 405, "method not allowed");
-}
+static int route_get(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_get(conn, args->values[0]); }
+static int route_delete(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { return handle_delete(conn, args->values[0]); }
 
-void ursatz_gui_jobs_register(struct mg_context *ctx) {
-  mg_set_request_handler(ctx, kJobsPrefix, jobs_handler, NULL);
+static const UrsatzGuiRoute kRoutes[] = {
+    {"GET", "/api/jobs/<id>", route_get},
+    {"DELETE", "/api/jobs/<id>", route_delete},
+};
+
+const UrsatzGuiRoute *ursatz_gui_jobs_routes(size_t *count) {
+  *count = sizeof(kRoutes) / sizeof(kRoutes[0]);
+  return kRoutes;
 }

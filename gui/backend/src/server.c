@@ -3,14 +3,8 @@
 #include <civetweb.h>
 #include <stdio.h>
 
-#include "routes/analyzer.h"
-#include "routes/composer.h"
-#include "routes/corpus.h"
-#include "routes/jobs.h"
-#include "routes/links.h"
-#include "routes/materials.h"
-#include "routes/subjects.h"
-#include "routes/styles.h"
+#include "routes/route_table.h"
+
 
 static Workshop *g_workshop = NULL;
 
@@ -44,14 +38,7 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
   /* Route registration: each tool module registers itself here. This is
    * the only place that wires tool routes into the running server. */
   g_workshop = workshop;
-  ursatz_gui_analyzer_register(ctx);
-  ursatz_gui_corpus_register(ctx);
-  ursatz_gui_composer_register(ctx);
-  ursatz_gui_styles_register(ctx);
-  ursatz_gui_materials_register(ctx);
-  ursatz_gui_subjects_register(ctx);
-  ursatz_gui_links_register(ctx);
-  ursatz_gui_jobs_register(ctx);
+  ursatz_gui_routes_register(ctx);
   return ctx;
 }
 

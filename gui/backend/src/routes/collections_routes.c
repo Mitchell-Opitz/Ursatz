@@ -1,4 +1,4 @@
-#include "corpus.h"
+#include "collections_routes.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,7 +10,6 @@
 
 #include "route_util.h"
 
-static const char *kCorpusPrefix = "/api/corpus";
 
 static void send_ok_false(struct mg_connection *conn, const char *message) {
   ursatz_gui_send_failure(conn, 200, message);
@@ -83,105 +82,60 @@ static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id)
                                  failed_collection, false);
 }
 
-/*
- * Single handler registered at kCorpusPrefix ("/api/corpus"). civetweb
- * routes both the exact prefix and any "prefix/something" URI to a
- * handler registered at prefix (see the identical note in analyzer.c), so
- * every corpus route -- "/api/corpus", ".../<id>/pieces",
- * ".../<id>/pieces/<piece_id>" -- arrives here and is dispatched by
- * local_uri.
- */
-static int corpus_handler(struct mg_connection *conn, void *cbdata) {
-  (void)cbdata;
-  const struct mg_request_info *info = mg_get_request_info(conn);
-  const char *uri = info->local_uri;
-  const char *method = info->request_method;
-  size_t prefix_len = strlen(kCorpusPrefix);
+#define ARG(args, i) ((args)->values[i])
 
-  if (strcmp(uri, kCorpusPrefix) == 0) {
-    if (strcmp(method, "POST") == 0) {
-      return handle_create_corpus(conn);
-    }
-    if (strcmp(method, "GET") == 0) {
-      return handle_list_corpora(conn);
-    }
-    mg_send_http_error(conn, 405, "Method Not Allowed");
-    return 405;
-  }
-
-  if (strncmp(uri, kCorpusPrefix, prefix_len) != 0 || uri[prefix_len] != '/') {
-    mg_send_http_error(conn, 404, "Not Found");
-    return 404;
-  }
-
-  /* rest is "<corpus_id>", "<corpus_id>/pieces" or "<corpus_id>/pieces/<piece_id>". */
-  const char *rest = uri + prefix_len + 1;
-  const char *slash = strchr(rest, '/');
-  size_t corpus_id_len = slash ? (size_t)(slash - rest) : strlen(rest);
-  if (corpus_id_len == 0 || corpus_id_len >= 256) {
-    mg_send_http_error(conn, 404, "Not Found");
-    return 404;
-  }
-  char corpus_id[256];
-  memcpy(corpus_id, rest, corpus_id_len);
-  corpus_id[corpus_id_len] = '\0';
-
-  if (!ursatz_gui_valid_id(corpus_id)) {
+/* An id that cannot name a collection or a piece is refused before any call: the route's 200 with {"ok": false} (until the envelope). */
+static int check_ids(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  if (!ursatz_gui_valid_id(ARG(args, 0))) {
     send_ok_false(conn, "invalid id");
     return 200;
   }
-
-  if (!slash) {
-    if (strcmp(method, "GET") == 0) {
-      return handle_get_corpus(conn, corpus_id);
-    }
-    if (strcmp(method, "PATCH") == 0) {
-      return handle_patch_corpus(conn, corpus_id);
-    }
-    if (strcmp(method, "DELETE") == 0) {
-      return handle_delete_corpus(conn, corpus_id);
-    }
-    mg_send_http_error(conn, 405, "Method Not Allowed");
-    return 405;
+  if (args->count > 1 && !ursatz_gui_valid_id(ARG(args, 1))) {
+    send_ok_false(conn, "invalid piece_id");
+    return 200;
   }
-
-  const char *pieces_start = slash;
-  if (strncmp(pieces_start, "/pieces", strlen("/pieces")) != 0 ||
-      (pieces_start[strlen("/pieces")] != '\0' && pieces_start[strlen("/pieces")] != '/')) {
-    mg_send_http_error(conn, 404, "Not Found");
-    return 404;
-  }
-
-  const char *after_pieces = pieces_start + strlen("/pieces");
-
-  if (after_pieces[0] == '\0') {
-    if (strcmp(method, "POST") == 0) {
-      return handle_add_pieces(conn, corpus_id);
-    }
-    if (strcmp(method, "GET") == 0) {
-      return handle_list_pieces(conn, corpus_id);
-    }
-    mg_send_http_error(conn, 405, "Method Not Allowed");
-    return 405;
-  }
-
-  if (after_pieces[0] == '/' && after_pieces[1] != '\0') {
-    const char *piece_id = after_pieces + 1;
-    if (!ursatz_gui_valid_id(piece_id)) {
-      send_ok_false(conn, "invalid piece_id");
-      return 200;
-    }
-    if (strcmp(method, "DELETE") == 0) {
-      return handle_remove_piece(conn, corpus_id, piece_id);
-    }
-    mg_send_http_error(conn, 405, "Method Not Allowed");
-    return 405;
-  }
-
-  mg_send_http_error(conn, 404, "Not Found");
-  return 404;
+  return 0;
 }
 
-void ursatz_gui_corpus_register(struct mg_context *ctx) {
-  mg_set_request_handler(ctx, kCorpusPrefix, corpus_handler, NULL);
+static int route_create(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_create_corpus(conn); }
+static int route_list(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) { (void)args; return handle_list_corpora(conn); }
+static int route_get(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  int refused = check_ids(conn, args);
+  return refused ? refused : handle_get_corpus(conn, ARG(args, 0));
+}
+static int route_patch(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  int refused = check_ids(conn, args);
+  return refused ? refused : handle_patch_corpus(conn, ARG(args, 0));
+}
+static int route_delete(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  int refused = check_ids(conn, args);
+  return refused ? refused : handle_delete_corpus(conn, ARG(args, 0));
+}
+static int route_add(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  int refused = check_ids(conn, args);
+  return refused ? refused : handle_add_pieces(conn, ARG(args, 0));
+}
+static int route_pieces(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  int refused = check_ids(conn, args);
+  return refused ? refused : handle_list_pieces(conn, ARG(args, 0));
+}
+static int route_remove(struct mg_connection *conn, const UrsatzGuiRouteArgs *args) {
+  int refused = check_ids(conn, args);
+  return refused ? refused : handle_remove_piece(conn, ARG(args, 0), ARG(args, 1));
+}
+
+static const UrsatzGuiRoute kRoutes[] = {
+    {"POST", "/api/corpus", route_create},
+    {"GET", "/api/corpus", route_list},
+    {"GET", "/api/corpus/<id>", route_get},
+    {"PATCH", "/api/corpus/<id>", route_patch},
+    {"DELETE", "/api/corpus/<id>", route_delete},
+    {"POST", "/api/corpus/<id>/pieces", route_add},
+    {"GET", "/api/corpus/<id>/pieces", route_pieces},
+    {"DELETE", "/api/corpus/<id>/pieces/<id>", route_remove},
+};
+
+const UrsatzGuiRoute *ursatz_gui_collections_routes(size_t *count) {
+  *count = sizeof(kRoutes) / sizeof(kRoutes[0]);
+  return kRoutes;
 }
