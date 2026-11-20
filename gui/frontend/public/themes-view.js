@@ -432,8 +432,8 @@ async function themeMountScore(host, id, version, title, options) {
   let ending = null;
   if (o.ending) {
     try {
-      const served = await fetch(ThemesModel.versionPlaybackUrl(id, version, o.ending.playback));
-      const playback = served.ok ? await served.json() : null;
+      const served = await ApiRequest.apiRequest("GET", ThemesModel.versionPlaybackUrl(id, version, o.ending.playback));
+      const playback = served.ok ? served.data : null;
       if (playback) {
         ending = { musicxmlUrl: files(o.ending.musicxml), playback, bodyEnd: o.ending.bodyEnd };
       }

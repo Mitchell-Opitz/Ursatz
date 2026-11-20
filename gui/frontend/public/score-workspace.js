@@ -1133,10 +1133,10 @@
       if (!opts.playbackUrl) {
         return;
       }
-      fetch(opts.playbackUrl)
-        .then((res) => res.json())
-        .then((data) => {
-          if (destroyed || !data || !data.ok) {
+      ApiRequest.apiRequest("GET", opts.playbackUrl)
+        .then((answer) => {
+          const data = answer.data;
+          if (destroyed || !answer.ok || !data) {
             return;
           }
           playbackData = data;
@@ -1153,10 +1153,9 @@
       setPaperStatus("Rendering score...", false);
       loadPlayback();
       if (opts.metaUrl) {
-        fetch(opts.metaUrl)
-          .then((res) => res.json())
-          .then((metaData) => {
-            const text = ScoreNotes.meterCaption(metaData);
+        ApiRequest.apiRequest("GET", opts.metaUrl)
+          .then((answer) => {
+            const text = ScoreNotes.meterCaption(answer.data);
             if (text && !destroyed) {
               caption.textContent = text;
               caption.hidden = false;

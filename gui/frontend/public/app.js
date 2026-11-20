@@ -58,23 +58,11 @@ function getContentEl() {
   return document.getElementById("content");
 }
 
-/* Sends a request and resolves to {ok, status, data}; data is null for an
- * answer that is not JSON. ok is false for an error status or a body with an
- * "error" field. A network failure resolves to {ok:false, status:0,
- * data:{error}}. Shared by the views that talk to the Composer routes. */
-async function fetchJsonResult(url, options) {
-  try {
-    const res = await fetch(url, options);
-    let data = null;
-    try {
-      data = await res.json();
-    } catch (err) {
-      data = null;
-    }
-    return { ok: res.ok && !(data && data.error), status: res.status, data };
-  } catch (err) {
-    return { ok: false, status: 0, data: { error: `Could not reach backend: ${err}` } };
-  }
+/* Sends a request and resolves to {ok, status, data} (ApiRequest.sendRequest: the one fetch of JSON; every route answers one envelope, R-647). options
+ * are fetch's: method, headers and a body that is text. Shared by the views that talk to the routes. */
+function fetchJsonResult(url, options) {
+  const o = options || {};
+  return ApiRequest.sendRequest({ url, method: o.method || "GET", headers: o.headers, body: o.body });
 }
 
 /* fetchJsonResult for a request the backend runs as a job (R-645: piece imports and re-analyses, style builds and rebuilds): runJob sends it,
@@ -82,15 +70,11 @@ async function fetchJsonResult(url, options) {
 async function jobJsonResult(url, options) {
   const res = await BackendJobs.runJob({ url, method: options.method, headers: options.headers, body: options.body });
   const data = res.body || null;
-  return { ok: res.status >= 200 && res.status < 300 && !(data && data.error), status: res.status, data };
+  return { ok: res.status >= 200 && res.status < 300 && !(data && data.ok === false), status: res.status, data };
 }
 
 function postJsonResult(url, body) {
-  return fetchJsonResult(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  return ApiRequest.apiRequest("POST", url, body);
 }
 
 /* Fetches a MusicXML file and draws it with OSMD (vendored under
@@ -319,11 +303,11 @@ async function loadLibraryPieces() {
 
   try {
     const query = PieceMetadata.filterQuery(libraryFilter);
-    const res = await fetch(query ? `/api/analyzer/pieces?${query}` : "/api/analyzer/pieces");
-    const data = await res.json();
+    const answer = await ApiRequest.apiRequest("GET", query ? `/api/analyzer/pieces?${query}` : "/api/analyzer/pieces");
+    const data = answer.data || {};
 
-    if (!data.ok) {
-      statusEl.textContent = `Failed to load pieces: ${data.message || "unknown error"}`;
+    if (!answer.ok) {
+      statusEl.textContent = `Failed to load pieces: ${ApiRequest.errorText(data, "unknown error")}`;
       statusEl.classList.add("error");
       return;
     }
@@ -523,7 +507,7 @@ async function applyBulkEdit(action, rawValue) {
       body: JSON.stringify(body),
     });
     if (!result.ok || !result.data || !result.data.ok) {
-      const reason = (result.data && (result.data.message || result.data.error)) || "failed";
+      const reason = (result.data && result.data.error) || "failed";
       failure = `Stopped at ${labels.get(id) || id}: ${reason}`;
       break;
     }
@@ -942,7 +926,7 @@ async function startLibraryEdit(row, piece) {
       body: JSON.stringify(body),
     });
     if (!result.ok || !result.data || !result.data.ok) {
-      errorEl.textContent = (result.data && (result.data.message || result.data.error)) || "Save failed.";
+      errorEl.textContent = (result.data && result.data.error) || "Save failed.";
       return;
     }
     const fresh = libraryTable ? libraryTable.buildRow(result.data.piece) : row;
@@ -970,7 +954,7 @@ async function reanalyzePiece(id) {
       return "The stored file could not be analyzed.";
     }
     if (!data.ok) {
-      return data.message || "Re-run failed.";
+      return data.error || "Re-run failed.";
     }
     return null;
   } catch (err) {
@@ -999,11 +983,11 @@ async function handleDeleteLibraryPiece(id, rowEl) {
   const statusEl = document.getElementById("library-status");
 
   try {
-    const res = await fetch(`/api/analyzer/pieces/${id}`, { method: "DELETE" });
-    const data = await res.json();
+    const answer = await ApiRequest.apiRequest("DELETE", `/api/analyzer/pieces/${id}`);
+    const data = answer.data || {};
 
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Delete failed.";
+    if (!answer.ok) {
+      statusEl.textContent = ApiRequest.errorText(data, "Delete failed.");
       statusEl.classList.add("error");
       return;
     }
@@ -1111,7 +1095,7 @@ async function runUploadQueue(idPrefix, files, onUploaded) {
       });
       const data = res.body || {};
       if (!data.ok) {
-        queue = UploadQueue.markFailed(queue, i, data.message || data.error || "Upload failed.");
+        queue = UploadQueue.markFailed(queue, i, data.error || "Upload failed.");
         show();
         continue;
       }
@@ -1208,7 +1192,7 @@ function showAnalysisView(id, options) {
         return;
       }
       if (!data.ok) {
-        showAnalysisProblem(data.message === "piece not found" ? "Piece not found" : data.message || "Piece not found");
+        showAnalysisProblem(data.error === "piece not found" ? "Piece not found" : data.error || "Piece not found");
         return;
       }
       mountAnalysisWorkspace(content, id, data, options);
@@ -1232,8 +1216,8 @@ async function fetchDocumentSections(id, names) {
  * from. The other sections load when their tab opens (renderAnalysisTabs). The detail's `document` is the cache's
  * sections so far; `documentCache` is the cache. */
 async function fetchAnalysisPiece(id) {
-  const res = await fetch(`/api/analyzer/pieces/${encodeURIComponent(id)}?document=summary`);
-  return res.json();
+  const answer = await ApiRequest.apiRequest("GET", `/api/analyzer/pieces/${encodeURIComponent(id)}?document=summary`);
+  return answer.data || { ok: false, error: "The backend gave no answer." };
 }
 
 async function loadAnalysisPiece(id) {
@@ -1360,7 +1344,7 @@ function buildNotationRow(data) {
       body: JSON.stringify(body),
     });
     if (!result.ok || !result.data || !result.data.ok) {
-      message.textContent = (result.data && (result.data.message || result.data.error)) || "Save failed.";
+      message.textContent = (result.data && result.data.error) || "Save failed.";
       return;
     }
     showAnalysisView(data.id);
@@ -1446,8 +1430,8 @@ async function fetchExportText(url) {
   let message = `Export failed (${res.status}).`;
   try {
     const body = await res.json();
-    if (body && (body.message || body.error)) {
-      message = body.message || body.error;
+    if (body && body.error) {
+      message = body.error;
     }
   } catch (error) {
     // Keep the status message.
@@ -1705,11 +1689,11 @@ async function renderCorpusView() {
   loadStylesSection();
 
   try {
-    const res = await fetch("/api/corpus");
-    const data = await res.json();
+    const answer = await ApiRequest.apiRequest("GET", "/api/corpus");
+    const data = answer.data || {};
 
-    if (!data.ok) {
-      statusEl.textContent = `Failed to load collections: ${data.message || "unknown error"}`;
+    if (!answer.ok) {
+      statusEl.textContent = `Failed to load collections: ${ApiRequest.errorText(data, "unknown error")}`;
       statusEl.classList.add("error");
       return;
     }
@@ -1761,7 +1745,7 @@ function patchCollection(id, body) {
 }
 
 function collectionResultError(result, fallback) {
-  return (result.data && (result.data.message || result.data.error)) || fallback;
+  return (result.data && result.data.error) || fallback;
 }
 
 function showCollectionsStatus(text, isError) {
@@ -1900,15 +1884,11 @@ async function handleCreateCorpus() {
   createButton.disabled = true;
 
   try {
-    const res = await fetch("/api/corpus", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description: document.getElementById("corpus-description-input").value }),
-    });
-    const data = await res.json();
+    const answer = await ApiRequest.apiRequest("POST", "/api/corpus", { name, description: document.getElementById("corpus-description-input").value });
+    const data = answer.data || {};
 
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Create failed.";
+    if (!answer.ok) {
+      statusEl.textContent = ApiRequest.errorText(data, "Create failed.");
       statusEl.classList.add("error");
       createButton.disabled = false;
       return;
@@ -2424,12 +2404,12 @@ async function addPiecesToCollection(ids) {
 
 async function handleRemovePiece(corpusId, corpusName, pieceId) {
   try {
-    const res = await fetch(`/api/corpus/${corpusId}/pieces/${pieceId}`, { method: "DELETE" });
-    const data = await res.json();
+    const answer = await ApiRequest.apiRequest("DELETE", `/api/corpus/${corpusId}/pieces/${pieceId}`);
+    const data = answer.data || {};
 
-    if (!data.ok) {
+    if (!answer.ok) {
       const statusEl = document.getElementById("corpus-piece-status");
-      statusEl.textContent = data.message || "Remove failed.";
+      statusEl.textContent = ApiRequest.errorText(data, "Remove failed.");
       statusEl.classList.add("error");
       return;
     }

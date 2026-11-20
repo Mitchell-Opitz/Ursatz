@@ -63,11 +63,7 @@ async function sendMaterialsRequest(original) {
   const request = ApiRequest.withBaseVersion(original);
   const answer = request.job
     ? await sendJobRequest(request)
-    : await fetchJsonResult(request.url, {
-        method: request.method,
-        headers: request.headers,
-        body: request.body,
-      });
+    : await ApiRequest.sendRequest(request);
   if (answer && answer.ok) {
     ApiRequest.rememberVersions(answer.data);
   }

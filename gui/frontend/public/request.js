@@ -121,7 +121,33 @@
     return { ...request, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, base_version: version }) };
   }
 
-  const api = { jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions, withBaseVersion };
+  /*
+   * The one fetch of JSON (R-647). Every route answers {"ok": true, ...} or {"ok": false, "error", "code", "path"?}: this resolves to {ok, status, data},
+   * data null for an answer that is not JSON, ok false for an error status or {"ok": false}. A network failure is {ok: false, status: 0, data: {ok: false,
+   * error, code: "unreachable"}}. request is {url, method, headers, body (text)}; fetchFn is the page's fetch.
+   */
+  async function sendRequest(request, fetchFn) {
+    const doFetch = fetchFn || ((url, init) => root.fetch(url, init));
+    try {
+      const res = await doFetch(request.url, { method: request.method, headers: request.headers, body: request.body });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (error) {
+        data = null;
+      }
+      return { ok: res.ok && !(data && data.ok === false), status: res.status, data };
+    } catch (error) {
+      return { ok: false, status: 0, data: { ok: false, error: `Could not reach backend: ${error}`, code: "unreachable" } };
+    }
+  }
+
+  /* sendRequest for a method, a url and a body that is sent as JSON when given (undefined for none). */
+  function apiRequest(method, url, body, fetchFn) {
+    return sendRequest(jsonRequest(method, url, body), fetchFn);
+  }
+
+  const api = { sendRequest, apiRequest, jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions, withBaseVersion };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {
