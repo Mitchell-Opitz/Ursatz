@@ -10,6 +10,11 @@
 
 #include "ursatz_test.h"
 
+/* The document version as text, for the literals of a test that writes a document by hand: the constant is the only place the number is written. */
+#define DOCUMENT_VERSION_TEXT_(x) #x
+#define DOCUMENT_VERSION_TEXT_X(x) DOCUMENT_VERSION_TEXT_(x)
+#define DOCUMENT_VERSION_TEXT DOCUMENT_VERSION_TEXT_X(ANALYZER_DOCUMENT_SCHEMA_VERSION)
+
 /*
  * analyzer_document_status_of over each status, and analyzer_document_status over a document from the snapshots
  * (which hold no analyzer_version or producer_key; the test sets them) with each key changed in turn.
@@ -87,7 +92,7 @@ int main(void) {
     CHECKF(analyzer_document_status("") == ANALYZER_DOCUMENT_UNREADABLE, "empty text");
     CHECKF(analyzer_document_status("{") == ANALYZER_DOCUMENT_UNREADABLE, "not JSON");
     CHECKF(analyzer_document_status("[]") == ANALYZER_DOCUMENT_UNREADABLE, "not an object");
-    CHECKF(analyzer_document_status("{\"schema_version\": 13}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
+    CHECKF(analyzer_document_status("{\"schema_version\": " DOCUMENT_VERSION_TEXT "}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
     CHECKF(analyzer_document_status("{\"metadata\": {}}") == ANALYZER_DOCUMENT_UNREADABLE, "no schema_version");
     CHECKF(analyzer_document_status("{\"schema_version\": \"9\", \"metadata\": {\"analyzer_version\": \"a\", "
                                     "\"producer_key\": \"b\"}}") == ANALYZER_DOCUMENT_UNREADABLE,

@@ -12,6 +12,11 @@
 #include "ursatz_test.h"
 #include "test_knowledge.h"
 
+/* The document version as text, for the literals of a test that writes a document by hand: the constant is the only place the number is written. */
+#define DOCUMENT_VERSION_TEXT_(x) #x
+#define DOCUMENT_VERSION_TEXT_X(x) DOCUMENT_VERSION_TEXT_(x)
+#define DOCUMENT_VERSION_TEXT DOCUMENT_VERSION_TEXT_X(ANALYZER_DOCUMENT_SCHEMA_VERSION)
+
 /*
  * The piece text export (text_export.h). Format rules are checked on three pieces:
  *   - pickup.musicxml: the header, the pickup numbered 0 with its note on beat 4, claims in the measure where they start,
@@ -383,8 +388,8 @@ static void check_refusals(void) {
     char *older = malloc(strlen(piece.document) + 1);
     if (older) {
         strcpy(older, piece.document);
-        char *version = strstr(older, "\"schema_version\": 13");
-        CHECKF(version != NULL, "the document states schema_version 13");
+        char *version = strstr(older, "\"schema_version\": " DOCUMENT_VERSION_TEXT);
+        CHECKF(version != NULL, "the document states the current schema_version");
         if (version) {
             version[strlen("\"schema_version\": ")] = '8';
             CHECKF(analyzer_text_export_piece(&piece.notes, older, &options, &text, NULL) == URSATZ_ERR_REQUEST && text == NULL,

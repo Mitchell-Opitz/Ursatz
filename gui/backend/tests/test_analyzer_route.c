@@ -1116,7 +1116,7 @@ int main(int argc, char **argv) {
     const cJSON *uploaded_after = meta ? cJSON_GetObjectItemCaseSensitive(meta, "uploaded_at") : NULL;
     const cJSON *filename = meta ? cJSON_GetObjectItemCaseSensitive(meta, "filename") : NULL;
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
-              schema->valuedouble == 13,
+              schema->valuedouble == ANALYZER_DOCUMENT_SCHEMA_VERSION,
           "re-running the analysis rewrites the versions in piece.json");
     check(cJSON_IsString(version) && strcmp(version->valuestring, analyzer_version()) == 0,
           "piece.json records the version the Analyzer reports");

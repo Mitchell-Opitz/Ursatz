@@ -14,7 +14,8 @@ ursatz_test(test_corpus_key_estimation LIBS ursatz_analyzer_engine analyzer_test
 ursatz_test(test_long_labels LIBS ursatz_analyzer_engine analyzer_test_support
     LABELS slow)
 
-ursatz_test(test_analysis_document LIBS ursatz_analyzer_engine analyzer_test_support cjson)
+ursatz_test(test_analysis_document LIBS ursatz_analyzer_engine analyzer_test_support cjson
+    DEFINITIONS URSATZ_ANALYSIS_SCHEMA="${PROJECT_SOURCE_DIR}/schema/analysis-document.schema.json")
 
 ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz>
