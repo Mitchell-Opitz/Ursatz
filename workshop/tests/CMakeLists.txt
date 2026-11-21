@@ -90,9 +90,9 @@ ursatz_test(workshop_variants SOURCES test_variants.c LIBS ursatz_workshop_inter
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(workshop_formats COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/validate_formats.py
                      ${PROJECT_SOURCE_DIR}/workshop/schema ${CMAKE_BINARY_DIR}/gui/backend/tests/migrated_routes
-                     ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
+                     ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings
         LABELS schema
-        PROPERTIES FIXTURES_REQUIRED "migrated_routes_files;settings_commands_files")
+        PROPERTIES FIXTURES_REQUIRED "migrated_routes_files;settings_commands_files;ratings_files")
 endif()
 
 # Recovery after a stop in the middle of a change (P63 B8): hand-made leftovers of every kind, recovered by workshop_open from the journal.
@@ -229,3 +229,10 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
 ursatz_test(workshop_compose_settings SOURCES test_compose_settings.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
+
+# Listening sessions and ratings (P66 B6): a session with two batches, ratings and a pick, keep as default citing them, the refusals, ratings of an item version.
+# Its folder is one of workshop_formats' (the files the commands leave validate).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings)
+ursatz_test(workshop_ratings SOURCES test_ratings.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings
+    PROPERTIES FIXTURES_SETUP ratings_files)
