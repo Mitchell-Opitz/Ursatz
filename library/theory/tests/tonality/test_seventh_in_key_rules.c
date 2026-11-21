@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "theory/tonality/framework.h"
 #include "theory/tonality/seventh_in_key_rules.h"
 #include "theory/tests/tonality/spelling_test_util.h"
 

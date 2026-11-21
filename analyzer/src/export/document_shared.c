@@ -2,6 +2,7 @@
    metadata and the input, and the helpers more than one area uses. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* Source ids for the meter: a time signature the MIDI file declares or the score notates, and
    the 4/4 the library assumes when it declares none. */
@@ -334,8 +335,7 @@ cJSON *doc_meter_json(DocBuild *build, const ImportedScore *notes) {
 }
 
 const char *doc_library_framework_name(void) {
-    const Framework *framework = common_practice_minimal_framework();
-    return framework ? framework_name(framework) : "unknown";
+    return FRAMEWORK_COMMON_PRACTICE_MINIMAL;
 }
 
 static const char *mode_hint_name(MidiModeHint hint) {

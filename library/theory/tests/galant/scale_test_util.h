@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "model/pitch/pitch_spelling.h"
-#include "theory/galant/scale_framework.h"
 #include "theory/galant/scale_harmonization.h"
 
 /* Test helpers shared by the scale-harmonization tests. Notes live in a fixed

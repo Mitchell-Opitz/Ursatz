@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "theory/voicing/doubling_rules.h"
-#include "theory/voicing/framework.h"
 #include "theory/tests/voicing/voicing_test_util.h"
 
 static void c_major(const PitchSpelling *tones[3]) {

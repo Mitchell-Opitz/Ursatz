@@ -1,4 +1,3 @@
-ursatz_test(standard_form_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_form_phrase_rules SOURCES test_phrase_rules.c LIBS ursatz_theory)
 

@@ -1166,9 +1166,6 @@ int chain_key_signature_major_tonic(int sharps_flats);
 /* The label of a pattern as Ursatz's corpus statistics print one: "I > IV > V > I". Owned; NULL on allocation failure. */
 char *chain_progression_label(const AnalysisProgression *progression);
 
-/* The library's framework name for the doubling and spacing claims. */
-const char *chain_voicing_framework_name(void);
-
 /* One rule the heard music breaks, as the Composer's check reads it (R-618). rule is one of "parallel-fifths",
    "parallel-octaves", "direct-fifths", "direct-octaves", "unresolved-seventh", "unresolved-leading-tone" (counterpoint is checked
    with standard-counterpoint, not here). hard is true for parallel fifths and octaves. The place is the measure and beat (1 is the

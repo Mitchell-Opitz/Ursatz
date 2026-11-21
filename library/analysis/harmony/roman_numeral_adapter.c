@@ -11,7 +11,6 @@
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/tonality/common_practice_materials.h"
-#include "theory/framework/framework.h"
 #include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
 

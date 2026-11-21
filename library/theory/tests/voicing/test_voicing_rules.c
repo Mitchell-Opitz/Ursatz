@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "theory/voicing/framework.h"
 #include "theory/voicing/voicing_rules.h"
 #include "theory/tests/voicing/voicing_test_util.h"
 

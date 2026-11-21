@@ -5,10 +5,9 @@
 #include <string.h>
 
 #include "theory/markings/dynamics_rules.h"
-#include "theory/markings/framework.h"
-#include "theory/framework/framework.h"
 #include "theory/markings/tempo_rules.h"
 #include "model/time/musical_time.h"
+#include "theory/vocabulary/framework_names.h"
 
 
 static const char *tempo_group_name(TempoGroup group) {
@@ -159,6 +158,6 @@ bool markings_stage_collect(const ImportedScore *notes, ChainResult *report) {
     if (notes->source.format != IMPORTED_FORMAT_MUSICXML) {
         return true;
     }
-    const char *framework = framework_name(standard_markings_framework());
+    const char *framework = FRAMEWORK_STANDARD_MARKINGS;
     return collect_tempo(notes, framework, report) && collect_dynamics(&notes->source, framework, report);
 }

@@ -1,4 +1,3 @@
-ursatz_test(standard_counterpoint_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_counterpoint_consonance_rules SOURCES test_consonance_rules.c LIBS ursatz_theory)
 

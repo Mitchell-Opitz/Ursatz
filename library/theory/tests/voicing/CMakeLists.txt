@@ -1,6 +1,5 @@
 ursatz_test_includes()
 
-ursatz_test(standard_voicing_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_voicing_stem_rules SOURCES test_stem_rules.c LIBS ursatz_theory)
 

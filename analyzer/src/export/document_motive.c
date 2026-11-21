@@ -1,6 +1,7 @@
 /* The motive areas of the analysis document: motives and the melody. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 static bool add_owned(cJSON *object, const char *key, cJSON **item) {
     bool ok = common_json_add(object, key, *item);
@@ -158,7 +159,7 @@ cJSON *doc_motives_json(DocBuild *build, const ImportedScore *notes, const Chain
     if (!list) {
         return NULL;
     }
-    const char *framework = framework_name(standard_form_framework());
+    const char *framework = FRAMEWORK_STANDARD_FORM;
     for (size_t m = 0; m < reading_motive_occurrence_count(build->reading); m++) {
         const ReadingMotiveOccurrence *held = reading_motive_occurrence_at(build->reading, m);
         if (held->detail != 0) { /* a family is printed at its prototype, its first occurrence */

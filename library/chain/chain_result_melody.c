@@ -19,9 +19,8 @@
 #include "analysis/counterpoint/analysis_melody_leaps.h"
 #include "analysis/counterpoint/analysis_melody_nct.h"
 #include "theory/counterpoint/cantus_firmus_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/counterpoint/tendency_rules.h"
-#include "theory/framework/framework.h"
+#include "theory/vocabulary/framework_names.h"
 
 _Static_assert(NON_CHORD_TONE_COUNT == ANALYSIS_MELODY_NCT_TYPES, "the report counts every NonChordTone");
 
@@ -277,7 +276,7 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
     const StandardCounterpointClimaxClaim *climax = &climaxes.items[0].claim;
 
     out->phrase = phrase_index;
-    out->framework = framework_name(standard_counterpoint_framework());
+    out->framework = FRAMEWORK_STANDARD_COUNTERPOINT;
     out->start = phrase->start;
     out->end = phrase->end;
     out->first_measure = phrase->first_measure;

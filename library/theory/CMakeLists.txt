@@ -1,8 +1,6 @@
 # The theory group (spec/target-architecture.md 7.2): the style model, the rule objects and the rule libraries,
 # vocabularies and predicates of every framework. Sources include headers by their path from library/ (theory/<area>/<file>.h).
 add_library(ursatz_theory
-    framework/framework.c
-    framework/framework_singleton.c
     style/style_features.c
     style/style_labels.c
     style/style_compare.c
@@ -28,9 +26,7 @@ add_library(ursatz_theory
     tonality/brightness.c
     tonality/chord_vocabulary.c
     tonality/chord_vocabulary_seventh.c
-    tonality/common_practice_framework.c
     tonality/common_practice_materials.c
-    tonality/framework.c
     tonality/interval.c
     tonality/key_vocabulary.c
     tonality/region_relation.c
@@ -49,7 +45,6 @@ add_library(ursatz_theory
     harmony/harmony_cadence_rules.c
     harmony/harmony_chord.c
     harmony/harmony_deceptive.c
-    harmony/harmony_framework.c
     harmony/harmony_functions.c
     harmony/harmony_key_change.c
     harmony/harmony_phrase_labels.c
@@ -69,7 +64,6 @@ add_library(ursatz_theory
     voicing/crossing_rules.c
     voicing/doubling_reading.c
     voicing/doubling_rules.c
-    voicing/framework.c
     voicing/range_rules.c
     voicing/spacing_rules.c
     voicing/stem_rules.c
@@ -91,7 +85,6 @@ add_library(ursatz_theory
     counterpoint/fourth_species_suspension.c
     counterpoint/fourth_species_suspension_rules.c
     counterpoint/fourth_species_weak_rules.c
-    counterpoint/framework.c
     counterpoint/harmonic_rules.c
     counterpoint/melodic_rules.c
     counterpoint/motion_rules.c
@@ -121,7 +114,6 @@ add_library(ursatz_theory
     form/expansion_placement.c
     form/external_expansion_kind.c
     form/external_expansion_rules.c
-    form/framework.c
     form/hybrid_rules.c
     form/idea_label.c
     form/internal_expansion_rules.c
@@ -137,7 +129,6 @@ add_library(ursatz_theory
     form/sentence_rules.c
     meter/beat_grid.c
     meter/borrowed_rules.c
-    meter/framework.c
     meter/hemiola_rules.c
     meter/hypermeter_rules.c
     meter/meter_class_rules.c
@@ -146,26 +137,21 @@ add_library(ursatz_theory
     meter/syncopation_rules.c
     galant/galant_degree.c
     galant/galant_exemplar.c
-    galant/galant_framework.c
     galant/galant_matching_rules.c
     galant/galant_prototypes.c
     galant/scale_direction.c
-    galant/scale_framework.c
     galant/scale_harmonization.c
     galant/scale_patterns.c
     galant/scale_sequence_rules.c
     galant/schema_function.c
     galant/sequence_kind.c
     markings/dynamics_rules.c
-    markings/framework.c
     markings/tempo_rules.c
 )
 ursatz_public_headers(ursatz_theory
     BASE ${PROJECT_SOURCE_DIR}
     SOURCE_DIRS ${PROJECT_SOURCE_DIR}
     HEADERS
-        theory/framework/framework.h
-        theory/framework/framework_singleton.h
         theory/style/style_features.h
         theory/style/style_labels.h
         theory/style/style_compare.h
@@ -177,6 +163,7 @@ ursatz_public_headers(ursatz_theory
         theory/style/style_model_blend.h
         theory/style/style_model_build.h
         theory/vocabulary/applied_chord_kind.h
+        theory/vocabulary/framework_names.h
         theory/vocabulary/beat_strength.h
         theory/vocabulary/cadence_type.h
         theory/vocabulary/key_change_extent.h
@@ -191,7 +178,6 @@ ursatz_public_headers(ursatz_theory
         theory/knowledge/relation.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
-        theory/tonality/common_practice_framework.h
         theory/tonality/common_practice_materials.h
         theory/tonality/interval.h
         theory/tonality/key_vocabulary.h
@@ -211,7 +197,6 @@ ursatz_public_headers(ursatz_theory
         theory/harmony/harmony_cadence_rules.h
         theory/harmony/harmony_chord.h
         theory/harmony/harmony_deceptive.h
-        theory/harmony/harmony_framework.h
         theory/harmony/harmony_functions.h
         theory/harmony/harmony_key_change.h
         theory/harmony/harmony_phrase_labels.h
@@ -228,7 +213,6 @@ ursatz_public_headers(ursatz_theory
         theory/harmony/phrase_model_label.h
         theory/harmony/six_four_type.h
         theory/voicing/doubling_reading.h
-        theory/voicing/framework.h
         theory/voicing/range_rules.h
         theory/voicing/spacing_rules.h
         theory/voicing/stem_rules.h
@@ -249,7 +233,6 @@ ursatz_public_headers(ursatz_theory
         theory/counterpoint/fourth_species_exercise.h
         theory/counterpoint/fourth_species_line_rules.h
         theory/counterpoint/fourth_species_rules.h
-        theory/counterpoint/framework.h
         theory/counterpoint/harmonic_rules.h
         theory/counterpoint/melodic_rules.h
         theory/counterpoint/motion_rules.h
@@ -270,7 +253,6 @@ ursatz_public_headers(ursatz_theory
         theory/form/expansion_placement.h
         theory/form/external_expansion_kind.h
         theory/form/external_expansion_rules.h
-        theory/form/framework.h
         theory/form/hybrid_rules.h
         theory/form/idea_label.h
         theory/form/internal_expansion_rules.h
@@ -287,7 +269,6 @@ ursatz_public_headers(ursatz_theory
         theory/form/sentence_rules.h
         theory/meter/beat_grid.h
         theory/meter/borrowed_rules.h
-        theory/meter/framework.h
         theory/meter/grouping_rules.h
         theory/meter/hemiola_rules.h
         theory/meter/hypermeter_rules.h
@@ -297,19 +278,16 @@ ursatz_public_headers(ursatz_theory
         theory/meter/syncopation_rules.h
         theory/galant/galant_degree.h
         theory/galant/galant_exemplar.h
-        theory/galant/galant_framework.h
         theory/galant/galant_matching_rules.h
         theory/galant/galant_prototype.h
         theory/galant/galant_prototypes.h
         theory/galant/scale_direction.h
-        theory/galant/scale_framework.h
         theory/galant/scale_harmonization.h
         theory/galant/scale_patterns.h
         theory/galant/scale_sequence_rules.h
         theory/galant/schema_function.h
         theory/galant/sequence_kind.h
         theory/markings/dynamics_rules.h
-        theory/markings/framework.h
         theory/markings/tempo_rules.h
 )
 target_link_libraries(ursatz_theory PUBLIC ursatz_model PRIVATE cjson)

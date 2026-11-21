@@ -1,6 +1,7 @@
 /* The chord areas of the analysis document: chords, non-chord tones and the chord vocabulary. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* The runner-up candidate, or null when the library gave none. */
 static cJSON *runner_up_json(const AnalysisChordReading *reading) {
@@ -201,7 +202,7 @@ static bool add_function(cJSON *claim, const ChainEntry *entry) {
           common_json_add(object, "applied_to",
               entry->function_applied ? cJSON_CreateNumber(entry->function_applied_to) : cJSON_CreateNull()) &&
           common_json_add(object, "predominant", doc_optional_string_json(entry->predominant_strength)) &&
-          common_json_add(object, "framework", cJSON_CreateString(framework_name(standard_harmony_framework()))) &&
+          common_json_add(object, "framework", cJSON_CreateString(FRAMEWORK_STANDARD_HARMONY)) &&
           common_json_add(object, "uncertainty", cJSON_CreateNumber(entry->function_uncertainty)))) {
         cJSON_Delete(object);
         return false;

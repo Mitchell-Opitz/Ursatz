@@ -1,10 +1,8 @@
-ursatz_test(common_practice_minimal_framework SOURCES test_common_practice_framework.c LIBS ursatz_theory)
 
 ursatz_test(common_practice_minimal_chord_vocabulary SOURCES test_chord_vocabulary.c LIBS ursatz_theory)
 
 ursatz_test(common_practice_minimal_key_vocabulary SOURCES test_key_vocabulary.c LIBS ursatz_theory)
 
-ursatz_test(standard_tonality_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_tonality_triad_in_key_rules SOURCES test_triad_in_key_rules.c LIBS ursatz_theory)
 

@@ -1,6 +1,5 @@
 ursatz_test_includes()
 
-add_subdirectory(framework)
 add_subdirectory(style)
 add_subdirectory(vocabulary)
 add_subdirectory(tonality)

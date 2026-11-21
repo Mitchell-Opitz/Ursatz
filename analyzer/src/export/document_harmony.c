@@ -1,6 +1,7 @@
 /* The harmony areas of the analysis document: cadences and prolongations, progressions, harmonic rhythm and the outer voices. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* {"span": ...} and {"span": ..., "location": ...} for the parts of a cadence. */
 static cJSON *span_only_json(Rational start, Rational end) {
@@ -61,7 +62,7 @@ cJSON *doc_cadences_json(DocBuild *build, const ImportedScore *notes, const Chai
     if (!list) {
         return NULL;
     }
-    const char *framework = framework_name(standard_harmony_framework());
+    const char *framework = FRAMEWORK_STANDARD_HARMONY;
     for (size_t c = 0; c < reading_cadence_count(build->reading); c++) {
         const AnalysisCadence *cadence = &report->cadences[reading_cadence_at(build->reading, c)->detail];
         const ChainEntry *dominant = &report->entries[cadence->dominant_first];
@@ -109,7 +110,7 @@ cJSON *doc_prolongations_json(DocBuild *build, const ImportedScore *notes, const
     if (!list) {
         return NULL;
     }
-    const char *framework = framework_name(standard_harmony_framework());
+    const char *framework = FRAMEWORK_STANDARD_HARMONY;
     for (size_t i = 0; i < report->prolongation_count; i++) {
         const AnalysisProlongation *prolongation = &report->prolongations[i];
         const ChainEntry *first = &report->entries[prolongation->first_entry];

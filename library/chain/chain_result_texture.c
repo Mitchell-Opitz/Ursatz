@@ -4,12 +4,11 @@
 #include <string.h>
 
 #include "model/events/note_event.h"
-#include "analysis/texture/framework.h"
 #include "analysis/texture/texture_analysis_classify.h"
-#include "theory/framework/framework.h"
 #include "model/core/rational.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* a < b for the rationals na/da and nb/db (denominators positive). */
 static bool before(long long na, long long da, long long nb, long long db) {
@@ -72,7 +71,7 @@ bool texture_stage_collect(const ImportedScore *notes, const AnalysisChain *libr
     if (notes->count == 0 || !analysis) {
         return true;
     }
-    const char *framework = framework_name(standard_texture_framework());
+    const char *framework = FRAMEWORK_STANDARD_TEXTURE;
     bool ok = true;
     if (analysis->passage_count > 0) {
         report->texture_passages = calloc(analysis->passage_count, sizeof(AnalysisTexturePassage));

@@ -1,4 +1,3 @@
-ursatz_test(standard_harmony_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_harmony_functions SOURCES test_harmony_functions.c LIBS ursatz_theory)
 

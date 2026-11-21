@@ -18,15 +18,14 @@
 #include "analysis/counterpoint/analysis_grid.h"
 #include "analysis/counterpoint/analysis_motion.h"
 #include "analysis/counterpoint/analysis_perfects.h"
-#include "theory/counterpoint/framework.h"
 #include "analysis/harmony/analysis_resolution.h"
 #include "theory/voicing/doubling_reading.h"
 #include "analysis/harmony/analysis_voices.h"
 #include "theory/meter/segmentation_beat_grid.h"
-#include "theory/framework/framework.h"
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
+#include "theory/vocabulary/framework_names.h"
 
 #define NO_NOTE SIZE_MAX
 
@@ -269,7 +268,7 @@ bool voice_leading_stage_collect(const ImportedScore *notes, const ChainScoreInp
     }
     AnalysisVoiceLeading *out = &report->voice_leading;
     out->present = true;
-    out->framework = framework_name(standard_counterpoint_framework());
+    out->framework = FRAMEWORK_STANDARD_COUNTERPOINT;
     out->voice_count = build.voice_count;
     out->row_count = build.row_count;
     bool ok = collect_motions(&build, &found->motions, out) && collect_perfects(&build, &found->perfects, out) &&

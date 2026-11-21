@@ -51,7 +51,6 @@ ursatz_public_headers(ursatz_model
         model/containers/section.h
         model/core/entity.h
         model/core/occurrence.h
-        model/core/once.h
         model/core/provenance_reference.h
         model/core/rational.h
         model/core/string_copy.h

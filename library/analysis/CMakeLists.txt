@@ -66,7 +66,6 @@ add_library(ursatz_analysis
     meter/meter_analysis_position.c
     meter/meter_analysis_syncopation.c
     meter/meter_analysis_tuplet.c
-    texture/framework.c
     texture/mixed_texture_rules.c
     texture/texture_analysis_classify.c
     texture/texture_analysis_features.c
@@ -149,7 +148,6 @@ ursatz_public_headers(ursatz_analysis
         analysis/meter/meter_analysis_input.h
         analysis/meter/meter_analysis_syncopation.h
         analysis/meter/meter_analysis_tuplet.h
-        analysis/texture/framework.h
         analysis/texture/texture_analysis_classify.h
         analysis/texture/texture_analysis_features.h
         analysis/texture/texture_analysis_input.h

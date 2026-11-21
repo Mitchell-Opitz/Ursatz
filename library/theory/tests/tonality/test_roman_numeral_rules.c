@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "theory/tonality/framework.h"
 #include "theory/tonality/roman_numeral_rules.h"
 #include "theory/tonality/seventh_in_key_rules.h"
 #include "theory/tonality/triad_in_key_rules.h"
