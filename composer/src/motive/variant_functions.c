@@ -12,11 +12,7 @@ static int roman_degree(const char *roman) {
     while (*roman == 'b' || *roman == '#') {
         roman++;
     }
-    size_t count = 0;
-    while (roman[count] == 'i' || roman[count] == 'I' || roman[count] == 'v' || roman[count] == 'V') {
-        count++;
-    }
-    return standard_tonality_roman_numeral_degree_of(roman, count);
+    return standard_tonality_roman_numeral_degree_of(roman, standard_tonality_roman_numeral_letters(roman));
 }
 
 /*

@@ -498,9 +498,7 @@ static int numeral_degree(const char *numeral, bool *inverted) {
         at++;
     }
     const char *letters = at;
-    while (*at && strchr("ivIV", *at)) {
-        at++;
-    }
+    at += standard_tonality_roman_numeral_letters(at);
     int degree = standard_tonality_roman_numeral_degree_of(letters, (size_t)(at - letters));
     /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7 and none are root position. */
     while (*at == 'o' || *at == '+' || *at == '/' || *at == '\xc2' || *at == '\xb0') {

@@ -15,6 +15,14 @@ const char *standard_tonality_roman_numeral_degree(int degree, bool uppercase) {
     return uppercase ? UPPERCASE[degree - 1] : LOWERCASE[degree - 1];
 }
 
+size_t standard_tonality_roman_numeral_letters(const char *text) {
+    size_t count = 0;
+    while (text != NULL && (text[count] == 'i' || text[count] == 'I' || text[count] == 'v' || text[count] == 'V')) {
+        count++;
+    }
+    return count;
+}
+
 int standard_tonality_roman_numeral_degree_of(const char *letters, size_t length) {
     char lower[8];
     if (letters == NULL || length == 0 || length >= sizeof(lower)) {
