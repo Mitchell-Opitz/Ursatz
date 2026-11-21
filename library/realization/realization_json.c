@@ -451,30 +451,9 @@ bool realization_digest(const Work *work, char out[17]) {
 /* ------------------------------------------------------------------------------------------------ reading */
 
 typedef struct {
-    RealizationJsonError *error;
-    bool failed;
-    RealizationResult result;
+    CommonJsonReader json;
     const KnowledgeSnapshot *knowledge;
 } Reader;
-
-static bool refuse(Reader *r, RealizationResult result, const char *path, const char *format, ...) {
-    if (!r->failed) {
-        r->failed = true;
-        r->result = result;
-        if (r->error) {
-            va_list args;
-            va_start(args, format);
-            vsnprintf(r->error->message, sizeof(r->error->message), format, args);
-            va_end(args);
-            snprintf(r->error->path, sizeof(r->error->path), "%s", path);
-        }
-    }
-    return false;
-}
-
-static bool bad(Reader *r, const char *path, const char *message) {
-    return refuse(r, REALIZATION_ERR_BAD_VALUE, path, "%s", message);
-}
 
 /* What the group's own check said, as text at the member's path. */
 static bool group_refused(Reader *r, RealizationResult result, const char *path, const char *what) {
@@ -496,104 +475,39 @@ static bool group_refused(Reader *r, RealizationResult result, const char *path,
         reason = "it is not built";
         break;
     case REALIZATION_ERR_ALLOC:
-        return refuse(r, result, path, "out of memory");
+        return common_json_refuse(&r->json, result, path, "out of memory");
     default:
         break;
     }
-    return refuse(r, result, path, "%s: %s", what, reason);
-}
-
-static void child_member(char *out, const char *parent, const char *key) {
-    if (parent[0] == '\0') {
-        snprintf(out, REALIZATION_JSON_PATH_MAX, "%s", key);
-    } else {
-        snprintf(out, REALIZATION_JSON_PATH_MAX, "%s.%s", parent, key);
-    }
-}
-
-static void child_index(char *out, const char *parent, size_t index) {
-    snprintf(out, REALIZATION_JSON_PATH_MAX, "%s[%zu]", parent, index);
-}
-
-static const cJSON *member(Reader *r, const cJSON *object, const char *path, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    if (!item) {
-        char at[REALIZATION_JSON_PATH_MAX];
-        child_member(at, path, key);
-        bad(r, at, "missing required member");
-    }
-    return item;
-}
-
-static bool read_object(Reader *r, const cJSON *item, const char *path) {
-    return cJSON_IsObject(item) || bad(r, path, "expected an object");
-}
-
-static const cJSON *read_array(Reader *r, const cJSON *object, const char *path, const char *key, char *at) {
-    const cJSON *item = member(r, object, path, key);
-    if (!item) {
-        return NULL;
-    }
-    child_member(at, path, key);
-    if (!cJSON_IsArray(item)) {
-        bad(r, at, "expected an array");
-        return NULL;
-    }
-    return item;
-}
-
-static bool read_long(Reader *r, const cJSON *item, const char *path, long long min, long long max, long long *out) {
-    if (!cJSON_IsNumber(item)) {
-        return bad(r, path, "expected a number");
-    }
-    double value = item->valuedouble;
-    if (value < (double)min || value > (double)max || (double)(long long)value != value) {
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, path, "expected an integer from %lld to %lld", min, max);
-    }
-    *out = (long long)value;
-    return true;
+    return common_json_refuse(&r->json, result, path, "%s: %s", what, reason);
 }
 
 static bool read_int_member(Reader *r, const cJSON *object, const char *path, const char *key, long long min, long long max, int *out) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     char at[REALIZATION_JSON_PATH_MAX];
     long long value;
-    child_member(at, path, key);
-    if (!item || !read_long(r, item, at, min, max, &value)) {
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
+    if (!item || !common_json_read_whole(&r->json, item, at, min, max, &value)) {
         return false;
     }
     *out = (int)value;
     return true;
 }
 
-static bool read_bool_member(Reader *r, const cJSON *object, const char *path, const char *key, bool *out) {
-    const cJSON *item = member(r, object, path, key);
-    if (!item) {
-        return false;
-    }
-    if (!cJSON_IsBool(item)) {
-        char at[REALIZATION_JSON_PATH_MAX];
-        child_member(at, path, key);
-        return bad(r, at, "expected true or false");
-    }
-    *out = cJSON_IsTrue(item);
-    return true;
-}
-
 /* A text member; *out is NULL for a JSON null when allow_null. */
 static bool read_text_member(Reader *r, const cJSON *object, const char *path, const char *key, bool allow_null, const char **out) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     if (!item) {
         return false;
     }
     char at[REALIZATION_JSON_PATH_MAX];
-    child_member(at, path, key);
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
     if (allow_null && cJSON_IsNull(item)) {
         *out = NULL;
         return true;
     }
     if (!cJSON_IsString(item) || !item->valuestring) {
-        return bad(r, at, allow_null ? "expected text or null" : "expected text");
+        return common_json_bad(&r->json, at, allow_null ? "expected text or null" : "expected text");
     }
     *out = item->valuestring;
     return true;
@@ -602,35 +516,17 @@ static bool read_text_member(Reader *r, const cJSON *object, const char *path, c
 static bool read_rational(Reader *r, const cJSON *item, const char *path, Rational *out) {
     long long num;
     long long den;
-    /* A time in range is read by the common codec; any other value falls through to the checks that say what is wrong. */
-    if (common_json_rational_read(item, COMMON_RATIONAL_OBJECT, &num, &den) && num >= -1000000000LL && num <= 1000000000LL &&
-        den <= 1000000000LL) {
-        return rational_make(num, den, out) == RATIONAL_OK || bad(r, path, "not a time");
-    }
-    if (!cJSON_IsObject(item)) {
-        return bad(r, path, "expected a time {\"num\", \"den\"}");
-    }
-    char at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *n = member(r, item, path, "num");
-    child_member(at, path, "num");
-    if (!n || !read_long(r, n, at, -1000000000LL, 1000000000LL, &num)) {
-        return false;
-    }
-    const cJSON *d = member(r, item, path, "den");
-    child_member(at, path, "den");
-    if (!d || !read_long(r, d, at, 1, 1000000000LL, &den)) {
-        return false;
-    }
-    return rational_make(num, den, out) == RATIONAL_OK || bad(r, path, "not a time");
+    return common_json_read_time(&r->json, item, path, 1000000000LL, "expected a time {\"num\", \"den\"}", &num, &den) &&
+           (rational_make(num, den, out) == RATIONAL_OK || common_json_bad(&r->json, path, "not a time"));
 }
 
 static bool read_time_member(Reader *r, const cJSON *object, const char *path, const char *key, bool allow_null, bool *present, MusicalTime *out) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     if (!item) {
         return false;
     }
     char at[REALIZATION_JSON_PATH_MAX];
-    child_member(at, path, key);
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
     if (allow_null && cJSON_IsNull(item)) {
         *present = false;
         return true;
@@ -643,21 +539,21 @@ static bool read_time_member(Reader *r, const cJSON *object, const char *path, c
         *present = true;
     }
     if (value.num < 0) {
-        return bad(r, at, "a time is not below 0");
+        return common_json_bad(&r->json, at, "a time is not below 0");
     }
     *out = musical_time_of(value);
     return true;
 }
 
 static bool read_duration_member(Reader *r, const cJSON *object, const char *path, const char *key, Duration *out) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     char at[REALIZATION_JSON_PATH_MAX];
     Rational value;
-    child_member(at, path, key);
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
     if (!item || !read_rational(r, item, at, &value)) {
         return false;
     }
-    return duration_of(value, out) == DURATION_OK || bad(r, at, "a duration is not below 0");
+    return duration_of(value, out) == DURATION_OK || common_json_bad(&r->json, at, "a duration is not below 0");
 }
 
 static bool read_name(Reader *r, const cJSON *object, const char *path, const char *key, const char *const *names, size_t count, int *out) {
@@ -672,8 +568,8 @@ static bool read_name(Reader *r, const cJSON *object, const char *path, const ch
         }
     }
     char at[REALIZATION_JSON_PATH_MAX];
-    child_member(at, path, key);
-    return refuse(r, REALIZATION_ERR_BAD_VALUE, at, "unknown name '%.40s'", text);
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
+    return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, at, "unknown name '%.40s'", text);
 }
 
 static bool read_spelling_member(Reader *r, const cJSON *object, const char *path, bool *spelled, PitchLetter *letter, int *accidental) {
@@ -684,28 +580,28 @@ static bool read_spelling_member(Reader *r, const cJSON *object, const char *pat
     *spelled = text != NULL;
     if (text && !pitch_spelling_parse_name(text, letter, accidental, NULL)) {
         char at[REALIZATION_JSON_PATH_MAX];
-        child_member(at, path, "spelling");
-        return bad(r, at, "expected a note name like \"F#\" or \"Bb\"");
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "spelling");
+        return common_json_bad(&r->json, at, "expected a note name like \"F#\" or \"Bb\"");
     }
     return true;
 }
 
 static bool read_derivation_member(Reader *r, const cJSON *object, const char *path, NoteDerivation *out) {
     memset(out, 0, sizeof(*out));
-    const cJSON *item = member(r, object, path, "derivation");
+    const cJSON *item = common_json_require(&r->json, object, path, "derivation");
     if (!item) {
         return false;
     }
     char at[REALIZATION_JSON_PATH_MAX];
-    child_member(at, path, "derivation");
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "derivation");
     if (cJSON_IsNull(item)) {
         return true;
     }
-    if (!read_object(r, item, at)) {
+    if (!common_json_expect_object(&r->json, item, at)) {
         return false;
     }
     char list_at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *sources = read_array(r, item, at, "sources", list_at);
+    const cJSON *sources = common_json_require_array(&r->json, item, at, "sources", list_at, REALIZATION_JSON_PATH_MAX);
     if (!sources) {
         return false;
     }
@@ -713,9 +609,9 @@ static bool read_derivation_member(Reader *r, const cJSON *object, const char *p
     const cJSON *source;
     cJSON_ArrayForEach(source, sources) {
         char source_at[REALIZATION_JSON_PATH_MAX];
-        child_index(source_at, list_at, index++);
+        common_json_index_path(source_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         if (!cJSON_IsString(source) || !source->valuestring) {
-            return bad(r, source_at, "expected a note id");
+            return common_json_bad(&r->json, source_at, "expected a note id");
         }
         RealizationResult added = note_derivation_add_source(out, source->valuestring);
         if (added != REALIZATION_OK) {
@@ -728,19 +624,19 @@ static bool read_derivation_member(Reader *r, const cJSON *object, const char *p
         return false;
     }
     if (operation[0] != '\0' && note_derivation_set_operation(out, operation) != REALIZATION_OK) {
-        child_member(list_at, at, "operation");
-        return bad(r, list_at, "expected lowercase words joined by hyphens, at most 31 characters");
+        common_json_child_path(list_at, REALIZATION_JSON_PATH_MAX, at, "operation");
+        return common_json_bad(&r->json, list_at, "expected lowercase words joined by hyphens, at most 31 characters");
     }
     if (run[0] != '\0' && note_derivation_set_run(out, run) != REALIZATION_OK) {
-        child_member(list_at, at, "run");
-        return bad(r, list_at, "expected printable text of at most 63 characters");
+        common_json_child_path(list_at, REALIZATION_JSON_PATH_MAX, at, "run");
+        return common_json_bad(&r->json, list_at, "expected printable text of at most 63 characters");
     }
     return true;
 }
 
 static bool copy_id(Reader *r, const char *text, const char *path, char out[REALIZATION_ID_MAX]) {
     if (!realization_id_valid(text)) {
-        return refuse(r, REALIZATION_ERR_BAD_ID, path, "not a valid id: '%.40s'", text);
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_ID, path, "not a valid id: '%.40s'", text);
     }
     snprintf(out, REALIZATION_ID_MAX, "%s", text);
     return true;
@@ -752,7 +648,7 @@ static bool read_id_member(Reader *r, const cJSON *object, const char *path, con
     if (!read_text_member(r, object, path, key, false, &text)) {
         return false;
     }
-    child_member(at, path, key);
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
     return copy_id(r, text, at, out);
 }
 
@@ -766,7 +662,7 @@ static bool parse_signature(const char *text, unsigned *top, unsigned *bottom) {
 static bool read_meter_map(Reader *r, const cJSON *object, const char *path, const char *key, const char *id_text, MeterMap **out) {
     *out = NULL;
     char list_at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *list = read_array(r, object, path, key, list_at);
+    const cJSON *list = common_json_require_array(&r->json, object, path, key, list_at, REALIZATION_JSON_PATH_MAX);
     size_t count = list ? (size_t)cJSON_GetArraySize(list) : 0;
     if (!list) {
         return false;
@@ -778,25 +674,25 @@ static bool read_meter_map(Reader *r, const cJSON *object, const char *path, con
     MeterMapChangePoint *points = calloc(count, sizeof(MeterMapChangePoint));
     bool ok = signatures && points;
     if (!ok) {
-        refuse(r, REALIZATION_ERR_ALLOC, list_at, "out of memory");
+        common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, list_at, "out of memory");
     }
     size_t index = 0;
     const cJSON *item;
     cJSON_ArrayForEach(item, list) {
         char at[REALIZATION_JSON_PATH_MAX];
-        child_index(at, list_at, index);
+        common_json_index_path(at, REALIZATION_JSON_PATH_MAX, list_at, index);
         const char *text;
         unsigned top;
         unsigned bottom;
-        if (!ok || !read_object(r, item, at) || !read_time_member(r, item, at, "position", false, NULL, &points[index].start) ||
+        if (!ok || !common_json_expect_object(&r->json, item, at) || !read_time_member(r, item, at, "position", false, NULL, &points[index].start) ||
             !read_text_member(r, item, at, "time_signature", false, &text)) {
             ok = false;
             break;
         }
         char sig_at[REALIZATION_JSON_PATH_MAX];
-        child_member(sig_at, at, "time_signature");
+        common_json_child_path(sig_at, REALIZATION_JSON_PATH_MAX, at, "time_signature");
         if (!parse_signature(text, &top, &bottom)) {
-            ok = bad(r, sig_at, "expected a time signature like \"3/4\"");
+            ok = common_json_bad(&r->json, sig_at, "expected a time signature like \"3/4\"");
             break;
         }
         int exponent = 0;
@@ -806,7 +702,7 @@ static bool read_meter_map(Reader *r, const cJSON *object, const char *path, con
         NoteValue *unit = NULL;
         TimeSignatureResult made;
         if (note_value_create(exponent, &unit) != NOTE_VALUE_OK) {
-            ok = refuse(r, REALIZATION_ERR_ALLOC, sig_at, "out of memory");
+            ok = common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, sig_at, "out of memory");
             break;
         }
         const cJSON *groups = cJSON_GetObjectItemCaseSensitive(item, "groups");
@@ -815,17 +711,17 @@ static bool read_meter_map(Reader *r, const cJSON *object, const char *path, con
             size_t group_count = 0;
             const cJSON *group;
             char groups_at[REALIZATION_JSON_PATH_MAX];
-            child_member(groups_at, at, "groups");
+            common_json_child_path(groups_at, REALIZATION_JSON_PATH_MAX, at, "groups");
             if (!cJSON_IsArray(groups) || cJSON_GetArraySize(groups) < 1 || (size_t)cJSON_GetArraySize(groups) > TIME_SIGNATURE_MAX_GROUPS) {
                 note_value_destroy(unit);
-                ok = bad(r, groups_at, "expected 1 to 16 groups");
+                ok = common_json_bad(&r->json, groups_at, "expected 1 to 16 groups");
                 break;
             }
             cJSON_ArrayForEach(group, groups) {
                 long long value;
                 char group_at[REALIZATION_JSON_PATH_MAX];
-                child_index(group_at, groups_at, group_count);
-                if (!read_long(r, group, group_at, 1, TIME_SIGNATURE_MAX_GROUP_UNITS, &value)) {
+                common_json_index_path(group_at, REALIZATION_JSON_PATH_MAX, groups_at, group_count);
+                if (!common_json_read_whole(&r->json, group, group_at, 1, TIME_SIGNATURE_MAX_GROUP_UNITS, &value)) {
                     ok = false;
                     break;
                 }
@@ -841,7 +737,7 @@ static bool read_meter_map(Reader *r, const cJSON *object, const char *path, con
         }
         note_value_destroy(unit);
         if (made != TIME_SIGNATURE_OK) {
-            ok = bad(r, sig_at, "not a time signature");
+            ok = common_json_bad(&r->json, sig_at, "not a time signature");
             break;
         }
         points[index].time_signature = signatures[index];
@@ -851,13 +747,13 @@ static bool read_meter_map(Reader *r, const cJSON *object, const char *path, con
     EntityID *id = NULL;
     if (ok) {
         if (entity_id_create(id_text, &id) != ENTITY_ID_OK) {
-            ok = refuse(r, REALIZATION_ERR_ALLOC, list_at, "out of memory");
+            ok = common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, list_at, "out of memory");
         } else {
             MeterMapResult made = meter_map_create(id, points, count, &map);
             if (made != METER_MAP_OK) {
                 entity_id_destroy(id);
-                ok = made == METER_MAP_ERR_ALLOC ? refuse(r, REALIZATION_ERR_ALLOC, list_at, "out of memory")
-                                                 : bad(r, list_at, "the meter changes must start from 0 and ascend");
+                ok = made == METER_MAP_ERR_ALLOC ? common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, list_at, "out of memory")
+                                                 : common_json_bad(&r->json, list_at, "the meter changes must start from 0 and ascend");
             }
         }
     }
@@ -873,7 +769,7 @@ static bool read_meter_map(Reader *r, const cJSON *object, const char *path, con
 static bool read_tempo_map(Reader *r, const cJSON *object, const char *path, const char *id_text, TempoMap **out) {
     *out = NULL;
     char list_at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *list = read_array(r, object, path, "tempo", list_at);
+    const cJSON *list = common_json_require_array(&r->json, object, path, "tempo", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
@@ -883,7 +779,7 @@ static bool read_tempo_map(Reader *r, const cJSON *object, const char *path, con
     }
     TempoMapChangePoint *points = calloc(count, sizeof(TempoMapChangePoint));
     if (!points) {
-        return refuse(r, REALIZATION_ERR_ALLOC, list_at, "out of memory");
+        return common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, list_at, "out of memory");
     }
     bool ok = true;
     size_t index = 0;
@@ -892,18 +788,18 @@ static bool read_tempo_map(Reader *r, const cJSON *object, const char *path, con
         char at[REALIZATION_JSON_PATH_MAX];
         char quarters_at[REALIZATION_JSON_PATH_MAX];
         Rational quarters;
-        child_index(at, list_at, index);
-        child_member(quarters_at, at, "quarters_per_minute");
+        common_json_index_path(at, REALIZATION_JSON_PATH_MAX, list_at, index);
+        common_json_child_path(quarters_at, REALIZATION_JSON_PATH_MAX, at, "quarters_per_minute");
         const cJSON *tempo;
-        if (!read_object(r, item, at) || !read_time_member(r, item, at, "position", false, NULL, &points[index].start) ||
-            !(tempo = member(r, item, at, "quarters_per_minute")) || !read_rational(r, tempo, quarters_at, &quarters)) {
+        if (!common_json_expect_object(&r->json, item, at) || !read_time_member(r, item, at, "position", false, NULL, &points[index].start) ||
+            !(tempo = common_json_require(&r->json, item, at, "quarters_per_minute")) || !read_rational(r, tempo, quarters_at, &quarters)) {
             ok = false;
             break;
         }
         /* microseconds per quarter = 60,000,000 / quarters per minute, which has to be a whole number of at least 1 */
         long long scaled = quarters.num > 0 ? MICROSECONDS_PER_MINUTE * quarters.den : 0;
         if (quarters.num <= 0 || scaled % quarters.num != 0 || scaled / quarters.num < 1) {
-            ok = bad(r, quarters_at, "the tempo is not a whole number of microseconds per quarter note");
+            ok = common_json_bad(&r->json, quarters_at, "the tempo is not a whole number of microseconds per quarter note");
             break;
         }
         points[index].microseconds_per_quarter = (unsigned long)(scaled / quarters.num);
@@ -914,10 +810,10 @@ static bool read_tempo_map(Reader *r, const cJSON *object, const char *path, con
         EntityID *id = NULL;
         TempoMap *map = NULL;
         if (entity_id_create(id_text, &id) != ENTITY_ID_OK) {
-            ok = refuse(r, REALIZATION_ERR_ALLOC, list_at, "out of memory");
+            ok = common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, list_at, "out of memory");
         } else if (tempo_map_create(id, points, count, &map) != TEMPO_MAP_OK) {
             entity_id_destroy(id);
-            ok = bad(r, list_at, "the tempo changes must start from 0 and ascend");
+            ok = common_json_bad(&r->json, list_at, "the tempo changes must start from 0 and ascend");
         } else {
             *out = map;
         }
@@ -927,7 +823,7 @@ static bool read_tempo_map(Reader *r, const cJSON *object, const char *path, con
 }
 
 static bool read_region(Reader *r, const cJSON *item, const char *path, Region *out) {
-    if (!read_object(r, item, path)) {
+    if (!common_json_expect_object(&r->json, item, path)) {
         return false;
     }
     const char *kind;
@@ -938,16 +834,16 @@ static bool read_region(Reader *r, const cJSON *item, const char *path, Region *
         return false;
     }
     if (strcmp(kind, "tonal") != 0) {
-        child_member(at, path, "kind");
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, at, "region kind '%.40s' is not built", kind);
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "kind");
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, at, "region kind '%.40s' is not built", kind);
     }
     if (!read_int_member(r, item, path, "center", 0, 11, &center) || !read_text_member(r, item, path, "material", false, &material)) {
         return false;
     }
     const PitchMaterial *found = knowledge_snapshot_material(r->knowledge, material);
     if (!found) {
-        child_member(at, path, "material");
-        return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no material has the id '%.60s'", material);
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "material");
+        return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no material has the id '%.60s'", material);
     }
     *out = region_tonal(center, found);
     return true;
@@ -959,11 +855,11 @@ static bool read_span_members(Reader *r, const cJSON *object, const char *path, 
     if (!read_time_member(r, object, path, "start", false, NULL, &start) || !read_time_member(r, object, path, "end", false, NULL, &end)) {
         return false;
     }
-    return time_span_make(start, end, out) == TIME_SPAN_OK || bad(r, path, "the span ends before it starts");
+    return time_span_make(start, end, out) == TIME_SPAN_OK || common_json_bad(&r->json, path, "the span ends before it starts");
 }
 
 static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *movement) {
-    if (!read_object(r, item, path)) {
+    if (!common_json_expect_object(&r->json, item, path)) {
         return false;
     }
     char id[REALIZATION_ID_MAX];
@@ -973,20 +869,20 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
     if (!read_id_member(r, item, path, "id", id) || !read_text_member(r, item, path, "name", true, &name)) {
         return false;
     }
-    const cJSON *role_item = member(r, item, path, "role");
-    child_member(at, path, "role");
+    const cJSON *role_item = common_json_require(&r->json, item, path, "role");
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "role");
     if (!role_item || !cJSON_IsString(role_item) || !line_role_from_name(role_item->valuestring, (LineRole *)&role)) {
-        return role_item ? bad(r, at, "unknown line role") : false;
+        return role_item ? common_json_bad(&r->json, at, "unknown line role") : false;
     }
     Line *line = NULL;
     RealizationResult made = line_create(id, (LineRole)role, name, &line);
     if (made != REALIZATION_OK) {
-        child_member(at, path, name ? "name" : "role");
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, name ? "name" : "role");
         return group_refused(r, made, at, "line");
     }
     bool ok = true;
     char list_at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *relations = read_array(r, item, path, "relations", list_at);
+    const cJSON *relations = common_json_require_array(&r->json, item, path, "relations", list_at, REALIZATION_JSON_PATH_MAX);
     size_t index = 0;
     const cJSON *relation;
     ok = relations != NULL;
@@ -995,13 +891,13 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
         LineRelation value;
         int kind;
         const char *target;
-        child_index(relation_at, list_at, index++);
+        common_json_index_path(relation_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         memset(&value, 0, sizeof(value));
         MusicalTime start;
         MusicalTime end;
         bool has_start = false;
         bool has_end = false;
-        if (!read_object(r, relation, relation_at) || !read_name(r, relation, relation_at, "kind", RELATION_NAMES, COUNT_OF(RELATION_NAMES), &kind) ||
+        if (!common_json_expect_object(&r->json, relation, relation_at) || !read_name(r, relation, relation_at, "kind", RELATION_NAMES, COUNT_OF(RELATION_NAMES), &kind) ||
             !read_text_member(r, relation, relation_at, "target", false, &target) ||
             !read_int_member(r, relation, relation_at, "interval", -1000, 1000, &value.interval) ||
             !read_duration_member(r, relation, relation_at, "delay", &value.delay) ||
@@ -1011,18 +907,18 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
             break;
         }
         value.kind = (LineRelationKind)kind;
-        child_member(at, relation_at, "target");
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, relation_at, "target");
         if (!copy_id(r, target, at, value.target)) {
             ok = false;
             break;
         }
         if (has_start != has_end) {
-            ok = bad(r, relation_at, "a relation names both ends of its span or neither");
+            ok = common_json_bad(&r->json, relation_at, "a relation names both ends of its span or neither");
             break;
         }
         value.has_span = has_start;
         if (has_start && time_span_make(start, end, &value.span) != TIME_SPAN_OK) {
-            ok = bad(r, relation_at, "the span ends before it starts");
+            ok = common_json_bad(&r->json, relation_at, "the span ends before it starts");
             break;
         }
         RealizationResult added = line_add_relation(line, &value);
@@ -1031,16 +927,16 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
             break;
         }
     }
-    const cJSON *notes = ok ? read_array(r, item, path, "notes", list_at) : NULL;
+    const cJSON *notes = ok ? common_json_require_array(&r->json, item, path, "notes", list_at, REALIZATION_JSON_PATH_MAX) : NULL;
     ok = ok && notes != NULL;
     index = 0;
     const cJSON *note;
     cJSON_ArrayForEach(note, notes) {
         char note_at[REALIZATION_JSON_PATH_MAX];
         LineNote value;
-        child_index(note_at, list_at, index++);
+        common_json_index_path(note_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         memset(&value, 0, sizeof(value));
-        if (!ok || !read_object(r, note, note_at) || !read_id_member(r, note, note_at, "id", value.id) ||
+        if (!ok || !common_json_expect_object(&r->json, note, note_at) || !read_id_member(r, note, note_at, "id", value.id) ||
             !read_time_member(r, note, note_at, "onset", false, NULL, &value.onset) ||
             !read_duration_member(r, note, note_at, "duration", &value.duration) || !read_int_member(r, note, note_at, "midi", 0, 127, &value.midi) ||
             !read_spelling_member(r, note, note_at, &value.spelled, &value.letter, &value.accidental) ||
@@ -1050,7 +946,7 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
         }
         RealizationResult added = line_add_note(line, &value);
         if (added != REALIZATION_OK) {
-            child_member(at, note_at, added == REALIZATION_ERR_BAD_ID || added == REALIZATION_ERR_DUPLICATE_ID ? "id" : "onset");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, note_at, added == REALIZATION_ERR_BAD_ID || added == REALIZATION_ERR_DUPLICATE_ID ? "id" : "onset");
             ok = group_refused(r, added, at, "note");
             break;
         }
@@ -1058,7 +954,7 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
     if (ok) {
         RealizationResult added = movement_add_line(movement, line);
         if (added != REALIZATION_OK) {
-            child_member(at, path, "id");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "id");
             ok = group_refused(r, added, at, "line");
         }
     }
@@ -1069,7 +965,7 @@ static bool read_line(Reader *r, const cJSON *item, const char *path, Movement *
 }
 
 static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *movement) {
-    if (!read_object(r, item, path)) {
+    if (!common_json_expect_object(&r->json, item, path)) {
         return false;
     }
     char id[REALIZATION_ID_MAX];
@@ -1089,7 +985,7 @@ static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *
     PerformerPart *part = NULL;
     RealizationResult made = performer_part_create(id, instrument, name, number, players, staves, program, &part);
     if (made != REALIZATION_OK) {
-        child_member(at, path, "name");
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "name");
         return group_refused(r, made, at, "part");
     }
     bool ok = true;
@@ -1102,11 +998,11 @@ static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *
         RealizationResult set = performer_part_set_local_meter_map(part, local);
         if (set != REALIZATION_OK) {
             meter_map_destroy(local);
-            child_member(at, path, "local_meter");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "local_meter");
             ok = group_refused(r, set, at, "local meter");
         }
     }
-    const cJSON *pedals = ok ? read_array(r, item, path, "pedals", list_at) : NULL;
+    const cJSON *pedals = ok ? common_json_require_array(&r->json, item, path, "pedals", list_at, REALIZATION_JSON_PATH_MAX) : NULL;
     ok = ok && pedals != NULL;
     size_t index = 0;
     const cJSON *pedal;
@@ -1114,15 +1010,15 @@ static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *
         char pedal_at[REALIZATION_JSON_PATH_MAX];
         PedalMarking marking;
         const char *kind;
-        child_index(pedal_at, list_at, index++);
-        if (!ok || !read_object(r, pedal, pedal_at) || !read_text_member(r, pedal, pedal_at, "kind", false, &kind) ||
+        common_json_index_path(pedal_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
+        if (!ok || !common_json_expect_object(&r->json, pedal, pedal_at) || !read_text_member(r, pedal, pedal_at, "kind", false, &kind) ||
             !read_span_members(r, pedal, pedal_at, &marking.span)) {
             ok = false;
             break;
         }
         if (strcmp(kind, "sustain") != 0) {
-            child_member(at, pedal_at, "kind");
-            ok = bad(r, at, "expected \"sustain\"");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, pedal_at, "kind");
+            ok = common_json_bad(&r->json, at, "expected \"sustain\"");
             break;
         }
         marking.kind = PEDAL_SUSTAIN;
@@ -1132,28 +1028,28 @@ static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *
             break;
         }
     }
-    const cJSON *notes = ok ? read_array(r, item, path, "notes", list_at) : NULL;
+    const cJSON *notes = ok ? common_json_require_array(&r->json, item, path, "notes", list_at, REALIZATION_JSON_PATH_MAX) : NULL;
     ok = ok && notes != NULL;
     index = 0;
     const cJSON *note;
     cJSON_ArrayForEach(note, notes) {
         char note_at[REALIZATION_JSON_PATH_MAX];
         PerformerNote value;
-        child_index(note_at, list_at, index++);
+        common_json_index_path(note_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         memset(&value, 0, sizeof(value));
-        if (!ok || !read_object(r, note, note_at) || !read_id_member(r, note, note_at, "id", value.id) ||
+        if (!ok || !common_json_expect_object(&r->json, note, note_at) || !read_id_member(r, note, note_at, "id", value.id) ||
             !read_time_member(r, note, note_at, "onset", false, NULL, &value.onset) ||
             !read_duration_member(r, note, note_at, "duration", &value.duration) || !read_int_member(r, note, note_at, "midi", 0, 127, &value.midi) ||
             !read_spelling_member(r, note, note_at, &value.spelled, &value.letter, &value.accidental) ||
             !read_int_member(r, note, note_at, "staff", 1, 4, &value.staff) || !read_int_member(r, note, note_at, "voice", 1, 1000, &value.voice) ||
-            !read_derivation_member(r, note, note_at, &value.derivation) || !read_bool_member(r, note, note_at, "edited", &value.edited) ||
-            !read_bool_member(r, note, note_at, "detached", &value.detached) || !read_bool_member(r, note, note_at, "review", &value.review)) {
+            !read_derivation_member(r, note, note_at, &value.derivation) || !common_json_require_bool(&r->json, note, note_at, "edited", &value.edited) ||
+            !common_json_require_bool(&r->json, note, note_at, "detached", &value.detached) || !common_json_require_bool(&r->json, note, note_at, "review", &value.review)) {
             ok = false;
             break;
         }
         RealizationResult added = performer_part_add_note(part, &value);
         if (added != REALIZATION_OK) {
-            child_member(at, note_at, added == REALIZATION_ERR_BAD_ID || added == REALIZATION_ERR_DUPLICATE_ID ? "id" : "staff");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, note_at, added == REALIZATION_ERR_BAD_ID || added == REALIZATION_ERR_DUPLICATE_ID ? "id" : "staff");
             ok = group_refused(r, added, at, "note");
             break;
         }
@@ -1161,7 +1057,7 @@ static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *
     if (ok) {
         RealizationResult added = movement_add_part(movement, part);
         if (added != REALIZATION_OK) {
-            child_member(at, path, "id");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "id");
             ok = group_refused(r, added, at, "part");
         }
     }
@@ -1172,46 +1068,46 @@ static bool read_part(Reader *r, const cJSON *item, const char *path, Movement *
 }
 
 static bool read_assignment(Reader *r, const cJSON *item, const char *path, Movement *movement) {
-    if (!read_object(r, item, path)) {
+    if (!common_json_expect_object(&r->json, item, path)) {
         return false;
     }
     ScoringAssignment value;
     memset(&value, 0, sizeof(value));
     int kind;
     if (!read_id_member(r, item, path, "id", value.id) || !read_id_member(r, item, path, "line", value.line) ||
-        !read_id_member(r, item, path, "part", value.part) || !read_bool_member(r, item, path, "whole", &value.whole)) {
+        !read_id_member(r, item, path, "part", value.part) || !common_json_require_bool(&r->json, item, path, "whole", &value.whole)) {
         return false;
     }
     if (!value.whole && !read_span_members(r, item, path, &value.span)) {
         return false;
     }
     if (!read_int_member(r, item, path, "staff", 1, 4, &value.staff) || !read_int_member(r, item, path, "voice", 1, 1000, &value.voice) ||
-        !read_bool_member(r, item, path, "divisi", &value.divisi)) {
+        !common_json_require_bool(&r->json, item, path, "divisi", &value.divisi)) {
         return false;
     }
     char at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *transform = member(r, item, path, "transform");
-    child_member(at, path, "transform");
-    if (!transform || !read_object(r, transform, at) || !read_name(r, transform, at, "kind", TRANSFORM_NAMES, COUNT_OF(TRANSFORM_NAMES), &kind) ||
+    const cJSON *transform = common_json_require(&r->json, item, path, "transform");
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "transform");
+    if (!transform || !common_json_expect_object(&r->json, transform, at) || !read_name(r, transform, at, "kind", TRANSFORM_NAMES, COUNT_OF(TRANSFORM_NAMES), &kind) ||
         !read_int_member(r, transform, at, "octaves", -4, 4, &value.transform.octaves) ||
         !read_int_member(r, transform, at, "semitones", -127, 127, &value.transform.semitones) ||
         !read_int_member(r, transform, at, "steps", -127, 127, &value.transform.steps)) {
         return false;
     }
     value.transform.kind = (ScoringTransformKind)kind;
-    child_member(at, path, "id");
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "id");
     RealizationResult added = movement_add_assignment(movement, &value);
     if (added != REALIZATION_OK) {
         return group_refused(r, added, at, "assignment");
     }
     /* The line and the part are named by id: they are read by now. */
     if (!movement_line_named(movement, value.line)) {
-        child_member(at, path, "line");
-        return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "the movement has no line '%.40s'", value.line);
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "line");
+        return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "the movement has no line '%.40s'", value.line);
     }
     if (!movement_part_named(movement, value.part)) {
-        child_member(at, path, "part");
-        return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "the movement has no part '%.40s'", value.part);
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "part");
+        return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "the movement has no part '%.40s'", value.part);
     }
     return true;
 }
@@ -1228,7 +1124,7 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
     }
     if (meter && movement_set_meter_map(movement, meter) != REALIZATION_OK) {
         meter_map_destroy(meter);
-        return refuse(r, REALIZATION_ERR_ALLOC, path, "out of memory");
+        return common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, path, "out of memory");
     }
     snprintf(map_id, sizeof(map_id), "%s-tempo", id);
     if (!read_tempo_map(r, item, path, map_id, &tempo)) {
@@ -1236,10 +1132,10 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
     }
     if (tempo && movement_set_tempo_map(movement, tempo) != REALIZATION_OK) {
         tempo_map_destroy(tempo);
-        return refuse(r, REALIZATION_ERR_ALLOC, path, "out of memory");
+        return common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, path, "out of memory");
     }
-    const cJSON *home = member(r, item, path, "home");
-    child_member(at, path, "home");
+    const cJSON *home = common_json_require(&r->json, item, path, "home");
+    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "home");
     if (!home) {
         return false;
     }
@@ -1259,12 +1155,12 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
     }
     if (ensemble) {
         RealizationResult set = movement_set_ensemble(movement, ensemble);
-        child_member(at, path, "ensemble");
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, "ensemble");
         if (set != REALIZATION_OK) {
             return group_refused(r, set, at, "ensemble");
         }
     }
-    const cJSON *list = read_array(r, item, path, "key_signatures", list_at);
+    const cJSON *list = common_json_require_array(&r->json, item, path, "key_signatures", list_at, REALIZATION_JSON_PATH_MAX);
     size_t index = 0;
     const cJSON *entry;
     if (!list) {
@@ -1274,9 +1170,9 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
         MovementKeySignature key;
         int mode;
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         memset(&key, 0, sizeof(key));
-        if (!read_object(r, entry, entry_at) || !read_time_member(r, entry, entry_at, "position", false, NULL, &key.position) ||
+        if (!common_json_expect_object(&r->json, entry, entry_at) || !read_time_member(r, entry, entry_at, "position", false, NULL, &key.position) ||
             !read_int_member(r, entry, entry_at, "sharps_flats", -7, 7, &key.sharps_flats) ||
             !read_name(r, entry, entry_at, "mode", KEY_MODE_NAMES, COUNT_OF(KEY_MODE_NAMES), &mode)) {
             return false;
@@ -1287,7 +1183,7 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
             return group_refused(r, added, entry_at, "key signature");
         }
     }
-    list = read_array(r, item, path, "markers", list_at);
+    list = common_json_require_array(&r->json, item, path, "markers", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
@@ -1296,15 +1192,15 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
         MovementMarker marker;
         const char *text;
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         memset(&marker, 0, sizeof(marker));
-        if (!read_object(r, entry, entry_at) || !read_time_member(r, entry, entry_at, "position", false, NULL, &marker.position) ||
+        if (!common_json_expect_object(&r->json, entry, entry_at) || !read_time_member(r, entry, entry_at, "position", false, NULL, &marker.position) ||
             !read_text_member(r, entry, entry_at, "text", false, &text)) {
             return false;
         }
         if (strlen(text) >= sizeof(marker.text)) {
-            child_member(at, entry_at, "text");
-            return bad(r, at, "a marker is at most 63 characters");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, entry_at, "text");
+            return common_json_bad(&r->json, at, "a marker is at most 63 characters");
         }
         snprintf(marker.text, sizeof(marker.text), "%s", text);
         RealizationResult added = movement_add_marker(movement, &marker);
@@ -1312,7 +1208,7 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
             return group_refused(r, added, entry_at, "marker");
         }
     }
-    list = read_array(r, item, path, "played", list_at);
+    list = common_json_require_array(&r->json, item, path, "played", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
@@ -1320,8 +1216,8 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
     cJSON_ArrayForEach(entry, list) {
         TimeSpan span;
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
-        if (!read_object(r, entry, entry_at) || !read_span_members(r, entry, entry_at, &span)) {
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
+        if (!common_json_expect_object(&r->json, entry, entry_at) || !read_span_members(r, entry, entry_at, &span)) {
             return false;
         }
         RealizationResult added = movement_add_played_span(movement, span);
@@ -1329,7 +1225,7 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
             return group_refused(r, added, entry_at, "played span");
         }
     }
-    list = read_array(r, item, path, "compound_parts", list_at);
+    list = common_json_require_array(&r->json, item, path, "compound_parts", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
@@ -1338,23 +1234,23 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
         MovementPart part;
         const char *name;
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         memset(&part, 0, sizeof(part));
-        if (!read_object(r, entry, entry_at) || !read_id_member(r, entry, entry_at, "id", part.id) ||
+        if (!common_json_expect_object(&r->json, entry, entry_at) || !read_id_member(r, entry, entry_at, "id", part.id) ||
             !read_text_member(r, entry, entry_at, "name", false, &name) || !read_span_members(r, entry, entry_at, &part.span)) {
             return false;
         }
         if (strlen(name) >= sizeof(part.name)) {
-            child_member(at, entry_at, "name");
-            return bad(r, at, "a name is at most 63 characters");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, entry_at, "name");
+            return common_json_bad(&r->json, at, "a name is at most 63 characters");
         }
         snprintf(part.name, sizeof(part.name), "%s", name);
-        const cJSON *part_home = member(r, entry, entry_at, "home");
+        const cJSON *part_home = common_json_require(&r->json, entry, entry_at, "home");
         if (!part_home) {
             return false;
         }
         if (!cJSON_IsNull(part_home)) {
-            child_member(at, entry_at, "home");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, entry_at, "home");
             part.has_home = true;
             if (!read_region(r, part_home, at, &part.home)) {
                 return false;
@@ -1365,38 +1261,38 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
             return group_refused(r, added, entry_at, "compound part");
         }
     }
-    list = read_array(r, item, path, "lines", list_at);
+    list = common_json_require_array(&r->json, item, path, "lines", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
     index = 0;
     cJSON_ArrayForEach(entry, list) {
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         if (!read_line(r, entry, entry_at, movement)) {
             return false;
         }
     }
-    list = read_array(r, item, path, "parts", list_at);
+    list = common_json_require_array(&r->json, item, path, "parts", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
     index = 0;
     cJSON_ArrayForEach(entry, list) {
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         if (!read_part(r, entry, entry_at, movement)) {
             return false;
         }
     }
-    list = read_array(r, item, path, "assignments", list_at);
+    list = common_json_require_array(&r->json, item, path, "assignments", list_at, REALIZATION_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
     index = 0;
     cJSON_ArrayForEach(entry, list) {
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         if (!read_assignment(r, entry, entry_at, movement)) {
             return false;
         }
@@ -1405,8 +1301,8 @@ static bool read_movement_body(Reader *r, const cJSON *item, const char *path, M
 }
 
 static bool read_work(Reader *r, const cJSON *document, Work **out) {
-    const cJSON *item = member(r, document, "", "work");
-    if (!item || !read_object(r, item, "work")) {
+    const cJSON *item = common_json_require(&r->json, document, "", "work");
+    if (!item || !common_json_expect_object(&r->json, item, "work")) {
         return false;
     }
     char id[REALIZATION_ID_MAX];
@@ -1426,19 +1322,19 @@ static bool read_work(Reader *r, const cJSON *document, Work **out) {
     bool ok = true;
     if (ensemble) {
         RealizationResult set = work_set_ensemble(work, ensemble);
-        child_member(at, "work", "ensemble");
+        common_json_child_path(at, REALIZATION_JSON_PATH_MAX, "work", "ensemble");
         ok = set == REALIZATION_OK || group_refused(r, set, at, "ensemble");
     }
     char list_at[REALIZATION_JSON_PATH_MAX];
-    const cJSON *list = ok ? read_array(r, item, "work", "material", list_at) : NULL;
+    const cJSON *list = ok ? common_json_require_array(&r->json, item, "work", "material", list_at, REALIZATION_JSON_PATH_MAX) : NULL;
     ok = ok && list != NULL;
     size_t index = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, list) {
         char entry_at[REALIZATION_JSON_PATH_MAX];
-        child_index(entry_at, list_at, index++);
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
         if (!cJSON_IsString(entry) || !entry->valuestring) {
-            ok = bad(r, entry_at, "expected a material reference like \"form:binary\"");
+            ok = common_json_bad(&r->json, entry_at, "expected a material reference like \"form:binary\"");
             break;
         }
         RealizationResult added = work_add_material(work, entry->valuestring);
@@ -1447,15 +1343,15 @@ static bool read_work(Reader *r, const cJSON *document, Work **out) {
             break;
         }
     }
-    list = ok ? read_array(r, item, "work", "movements", list_at) : NULL;
+    list = ok ? common_json_require_array(&r->json, item, "work", "movements", list_at, REALIZATION_JSON_PATH_MAX) : NULL;
     ok = ok && list != NULL;
     index = 0;
     cJSON_ArrayForEach(entry, list) {
         char entry_at[REALIZATION_JSON_PATH_MAX];
         char movement_id[REALIZATION_ID_MAX];
         const char *movement_title;
-        child_index(entry_at, list_at, index++);
-        if (!ok || !read_object(r, entry, entry_at) || !read_id_member(r, entry, entry_at, "id", movement_id) ||
+        common_json_index_path(entry_at, REALIZATION_JSON_PATH_MAX, list_at, index++);
+        if (!ok || !common_json_expect_object(&r->json, entry, entry_at) || !read_id_member(r, entry, entry_at, "id", movement_id) ||
             !read_text_member(r, entry, entry_at, "title", true, &movement_title)) {
             ok = false;
             break;
@@ -1474,7 +1370,7 @@ static bool read_work(Reader *r, const cJSON *document, Work **out) {
         RealizationResult added = work_add_movement(work, movement);
         if (added != REALIZATION_OK) {
             movement_destroy(movement);
-            child_member(at, entry_at, "id");
+            common_json_child_path(at, REALIZATION_JSON_PATH_MAX, entry_at, "id");
             ok = group_refused(r, added, at, "movement");
             break;
         }
@@ -1495,7 +1391,10 @@ RealizationResult realization_work_from_json(const KnowledgeSnapshot *knowledge,
         set_error(error, "", "a knowledge snapshot, a text and an out are required");
         return REALIZATION_ERR_NULL;
     }
-    Reader reader = {error, false, REALIZATION_OK, knowledge};
+    Reader reader;
+    common_json_reader_init(&reader.json, error ? error->path : NULL, REALIZATION_JSON_PATH_MAX, error ? error->message : NULL,
+                            error ? sizeof(error->message) : 0, REALIZATION_ERR_BAD_VALUE, "missing required member");
+    reader.knowledge = knowledge;
     const char *end = NULL;
     cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
     if (!document) {
@@ -1503,18 +1402,18 @@ RealizationResult realization_work_from_json(const KnowledgeSnapshot *knowledge,
         return REALIZATION_ERR_BAD_VALUE;
     }
     if (!cJSON_IsObject(document)) {
-        bad(&reader, "", "expected a JSON object");
+        common_json_bad(&reader.json, "", "expected a JSON object");
     } else {
         const cJSON *format = cJSON_GetObjectItemCaseSensitive(document, "format");
         const cJSON *version = cJSON_GetObjectItemCaseSensitive(document, "format_version");
         if (!cJSON_IsString(format) || strcmp(format->valuestring, FORMAT_NAME) != 0) {
-            bad(&reader, "format", "expected \"" FORMAT_NAME "\"");
+            common_json_bad(&reader.json, "format", "expected \"" FORMAT_NAME "\"");
         } else if (!cJSON_IsNumber(version) || version->valuedouble != (double)URSATZ_REALIZATION_FORMAT_VERSION) {
-            bad(&reader, "format_version", "expected the format version 1");
+            common_json_bad(&reader.json, "format_version", "expected the format version 1");
         } else {
             read_work(&reader, document, out);
         }
     }
     cJSON_Delete(document);
-    return reader.failed ? reader.result : REALIZATION_OK;
+    return reader.json.failed ? (RealizationResult)reader.json.code : REALIZATION_OK;
 }
