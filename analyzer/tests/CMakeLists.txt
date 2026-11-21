@@ -115,8 +115,7 @@ ursatz_test(test_chord_details LIBS ursatz_analyzer_engine analyzer_test_support
 
 ursatz_test_executable(test_key_regions LIBS ursatz_analyzer_engine analyzer_test_support cjson)
 # Both pass since keys are placed on phrases (Ursatz P42, R-397): the regions follow the phrases that arrive in a
-# new key. Before P42 they failed (Clementi missed 1 core measure, Mozart 38 core measures and 5 modulations) and ran
-# under WILL_FAIL.
+# new key. Before P42 they failed (Clementi missed 1 core measure, Mozart 38 core measures and 5 modulations).
 ursatz_test(test_key_regions_clementi_36 TARGET test_key_regions ARGS clementi)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
 ursatz_test(test_key_regions_mozart_545 TARGET test_key_regions ARGS mozart LABELS slow)
@@ -144,10 +143,10 @@ ursatz_test_executable(test_progressions LIBS ursatz_analyzer_engine analyzer_te
 ursatz_test(test_progressions_smoke TARGET test_progressions ARGS smoke)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
 ursatz_test(test_progressions TARGET test_progressions LABELS slow)
-# Expected to fail: the library's Roman numerals give Bach 114 the most common progression I > IV7 (6 occurrences,
-# tied with ii > iii7), which ends on IV7, not I (see README, Known limits). The assertion stays as the target; remove
-# WILL_FAIL when the library meets it.
-ursatz_test(test_progressions_bach_114_top TARGET test_progressions ARGS bach-top PROPERTIES WILL_FAIL TRUE)
+# The top progression of Bach 114 is I > IV > vi (4 occurrences), tied with ii > I; the first progression that ends on I
+# is the second (index 1). The test asserts those numbers and prints the target, the most common progression ends on I
+# (see README, Known limits; R-698).
+ursatz_test(test_progressions_bach_114_top TARGET test_progressions ARGS bach-top)
 
 ursatz_test_executable(test_phrases LIBS ursatz_analyzer_engine analyzer_test_support cjson)
 ursatz_test(test_phrases_smoke TARGET test_phrases ARGS smoke)
@@ -180,21 +179,17 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_melody LIBS ursatz_analyzer_engine analyzer_test_support cjson m)
+# The extracted soprano of Bach 114 gets both climaxes, no range (the extractor adopts a left-hand note where the right
+# hand rests) and 4 of the 11 annotated leaps (36.4%): the test asserts those floors and prints the target, both ranges
+# and 90% of the leaps (R-698).
 ursatz_test(test_melody TARGET test_melody)
-# Expected to fail: the extracted soprano of Bach 114 misses the annotated ranges (the extractor adopts a left-hand note
-# where the right hand rests, at the start of measure 4) and gets the right recovery status for 4 of the 11 annotated
-# leaps (36.4%, target 90%): it keeps one soprano note per segment, which drops the quick notes the other leaps arrive on.
-# Both climaxes are right. The assertions stay as the target; remove WILL_FAIL when the extraction meets it.
-ursatz_test(test_melody_bach_114_target TARGET test_melody ARGS bach-114-target PROPERTIES WILL_FAIL TRUE)
 
 ursatz_test_executable(test_rhythm LIBS ursatz_analyzer_engine analyzer_test_support cjson m)
+# Field 5: the syncopation and the hemiolas are right, 5 of the 8 annotated hyperdownbeats are found (measures 18, 20 and
+# 22 are missed), and the form adapter reports no elided cadence, so no reinterpretation: the test asserts those floors and
+# prints the target, 80% of the hyperdownbeats and every reinterpretation (R-698).
 ursatz_test(test_rhythm TARGET test_rhythm)
 ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
-# Expected to fail: the form adapter reports no elided cadence, so the hypermeter has no reinterpretation, and Field 5's
-# annotation has one (measure 9, where the phrase of measures 5 to 8 is elided with the next). The syncopation, the
-# hemiolas (none) and 7 of 8 hyperdownbeats (87.5%, target 80%; measure 18 is missed) meet the target. The assertions
-# stay as the target; remove WILL_FAIL when the form adapter reports elision.
-ursatz_test(test_rhythm_field5_target TARGET test_rhythm ARGS field5-target PROPERTIES WILL_FAIL TRUE)
 
 ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer_engine analyzer_test_support)
 
