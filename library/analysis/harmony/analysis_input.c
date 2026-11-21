@@ -4,32 +4,45 @@
 #include <string.h>
 
 #include "analysis/harmony/analysis_six_four.h"
+#include "theory/tonality/seventh_rules.h"
+#include "theory/tonality/triad_rules.h"
 
 typedef struct {
-    int intervals[HARMONY_SEGMENT_MAX_INTERVALS];
+    StandardTonalityTriadQuality triad;            /* the quality, when the chord has three tones */
+    StandardTonalitySeventhQuality seventh;        /* the quality, when it has four */
     size_t count;
     HarmonyAppliedQuality applied_quality; /* when the set is a quality an applied chord can have */
     bool applied_possible;
 } Shape;
 
+/* The intervals of each shape are the owner's (triad_rules.h, seventh_rules.h); only the map to an applied quality is here. */
 static const Shape SHAPES[] = {
-    {{0, 4, 7, 0}, 3, HARMONY_APPLIED_MAJOR_TRIAD, true},
-    {{0, 3, 7, 0}, 3, HARMONY_APPLIED_MAJOR_TRIAD, false},
-    {{0, 3, 6, 0}, 3, HARMONY_APPLIED_DIMINISHED_TRIAD, true},
-    {{0, 4, 8, 0}, 3, HARMONY_APPLIED_MAJOR_TRIAD, false},
-    {{0, 4, 7, 10}, 4, HARMONY_APPLIED_DOMINANT_SEVENTH, true},
-    {{0, 4, 7, 11}, 4, HARMONY_APPLIED_DOMINANT_SEVENTH, false},
-    {{0, 3, 7, 10}, 4, HARMONY_APPLIED_DOMINANT_SEVENTH, false},
-    {{0, 3, 6, 10}, 4, HARMONY_APPLIED_HALF_DIMINISHED_SEVENTH, true},
-    {{0, 3, 6, 9}, 4, HARMONY_APPLIED_FULLY_DIMINISHED_SEVENTH, true}};
+    {STANDARD_TONALITY_TRIAD_MAJOR, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR, 3, HARMONY_APPLIED_MAJOR_TRIAD, true},
+    {STANDARD_TONALITY_TRIAD_MINOR, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR, 3, HARMONY_APPLIED_MAJOR_TRIAD, false},
+    {STANDARD_TONALITY_TRIAD_DIMINISHED, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR, 3, HARMONY_APPLIED_DIMINISHED_TRIAD, true},
+    {STANDARD_TONALITY_TRIAD_AUGMENTED, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR, 3, HARMONY_APPLIED_MAJOR_TRIAD, false},
+    {STANDARD_TONALITY_TRIAD_MAJOR, STANDARD_TONALITY_SEVENTH_MAJOR_MINOR, 4, HARMONY_APPLIED_DOMINANT_SEVENTH, true},
+    {STANDARD_TONALITY_TRIAD_MAJOR, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR, 4, HARMONY_APPLIED_DOMINANT_SEVENTH, false},
+    {STANDARD_TONALITY_TRIAD_MAJOR, STANDARD_TONALITY_SEVENTH_MINOR_MINOR, 4, HARMONY_APPLIED_DOMINANT_SEVENTH, false},
+    {STANDARD_TONALITY_TRIAD_MAJOR, STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED, 4, HARMONY_APPLIED_HALF_DIMINISHED_SEVENTH,
+     true},
+    {STANDARD_TONALITY_TRIAD_MAJOR, STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED, 4,
+     HARMONY_APPLIED_FULLY_DIMINISHED_SEVENTH, true}};
+
+/* The shape's intervals above the root. */
+static bool shape_intervals(const Shape *shape, int out[HARMONY_SEGMENT_MAX_INTERVALS]) {
+    return shape->count == 3 ? standard_tonality_triad_quality_semitones(shape->triad, out)
+                             : standard_tonality_seventh_quality_semitones(shape->seventh, out);
+}
 
 static const Shape *shape_of(const HarmonySegmentInput *input) {
     if (input->interval_count != 3 && input->interval_count != 4) {
         return NULL;
     }
     for (size_t i = 0; i < sizeof(SHAPES) / sizeof(SHAPES[0]); i++) {
-        if (SHAPES[i].count == input->interval_count &&
-            memcmp(SHAPES[i].intervals, input->intervals, SHAPES[i].count * sizeof(int)) == 0) {
+        int intervals[HARMONY_SEGMENT_MAX_INTERVALS];
+        if (SHAPES[i].count == input->interval_count && shape_intervals(&SHAPES[i], intervals) &&
+            memcmp(intervals, input->intervals, SHAPES[i].count * sizeof(int)) == 0) {
             return &SHAPES[i];
         }
     }
