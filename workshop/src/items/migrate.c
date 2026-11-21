@@ -68,18 +68,6 @@ static UrsatzStatus fail(Run *run, UrsatzStatus status, const char *path, const 
     return ursatz_error_set(run->error, status, path, "%s", message);
 }
 
-/* Makes the parent folder of path. */
-static bool make_parent(const char *path) {
-    char parent[PATH_BYTES];
-    snprintf(parent, sizeof(parent), "%s", path);
-    char *slash = strrchr(parent, '/');
-    if (!slash) {
-        return true;
-    }
-    *slash = '\0';
-    return common_dir_make(parent, NULL) == URSATZ_OK;
-}
-
 /* --- building layout 1 ------------------------------------------------------------------------------------------------ */
 
 /* Writes object (stamped as format, owned by the caller) as <build>/<relative>. */
@@ -89,7 +77,7 @@ static UrsatzStatus put_json(Run *run, const char *relative, const char *format,
         return URSATZ_OK;
     }
     char path[PATH_BYTES];
-    if (!common_path_join(path, PATH_BYTES, run->build, relative) || !make_parent(path)) {
+    if (!common_path_join(path, PATH_BYTES, run->build, relative) || common_dir_make_parent(path, NULL) != URSATZ_OK) {
         return fail(run, URSATZ_ERR_IO, relative, "cannot make the folder of %s", relative);
     }
     UrsatzStatus written = workshop_format_write(path, format, object, run->error);
@@ -108,7 +96,7 @@ static UrsatzStatus copy_file(Run *run, const char *source, const char *relative
     UrsatzStatus written = URSATZ_OK;
     if (!run->dry) {
         char path[PATH_BYTES];
-        if (!common_path_join(path, PATH_BYTES, run->build, relative) || !make_parent(path)) {
+        if (!common_path_join(path, PATH_BYTES, run->build, relative) || common_dir_make_parent(path, NULL) != URSATZ_OK) {
             written = fail(run, URSATZ_ERR_IO, relative, "cannot make the folder of %s", relative);
         } else {
             written = common_file_write_atomic(path, data, size, run->error);

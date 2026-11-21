@@ -47,11 +47,7 @@ static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
 
 /* Moves the file from over to: the bytes are written atomically (fsynced) and from is removed. */
 static bool replace_file(const char *from, const char *to) {
-    char *data = NULL;
-    size_t size = 0;
-    bool ok = common_file_read(from, &data, &size, NULL) == URSATZ_OK &&
-              common_file_write_atomic(to, data, size, NULL) == URSATZ_OK;
-    free(data);
+    bool ok = common_file_copy(from, to, NULL) == URSATZ_OK;
     remove(from);
     return ok;
 }

@@ -992,10 +992,7 @@ static bool copy_folder(const char *from, const char *to) {
         } else if (common_path_is_dir(source)) {
             ok = common_dir_make(target, NULL) == URSATZ_OK && copy_folder(source, target);
         } else {
-            char *data = NULL;
-            size_t size = 0;
-            ok = common_file_read(source, &data, &size, NULL) == URSATZ_OK && common_file_write_atomic(target, data, size, NULL) == URSATZ_OK;
-            free(data);
+            ok = common_file_copy(source, target, NULL) == URSATZ_OK;
         }
     }
     common_names_free(&names);

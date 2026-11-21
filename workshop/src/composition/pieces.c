@@ -24,16 +24,6 @@
 
 #define PATH_BYTES 800
 
-/* Copies the file whole, atomically (common_file_write_atomic). */
-static bool copy_file(const char *from, const char *to) {
-    char *data = NULL;
-    size_t size = 0;
-    bool ok = common_file_read(from, &data, &size, NULL) == URSATZ_OK &&
-              common_file_write_atomic(to, data, size, NULL) == URSATZ_OK;
-    free(data);
-    return ok;
-}
-
 /* --- the request --------------------------------------------------------- */
 
 /* The request is the body's own (R-650): the resolver replaces its references (composition/request_resolve.c). A piece is
@@ -555,7 +545,7 @@ static UrsatzStatus carry_request(const char *from_dir, const char *dir, UrsatzE
             char name[96];
             snprintf(name, sizeof(name), "theme-%s.plan.json", common_json_string(section, "id"));
             if (!common_path_join(path, sizeof(path), from_dir, name) || !common_path_join(copy, sizeof(copy), dir, name) ||
-                !copy_file(path, copy) || !set_string(fill, "plan", copy)) {
+                common_file_copy(path, copy, NULL) != URSATZ_OK || !set_string(fill, "plan", copy)) {
                 workshop_error_printf(error, "the plan of the theme in section %s could not be copied", common_json_string(section, "id"));
                 result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
             }
@@ -564,7 +554,7 @@ static UrsatzStatus carry_request(const char *from_dir, const char *dir, UrsatzE
     if (result == URSATZ_OK && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "style"))) {
         snprintf(path, sizeof(path), "%s/brief.style.json", from_dir);
         snprintf(copy, sizeof(copy), "%s/brief.style.json", dir);
-        if (!copy_file(path, copy) || !set_string(request, "style", copy)) {
+        if (common_file_copy(path, copy, NULL) != URSATZ_OK || !set_string(request, "style", copy)) {
             workshop_error_text(error, "the style file of the version could not be copied");
             result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
         }

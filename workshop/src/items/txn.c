@@ -92,17 +92,6 @@ bool workshop_txn_aside_path(const char *kind, long long seq, const char *final_
     return written > 0 && (size_t)written < size;
 }
 
-static bool make_parent(const char *path) {
-    char parent[PATH_BYTES];
-    snprintf(parent, sizeof(parent), "%s", path);
-    char *slash = strrchr(parent, '/');
-    if (!slash) {
-        return true;
-    }
-    *slash = '\0';
-    return common_dir_make(parent, NULL) == URSATZ_OK;
-}
-
 static char *copy_text(const char *text) {
     return common_strdup(text ? text : "");
 }
@@ -200,7 +189,7 @@ static UrsatzStatus add_write(WorkshopTxn *txn, const char *pending, const char 
 
 UrsatzStatus workshop_txn_stage_folder(WorkshopTxn *txn, const char *final_path, const char **out_pending) {
     char pending[PATH_BYTES];
-    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || !make_parent(pending)) {
+    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || common_dir_make_parent(pending, NULL) != URSATZ_OK) {
         return URSATZ_ERR_IO;
     }
     common_dir_remove(pending, NULL);
@@ -219,7 +208,7 @@ UrsatzStatus workshop_txn_stage_folder(WorkshopTxn *txn, const char *final_path,
 
 UrsatzStatus workshop_txn_adopt_folder(WorkshopTxn *txn, const char *folder, const char *final_path, const char **out_pending) {
     char pending[PATH_BYTES];
-    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || !make_parent(pending)) {
+    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || common_dir_make_parent(pending, NULL) != URSATZ_OK) {
         return URSATZ_ERR_IO;
     }
     common_dir_remove(pending, NULL);
@@ -238,7 +227,7 @@ UrsatzStatus workshop_txn_adopt_folder(WorkshopTxn *txn, const char *folder, con
 
 UrsatzStatus workshop_txn_stage_file(WorkshopTxn *txn, const char *final_path, const void *data, size_t size) {
     char pending[PATH_BYTES];
-    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || !make_parent(pending)) {
+    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || common_dir_make_parent(pending, NULL) != URSATZ_OK) {
         return URSATZ_ERR_IO;
     }
     UrsatzStatus written = common_file_write_atomic(pending, data, size, NULL);

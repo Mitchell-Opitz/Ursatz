@@ -26,12 +26,8 @@ static char *read_text(const char *path) {
 }
 
 static void copy_file(const char *from, const char *to) {
-    char *data = NULL;
-    size_t size = 0;
     UrsatzError error;
-    assert(common_file_read(from, &data, &size, &error) == URSATZ_OK);
-    assert(common_file_write_atomic(to, data, size, &error) == URSATZ_OK);
-    free(data);
+    assert(common_file_copy(from, to, &error) == URSATZ_OK);
 }
 
 static const char *text_member(const cJSON *object, const char *name) {
