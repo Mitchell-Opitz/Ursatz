@@ -208,3 +208,8 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)
 ursatz_test(workshop_restore SOURCES test_restore.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)
+
+# The settings resolver (P66 B4): scope files written by hand, the order and sources of the scopes, the switches, the profile chain and every override action.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_resolve)
+ursatz_test(workshop_settings_resolve SOURCES test_settings_resolve.c LIBS ursatz_workshop_internal ursatz_test_support VALGRIND
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_resolve)
