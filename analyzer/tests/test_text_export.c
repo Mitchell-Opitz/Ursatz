@@ -243,6 +243,42 @@ static void check_pickup_piece(void) {
     piece_release(&piece);
 }
 
+/* A subverted cadence prints its text: the library's abbreviation for it would be EV. */
+static void check_subverted_cadence(void) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/pickup.musicxml", URSATZ_MUSICXML_DIR);
+    Piece piece;
+    if (!piece_load(&piece, path, "pickup.musicxml")) {
+        CHECKF(false, "cannot analyze %s", path);
+        return;
+    }
+    const char *from = "\"imperfect-authentic\"";
+    const char *to = "\"subverted\"";
+    char *changed = malloc(strlen(piece.document) + 1);
+    CHECKF(changed != NULL, "allocation");
+    if (changed) {
+        const char *in = piece.document;
+        char *out = changed;
+        const char *hit;
+        while ((hit = strstr(in, from)) != NULL) {
+            memcpy(out, in, (size_t)(hit - in));
+            out += hit - in;
+            memcpy(out, to, strlen(to));
+            out += strlen(to);
+            in = hit + strlen(from);
+        }
+        strcpy(out, in);
+        char *original = piece.document;
+        piece.document = changed;
+        char *whole = export_range(&piece, NULL, 0, 0);
+        CHECKF(whole && block_has(whole, "3", " cadence subverted m4 @1 c="), "a subverted cadence prints subverted");
+        free(whole);
+        piece.document = original;
+        free(changed);
+    }
+    piece_release(&piece);
+}
+
 static void check_triplet_piece(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/triplet.musicxml", URSATZ_MUSICXML_DIR);
@@ -419,6 +455,7 @@ static void check_refusals(void) {
 
 int main(void) {
     check_pickup_piece();
+    check_subverted_cadence();
     check_triplet_piece();
     check_bach_piece();
     check_repeat_pieces();
