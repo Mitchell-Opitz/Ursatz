@@ -393,10 +393,8 @@ const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, 
         ideas[3] = &spec->broken;
         ideas[4] = &spec->head;
     }
-    for (size_t i = 0; i < IDEAS; i++) {
-        if (rational_cmp(ideas[i]->length, spec->span[i].length) > 0) {
-            return "an idea is longer than its bars";
-        }
+    if (!grow_ideas_fit(ideas, spec->span, IDEAS)) {
+        return "an idea is longer than its bars";
     }
     if (spec->retransition ? spec->repeated.note_count >= spec->liquidated.note_count
                            : spec->liquidated.note_count >= spec->source.note_count) {
@@ -421,16 +419,7 @@ PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquida
         return PLAN_ERR_BAD_PAYLOAD;
     }
     GrowBuild build;
-    memset(&build, 0, sizeof(build));
-    build.plan = plan;
-    build.request = &request.theme;
-    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    build.cadence.params.cadence = request.theme.cadence;
-    build.material = plan_node_parent(plan, request.theme.source);
-    build.material_span = plan_node_span(plan, build.material);
-    build.source = request.theme.source;
-    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.theme.bar,
-                                          spec->retransition ? RETRANSITION_MOTIVE_BARS : MOTIVE_BARS);
+    grow_build_init(&build, plan, &request.theme, spec->retransition ? RETRANSITION_MOTIVE_BARS : MOTIVE_BARS);
 
     /* The phrase over the section, with the chords and the bass over all of it: V prolonged over the pedal. */
     NodeId phrase;

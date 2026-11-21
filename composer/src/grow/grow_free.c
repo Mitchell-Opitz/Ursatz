@@ -351,15 +351,7 @@ PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *sp
         return PLAN_ERR_BAD_PAYLOAD;
     }
     GrowBuild build;
-    memset(&build, 0, sizeof(build));
-    build.plan = plan;
-    build.request = &request.theme;
-    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    build.cadence.params.cadence = request.theme.cadence;
-    build.material = plan_node_parent(plan, request.theme.source);
-    build.material_span = plan_node_span(plan, build.material);
-    build.source = request.theme.source;
-    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.theme.bar, spec->count - 1);
+    grow_build_init(&build, plan, &request.theme, spec->count - 1);
 
     /* The phrase over the section, with the chords and the bass over all of it. */
     NodeId phrase;

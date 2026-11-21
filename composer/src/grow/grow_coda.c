@@ -263,10 +263,8 @@ const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *
     const Motive *ideas[IDEAS] = {&spec->source,     &spec->source,   spec->augmented ? &spec->augment : &spec->source,
                                   &spec->liquidated, &spec->repeated, &spec->head,
                                   &spec->tone};
-    for (size_t i = 0; i < IDEAS; i++) {
-        if (rational_cmp(ideas[i]->length, spec->idea_span[i].length) > 0) {
-            return "an idea is longer than its bars";
-        }
+    if (!grow_ideas_fit(ideas, spec->idea_span, IDEAS)) {
+        return "an idea is longer than its bars";
     }
     if (spec->liquidated.note_count >= spec->source.note_count) {
         return "fragment 1 not shorter than the basic idea";
@@ -313,16 +311,7 @@ PlanResult grow_coda_apply(Plan *plan, FillTarget target, const GrowCodaSpec *sp
         return PLAN_ERR_BAD_PAYLOAD;
     }
     GrowBuild build;
-    memset(&build, 0, sizeof(build));
-    build.plan = plan;
-    build.request = &request.theme;
-    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    build.cadence.params.cadence = request.theme.cadence;
-    build.material = plan_node_parent(plan, request.theme.source);
-    build.material_span = plan_node_span(plan, build.material);
-    build.source = request.theme.source;
-    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.theme.bar,
-                                          MOTIVE_BARS + (spec->augmented ? 1 : 0));
+    grow_build_init(&build, plan, &request.theme, MOTIVE_BARS + (spec->augmented ? 1 : 0));
 
     /* The motive nodes, bar by bar from slot_base: m1 (when augmented), m2, m3, the head and the tonic. */
     NodeId nodes[IDEAS];

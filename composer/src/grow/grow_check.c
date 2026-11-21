@@ -220,6 +220,30 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     return form == PHRASE_LEVEL_FORM_PERIOD ? judge_period(spec, soft) : judge_hybrid(spec, soft);
 }
 
+bool grow_ideas_fit(const Motive *const *ideas, const PlanSpan *spans, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        if (rational_cmp(ideas[i]->length, spans[i].length) > 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The check of a candidate whose judge gave `hard` (NULL when it holds every hard rule) and the soft share `soft`; reason names the rules. */
+static bool judge_result(const char *hard, const Soft *soft, const char *reason, FillCheck *out) {
+    memset(out, 0, sizeof(*out));
+    if (hard) {
+        out->hard_violation = true;
+        out->score_denominator = 1;
+        snprintf(out->reason, sizeof(out->reason), "%s", hard);
+        return true;
+    }
+    out->score_numerator = soft->held;
+    out->score_denominator = soft->total ? soft->total : 1;
+    snprintf(out->reason, sizeof(out->reason), "%s", reason);
+    return true;
+}
+
 bool grow_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                   const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
@@ -231,46 +255,16 @@ bool grow_checker(const Plan *plan, FillTarget target, const FillOperator *opera
     const GrowThemeSpec *spec = candidate->payload;
     Soft soft;
     if (spec && spec->magic == GROW_FREE_MAGIC) {
-        memset(out, 0, sizeof(*out));
-        out->score_denominator = 1;
         const char *hard = grow_free_judge(candidate->payload, &soft.held, &soft.total);
-        if (hard) {
-            out->hard_violation = true;
-            snprintf(out->reason, sizeof(out->reason), "%s", hard);
-            return true;
-        }
-        out->score_numerator = soft.held;
-        out->score_denominator = soft.total ? soft.total : 1;
-        snprintf(out->reason, sizeof(out->reason), "free phrase rules");
-        return true;
+        return judge_result(hard, &soft, "free phrase rules", out);
     }
     if (spec && spec->magic == GROW_LIQUIDATE_MAGIC) {
-        memset(out, 0, sizeof(*out));
-        out->score_denominator = 1;
         const char *hard = grow_liquidate_judge(candidate->payload, &soft.held, &soft.total);
-        if (hard) {
-            out->hard_violation = true;
-            snprintf(out->reason, sizeof(out->reason), "%s", hard);
-            return true;
-        }
-        out->score_numerator = soft.held;
-        out->score_denominator = soft.total ? soft.total : 1;
-        snprintf(out->reason, sizeof(out->reason), "liquidation rules");
-        return true;
+        return judge_result(hard, &soft, "liquidation rules", out);
     }
     if (spec && spec->magic == GROW_CODA_MAGIC) {
-        memset(out, 0, sizeof(*out));
-        out->score_denominator = 1;
         const char *hard = grow_coda_judge(candidate->payload, &soft.held, &soft.total);
-        if (hard) {
-            out->hard_violation = true;
-            snprintf(out->reason, sizeof(out->reason), "%s", hard);
-            return true;
-        }
-        out->score_numerator = soft.held;
-        out->score_denominator = soft.total ? soft.total : 1;
-        snprintf(out->reason, sizeof(out->reason), "coda rules");
-        return true;
+        return judge_result(hard, &soft, "coda rules", out);
     }
     if (!spec || spec->magic != GROW_PAYLOAD_MAGIC) {
         return false;

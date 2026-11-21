@@ -606,6 +606,13 @@ bool grow_read_section_target(const Plan *plan, FillTarget target, GrowThemeRequ
 /* Whether the span of theme is `bars` whole bars that start on a barline of the meter lane that starts at meter_start. */
 bool grow_whole_bars(const GrowThemeRequest *theme, Rational meter_start, size_t bars);
 
+/* Sets up the GrowBuild of a coda, a liquidation or a free phrase over theme: its plan, cadence, the material the source is in, and
+   the first bar of the material `bars` motive slots are free from (slot_base). */
+void grow_build_init(GrowBuild *build, Plan *plan, const GrowThemeRequest *theme, size_t bars);
+
+/* Whether each of count ideas is no longer than its span (the hard rule "an idea is longer than its bars"). */
+bool grow_ideas_fit(const Motive *const *ideas, const PlanSpan *spans, size_t count);
+
 /* How many notes a liquidation drops of a motive of count notes: one draw, 1 to half of them (at least 1), fewer than all. */
 size_t grow_draw_drop(FillRng *rng, size_t count);
 
