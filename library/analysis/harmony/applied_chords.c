@@ -4,7 +4,9 @@
 #include <string.h>
 
 #include "theory/tonality/roman_numeral_analysis_rules.h"
+#include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/triad_in_key_rules.h"
+#include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/tonality/common_practice_materials.h"
@@ -31,7 +33,6 @@ static const int MINOR_TARGETS[5] = {3, 4, 5, 6, 7};
 
 typedef struct {
     int root_offset;              /* the root's semitones above the target's root */
-    int intervals[4];
     size_t interval_count;
     AppliedChordKind kind;
     bool seventh;
@@ -40,16 +41,26 @@ typedef struct {
     StandardTonalitySeventhQuality seventh_quality;
 } Shape;
 
-/* In the order of tie-breaking: V, V7, vii-diminished, vii-diminished-7. */
+/* In the order of tie-breaking: V, V7, vii-diminished, vii-diminished-7. The intervals are the owner's: the triad or seventh
+   quality names them (triad_rules.h, seventh_rules.h). */
 static const Shape SHAPES[4] = {
-    {7, {0, 4, 7, 0}, 3, APPLIED_CHORD_KIND_SECONDARY_DOMINANT, false, 5, STANDARD_TONALITY_TRIAD_MAJOR,
+    {7, 3, APPLIED_CHORD_KIND_SECONDARY_DOMINANT, false, 5, STANDARD_TONALITY_TRIAD_MAJOR,
      STANDARD_TONALITY_SEVENTH_MAJOR_MINOR},
-    {7, {0, 4, 7, 10}, 4, APPLIED_CHORD_KIND_SECONDARY_DOMINANT, true, 5, STANDARD_TONALITY_TRIAD_MAJOR,
+    {7, 4, APPLIED_CHORD_KIND_SECONDARY_DOMINANT, true, 5, STANDARD_TONALITY_TRIAD_MAJOR,
      STANDARD_TONALITY_SEVENTH_MAJOR_MINOR},
-    {11, {0, 3, 6, 0}, 3, APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE, false, 7, STANDARD_TONALITY_TRIAD_DIMINISHED,
+    {11, 3, APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE, false, 7, STANDARD_TONALITY_TRIAD_DIMINISHED,
      STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED},
-    {11, {0, 3, 6, 9}, 4, APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE, true, 7, STANDARD_TONALITY_TRIAD_DIMINISHED,
+    {11, 4, APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE, true, 7, STANDARD_TONALITY_TRIAD_DIMINISHED,
      STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED}};
+
+/* The shape's intervals above its root: three for a triad, four for a seventh. */
+static void shape_intervals(const Shape *shape, int out[4]) {
+    if (shape->seventh) {
+        standard_tonality_seventh_quality_semitones(shape->seventh_quality, out);
+    } else {
+        standard_tonality_triad_quality_semitones(shape->triad, out);
+    }
+}
 
 StandardTonalityAppliedConfig standard_tonality_applied_config_default(void) {
     StandardTonalityAppliedConfig config;
@@ -144,7 +155,9 @@ static bool fill_applied_reading(StandardTonalityRomanKeyMode mode, const Shape 
     if (!built || !target_numeral(mode, target, &reading.applied_target)) {
         return false;
     }
-    reading.inversion = member_in_bass(bass_pitch_class, root, shape->intervals, shape->interval_count);
+    int intervals[4];
+    shape_intervals(shape, intervals);
+    reading.inversion = member_in_bass(bass_pitch_class, root, intervals, shape->interval_count);
     reading.applied = true;
     reading.romantext_spelling = mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
     reading.applied_kind = shape->kind;
@@ -163,9 +176,11 @@ bool standard_tonality_read_applied_chord(const StandardTonalityChordInput *inpu
         if (input->interval_count != shape->interval_count) {
             continue;
         }
+        int intervals[4];
+        shape_intervals(shape, intervals);
         bool same = true;
         for (size_t i = 0; i < shape->interval_count; i++) {
-            same = same && input->intervals[i] == shape->intervals[i];
+            same = same && input->intervals[i] == intervals[i];
         }
         if (!same) {
             continue;
@@ -260,7 +275,9 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
             if (input->weights[root] <= 0.0) {
                 continue; /* the root does not sound */
             }
-            double score = score_chord(input->weights, total, root, shape->intervals, shape->interval_count,
+            int intervals[4];
+            shape_intervals(shape, intervals);
+            double score = score_chord(input->weights, total, root, intervals, shape->interval_count,
                                        input->sounding_bass_pitch_class, config);
             if (score > diatonic_score && (!found || score > best_score)) {
                 found = true;
