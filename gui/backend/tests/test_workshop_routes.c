@@ -18,7 +18,7 @@
 #include "ursatz_check.h"
 #include "test_http.h"
 
-#define PORT "18779"
+#define PORT "18780"
 
 /* A percent-encoded copy of text (every byte but a letter, a digit, "-", "_" and "."). */
 static char *encode(const char *text) {
