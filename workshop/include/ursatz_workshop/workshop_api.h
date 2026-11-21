@@ -43,6 +43,8 @@ typedef struct Workshop Workshop;
 #define WORKSHOP_FORMAT_STYLE "ursatz-style"
 #define WORKSHOP_FORMAT_LINK_RUN "ursatz-link-run"
 #define WORKSHOP_FORMAT_RENDER "ursatz-render"
+#define WORKSHOP_FORMAT_SETTINGS "ursatz-settings"                   /* one scope of the settings (R-671, R-676) */
+#define WORKSHOP_FORMAT_SETTINGS_SNAPSHOT "ursatz-settings-snapshot" /* how a composed version's settings resolved */
 #define WORKSHOP_FORMAT_JOURNAL "ursatz-journal" /* the first line of journal/journal.jsonl; the file is lines, not one document */
 
 /*

@@ -74,6 +74,22 @@ bool workshop_layout_style_dir(const char *style, char *out, size_t size) {
     return workshop_layout_id_ok(style) && fits(snprintf(out, size, WORKSHOP_DIR_STYLES "/%s", style), size);
 }
 
+bool workshop_layout_taste_file(const char *name, char *out, size_t size) {
+    return workshop_layout_id_ok(name) && fits(snprintf(out, size, WORKSHOP_DIR_TASTE "/%s.json", name), size);
+}
+
+bool workshop_layout_style_settings_file(const char *style, char *out, size_t size) {
+    return workshop_layout_id_ok(style) && fits(snprintf(out, size, WORKSHOP_DIR_STYLES "/%s/" WORKSHOP_FILE_SETTINGS, style), size);
+}
+
+bool workshop_layout_project_settings_file(const char *project, char *out, size_t size) {
+    return workshop_layout_id_ok(project) && fits(snprintf(out, size, WORKSHOP_DIR_PROJECTS "/%s/" WORKSHOP_FILE_SETTINGS, project), size);
+}
+
+bool workshop_layout_item_settings_file(const char *project, const char *item, char *out, size_t size) {
+    return workshop_layout_item_file(project, item, WORKSHOP_FILE_SETTINGS, out, size);
+}
+
 bool workshop_layout_render_dir(const char *item, int version, char *out, size_t size) {
     return workshop_layout_id_ok(item) && version >= 1 && fits(snprintf(out, size, WORKSHOP_DIR_RENDERS "/%s/v%d", item, version), size);
 }

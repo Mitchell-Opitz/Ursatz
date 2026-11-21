@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-settings.v1.schema.json",
+  "title": "Settings scope, format version 1",
+  "description": "settings/taste/<name>.json, settings/styles/<id>/settings.json, projects/<id>/settings.json and projects/<id>/items/<id>/settings.json: one scope of the settings (R-671). values holds dotted setting keys; overrides and off only in a project or item file (off's project only in an item file), taste never in a taste file, kept only in a taste file.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "scope",
+    "values"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-settings"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^(taste|style|project|item):[A-Za-z0-9_-]{1,64}$",
+      "description": "taste:<name>, style:<id>, project:<id> or item:<id>"
+    },
+    "values": {
+      "type": "object",
+      "description": "the settings of the scope: dotted key to value"
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule",
+          "action"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "off",
+              "reverse",
+              "reweight",
+              "waive"
+            ]
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "for reweight only"
+          },
+          "note": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "off": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "style",
+          "taste",
+          "project"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "taste": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "the taste profile this scope uses"
+    },
+    "kept": {
+      "type": "array",
+      "description": "a taste file only: what keep as default and import recorded",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "value",
+          "ratings",
+          "note",
+          "actor",
+          "at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {},
+          "ratings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -26,6 +26,11 @@ PLACES = [
     (re.compile(r"^library/collections/[^/]+\.json$"), "ursatz-collection"),
     (re.compile(r"^library/links/[^/]+/run\.json$"), "ursatz-link-run"),
     (re.compile(r"^settings/styles/[^/]+/style\.json$"), "ursatz-style"),
+    (re.compile(r"^settings/styles/[^/]+/settings\.json$"), "ursatz-settings"),
+    (re.compile(r"^settings/taste/[^/]+\.json$"), "ursatz-settings"),
+    (re.compile(r"^projects/[^/]+/settings\.json$"), "ursatz-settings"),
+    (re.compile(r"^projects/[^/]+/items/[^/]+/settings\.json$"), "ursatz-settings"),
+    (re.compile(r"^projects/[^/]+/items/[^/]+/v\d+/settings\.json$"), "ursatz-settings-snapshot"),
     (re.compile(r"^cache/renders/[^/]+/v\d+/render\.json$"), "ursatz-render"),
     (re.compile(r"^ursatz\.json$"), "ursatz-config"),
 ]
