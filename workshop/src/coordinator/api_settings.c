@@ -41,6 +41,18 @@ WORKSHOP_HANDLER(workshop_q_settings_resolve) {
     if (strcmp(request.kind, "theme") != 0 && strcmp(request.kind, "motif") != 0) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/kind", "kind is theme or motif");
     }
+    const cJSON *explore = cJSON_GetObjectItemCaseSensitive(call->params, "explore");
+    if (explore && !cJSON_IsNull(explore)) {
+        const cJSON *seed = cJSON_GetObjectItemCaseSensitive(explore, "seed");
+        const cJSON *distance = cJSON_GetObjectItemCaseSensitive(explore, "distance");
+        if (!cJSON_IsObject(explore) || !cJSON_IsNumber(seed) || seed->valuedouble < 0 || seed->valuedouble > 4294967295.0 ||
+            (distance && !cJSON_IsNull(distance) && (!cJSON_IsNumber(distance) || distance->valuedouble < 1 || distance->valuedouble > 8))) {
+            return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/explore", "explore is {seed: 0 to 4294967295, distance: 1 to 8}");
+        }
+        request.explore = true;
+        request.explore_seed = (unsigned long long)seed->valuedouble;
+        request.explore_distance = cJSON_IsNumber(distance) ? distance->valueint : 0;
+    }
     const cJSON *all = cJSON_GetObjectItemCaseSensitive(call->params, "all");
     if (all && !cJSON_IsNull(all) && !cJSON_IsBool(all)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/all", "all is true or false");

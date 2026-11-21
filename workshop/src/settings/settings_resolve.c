@@ -274,6 +274,95 @@ static UrsatzStatus check_request_off(const cJSON *off, UrsatzError *error) {
     return URSATZ_OK;
 }
 
+/* --- exploring (R-673) ------------------------------------------------------------------------------------------------------------- */
+
+static unsigned long long xorshift64(unsigned long long *state) {
+    unsigned long long x = *state;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    *state = x;
+    return x;
+}
+
+typedef struct {
+    const char *key;
+    size_t index;
+} Candidate;
+
+static int by_key(const void *a, const void *b) {
+    return strcmp(((const Candidate *)a)->key, ((const Candidate *)b)->key);
+}
+
+static bool group_read(const char *kind, const char *key) {
+    if (strncmp(key, "motif.", 6) == 0) {
+        return true;
+    }
+    return strcmp(kind, "theme") == 0 && (strncmp(key, "melody.", 7) == 0 || strncmp(key, "development.", 12) == 0);
+}
+
+/* Picks `distance` of the settings the kind may move and moves them; *moves is the array [{key, from, to}] (the caller's). */
+static UrsatzStatus explore(State *state, const char *kind, unsigned long long seed, int distance, cJSON **moves, UrsatzError *error) {
+    Candidate *candidates = calloc(state->count ? state->count : 1, sizeof(*candidates));
+    size_t count = 0;
+    *moves = cJSON_CreateArray();
+    if (!candidates || !*moves) {
+        free(candidates);
+        return refuse(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    for (size_t i = 0; i < state->count; i++) {
+        const WorkshopSettingKey *key = workshop_settings_key_at(i);
+        bool boolean = strcmp(key->type, "boolean") == 0;
+        bool weight = strcmp(key->type, "integer") == 0 && key->min == 0 && key->max == 20;
+        if (!key->hard && (boolean || weight) && group_read(kind, key->key)) {
+            candidates[count].key = key->key;
+            candidates[count].index = i;
+            count++;
+        }
+    }
+    qsort(candidates, count, sizeof(*candidates), by_key);
+    unsigned long long generator = seed ? seed : 1;
+    UrsatzStatus status = URSATZ_OK;
+    for (int pick = 0; pick < distance && count > 0 && status == URSATZ_OK; pick++) {
+        size_t chosen = (size_t)(xorshift64(&generator) % count);
+        const WorkshopSettingKey *key = workshop_settings_key_at(candidates[chosen].index);
+        Slot *slot = &state->slots[candidates[chosen].index];
+        cJSON *from = slot->value ? cJSON_Duplicate(slot->value, true) : cJSON_CreateNull();
+        cJSON *to = NULL;
+        if (strcmp(key->type, "boolean") == 0) {
+            to = cJSON_CreateBool(!cJSON_IsTrue(slot->value));
+        } else {
+            int value = cJSON_IsNumber(slot->value) ? slot->value->valueint : 0;
+            int moved = value >= 3 ? 0 : (value + 3 < key->max ? value + 3 : key->max);
+            to = cJSON_CreateNumber(moved);
+        }
+        cJSON *record = cJSON_CreateObject();
+        bool ok = from && to && record && cJSON_AddStringToObject(record, "key", key->key) && cJSON_AddItemToObject(record, "from", from) &&
+                  cJSON_AddItemToObject(record, "to", to);
+        if (ok) {
+            from = NULL;
+            to = NULL;
+        }
+        ok = ok && cJSON_AddItemToArray(*moves, record);
+        if (ok) {
+            ok = set_slot(slot, cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(record, "to"), true), true, "explore");
+        } else {
+            cJSON_Delete(from);
+            cJSON_Delete(to);
+            cJSON_Delete(record);
+        }
+        if (!ok) {
+            status = refuse(error, URSATZ_ERR_ALLOC, "", "out of memory");
+        }
+        /* a setting moves once: the last candidate takes the place of the one picked */
+        candidates[chosen] = candidates[count - 1];
+        count--;
+        qsort(candidates, count, sizeof(*candidates), by_key);
+    }
+    free(candidates);
+    return status;
+}
+
 /* --- the answer -------------------------------------------------------------------------------------------------------------------- */
 
 /* Sets the value at a dotted key of a nested document, making the objects on the way. */
@@ -297,7 +386,7 @@ static bool nest(cJSON *document, const char *key, const cJSON *value) {
     return copy && cJSON_AddItemToObject(at, key, copy);
 }
 
-static UrsatzStatus answer(const State *state, const char *taste, const Switches *off, bool all, cJSON **out, UrsatzError *error) {
+static UrsatzStatus answer(const State *state, const char *taste, const Switches *off, bool all, cJSON *explore_record, cJSON **out, UrsatzError *error) {
     cJSON *root = cJSON_CreateObject();
     cJSON *off_list = root ? cJSON_CreateArray() : NULL;
     cJSON *values = off_list ? cJSON_CreateArray() : NULL;
@@ -347,6 +436,11 @@ static UrsatzStatus answer(const State *state, const char *taste, const Switches
     } else if (ok) {
         ok = cJSON_AddNullToObject(root, "document") != NULL;
     }
+    if (ok && explore_record) {
+        ok = cJSON_AddItemToObject(root, "explore", explore_record);
+        explore_record = ok ? NULL : explore_record;
+    }
+    cJSON_Delete(explore_record);
     cJSON_Delete(off_list);
     cJSON_Delete(values);
     cJSON_Delete(document);
@@ -490,9 +584,27 @@ UrsatzStatus workshop_settings_resolve_request(const WorkshopSettingsRequest *re
             }
         }
     }
-    if (status == URSATZ_OK) {
-        status = answer(&state, profile, &off, all, out, error);
+    cJSON *explore_record = NULL;
+    if (status == URSATZ_OK && request->explore) {
+        const WorkshopSettingKey *distance_key = workshop_settings_key_find("explore.distance");
+        const cJSON *resolved = distance_key ? slot_of(&state, distance_key)->value : NULL;
+        int distance = request->explore_distance > 0 ? request->explore_distance : (cJSON_IsNumber(resolved) ? resolved->valueint : 2);
+        cJSON *moves = NULL;
+        status = explore(&state, request->kind ? request->kind : "theme", request->explore_seed, distance, &moves, error);
+        explore_record = cJSON_CreateObject();
+        if (status == URSATZ_OK && (!explore_record || !cJSON_AddNumberToObject(explore_record, "seed", (double)request->explore_seed) ||
+                                    !cJSON_AddNumberToObject(explore_record, "distance", distance) || !cJSON_AddItemToObject(explore_record, "moves", moves))) {
+            status = refuse(error, URSATZ_ERR_ALLOC, "", "out of memory");
+            cJSON_Delete(moves);
+        } else if (status != URSATZ_OK) {
+            cJSON_Delete(moves);
+        }
     }
+    if (status == URSATZ_OK) {
+        status = answer(&state, profile, &off, all, explore_record, out, error);
+        explore_record = NULL;
+    }
+    cJSON_Delete(explore_record);
 done:
     state_free(&state);
     cJSON_Delete(style_file);
