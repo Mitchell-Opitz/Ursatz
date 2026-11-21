@@ -30,8 +30,23 @@ static bool default_string(cJSON *object, const char *name, const char *value) {
     return (item && !cJSON_IsNull(item)) || cJSON_AddStringToObject(object, name, value) != NULL;
 }
 
+/* A motif that is to be stored is written with C as the tonic (R-179): its key is C major or C minor. */
+static UrsatzStatus check_stored_tonic(const cJSON *request, UrsatzError *error) {
+    const cJSON *key = cJSON_GetObjectItemCaseSensitive(request, "key");
+    if (cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0)) {
+        return URSATZ_OK;
+    }
+    return api_fail(error, URSATZ_ERR_REQUEST, "/params/body", "motifs are written with C as the tonic");
+}
+
 static UrsatzStatus validate_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, cJSON *filled,
                                       UrsatzError *error) {
+    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(request, "stored"))) {
+        UrsatzStatus tonic = check_stored_tonic(request, error);
+        if (tonic != URSATZ_OK) {
+            return tonic;
+        }
+    }
     Motive motive;
     MotiveOptions options;
     UrsatzStatus status = api_read_motive(request, "", knowledge, &motive, &options, error);

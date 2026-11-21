@@ -287,8 +287,39 @@ static void test_piece_of_a_form(void) {
     composer_response_destroy(&response);
 }
 
+/* A motive that is to be stored is written in C major or C minor (R-179). */
+static void expect_stored(const char *key_member, bool accepted) {
+    char request[256];
+    snprintf(request, sizeof request, "{\"input\": {\"text\": \"C4:q E4:q G4:h\"}, \"meter\": \"4/4\", \"stored\": true%s}", key_member);
+    ComposerResponse response;
+    UrsatzStatus status = composer_api_validate(test_context(), "motive", request, &response);
+    if (accepted) {
+        if (status != URSATZ_OK) {
+            fprintf(stderr, "stored: %s '%s' at '%s'\n", test_status_name(status), response.error.message, response.error.path);
+        }
+        assert(status == URSATZ_OK && response.json);
+    } else {
+        assert(status == URSATZ_ERR_REQUEST && strcmp(response.error.path, "/params/body") == 0);
+        assert(strstr(response.error.message, "motifs are written with C as the tonic"));
+    }
+    composer_response_destroy(&response);
+}
+
+static void test_stored_motive(void) {
+    expect_stored(", \"key\": \"C major\"", true);
+    expect_stored(", \"key\": \"C minor\"", true);
+    expect_stored(", \"key\": \"D minor\"", false);
+    expect_stored(", \"key\": \"C dorian\"", false);
+    expect_stored("", false);
+    ComposerResponse response;
+    assert(composer_api_validate(test_context(), "motive", "{\"input\": {\"text\": \"C4:q E4:q G4:h\"}, \"meter\": \"4/4\", \"key\": \"D minor\"}", &response) ==
+           URSATZ_OK);
+    composer_response_destroy(&response);
+}
+
 int main(void) {
     test_valid();
+    test_stored_motive();
     test_piece_of_a_form();
     test_plan_refusals();
     test_chord_refusals();

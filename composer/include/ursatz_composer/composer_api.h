@@ -394,6 +394,7 @@ UrsatzStatus composer_api_forms(ComposerResponse *out);
  * composer_api_theme), "piece" (the piece request object, docs/piece-request.md, not the wrapper of composer_api_piece; one of a form with sizes
  * gets the "bars" and "count" of the size it chose and no section defaults) or
  * "random_motive" (of composer_api_random_motive). json: {"request": <the request with the Composer's defaults filled>}: a
+ * motive with "stored": true is refused unless its key is C major or C minor (path /params/body, R-179); a
  * motive gets its "meter", "role", "input" "format" and "form" when it has none and its "harmony" as [{"numeral", "onset"}]
  * (the onset in beats of the meter, as "3/2"); a piece gets the "cadence" of every section that has none and the default
  * ending section; a random motive gets its "seed" and the "mode" and "meter" a "random" drew; a theme comes back as it is

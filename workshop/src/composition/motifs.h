@@ -92,9 +92,11 @@ WorkshopMotifAnalysis workshop_motif_analyze_body(cJSON *version_body, const cJS
 
 /* The rules of the motif requests the routes get. */
 
-/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major" or
- * "C minor" is read as before). Bodies without a motif pass. */
-bool workshop_motif_tonic_ok(const cJSON *version_body);
+/* Asks the Composer whether a motif body may be stored (composer_api_validate with "stored": true): a motif is written with C as
+ * its tonic (R-179), so its material or key text names C major or C minor. DONE for a body without a request-shaped motif (a draft,
+ * or a form the material service judges) and when the Composer cannot run; REFUSED with the Composer's message and path. */
+WorkshopMotifAnalysis workshop_motif_check_stored(const cJSON *version_body, char *refusal, size_t refusal_size, char *refusal_path,
+                                                     size_t refusal_path_size);
 
 /* True when a new version of an item of type "motif" or "theme" has a version note (every such version says what changed); a piece
  * needs none. */

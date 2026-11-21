@@ -203,10 +203,8 @@ static bool add_tone_overrides(cJSON *request, const cJSON *motif) {
   return true;
 }
 
-/* The motive request (composer_api_motive) of a motif: form full, rhythm or contour with notes, meter and pickup, its
-   key when it has one, and its harmony, features, role and tone overrides. NULL on allocation failure or when the motif
-   lacks the members of a request (a draft); nothing is judged here, the Composer refuses a value it does not read. */
-cJSON *workshop_motif_request(const cJSON *motif) {
+/* The request of a motif; without extras only its notes, meter, key and pickup. */
+static cJSON *motif_request(const cJSON *motif, bool extras) {
   const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
   const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
   const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
@@ -221,13 +219,21 @@ cJSON *workshop_motif_request(const cJSON *motif) {
   const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
   cJSON *request = workshop_motif_motive_request(full ? "notes" : NULL, full ? NULL : form->valuestring, notes->valuestring,
                                   meter->valuestring, key, pickup->valuestring);
-  if (!request || !workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
+  if (!request ||
+      (extras && (!workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                                      cJSON_IsString(role) ? role->valuestring : NULL) ||
-      (full && has_key && !add_tone_overrides(request, motif))) {
+                  (full && has_key && !add_tone_overrides(request, motif))))) {
     cJSON_Delete(request);
     return NULL;
   }
   return request;
+}
+
+/* The motive request (composer_api_motive) of a motif: form full, rhythm or contour with notes, meter and pickup, its
+   key when it has one, and its harmony, features, role and tone overrides. NULL on allocation failure or when the motif
+   lacks the members of a request (a draft); nothing is judged here, the Composer refuses a value it does not read. */
+cJSON *workshop_motif_request(const cJSON *motif) {
+  return motif_request(motif, true);
 }
 
 /* ---- variants ------------------------------------------------------------ */
@@ -471,6 +477,40 @@ WorkshopMotifAnalysis workshop_motif_analyze_body(cJSON *version_body, const cJS
   return WORKSHOP_MOTIF_ANALYSIS_DONE;
 }
 
+/* Asks the Composer whether a motif body may be stored (R-179): the request of the motif with "stored": true. */
+WorkshopMotifAnalysis workshop_motif_check_stored(const cJSON *version_body, char *refusal, size_t refusal_size, char *refusal_path,
+                                          size_t refusal_path_size) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  if (!cJSON_IsObject(motif) || !cJSON_IsString(form) ||
+      (strcmp(form->valuestring, "full") != 0 && strcmp(form->valuestring, "rhythm") != 0 &&
+       strcmp(form->valuestring, "contour") != 0)) {
+    return WORKSHOP_MOTIF_ANALYSIS_DONE;
+  }
+  /* Only what names the tonic: the notes, meter, key and pickup; the harmony and the features are judged with the analysis. */
+  cJSON *request = motif_request(motif, false);
+  if (!request) {
+    return WORKSHOP_MOTIF_ANALYSIS_DONE;
+  }
+  if (!cJSON_AddTrueToObject(request, "stored")) {
+    cJSON_Delete(request);
+    return WORKSHOP_MOTIF_ANALYSIS_ALLOC;
+  }
+  WorkshopComposerReply reply;
+  bool called = workshop_motif_validate("motive", request, &reply);
+  cJSON_Delete(request);
+  if (!called) {
+    return WORKSHOP_MOTIF_ANALYSIS_ALLOC;
+  }
+  bool refused = workshop_composer_reply_refused(&reply);
+  if (refused) {
+    snprintf(refusal, refusal_size, "%s", reply.message[0] ? reply.message : "composer could not read the motif");
+    snprintf(refusal_path, refusal_path_size, "%s", reply.path);
+  }
+  workshop_composer_reply_destroy(&reply);
+  return refused ? WORKSHOP_MOTIF_ANALYSIS_REFUSED : WORKSHOP_MOTIF_ANALYSIS_DONE;
+}
+
 /* ---- rules of the routes' motif requests --------------------------------- */
 
 /* Fills error and *http_status for a failure. */
@@ -488,21 +528,6 @@ static bool has_text(const char *text) {
     }
   }
   return false;
-}
-
-/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major"
-   or "C minor" is read as before). Bodies without a motif are left alone. */
-bool workshop_motif_tonic_ok(const cJSON *version_body) {
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
-  if (!cJSON_IsObject(motif)) {
-    return true;
-  }
-  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
-  if (material) {
-    return cJSON_IsString(material) && workshop_composer_vocabulary_has("materials", material->valuestring);
-  }
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
-  return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
 }
 
 bool workshop_motif_version_note_ok(const char *type, const char *note) {
