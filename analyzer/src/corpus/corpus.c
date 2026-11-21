@@ -55,22 +55,6 @@ typedef struct {
     size_t capacity;
 } PieceList;
 
-char *corpus_join(const char *dir, const char *name) {
-    size_t dir_len = strlen(dir);
-    size_t name_len = strlen(name);
-    bool need_slash = dir_len > 0 && dir[dir_len - 1] != '/';
-    char *joined = malloc(dir_len + (need_slash ? 1 : 0) + name_len + 1);
-    if (!joined) {
-        return NULL;
-    }
-    memcpy(joined, dir, dir_len);
-    if (need_slash) {
-        joined[dir_len++] = '/';
-    }
-    memcpy(joined + dir_len, name, name_len + 1);
-    return joined;
-}
-
 bool corpus_make_dirs(const char *path) {
     return common_dir_make(path, NULL) == URSATZ_OK;
 }
@@ -153,8 +137,8 @@ static bool walk_directory(const char *dir, const char *relative, const struct s
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-        char *full = corpus_join(dir, entry->d_name);
-        char *entry_relative = corpus_join(relative, entry->d_name);
+        char *full = common_path_join_alloc(dir, entry->d_name);
+        char *entry_relative = common_path_join_alloc(relative, entry->d_name);
         struct stat info;
         if (!full || !entry_relative) {
             ok = false;
@@ -192,7 +176,7 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
     }
     strcpy(name, relative);
     strcat(name, suffix);
-    char *path = corpus_join(output_dir, name);
+    char *path = common_path_join_alloc(output_dir, name);
     free(name);
     if (!path) {
         return false;
@@ -361,7 +345,7 @@ static char *render_index(const char *input_dir, const char *const *paths, const
    read is URSATZ_ERR_FORMAT. */
 static UrsatzStatus load_previous_index(const char *output_dir, cJSON **out, UrsatzError *error) {
     *out = NULL;
-    char *path = corpus_join(output_dir, INDEX_NAME);
+    char *path = common_path_join_alloc(output_dir, INDEX_NAME);
     if (!path) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, output_dir, "out of memory");
     }
@@ -402,7 +386,7 @@ static bool file_exists(const char *dir, const char *relative, const char *suffi
     }
     strcpy(name, relative);
     strcat(name, suffix);
-    char *path = corpus_join(dir, name);
+    char *path = common_path_join_alloc(dir, name);
     free(name);
     struct stat info;
     bool exists = path && stat(path, &info) == 0 && S_ISREG(info.st_mode);
@@ -456,7 +440,7 @@ static bool reuse_previous(const cJSON *previous, const char *output_dir, const 
 static bool write_index(const char *output_dir, const char *input_dir, const char *const *paths,
                         const PieceRecord *records, size_t count) {
     char *text = render_index(input_dir, paths, records, count);
-    char *final_path = corpus_join(output_dir, INDEX_NAME);
+    char *final_path = common_path_join_alloc(output_dir, INDEX_NAME);
     bool ok = text && final_path && (common_file_write_atomic(final_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     free(final_path);
@@ -480,7 +464,7 @@ UrsatzStatus analyzer_corpus_run(const AnalyzerCorpusOptions *options, AnalyzerC
     char *default_output = NULL;
     const char *output_dir = options->output_dir;
     if (!output_dir) {
-        default_output = corpus_join(options->input_dir, CORPUS_DEFAULT_OUTPUT_NAME);
+        default_output = common_path_join_alloc(options->input_dir, CORPUS_DEFAULT_OUTPUT_NAME);
         if (!default_output) {
             return ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
         }
@@ -516,7 +500,7 @@ UrsatzStatus analyzer_corpus_run(const AnalyzerCorpusOptions *options, AnalyzerC
     size_t done = 0;
     for (; result == URSATZ_OK && done < pieces.count; done++) {
         const char *relative = pieces.paths[done];
-        char *input_path = corpus_join(options->input_dir, relative);
+        char *input_path = common_path_join_alloc(options->input_dir, relative);
         if (!input_path) {
             result = ursatz_error_set(error, URSATZ_ERR_IO, "", "out of memory");
             break;

@@ -9,6 +9,7 @@
 #include <theory/style/style_model_file.h>
 
 #include "base/knowledge.h"
+#include <common/files.h>
 
 typedef struct {
     cJSON *pieces;
@@ -45,19 +46,9 @@ static void collect_piece(const char *path, AnalyzerCorpusPieceStatus status, co
     cJSON_AddItemToArray(collector->pieces, piece);
 }
 
-/* "<dir>/<name>", with one slash. NULL on allocation failure. */
-static char *join(const char *dir, const char *name) {
-    size_t length = strlen(dir);
-    char *path = malloc(length + strlen(name) + 2);
-    if (path) {
-        sprintf(path, "%s%s%s", dir, length > 0 && dir[length - 1] == '/' ? "" : "/", name);
-    }
-    return path;
-}
-
 UrsatzStatus workshop_corpus_run(const char *dir, const char *out, bool resume, cJSON **result, UrsatzError *error) {
     *result = NULL;
-    char *default_out = out ? NULL : join(dir, ".ursatz-corpus");
+    char *default_out = out ? NULL : common_path_join_alloc(dir, ".ursatz-corpus");
     if (!out && !default_out) {
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
@@ -92,8 +83,8 @@ UrsatzStatus workshop_corpus_run(const char *dir, const char *out, bool resume, 
 UrsatzStatus workshop_style_profile(const char *dir, const char *name, const char *model_path, cJSON **result, UrsatzError *error) {
     *result = NULL;
     StyleProfile *profile = style_profile_create();
-    char *index_path = join(dir, "corpus-index.json");
-    char *default_model = model_path ? NULL : join(dir, "style-model.json");
+    char *index_path = common_path_join_alloc(dir, "corpus-index.json");
+    char *default_model = model_path ? NULL : common_path_join_alloc(dir, "style-model.json");
     if (!profile || !index_path || (!model_path && !default_model)) {
         style_profile_destroy(profile);
         free(index_path);

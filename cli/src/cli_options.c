@@ -241,7 +241,7 @@ void cli_print_json(const cJSON *document) {
 /* Writes the text to dir/name; the message names the file. */
 static int write_layer(const char *dir, const char *name, const char *text) {
     char path[1100];
-    if (snprintf(path, sizeof path, "%s/%s", dir, name) >= (int)sizeof path || !text || !cli_write_bytes(path, text, strlen(text))) {
+    if (!common_path_join(path, sizeof path, dir, name) || !text || !cli_write_bytes(path, text, strlen(text))) {
         return cli_fail(CLI_EXIT_WRITE, "cannot write '%s/%s'", dir, name);
     }
     return 0;

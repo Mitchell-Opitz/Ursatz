@@ -17,7 +17,10 @@
 static bool write_layer(const char *dir, const char *relative, const char *text) {
     char path[1200];
     char folder[1200];
-    snprintf(path, sizeof path, "%s/%s", dir, relative);
+    if (!common_path_join(path, sizeof path, dir, relative)) {
+        fprintf(stderr, "Error: cannot write '%s/%s'\n", dir, relative);
+        return false;
+    }
     snprintf(folder, sizeof folder, "%s", path);
     char *slash = strrchr(folder, '/');
     if (slash) {

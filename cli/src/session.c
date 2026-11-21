@@ -10,6 +10,7 @@
 #include "cli_options.h"
 #include "cli_tools.h"
 #include "remote.h"
+#include <common/files.h>
 
 struct CliSession {
     bool local;
@@ -42,12 +43,7 @@ char *cli_path_absolute(const char *path) {
     }
     char here[PATH_MAX];
     const char *base = g_start_directory[0] ? g_start_directory : (getcwd(here, sizeof here) ? here : "");
-    size_t length = strlen(base) + strlen(path) + 2;
-    char *absolute = malloc(length);
-    if (absolute) {
-        snprintf(absolute, length, "%s/%s", base, path);
-    }
-    return absolute;
+    return common_path_join_alloc(base, path);
 }
 
 /* The data folder as an absolute path: realpath of an existing folder, else the starting directory plus the name. */

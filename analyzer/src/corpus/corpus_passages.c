@@ -145,7 +145,7 @@ static bool passage_from_match(const char *corpus_dir, const SimilarMatch *match
     }
     char path[2048];
     char *text = NULL;
-    if (snprintf(path, sizeof path, "%s/%s", corpus_dir, match->document) >= (int)sizeof path || common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
+    if (!common_path_join(path, sizeof path, corpus_dir, match->document) || common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
         return true;
     }
     cJSON *document = cJSON_Parse(text);
