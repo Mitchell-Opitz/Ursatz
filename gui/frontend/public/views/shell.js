@@ -1,3 +1,4 @@
+import ApiRequest from "../core/request.js";
 import ScoreNotes from "../score/score-notes.js";
 import SubjectsPanel from "./subjects-panel.js";
 import TagsPanel from "./tags-panel.js";
@@ -77,9 +78,9 @@ async function drawMusicXmlScore(url, containerEl, statusEl, zoom) {
   statusEl.classList.remove("error");
   containerEl.innerHTML = "";
   try {
-    const res = await fetch(url);
-    const xmlText = await res.text();
-    const problem = ScoreNotes.scoreResponseProblem(res.status, res.headers.get("Content-Type") || "", xmlText);
+    const res = await ApiRequest.sendText(url);
+    const xmlText = res.text;
+    const problem = res.status === 0 ? res.error : ScoreNotes.scoreResponseProblem(res.status, res.contentType, xmlText);
     if (problem) {
       statusEl.textContent = `Could not load score: ${problem}`;
       statusEl.classList.add("error");

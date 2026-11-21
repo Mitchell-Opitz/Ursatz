@@ -308,18 +308,16 @@ function buildNotationRow(data) {
 /* GET a plain-text export (the Analyzer's text, docs/text-export.md). Rejects with an Error carrying the route's
    message when the status is not 200. */
 export async function fetchExportText(url) {
-  let res;
-  try {
-    res = await fetch(url);
-  } catch (error) {
+  const res = await ApiRequest.sendText(url);
+  if (res.status === 0) {
     throw new Error("Could not reach the backend.");
   }
   if (res.ok) {
-    return res.text();
+    return res.text;
   }
   let message = `Export failed (${res.status}).`;
   try {
-    const body = await res.json();
+    const body = JSON.parse(res.text);
     if (body && body.error) {
       message = body.error;
     }
