@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "ezxml.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 #include "model/core/provenance_reference.h"
 #include "model/core/voice_reference.h"
@@ -281,19 +282,11 @@ static bool read_pitch(Ctx *ctx, ezxml_t pitch, XNote *note) {
         fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "<pitch> without a <step> of A to G");
         return false;
     }
-    int semitone = 0;
-    switch (text[0]) {
-        case 'C': note->letter = PITCH_LETTER_C; semitone = 0; break;
-        case 'D': note->letter = PITCH_LETTER_D; semitone = 2; break;
-        case 'E': note->letter = PITCH_LETTER_E; semitone = 4; break;
-        case 'F': note->letter = PITCH_LETTER_F; semitone = 5; break;
-        case 'G': note->letter = PITCH_LETTER_G; semitone = 7; break;
-        case 'A': note->letter = PITCH_LETTER_A; semitone = 9; break;
-        case 'B': note->letter = PITCH_LETTER_B; semitone = 11; break;
-        default:
-            fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "<step> is \"%s\", not A to G", text);
-            return false;
+    if (!pitch_letter_from_char(text[0], &note->letter)) {
+        fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "<step> is \"%s\", not A to G", text);
+        return false;
     }
+    int semitone = pitch_letter_semitone(note->letter);
     long octave = 0;
     if (!read_long(ezxml_child(pitch, "octave"), &octave) || octave < -1 || octave > 20) {
         fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "<pitch> without a usable <octave>");

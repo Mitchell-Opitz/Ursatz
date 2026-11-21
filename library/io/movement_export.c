@@ -10,6 +10,7 @@
 #include "model/core/rational.h"
 #include "model/core/voice_reference.h"
 #include "model/identity/entity_id.h"
+#include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_numeric_value.h"
@@ -50,11 +51,7 @@ static void built_release(Built *built) {
 
 /* The sharp spellings of the twelve pitch classes: what a note with no spelling is written as. */
 static void sharp_spelling(int midi, PitchLetter *letter, int *accidental) {
-    static const PitchLetter LETTERS[12] = {PITCH_LETTER_C, PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
-                                            PITCH_LETTER_F, PITCH_LETTER_G, PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
-    static const int SHARPS[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-    *letter = LETTERS[midi % 12];
-    *accidental = SHARPS[midi % 12];
+    pitch_class_spelling(pitch_class_of_midi(midi), -1, letter, accidental);
 }
 
 /* One NoteEvent and its pitch value; everything is freed again on failure. */
