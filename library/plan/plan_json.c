@@ -488,14 +488,14 @@ char *plan_to_json(const Plan *plan, const PlanProducer *producer, PlanJsonError
 /* ------------------------------------------------------------------ reading */
 
 bool json_fail(JsonReader *reader, PlanResult result, const char *path, const char *format, ...) {
-    if (reader->result == PLAN_OK) {
-        reader->result = result;
+    if (!reader->json.failed) {
+        char message[256];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(message, sizeof(message), format, args);
+        va_end(args);
+        common_json_refuse(&reader->json, (int)result, path, "%s", message);
         if (reader->error) {
-            va_list args;
-            va_start(args, format);
-            vsnprintf(reader->error->message, sizeof(reader->error->message), format, args);
-            va_end(args);
-            snprintf(reader->error->path, sizeof(reader->error->path), "%s", path);
             reader->error->offset = -1;
         }
     }
@@ -507,15 +507,11 @@ bool json_bad_format(JsonReader *reader, const char *path, const char *message) 
 }
 
 void json_child_path(char *out, const char *parent, const char *key) {
-    if (parent[0] == '\0') {
-        snprintf(out, PLAN_JSON_PATH_MAX, "%s", key);
-    } else {
-        snprintf(out, PLAN_JSON_PATH_MAX, "%s.%s", parent, key);
-    }
+    common_json_child_path(out, PLAN_JSON_PATH_MAX, parent, key);
 }
 
 void json_index_path(char *out, const char *parent, size_t index) {
-    snprintf(out, PLAN_JSON_PATH_MAX, "%s[%zu]", parent, index);
+    common_json_index_path(out, PLAN_JSON_PATH_MAX, parent, index);
 }
 
 /* The plan_json_member of object named key, or NULL after reporting it missing (when required) or of the wrong type. */
@@ -524,18 +520,18 @@ const cJSON *plan_json_member(JsonReader *reader, const cJSON *object, const cha
     if (!item && required) {
         char at[PLAN_JSON_PATH_MAX];
         json_child_path(at, path, key);
-        json_bad_format(reader, at, "missing required field");
+        json_bad_format(reader, at, reader->json.missing_text);
     }
     return item;
 }
 
 bool json_read_long(JsonReader *reader, const cJSON *item, const char *path, long min, long max, long *out) {
-    if (!cJSON_IsNumber(item)) {
-        return json_bad_format(reader, path, "expected a number");
-    }
-    double value = item->valuedouble;
-    if (value < (double)min || value > (double)max || (double)(long)value != value) {
-        return json_fail(reader, PLAN_ERR_FORMAT, path, "expected an integer from %ld to %ld", min, max);
+    long long value;
+    if (!common_json_read_whole(&reader->json, item, path, min, max, &value)) {
+        if (reader->error) {
+            reader->error->offset = -1;
+        }
+        return false;
     }
     *out = (long)value;
     return true;
@@ -1025,7 +1021,7 @@ static bool read_function(JsonReader *reader, const cJSON *object, const char *p
     harmony->function = HARMONIC_FUNCTION_TONIC;
     const cJSON *item = plan_json_member(reader, object, path, "function", reader->version == 1);
     if (!item) {
-        return reader->result == PLAN_OK;
+        return !reader->json.failed;
     }
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, "function");
@@ -2111,41 +2107,43 @@ static bool read_derived_from(JsonReader *reader, const cJSON *document, Plan *p
 /* Everything after the version: the metadata, the form, the lane spans and, from version 4, the next note id. */
 static PlanResult read_document_body(JsonReader *reader, const cJSON *document, Plan *plan) {
     if (!read_metadata(reader, document, plan) || !read_derived_from(reader, document, plan)) {
-        return reader->result;
+        return json_result(reader);
     }
     const cJSON *form = plan_json_member(reader, document, "", "form", true);
     if (!form) {
-        return reader->result;
+        return json_result(reader);
     }
     if (!cJSON_IsNull(form) && !build_nodes(reader, plan, form)) {
-        return reader->result;
+        return json_result(reader);
     }
     if (!build_lane_spans(reader, plan, document)) {
-        return reader->result;
+        return json_result(reader);
     }
     if (reader->version >= 4) {
         long next;
         if (!json_read_int_member(reader, document, "", "next_note_id", 1, 0x7fffffffffffffffL, &next)) {
-            return reader->result;
+            return json_result(reader);
         }
         if ((size_t)next <= reader->note_ids->max) {
             json_bad_format(reader, "next_note_id", "must be above every note id");
-            return reader->result;
+            return json_result(reader);
         }
         plan_note_next_id_set(plan, (PlanNoteId)next);
     }
     if (!apply_states(reader, plan, document)) {
-        return reader->result;
+        return json_result(reader);
     }
     return PLAN_OK;
 }
 
 static PlanResult read_document(const cJSON *document, Plan *plan, const CommonPracticeMaterials *materials,
                                 const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK, 0, materials, knowledge, NULL, hooks};
+    JsonReader reader = {error, {0}, 0, materials, knowledge, NULL, hooks};
+    common_json_reader_init(&reader.json, error ? error->path : NULL, PLAN_JSON_PATH_MAX, error ? error->message : NULL,
+                            error ? sizeof(error->message) : 0, PLAN_ERR_FORMAT, "missing required field");
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
-        return reader.result;
+        return json_result(&reader);
     }
     long version;
     if (cJSON_GetObjectItemCaseSensitive(document, "format")) {
@@ -2154,14 +2152,14 @@ static PlanResult read_document(const cJSON *document, Plan *plan, const CommonP
         bool current = cJSON_IsString(format) && strcmp(format->valuestring, PLAN_FORMAT_NAME) == 0;
         if (!current && !(cJSON_IsString(format) && strcmp(format->valuestring, PLAN_FORMAT_NAME_LEGACY) == 0)) {
             json_bad_format(&reader, "format", "expected \"" PLAN_FORMAT_NAME "\"");
-            return reader.result;
+            return json_result(&reader);
         }
         if (!json_read_int_member(&reader, document, "", "format_version", current ? 6 : 2, current ? URSATZ_PLAN_FORMAT_VERSION : 5,
                                   &version)) {
-            return reader.result;
+            return json_result(&reader);
         }
     } else if (!json_read_int_member(&reader, document, "", "schema_version", 1, PLAN_JSON_SCHEMA_VERSION, &version)) {
-        return reader.result;
+        return json_result(&reader);
     }
     reader.version = (int)version;
     struct NoteIdSet note_ids = {NULL, 0, 0, 0};
