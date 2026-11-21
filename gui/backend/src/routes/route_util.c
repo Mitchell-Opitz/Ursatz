@@ -179,25 +179,11 @@ cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_byte
 }
 
 int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
+  /* the one difference from the workshop's table: a body past the size the route takes is 413 */
   if (status == URSATZ_ERR_REQUEST && error && strcmp(error->path, "/body/size") == 0) {
     return 413;
   }
-  switch (status) {
-    case URSATZ_OK:
-      return 200;
-    case URSATZ_ERR_REQUEST:
-      return error && error->path[0] != '\0' ? 422 : 400;
-    case URSATZ_ERR_UNSATISFIABLE:
-      return 422;
-    case URSATZ_ERR_NOT_FOUND:
-      return 404;
-    case URSATZ_ERR_CONFLICT:
-      return 409;
-    case URSATZ_ERR_CANCELLED:
-      return 499;
-    default:
-      return 500;
-  }
+  return workshop_http_status(status, error);
 }
 
 bool ursatz_gui_valid_id(const char *text) {

@@ -215,4 +215,15 @@ int workshop_http_threads(const Workshop *workshop);
 int workshop_job_workers(const Workshop *workshop);
 int workshop_port(const Workshop *workshop);
 
+/*
+ * The HTTP status a failed call answers with (R-639, R-692): OK 200; REQUEST 400, or 422 when the error names a path into the request a
+ * service read (a Composer refusal); UNSATISFIABLE 422; NOT_FOUND 404; CONFLICT 409; CANCELLED 499; FORMAT, IO, ALLOC and INTERNAL 500. error may
+ * be NULL. A path that names the call's own members (workshop_is_call_path) is a 400, so the caller passes NULL for it.
+ */
+int workshop_http_status(UrsatzStatus status, const UrsatzError *error);
+
+/* True for a request path that names a member of the call itself ("/params", "/body", "/target", "/bytes", "/base_version", "/command",
+ * "/actor", "/name", "/query"), whose refusal is a 400, not a member of a request a service read (a 422). */
+bool workshop_is_call_path(const char *path);
+
 #endif

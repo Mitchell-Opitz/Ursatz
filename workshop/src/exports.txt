@@ -21,3 +21,5 @@ workshop_status
 workshop_stop
 workshop_tool
 workshop_tools_open
+workshop_http_status
+workshop_is_call_path
