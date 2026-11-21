@@ -64,6 +64,10 @@ static const QueryEntry kQueries[] = {
     {"subject.list", workshop_q_subject_list},
     {"subject.groups", workshop_q_subject_groups},
     {"subject.get", workshop_q_subject_get},
+    {"settings.resolve", workshop_q_settings_resolve},
+    {"settings.scope", workshop_q_settings_scope},
+    {"settings.list", workshop_q_settings_list},
+    {"settings.keys", workshop_q_settings_keys},
 };
 
 /* --- the table of commands ------------------------------------------------------------------------------------------------------- */

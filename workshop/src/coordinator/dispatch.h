@@ -153,6 +153,12 @@ WORKSHOP_HANDLER(workshop_q_subject_list);
 WORKSHOP_HANDLER(workshop_q_subject_groups);
 WORKSHOP_HANDLER(workshop_q_subject_get);
 
+/* settings (api_settings.c) */
+WORKSHOP_HANDLER(workshop_q_settings_resolve);
+WORKSHOP_HANDLER(workshop_q_settings_scope);
+WORKSHOP_HANDLER(workshop_q_settings_list);
+WORKSHOP_HANDLER(workshop_q_settings_keys);
+
 /* library, collections, styles, links, jobs commands (api_commands_library.c) */
 WORKSHOP_HANDLER(workshop_c_library_import);
 WORKSHOP_HANDLER(workshop_c_library_update);
