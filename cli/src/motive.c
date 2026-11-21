@@ -86,12 +86,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 /* Writes the bytes of an output the response holds to the path the user gave. Returns 0, or the status of the failure. */
 static int write_output(const char *path, const void *bytes, size_t size) {
-    FILE *file = fopen(path, "wb");
-    bool ok = file && (size == 0 || fwrite(bytes, 1, size, file) == size);
-    if (file && fclose(file) != 0) {
-        ok = false;
-    }
-    return ok ? 0 : fail(EXIT_OUTPUT, "cannot write '%s': could not write '%s'", path, path);
+    return cli_write_bytes(path, bytes, size) ? 0 : fail(EXIT_OUTPUT, "cannot write '%s': could not write '%s'", path, path);
 }
 
 /* Adds the members of the command's own options to the request. False when out of memory. */

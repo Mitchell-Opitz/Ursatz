@@ -17,6 +17,7 @@
 #include "workflow.h"
 #include "piece_text.h"
 #include <common/json.h>
+#include <common/files.h>
 
 #define SCHEMA_NAME "ursatz-piece-request"
 #define OUTPUT_MAX 8
@@ -259,14 +260,10 @@ typedef enum {
 
 /* Renames every file written, or removes them all. Returns 0 or the status. */
 static int finish_files(CliPendingFile *pending, size_t count, int status) {
-    for (size_t i = 0; status == 0 && i < count; i++) {
-        if (rename(pending[i].temporary, pending[i].final_path) != 0) {
-            status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
-        }
+    if (status == 0) {
+        return cli_pending_commit(pending, count);
     }
-    if (status != 0) {
-        cli_discard_pending(pending, count);
-    }
+    cli_discard_pending(pending, count);
     return status;
 }
 
@@ -403,20 +400,17 @@ typedef struct {
     char musicxml[PATH_SIZE];
 } VariationFiles;
 
-/* Writes what the document holds to path next to its final name, then renames it. */
+/* Writes what the document holds to path (atomically). */
 static int write_result_file(const cJSON *document, const char *path) {
-    char temporary[PATH_SIZE + 8];
-    snprintf(temporary, sizeof(temporary), "%s.tmp", path);
     char *printed = cJSON_PrintUnformatted(document);
     char *text = printed ? malloc(strlen(printed) + 2) : NULL;
     if (text) {
         sprintf(text, "%s\n", printed);
     }
-    bool ok = text && cli_write_bytes(temporary, text, strlen(text));
+    bool ok = text && cli_write_bytes(path, text, strlen(text));
     cJSON_free(printed);
     free(text);
-    if (!ok || rename(temporary, path) != 0) {
-        remove(temporary);
+    if (!ok) {
         return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", path);
     }
     return 0;
@@ -427,8 +421,9 @@ static int write_variations(const Options *options, cJSON *document, bool json) 
     cJSON *list = cJSON_GetObjectItemCaseSensitive(document, "variations");
     size_t kept = (size_t)cJSON_GetArraySize(list);
     double qpm = document_tempo(cJSON_GetObjectItemCaseSensitive(document, "brief"));
-    if (mkdir(options->out_dir, 0755) != 0 && errno != EEXIST) {
-        return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", options->out_dir, strerror(errno));
+    UrsatzError made = {0};
+    if (common_dir_make(options->out_dir, &made) != URSATZ_OK) {
+        return cli_fail(CLI_EXIT_WRITE, "%s", made.message);
     }
     VariationFiles files[VARIATIONS_MAX];
     CliPendingFile pending[3 * VARIATIONS_MAX];

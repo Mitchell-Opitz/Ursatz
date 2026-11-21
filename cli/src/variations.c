@@ -13,6 +13,7 @@
 #include "cli_options.h"
 #include "cli_params.h"
 #include "workflow.h"
+#include <common/files.h>
 
 /* The most versions one command keeps (VARIATIONS_MAX). */
 #define VARIATIONS_MAX 16
@@ -106,8 +107,9 @@ static cJSON *build_request(const Options *options, cJSON *plan) {
 #define PATH_SIZE 1024
 
 static int make_directory(const char *path) {
-    if (mkdir(path, 0755) != 0 && errno != EEXIST) {
-        return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", path, strerror(errno));
+    UrsatzError made = {0};
+    if (common_dir_make(path, &made) != URSATZ_OK) {
+        return cli_fail(CLI_EXIT_WRITE, "%s", made.message);
     }
     return 0;
 }

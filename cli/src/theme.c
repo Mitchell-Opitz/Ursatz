@@ -162,16 +162,7 @@ static int write_files(const Options *options, const CliResponse *response, cons
         cli_discard_pending(pending, *pending_count);
         return status;
     }
-    for (size_t i = 0; i < *pending_count; i++) {
-        if (rename(pending[i].temporary, pending[i].final_path) != 0) {
-            status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
-            break;
-        }
-    }
-    if (status != 0) {
-        cli_discard_pending(pending, *pending_count);
-    }
-    return status;
+    return cli_pending_commit(pending, *pending_count);
 }
 
 /* --- the output ---------------------------------------------------------------------------------------- */
