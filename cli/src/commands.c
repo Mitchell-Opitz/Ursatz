@@ -57,6 +57,7 @@ static const char *const FLAGS_REGENERATE[] = {"--base", "--format", "--lane", "
 static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
+static const char *const FLAGS_EXPLORE[] = {"--base", "--distance", "--no-wait", "--seed", "--taste", NULL};
 static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--round", "--seed", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
@@ -697,6 +698,16 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz --data ~/ursatz-data rate ses-3f2a --round 1 --seed 1 --rating A=3 --rating B=4 --better B --note \"B is brighter\"\n"
     "  ursatz --data ~/ursatz-data rate item:thm-3f2a@v2 --rating 5",
      FLAGS_RATE, 1, 1, run_rate},
+    {"explore",
+    "explore item:<id> [--distance <n>] [--seed <n>] [--taste <name>] [--base <n>] [--no-wait]",
+     "Compose a theme of the data folder with some settings moved away from your taste",
+    "Composes the theme the address names into its next version as item.compose does, with some settings moved away from the ones you have chosen (R-673): --distance of them (1 to 8, default the setting explore.distance, 2), picked and moved from the seed. The same --seed moves the same settings and makes the same composition; without it the seed is new. --taste names the taste profile to move from. The version's settings.json records the settings that moved. It prints item <id> version <n> when the job is done; --no-wait prints the job's id and returns. --base is the version the command is made against (default: the current one). The data folder is named before the subcommand: ursatz --data <dir> explore item:<id>.\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or a command the workshop refuses (a stale --base, a piece, a distance outside 1 to 8); 2 the folder cannot be opened, the item is not there or the job failed.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data explore item:thm-3f2a --distance 2 --seed 7",
+     FLAGS_EXPLORE, 1, 1, run_explore},
     {"restore",
     "restore item:<id>@v<n> [--base <n>] [--note <text>]",
      "Make the next version of an item a copy of an older one",
