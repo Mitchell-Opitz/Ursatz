@@ -12,6 +12,7 @@
 
 #include "api_internal.h"
 #include "structure/request_parse.h"
+#include "util/util.h"
 
 /* "3=passing": the 1-based note and its role (the --tone option's value). */
 static UrsatzStatus read_tone(const char *text, size_t note_count, const char *path, MotiveToneOverride *out,
@@ -125,6 +126,34 @@ static UrsatzStatus render_motive(const cJSON *request, const KnowledgeSnapshot 
     return status;
 }
 
+/* write_in_c (R-179): the key the motive was found in as "D minor" and its notes written with C as the tonic in the same mode,
+   added to the "analysis" member of json. A motive with no key adds nothing (its notes are C major's already). */
+static bool add_write_in_c(const Motive *motive, const MotiveAnalysis *analysis, char **json) {
+    if (!analysis->key_known) {
+        return true;
+    }
+    char name[32];
+    util_key_name(spelled_key_tonic_pitch_class(&analysis->key), analysis->key.material, name, sizeof name);
+    SpelledKey home = plan_key_of_pitch_class(0, analysis->key.material);
+    Motive moved;
+    char *notes = motive_in_key(motive, &home, &moved) ? motive_to_notes_text(&moved) : NULL;
+    cJSON *document = notes ? cJSON_Parse(*json) : NULL;
+    cJSON *body = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+    char *printed = NULL;
+    if (cJSON_IsObject(body) && cJSON_AddStringToObject(body, "key_text", name) &&
+        cJSON_AddStringToObject(body, "notes_text_in_c", notes)) {
+        printed = cJSON_Print(document);
+    }
+    cJSON_Delete(document);
+    free(notes);
+    if (!printed) {
+        return false;
+    }
+    free(*json);
+    *json = printed;
+    return true;
+}
+
 /* The motive's input: text in the request, or the bytes of a MIDI file when bytes is not NULL. */
 static UrsatzStatus analyze_request(const cJSON *request, const KnowledgeSnapshot *knowledge, const unsigned char *bytes,
                                       size_t size, bool render, const UrsatzJob *job, ComposerResponse *out) {
@@ -167,6 +196,10 @@ static UrsatzStatus analyze_request(const cJSON *request, const KnowledgeSnapsho
     }
     out->json = render ? motive_analysis_to_json_rendered(&motive, &analysis, &rendered)
                        : motive_analysis_to_json(&motive, &analysis);
+    if (out->json && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(request, "write_in_c")) &&
+        !add_write_in_c(&motive, &analysis, &out->json)) {
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
     return out->json ? URSATZ_OK : api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 

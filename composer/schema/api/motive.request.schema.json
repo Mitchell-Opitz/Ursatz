@@ -19,6 +19,7 @@
     },
     "meter": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
     "key": { "type": "string" },
+    "write_in_c": { "type": "boolean", "description": "composer_api_motive_from_midi: true adds key_text (the key found, as D minor) and notes_text_in_c (the notes with C as the tonic in the same mode) to the analysis of a motive that has a key (R-179)." },
     "stored": { "type": "boolean", "description": "Only composer_api_validate reads it: true asks whether the motive may be stored, which needs the key C major or C minor (R-179)." },
     "pickup": { "oneOf": [{ "type": "number", "minimum": 0 }, { "type": "string" }] },
     "harmony": { "type": "string" },

@@ -59,6 +59,8 @@
         "rhythm_text": { "type": "string" },
         "contour_text": { "type": "string" },
         "harmony_text": { "type": "string" },
+        "key_text": { "type": "string", "description": "With write_in_c and a key: the key as D minor." },
+        "notes_text_in_c": { "type": "string", "description": "With write_in_c and a key: the notes with C as the tonic in the same mode." },
         "note_count": { "type": "integer", "minimum": 1 },
         "length": { "$ref": "#/$defs/rational" },
         "bars": { "$ref": "#/$defs/rational" },
