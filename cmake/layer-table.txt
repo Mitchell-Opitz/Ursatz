@@ -81,7 +81,7 @@ uses analysis-harmony      model theory analysis-notes
 uses analysis-form         model theory analysis-notes analysis-motive
 uses analysis-meter        model theory analysis-notes
 uses analysis-texture      model theory analysis-notes
-uses analysis-counterpoint model theory analysis-notes
+uses analysis-counterpoint model theory analysis-notes common
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.

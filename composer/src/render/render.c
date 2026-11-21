@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/strings.h>
+
 #include <model/core/provenance_reference.h>
 #include <model/core/voice_reference.h>
 #include <model/identity/entity_id.h>
@@ -788,11 +790,10 @@ static PlanRenderResult render_checked(const Plan *plan, const PlanSpan *range, 
     out->piece_end = range ? from_range_start(range_end(range), range) : piece_end_of(plan);
     const char *form_name = plan_root(plan) != PLAN_NODE_NONE ? plan_node_name(plan, plan_root(plan)) : NULL;
     if (form_name && form_name[0]) {
-        out->form_name = malloc(strlen(form_name) + 1);
+        out->form_name = common_strdup(form_name);
         if (!out->form_name) {
             return PLAN_RENDER_ERR_ALLOC;
         }
-        memcpy(out->form_name, form_name, strlen(form_name) + 1);
     }
     PlanRenderResult result = render_into(plan, range, out);
     if (result == PLAN_RENDER_OK) {

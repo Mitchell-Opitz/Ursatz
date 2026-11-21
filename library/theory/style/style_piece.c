@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/strings.h>
+
 /* Room for one more element of an array of *count elements of size bytes; the array and count are kept on failure. */
 static bool grow(void **array, size_t *count, size_t size) {
     if (*count >= SIZE_MAX / size - 1) {
@@ -17,7 +19,7 @@ static bool grow(void **array, size_t *count, size_t size) {
     return true;
 }
 
-static char *copy_string(const char *text) { return text ? strdup(text) : NULL; }
+static char *copy_string(const char *text) { return common_strdup(text); }
 
 static bool add_string(char ***array, size_t *count, const char *text) {
     char *copy = copy_string(text);
@@ -50,7 +52,7 @@ static char **copy_strings(const char *const *source, size_t count, bool *failed
         return NULL;
     }
     for (size_t i = 0; i < count; i++) {
-        if (source[i] && !(copy[i] = strdup(source[i]))) {
+        if (source[i] && !(copy[i] = common_strdup(source[i]))) {
             free_strings(copy, i);
             *failed = true;
             return NULL;

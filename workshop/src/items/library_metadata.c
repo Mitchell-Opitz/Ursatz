@@ -24,21 +24,23 @@ static char *normalize_text(const char *text) {
     if (!text) {
         text = "";
     }
-    char *out = malloc(strlen(text) + 1);
+    /* the result is never longer than the text, so it is written over a copy of it */
+    char *out = common_strdup(text);
     if (!out) {
         return NULL;
     }
     size_t length = 0;
     bool pending_space = false;
-    for (const unsigned char *c = (const unsigned char *)text; *c; c++) {
+    for (const unsigned char *c = (const unsigned char *)out; *c; c++) {
         if (is_space(*c)) {
             pending_space = true;
         } else if (!is_control(*c)) {
+            unsigned char current = *c;
             if (pending_space && length > 0) {
                 out[length++] = ' ';
             }
             pending_space = false;
-            out[length++] = (char)*c;
+            out[length++] = (char)current;
         }
     }
     out[length] = '\0';

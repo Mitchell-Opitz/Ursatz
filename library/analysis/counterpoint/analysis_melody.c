@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/strings.h>
+
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 
@@ -16,18 +18,6 @@ StandardCounterpointMelodyConfig standard_counterpoint_melody_config_default(voi
 }
 
 /* --- the line --- */
-
-static char *copy_string(const char *text) {
-    if (text == NULL) {
-        return NULL;
-    }
-    size_t size = strlen(text) + 1;
-    char *copy = (char *)malloc(size);
-    if (copy != NULL) {
-        memcpy(copy, text, size);
-    }
-    return copy;
-}
 
 void standard_counterpoint_melody_line_init(StandardCounterpointMelodyLine *line) {
     if (line != NULL) {
@@ -94,8 +84,8 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_line_add_note(Stan
     }
     StandardCounterpointMelodyNote *slot = &line->notes[line->count];
     *slot = *note;
-    slot->note_id = copy_string(note->note_id);
-    slot->nct_ref = copy_string(note->nct_ref);
+    slot->note_id = common_strdup(note->note_id);
+    slot->nct_ref = common_strdup(note->nct_ref);
     if (slot->note_id == NULL || (note->nct_ref != NULL && slot->nct_ref == NULL)) {
         free((void *)slot->note_id);
         free((void *)slot->nct_ref);
