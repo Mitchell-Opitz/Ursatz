@@ -360,11 +360,6 @@ typedef struct {
     CommonPracticeRegionSource source;
 } CommonPracticeKeyRegion;
 
-/* The SpelledKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor and
-   the material of that mode from `materials`, id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
-bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
-                                             SpelledKey *out);
-
 typedef struct {
     size_t from_region;            /* indices into regions[]; to_region == from_region + 1 */
     size_t to_region;
