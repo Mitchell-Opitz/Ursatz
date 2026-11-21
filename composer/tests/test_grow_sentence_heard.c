@@ -13,8 +13,9 @@
 /*
  * The grown sentences, heard. The same runs as test_grow_sentence (four keys and meters, 8 and 4 bars, seeds 1 to 10):
  * form_hear, the way standard-form's adapter hears real music, reads each plan's lanes alone, and the theme it finds
- * must be a sentence. The share heard is printed. Below 100% this test fails, and it is registered WILL_FAIL with the
- * share measured written in docs/grow.md: the share is not tuned, and the test is not skipped.
+ * must be a sentence. The share heard is printed and held to the baseline table below: the test fails when the sentences
+ * heard fall below the floor or the runs with no theme rise above the ceiling, and passes when a number holds or
+ * improves. The target, every grown sentence heard as a sentence, is printed and does not gate (R-698).
  */
 
 typedef struct {
@@ -88,6 +89,18 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     plan_destroy(plan);
 }
 
+/*
+ * What the runs heard at 243bd316 (seeds 1 to 10, four scenarios, so 40 runs per size; the runs are deterministic).
+ * 8 bars: 16 sentences, 17 another form, 7 no theme. 4 bars: 0, 0, 40. Raise a baseline when a change lifts it.
+ */
+typedef struct {
+    size_t bars;
+    size_t floor_sentences;
+    size_t ceiling_nothing;
+} Baseline;
+
+static const Baseline BASELINES[2] = {{8, 16, 7}, {4, 0, 40}};
+
 int main(void) {
     Share share[2];
     memset(share, 0, sizeof(share));
@@ -97,20 +110,30 @@ int main(void) {
             hear_one(&SCENARIOS[s], 4, seed, &share[1]);
         }
     }
-    static const size_t BARS[2] = {8, 4};
     size_t sentences = 0;
     size_t runs = 0;
+    int failed = 0;
     for (int i = 0; i < 2; i++) {
-        printf("%zu bars: heard as a sentence %zu of %zu (%zu%%), as another form %zu, no theme %zu\n", BARS[i],
-               share[i].sentences, share[i].runs, share[i].sentences * 100 / share[i].runs, share[i].other_form,
-               share[i].nothing);
+        printf("%zu bars: heard as a sentence %zu of %zu (%zu%%), as another form %zu, no theme %zu\n",
+               BASELINES[i].bars, share[i].sentences, share[i].runs, share[i].sentences * 100 / share[i].runs,
+               share[i].other_form, share[i].nothing);
+        if (share[i].sentences < BASELINES[i].floor_sentences) {
+            printf("%zu bars: heard as a sentence %zu, below the baseline %zu\n", BASELINES[i].bars,
+                   share[i].sentences, BASELINES[i].floor_sentences);
+            failed = 1;
+        }
+        if (share[i].nothing > BASELINES[i].ceiling_nothing) {
+            printf("%zu bars: no theme %zu, above the baseline %zu\n", BASELINES[i].bars, share[i].nothing,
+                   BASELINES[i].ceiling_nothing);
+            failed = 1;
+        }
         sentences += share[i].sentences;
         runs += share[i].runs;
     }
     printf("all: heard as a sentence %zu of %zu (%zu%%)\n", sentences, runs, sentences * 100 / runs);
-    /* Exit with a status, not an abort, so that a registered WILL_FAIL sees an ordinary failure. */
-    if (sentences != runs) {
-        puts("test_grow_sentence_heard: not every grown sentence is heard as a sentence");
+    puts("target: every grown sentence heard as a sentence (not gating)");
+    if (failed) {
+        puts("test_grow_sentence_heard: a number is worse than its baseline");
         return 1;
     }
     puts("test_grow_sentence_heard: ok");

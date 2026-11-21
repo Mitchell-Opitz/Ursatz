@@ -143,8 +143,8 @@ ursatz_test(test_grow_sentence_smoke TARGET test_grow_sentence ARGS smoke)
 ursatz_test(test_grow_half_cadence LIBS ursatz_composer_engine)
 
 # The share of grown sentences standard-form hears as a sentence is below 100% (measured, with the cause, in docs/grow.md):
-# the test asserts all of them are, so it fails, and the failure is expected. Not tuned away, not skipped.
-ursatz_test(test_grow_sentence_heard LIBS ursatz_composer_engine composer_test_support PROPERTIES WILL_FAIL TRUE)
+# the test holds it to the baseline table in its source and prints the target (R-698).
+ursatz_test(test_grow_sentence_heard LIBS ursatz_composer_engine composer_test_support)
 ursatz_test(test_theme_shape LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test(test_grow_layout LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test_executable(test_grow_uneven LIBS ursatz_composer_engine composer_test_support)
@@ -176,15 +176,10 @@ foreach(beginning RANGE 2)
         list(GET GROW_ENDINGS ${ending} ending_name)
         # A presentation and a continuation is the sentence, heard by test_grow_sentence_heard.
         if(NOT (beginning EQUAL 0 AND ending EQUAL 0))
-            # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
-            # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
-            # The compound basic idea and a continuation was heard in every run (the motive-forms) until the Analyzer heard
-            # the plan: 38 of 40, and again 40 of 40 since P36 B1 (every idea is the step its ref names), so its test passed
-            # until P61 B6, which hears on harmonic spans (R-618): 32 of 40, so its test fails too (the antecedent and a
-            # consequent, the period, went from 38 to 32 of 40).
-            set(expected_failure WILL_FAIL TRUE)
+            # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test holds the
+            # shares to the baseline table in its source and prints the target (R-698).
             ursatz_test(test_grow_period_heard_${beginning_name}_${ending_name} TARGET test_grow_period_heard
-                ARGS ${beginning} ${ending} PROPERTIES ${expected_failure})
+                ARGS ${beginning} ${ending})
         endif()
     endforeach()
 endforeach()

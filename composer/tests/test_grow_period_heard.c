@@ -19,11 +19,12 @@
  * plan's lanes alone, and the theme it finds must be the form the pairing makes: a period for an antecedent and a
  * consequent, a hybrid with the requested beginning and ending for the rest. The shares are printed.
  *
- * Only themes of 8 bars are held to it. The adapter cuts a phrase into ideas of two measures, so a theme of 4 bars is
+ * Only themes of 8 bars are held to a floor. The adapter cuts a phrase into ideas of two measures, so a theme of 4 bars is
  * two ideas, which it reads as one part, never as a theme: those are printed, and documented in docs/grow.md.
  *
- * Below 100% a pairing fails, and it is registered WILL_FAIL with the share measured written in docs/grow.md: the
- * share is not tuned, and the test is not skipped.
+ * The shares are held to a baseline table (R-698): a pairing fails when the themes heard as requested fall below the
+ * floor or the runs with no theme rise above the ceiling, and passes when a number holds or improves. The target,
+ * every grown theme heard as the form it was grown as, is printed and does not gate.
  */
 
 typedef struct {
@@ -136,6 +137,28 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     plan_destroy(plan);
 }
 
+/*
+ * What the runs heard at 243bd316 (seeds 1 to 10, four scenarios, so 40 runs per size; the runs are deterministic), per
+ * beginning and ending (the order of SectionBeginning and SectionEnding), 8 bars: as requested / a hybrid with other
+ * parts / another form / no theme. The floor is the first number and the ceiling the last. A presentation and a
+ * continuation is the sentence, heard by test_grow_sentence_heard. Raise a baseline when a change lifts it.
+ *   presentation + consequent 1/28/10/1, presentation + cadential 0/29/9/2,
+ *   antecedent + continuation 0/2/35/3, antecedent + consequent 32/0/3/5, antecedent + cadential 0/2/38/0,
+ *   compound basic idea + continuation 32/0/0/8, + consequent 3/37/0/0, + cadential 0/37/0/3.
+ * At 4 bars every pairing is 0/0/0/40: the adapter reads two ideas of two measures as one part.
+ */
+typedef struct {
+    size_t floor_as_requested;
+    size_t ceiling_nothing;
+} Baseline;
+
+static const Baseline BASELINES_8[3][3] = {
+    {{0, 0}, {1, 1}, {0, 2}},
+    {{0, 3}, {32, 5}, {0, 0}},
+    {{32, 8}, {3, 0}, {0, 3}},
+};
+static const Baseline BASELINE_4 = {0, 40};
+
 int main(int argc, char **argv) {
     if (argc != 3) {
         fputs("usage: test_grow_period_heard <beginning 0-2> <ending 0-2>\n", stderr);
@@ -161,9 +184,23 @@ int main(int argc, char **argv) {
                BARS[i], share[i].as_requested, share[i].runs, share[i].as_requested * 100 / share[i].runs,
                share[i].right_form_wrong_parts, share[i].other_form, share[i].nothing);
     }
-    /* Exit with a status, not an abort, so that a registered WILL_FAIL sees an ordinary failure. */
-    if (share[0].as_requested != share[0].runs) {
-        puts("test_grow_period_heard: not every grown theme of 8 bars is heard as the form it was grown as");
+    const Baseline *baselines[2] = {&BASELINES_8[beginning][ending], &BASELINE_4};
+    int failed = 0;
+    for (int i = 0; i < 2; i++) {
+        if (share[i].as_requested < baselines[i]->floor_as_requested) {
+            printf("%zu bars: heard as requested %zu, below the baseline %zu\n", BARS[i], share[i].as_requested,
+                   baselines[i]->floor_as_requested);
+            failed = 1;
+        }
+        if (share[i].nothing > baselines[i]->ceiling_nothing) {
+            printf("%zu bars: no theme %zu, above the baseline %zu\n", BARS[i], share[i].nothing,
+                   baselines[i]->ceiling_nothing);
+            failed = 1;
+        }
+    }
+    puts("target: every grown theme heard as the form it was grown as (not gating)");
+    if (failed) {
+        puts("test_grow_period_heard: a number is worse than its baseline");
         return 1;
     }
     puts("test_grow_period_heard: ok");
