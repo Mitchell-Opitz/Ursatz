@@ -140,4 +140,16 @@ ursatz(--data "${DATA}" restore "item:${theme}")
 expect_status(1 "restore without a version")
 expect_text("restore needs the version to copy" "restore without a version")
 
+# Rate: a version of an item is rated against the version it names (R-679): the current one goes through, an older one is refused as stale.
+ursatz(--data "${DATA}" restore "item:${theme}@v1")
+expect_status(0 "restore again")
+string(REGEX MATCH "version ([0-9]+) [(]restored" ignored "${out}")
+set(current_version "${CMAKE_MATCH_1}")
+ursatz(--data "${DATA}" rate "item:${theme}@v${current_version}" --rating 4)
+expect_status(0 "rate the current version of an item")
+expect_text("rat-" "rate the current version of an item")
+ursatz(--data "${DATA}" rate "item:${theme}@v1" --rating 4)
+expect_status(2 "rate an older version of an item")
+expect_text("changed since you read it" "rate an older version of an item")
+
 message(STATUS "ok")

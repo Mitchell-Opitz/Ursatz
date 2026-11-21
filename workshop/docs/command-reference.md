@@ -39,10 +39,10 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 | `item.compose` | `item:<id>@v<n>` | `[seed int] [update_uses bool] [settings object] [overrides list] [off list] [taste string]` | Compose a theme or piece into a new version |
 | `item.explore` | `item:<id>@v<n>` | `[distance int] [seed int] [settings object] [overrides list] [off list] [taste string]` | Compose a theme with some settings moved away from the taste |
 | `item.regenerate` | `item:<id>@v<n>` | `version int section_id string [lane string] [seed int]` | Write one section of a composed piece again as the next version |
-| `item.variations` | `item:<id>` | `version int section_id string lane string count int [seed int]` | Make variations of a section of a composed piece |
+| `item.variations` | `item:<id>@v<n>` | `version int section_id string lane string count int [seed int]` | Make variations of a section of a composed piece |
 | `item.choose` | `item:<id>@v<n>` | `version int set int index int` | Make one variation of a set the next version |
-| `item.set-op-checks` | `item:<id>` | `checks object` | Replace the marks of Try every operation |
-| `item.save-variant` | `item:<id>` | `variant object [name string] [flag approved\|rejected\|unflagged]` | Save one candidate of the variants run as a derived motif |
+| `item.set-op-checks` | `item:<id>@v<n>` | `checks object` | Replace the marks of Try every operation |
+| `item.save-variant` | `item:<id>@v<n>` | `variant object [name string] [flag approved\|rejected\|unflagged]` | Save one candidate of the variants run as a derived motif |
 | `item.flag` | `item:<id>@v<n>` | `flag approved\|rejected\|unflagged [kind exact\|motive-form\|variant]` | Flag a derived motif as approved, rejected or unflagged |
 | `item.promote` | `item:<id>@v<n>` | `name string project_id string [note string]` | Save a variant as a motif of its own |
 | `item.link-form` | `item:<id>@v<n>` | `source object recognition object` | Record a motif as a form of another motif |
@@ -98,7 +98,7 @@ Ratings: listening sessions with batches, ratings and picks, ratings of item ver
 | `ratings.batch` | none | `session string round int batch string samples list` | Record a batch of samples in a session |
 | `ratings.rate` | none | `session string round int batch string seed int rating int [note string]` | Rate a sample of a batch from 1 to 5 |
 | `ratings.pick` | none | `session string round int seed int better string [note string]` | Say which batch of a round sounded better |
-| `ratings.rate-version` | `item:<id>` | `version int rating int [note string]` | Rate a version of an item from 1 to 5 |
+| `ratings.rate-version` | `item:<id>@v<n>` | `version int rating int [note string]` | Rate a version of an item from 1 to 5 |
 | `ratings.keep` | none | `taste string key string ratings list [value value] [note string]` | Keep a setting as the default of a taste profile, citing the ratings behind it |
 
 ## Section

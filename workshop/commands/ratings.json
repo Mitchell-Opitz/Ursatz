@@ -200,7 +200,7 @@
       "name": "ratings.rate-version",
       "summary": "Rate a version of an item from 1 to 5",
       "target": "item",
-      "base": false,
+      "base": true,
       "journaled": true,
       "bytes": false,
       "params": [
