@@ -296,134 +296,48 @@ char *reading_to_json(const Reading *reading, ReadingJsonError *error) {
 /* ------------------------------------------------------------------------------------------------ reading */
 
 typedef struct {
-    ReadingJsonError *error;
-    bool failed;
-    RealizationResult result;
+    CommonJsonReader json;
     const KnowledgeSnapshot *knowledge;
 } Reader;
-
-static bool refuse(Reader *r, RealizationResult result, const char *path, const char *format, ...) {
-    if (!r->failed) {
-        r->failed = true;
-        r->result = result;
-        if (r->error) {
-            va_list args;
-            va_start(args, format);
-            vsnprintf(r->error->message, sizeof(r->error->message), format, args);
-            va_end(args);
-            snprintf(r->error->path, sizeof(r->error->path), "%s", path);
-        }
-    }
-    return false;
-}
-
-static bool bad(Reader *r, const char *path, const char *message) {
-    return refuse(r, REALIZATION_ERR_BAD_VALUE, path, "%s", message);
-}
 
 static bool group_refused(Reader *r, RealizationResult result, const char *path) {
     switch (result) {
     case REALIZATION_ERR_BAD_ID:
-        return refuse(r, result, path, "not a valid id");
+        return common_json_refuse(&r->json, result, path, "not a valid id");
     case REALIZATION_ERR_DUPLICATE_ID:
-        return refuse(r, result, path, "the id is used twice");
+        return common_json_refuse(&r->json, result, path, "the id is used twice");
     case REALIZATION_ERR_ALLOC:
-        return refuse(r, result, path, "out of memory");
+        return common_json_refuse(&r->json, result, path, "out of memory");
     default:
-        return refuse(r, result, path, "the claim is refused: a value is out of range");
+        return common_json_refuse(&r->json, result, path, "the claim is refused: a value is out of range");
     }
-}
-
-static void child_member(char *out, const char *parent, const char *key) {
-    if (parent[0] == '\0') {
-        snprintf(out, READING_JSON_PATH_MAX, "%s", key);
-    } else {
-        snprintf(out, READING_JSON_PATH_MAX, "%s.%s", parent, key);
-    }
-}
-
-static void child_index(char *out, const char *parent, size_t index) {
-    snprintf(out, READING_JSON_PATH_MAX, "%s[%zu]", parent, index);
-}
-
-static const cJSON *member(Reader *r, const cJSON *object, const char *path, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    if (!item) {
-        char at[READING_JSON_PATH_MAX];
-        child_member(at, path, key);
-        bad(r, at, "missing required member");
-    }
-    return item;
-}
-
-static bool read_object(Reader *r, const cJSON *item, const char *path) {
-    return cJSON_IsObject(item) || bad(r, path, "expected an object");
-}
-
-static const cJSON *read_array(Reader *r, const cJSON *object, const char *path, const char *key, char *at) {
-    const cJSON *item = member(r, object, path, key);
-    if (!item) {
-        return NULL;
-    }
-    child_member(at, path, key);
-    if (!cJSON_IsArray(item)) {
-        bad(r, at, "expected an array");
-        return NULL;
-    }
-    return item;
-}
-
-static bool read_long(Reader *r, const cJSON *item, const char *path, long long min, long long max, long long *out) {
-    if (!cJSON_IsNumber(item)) {
-        return bad(r, path, "expected a number");
-    }
-    double value = item->valuedouble;
-    if (value < (double)min || value > (double)max || (double)(long long)value != value) {
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, path, "expected an integer from %lld to %lld", min, max);
-    }
-    *out = (long long)value;
-    return true;
 }
 
 static bool read_int_member(Reader *r, const cJSON *object, const char *path, const char *key, long long min, long long max, int *out) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     char at[READING_JSON_PATH_MAX];
     long long value;
-    child_member(at, path, key);
-    if (!item || !read_long(r, item, at, min, max, &value)) {
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, key);
+    if (!item || !common_json_read_whole(&r->json, item, at, min, max, &value)) {
         return false;
     }
     *out = (int)value;
     return true;
 }
 
-static bool read_bool_member(Reader *r, const cJSON *object, const char *path, const char *key, bool *out) {
-    const cJSON *item = member(r, object, path, key);
-    if (!item) {
-        return false;
-    }
-    if (!cJSON_IsBool(item)) {
-        char at[READING_JSON_PATH_MAX];
-        child_member(at, path, key);
-        return bad(r, at, "expected true or false");
-    }
-    *out = cJSON_IsTrue(item);
-    return true;
-}
-
 /* A text member copied into out (size bytes); text longer than that is refused. */
 static bool read_text_member(Reader *r, const cJSON *object, const char *path, const char *key, char *out, size_t size) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     if (!item) {
         return false;
     }
     char at[READING_JSON_PATH_MAX];
-    child_member(at, path, key);
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, key);
     if (!cJSON_IsString(item) || !item->valuestring) {
-        return bad(r, at, "expected text");
+        return common_json_bad(&r->json, at, "expected text");
     }
     if (strlen(item->valuestring) >= size) {
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, at, "the text is longer than %zu characters", size - 1);
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, at, "the text is longer than %zu characters", size - 1);
     }
     snprintf(out, size, "%s", item->valuestring);
     return true;
@@ -432,32 +346,14 @@ static bool read_text_member(Reader *r, const cJSON *object, const char *path, c
 static bool read_rational(Reader *r, const cJSON *item, const char *path, Rational *out) {
     long long num;
     long long den;
-    /* A time in range is read by the common codec; any other value falls through to the checks that say what is wrong. */
-    if (common_json_rational_read(item, COMMON_RATIONAL_OBJECT, &num, &den) && num >= -1000000000LL && num <= 1000000000LL &&
-        den <= 1000000000LL) {
-        return rational_make(num, den, out) == RATIONAL_OK || bad(r, path, "not a time");
-    }
-    if (!cJSON_IsObject(item)) {
-        return bad(r, path, "expected a time {\"num\", \"den\"}");
-    }
-    char at[READING_JSON_PATH_MAX];
-    const cJSON *n = member(r, item, path, "num");
-    child_member(at, path, "num");
-    if (!n || !read_long(r, n, at, -1000000000LL, 1000000000LL, &num)) {
-        return false;
-    }
-    const cJSON *d = member(r, item, path, "den");
-    child_member(at, path, "den");
-    if (!d || !read_long(r, d, at, 1, 1000000000LL, &den)) {
-        return false;
-    }
-    return rational_make(num, den, out) == RATIONAL_OK || bad(r, path, "not a time");
+    return common_json_read_time(&r->json, item, path, 1000000000LL, "expected a time {\"num\", \"den\"}", &num, &den) &&
+           (rational_make(num, den, out) == RATIONAL_OK || common_json_bad(&r->json, path, "not a time"));
 }
 
 static bool read_rational_member(Reader *r, const cJSON *object, const char *path, const char *key, Rational *out) {
-    const cJSON *item = member(r, object, path, key);
+    const cJSON *item = common_json_require(&r->json, object, path, key);
     char at[READING_JSON_PATH_MAX];
-    child_member(at, path, key);
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, key);
     return item && read_rational(r, item, at, out);
 }
 
@@ -473,34 +369,34 @@ static bool read_name(Reader *r, const cJSON *object, const char *path, const ch
         }
     }
     char at[READING_JSON_PATH_MAX];
-    child_member(at, path, key);
-    return refuse(r, REALIZATION_ERR_BAD_VALUE, at, "unknown name '%.30s'", text);
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, key);
+    return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, at, "unknown name '%.30s'", text);
 }
 
 static bool read_cadence_name(Reader *r, const cJSON *item, const char *path, CadenceType *out) {
     if (!cJSON_IsString(item) || !item->valuestring) {
-        return bad(r, path, "expected a cadence type name");
+        return common_json_bad(&r->json, path, "expected a cadence type name");
     }
     if (!cadence_type_from_name(item->valuestring, out)) {
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, path, "unknown cadence type '%.40s'", item->valuestring);
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, path, "unknown cadence type '%.40s'", item->valuestring);
     }
     return true;
 }
 
 static bool read_cadence_array(Reader *r, const cJSON *object, const char *path, const char *key, size_t max, CadenceType *out, size_t *count) {
     char list_at[READING_JSON_PATH_MAX];
-    const cJSON *list = read_array(r, object, path, key, list_at);
+    const cJSON *list = common_json_require_array(&r->json, object, path, key, list_at, READING_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
     if ((size_t)cJSON_GetArraySize(list) > max) {
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, list_at, "at most %zu cadence types", max);
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, list_at, "at most %zu cadence types", max);
     }
     *count = 0;
     const cJSON *item;
     cJSON_ArrayForEach(item, list) {
         char at[READING_JSON_PATH_MAX];
-        child_index(at, list_at, *count);
+        common_json_index_path(at, READING_JSON_PATH_MAX, list_at, *count);
         if (!read_cadence_name(r, item, at, &out[*count])) {
             return false;
         }
@@ -514,13 +410,13 @@ static bool read_head(Reader *r, const cJSON *item, const char *path, ReadingCla
     memset(claim, 0, sizeof(*claim));
     claim->detail = READING_NO_DETAIL;
     *buffer = NULL;
-    if (!read_object(r, item, path) || !read_text_member(r, item, path, "id", claim->id, sizeof(claim->id)) ||
+    if (!common_json_expect_object(&r->json, item, path) || !read_text_member(r, item, path, "id", claim->id, sizeof(claim->id)) ||
         !read_rational_member(r, item, path, "start", &claim->start) || !read_rational_member(r, item, path, "end", &claim->end)) {
         return false;
     }
-    const cJSON *confidence = member(r, item, path, "confidence");
+    const cJSON *confidence = common_json_require(&r->json, item, path, "confidence");
     char at[READING_JSON_PATH_MAX];
-    child_member(at, path, "confidence");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "confidence");
     if (!confidence) {
         return false;
     }
@@ -531,7 +427,7 @@ static bool read_head(Reader *r, const cJSON *item, const char *path, ReadingCla
         }
     }
     char list_at[READING_JSON_PATH_MAX];
-    const cJSON *list = read_array(r, item, path, "evidence", list_at);
+    const cJSON *list = common_json_require_array(&r->json, item, path, "evidence", list_at, READING_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
@@ -539,14 +435,14 @@ static bool read_head(Reader *r, const cJSON *item, const char *path, ReadingCla
     if (count > 0) {
         *buffer = malloc(count * REALIZATION_ID_MAX);
         if (!*buffer) {
-            return refuse(r, REALIZATION_ERR_ALLOC, list_at, "out of memory");
+            return common_json_refuse(&r->json, REALIZATION_ERR_ALLOC, list_at, "out of memory");
         }
     }
     const cJSON *entry;
     cJSON_ArrayForEach(entry, list) {
-        child_index(at, list_at, claim->evidence.count);
+        common_json_index_path(at, READING_JSON_PATH_MAX, list_at, claim->evidence.count);
         if (!cJSON_IsString(entry) || !entry->valuestring || strlen(entry->valuestring) >= REALIZATION_ID_MAX) {
-            return bad(r, at, "expected a note id");
+            return common_json_bad(&r->json, at, "expected a note id");
         }
         snprintf((*buffer)[claim->evidence.count++], REALIZATION_ID_MAX, "%s", entry->valuestring);
     }
@@ -559,7 +455,7 @@ static bool read_chord_reading(Reader *r, const cJSON *item, const char *path, c
         chord->has_reading = false;
         return true;
     }
-    if (!read_object(r, item, path)) {
+    if (!common_json_expect_object(&r->json, item, path)) {
         return false;
     }
     chord->has_reading = true;
@@ -579,55 +475,55 @@ static bool read_chord_reading(Reader *r, const cJSON *item, const char *path, c
     reading->sonority.pitch_classes = (unsigned)mask;
     reading->sonority.bass_pitch_class = bass;
     if (time_span_make(from, to, &reading->sonority.span) != TIME_SPAN_OK) {
-        return bad(r, path, "the span ends before it starts");
+        return common_json_bad(&r->json, path, "the span ends before it starts");
     }
     reading->has_root = root >= 0;
     reading->root_pitch_class = root >= 0 ? root : 0;
     reading->bass_pitch_class = bass;
-    const cJSON *type = member(r, item, path, "type");
-    child_member(at, path, "type");
+    const cJSON *type = common_json_require(&r->json, item, path, "type");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "type");
     if (!type) {
         return false;
     }
     if (!cJSON_IsNull(type)) {
         if (!cJSON_IsString(type) || !type->valuestring) {
-            return bad(r, at, "expected a chord type id or null");
+            return common_json_bad(&r->json, at, "expected a chord type id or null");
         }
         reading->type = knowledge_snapshot_chord_type(r->knowledge, type->valuestring);
         if (!reading->type) {
-            return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no chord type has the id '%.60s'", type->valuestring);
+            return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no chord type has the id '%.60s'", type->valuestring);
         }
     }
     char list_at[READING_JSON_PATH_MAX];
-    const cJSON *members = read_array(r, item, path, "members", list_at);
+    const cJSON *members = common_json_require_array(&r->json, item, path, "members", list_at, READING_JSON_PATH_MAX);
     if (!members) {
         return false;
     }
     if ((size_t)cJSON_GetArraySize(members) != CHORD_READING_ROLE_COUNT) {
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, list_at, "expected %d member masks", CHORD_READING_ROLE_COUNT);
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, list_at, "expected %d member masks", CHORD_READING_ROLE_COUNT);
     }
     size_t index = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, members) {
         long long value;
-        child_index(at, list_at, index);
-        if (!read_long(r, entry, at, 0, 4095, &value)) {
+        common_json_index_path(at, READING_JSON_PATH_MAX, list_at, index);
+        if (!common_json_read_whole(&r->json, entry, at, 0, 4095, &value)) {
             return false;
         }
         reading->members_by_role[index++] = (unsigned)value;
     }
-    const cJSON *borrowed = member(r, item, path, "borrowed_from");
-    child_member(at, path, "borrowed_from");
+    const cJSON *borrowed = common_json_require(&r->json, item, path, "borrowed_from");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "borrowed_from");
     if (!borrowed) {
         return false;
     }
     if (!cJSON_IsNull(borrowed)) {
         if (!cJSON_IsString(borrowed) || !borrowed->valuestring) {
-            return bad(r, at, "expected a material id or null");
+            return common_json_bad(&r->json, at, "expected a material id or null");
         }
         reading->borrowed_from = knowledge_snapshot_material(r->knowledge, borrowed->valuestring);
         if (!reading->borrowed_from) {
-            return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no material has the id '%.60s'", borrowed->valuestring);
+            return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no material has the id '%.60s'", borrowed->valuestring);
         }
     }
     int role;
@@ -635,31 +531,31 @@ static bool read_chord_reading(Reader *r, const cJSON *item, const char *path, c
         return false;
     }
     reading->role = (ChordRole)role;
-    const cJSON *expected = member(r, item, path, "expected");
-    child_member(at, path, "expected");
+    const cJSON *expected = common_json_require(&r->json, item, path, "expected");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "expected");
     if (!expected) {
         return false;
     }
     if (!cJSON_IsNull(expected)) {
-        if (!read_object(r, expected, at)) {
+        if (!common_json_expect_object(&r->json, expected, at)) {
             return false;
         }
         reading->has_expected = true;
         if (!read_int_member(r, expected, at, "root", 0, 11, &reading->expected_root_pitch_class)) {
             return false;
         }
-        const cJSON *expected_type = member(r, expected, at, "type");
-        child_member(id, at, "type");
+        const cJSON *expected_type = common_json_require(&r->json, expected, at, "type");
+        common_json_child_path(id, READING_JSON_PATH_MAX, at, "type");
         if (!expected_type) {
             return false;
         }
         if (!cJSON_IsNull(expected_type)) {
             if (!cJSON_IsString(expected_type) || !expected_type->valuestring) {
-                return bad(r, id, "expected a chord type id or null");
+                return common_json_bad(&r->json, id, "expected a chord type id or null");
             }
             reading->expected_type = knowledge_snapshot_chord_type(r->knowledge, expected_type->valuestring);
             if (!reading->expected_type) {
-                return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, id, "no chord type has the id '%.60s'", expected_type->valuestring);
+                return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, id, "no chord type has the id '%.60s'", expected_type->valuestring);
             }
         }
     }
@@ -672,7 +568,7 @@ typedef RealizationResult (*AddFn)(Reading *reading, const void *claim);
 
 static bool read_claims(Reader *r, Reading *reading, const cJSON *document, const char *key, void *claim, size_t claim_size, FillFn fill, AddFn add) {
     char list_at[READING_JSON_PATH_MAX];
-    const cJSON *list = read_array(r, document, "", key, list_at);
+    const cJSON *list = common_json_require_array(&r->json, document, "", key, list_at, READING_JSON_PATH_MAX);
     if (!list) {
         return false;
     }
@@ -681,7 +577,7 @@ static bool read_claims(Reader *r, Reading *reading, const cJSON *document, cons
     cJSON_ArrayForEach(item, list) {
         char at[READING_JSON_PATH_MAX];
         char(*evidence)[REALIZATION_ID_MAX] = NULL;
-        child_index(at, list_at, index++);
+        common_json_index_path(at, READING_JSON_PATH_MAX, list_at, index++);
         ReadingClaim *head = claim;
         memset(claim, 0, claim_size);
         bool ok = read_head(r, item, at, head, &evidence) && fill(r, item, at, claim);
@@ -690,7 +586,7 @@ static bool read_claims(Reader *r, Reading *reading, const cJSON *document, cons
             if (added != REALIZATION_OK) {
                 char id_at[READING_JSON_PATH_MAX];
                 const char *member_name = added == REALIZATION_ERR_DUPLICATE_ID ? "id" : added == REALIZATION_ERR_BAD_ID ? (realization_id_valid(head->id) ? "evidence" : "id") : "start";
-                child_member(id_at, at, member_name);
+                common_json_child_path(id_at, READING_JSON_PATH_MAX, at, member_name);
                 ok = group_refused(r, added, id_at);
             }
         }
@@ -714,8 +610,8 @@ static bool fill_region(Reader *r, const cJSON *item, const char *path, void *cl
     }
     region->material = knowledge_snapshot_material(r->knowledge, id);
     if (!region->material) {
-        child_member(at, path, "material");
-        return refuse(r, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no material has the id '%.60s'", id);
+        common_json_child_path(at, READING_JSON_PATH_MAX, path, "material");
+        return common_json_refuse(&r->json, REALIZATION_ERR_UNKNOWN_REFERENCE, at, "no material has the id '%.60s'", id);
     }
     region->strength = (RegionStrength)strength;
     return true;
@@ -723,9 +619,9 @@ static bool fill_region(Reader *r, const cJSON *item, const char *path, void *cl
 
 static bool fill_chord(Reader *r, const cJSON *item, const char *path, void *claim) {
     ReadingChord *chord = claim;
-    const cJSON *reading = member(r, item, path, "reading");
+    const cJSON *reading = common_json_require(&r->json, item, path, "reading");
     char at[READING_JSON_PATH_MAX];
-    child_member(at, path, "reading");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "reading");
     return reading && read_chord_reading(r, reading, at, &chord->start, &chord->end, chord) &&
            read_text_member(r, item, path, "numeral", chord->numeral, sizeof(chord->numeral)) &&
            read_text_member(r, item, path, "function", chord->function, sizeof(chord->function)) &&
@@ -734,9 +630,9 @@ static bool fill_chord(Reader *r, const cJSON *item, const char *path, void *cla
 
 static bool fill_cadence(Reader *r, const cJSON *item, const char *path, void *claim) {
     ReadingCadence *cadence = claim;
-    const cJSON *type = member(r, item, path, "type");
+    const cJSON *type = common_json_require(&r->json, item, path, "type");
     char at[READING_JSON_PATH_MAX];
-    child_member(at, path, "type");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "type");
     return type && read_cadence_name(r, type, at, &cadence->type) && read_rational_member(r, item, path, "arrival", &cadence->arrival) &&
            read_cadence_array(r, item, path, "alternatives", 4, cadence->alternatives, &cadence->alternative_count);
 }
@@ -745,16 +641,16 @@ static bool fill_group(Reader *r, const cJSON *item, const char *path, void *cla
     ReadingGroup *group = claim;
     int kind;
     int phrase_count;
-    const cJSON *parent = member(r, item, path, "parent");
+    const cJSON *parent = common_json_require(&r->json, item, path, "parent");
     char at[READING_JSON_PATH_MAX];
     if (!parent) {
         return false;
     }
-    child_member(at, path, "parent");
+    common_json_child_path(at, READING_JSON_PATH_MAX, path, "parent");
     group->parent = READING_NO_PARENT;
     if (!cJSON_IsNull(parent)) {
         long long value;
-        if (!read_long(r, parent, at, 0, 100000000LL, &value)) {
+        if (!common_json_read_whole(&r->json, parent, at, 0, 100000000LL, &value)) {
             return false;
         }
         group->parent = (size_t)value;
@@ -769,7 +665,7 @@ static bool fill_group(Reader *r, const cJSON *item, const char *path, void *cla
         !read_int_member(r, item, path, "last_measure", -100000, 100000000, &group->last_measure) ||
         !read_int_member(r, item, path, "phrase_count", 0, 1000000, &phrase_count) ||
         !read_cadence_array(r, item, path, "part_cadences", 2, group->part_cadences, &group->part_cadence_count) ||
-        !read_bool_member(r, item, path, "archetypal", &group->archetypal) || !read_bool_member(r, item, path, "fragmentation", &group->fragmentation)) {
+        !common_json_require_bool(&r->json, item, path, "archetypal", &group->archetypal) || !common_json_require_bool(&r->json, item, path, "fragmentation", &group->fragmentation)) {
         return false;
     }
     group->kind = (ReadingGroupKind)kind;
@@ -801,8 +697,8 @@ static bool fill_line(Reader *r, const cJSON *item, const char *path, void *clai
     }
     LineRole found;
     if (!line_role_from_name(role, &found)) {
-        child_member(at, path, "role");
-        return refuse(r, REALIZATION_ERR_BAD_VALUE, at, "unknown line role '%.30s'", role);
+        common_json_child_path(at, READING_JSON_PATH_MAX, path, "role");
+        return common_json_refuse(&r->json, REALIZATION_ERR_BAD_VALUE, at, "unknown line role '%.30s'", role);
     }
     line->role = found;
     return true;
@@ -810,14 +706,14 @@ static bool fill_line(Reader *r, const cJSON *item, const char *path, void *clai
 
 static bool fill_fault(Reader *r, const cJSON *item, const char *path, void *claim) {
     ReadingVoiceFault *fault = claim;
-    return read_text_member(r, item, path, "rule", fault->rule, sizeof(fault->rule)) && read_bool_member(r, item, path, "hard", &fault->hard) &&
+    return read_text_member(r, item, path, "rule", fault->rule, sizeof(fault->rule)) && common_json_require_bool(&r->json, item, path, "hard", &fault->hard) &&
            read_int_member(r, item, path, "measure", -100000, 100000000, &fault->measure);
 }
 
 static bool read_reading(Reader *r, const cJSON *document, Reading **out) {
-    const cJSON *source_item = member(r, document, "", "source");
-    const cJSON *target_item = member(r, document, "", "target");
-    if (!source_item || !target_item || !read_object(r, source_item, "source") || !read_object(r, target_item, "target")) {
+    const cJSON *source_item = common_json_require(&r->json, document, "", "source");
+    const cJSON *target_item = common_json_require(&r->json, document, "", "target");
+    if (!source_item || !target_item || !common_json_expect_object(&r->json, source_item, "source") || !common_json_expect_object(&r->json, target_item, "target")) {
         return false;
     }
     ReadingSource source;
@@ -841,7 +737,7 @@ static bool read_reading(Reader *r, const cJSON *document, Reading **out) {
     Reading *reading = NULL;
     RealizationResult made = reading_create(&source, &target, &reading);
     if (made != REALIZATION_OK) {
-        return refuse(r, made, made == REALIZATION_ERR_BAD_ID ? "target" : "source", "the source or the target is refused");
+        return common_json_refuse(&r->json, made, made == REALIZATION_ERR_BAD_ID ? "target" : "source", "the source or the target is refused");
     }
     union {
         ReadingRegion region;
@@ -877,7 +773,10 @@ RealizationResult reading_from_json(const KnowledgeSnapshot *knowledge, const ch
         set_error(error, "", "a knowledge snapshot, a text and an out are required");
         return REALIZATION_ERR_NULL;
     }
-    Reader reader = {error, false, REALIZATION_OK, knowledge};
+    Reader reader;
+    common_json_reader_init(&reader.json, error ? error->path : NULL, READING_JSON_PATH_MAX, error ? error->message : NULL,
+                            error ? sizeof(error->message) : 0, REALIZATION_ERR_BAD_VALUE, "missing required member");
+    reader.knowledge = knowledge;
     const char *end = NULL;
     cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
     if (!document) {
@@ -885,18 +784,18 @@ RealizationResult reading_from_json(const KnowledgeSnapshot *knowledge, const ch
         return REALIZATION_ERR_BAD_VALUE;
     }
     if (!cJSON_IsObject(document)) {
-        bad(&reader, "", "expected a JSON object");
+        common_json_bad(&reader.json, "", "expected a JSON object");
     } else {
         const cJSON *format = cJSON_GetObjectItemCaseSensitive(document, "format");
         const cJSON *version = cJSON_GetObjectItemCaseSensitive(document, "format_version");
         if (!cJSON_IsString(format) || strcmp(format->valuestring, FORMAT_NAME) != 0) {
-            bad(&reader, "format", "expected \"" FORMAT_NAME "\"");
+            common_json_bad(&reader.json, "format", "expected \"" FORMAT_NAME "\"");
         } else if (!cJSON_IsNumber(version) || version->valuedouble != (double)URSATZ_READING_FORMAT_VERSION) {
-            bad(&reader, "format_version", "expected the format version 1");
+            common_json_bad(&reader.json, "format_version", "expected the format version 1");
         } else {
             read_reading(&reader, document, out);
         }
     }
     cJSON_Delete(document);
-    return reader.failed ? reader.result : REALIZATION_OK;
+    return reader.json.failed ? (RealizationResult)reader.json.code : REALIZATION_OK;
 }
