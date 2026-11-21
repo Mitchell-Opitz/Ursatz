@@ -17,19 +17,16 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT] 
     "leaps",         "final-step", "range",           "leading-tone",     "single-climax",
     "no-repeated-motive", "stepwise", "leap-direction", "secondary-climaxes"};
 
-static bool rule_is_hard(StandardCounterpointSecondSpeciesLineRule which) {
-    return which == STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_LEAPS ||
-           which == STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_FINAL_STEP ||
-           which == STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_RANGE ||
-           which == STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_LEADING_TONE;
-}
-
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointSecondSpeciesLineRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT] = {
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_SINGLE_CLIMAX] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_NO_REPEATED_MOTIVE] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_STEPWISE] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_LEAP_DIRECTION] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_SECONDARY_CLIMAXES] = true};
 
 static const RuleTable TABLE = {
-    .name = "second-species-line", .names = NAMES, .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT, .is_hard = table_is_hard};
+    .name = "second-species-line", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesLineRule which) {
     return rule_table_valid(&TABLE, (int)which);

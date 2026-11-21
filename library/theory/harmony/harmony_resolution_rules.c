@@ -8,8 +8,10 @@
 static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolves-down",
                                                                  "leading-tone-resolves"};
 
+static const bool SOFT[HARMONY_RESOLUTION_RULE_COUNT] = {false};
+
 static const RuleTable TABLE = {
-    .name = "resolution", .names = NAMES, .count = HARMONY_RESOLUTION_RULE_COUNT};
+    .name = "resolution", .names = NAMES, .soft = SOFT, .count = HARMONY_RESOLUTION_RULE_COUNT};
 
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which) {
     return rule_table_name(&TABLE, (int)which);

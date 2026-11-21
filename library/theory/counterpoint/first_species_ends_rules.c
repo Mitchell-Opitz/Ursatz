@@ -12,8 +12,11 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
     "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
 
+static const bool SOFT[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {false};
+
 static const RuleTable TABLE = {
-    .name = "first-species-ends", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT};
+    .name = "first-species-ends", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
     return rule_table_valid(&TABLE, (int)which);

@@ -12,16 +12,13 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT] = {"dissonance-figure", "mixture",
                                                                                    "large-leap-recovery"};
 
-static bool rule_is_hard(StandardCounterpointThirdSpeciesBeatRule which) {
-    return which == STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_DISSONANCE_FIGURE;
-}
-
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointThirdSpeciesBeatRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT] = {
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_MIXTURE] = true,
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_LARGE_LEAP_RECOVERY] = true};
 
 static const RuleTable TABLE = {
-    .name = "third-species-beat", .names = NAMES, .count = STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT, .is_hard = table_is_hard};
+    .name = "third-species-beat", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesBeatRule which) {
     return rule_table_valid(&TABLE, (int)which);

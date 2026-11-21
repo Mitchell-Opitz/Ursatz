@@ -9,13 +9,13 @@ enum { ALPHA = 0, BETA, GAMMA, COUNT };
 
 static const char *const NAMES[COUNT] = {"alpha", "beta", "gamma"};
 
-static bool is_hard(int which) {
-    return which != BETA;
-}
+static const bool SOFT_BETA[COUNT] = {[BETA] = true};
+static const bool NONE_SOFT[COUNT] = {false};
+static const bool ALL_SOFT[COUNT] = {true, true, true};
 
-static const RuleTable TABLE = {.name = "test-group", .names = NAMES, .count = COUNT, .is_hard = is_hard};
-static const RuleTable BARE = {.names = NAMES, .count = COUNT};
-static const RuleTable SOFT = {.name = "test-soft", .names = NAMES, .count = COUNT, .is_hard = rule_table_never_hard};
+static const RuleTable TABLE = {.name = "test-group", .names = NAMES, .soft = SOFT_BETA, .count = COUNT};
+static const RuleTable BARE = {.names = NAMES, .soft = NONE_SOFT, .count = COUNT};
+static const RuleTable SOFT = {.name = "test-soft", .names = NAMES, .soft = ALL_SOFT, .count = COUNT};
 
 /* The subject is a bit mask of the rules that hold. */
 static bool holds(int which, const void *subject) {
@@ -40,7 +40,7 @@ static void test_hardness(void) {
     assert(rule_table_is_hard(&TABLE, GAMMA));
     assert(!rule_table_is_hard(&TABLE, COUNT));
 
-    /* No predicate: all hard. Never hard: all soft. */
+    /* No soft rule: all hard. Every rule soft: none hard. */
     for (int i = 0; i < COUNT; i++) {
         assert(rule_table_is_hard(&BARE, i));
         assert(!rule_table_is_hard(&SOFT, i));

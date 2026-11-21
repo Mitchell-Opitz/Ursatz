@@ -12,19 +12,14 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
     "first-interval",   "last-interval",    "max-gap",          "mostly-within-octave", "no-crossing",
     "parallel-octaves", "parallel-fifths",  "direct-perfects",  "interior-unisons",     "climax-coordination"};
 
-static bool rule_is_soft(StandardCounterpointHarmonicRule which) {
-    return which == STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE ||
-           which == STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS ||
-           which == STANDARD_COUNTERPOINT_HARMONIC_RULE_INTERIOR_UNISONS ||
-           which == STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointHarmonicRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE] = true,
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS] = true,
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_INTERIOR_UNISONS] = true,
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION] = true};
 
 static const RuleTable TABLE = {
-    .name = "harmonic", .names = NAMES, .count = STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, .is_hard = table_is_hard};
+    .name = "harmonic", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointHarmonicRule which) {
     return rule_table_valid(&TABLE, (int)which);

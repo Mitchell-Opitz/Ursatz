@@ -9,16 +9,14 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT] = {
     "dissonant-passing", "pattern-fit", "mixture", "register-change-rare"};
 
-static bool rule_is_hard(StandardCounterpointSecondSpeciesWeakRule which) {
-    return which == STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_DISSONANT_PASSING;
-}
-
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointSecondSpeciesWeakRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT] = {
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_PATTERN_FIT] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_MIXTURE] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_REGISTER_CHANGE_RARE] = true};
 
 static const RuleTable TABLE = {
-    .name = "second-species-weak", .names = NAMES, .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT, .is_hard = table_is_hard};
+    .name = "second-species-weak", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesWeakRule which) {
     return rule_table_valid(&TABLE, (int)which);

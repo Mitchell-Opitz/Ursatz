@@ -6,12 +6,10 @@
 static const char *const NAMES[HARMONY_PHRASE_RULE_COUNT] = {"tonic-then-dominant", "no-backward-motion",
                                                              "weak-predominant-leads-on", "iv-before-ii"};
 
-static bool table_is_hard(int which) {
-    return which == HARMONY_PHRASE_TONIC_THEN_DOMINANT || which == HARMONY_PHRASE_IV_BEFORE_II;
-}
+static const bool SOFT[HARMONY_PHRASE_RULE_COUNT] = {
+    [HARMONY_PHRASE_NO_BACKWARD_MOTION] = true, [HARMONY_PHRASE_WEAK_PREDOMINANT_LEADS_ON] = true};
 
-static const RuleTable TABLE = {
-    .name = "phrase", .names = NAMES, .count = HARMONY_PHRASE_RULE_COUNT, .is_hard = table_is_hard};
+static const RuleTable TABLE = {.name = "phrase", .names = NAMES, .soft = SOFT, .count = HARMONY_PHRASE_RULE_COUNT};
 
 bool harmony_phrase_rule_soft(HarmonyPhraseRule which) {
     return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);

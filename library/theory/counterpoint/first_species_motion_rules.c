@@ -9,8 +9,15 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT] = {
     "motion-variety", "contrary-preferred", "similar-with-leap", "similar-with-large-leap"};
 
+static const bool SOFT[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT] = {
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_VARIETY] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_CONTRARY_PREFERRED] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_SIMILAR_WITH_LEAP] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_SIMILAR_WITH_LARGE_LEAP] = true};
+
 static const RuleTable TABLE = {
-    .name = "first-species-motion", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, .is_hard = rule_table_never_hard};
+    .name = "first-species-motion", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesMotionRule which) {
     return rule_table_valid(&TABLE, (int)which);

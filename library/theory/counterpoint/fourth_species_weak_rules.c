@@ -11,16 +11,12 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT] = {
     "consonant", "no-repeated-perfect", "max-same-imperfect-run", "no-direct-perfect", "no-interior-unison"};
 
-static bool rule_is_soft(StandardCounterpointFourthSpeciesWeakRule which) {
-    return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_NO_INTERIOR_UNISON;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointFourthSpeciesWeakRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT] = {
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_NO_INTERIOR_UNISON] = true};
 
 static const RuleTable TABLE = {
-    .name = "fourth-species-weak", .names = NAMES, .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT, .is_hard = table_is_hard};
+    .name = "fourth-species-weak", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesWeakRule which) {
     return rule_table_valid(&TABLE, (int)which);

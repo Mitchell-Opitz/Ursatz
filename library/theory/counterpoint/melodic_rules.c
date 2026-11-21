@@ -12,18 +12,18 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT] = {
     "leap-density",     "repeated-generic", "unique-climax",    "climax-not-final",
     "climax-by-leap",   "forbidden-leap",  "forbidden-outline"};
 
-static bool rule_is_hard(StandardCounterpointMelodicRule which) {
-    return which == STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA ||
-           which == STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_LEAP ||
-           which == STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE;
-}
-
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointMelodicRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_REPEATED_NOTES] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_PITCH_OCCURRENCES] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_CONSECUTIVE_LEAPS] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_LEAP_DENSITY] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_REPEATED_GENERIC] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_UNIQUE_CLIMAX] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_CLIMAX_NOT_FINAL] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_CLIMAX_BY_LEAP] = true};
 
 static const RuleTable TABLE = {
-    .name = "melodic", .names = NAMES, .count = STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT, .is_hard = table_is_hard};
+    .name = "melodic", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointMelodicRule which) {
     return rule_table_valid(&TABLE, (int)which);

@@ -12,8 +12,11 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT] = {"begin", "opening-bar", "final-bar",
                                                                                     "clausula-vera"};
 
+static const bool SOFT[STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT] = {false};
+
 static const RuleTable TABLE = {
-    .name = "second-species-ends", .names = NAMES, .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT};
+    .name = "second-species-ends", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesEndsRule which) {
     return rule_table_valid(&TABLE, (int)which);

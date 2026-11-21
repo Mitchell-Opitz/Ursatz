@@ -9,16 +9,13 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT] = {"proper", "many",
                                                                                                "few-nine-eight"};
 
-static bool rule_is_hard(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_PROPER;
-}
-
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointFourthSpeciesSuspensionRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_MANY] = true,
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_FEW_NINE_EIGHT] = true};
 
 static const RuleTable TABLE = {
-    .name = "fourth-species-suspension", .names = NAMES, .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT, .is_hard = table_is_hard};
+    .name = "fourth-species-suspension", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
     return rule_table_valid(&TABLE, (int)which);

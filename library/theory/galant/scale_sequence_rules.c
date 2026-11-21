@@ -7,11 +7,10 @@
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
 
-static bool table_is_hard(int which) {
-    return which <= SCALE_SEQUENCE_SUSPENDED;
-}
+static const bool SOFT[SCALE_SEQUENCE_RULE_COUNT] = {
+    [SCALE_SEQUENCE_WHOLE_UNITS] = true};
 
-static const RuleTable TABLE = {.count = SCALE_SEQUENCE_RULE_COUNT, .is_hard = table_is_hard};
+static const RuleTable TABLE = {.soft = SOFT, .count = SCALE_SEQUENCE_RULE_COUNT};
 
 bool scale_sequence_valid(const ScaleSequence *sequence) {
     return sequence != NULL && sequence->pattern != NULL && sequence->pattern->unit_length > 0 &&

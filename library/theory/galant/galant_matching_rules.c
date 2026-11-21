@@ -4,11 +4,10 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 
-static bool table_is_hard(int which) {
-    return which <= GALANT_MATCH_BASS_DEFINING;
-}
+static const bool SOFT[GALANT_MATCH_RULE_COUNT] = {
+    [GALANT_MATCH_BASS_USUAL] = true, [GALANT_MATCH_TENTHS] = true};
 
-static const RuleTable TABLE = {.count = GALANT_MATCH_RULE_COUNT, .is_hard = table_is_hard};
+static const RuleTable TABLE = {.soft = SOFT, .count = GALANT_MATCH_RULE_COUNT};
 
 bool galant_match_valid(const GalantMatch *match) {
     return match != NULL && match->prototype != NULL && galant_exemplar_valid(match->exemplar) &&

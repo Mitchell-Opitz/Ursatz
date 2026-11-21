@@ -14,18 +14,13 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT] = {
     "single-climax", "leap-recovery",     "consecutive-leaps", "leading-tone",  "mostly-stepwise",
     "no-repeated-motive"};
 
-static bool rule_is_soft(StandardCounterpointCantusRule which) {
-    return which == STANDARD_COUNTERPOINT_CANTUS_RULE_SINGLE_CLIMAX ||
-           which == STANDARD_COUNTERPOINT_CANTUS_RULE_MOSTLY_STEPWISE ||
-           which == STANDARD_COUNTERPOINT_CANTUS_RULE_NO_REPEATED_MOTIVE;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointCantusRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_CANTUS_RULE_SINGLE_CLIMAX] = true,
+    [STANDARD_COUNTERPOINT_CANTUS_RULE_MOSTLY_STEPWISE] = true,
+    [STANDARD_COUNTERPOINT_CANTUS_RULE_NO_REPEATED_MOTIVE] = true};
 
 static const RuleTable TABLE = {
-    .name = "cantus-firmus", .names = NAMES, .count = STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT, .is_hard = table_is_hard};
+    .name = "cantus-firmus", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointCantusRule which) {
     return rule_table_valid(&TABLE, (int)which);

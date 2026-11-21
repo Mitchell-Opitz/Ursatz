@@ -10,12 +10,7 @@ bool rule_table_is_hard(const RuleTable *table, int which) {
     if (!rule_table_valid(table, which)) {
         return false;
     }
-    return table->is_hard == NULL || table->is_hard(which);
-}
-
-bool rule_table_never_hard(int which) {
-    (void)which;
-    return false;
+    return !table->soft[which];
 }
 
 const char *rule_table_name(const RuleTable *table, int which) {

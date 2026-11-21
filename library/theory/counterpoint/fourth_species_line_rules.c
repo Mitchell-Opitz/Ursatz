@@ -15,17 +15,13 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT] = {
     "leaps", "final-step", "range", "leading-tone", "downward-steps", "upward-leap"};
 
-static bool rule_is_soft(StandardCounterpointFourthSpeciesLineRule which) {
-    return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_DOWNWARD_STEPS ||
-           which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_UPWARD_LEAP;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointFourthSpeciesLineRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT] = {
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_DOWNWARD_STEPS] = true,
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_UPWARD_LEAP] = true};
 
 static const RuleTable TABLE = {
-    .name = "fourth-species-line", .names = NAMES, .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT, .is_hard = table_is_hard};
+    .name = "fourth-species-line", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesLineRule which) {
     return rule_table_valid(&TABLE, (int)which);

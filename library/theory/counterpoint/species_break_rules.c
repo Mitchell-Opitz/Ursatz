@@ -10,16 +10,11 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT] = {"downbeat-consonant", "weak-passing",
                                                                               "limits"};
 
-static bool rule_is_soft(StandardCounterpointSpeciesBreakRule which) {
-    return which == STANDARD_COUNTERPOINT_SPECIES_BREAK_LIMITS;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointSpeciesBreakRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT] = {
+    [STANDARD_COUNTERPOINT_SPECIES_BREAK_LIMITS] = true};
 
 static const RuleTable TABLE = {
-    .name = "species-break", .names = NAMES, .count = STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT, .is_hard = table_is_hard};
+    .name = "species-break", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT};
 
 static bool valid_rule(StandardCounterpointSpeciesBreakRule which) {
     return rule_table_valid(&TABLE, (int)which);

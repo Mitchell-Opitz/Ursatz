@@ -10,8 +10,13 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_TENDENCY_COUNT] = {
     "pitch-proximity", "step-declination", "step-inertia", "melodic-regression", "melodic-arch"};
 
+static const bool SOFT[STANDARD_COUNTERPOINT_TENDENCY_COUNT] = {
+    [STANDARD_COUNTERPOINT_TENDENCY_PITCH_PROXIMITY] = true,
+    [STANDARD_COUNTERPOINT_TENDENCY_STEP_DECLINATION] = true, [STANDARD_COUNTERPOINT_TENDENCY_STEP_INERTIA] = true,
+    [STANDARD_COUNTERPOINT_TENDENCY_MELODIC_REGRESSION] = true, [STANDARD_COUNTERPOINT_TENDENCY_MELODIC_ARCH] = true};
+
 static const RuleTable TABLE = {
-    .name = "tendency", .names = NAMES, .count = STANDARD_COUNTERPOINT_TENDENCY_COUNT, .is_hard = rule_table_never_hard};
+    .name = "tendency", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_TENDENCY_COUNT};
 
 static bool valid_rule(StandardCounterpointTendency which) {
     return rule_table_valid(&TABLE, (int)which);

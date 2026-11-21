@@ -11,18 +11,14 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT
     "all-consonant",        "no-repeated-perfect",    "no-direct-perfects", "max-same-imperfect-run",
     "imperfect-preferred",  "perfect-then-imperfect", "interval-variety"};
 
-static bool rule_is_soft(StandardCounterpointFirstSpeciesHarmonyRule which) {
-    return which == STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_IMPERFECT_PREFERRED ||
-           which == STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_PERFECT_THEN_IMPERFECT ||
-           which == STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_INTERVAL_VARIETY;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointFirstSpeciesHarmonyRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT] = {
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_IMPERFECT_PREFERRED] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_PERFECT_THEN_IMPERFECT] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_INTERVAL_VARIETY] = true};
 
 static const RuleTable TABLE = {
-    .name = "first-species-harmony", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT, .is_hard = table_is_hard};
+    .name = "first-species-harmony", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesHarmonyRule which) {
     return rule_table_valid(&TABLE, (int)which);

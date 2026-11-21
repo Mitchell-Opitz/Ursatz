@@ -5,12 +5,10 @@
 
 static const char *const NAMES[HARMONY_CADENCE_RULE_COUNT] = {"cadential-progression", "half-without-seventh"};
 
-static bool table_is_hard(int which) {
-    return which == HARMONY_CADENCE_CADENTIAL_PROGRESSION;
-}
+static const bool SOFT[HARMONY_CADENCE_RULE_COUNT] = {
+    [HARMONY_CADENCE_HALF_WITHOUT_SEVENTH] = true};
 
-static const RuleTable TABLE = {
-    .name = "cadence", .names = NAMES, .count = HARMONY_CADENCE_RULE_COUNT, .is_hard = table_is_hard};
+static const RuleTable TABLE = {.name = "cadence", .names = NAMES, .soft = SOFT, .count = HARMONY_CADENCE_RULE_COUNT};
 
 bool harmony_cadence_rule_soft(HarmonyCadenceRule which) {
     return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);

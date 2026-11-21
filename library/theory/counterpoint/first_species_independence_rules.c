@@ -11,16 +11,14 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT] = {
     "single-repeat", "no-repeat", "no-overlap", "emergency-gap"};
 
-static bool rule_is_hard(StandardCounterpointFirstSpeciesIndependenceRule which) {
-    return which == STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_SINGLE_REPEAT;
-}
-
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointFirstSpeciesIndependenceRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT] = {
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_NO_REPEAT] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_NO_OVERLAP] = true,
+    [STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_EMERGENCY_GAP] = true};
 
 static const RuleTable TABLE = {
-    .name = "first-species-independence", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT, .is_hard = table_is_hard};
+    .name = "first-species-independence", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesIndependenceRule which) {
     return rule_table_valid(&TABLE, (int)which);

@@ -10,17 +10,13 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT
     "consonant", "imperfect-preferred", "no-strong-unison", "no-repeated-perfect", "no-dissonant-outline",
     "max-same-imperfect-run"};
 
-static bool rule_is_soft(StandardCounterpointSecondSpeciesStrongRule which) {
-    return which == STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_IMPERFECT_PREFERRED ||
-           which == STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_NO_STRONG_UNISON;
-}
-
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointSecondSpeciesStrongRule)which);
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT] = {
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_IMPERFECT_PREFERRED] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_NO_STRONG_UNISON] = true};
 
 static const RuleTable TABLE = {
-    .name = "second-species-strong", .names = NAMES, .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT, .is_hard = table_is_hard};
+    .name = "second-species-strong", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesStrongRule which) {
     return rule_table_valid(&TABLE, (int)which);
