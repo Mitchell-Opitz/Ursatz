@@ -6,6 +6,7 @@
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/seventh_rules.h"
 
 static long floor_div(long a, long b) {
     long quotient = a / b;
@@ -280,9 +281,11 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     int root = scale_step_semitone(sketch, root_index) + chord->alteration;
     size_t count = chord->seventh ? 4 : 3;
     if (chord->alteration != 0) {
-        static const int OFFSETS[4] = {0, 4, 7, 10};
+        /* an altered chord is a dominant seventh on its root, or its first three tones */
+        int offsets[4];
+        standard_tonality_seventh_quality_semitones(STANDARD_TONALITY_SEVENTH_MAJOR_MINOR, offsets);
         for (size_t i = 0; i < count; i++) {
-            pcs[i] = (sketch->tonic_pc + root + OFFSETS[i] + 120) % 12;
+            pcs[i] = (sketch->tonic_pc + root + offsets[i] + 120) % 12;
         }
         return count;
     }
