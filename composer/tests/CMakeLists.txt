@@ -165,8 +165,12 @@ foreach(beginning RANGE 2)
     foreach(ending RANGE 2)
         list(GET GROW_BEGINNINGS ${beginning} beginning_name)
         list(GET GROW_ENDINGS ${ending} ending_name)
+        # Each pairing writes its plans and heard.txt in its own folder; test_grow_period_heard reads them.
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/grow_period_${beginning_name}_${ending_name})
         ursatz_test(test_grow_period_${beginning_name}_${ending_name} TARGET test_grow_period
-            ARGS ${beginning} ${ending})
+            ARGS ${beginning} ${ending}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/grow_period_${beginning_name}_${ending_name}
+            PROPERTIES FIXTURES_SETUP grow_period_${beginning_name}_${ending_name})
     endforeach()
 endforeach()
 ursatz_test_executable(test_grow_period_heard LIBS ursatz_composer_engine composer_test_support)
@@ -179,7 +183,9 @@ foreach(beginning RANGE 2)
             # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test holds the
             # shares to the baseline table in its source and prints the target (R-698).
             ursatz_test(test_grow_period_heard_${beginning_name}_${ending_name} TARGET test_grow_period_heard
-                ARGS ${beginning} ${ending})
+                ARGS ${beginning} ${ending}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/grow_period_${beginning_name}_${ending_name}
+                PROPERTIES FIXTURES_REQUIRED grow_period_${beginning_name}_${ending_name})
         endif()
     endforeach()
 endforeach()
