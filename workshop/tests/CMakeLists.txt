@@ -90,8 +90,9 @@ ursatz_test(workshop_variants SOURCES test_variants.c LIBS ursatz_workshop_inter
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(workshop_formats COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/validate_formats.py
                      ${PROJECT_SOURCE_DIR}/workshop/schema ${CMAKE_BINARY_DIR}/gui/backend/tests/migrated_routes
+                     ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
         LABELS schema
-        PROPERTIES FIXTURES_REQUIRED migrated_routes_files)
+        PROPERTIES FIXTURES_REQUIRED "migrated_routes_files;settings_commands_files")
 endif()
 
 # Recovery after a stop in the middle of a change (P63 B8): hand-made leftovers of every kind, recovered by workshop_open from the journal.
@@ -213,3 +214,11 @@ ursatz_test(workshop_restore SOURCES test_restore.c LIBS ursatz_workshop_interna
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_resolve)
 ursatz_test(workshop_settings_resolve SOURCES test_settings_resolve.c LIBS ursatz_workshop_internal ursatz_test_support VALGRIND
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_resolve)
+
+# The settings commands (P66 B4): every command and refusal through the API, the queries, a taste profile that changes only by an import that says why. Its folder is
+# one of workshop_formats' (the files the commands leave validate).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands)
+ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
+    PROPERTIES FIXTURES_SETUP settings_commands_files)
