@@ -24,7 +24,7 @@ Realized note is `URSATZ_ERR_REQUEST` with `/plan`. Schema: `schema/api/export.s
 ## Motive requests
 
 The three motive entries read the same request. Only `input` (with its `text`) is required; `composer_api_motive_from_midi`
-takes the bytes of a MIDI file instead of `input`.
+takes the bytes of a MIDI file instead of `input`, and `write_in_c` (API 4.4): with a key the `analysis` also has `key_text` (the key found, `"D minor"`) and `notes_text_in_c` (the notes with C as the tonic in the same mode, R-179). `stored` (only `composer_api_validate`) refuses a key but C major or C minor.
 
 | Member | Value |
 |---|---|
