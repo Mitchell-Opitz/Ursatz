@@ -233,9 +233,6 @@ const ChainResult *analysis_chain_result(const AnalysisChain *chain);
 /* The score analysis_chain_run_score ran on; NULL after analysis_chain_run. */
 const ImportedScore *analysis_chain_score(const AnalysisChain *chain);
 
-/* Moves the collected result out into *out (the caller releases it with chain_result_destroy); the chain keeps an empty one. */
-void chain_result_take(AnalysisChain *chain, ChainResult *out);
-
 /* --- the results --- */
 
 /* How many segments the stages ran over (those starting inside the scope). */

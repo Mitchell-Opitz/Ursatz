@@ -25,7 +25,6 @@ library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-posit
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 
-library/chain/chain_collect.c chain_result_take  # only analyzer_result_take_report calls it, which the Analyzer's tests use (P61 B9); its tests call it
 analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it
 library/model/containers/section.c section_id  # no app reads a section's id since P62 B11 (the claims that named it are gone); its tests call it
 library/model/core/entity.c entity_id  # no app reads an entity's id since P62 B11 (the claims that named it are gone); its tests call it
