@@ -183,6 +183,21 @@ static void test_pitch_class_windows(void) {
     assert(pitch_class_window_name(0, 0) == NULL);
 }
 
+static void test_pitch_name_of_midi(void) {
+    char name[8];
+    assert(pitch_name_of_midi(60, false, name, sizeof(name)) && strcmp(name, "C4") == 0);
+    assert(pitch_name_of_midi(61, false, name, sizeof(name)) && strcmp(name, "C#4") == 0);
+    assert(pitch_name_of_midi(61, true, name, sizeof(name)) && strcmp(name, "Db4") == 0);
+    assert(pitch_name_of_midi(0, false, name, sizeof(name)) && strcmp(name, "C-1") == 0);
+    assert(pitch_name_of_midi(127, true, name, sizeof(name)) && strcmp(name, "G9") == 0);
+    /* below MIDI 0 the octave truncates toward zero, as every copy did */
+    assert(pitch_name_of_midi(-1, false, name, sizeof(name)) && strcmp(name, "B-1") == 0);
+    assert(pitch_name_of_midi(-13, false, name, sizeof(name)) && strcmp(name, "B-2") == 0);
+    char small[3] = "zz";
+    assert(!pitch_name_of_midi(61, false, small, sizeof(small)));
+    assert(!pitch_name_of_midi(60, false, NULL, 8));
+}
+
 static void test_pitch_class_names(void) {
     static const char *const SHARPS[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     static const char *const FLATS[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
@@ -279,6 +294,7 @@ int main(void) {
     test_parse_rejects();
     test_pitch_class_names();
     test_pitch_class_windows();
+    test_pitch_name_of_midi();
     test_letter_from_char();
     test_step_number_and_generic_size();
     test_direction_and_same_name();

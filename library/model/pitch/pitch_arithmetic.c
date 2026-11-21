@@ -1,6 +1,7 @@
 #include "model/pitch/pitch_arithmetic.h"
 
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -281,4 +282,13 @@ bool pitch_spelling_parse_name(const char *text, PitchLetter *letter, int *accid
 
 const char *pitch_class_name(int pitch_class, bool prefer_flats) {
     return pitch_class_window_name(pitch_class, prefer_flats ? -6 : -1);
+}
+
+bool pitch_name_of_midi(int midi, bool prefer_flats, char *out, size_t size) {
+    if (out == NULL) {
+        return false;
+    }
+    int written = snprintf(out, size, "%s%d", pitch_class_name(pitch_class_of_midi(midi), prefer_flats),
+                           midi / PITCH_SEMITONES_PER_OCTAVE - 1);
+    return written > 0 && (size_t)written < size;
 }

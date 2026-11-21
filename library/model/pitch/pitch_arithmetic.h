@@ -86,4 +86,9 @@ bool pitch_spelling_parse_name(const char *text, PitchLetter *letter, int *accid
 /* "C", "C#" or "Db" ... for 0 to 11; NULL outside that range. */
 const char *pitch_class_name(int pitch_class, bool prefer_flats);
 
+/* The name and octave of a MIDI number, "C#4" or "Db4" (middle C, 60, is C4): the pitch class name of pitch_class_name followed
+ * by midi / 12 - 1 with C's truncating division (below MIDI 0 the octave is 0 for -1 to -11, not -1). False (out untouched)
+ * for a NULL out or a size too small for the text and its terminator. */
+bool pitch_name_of_midi(int midi, bool prefer_flats, char *out, size_t size);
+
 #endif

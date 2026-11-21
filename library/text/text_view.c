@@ -11,6 +11,7 @@
 #include <common/strings.h>
 
 #include <model/core/rational.h>
+#include <model/pitch/midi_pitch.h>
 #include <model/pitch/pitch_arithmetic.h>
 
 #include "plan/plan_json.h"
@@ -272,7 +273,7 @@ static void region_text(const Ctx *c, const char *tonic, const char *material, c
 }
 
 static void pc_region_text(const Ctx *c, int center, const char *material, char *out, size_t size) {
-    region_text(c, pitch_class_name(((center % 12) + 12) % 12, false), material, NULL, NULL, out, size);
+    region_text(c, pitch_class_name(pitch_class_of_midi(center), false), material, NULL, NULL, out, size);
 }
 
 static const cJSON *first_movement(const cJSON *real) {
@@ -586,7 +587,7 @@ static void note_name(const Note *n, char *out, size_t size) {
         snprintf(out, size, "%s%d", n->spelling, (n->midi - pitch_class_offset) / 12 - 1);
         return;
     }
-    snprintf(out, size, "%s%d", pitch_class_name(((n->midi % 12) + 12) % 12, false), n->midi / 12 - 1);
+    pitch_name_of_midi(n->midi, false, out, size);
 }
 
 /* A duration: w h q e s t, with one or two dots or a triplet 3, else n/d of a whole note. */
