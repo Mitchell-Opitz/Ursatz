@@ -43,7 +43,7 @@ static void test_defaults(void) {
     WorkshopConfig out;
     char storage[512];
     UrsatzError error;
-    assert(workshop_settings_resolve(NULL, &out, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(NULL, &out, storage, sizeof(storage), &error) == URSATZ_OK);
     assert(strcmp(out.data_dir, ".") == 0 && out.port == 8765 && out.http_threads == 16 && out.job_workers == 2);
     assert(strcmp(out.config_path, "./ursatz.json") == 0);
 }
@@ -56,21 +56,21 @@ static void test_each_layer_overrides_the_one_before(void) {
     WorkshopConfig out;
     char storage[512];
     UrsatzError error;
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
     assert(out.port == 9001 && out.http_threads == 8 && out.job_workers == 3);
 
     setenv("URSATZ_PORT", "9002", 1);
     setenv("URSATZ_JOB_WORKERS", "5", 1);
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
     assert(out.port == 9002 && out.http_threads == 8 && out.job_workers == 5);
 
     flags.port = 9003;
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
     assert(out.port == 9003 && out.job_workers == 5);
 
     setenv("URSATZ_DATA", dir, 1);
     flags.data_dir = NULL;
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_OK);
     assert(strcmp(out.data_dir, dir) == 0 && out.port == 9003);
     clear_environment();
 }
@@ -84,32 +84,32 @@ static void test_bad_values_are_refused(void) {
     UrsatzError error;
 
     write_config(dir, "{\"format\":\"ursatz-config\",\"format_version\":1,\"http_threads\":0}");
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
     assert(strstr(error.message, "http_threads") && strcmp(error.path, "/http_threads") == 0);
 
     write_config(dir, "{\"format\":\"ursatz-config\",\"format_version\":1,\"port\":70000}");
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
     assert(strstr(error.message, "port"));
 
     write_config(dir, "{\"format\":\"other\",\"format_version\":1}");
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
 
     write_config(dir, "{\"format\":\"ursatz-config\",\"format_version\":2}");
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_FORMAT);
     assert(strstr(error.message, "format_version"));
 
     write_config(dir, "{\"format\":\"ursatz-config\",\"format_version\":1}");
     setenv("URSATZ_PORT", "abc", 1);
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_REQUEST);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_REQUEST);
     assert(strstr(error.message, "URSATZ_PORT"));
     clear_environment();
 
     flags.job_workers = 9;
-    assert(workshop_settings_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_REQUEST);
+    assert(workshop_config_resolve(&flags, &out, storage, sizeof(storage), &error) == URSATZ_ERR_REQUEST);
     assert(strstr(error.message, "job_workers"));
     flags.job_workers = 0;
 
-    assert(workshop_settings_resolve(&flags, &out, storage, 4, &error) == URSATZ_ERR_REQUEST);
+    assert(workshop_config_resolve(&flags, &out, storage, 4, &error) == URSATZ_ERR_REQUEST);
 }
 
 int main(void) {

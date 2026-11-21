@@ -1,7 +1,7 @@
 # The workshop's tests: opening, settings and the data folder lock (P63 B4), and the services (P63 B5). Each runs in its own working
 # directory.
 ursatz_test(workshop_open LIBS ursatz_workshop)
-ursatz_test(workshop_settings LIBS ursatz_workshop)
+ursatz_test(workshop_config LIBS ursatz_workshop)
 ursatz_test(workshop_lock LIBS ursatz_workshop)
 
 # The third call, tools (P64 B1): a workshop with no data folder and the tools the command line calls. The seed corpus is built by the target

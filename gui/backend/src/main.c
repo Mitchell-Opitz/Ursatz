@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
   char storage[2048];
   UrsatzError error = {{0}};
   Workshop *workshop = NULL;
-  if (workshop_settings_resolve(&flags, &settings, storage, sizeof(storage), &error) != URSATZ_OK ||
+  if (workshop_config_resolve(&flags, &settings, storage, sizeof(storage), &error) != URSATZ_OK ||
       workshop_open(&settings, &workshop, &error) != URSATZ_OK) {
     fprintf(stderr, "ursatz-gui-backend: %s\n", error.message);
     return 1;

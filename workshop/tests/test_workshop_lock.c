@@ -15,7 +15,7 @@ static Workshop *open_on(const char *data, UrsatzStatus *status, UrsatzError *er
     WorkshopConfig flags = {data, NULL, 0, 0, 0};
     WorkshopConfig resolved;
     char storage[512];
-    assert(workshop_settings_resolve(&flags, &resolved, storage, sizeof(storage), error) == URSATZ_OK);
+    assert(workshop_config_resolve(&flags, &resolved, storage, sizeof(storage), error) == URSATZ_OK);
     Workshop *workshop = NULL;
     *status = workshop_open(&resolved, &workshop, error);
     return workshop;

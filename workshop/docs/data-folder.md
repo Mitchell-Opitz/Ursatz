@@ -91,4 +91,4 @@ A real run first runs the read-only data check (a folder the one-time migrations
 
 ## Settings
 
-`workshop_settings_resolve` takes four layers, each over the one before: the defaults (`data_dir` `.`, `port` 8765, `http_threads` 16, `job_workers` 2), `ursatz.json` (format `ursatz-config` 1: `port` 1 to 65535, `http_threads` 1 to 64, `job_workers` 1 to 8; a bad file is `URSATZ_ERR_FORMAT` naming the member), the environment (`URSATZ_DATA`, `URSATZ_PORT`, `URSATZ_JOB_WORKERS`) and the flags (`--data`, `--port`).
+`workshop_config_resolve` takes four layers, each over the one before: the defaults (`data_dir` `.`, `port` 8765, `http_threads` 16, `job_workers` 2), `ursatz.json` (format `ursatz-config` 1: `port` 1 to 65535, `http_threads` 1 to 64, `job_workers` 1 to 8; a bad file is `URSATZ_ERR_FORMAT` naming the member), the environment (`URSATZ_DATA`, `URSATZ_PORT`, `URSATZ_JOB_WORKERS`) and the flags (`--data`, `--port`).

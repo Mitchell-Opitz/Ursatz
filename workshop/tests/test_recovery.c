@@ -164,7 +164,7 @@ int main(void) {
     char storage[512];
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    assert(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     Workshop *workshop = NULL;
     assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK && workshop);
     const char *summary = workshop_recovery_summary(workshop);

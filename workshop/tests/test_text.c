@@ -200,7 +200,7 @@ static bool open_copy(void) {
     WorkshopConfig flags = {.data_dir = ".", .config_path = NULL, .port = 0, .http_threads = 2, .job_workers = 2};
     WorkshopConfig resolved;
     char storage[4096];
-    if (workshop_settings_resolve(&flags, &resolved, storage, sizeof(storage), &error) != URSATZ_OK ||
+    if (workshop_config_resolve(&flags, &resolved, storage, sizeof(storage), &error) != URSATZ_OK ||
         workshop_open(&resolved, &g_workshop, &error) != URSATZ_OK || workshop_start(g_workshop, &error) != URSATZ_OK) {
         fprintf(stderr, "cannot open the workshop: %s\n", error.message);
         return false;

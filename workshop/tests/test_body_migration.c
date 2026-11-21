@@ -187,7 +187,7 @@ static void test_layout_one(void) {
   WorkshopConfig resolved;
   char storage[512];
   Workshop *workshop = NULL;
-  check_quiet(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "settings resolve");
+  check_quiet(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "settings resolve");
   check_quiet(workshop_open(&resolved, &workshop, &error) == URSATZ_ERR_FORMAT && workshop == NULL && strstr(error.message, "layout 1") != NULL &&
                   strstr(error.message, "migrate --dry-run") != NULL,
               "a layout 1 folder is refused by open, saying how to back it up and migrate it");

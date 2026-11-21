@@ -18,7 +18,7 @@ static void test_open_creates_the_folder_and_reports_status(void) {
     WorkshopConfig resolved;
     char storage[512];
     UrsatzError error;
-    assert(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     Workshop *workshop = NULL;
     assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK && workshop);
     assert(common_path_is_dir(data));
@@ -43,7 +43,7 @@ static void test_open_on_an_existing_folder_twice_in_turn(void) {
     WorkshopConfig resolved;
     char storage[512];
     UrsatzError error;
-    assert(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     for (int i = 0; i < 2; i++) {
         Workshop *workshop = NULL;
         assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK && workshop);

@@ -217,7 +217,7 @@ static void test_a_data_folder_workshop_answers_tools_before_start(void) {
     WorkshopConfig resolved;
     char storage[512];
     UrsatzError error;
-    assert(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     Workshop *workshop = NULL;
     assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK && workshop);
     WorkshopReply reply;

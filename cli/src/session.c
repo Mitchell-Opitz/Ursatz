@@ -91,7 +91,7 @@ int cli_session_open(const CliGlobal *global, CliSession **out) {
     char storage[2048];
     UrsatzError error;
     memset(&error, 0, sizeof error);
-    UrsatzStatus status = workshop_settings_resolve(&flags, &resolved, storage, sizeof storage, &error);
+    UrsatzStatus status = workshop_config_resolve(&flags, &resolved, storage, sizeof storage, &error);
     if (status == URSATZ_OK) {
         status = workshop_open(&resolved, &session->workshop, &error);
     }

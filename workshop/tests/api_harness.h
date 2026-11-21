@@ -50,7 +50,7 @@ static bool harness_open(int port) {
     WorkshopConfig resolved;
     char storage[4096];
     UrsatzError error = {{0}, {0}};
-    if (workshop_settings_resolve(&flags, &resolved, storage, sizeof(storage), &error) != URSATZ_OK ||
+    if (workshop_config_resolve(&flags, &resolved, storage, sizeof(storage), &error) != URSATZ_OK ||
         workshop_open(&resolved, &g_workshop, &error) != URSATZ_OK || workshop_start(g_workshop, &error) != URSATZ_OK) {
         fprintf(stderr, "cannot open the workshop: %s\n", error.message);
         return false;

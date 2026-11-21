@@ -66,11 +66,11 @@ typedef struct {
  * parsed, any 0 or NULL one unset). *out is filled with every member set; its strings point into storage (storage_size bytes,
  * the caller's), so it is valid while storage is. URSATZ_ERR_REQUEST for a value out of range or storage too small.
  */
-UrsatzStatus workshop_settings_resolve(const WorkshopConfig *flags, WorkshopConfig *out, char *storage, size_t storage_size,
+UrsatzStatus workshop_config_resolve(const WorkshopConfig *flags, WorkshopConfig *out, char *storage, size_t storage_size,
                                        UrsatzError *error);
 
 /*
- * Opens the workshop on the data folder of resolved (a WorkshopConfig with every member set, as workshop_settings_resolve
+ * Opens the workshop on the data folder of resolved (a WorkshopConfig with every member set, as workshop_config_resolve
  * gives it): creates the folder when it is absent, locks it, and starts what the workshop holds. *out is the workshop on
  * URSATZ_OK and NULL otherwise.
  */

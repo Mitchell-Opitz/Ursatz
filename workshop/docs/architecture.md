@@ -15,11 +15,11 @@ GUI backend (routes)          one route table over workshop_api.h: parse, call, 
         common                status, files, strings, JSON, hash, job handle, events
 ```
 
-It holds no music logic: a query or command reads or changes files and asks the Analyzer or the Composer. The one header a program includes is `workshop/include/ursatz_workshop/workshop_api.h`; the library exports only its 23 names (`workshop/src/exports.txt`, checked by the test `app_exports`): `workshop_settings_resolve`, `_open`, `_start`, `_stop`, `_close`, `_query`, `_command`, `_reply_destroy`, `_migrate`, `_status`, `_events_subscribe/next/unsubscribe/close`, `_recovery_summary` and the settings accessors (`_data_dir`, `_port`, `_http_threads`, `_job_workers`).
+It holds no music logic: a query or command reads or changes files and asks the Analyzer or the Composer. The one header a program includes is `workshop/include/ursatz_workshop/workshop_api.h`; the library exports only its 23 names (`workshop/src/exports.txt`, checked by the test `app_exports`): `workshop_config_resolve`, `_open`, `_start`, `_stop`, `_close`, `_query`, `_command`, `_reply_destroy`, `_migrate`, `_status`, `_events_subscribe/next/unsubscribe/close`, `_recovery_summary` and the settings accessors (`_data_dir`, `_port`, `_http_threads`, `_job_workers`).
 
 ## Life of a workshop
 
-1. `workshop_settings_resolve` merges defaults, `<data>/ursatz.json`, the environment and the flags ([settings](data-folder.md#settings)).
+1. `workshop_config_resolve` merges defaults, `<data>/ursatz.json`, the environment and the flags ([settings](data-folder.md#settings)).
 2. `workshop_open` creates or checks the data folder (`workshop_data_folder_prepare`: a layout 2 folder passes, an empty one gets `data-folder.json`, an older one is refused with the commands to run), takes the lock, runs recovery ([transactions](data-folder.md#changes-are-transactions)) and builds the knowledge snapshot and the Composer context.
 3. `workshop_start` starts the stores, the link run index, the job queue and the event bus, and makes the data folder the process's working directory (the services' paths are relative to it).
 4. `workshop_query` and `workshop_command` ([commands](commands.md)), `workshop_tool` ([tools](tools.md)), `workshop_events_*` ([jobs and events](jobs-and-events.md)).
@@ -37,7 +37,7 @@ It holds no music logic: a query or command reads or changes files and asks the 
 | `analysis/` | the Analyzer's services: import and re-analysis (and their jobs), styles, motive links, the import cache |
 | `composition/` | the Composer's services: compose jobs, themes, pieces, motifs, the variant engine ([variants](variants.md)), the request resolver, the Composer client |
 | `rendering/` | the render cache, playback of versions and pieces, the export of a version's files |
-| `coordinator/` | the API: `workshop.c` (open, start, stop), `dispatch.c` (the two tables of names), `api_*.c` (one file per family of handlers), `events.c`, `settings.c`, `data_lock.c` |
+| `coordinator/` | the API: `workshop.c` (open, start, stop), `dispatch.c` (the two tables of names), `api_*.c` (one file per family of handlers), `events.c`, `config.c`, `data_lock.c` |
 
 Rules the layer table holds: `items/` does not reach up to `analysis/`, `composition/` or `rendering/`, so a function that needs the analysis layer to cascade (`workshop_library_piece_json`, `_patch`, `_delete`) lives in `analysis/analysis.c`; the Composer's vocabulary is not read by the store at all (R-649), only by the Composer client; the one cycle left between the store and the subjects is a registered callback (`workshop_store_set_forget_item`).
 
@@ -51,4 +51,4 @@ The transaction is the outermost lock: a writer begins it (`workshop_txn_begin`,
 
 ## Tests
 
-`workshop/tests/`: `workshop_open`, `workshop_settings`, `workshop_lock`, `workshop_formats` (validates every format against its schema), `workshop_migrate`, `workshop_body_migration`, `workshop_request_resolve` (39 recorded requests resolve to the recorded requests member for member), `workshop_recovery`, `workshop_crash_points` (slow: every step of every command kind it names) and its smoke test, `workshop_layers`, `workshop_commands`, `workshop_queries`, `workshop_base_version`, `workshop_variants`, `workshop_jobs`, `workshop_events` and the service tests that moved with the services (`item`, `subject`, `link`, `piece lock`, `piece metadata`, `id`, `stale analysis`). The GUI's route tests play the whole stack through HTTP ([GUI testing](../../gui/docs/testing.md)).
+`workshop/tests/`: `workshop_open`, `workshop_config`, `workshop_lock`, `workshop_formats` (validates every format against its schema), `workshop_migrate`, `workshop_body_migration`, `workshop_request_resolve` (39 recorded requests resolve to the recorded requests member for member), `workshop_recovery`, `workshop_crash_points` (slow: every step of every command kind it names) and its smoke test, `workshop_layers`, `workshop_commands`, `workshop_queries`, `workshop_base_version`, `workshop_variants`, `workshop_jobs`, `workshop_events` and the service tests that moved with the services (`item`, `subject`, `link`, `piece lock`, `piece metadata`, `id`, `stale analysis`). The GUI's route tests play the whole stack through HTTP ([GUI testing](../../gui/docs/testing.md)).

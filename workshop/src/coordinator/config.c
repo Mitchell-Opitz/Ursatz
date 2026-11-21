@@ -130,7 +130,7 @@ static UrsatzStatus apply_flags(const WorkshopConfig *flags, WorkshopConfig *con
     return URSATZ_OK;
 }
 
-UrsatzStatus workshop_settings_resolve(const WorkshopConfig *flags, WorkshopConfig *out, char *storage, size_t storage_size,
+UrsatzStatus workshop_config_resolve(const WorkshopConfig *flags, WorkshopConfig *out, char *storage, size_t storage_size,
                                        UrsatzError *error) {
     WorkshopConfig none;
     memset(&none, 0, sizeof(none));

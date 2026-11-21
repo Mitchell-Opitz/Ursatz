@@ -50,7 +50,7 @@ static Workshop *open_on(const char *data) {
     WorkshopConfig resolved;
     char storage[512];
     UrsatzError error;
-    assert(workshop_settings_resolve(&flags, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&flags, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     Workshop *workshop = NULL;
     assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK);
     return workshop;

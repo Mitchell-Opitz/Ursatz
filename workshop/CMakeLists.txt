@@ -85,7 +85,7 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/data_lock.c
     src/coordinator/dispatch.c
     src/coordinator/events.c
-    src/coordinator/settings.c
+    src/coordinator/config.c
     src/coordinator/tools.c
     src/coordinator/workshop.c
 )
