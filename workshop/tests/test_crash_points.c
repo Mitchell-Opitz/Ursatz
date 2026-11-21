@@ -149,7 +149,7 @@ static void make_base(void) {
     UrsatzError error;
     memset(&error, 0, sizeof(error));
     shell("rm -rf '%s' '%s'", "base", "case");
-    assert(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     Workshop *workshop = NULL;
     assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK);
     workshop_close(workshop);
@@ -398,7 +398,7 @@ static void run_theme_compose(void) {
     cJSON *item = NULL;
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    UrsatzStatus status = workshop_theme_compose(g_base.theme, true, 1, false, NULL, &item, &error);
+    UrsatzStatus status = workshop_theme_compose(g_base.theme, true, 1, false, NULL, NULL, &item, &error);
     if (status != URSATZ_OK) {
         fprintf(stderr, "theme compose: status %d: %s\n", (int)status, error.message);
     }
@@ -468,7 +468,7 @@ static void check_after_stop(const Command *command, const char *point_name, uns
     char storage[512];
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    CHECK(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "%s: settings", label);
+    CHECK(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "%s: settings", label);
     Workshop *workshop = NULL;
     if (workshop_open(&resolved, &workshop, &error) != URSATZ_OK) {
         CHECK(false, "%s: open after the stop: %s", label, error.message);

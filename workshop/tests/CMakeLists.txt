@@ -1,7 +1,7 @@
 # The workshop's tests: opening, settings and the data folder lock (P63 B4), and the services (P63 B5). Each runs in its own working
 # directory.
 ursatz_test(workshop_open LIBS ursatz_workshop)
-ursatz_test(workshop_settings LIBS ursatz_workshop)
+ursatz_test(workshop_config LIBS ursatz_workshop)
 ursatz_test(workshop_lock LIBS ursatz_workshop)
 
 # The third call, tools (P64 B1): a workshop with no data folder and the tools the command line calls. The seed corpus is built by the target
@@ -90,8 +90,9 @@ ursatz_test(workshop_variants SOURCES test_variants.c LIBS ursatz_workshop_inter
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(workshop_formats COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/validate_formats.py
                      ${PROJECT_SOURCE_DIR}/workshop/schema ${CMAKE_BINARY_DIR}/gui/backend/tests/migrated_routes
+                     ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings
         LABELS schema
-        PROPERTIES FIXTURES_REQUIRED migrated_routes_files)
+        PROPERTIES FIXTURES_REQUIRED "migrated_routes_files;settings_commands_files;ratings_files")
 endif()
 
 # Recovery after a stop in the middle of a change (P63 B8): hand-made leftovers of every kind, recovered by workshop_open from the journal.
@@ -208,3 +209,30 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)
 ursatz_test(workshop_restore SOURCES test_restore.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS TEXT_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_restore)
+
+# The settings resolver (P66 B4): scope files written by hand, the order and sources of the scopes, the switches, the profile chain and every override action.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_resolve)
+ursatz_test(workshop_settings_resolve SOURCES test_settings_resolve.c LIBS ursatz_workshop_internal ursatz_test_support VALGRIND
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_resolve)
+
+# The settings commands (P66 B4): every command and refusal through the API, the queries, a taste profile that changes only by an import that says why. Its folder is
+# one of workshop_formats' (the files the commands leave validate).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands)
+ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
+    PROPERTIES FIXTURES_SETUP settings_commands_files)
+
+# Composing with settings (P66 B5): a theme with nothing set, with the taste switched off, with an item override and explored, the random motifs query and a piece that takes no
+# settings. Composes several themes: slow if it passes a minute.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
+ursatz_test(workshop_compose_settings SOURCES test_compose_settings.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
+
+# Listening sessions and ratings (P66 B6): a session with two batches, ratings and a pick, keep as default citing them, the refusals, ratings of an item version.
+# Its folder is one of workshop_formats' (the files the commands leave validate).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings)
+ursatz_test(workshop_ratings SOURCES test_ratings.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings
+    PROPERTIES FIXTURES_SETUP ratings_files)

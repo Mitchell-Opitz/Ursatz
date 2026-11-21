@@ -56,7 +56,7 @@ The Composer's sources are 17 modules, one folder each under `src/` (R-636). A m
 | `piece` | the compose run, the piece builders, performing, regenerating, the stages of `grow` | `check`, the operators, `grow` and the five above |
 | `candidates` | candidates and variations of a plan | `piece` and the five above |
 | `explain` | the explanation of a run | `piece`, `check`, `grow` and the five above |
-| `request` | the API entries and the preferences document | every module and `composer_api.h` |
+| `request` | the API entries and the preferences document, with its key table (`composer_preferences_keys`: one row per setting, hard or soft) and rule table (`composer_preferences_rules`), which the vocabulary serves as `preference_keys` and `rules` and the workshop reads at open to resolve settings | every module and `composer_api.h` |
 
 A header in `src/include/ursatz_composer/` belongs to the module whose files implement it. The five lowest modules (`util`, `structure`, `fill`, `render`, `style`) are the core; `harmony` to `material` are the operators.
 

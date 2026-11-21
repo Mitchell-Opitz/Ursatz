@@ -8,6 +8,7 @@ import Vocabulary from "../core/vocabulary.js";
 import { attachFormValidation, materialsState, sendMaterialsRequest } from "./materials-common.js";
 import { loadMotiveLinksChoices } from "./motive-links-view.js";
 import { fetchJsonResult } from "../core/api.js";
+import { buildSettingsSection } from "./settings-panel.js";
 
 /* The Themes view's editor (P16, R-167): the form, slot motifs and
  * accompaniment of a theme, mounted in the theme detail of materials-view.js.
@@ -956,11 +957,12 @@ function buildThemeChordRow(state) {
   return { element: block, refresh, mark };
 }
 
-function buildThemeAdvancedSection(state, itemsOf) {
+function buildThemeAdvancedSection(state, itemsOf, id) {
   const section = element("details", "panel materials-editor theme-editor theme-advanced");
   section.appendChild(element("summary", "section-title", "Advanced"));
   section.appendChild(buildThemeAccompanimentSection(state, itemsOf));
   section.appendChild(buildThemeBriefSection(state, { tempo: false }));
+  section.appendChild(buildSettingsSection({ id }));
   return section;
 }
 
@@ -1081,7 +1083,7 @@ export function buildThemeEditor(ctx) {
   chordRow = buildThemeChordRow(state);
   sections.slots.appendChild(chordRow.element);
 
-  sections.advanced = buildThemeAdvancedSection(state, itemsOf);
+  sections.advanced = buildThemeAdvancedSection(state, itemsOf, ctx.id);
 
   /* The Composer's checks of the values (meter, bars, hybrid, tempo, seed, chords...) come from the validate route. */
   const validation = attachFormValidation({

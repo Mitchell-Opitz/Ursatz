@@ -2,6 +2,12 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P66)
+
+API 4.3 (R-672, P66 B2): the melody group of the preferences takes `waive` (hard rules the melody stage does not hold: `forbidden-leap`, `forbidden-outline`, `no-crossing`, `parallel-octaves`, `parallel-fifths`, `dissonance-against-bass`, `strong-beat-chord-tone`) and `reverse` (soft rule groups scored by what they break), both empty by default; a response that echoes the preferences writes both. The vocabulary lists `preference_keys` (every setting by its dotted key, with its type, limits, class and default) and `rules`. `ComposerPreferenceKey` and `ComposerRule` with `composer_preferences_keys` and `composer_preferences_rules` (`<ursatz_composer/preferences.h>`); `MelodyFillParams.waive` and `reverse`. The preferences schema is one file, `schema/api/preferences.schema.json`, that the theme and random motive requests and responses and the vocabulary refer to (B1). Without preferences every output is unchanged.
+
+API 4.3 (R-673, P66 B3): the preferences take a fourth group, `candidates` (`variety` 0 to 20, default 0; `pool` 2 to 8, default 4), and the random motive request takes `avoid`, an array of up to 64 motive documents (refused at `/avoid/<i>`). With variety above 0 each motive is chosen among `pool` candidates (at least the style's 8) for being unlike the motives of `avoid` and the ones already made; with variety 0 the draw is as it was. `limits.preferences` gains `pool_min` and `pool_max`; `MotiveRandomOptions` gains `variety`, `pool`, `avoid` and `avoid_count`. `ursatz listen --what motifs` hands a varied batch's earlier motifs to each sample.
+
 ## Unreleased (phase P64)
 
 The Composer's command line is `ursatz` (R-657, R-658): `ursatz-composer` is gone, `export` is `ursatz render`, `--json` is `--format json`, and the command pages moved to the [cli docs](../../cli/docs/README.md). The API and its schemas are as they were.

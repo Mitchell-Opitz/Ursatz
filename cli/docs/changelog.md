@@ -2,6 +2,13 @@
 
 Newest first. [Docs index](README.md).
 
+## P66: ratings and exploring (2026-11)
+
+- **Rate.** `ursatz rate <ses-id> --round <n> --seed <s> --rating <batch>=<1-5> --better <batch>` and `rate item:<id>@v<n> --rating <1-5>` record ratings and picks (R-674). New flags `--batch`, `--better`, `--rating`, `--round`, `--session`, `--taste`; `--distance` and `--note` widen their help.
+- **Explore.** `ursatz explore item:<id>` composes a theme with settings moved from the taste (R-673).
+- **Listen data mode.** `ursatz listen --session <ses-id> --round <n> --batch <name>` resolves each sample's settings through the workshop and records the batch (R-674). The command count is 31.
+- **Build.** `third_party/CMakeLists.txt` always builds civetweb, so `ursatz` builds with `-DURSATZ_GUI=OFF` (R-670).
+
 ## P65: Ursatz Text (2026-11)
 
 - **Restore.** `ursatz restore item:<id>@v<n> [--base <n>] [--note <text>]` makes the next version a copy of an older one (R-667); `--note` joins the flag table (29 commands).

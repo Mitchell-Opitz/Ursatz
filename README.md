@@ -12,7 +12,7 @@ Each part builds on the library, and every part builds on `common/`. The Analyze
 | `library/` | The music theory library (`libursatz`): a canonical representation of musical material | [README](library/README.md), [docs](library/docs/README.md) |
 | `analyzer/` | The Analyzer: a library that writes the JSON analysis document and its text export (run by `ursatz analyze`) | [README](analyzer/README.md), [docs](analyzer/docs/README.md) |
 | `composer/` | The Composer: a seeded, reproducible composing partner (run by `ursatz`) | [README](composer/README.md), [docs](composer/docs/README.md) |
-| `workshop/` | The workshop: the one process that holds the data folder (projects, items and their versions, the Library, styles, links), its transactions, the job queue and the events, and answers every query and command | [docs](workshop/docs/README.md) |
+| `workshop/` | The workshop: the one process that holds the data folder (projects, items and their versions, the Library, styles, links, settings and listening ratings), its transactions, the job queue and the events, and answers every query and command | [docs](workshop/docs/README.md) |
 | `cli/` | `ursatz`: the one command line, for Claude sessions and scripts, over the workshop: it composes, analyzes and renders, and reads and changes a data folder | [README](cli/README.md), [docs](cli/docs/README.md) |
 | `gui/` | The GUI: a local web UI that is a client of the workshop (the `ursatz-gui-backend` server and its frontend) | [README](gui/README.md), [docs](gui/docs/README.md) |
 

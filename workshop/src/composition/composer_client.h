@@ -67,6 +67,11 @@ WorkshopComposerBuild workshop_composer_build(void);
  * limits.seed_max; -1 when the Composer does not give it. */
 double workshop_composer_seed_max(const char *kind);
 
+/* Asks the Composer whether document is a preferences document it reads (composer_api_validate of kind random_motive with the document as
+ * `preferences`, as ursatz listen does). True when it does; false with path (the Composer's, "/preferences/melody/keep") and message set when it
+ * refuses it. */
+bool workshop_composer_validate_preferences(const cJSON *document, char *path, size_t path_size, char *message, size_t message_size);
+
 /* The position of value in the vocabulary list called list ("theme_slots", "theme_ideas", "functions"...), from 0; -1 when
  * the list has no such value or the Composer gave no vocabulary. */
 int workshop_composer_vocabulary_index(const char *list, const char *value);

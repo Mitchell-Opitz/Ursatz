@@ -36,7 +36,8 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 | `item.delete` | `item:<id>@v<n>` | `[force bool]` | Delete an item and its variants |
 | `item.save` | `item:<id>@v<n>` | `body object [note string]` | Save the next version of an item |
 | `item.reanalyze` | `item:<id>@v<n>` | none | Analyze a motif again and save the result as a version |
-| `item.compose` | `item:<id>@v<n>` | `[seed int] [update_uses bool]` | Compose a theme or piece into a new version |
+| `item.compose` | `item:<id>@v<n>` | `[seed int] [update_uses bool] [settings object] [overrides list] [off list] [taste string]` | Compose a theme or piece into a new version |
+| `item.explore` | `item:<id>@v<n>` | `[distance int] [seed int] [settings object] [overrides list] [off list] [taste string]` | Compose a theme with some settings moved away from the taste |
 | `item.regenerate` | `item:<id>@v<n>` | `version int section_id string [lane string] [seed int]` | Write one section of a composed piece again as the next version |
 | `item.variations` | `item:<id>` | `version int section_id string lane string count int [seed int]` | Make variations of a section of a composed piece |
 | `item.choose` | `item:<id>@v<n>` | `version int set int index int` | Make one variation of a set the next version |
@@ -87,6 +88,19 @@ Projects: the folders that hold items.
 | `project.update` | `project:<id>` | `[name string] [description string]` | Rename a project or change its description |
 | `project.delete` | `project:<id>` | none | Delete a project |
 
+## Ratings
+
+Ratings: listening sessions with batches, ratings and picks, ratings of item versions, and keep as default.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `ratings.session` | none | `what motifs\|themes [taste string] [style string] [note string]` | Open a listening session |
+| `ratings.batch` | none | `session string round int batch string samples list` | Record a batch of samples in a session |
+| `ratings.rate` | none | `session string round int batch string seed int rating int [note string]` | Rate a sample of a batch from 1 to 5 |
+| `ratings.pick` | none | `session string round int seed int better string [note string]` | Say which batch of a round sounded better |
+| `ratings.rate-version` | `item:<id>` | `version int rating int [note string]` | Rate a version of an item from 1 to 5 |
+| `ratings.keep` | none | `taste string key string ratings list [value value] [note string]` | Keep a setting as the default of a taste profile, citing the ratings behind it |
+
 ## Section
 
 Sections: add, remove, move, resize and set the sections of a piece version's request.
@@ -98,6 +112,19 @@ Sections: add, remove, move, resize and set the sections of a piece version's re
 | `section.move` | `item:<id>@v<n>` | `id string [after string] [before string] [note string]` | Move a section after or before another |
 | `section.resize` | `item:<id>@v<n>` | `id string [bars int] [beats int] [note string]` | Change the length of a section |
 | `section.set` | `item:<id>@v<n>` | `id string [role intro\|body\|turnaround\|ending] [letter string] [function transition\|coda\|none] [cadence PAC\|IAC\|HC\|DC\|PC\|none] [pickup n/d] [fill empty\|motif] [region object] [harmony object] [note string]` | Change the role, letter, function, cadence, pickup, fill, region or harmony |
+
+## Settings
+
+Settings: the values, overrides and switches of a style, project or item, and the taste profile it uses.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `settings.set` | none | `scope string key string value value` | Set one setting in a scope |
+| `settings.unset` | none | `scope string key string` | Take one setting out of a scope |
+| `settings.import` | none | `scope string document object [replace bool] [note string]` | Set the settings of a document in a scope |
+| `settings.override` | none | `scope string rule string action off\|reverse\|reweight\|waive\|clear [weight int] [note string]` | Waive, reverse, reweight or switch off a rule in a project or item |
+| `settings.switch` | none | `scope string off list` | Switch scopes off for a project or an item |
+| `settings.use-taste` | none | `scope string [taste string]` | Name the taste profile a style, project or item uses |
 
 ## Style
 

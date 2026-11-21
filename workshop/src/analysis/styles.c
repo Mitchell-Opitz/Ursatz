@@ -1492,10 +1492,20 @@ UrsatzStatus workshop_style_rebuild(const char *id, const UrsatzJob *job) {
             const char *pending = NULL;
             WorkshopTxn *txn = workshop_txn_begin(NULL, "style.rebuild", "michelle", id, 0);
             LOCK();
+            /* The style's settings (settings.json, R-671) are not made by the rebuild: they go into the new folder as they were. */
+            char settings_path[512];
+            char *kept_settings = NULL;
+            size_t kept_size = 0;
+            snprintf(settings_path, sizeof(settings_path), "%s/" WORKSHOP_FILE_SETTINGS, dir);
+            if (common_path_exists(settings_path)) {
+                (void)common_file_read(settings_path, &kept_settings, &kept_size, NULL);
+            }
             if (!common_path_is_dir(dir)) {
                 result = workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
             } else if (txn && workshop_txn_remove(txn, dir) == URSATZ_OK && workshop_txn_stage_folder(txn, dir, &pending) == URSATZ_OK &&
-                       write_style_files(pending, id, name ? name : "", created_at ? created_at : "", now, &source, &collected)) {
+                       write_style_files(pending, id, name ? name : "", created_at ? created_at : "", now, &source, &collected) &&
+                       (!kept_settings || (snprintf(settings_path, sizeof(settings_path), "%s/" WORKSHOP_FILE_SETTINGS, pending) > 0 &&
+                                           common_file_write_atomic(settings_path, kept_settings, kept_size, NULL) == URSATZ_OK))) {
                 UrsatzError error;
                 memset(&error, 0, sizeof(error));
                 if (workshop_txn_commit(txn, &error) != URSATZ_OK) {
@@ -1506,6 +1516,7 @@ UrsatzStatus workshop_style_rebuild(const char *id, const UrsatzJob *job) {
                 result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
             }
             UNLOCK();
+            free(kept_settings);
             if (txn) {
                 workshop_txn_abort(txn);
             }

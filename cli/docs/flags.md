@@ -15,13 +15,15 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--axis <pitch>` | invert: the pitch to mirror around, D4 or a MIDI number | `develop` |
 | `--backup <dir>` | migrate: where the copy of the whole folder goes before the migration (default: beside it, named <folder>-backup-<time>) | `migrate` |
 | `--bars <n>` | the length in bars | `progression`, `grow`, `plan`, `listen` |
-| `--base <n>` | the version of the item a command is made against (default: its current version); a newer one refuses the command | `regenerate`, `compose`, `restore` |
+| `--base <n>` | the version of the item a command is made against (default: its current version); a newer one refuses the command | `regenerate`, `compose`, `explore`, `restore` |
 | `--basic <file>` | the basic motive the family of forms comes from; remoteness is measured from it | `variants`, `recognize` |
 | `--basic-format <format>` | the format of the basic motive's file, as --input-format | `variants`, `recognize` |
 | `--basic-harmony <text>` | the basic motive's own chords, as --harmony | `variants`, `recognize` |
 | `--basic-pickup <beats>` | the basic motive's pickup, as --pickup | `variants`, `recognize` |
 | `--bass` | write a bass line (the default) | `progression` |
+| `--batch <name>` | listen --session: the name of the batch this run makes, 1 to 8 letters and digits | `listen` |
 | `--below` | the line is the melody and the counter-melody sings below it | `counterpoint` |
+| `--better <batch>` | rate: the batch of the round that sounded better, or same | `rate` |
 | `--blend <file>` | a second style model file, blended with --style | `grow`, `plan`, `fill`, `listen` |
 | `--blend-weight <n/d>` | the second style's share in every dimension, 0 to 1 | `grow`, `plan`, `fill`, `listen` |
 | `--blend-weights <list>` | the second style's share per dimension, as harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d> | `grow`, `plan`, `fill`, `listen` |
@@ -36,7 +38,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--degree <n>` | restate: move the first note to scale degree n | `develop` |
 | `--depth <n>` | the most operations in the chain, 1 to 4 | `recognize` |
 | `--development <name>` | how a theme develops: melody, balanced or theme | `listen` |
-| `--distance <d>` | how far the variants are from the motive: close, medium or far | `variants` |
+| `--distance <d>` | how far the variants are from the motive: close, medium or far; explore: how many settings move from your taste, 1 to 8 | `variants`, `explore` |
 | `--drop <n>` | liquidate: how many notes to drop at each step | `develop` |
 | `--dry-run` | migrate: report every planned move and rewrite, and write nothing | `migrate` |
 | `--each-op` | one variant for every operation that applies to the motive's form | `variants` |
@@ -83,9 +85,9 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--musicxml <file>` | write the result as a MusicXML file | `progression`, `motive`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `render` |
 | `--name <name>` | the name of the style model | `style-profile` |
 | `--no-bass` | write only the chords | `progression` |
-| `--no-wait` | do not wait for the job a command starts: print its id | `regenerate`, `compose` |
+| `--no-wait` | do not wait for the job a command starts: print its id | `regenerate`, `compose`, `explore` |
 | `--node <id>` | the node's id in the plan file | `lock`, `regenerate`, `variations` |
-| `--note <text>` | restore: the note of the new version (default: restore v<n>) | `restore` |
+| `--note <text>` | restore: the note of the new version (default: restore v<n>); rate: why the rating or the pick | `rate`, `restore` |
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
@@ -95,6 +97,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--port <n>` | global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand | every command (stands before it) |
 | `--position <where>` | fragment: leading, trailing or middle | `develop` |
 | `--print-settings` | print the default preferences document and exit | `listen` |
+| `--rating <r>` | rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable | `rate` |
 | `--ratio <n:m>` | augment or diminish: the ratio of the new durations to the old | `develop` |
 | `--record <file>` | write what the run did: seeds, candidates and the check | `fill` |
 | `--regenerate <id|none>` | write the section with that id again, the rest locked | `piece` |
@@ -102,10 +105,12 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--request <request.json>` | the request a loop plan was made from, with --from | `piece` |
 | `--resume` | skip the pieces unchanged since the last run | `corpus` |
 | `--role <role>` | melodic or accompaniment | `motive`, `variants`, `recognize`, `random-motive`, `grow` |
+| `--round <n>` | listen --session and rate: the round of the listening session, 1 to 10000 | `listen`, `rate` |
 | `--schema <name>` | build the start of the phrase on a galant schema (see --list-schemas) | `progression` |
 | `--section <letter>` | the section with that form letter or id | `lock`, `regenerate`, `variations`, `harmonize` |
-| `--seed <n>` | a whole number from 0; the same seed gives the same output | `progression`, `develop`, `variants`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `regenerate`, `variations`, `harmonize`, `listen`, `compose` |
+| `--seed <n>` | a whole number from 0; the same seed gives the same output | `progression`, `develop`, `variants`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `regenerate`, `variations`, `harmonize`, `listen`, `compose`, `rate`, `explore` |
 | `--sequence <name>` | build a continuation on a harmonic sequence (see --list-schemas) | `progression` |
+| `--session <id>` | listen: record the batch in this listening session (needs --round and --batch) | `listen` |
 | `--settings <file>` | a preferences document | `listen` |
 | `--species <1-4>` | the species of counterpoint | `counterpoint` |
 | `--strategy <name>` | how motifs are made: segments or drawn | `random-motive`, `listen` |
@@ -117,6 +122,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--target-format <format>` | the target's input format, as --input-format | `recognize` |
 | `--target-harmony <text>` | the target's own chords, as --harmony | `recognize` |
 | `--target-pickup <beats>` | the target's pickup, as --pickup | `recognize` |
+| `--taste <name>` | listen --session and explore: the taste profile (default: the session's, else the item's, none) | `listen`, `explore` |
 | `--tempo <bpm>` | the tempo of the files in quarter notes per minute, 20 to 400, a whole number or a fraction like 195/2 | `progression`, `motive`, `develop`, `counterpoint`, `grow`, `fill`, `regenerate`, `variations`, `harmonize`, `render`, `listen` |
 | `--texture <name>` | the texture the accompaniment is to be heard as | `grow`, `plan` |
 | `--theme-request <file>` | the theme request every theme of the batch is made from | `listen` |

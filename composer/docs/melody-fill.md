@@ -32,8 +32,7 @@ A melody span whose owner is an **idea** or a **subphrase** stands for that part
 whole of it. The enclosing phrase node's span is the phrase. A phrase is then written idea by idea:
 
 - **Time order.** The operator applies to an idea target only when every melody span of the same phrase
-  before it is written. A later idea is refused (`FILL_STUCK_NO_OPERATOR` for that step) until the ones before
-  it are there.
+  before it is written. A later idea is refused (`FILL_STUCK_NO_OPERATOR`) until the ones before it are there.
 - **Chords and bass.** The harmony and bass lanes are read over the target only: the chord and bass spans that
   overlap it, the first and the last clipped to it. A chord may begin before the idea or end after it, and an
   idea may begin inside a cell (a half bar of 3/4); the strong beats are the cell lines of the meter, not the
@@ -59,7 +58,7 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
 - **Exact restatement.** A target whose `motive_ref` is `restated` takes the whole melody of the written span it
   restates for its motive and says it again, choosing the nearest chord tone each time. The span restated is the
   latest written one, before the target and as long, that asks for the motive the target's own motive is a
-  restatement of (a basic idea, however far back, as a consequent restates its antecedent's); failing that, the one
+  restatement of (a basic idea, however far back); failing that, the one
   right before the target if it is as long. Two ideas of a presentation made so are heard by standard-form as a
   repetition.
 
@@ -111,8 +110,7 @@ framework's check); the other melodic rules, parallel fifths and octaves against
 unresolved leading tone or seventh and a climax not above the phrase before it score with the soft rules; voice crossing, figures,
 strong-beat chord tones and the cadence tone stay hard. Its generated notes fall back past the arch and the bass checks when no
 option passes, and the fill search starts at the nearest motive note and tries again without the bass checks.
-The tests' `melody_check_lane` (`tests/support/test_oracles.h`) judges a written lane with motive notes strict, then relaxed. Realized notes are not held to the rules the motive
-itself breaks (`motive_waived`), nor is the join to the idea before or after it.
+Realized notes are not held to the rules the motive itself breaks (`motive_waived`), nor is the join to the idea before or after it.
 
 ## Spans on beats
 
@@ -121,7 +119,7 @@ anchored to the barlines of the meter span, and a span that starts or ends betwe
 its ends. Strong beats are the barline grid's, so in 4/4 a span starting on beat 3 starts on a strong beat and one
 starting on beat 2 does not. Chord starts are read from the cell list, part cells included. On a span that does not
 run from a barline over whole bars the climax stays in the motive when no chord tone is within a fifth above the
-last anchor of the motive, since few anchors follow it. Whole-bar spans are written as before.
+last anchor of the motive, since few anchors follow it.
 
 ## Pickups
 
@@ -156,8 +154,8 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `closure_final`, `closure_first` | 0, 0 | How many times the closure rules count for the target that ends the theme's last cadence, and for one that ends an earlier cadence (an antecedent's weak cadence); 0 leaves them out and draws no random number. Set from C only (R-478). |
 | `rhythm_repeat_bars` | 0 | The most bars in a row of 2 or more notes with one rhythm (onsets and durations within the bar); 0 sets no cap and changes nothing. Set from C only (R-479, R-483). |
 | `leap_weight`, `register_weight` | 0, 0 | How many times the leap rule and the register rules count in the score (R-481): see Leaps and register. Set from C only. |
-
-Each field is a setting of the [preferences](preferences.md) document, with its limits.
+| `waive` | 0 | `MelodyHardRule` bits the checker does not hold (R-672). |
+| `reverse` | 0 | `MelodySoftGroup` bits scored by what they break (R-672). |
 
 Appoggiaturas, suspensions and anticipations are off unless asked for. Appoggiaturas and anticipations
 are written on weak beats; a suspension is a chord tone held into a chord it is not a tone of.
@@ -177,6 +175,8 @@ rules again. Hard rules reject a candidate; soft rules give the score, the share
 The strict-species rules for the first interval, the last interval, the largest gap and the last note
 approached by step are not asked of a tonal melody. The one climax, its place, recovered leaps and few
 repeated notes also score.
+
+A waived rule neither refuses nor scores a candidate; a reversed group scores by what it breaks ([preferences.md](preferences.md#the-melody-group)).
 
 ### The fidelity checker
 

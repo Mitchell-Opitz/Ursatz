@@ -206,10 +206,22 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
 
     FillRng rng;
     fill_rng_seed(&rng, options->seed);
+    /*
+     * With variety 0 each motive is the first candidate drawn, or the closest to the style of STYLE_CANDIDATES. With variety
+     * above 0 (R-673) it is the best of at least `pool` candidates for being unlike the motives of avoid and the ones already
+     * made, the first drawn winning a tie.
+     */
+    const bool varied = options->variety > 0;
     size_t want = options->style ? STYLE_CANDIDATES : 1;
+    if (varied) {
+        size_t pool_size = options->pool < 2 ? 2 : (options->pool > VARIETY_POOL_MAX ? VARIETY_POOL_MAX : options->pool);
+        want = pool_size > want ? pool_size : want;
+    }
+    unsigned variety = options->variety > VARIETY_MAX ? VARIETY_MAX : options->variety;
     size_t made = 0;
     while (made < options->count) {
-        Motive pool[STYLE_CANDIDATES];
+        Motive pool[VARIETY_POOL_MAX > STYLE_CANDIDATES ? VARIETY_POOL_MAX : STYLE_CANDIDATES];
+        Rational closeness_of[VARIETY_POOL_MAX > STYLE_CANDIDATES ? VARIETY_POOL_MAX : STYLE_CANDIDATES];
         size_t have = 0;
         size_t best = 0;
         size_t ties = 0;
@@ -221,7 +233,8 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
                 return MOTIVE_RANDOM_ERR_ALLOC;
             }
             if (!found || !motive_random_apply_form(options, &full, &pool[have]) || motive_random_already_made(out, made, &pool[have]) ||
-                motive_random_already_made(pool, have, &pool[have])) {
+                motive_random_already_made(pool, have, &pool[have]) ||
+                (varied && motive_random_already_made(options->avoid, options->avoid_count, &pool[have]))) {
                 continue;
             }
             if (options->style) {
@@ -229,8 +242,11 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
                 if (!motive_random_candidate_closeness(options, &full, &closeness)) {
                     return MOTIVE_RANDOM_ERR_ALLOC;
                 }
+                closeness_of[have] = closeness;
                 int order = have == 0 ? 1 : rational_cmp(closeness, best_closeness);
-                if (order > 0) {
+                if (varied) {
+                    /* Chosen below, by distance as well; no tie is drawn. */
+                } else if (order > 0) {
                     best = have;
                     best_closeness = closeness;
                     ties = 1;
@@ -242,6 +258,29 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         }
         if (have == 0) {
             return MOTIVE_RANDOM_ERR_UNSATISFIABLE;
+        }
+        if (varied) {
+            double best_score = 0.0;
+            for (size_t i = 0; i < have; i++) {
+                double distance = 1.0;
+                for (size_t k = 0; k < options->avoid_count; k++) {
+                    double apart = motive_random_distance(&pool[i], &options->avoid[k]);
+                    distance = apart < distance ? apart : distance;
+                }
+                for (size_t k = 0; k < made; k++) {
+                    double apart = motive_random_distance(&pool[i], &out[k]);
+                    distance = apart < distance ? apart : distance;
+                }
+                double score = distance;
+                if (options->style) {
+                    double closeness = closeness_of[i].den != 0 ? (double)closeness_of[i].num / (double)closeness_of[i].den : 0.0;
+                    score = closeness * (double)(VARIETY_MAX - variety) + distance * (double)variety;
+                }
+                if (i == 0 || score > best_score) {
+                    best = i;
+                    best_score = score;
+                }
+            }
         }
         out[made++] = pool[best];
     }

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-settings-snapshot.v1.schema.json",
+  "title": "Settings snapshot of a composed version, format version 1",
+  "description": "projects/<id>/items/<id>/v<n>/settings.json: how the settings resolved for the compose that made the version (R-671, R-673).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "taste",
+    "off",
+    "values",
+    "overrides",
+    "explore",
+    "document"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-settings-snapshot"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "taste": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "off": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "style",
+          "taste",
+          "project"
+        ]
+      }
+    },
+    "values": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "value",
+          "from"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {},
+          "from": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule",
+          "action",
+          "from"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "off",
+              "reverse",
+              "reweight",
+              "waive"
+            ]
+          },
+          "weight": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "explore": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "seed",
+            "distance",
+            "moves"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "seed": {
+              "type": "integer"
+            },
+            "distance": {
+              "type": "integer"
+            },
+            "moves": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "from",
+                  "to"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "from": {},
+                  "to": {}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "document": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "the preferences document the compose sent"
+    }
+  }
+}

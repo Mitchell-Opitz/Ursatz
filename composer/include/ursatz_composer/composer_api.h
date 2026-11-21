@@ -44,10 +44,12 @@
  * 3.2 adds the output "layers" (R-634): a request that asks for it also gets "realization" and "reading" in its response document.
  * 4.0 answers with the common status set (R-639): UrsatzStatus, UrsatzError and UrsatzJob (<common/status.h>, <common/job.h>) replace the
  * Composer's own, and the versions response gives "producer_key" in place of "ursatz_commit".
+ * 4.3 adds waive and reverse to the melody group of the preferences, and preference_keys and rules to the vocabulary (R-672),
+ * the candidates group of the preferences and the random motive's avoid (R-673).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 2
+#define COMPOSER_API_VERSION_MINOR 3
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -185,8 +187,8 @@ UrsatzStatus composer_api_random_motive(const ComposerContext *context, const ch
  * inline ("degrees" text; a motive with a "path" or "file" is refused with its path) and the options the command takes:
  * "seed", "suggest" (1 to 16 themes), "check", "style" (a style model path), "blend", "blend_weight", "blend_weights",
  * "tempo", "plain_midi", "preferences" (the settings document, docs/preferences.md: the melody group and the development
- * group's fidelity minimums apply, the motif group is accepted and has no effect, since the motives come from the
- * request), and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
+ * group's fidelity minimums apply, the motif group shapes the rhythms and new material a theme draws, not the motives,
+ * which come from the request), and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
  * (each theme's plan in the document), "explain" ("text" or "json": each theme's explanation in the document).
  * json: what `theme --format json` prints (without the files it wrote), and "preferences" (the full document the settings
  * made) when the request had the member. plan_json: the first theme's plan. midi and

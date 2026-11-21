@@ -570,7 +570,9 @@ static bool add_preference_limits(cJSON *limits) {
            cJSON_AddNumberToObject(item, "fidelity_denominator_max", COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX) &&
            cJSON_AddNumberToObject(item, "attempts_max", COMPOSER_PREFERENCES_ATTEMPTS_MAX) &&
            cJSON_AddNumberToObject(item, "keep_max", MELODY_KEEP_MAX) &&
-           cJSON_AddNumberToObject(item, "rhythm_repeat_bars_max", COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX);
+           cJSON_AddNumberToObject(item, "rhythm_repeat_bars_max", COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX) &&
+           cJSON_AddNumberToObject(item, "pool_min", COMPOSER_PREFERENCES_POOL_MIN) &&
+           cJSON_AddNumberToObject(item, "pool_max", COMPOSER_PREFERENCES_POOL_MAX);
 }
 
 /* The default preferences, the document a listening session edits. */
@@ -578,6 +580,91 @@ static bool add_preferences(cJSON *root) {
     ComposerPreferences defaults;
     composer_preferences_default(&defaults);
     return cJSON_AddItemToObject(root, "preferences", composer_preferences_write(&defaults));
+}
+
+/* The value at a dotted key of the default document ("melody.weights.melodic"), or NULL. */
+static const cJSON *default_value(const cJSON *document, const char *key) {
+    const cJSON *at = document;
+    char part[96];
+    while (at && *key) {
+        size_t length = strcspn(key, ".");
+        if (length >= sizeof(part)) {
+            return NULL;
+        }
+        memcpy(part, key, length);
+        part[length] = '\0';
+        at = cJSON_GetObjectItemCaseSensitive(at, part);
+        key += length + (key[length] == '.' ? 1 : 0);
+    }
+    return at;
+}
+
+/*
+ * The setting keys (R-672): one object per row of the key table, with its type, its limits, its words, whether it is a
+ * hard or a soft setting and the value the default document holds. The workshop reads this list to know which settings
+ * exist and how to check them; motif.plan has no default.
+ */
+static bool add_preference_keys(cJSON *root) {
+    static const char *const TYPES[] = {"integer", "boolean", "ratio", "words", "plan"};
+    ComposerPreferences defaults;
+    size_t count;
+    const ComposerPreferenceKey *keys = composer_preferences_keys(&count);
+    composer_preferences_default(&defaults);
+    cJSON *document = composer_preferences_write(&defaults);
+    cJSON *list = document ? add_list(root, "preference_keys") : NULL;
+    bool ok = list != NULL;
+    for (size_t i = 0; ok && i < count; i++) {
+        const ComposerPreferenceKey *row = &keys[i];
+        cJSON *item = cJSON_CreateObject();
+        ok = item && cJSON_AddStringToObject(item, "key", row->key) && cJSON_AddStringToObject(item, "type", TYPES[row->type]);
+        if (ok && row->type == COMPOSER_KEY_INTEGER) {
+            ok = cJSON_AddNumberToObject(item, "min", row->min) && cJSON_AddNumberToObject(item, "max", row->max);
+        } else if (ok && row->type == COMPOSER_KEY_RATIO) {
+            ok = cJSON_AddNumberToObject(item, "max", row->max);
+        } else if (ok && row->type == COMPOSER_KEY_WORDS) {
+            cJSON *words = cJSON_AddArrayToObject(item, "words");
+            for (size_t w = 0; words && row->words[w]; w++) {
+                cJSON *word = cJSON_CreateString(row->words[w]);
+                if (!word || !cJSON_AddItemToArray(words, word)) {
+                    cJSON_Delete(word);
+                    words = NULL;
+                }
+            }
+            ok = words != NULL;
+        }
+        ok = ok && cJSON_AddStringToObject(item, "class", row->hard ? "hard" : "soft");
+        if (ok && row->type != COMPOSER_KEY_PLAN) {
+            const cJSON *value = default_value(document, row->key);
+            cJSON *copy = value ? cJSON_Duplicate(value, true) : NULL;
+            ok = copy && cJSON_AddItemToObject(item, "default", copy);
+            if (!ok) {
+                cJSON_Delete(copy);
+            }
+        }
+        if (!ok || !cJSON_AddItemToArray(list, item)) {
+            cJSON_Delete(item);
+            ok = false;
+        }
+    }
+    cJSON_Delete(document);
+    return ok;
+}
+
+/* The rules a setting can override (R-672): the soft groups and the hard rules of the melody stage, by name. */
+static bool add_rules(cJSON *root) {
+    size_t count;
+    const ComposerRule *rules = composer_preferences_rules(&count);
+    cJSON *list = add_list(root, "rules");
+    for (size_t i = 0; list && i < count; i++) {
+        cJSON *item = cJSON_CreateObject();
+        if (!item || !cJSON_AddStringToObject(item, "name", rules[i].name) ||
+            !cJSON_AddStringToObject(item, "class", rules[i].hard ? "hard" : "soft") ||
+            !cJSON_AddStringToObject(item, "key", rules[i].key) || !cJSON_AddItemToArray(list, item)) {
+            cJSON_Delete(item);
+            return false;
+        }
+    }
+    return list != NULL;
 }
 
 /* The sizes the requests are limited to, for the help of a client that shows them. */
@@ -656,7 +743,7 @@ bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials)
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
            add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_lanes(root) &&
-           add_preferences(root) && add_limits(root);
+           add_preferences(root) && add_preference_keys(root) && add_rules(root) && add_limits(root);
 }
 
 /* The schemas a section's harmony may be (R-610): the galant prototypes that make a chord of each stage in the major and in the natural minor. */

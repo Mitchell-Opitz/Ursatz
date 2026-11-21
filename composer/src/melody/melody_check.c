@@ -112,6 +112,11 @@ unsigned melody_nct_bit(int tone) {
     }
 }
 
+/* Whether a setting waives the hard rule (R-672): it neither refuses a candidate nor scores it. */
+static bool melody_rule_waived(const MelodyCandidate *melody, MelodyHardRule rule) {
+    return (melody->params.waive >> rule) & 1u;
+}
+
 /* Range, and a chord tone on every strong beat (but for the figures that put a non-chord tone there). */
 static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
@@ -127,7 +132,8 @@ static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) 
         const MelodyNote *note = &melody->notes[i];
         if (note->pitch < melody->params.range_low || note->pitch > melody->params.range_high) {
             verdict->hard = "outside the melody range";
-        } else if (melody_on_cell(context, note->onset) && !(context->chord_mask[note->chord] & (1u << util_pitch_class(note->pitch))) &&
+        } else if (!melody_rule_waived(melody, MELODY_RULE_STRONG_BEAT_CHORD_TONE) && melody_on_cell(context, note->onset) &&
+                   !(context->chord_mask[note->chord] & (1u << util_pitch_class(note->pitch))) &&
                    !(melody->params.nct_types & strong_figures)) {
             verdict->hard = "strong beat without a chord tone";
         }
@@ -365,14 +371,32 @@ static unsigned generated_runs_hard(const MelodyCandidate *melody) {
     return hard;
 }
 
+/*
+ * The soft score kept per group (MelodySoftGroup), so a reversed group can count what it breaks in place of what it
+ * holds (R-672): the weighted held and the weighted total of each group.
+ */
+typedef struct {
+    unsigned held[MELODY_GROUP_COUNT];
+    unsigned total[MELODY_GROUP_COUNT];
+} SoftTally;
+
 /* A group of soft rules counts weight times in the score (MelodyWeights): weight * held of weight * total. */
-static void add_soft(PhraseVerdict *verdict, unsigned weight, unsigned held, unsigned total) {
-    verdict->soft_held += weight * held;
-    verdict->soft_total += weight * total;
+static void add_soft(SoftTally *tally, MelodySoftGroup group, unsigned weight, unsigned held, unsigned total) {
+    tally->held[group] += weight * held;
+    tally->total[group] += weight * total;
+}
+
+/* Folds the groups into the verdict; a reversed group adds what it breaks (total - held) in place of what it holds. */
+static void fold_soft(const MelodyCandidate *melody, const SoftTally *tally, PhraseVerdict *verdict) {
+    for (unsigned group = 0; group < MELODY_GROUP_COUNT; group++) {
+        bool reversed = (melody->params.reverse >> group) & 1u;
+        verdict->soft_held += reversed ? tally->total[group] - tally->held[group] : tally->held[group];
+        verdict->soft_total += tally->total[group];
+    }
 }
 
 /* standard-counterpoint's melodic rules over the melody. */
-static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict, SoftTally *tally) {
     /* A target that follows written melody is read as one line with the last notes of it, so a leap or a run across
        the join is judged like any other; so is the join to written or Given melody that follows it. */
     size_t lead = melody->context.lead_in_count;
@@ -405,12 +429,18 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
         StandardCounterpointLimits limits = standard_counterpoint_default_limits();
         unsigned hard = 0;
         unsigned soft = 0;
-        add_soft(verdict, melody->params.weights.melodic, 0, melody_melodic_soft_rules());
+        add_soft(tally, MELODY_GROUP_MELODIC, melody->params.weights.melodic, 0, melody_melodic_soft_rules());
         if (!standard_counterpoint_melodic_check(&line, &limits, &hard, &soft)) {
             ok = false;
         } else {
             /* A tonal melody need not end by step, as a strict counterpoint line must. */
             hard &= ~(1u << STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA);
+            /* A waived rule is not held (R-672); the relaxed run check below leaves it out too. */
+            unsigned waived = (melody_rule_waived(melody, MELODY_RULE_FORBIDDEN_LEAP)
+                                   ? 1u << STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_LEAP : 0u) |
+                              (melody_rule_waived(melody, MELODY_RULE_FORBIDDEN_OUTLINE)
+                                   ? 1u << STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE : 0u);
+            hard &= ~waived;
             /* The rules the motive's own line breaks are not asked of a melody that carries it (R-335). */
             for (size_t i = 0; i < melody->count; i++) {
                 if (melody->notes[i].motive_index >= 0) {
@@ -422,8 +452,8 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
                 /* A relaxed melody holds the local rules over its generated runs; the whole line's other hard rules score. */
                 unsigned others = other_hard_rules();
                 hard &= ~LOCAL_RULES;
-                add_soft(verdict, melody->params.weights.melodic, others - util_bits_set(hard), others);
-                hard = generated_runs_hard(melody);
+                add_soft(tally, MELODY_GROUP_MELODIC, melody->params.weights.melodic, others - util_bits_set(hard), others);
+                hard = generated_runs_hard(melody) & ~waived;
             }
             for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
                 if (hard & (1u << rule)) {
@@ -431,7 +461,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
                     break;
                 }
             }
-            add_soft(verdict, melody->params.weights.melodic, melody_melodic_soft_rules() - util_bits_set(soft), 0);
+            add_soft(tally, MELODY_GROUP_MELODIC, melody->params.weights.melodic, melody_melodic_soft_rules() - util_bits_set(soft), 0);
         }
     }
     for (size_t i = 0; spellings && i < total; i++) {
@@ -449,7 +479,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
  * non-chord tone or the chord's seventh. The rules for the first and last interval and the largest gap are for
  * strict species and are not asked. Imperfect consonances on strong beats score.
  */
-static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *verdict, SoftTally *tally) {
     const MelodyContext *context = &melody->context;
     size_t capacity = melody->count + context->bass_count;
     Rational *times = malloc(capacity * sizeof(*times));
@@ -502,7 +532,9 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
         if (!standard_counterpoint_pitches_consonant(lower[samples], upper[samples]) &&
             (context->chord_mask[sounding] & pitch_bit) && !(context->chord_seventh[sounding] & pitch_bit)) {
             /* A relaxed melody counts a chord tone dissonant over the bass with the soft rules (R-338). */
-            if (melody->relaxed) {
+            if (melody_rule_waived(melody, MELODY_RULE_DISSONANCE_AGAINST_BASS)) {
+                /* Waived (R-672): neither refused nor scored. */
+            } else if (melody->relaxed) {
                 dissonant = true;
             } else {
                 verdict->hard = "dissonance against the bass";
@@ -523,16 +555,23 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
         unsigned asked = (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING) |
                          (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES) |
                          (1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_FIFTHS);
-        add_soft(verdict, melody->params.weights.against_bass, 0, harmonic_soft_rules() + 1);
+        add_soft(tally, MELODY_GROUP_AGAINST_BASS, melody->params.weights.against_bass, 0, harmonic_soft_rules() + 1);
         if (!standard_counterpoint_harmonic_check(&pair, &hard, &soft)) {
             ok = false;
         } else {
             hard &= asked;
+            /* A waived rule is not held, and a waived parallel does not score either (R-672). */
+            hard &= ~((melody_rule_waived(melody, MELODY_RULE_NO_CROSSING)
+                           ? 1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING : 0u) |
+                      (melody_rule_waived(melody, MELODY_RULE_PARALLEL_OCTAVES)
+                           ? 1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES : 0u) |
+                      (melody_rule_waived(melody, MELODY_RULE_PARALLEL_FIFTHS)
+                           ? 1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_FIFTHS : 0u));
             if (melody->relaxed) {
                 /* Parallel fifths and octaves and a dissonant chord tone score; a voice crossing stays hard. */
                 unsigned parallels = hard & ~(1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING);
                 hard &= 1u << STANDARD_COUNTERPOINT_HARMONIC_RULE_NO_CROSSING;
-                add_soft(verdict, melody->params.weights.against_bass, 2 - util_bits_set(parallels) + (dissonant ? 0u : 1u), 3);
+                add_soft(tally, MELODY_GROUP_AGAINST_BASS, melody->params.weights.against_bass, 2 - util_bits_set(parallels) + (dissonant ? 0u : 1u), 3);
             }
             for (int rule = 0; rule < STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT; rule++) {
                 if (hard & (1u << rule)) {
@@ -540,7 +579,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
                     break;
                 }
             }
-            add_soft(verdict, melody->params.weights.against_bass, harmonic_soft_rules() - util_bits_set(soft), 0);
+            add_soft(tally, MELODY_GROUP_AGAINST_BASS, melody->params.weights.against_bass, harmonic_soft_rules() - util_bits_set(soft), 0);
             /* Imperfect consonances (thirds and sixths) on at least half of the strong beats. */
             unsigned on_strong = 0;
             unsigned imperfect = 0;
@@ -552,7 +591,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
                                  category == STANDARD_COUNTERPOINT_IMPERFECT_CONSONANCE;
                 }
             }
-            add_soft(verdict, melody->params.weights.against_bass, on_strong == 0 || imperfect * 2 >= on_strong, 0);
+            add_soft(tally, MELODY_GROUP_AGAINST_BASS, melody->params.weights.against_bass, on_strong == 0 || imperfect * 2 >= on_strong, 0);
         }
     }
     for (size_t i = 0; upper && lower && i < capacity; i++) {
@@ -610,7 +649,7 @@ bool melody_dissonant_over_bass(const MelodyContext *context, int pitch, Rationa
 }
 
 /* standard-harmony's resolution of the leading tone and the seventh, for the melody as the outer voice. */
-static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict, SoftTally *tally) {
     const MelodyContext *context = &melody->context;
     for (size_t i = 0; !verdict->hard && i + 1 < context->count; i++) {
         Rational boundary = context->chord_start[i + 1];
@@ -633,12 +672,12 @@ static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict
                 !harmony_resolution_rule_holds((HarmonyResolutionRule)rule, &move)) {
                 /* A relaxed melody counts a resolution that does not hold with the soft rules (R-338). */
                 if (melody->relaxed) {
-                    add_soft(verdict, melody->params.weights.tendency, 0, 1);
+                    add_soft(tally, MELODY_GROUP_TENDENCY, melody->params.weights.tendency, 0, 1);
                 } else {
                     verdict->hard = harmony_resolution_rule_name((HarmonyResolutionRule)rule);
                 }
             } else if (melody->relaxed && harmony_resolution_rule_applies((HarmonyResolutionRule)rule, &move)) {
-                add_soft(verdict, melody->params.weights.tendency, 1, 1);
+                add_soft(tally, MELODY_GROUP_TENDENCY, melody->params.weights.tendency, 1, 1);
             }
         }
     }
@@ -759,17 +798,16 @@ unsigned melody_shaping_broken(const MelodyCandidate *melody) {
            (monotony_holds(melody) ? 0 : SHAPING_MONOTONY);
 }
 
-static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict, SoftTally *tally) {
     if (melody->params.plain_shaping) {
         return;
     }
     unsigned broken = melody_shaping_broken(melody);
     const MelodyWeights *weights = &melody->params.weights;
-    verdict->soft_total += weights->ending_reduction + weights->waves + weights->central_range + weights->monotony;
-    verdict->soft_held += (broken & SHAPING_ENDING_REDUCTION ? 0 : weights->ending_reduction) +
-                          (broken & SHAPING_WAVES ? 0 : weights->waves) +
-                          (broken & SHAPING_CENTRAL_RANGE ? 0 : weights->central_range) +
-                          (broken & SHAPING_MONOTONY ? 0 : weights->monotony);
+    add_soft(tally, MELODY_GROUP_ENDING_REDUCTION, weights->ending_reduction, broken & SHAPING_ENDING_REDUCTION ? 0 : 1, 1);
+    add_soft(tally, MELODY_GROUP_WAVES, weights->waves, broken & SHAPING_WAVES ? 0 : 1, 1);
+    add_soft(tally, MELODY_GROUP_CENTRAL_RANGE, weights->central_range, broken & SHAPING_CENTRAL_RANGE ? 0 : 1, 1);
+    add_soft(tally, MELODY_GROUP_MONOTONY, weights->monotony, broken & SHAPING_MONOTONY ? 0 : 1, 1);
     verdict->shaping_broken |= broken;
 }
 
@@ -779,7 +817,7 @@ static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict)
  * twice the phrase's mean note value, and (b) no note of the last bar is shorter than the note before it in that bar,
  * so the rhythm settles into the end. Weight 0 adds nothing.
  */
-static void check_closure(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static void check_closure(const MelodyCandidate *melody, SoftTally *tally) {
     unsigned weight = melody_closure_weight(&melody->context, &melody->params);
     if (weight == 0 || melody->count < 2) {
         return;
@@ -803,7 +841,7 @@ static void check_closure(const MelodyCandidate *melody, PhraseVerdict *verdict)
     if (settled) {
         held++;
     }
-    add_soft(verdict, weight, held, 2);
+    add_soft(tally, MELODY_GROUP_CLOSURE, weight, held, 2);
 }
 
 /* The median pitch of the candidate's notes (the mean of the middle two for an even count). */
@@ -828,7 +866,7 @@ static int candidate_median(const MelodyCandidate *melody) {
  * 5 or more, as leaps_per_motif counts). register_weight: the candidate's median pitch is within 7 semitones of the
  * median of the idea before it, and within 4. Both 0 add nothing.
  */
-static void check_line(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static void check_line(const MelodyCandidate *melody, SoftTally *tally) {
     const MelodyContext *context = &melody->context;
     unsigned leap_weight = melody->params.leap_weight;
     unsigned register_weight = melody->params.register_weight;
@@ -842,12 +880,12 @@ static void check_line(const MelodyCandidate *melody, PhraseVerdict *verdict) {
             total += count;
             held += (move < 5 && move > -5) ? count : 0;
         }
-        add_soft(verdict, leap_weight, held, total);
+        add_soft(tally, MELODY_GROUP_LEAPS, leap_weight, held, total);
     }
     if (register_weight > 0 && context->has_before_register && melody->count > 0) {
         int away = candidate_median(melody) - context->before_register;
         away = away < 0 ? -away : away;
-        add_soft(verdict, register_weight, (unsigned)(away <= 7) + (unsigned)(away <= 4), 2);
+        add_soft(tally, MELODY_GROUP_REGISTER, register_weight, (unsigned)(away <= 7) + (unsigned)(away <= 4), 2);
     }
 }
 
@@ -856,7 +894,7 @@ static void check_line(const MelodyCandidate *melody, PhraseVerdict *verdict) {
  * bass and melody across it, a melody that moves by step (or a leap answered), and a leading tone that goes up. The
  * progression is the harmony's. Nothing is rejected for them.
  */
-static void check_seam(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+static void check_seam(const MelodyCandidate *melody, SoftTally *tally) {
     const MelodyContext *context = &melody->context;
     SeamNotes notes;
     SeamHeard heard;
@@ -873,7 +911,7 @@ static void check_seam(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     notes.melody_after = context->lead_out;
     notes.melody_next = context->seam_next;
     seam_hear_notes(&notes, &heard);
-    add_soft(verdict, melody->params.weights.seam, (unsigned)heard.no_parallels + (unsigned)heard.step + (unsigned)heard.leading_tone, 3);
+    add_soft(tally, MELODY_GROUP_SEAM, melody->params.weights.seam, (unsigned)heard.no_parallels + (unsigned)heard.step + (unsigned)heard.leading_tone, 3);
 }
 
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
@@ -899,7 +937,9 @@ bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unc
 
 bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     bool ok = true;
+    SoftTally tally;
     memset(verdict, 0, sizeof(*verdict));
+    memset(&tally, 0, sizeof(tally));
     if (melody->count == 0 || melody->count > MELODY_MAX_NOTES) {
         verdict->hard = "no melody notes";
         return true;
@@ -909,13 +949,13 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         ok = check_tones(melody, verdict, NULL, NULL);
     }
     if (ok && !verdict->hard) {
-        ok = check_melodic(melody, verdict);
+        ok = check_melodic(melody, verdict, &tally);
     }
     if (ok && !verdict->hard) {
-        ok = check_against_bass(melody, verdict);
+        ok = check_against_bass(melody, verdict, &tally);
     }
     if (ok && !verdict->hard) {
-        check_tendency(melody, verdict);
+        check_tendency(melody, verdict, &tally);
     }
     /* The target with the phrase's climax writes the phrase's single highest note, when it generates notes (R-335): a target
        of realized notes alone cannot be bent to make a climax, and its tops count with the soft rules. */
@@ -926,7 +966,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
             top = melody->notes[i].pitch > top ? melody->notes[i].pitch : top;
         }
         if (melody->relaxed) {
-            add_soft(verdict, melody->params.weights.climax, top > melody->context.phrase_top, 1);
+            add_soft(&tally, MELODY_GROUP_CLIMAX, melody->params.weights.climax, top > melody->context.phrase_top, 1);
         } else if (top <= melody->context.phrase_top) {
             verdict->hard = "climax not above the phrase before it";
         }
@@ -940,12 +980,13 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         unsigned held;
         unsigned total;
         melody_contour_score(melody, &held, &total);
-        add_soft(verdict, melody->params.weights.contour, held, total);
-        check_shaping(melody, verdict);
-        check_closure(melody, verdict);
-        check_line(melody, verdict);
-        check_seam(melody, verdict);
+        add_soft(&tally, MELODY_GROUP_CONTOUR, melody->params.weights.contour, held, total);
+        check_shaping(melody, verdict, &tally);
+        check_closure(melody, &tally);
+        check_line(melody, &tally);
+        check_seam(melody, &tally);
     }
+    fold_soft(melody, &tally, verdict);
     return ok;
 }
 

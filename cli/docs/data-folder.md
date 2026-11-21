@@ -84,6 +84,12 @@ ursatz render item:<id>[@v<n>] [--midi <file>] [--musicxml <file>] [--tempo <bpm
 
 `render` renders the `plan.json` of a version (the current one when the address has none) to MIDI or MusicXML as `render <plan.json>` does; a motif has no plan (exit 2). `regenerate <plan.json>` and `render <plan.json>` stay the forms for a file.
 
+## rate and explore
+
+`ursatz --data <dir> rate <ses-id> --round <n> --seed <s> [--rating <batch>=<1-5>]... [--better <batch>|same] [--note <text>]` records the ratings of the samples of a listening session and a pick between its batches (`ratings.rate`, `ratings.pick`, [ratings](../../workshop/docs/ratings.md)); `rate item:<id>@v<n> --rating <1-5>` rates a version (`ratings.rate-version`). It prints one line for each id made: `rat-... <batch> <rating>`, `pck-... better <batch>`, `rat-... v<n> <rating>`. A request the workshop refuses exits 1, any other failure 2. A value is kept as a taste default with `ratings.keep`, which cites those ids (written as an apply command).
+
+`ursatz --data <dir> explore item:<id> [--distance <n>] [--seed <n>] [--taste <name>] [--base <n>] [--no-wait]` composes a theme as `compose` does with some settings moved away from the taste (`item.explore`, [settings](../../workshop/docs/settings.md#composing-with-settings-and-exploring)); it waits for the job and prints `item <id> version <n>`, or the job's id with `--no-wait`. A piece or an item that is not there is refused (2 for an item that is not there).
+
 ## restore
 
 `ursatz restore item:<id>@v<n> [--base <n>] [--note <text>]` makes the next version of the item a copy of version n: its files, its body (the paths of its result in the new folder) and its uses (the command `item.restore`). Nothing is rewritten, so restoring is an undo that keeps the history: it prints `item <id> version <new> (restored v<n>)`. The note of the new version is `restore v<n>` unless `--note` gives one; `--base` is the version the command is made against (default: the current one). The current version cannot be restored, and a version that is not there is not found. The GUI's versions list has the same action.

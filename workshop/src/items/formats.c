@@ -34,6 +34,10 @@ static const Format kFormats[] = {
     {WORKSHOP_FORMAT_STYLE, {"id", "name", "created_at", "updated_at", "source", "pieces"}, "ssssoa", 1},
     {WORKSHOP_FORMAT_LINK_RUN, {"id", "scope", "status", "created_at"}, "soss", 1},
     {WORKSHOP_FORMAT_RENDER, {"api_version", "composer_version", "composition_key", "render_key", "tempo"}, "ssssn", 1},
+    {WORKSHOP_FORMAT_SETTINGS, {"scope", "values"}, "so", 1},
+    {WORKSHOP_FORMAT_SETTINGS_SNAPSHOT, {"off", "values", "overrides"}, "aaa", 1},
+    {WORKSHOP_FORMAT_LISTENING_SESSION, {"id", "created_at", "actor", "what", "taste", "note", "batches", "ratings", "picks"}, "ssssssaaa", 1},
+    {WORKSHOP_FORMAT_ITEM_RATINGS, {"item_id", "ratings"}, "sa", 1},
 };
 
 /* The row of format for a file of version (0: the newest), or NULL for a name that is not a format. */
@@ -176,6 +180,27 @@ static bool starts_with(const char *path, const char *prefix) {
     return strncmp(path, prefix, strlen(prefix)) == 0;
 }
 
+/* True when the folder holding the file at path is a version folder, "v<digits>". */
+static bool is_version_folder(const char *path) {
+    const char *end = strrchr(path, '/');
+    if (!end || end == path) {
+        return false;
+    }
+    const char *start = end;
+    while (start > path && start[-1] != '/') {
+        start--;
+    }
+    if (*start != 'v' || start + 1 == end) {
+        return false;
+    }
+    for (const char *c = start + 1; c < end; c++) {
+        if (*c < '0' || *c > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
 const char *workshop_format_of_path(const char *path) {
     if (!path) {
         return NULL;
@@ -202,6 +227,10 @@ const char *workshop_format_of_path(const char *path) {
         if (ends_with_segment(path, "op-checks.json")) {
             return WORKSHOP_FORMAT_OP_CHECKS;
         }
+        if (ends_with_segment(path, "settings.json")) {
+            /* projects/<prj>/settings.json and projects/<prj>/items/<id>/settings.json are scopes; one under a version folder is its snapshot */
+            return is_version_folder(path) ? WORKSHOP_FORMAT_SETTINGS_SNAPSHOT : WORKSHOP_FORMAT_SETTINGS;
+        }
         return NULL;
     }
     if (starts_with(path, "subjects/") && ends_with(path, ".json")) {
@@ -218,6 +247,18 @@ const char *workshop_format_of_path(const char *path) {
     }
     if (starts_with(path, "settings/styles/") && ends_with_segment(path, "style.json")) {
         return WORKSHOP_FORMAT_STYLE;
+    }
+    if (starts_with(path, "settings/styles/") && ends_with_segment(path, "settings.json")) {
+        return WORKSHOP_FORMAT_SETTINGS;
+    }
+    if (starts_with(path, "settings/taste/") && ends_with(path, ".json")) {
+        return WORKSHOP_FORMAT_SETTINGS;
+    }
+    if (starts_with(path, "ratings/sessions/") && ends_with(path, ".json")) {
+        return WORKSHOP_FORMAT_LISTENING_SESSION;
+    }
+    if (starts_with(path, "ratings/items/") && ends_with(path, ".json")) {
+        return WORKSHOP_FORMAT_ITEM_RATINGS;
     }
     if (starts_with(path, "cache/renders/") && ends_with_segment(path, "render.json")) {
         return WORKSHOP_FORMAT_RENDER;

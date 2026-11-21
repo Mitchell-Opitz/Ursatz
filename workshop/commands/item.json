@@ -159,12 +159,94 @@
           "type": "boolean",
           "required": false,
           "help": "Move every updated use to its source's current version first."
+        },
+        {
+          "name": "settings",
+          "type": "object",
+          "required": false,
+          "help": "Settings for this compose only (the request scope): a preferences document, for a theme."
+        },
+        {
+          "name": "overrides",
+          "type": "array",
+          "required": false,
+          "help": "Overrides for this compose only: each {rule, action, weight}, for a theme.",
+          "items": "object"
+        },
+        {
+          "name": "off",
+          "type": "array",
+          "required": false,
+          "help": "Scopes this compose skips: style, taste or project, for a theme.",
+          "items": "string"
+        },
+        {
+          "name": "taste",
+          "type": "string",
+          "required": false,
+          "help": "The taste profile for this compose, for a theme."
         }
       ],
       "one_of": [],
       "reply": "The job that composes the item.",
       "job": "theme or piece",
       "example": "item.compose item:pce-1@v2 seed 1"
+    },
+    {
+      "name": "item.explore",
+      "summary": "Compose a theme with some settings moved away from the taste",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "distance",
+          "type": "integer",
+          "required": false,
+          "help": "How many settings move, 1 to 8; the resolved explore.distance when absent.",
+          "minimum": 1,
+          "maximum": 8
+        },
+        {
+          "name": "seed",
+          "type": "integer",
+          "required": false,
+          "help": "The seed of the composition and of the moves; one is drawn when absent.",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        {
+          "name": "settings",
+          "type": "object",
+          "required": false,
+          "help": "Settings for this compose only (the request scope): a preferences document."
+        },
+        {
+          "name": "overrides",
+          "type": "array",
+          "required": false,
+          "help": "Overrides for this compose only: each {rule, action, weight}.",
+          "items": "object"
+        },
+        {
+          "name": "off",
+          "type": "array",
+          "required": false,
+          "help": "Scopes this compose skips: style, taste or project.",
+          "items": "string"
+        },
+        {
+          "name": "taste",
+          "type": "string",
+          "required": false,
+          "help": "The taste profile for this compose."
+        }
+      ],
+      "one_of": [],
+      "reply": "The job that composes the theme.",
+      "job": "theme",
+      "example": "item.explore item:thm-1@v2 distance 2 seed 7"
     },
     {
       "name": "item.regenerate",

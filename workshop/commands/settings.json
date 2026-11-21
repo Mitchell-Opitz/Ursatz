@@ -1,0 +1,212 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "settings",
+  "summary": "Settings: the values, overrides and switches of a style, project or item, and the taste profile it uses.",
+  "commands": [
+    {
+      "name": "settings.set",
+      "summary": "Set one setting in a scope",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "help": "The scope: style:<id>, project:<id> or item:<id>; a taste profile changes only by keep as default."
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "required": true,
+          "help": "The setting's dotted key, for example melody.weights.melodic."
+        },
+        {
+          "name": "value",
+          "type": "value",
+          "required": true,
+          "help": "The value: a number, true or false, a word, n/d or a list."
+        }
+      ],
+      "one_of": [],
+      "reply": "The scope's content after the change.",
+      "job": null,
+      "example": "settings.set scope item:itm-1 key melody.keep value 3"
+    },
+    {
+      "name": "settings.unset",
+      "summary": "Take one setting out of a scope",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "help": "The scope: style:<id>, project:<id> or item:<id>."
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "required": true,
+          "help": "The setting's dotted key."
+        }
+      ],
+      "one_of": [],
+      "reply": "The scope's content after the change.",
+      "job": null,
+      "example": "settings.unset scope item:itm-1 key melody.keep"
+    },
+    {
+      "name": "settings.import",
+      "summary": "Set the settings of a document in a scope",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "help": "The scope: taste:<name>, style:<id>, project:<id> or item:<id>."
+        },
+        {
+          "name": "document",
+          "type": "object",
+          "required": true,
+          "help": "A preferences document: its members are flattened to dotted keys."
+        },
+        {
+          "name": "replace",
+          "type": "boolean",
+          "required": false,
+          "help": "True drops the scope's settings that the document does not hold."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why; required for a taste profile, which records it with who and when.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The scope's content after the change.",
+      "job": null,
+      "example": "settings.import scope taste:none note \"taste-profile.md none\"\n  document\n    melody\n      keep 3"
+    },
+    {
+      "name": "settings.override",
+      "summary": "Waive, reverse, reweight or switch off a rule in a project or item",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "help": "The scope: project:<id> or item:<id>; overrides go on a project, an item or a request, never in a profile."
+        },
+        {
+          "name": "rule",
+          "type": "string",
+          "required": true,
+          "help": "The rule: a soft rule group or a hard rule of the melody stage."
+        },
+        {
+          "name": "action",
+          "type": "enum",
+          "required": true,
+          "help": "What to do with it; clear removes the rule's override.",
+          "values": [
+            "off",
+            "reverse",
+            "reweight",
+            "waive",
+            "clear"
+          ]
+        },
+        {
+          "name": "weight",
+          "type": "integer",
+          "required": false,
+          "help": "The weight of a reweight, 0 to 20.",
+          "minimum": 0,
+          "maximum": 20
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The scope's content after the change.",
+      "job": null,
+      "example": "settings.override scope item:itm-1 rule parallel-fifths action waive"
+    },
+    {
+      "name": "settings.switch",
+      "summary": "Switch scopes off for a project or an item",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "help": "The scope: project:<id> or item:<id>."
+        },
+        {
+          "name": "off",
+          "type": "array",
+          "required": true,
+          "help": "The scopes to skip: style, taste or project (an item only); replaces the list.",
+          "items": "string"
+        }
+      ],
+      "one_of": [],
+      "reply": "The scope's content after the change.",
+      "job": null,
+      "example": "settings.switch scope item:itm-1 off [taste]"
+    },
+    {
+      "name": "settings.use-taste",
+      "summary": "Name the taste profile a style, project or item uses",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "help": "The scope: style:<id>, project:<id> or item:<id>."
+        },
+        {
+          "name": "taste",
+          "type": "string",
+          "required": false,
+          "help": "The profile's name; absent clears it."
+        }
+      ],
+      "one_of": [],
+      "reply": "The scope's content after the change.",
+      "job": null,
+      "example": "settings.use-taste scope project:prj-1 taste none"
+    }
+  ]
+}

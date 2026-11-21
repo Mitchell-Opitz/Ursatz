@@ -1,6 +1,7 @@
 # The listen command, run as a process (cli/docs/cli-listen.md).
 # Run with: cmake -DCOMPOSER=<ursatz> -DANALYZER=<ursatz> -DWORK=<empty working directory>
-#           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] -P cli_listen.cmake
+#           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] [-DCASE=overrides] -P cli_listen.cmake
+# CASE=overrides runs only the overrides of the melody stage (R-672); without it the script runs the rest.
 
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}")
@@ -61,6 +62,61 @@ function(compare_files equal first second)
         message(FATAL_ERROR "${first} and ${second} are the same")
     endif()
 endfunction()
+
+# --- overrides (R-672) -------------------------------------------------------------------
+
+# One theme at a seed with a settings document (or none): the file it wrote is <dir>/01.mid.
+function(theme_with seed settings dir)
+    set(arguments listen --what themes --count 1 --seed ${seed} --out-dir ${dir})
+    if(NOT settings STREQUAL "")
+        list(APPEND arguments --settings ${settings})
+    endif()
+    expect_status(0 ${arguments})
+    expect_file(${dir}/01.mid)
+endfunction()
+
+if(CASE STREQUAL "overrides")
+    # Waiving the parallel fifths and octaves changes the themes of seeds 4 and 14 (measured on the prototype, R-672) and not
+    # seed 1.
+    file(WRITE "${WORK}/waive.json" "{\"melody\": {\"waive\": [\"parallel-fifths\", \"parallel-octaves\"]}}")
+    foreach(seed 1 4 14)
+        theme_with(${seed} "" plain-${seed})
+        theme_with(${seed} waive.json waive-${seed})
+    endforeach()
+    compare_files(TRUE plain-1/01.mid waive-1/01.mid)
+    compare_files(FALSE plain-4/01.mid waive-4/01.mid)
+    compare_files(FALSE plain-14/01.mid waive-14/01.mid)
+    file(STRINGS "${WORK}/waive-4/listen.jsonl" lines)
+    list(GET lines 0 first)
+    string(JSON waived GET "${first}" preferences melody waive 0)
+    if(NOT waived STREQUAL "parallel-fifths")
+        message(FATAL_ERROR "the manifest does not record the waived rules: ${first}")
+    endif()
+
+    # basic_as_written (A20261115-80): the same themes without the development's own rules change at seed 1.
+    file(WRITE "${WORK}/basic.json" "{\"development\": {\"basic_as_written\": true}}")
+    theme_with(1 basic.json basic-1)
+    compare_files(FALSE plain-1/01.mid basic-1/01.mid)
+
+    # Reversing the leaps group changes the themes with a leaps weight of 5 at the seeds 1 to 4 (measured when the case was
+    # written; seed 5 is the same, seed 6 differs).
+    file(WRITE "${WORK}/leaps.json" "{\"melody\": {\"leaps\": 5}}")
+    file(WRITE "${WORK}/leaps-reversed.json" "{\"melody\": {\"leaps\": 5, \"reverse\": [\"leaps\"]}}")
+    foreach(seed 1 2 3 4)
+        theme_with(${seed} leaps.json leaps-${seed})
+        theme_with(${seed} leaps-reversed.json reversed-${seed})
+        compare_files(FALSE leaps-${seed}/01.mid reversed-${seed}/01.mid)
+    endforeach()
+
+    # A name that is no rule is refused with the names.
+    file(WRITE "${WORK}/bad.json" "{\"melody\": {\"waive\": [\"range\"]}}")
+    run("${COMPOSER}" listen --what themes --count 1 --seed 1 --settings bad.json --out-dir bad)
+    if(STATUS EQUAL 0)
+        message(FATAL_ERROR "a waived rule that does not exist was accepted")
+    endif()
+    expect_match("${ERR}" "is not a rule the melody stage can waive")
+    return()
+endif()
 
 # --- motifs ------------------------------------------------------------------------------
 

@@ -34,6 +34,13 @@ typedef struct {
   int count;     /* variations */
   int set;       /* choose */
   int index;     /* choose */
+  /* theme compose and explore: what the call adds to the settings (R-671, R-673), owned copies */
+  cJSON *settings;
+  cJSON *overrides;
+  cJSON *off;
+  char *taste;
+  bool explore;
+  int distance;  /* explore: 0 for the resolved explore.distance */
 } WorkshopComposeJob;
 
 /* The job name the queue shows for op: theme, piece, regenerate, variations or choose. */

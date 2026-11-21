@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-listening-session.v1.schema.json",
+  "title": "Listening session, format version 1",
+  "description": "ratings/sessions/<id>.json: a listening session (R-674): the batches made, the ratings of their samples and the picks between batches.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "created_at",
+    "actor",
+    "what",
+    "taste",
+    "style",
+    "note",
+    "batches",
+    "ratings",
+    "picks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-listening-session"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "actor": {
+      "type": "string"
+    },
+    "what": {
+      "enum": [
+        "motifs",
+        "themes"
+      ]
+    },
+    "taste": {
+      "type": "string"
+    },
+    "style": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "note": {
+      "type": "string"
+    },
+    "batches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "round",
+          "batch",
+          "at",
+          "samples"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "round": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "batch": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9]{1,8}$"
+          },
+          "at": {
+            "type": "string"
+          },
+          "samples": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": [
+                "index",
+                "seed",
+                "status",
+                "files",
+                "settings"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "seed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "status": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "sha256"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "sha256": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "settings": {
+                  "description": "the resolution the sample was made with (settings.resolve's answer), or null"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ratings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "round",
+          "batch",
+          "seed",
+          "rating",
+          "note",
+          "actor",
+          "at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "round": {
+            "type": "integer"
+          },
+          "batch": {
+            "type": "string"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "note": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "picks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "round",
+          "seed",
+          "better",
+          "note",
+          "actor",
+          "at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "round": {
+            "type": "integer"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "better": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

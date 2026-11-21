@@ -166,7 +166,7 @@ static void test_theme(const char *general) {
     cJSON *item = NULL;
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    CHECK(workshop_theme_compose(id, true, 1, false, NULL, &item, &error) == URSATZ_OK, "the theme composes");
+    CHECK(workshop_theme_compose(id, true, 1, false, NULL, NULL, &item, &error) == URSATZ_OK, "the theme composes");
     cJSON_Delete(item);
     cJSON *layers = NULL;
     CHECK(workshop_material_version_layers(id, 2, &layers) == URSATZ_OK && cJSON_IsObject(layers) &&
@@ -219,7 +219,7 @@ int main(void) {
     char storage[512];
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    assert(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
+    assert(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK);
     Workshop *workshop = NULL;
     assert(workshop_open(&resolved, &workshop, &error) == URSATZ_OK);
     workshop_close(workshop);

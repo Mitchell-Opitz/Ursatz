@@ -43,6 +43,10 @@ typedef struct Workshop Workshop;
 #define WORKSHOP_FORMAT_STYLE "ursatz-style"
 #define WORKSHOP_FORMAT_LINK_RUN "ursatz-link-run"
 #define WORKSHOP_FORMAT_RENDER "ursatz-render"
+#define WORKSHOP_FORMAT_SETTINGS "ursatz-settings"                   /* one scope of the settings (R-671, R-676) */
+#define WORKSHOP_FORMAT_SETTINGS_SNAPSHOT "ursatz-settings-snapshot" /* how a composed version's settings resolved */
+#define WORKSHOP_FORMAT_LISTENING_SESSION "ursatz-listening-session" /* a listening session with its batches, ratings and picks (R-674) */
+#define WORKSHOP_FORMAT_ITEM_RATINGS "ursatz-item-ratings"           /* the ratings of the versions of an item */
 #define WORKSHOP_FORMAT_JOURNAL "ursatz-journal" /* the first line of journal/journal.jsonl; the file is lines, not one document */
 
 /*
@@ -66,11 +70,11 @@ typedef struct {
  * parsed, any 0 or NULL one unset). *out is filled with every member set; its strings point into storage (storage_size bytes,
  * the caller's), so it is valid while storage is. URSATZ_ERR_REQUEST for a value out of range or storage too small.
  */
-UrsatzStatus workshop_settings_resolve(const WorkshopConfig *flags, WorkshopConfig *out, char *storage, size_t storage_size,
+UrsatzStatus workshop_config_resolve(const WorkshopConfig *flags, WorkshopConfig *out, char *storage, size_t storage_size,
                                        UrsatzError *error);
 
 /*
- * Opens the workshop on the data folder of resolved (a WorkshopConfig with every member set, as workshop_settings_resolve
+ * Opens the workshop on the data folder of resolved (a WorkshopConfig with every member set, as workshop_config_resolve
  * gives it): creates the folder when it is absent, locks it, and starts what the workshop holds. *out is the workshop on
  * URSATZ_OK and NULL otherwise.
  */

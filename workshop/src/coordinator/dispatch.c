@@ -64,6 +64,13 @@ static const QueryEntry kQueries[] = {
     {"subject.list", workshop_q_subject_list},
     {"subject.groups", workshop_q_subject_groups},
     {"subject.get", workshop_q_subject_get},
+    {"settings.resolve", workshop_q_settings_resolve},
+    {"settings.scope", workshop_q_settings_scope},
+    {"settings.list", workshop_q_settings_list},
+    {"settings.keys", workshop_q_settings_keys},
+    {"ratings.session", workshop_q_ratings_session},
+    {"ratings.sessions", workshop_q_ratings_sessions},
+    {"ratings.item", workshop_q_ratings_item},
 };
 
 /* --- the table of commands ------------------------------------------------------------------------------------------------------- */
@@ -97,6 +104,7 @@ static const CommandEntry kCommands[] = {
     {"item.save", workshop_c_item_save},
     {"item.reanalyze", workshop_c_item_reanalyze},
     {"item.compose", workshop_c_item_compose},
+    {"item.explore", workshop_c_item_explore},
     {"item.regenerate", workshop_c_item_regenerate},
     {"item.variations", workshop_c_item_variations},
     {"item.choose", workshop_c_item_choose},
@@ -122,6 +130,18 @@ static const CommandEntry kCommands[] = {
     {"section.move", workshop_c_section_move},
     {"section.resize", workshop_c_section_resize},
     {"section.set", workshop_c_section_set},
+    {"settings.set", workshop_c_settings_set},
+    {"settings.unset", workshop_c_settings_unset},
+    {"settings.import", workshop_c_settings_import},
+    {"settings.override", workshop_c_settings_override},
+    {"settings.switch", workshop_c_settings_switch},
+    {"settings.use-taste", workshop_c_settings_use_taste},
+    {"ratings.session", workshop_c_ratings_session},
+    {"ratings.batch", workshop_c_ratings_batch},
+    {"ratings.rate", workshop_c_ratings_rate},
+    {"ratings.pick", workshop_c_ratings_pick},
+    {"ratings.rate-version", workshop_c_ratings_rate_version},
+    {"ratings.keep", workshop_c_ratings_keep},
     {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };
 

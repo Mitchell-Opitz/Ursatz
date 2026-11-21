@@ -10,6 +10,8 @@ const NAMES = [
   "subject-changed",
   "style-changed",
   "links-changed",
+  "settings-changed",
+  "ratings-changed",
   "job-progress",
   "job-done",
   "analysis-stale",

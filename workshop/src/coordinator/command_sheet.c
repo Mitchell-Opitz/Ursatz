@@ -46,6 +46,9 @@ static const char *type_text(const cJSON *param, CommonText *scratch) {
     if (strcmp(type, "rational") == 0) {
         return "n/d";
     }
+    if (strcmp(type, "value") == 0) {
+        return "value";
+    }
     if (strcmp(type, "object") == 0) {
         return "object";
     }
@@ -204,6 +207,9 @@ static const char *value_production(const cJSON *param) {
     }
     if (strcmp(type, "rational") == 0) {
         return "rational";
+    }
+    if (strcmp(type, "value") == 0) {
+        return "value";
     }
     if (strcmp(type, "object") == 0) {
         return "object";

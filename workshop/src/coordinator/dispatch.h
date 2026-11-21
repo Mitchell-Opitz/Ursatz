@@ -153,6 +153,41 @@ WORKSHOP_HANDLER(workshop_q_subject_list);
 WORKSHOP_HANDLER(workshop_q_subject_groups);
 WORKSHOP_HANDLER(workshop_q_subject_get);
 
+/* settings (api_settings.c) */
+WORKSHOP_HANDLER(workshop_q_settings_resolve);
+WORKSHOP_HANDLER(workshop_q_settings_scope);
+WORKSHOP_HANDLER(workshop_q_settings_list);
+WORKSHOP_HANDLER(workshop_q_settings_keys);
+
+/* ratings (api_ratings.c) */
+WORKSHOP_HANDLER(workshop_q_ratings_session);
+WORKSHOP_HANDLER(workshop_q_ratings_sessions);
+WORKSHOP_HANDLER(workshop_q_ratings_item);
+
+/* ratings commands (api_commands_ratings.c) */
+WORKSHOP_HANDLER(workshop_c_ratings_session);
+WORKSHOP_HANDLER(workshop_c_ratings_batch);
+WORKSHOP_HANDLER(workshop_c_ratings_rate);
+WORKSHOP_HANDLER(workshop_c_ratings_pick);
+WORKSHOP_HANDLER(workshop_c_ratings_rate_version);
+WORKSHOP_HANDLER(workshop_c_ratings_keep);
+
+/* settings commands (api_commands_settings.c) */
+WORKSHOP_HANDLER(workshop_c_settings_set);
+WORKSHOP_HANDLER(workshop_c_settings_unset);
+WORKSHOP_HANDLER(workshop_c_settings_import);
+WORKSHOP_HANDLER(workshop_c_settings_override);
+WORKSHOP_HANDLER(workshop_c_settings_switch);
+WORKSHOP_HANDLER(workshop_c_settings_use_taste);
+
+/* Checks a setting's value as a set or an import does (R-676): the key exists, motif.plan only in a request scope, an explore value against its
+ * limits, any other by the Composer. REQUEST at where (the Composer's path below it). */
+UrsatzStatus workshop_settings_check_value(const char *key, const cJSON *value, const char *where, bool request_scope, UrsatzError *error);
+
+/* Adds {key, value, ratings, note, actor, at} to the `kept` list of a taste file (made when missing); value NULL is null. */
+UrsatzStatus workshop_settings_keep_record(cJSON *file, const char *key, const cJSON *value, const cJSON *ratings, const char *note, const char *actor,
+                                           UrsatzError *error);
+
 /* library, collections, styles, links, jobs commands (api_commands_library.c) */
 WORKSHOP_HANDLER(workshop_c_library_import);
 WORKSHOP_HANDLER(workshop_c_library_update);
@@ -185,6 +220,7 @@ WORKSHOP_HANDLER(workshop_c_item_delete);
 WORKSHOP_HANDLER(workshop_c_item_save);
 WORKSHOP_HANDLER(workshop_c_item_reanalyze);
 WORKSHOP_HANDLER(workshop_c_item_compose);
+WORKSHOP_HANDLER(workshop_c_item_explore);
 WORKSHOP_HANDLER(workshop_c_item_regenerate);
 WORKSHOP_HANDLER(workshop_c_item_variations);
 WORKSHOP_HANDLER(workshop_c_item_choose);

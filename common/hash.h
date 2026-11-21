@@ -17,4 +17,7 @@ uint64_t common_fnv1a64(const void *data, size_t size, uint64_t seed);
 /* The hash as 16 lowercase hexadecimal digits and a terminating NUL. */
 void common_fnv1a64_hex(uint64_t hash, char out[17]);
 
+/* The SHA-256 of size bytes as 64 lowercase hexadecimal digits and a terminating NUL (FIPS 180-4): for a file's identity where FNV-1a is too short. */
+void common_sha256_hex(const void *data, size_t size, char out[65]);
+
 #endif

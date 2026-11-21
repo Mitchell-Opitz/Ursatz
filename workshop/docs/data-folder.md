@@ -21,7 +21,13 @@ subjects/<sub>.json
 library/pieces/<id>/                               source.<ext>, piece.json, analysis.json, realization.json, readings/analyzer.json
 library/collections/<id>.json
 library/links/<lnk>/run.json
-settings/styles/<sty>/                             style-model.json, style.json
+settings/styles/<sty>/                             style-model.json, style.json, settings.json
+settings/taste/<name>.json                         a taste profile (format ursatz-settings)
+ratings/sessions/<ses-id>.json                     a listening session: batches, ratings, picks (ursatz-listening-session)
+ratings/items/<item id>.json                       the ratings of the versions of an item (ursatz-item-ratings)
+projects/<prj>/settings.json                       the project's settings, overrides and switches
+projects/<prj>/items/<id>/settings.json            the item's
+projects/<prj>/items/<id>/v<n>/settings.json       how the settings resolved for the compose that made the version (ursatz-settings-snapshot)
 cache/                                             motive-link-cache.json, renders/<item>/v<n>/, index/: rebuilt, never the source of truth
 ```
 
@@ -91,4 +97,4 @@ A real run first runs the read-only data check (a folder the one-time migrations
 
 ## Settings
 
-`workshop_settings_resolve` takes four layers, each over the one before: the defaults (`data_dir` `.`, `port` 8765, `http_threads` 16, `job_workers` 2), `ursatz.json` (format `ursatz-config` 1: `port` 1 to 65535, `http_threads` 1 to 64, `job_workers` 1 to 8; a bad file is `URSATZ_ERR_FORMAT` naming the member), the environment (`URSATZ_DATA`, `URSATZ_PORT`, `URSATZ_JOB_WORKERS`) and the flags (`--data`, `--port`).
+`workshop_config_resolve` takes four layers, each over the one before: the defaults (`data_dir` `.`, `port` 8765, `http_threads` 16, `job_workers` 2), `ursatz.json` (format `ursatz-config` 1: `port` 1 to 65535, `http_threads` 1 to 64, `job_workers` 1 to 8; a bad file is `URSATZ_ERR_FORMAT` naming the member), the environment (`URSATZ_DATA`, `URSATZ_PORT`, `URSATZ_JOB_WORKERS`) and the flags (`--data`, `--port`).

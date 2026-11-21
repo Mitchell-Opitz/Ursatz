@@ -52,9 +52,24 @@ typedef struct {
  * added a version meanwhile, so composes of one item may run at once). On OK *out_item is the new item.json (caller
  * frees); otherwise no folder is left.
  */
+/*
+ * What a compose adds to the settings (R-671, R-673), borrowed for the length of the run: the request scope (a nested preferences document the
+ * body's own `preferences` is merged under), its overrides, its switches (style, taste, project), the taste profile it names, and for an
+ * exploration the distance (0: the resolved explore.distance).
+ */
+typedef struct {
+    const cJSON *settings;
+    const cJSON *overrides;
+    const cJSON *off;
+    const char *taste;
+    bool explore;
+    int distance;
+} WorkshopComposeSettings;
+
+/* settings is NULL for a piece (its settings come with the plan node scope, P71) and for a call with none; a theme resolves its settings either way. */
 UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *id, bool has_seed,
-                                             long long seed, bool update_uses, const UrsatzJob *job,
-                                             cJSON **out_item, UrsatzError *error);
+                                             long long seed, bool update_uses, const WorkshopComposeSettings *settings,
+                                             const UrsatzJob *job, cJSON **out_item, UrsatzError *error);
 
 #define WORKSHOP_COMPOSE_PATH_BYTES 800
 

@@ -542,7 +542,7 @@ static void test_refusals(void) {
   WorkshopConfig config = {"open", NULL, 9201, 2, 2};
   WorkshopConfig resolved;
   char storage[512];
-  check_quiet(workshop_settings_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "settings resolve");
+  check_quiet(workshop_config_resolve(&config, &resolved, storage, sizeof(storage), &error) == URSATZ_OK, "settings resolve");
   Workshop *workshop = NULL;
   check_quiet(workshop_open(&resolved, &workshop, &error) == URSATZ_ERR_FORMAT && workshop == NULL, "an unmigrated folder is refused by open");
   check_quiet(strstr(error.message, "is in the GUI's old layout") != NULL && strstr(error.message, "migrate --dry-run") != NULL &&
@@ -558,7 +558,7 @@ static void test_refusals(void) {
   /* an empty folder opens and becomes layout 1; a marker of a newer version or another format is refused naming the file */
   sh("rm -rf fresh && mkdir fresh");
   WorkshopConfig fresh = {"fresh", NULL, 9202, 2, 2};
-  check_quiet(workshop_settings_resolve(&fresh, &resolved, storage, sizeof(storage), &error) == URSATZ_OK &&
+  check_quiet(workshop_config_resolve(&fresh, &resolved, storage, sizeof(storage), &error) == URSATZ_OK &&
                   workshop_open(&resolved, &workshop, &error) == URSATZ_OK,
               "an empty folder opens");
   workshop_close(workshop);

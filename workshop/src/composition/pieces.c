@@ -388,7 +388,7 @@ UrsatzStatus workshop_piece_compose(const char *id, bool has_seed, long long see
     }
     workshop_error_text(error, "");
     cJSON *item = NULL;
-    UrsatzStatus result = workshop_compose_item(&kPieceKind, id, has_seed, seed, update_uses, job, &item, error);
+    UrsatzStatus result = workshop_compose_item(&kPieceKind, id, has_seed, seed, update_uses, NULL, job, &item, error);
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {

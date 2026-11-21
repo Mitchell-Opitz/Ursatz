@@ -2,6 +2,8 @@
 #include "base/knowledge.h"
 #include "base/last_error.h"
 #include "analysis/styles.h"
+#include "settings/settings_keys.h"
+#include "settings/settings_resolve.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -574,14 +576,53 @@ UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int 
                (!style_id || cJSON_AddStringToObject(request, "style", style_path)) &&
                cJSON_AddNumberToObject(request, "count", count_item ? (int)count_item->valuedouble : 6) &&
                (!seed_item || cJSON_AddNumberToObject(request, "seed", seed_item->valuedouble));
+  /* The settings (R-671): the project, the style, the taste profile, the switches and the request's own, resolved for a motif; a resolution with a
+     document sends it to the Composer as the request's preferences and is answered as `settings`. With none set the request and the reply are as they were. */
+  cJSON *resolution = NULL;
+  if (built && workshop_settings_key_count() > 0) {
+    WorkshopSettingsRequest resolve;
+    memset(&resolve, 0, sizeof(resolve));
+    const char *project_id = optional_string(body, "project_id", &bad);
+    const char *taste = optional_string(body, "taste", &bad);
+    const cJSON *values = cJSON_GetObjectItemCaseSensitive(body, "settings");
+    const cJSON *off = cJSON_GetObjectItemCaseSensitive(body, "off");
+    resolve.project_id = project_id && project_id[0] ? project_id : NULL;
+    resolve.style_id = style_id;
+    resolve.taste = taste && taste[0] ? taste : NULL;
+    resolve.values = cJSON_IsObject(values) ? values : NULL;
+    resolve.off = cJSON_IsArray(off) ? off : NULL;
+    resolve.kind = "motif";
+    UrsatzError failure = {{0}, {0}};
+    UrsatzStatus resolved = bad ? URSATZ_ERR_REQUEST : workshop_settings_resolve_request(&resolve, false, &resolution, &failure);
+    if (resolved != URSATZ_OK) {
+      cJSON_Delete(request);
+      return refuse(http_status, resolved == URSATZ_ERR_NOT_FOUND ? 404 : 400, resolved, error, failure.path,
+                    failure.message[0] ? failure.message : "the settings are not valid");
+    }
+    const cJSON *document = cJSON_GetObjectItemCaseSensitive(resolution, "document");
+    if (cJSON_IsObject(document)) {
+      cJSON *copy = cJSON_Duplicate(document, true);
+      if (!copy || !cJSON_AddItemToObject(request, "preferences", copy)) {
+        cJSON_Delete(copy);
+        cJSON_Delete(resolution);
+        cJSON_Delete(request);
+        return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
+      }
+    } else {
+      cJSON_Delete(resolution);
+      resolution = NULL;
+    }
+  }
   WorkshopComposerReply reply;
   bool called = built && workshop_motif_random_motive(request, &reply);
   cJSON_Delete(request);
   if (!called) {
+    cJSON_Delete(resolution);
     return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
   }
   cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
+    cJSON_Delete(resolution);
     UrsatzStatus failed = refuse(http_status, workshop_composer_reply_failure_status(&reply),
                                  reply.status != URSATZ_OK ? reply.status : URSATZ_ERR_INTERNAL, error, reply.path,
                                  reply.message[0] ? reply.message : "composer could not draw the motives");
@@ -589,10 +630,11 @@ UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int 
     return failed;
   }
   workshop_composer_reply_destroy(&reply);
-  if (!cJSON_AddBoolToObject(document, "ok", 1)) {
+  if (!cJSON_AddBoolToObject(document, "ok", 1) || (resolution && !cJSON_AddItemToObject(document, "settings", resolution))) {
     cJSON_Delete(document);
     return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
   }
+  resolution = NULL;
   *document_out = document;
   return URSATZ_OK;
 }

@@ -2,7 +2,7 @@
 
 The composer's settings as one document (R-411, R-413): the numbers that shape what it makes, so that a listening session can change one and compose again with no code change and no rebuild. Back to the [docs index](README.md).
 
-Header: `<ursatz_composer/preferences.h>`. Source: `src/preferences/preferences.c`.
+Header: `<ursatz_composer/preferences.h>`. Source: `src/preferences/preferences.c`. Schema: [`schema/api/preferences.schema.json`](../schema/api/preferences.schema.json), the one definition the theme and random motive requests and responses and the vocabulary refer to.
 
 Every member is optional and its default is the value the Composer used before the document existed. With no preferences every output is byte-identical to what it was (R-413). A member that is unknown, of the wrong type or outside its limit is refused with its JSON path, for example `/preferences/melody/keep`; the functions give the path relative to the object (`/melody/keep`). A value is a whole number unless the table says otherwise; `null` is a wrong type.
 
@@ -13,6 +13,8 @@ Every member is optional and its default is the value the Composer used before t
 | `composer_preferences_default(out)` | Writes the defaults. |
 | `composer_preferences_read(object, out, path, path_size, message, message_size)` | Starts from the defaults, applies every member present, and returns false at the first bad one with its `path` and a `message` naming the limit. |
 | `composer_preferences_write(preferences)` | The full document, every member, as a `cJSON` object the caller deletes. Ratios are `"n/d"` text and `nct_types` is in the order passing, neighbor, appoggiatura, suspension, anticipation. |
+| `composer_preferences_keys(count)` | The key table: one row per setting (below). Static. |
+| `composer_preferences_rules(count)` | The rule table: the 13 soft groups and the 7 hard rules of the melody stage. Static. |
 
 `ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif`, `GrowFidelityTable development` and, from 1.19, `GrowContrast contrast` (the development group's contrast settings). The API carries the document as the `preferences` member of the random motive and theme requests (below).
 
@@ -39,6 +41,8 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
 | `rhythm_repeat_bars` | 0 | 0 to 16 | The most bars of 2 or more notes in a row that may share one rhythm in a theme's line; 0 sets no cap. | new (R-479) |
 | `leaps` | 0 | 0 to 20 | How many times a melody's leaps count against it (`leap_weight`). 0 leaves them out. | new (R-481) |
 | `register` | 0 | 0 to 20 | How many times an idea's drift from the register of the span before it counts against it (`register_weight`). 0 leaves it out. | new (R-481) |
+| `waive` | `[]` | a list of `forbidden-leap`, `forbidden-outline`, `no-crossing`, `parallel-octaves`, `parallel-fifths`, `dissonance-against-bass`, `strong-beat-chord-tone`, no repeats | The hard rules the melody stage does not hold: a waived rule neither refuses a candidate nor scores it. Off by default; R-672. | new (R-672, API 4.3) |
+| `reverse` | `[]` | a list of the groups of `weights` and `closure`, `leaps`, `register`, no repeats | The soft rule groups whose score counts what a candidate breaks in place of what it holds, so a setting can ask for the opposite. Off by default; R-672. | new (R-672, API 4.3) |
 
 `weights` has ten keys. The score is the share of soft rules held: the sum of `weight * held` over the sum of `weight * total`. A weight of 0 leaves a group out; every weight 1 is the score before weights existed.
 
@@ -51,6 +55,10 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
 | `contour` | The one climax, its place, recovered leaps and few repeated notes. |
 | `ending_reduction`, `waves`, `central_range`, `monotony` | One shaping rule each (see [the shaping rules](melody-fill.md#the-shaping-rules)). |
 | `seam` | The rules at the seam of a loop. |
+
+`waive` and `reverse` are the overrides of the melody stage (R-672). A name that is no rule is refused at `/melody/waive/<i>` ("is not a rule the melody stage can waive: " and the names) or `/melody/reverse/<i>` ("is not a soft rule group: " and the names), a repeat at the same place, a value that is no list at `/melody/waive` or `/melody/reverse`. The range, the stable tone of the cadence, the non-chord tone types and the checks that are not named are never waived. A reversed group adds `total - held` to the score in place of `held`; with `reverse` empty the score is the same integers as before.
+
+What a waived rule leaves out of the checker: `strong-beat-chord-tone` the chord tone asked of a strong beat (the range stays hard); `forbidden-leap` and `forbidden-outline` the melodic check, in the relaxed run check too; `dissonance-against-bass` the refusal of a chord tone that is dissonant over the bass, which is not scored either; `no-crossing`, `parallel-octaves` and `parallel-fifths` the harmonic check, so a waived parallel does not score. The checker keeps the weighted score of each group apart and adds a reversed group as `total - held` where the verdict is finished ([melody-fill.md](melody-fill.md#the-checker)).
 
 ```json
 {
@@ -70,12 +78,33 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
     "closure": {"final": 0, "first": 0},
     "rhythm_repeat_bars": 0,
     "leaps": 0,
-    "register": 0
+    "register": 0,
+    "waive": [],
+    "reverse": []
   }
 }
 ```
 
 `start_cell` stays a parameter of the stage and is not a preference. The first melody attempt of a compose run uses `climax_position` and a retry uses its own position (`CLIMAX_RETRIES`, `compose_run.c`); the other melody settings apply to every attempt.
+
+## The candidates group (R-673)
+
+How a set of random motives is chosen, in `CandidatePreferences`. Off by default.
+
+| Key | Default | Limit | What it shapes |
+| --- | --- | --- | --- |
+| `variety` | 0 | 0 to 20 | How much each random motive is chosen for being unlike the ones before it. 0 draws as it always did. With a style the choice mixes closeness to the style (counted 20 - `variety` times) and distance from the other motives (`variety` times). |
+| `pool` | 4 | 2 to 8 | The candidates drawn for each motive that is chosen among (at least the 8 a style asks for, when there is one). Read only when `variety` is above 0. |
+
+The distance of a candidate is the least, over the motives of the request's `avoid` list and those already chosen, of 1 - (rhythm similarity + contour similarity) / 2 (the library's `similarity_rhythm_score` and `similarity_contour_score`, the contour from the directions of the intervals); a tie keeps the first candidate drawn. A candidate equal to a motive of `avoid` is never kept. A value outside its limit is refused at `/candidates/variety` or `/candidates/pool`. The document's four groups are `melody`, `motif`, `development` and `candidates`, in that order; the key table lists the two keys last.
+
+## The key and rule tables (R-672)
+
+`composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.skips_per_motif`: 122 rows. A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
+
+A **hard** setting changes what a request may ask for or what a candidate may be: `melody.range.low`, `melody.range.high`, `melody.nct_types`, `melody.rhythm_repeat_bars`, `melody.waive`, `motif.leap.low`, `motif.leap.high`, `motif.leaps_per_motif`, `motif.skips_per_motif`, `motif.contrast_fidelity_min`, `motif.plan` and every `development.fidelity_minimum.*` (R-671). Every other setting is **soft**: a preference a listener can move.
+
+`composer_preferences_rules` lists the rules a setting can override, in enum order: the 13 soft groups (`melody.weights.<name>` for the ten weights, `melody.closure`, `melody.leaps`, `melody.register`) and the 7 hard rules (key `melody.waive`). The vocabulary serves both tables as `preference_keys` and `rules` ([api.md](api.md)).
 
 ## The motif group
 
@@ -135,7 +164,7 @@ The random motive and theme requests take the document as an optional `preferenc
 
 | Request | Groups that apply |
 |---|---|
-| `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants). `melody` and `development` are accepted and echoed. |
+| `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants), and `candidates`. `melody` and `development` are accepted and echoed. |
 | `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item, from 1.17 the continuation settings and `basic_as_written`, and from 1.19 the L4 settings: `melody.closure`, `rhythm_repeat_bars`, `leaps`, `register` and `development.contrast`). `motif` shapes a theme's drawn rhythms and new material (1.19) and nothing else: a theme's motives come from the request. |
 
 `composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `long_nct_one_in_max`, `leaps_per_motif_max`, `syncopation_one_in_max`, `skips_per_motif_max`, `plan_chords_max`, `plan_beat_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`, and from 1.19 `rhythm_repeat_bars_max`). API 1.19 adds the L4 settings (closure, the cap on bars with one rhythm, leaps, register, the contrast distance and new material; every one off by default, R-422). API 1.17 adds the L3 settings (syncopation, skips, a given chord plan, the continuation settings and `basic_as_written`; every one off by default, R-422). A given `motif.plan` that does not fit the meter, bars, shapes or endings allowed is refused by a random motive run as `URSATZ_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that meter-dependent refusal to the run; its syntax refusals come from the reader). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.

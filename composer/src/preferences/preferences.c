@@ -30,6 +30,8 @@
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
 #define FIDELITY_DENOMINATOR_MAX COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX
 #define RHYTHM_REPEAT_BARS_MAX COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX
+#define POOL_MIN COMPOSER_PREFERENCES_POOL_MIN
+#define POOL_MAX COMPOSER_PREFERENCES_POOL_MAX
 
 /* The non-chord tones nct_types may name, in the order the document writes them. */
 static const struct {
@@ -65,6 +67,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     grow_fidelity_table_default(&out->development);
     out->continuation.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
     out->contrast.distance[GROW_CONTRAST_SIMILAR] = 1;
+    out->candidates.pool = 4;
 }
 
 /* Where a refusal goes: the path and the message of the caller, which may both be absent. */
@@ -264,6 +267,61 @@ static bool read_closure(const cJSON *closure, MelodyFillParams *melody, const R
     return true;
 }
 
+/* The names a list of the melody group may hold, "forbidden-leap, forbidden-outline, ...", for the refusal that names them. */
+static void rule_names(bool groups, char *text, size_t size) {
+    size_t used = 0;
+    unsigned count = groups ? MELODY_GROUP_COUNT : MELODY_RULE_COUNT;
+    text[0] = '\0';
+    for (unsigned i = 0; i < count && used < size; i++) {
+        const char *name = groups ? melody_soft_group_name((MelodySoftGroup)i) : melody_hard_rule_name((MelodyHardRule)i);
+        int written = snprintf(text + used, size - used, "%s%s", i ? ", " : "", name);
+        used += written > 0 ? (size_t)written : 0;
+    }
+}
+
+/*
+ * waive and reverse (R-672): a list of names, none twice. waive names hard rules the melody stage does not hold,
+ * reverse names soft groups whose score counts what a candidate breaks. *bits is the list as bits of the enum.
+ */
+static bool read_rule_list(const cJSON *list, bool groups, unsigned *bits, const Refusal *refusal) {
+    const char *key_name = groups ? "reverse" : "waive";
+    unsigned found = 0;
+    const cJSON *item;
+    char names[192];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    int index = 0;
+    if (!cJSON_IsArray(list)) {
+        return refuse_melody(refusal, key_name, "must be a list of names");
+    }
+    rule_names(groups, names, sizeof(names));
+    cJSON_ArrayForEach(item, list) {
+        unsigned bit = 0;
+        bool known = false;
+        char key[COMPOSER_PREFERENCES_PATH_MAX];
+        snprintf(key, sizeof(key), "%s/%d", key_name, index++);
+        if (cJSON_IsString(item) && groups) {
+            MelodySoftGroup group = MELODY_GROUP_MELODIC;
+            known = melody_soft_group_find(item->valuestring, &group);
+            bit = 1u << group;
+        } else if (cJSON_IsString(item)) {
+            MelodyHardRule rule = MELODY_RULE_FORBIDDEN_LEAP;
+            known = melody_hard_rule_find(item->valuestring, &rule);
+            bit = 1u << rule;
+        }
+        if (!known) {
+            snprintf(message, sizeof(message), groups ? "is not a soft rule group: %s" : "is not a rule the melody stage can waive: %s",
+                     names);
+            return refuse_melody(refusal, key, message);
+        }
+        if (found & bit) {
+            return refuse_melody(refusal, key, "repeats a name of the list");
+        }
+        found |= bit;
+    }
+    *bits = found;
+    return true;
+}
+
 static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
@@ -303,6 +361,10 @@ static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refu
             ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->leap_weight, refusal);
         } else if (strcmp(key, "register") == 0) {
             ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->register_weight, refusal);
+        } else if (strcmp(key, "waive") == 0) {
+            ok = read_rule_list(item, false, &melody->waive, refusal);
+        } else if (strcmp(key, "reverse") == 0) {
+            ok = read_rule_list(item, true, &melody->reverse, refusal);
         } else {
             ok = refuse_melody(refusal, key, "unknown member");
         }
@@ -914,6 +976,29 @@ static bool read_development(const cJSON *group, ComposerPreferences *preference
     return true;
 }
 
+/* ---------------------------------------------------------- the candidates group (R-673) */
+
+static bool read_candidates(const cJSON *group, CandidatePreferences *candidates, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(group)) {
+        return refuse(refusal, "candidates", "must be an object");
+    }
+    cJSON_ArrayForEach(item, group) {
+        if (strcmp(item->string, "variety") == 0) {
+            if (!read_unsigned_in(item, "candidates", "variety", 0, WEIGHT_MAX, &candidates->variety, refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "pool") == 0) {
+            if (!read_unsigned_in(item, "candidates", "pool", POOL_MIN, POOL_MAX, &candidates->pool, refusal)) {
+                return false;
+            }
+        } else {
+            return refuse_in(refusal, "candidates", item->string, "unknown member");
+        }
+    }
+    return true;
+}
+
 bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
                                size_t message_size) {
     Refusal refusal = {path, path_size, message, message_size};
@@ -939,6 +1024,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             }
         } else if (strcmp(item->string, "development") == 0) {
             if (!read_development(item, out, &refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "candidates") == 0) {
+            if (!read_candidates(item, &out->candidates, &refusal)) {
                 return false;
             }
         } else {
@@ -993,6 +1082,28 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
          add_number(closure, "first", melody->closure_first) &&
          add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
          add_number(group, "leaps", melody->leap_weight) && add_number(group, "register", melody->register_weight);
+    cJSON *waive = ok ? cJSON_AddArrayToObject(group, "waive") : NULL;
+    for (unsigned i = 0; waive && i < MELODY_RULE_COUNT; i++) {
+        if (melody->waive & (1u << i)) {
+            cJSON *name = cJSON_CreateString(melody_hard_rule_name((MelodyHardRule)i));
+            if (!name || !cJSON_AddItemToArray(waive, name)) {
+                cJSON_Delete(name);
+                ok = false;
+            }
+        }
+    }
+    ok = ok && waive;
+    cJSON *reverse = ok ? cJSON_AddArrayToObject(group, "reverse") : NULL;
+    for (unsigned i = 0; reverse && i < MELODY_GROUP_COUNT; i++) {
+        if (melody->reverse & (1u << i)) {
+            cJSON *name = cJSON_CreateString(melody_soft_group_name((MelodySoftGroup)i));
+            if (!name || !cJSON_AddItemToArray(reverse, name)) {
+                cJSON_Delete(name);
+                ok = false;
+            }
+        }
+    }
+    ok = ok && reverse;
     if (!ok || !weights) {
         cJSON_Delete(types);
         cJSON_Delete(group);
@@ -1152,6 +1263,187 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *candidates = cJSON_AddObjectToObject(document, "candidates");
+    if (!candidates || !add_number(candidates, "variety", preferences->candidates.variety) ||
+        !add_number(candidates, "pool", preferences->candidates.pool)) {
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
+/* ------------------------------------------------------------------- the key and rule tables (R-672) */
+
+static const char *const WORDS_NCT[] = {"passing", "neighbor", "appoggiatura", "suspension", "anticipation", NULL};
+static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-outline",      "no-crossing", "parallel-octaves",
+                                          "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
+static const char *const WORDS_REVERSE[] = {"melodic",  "against_bass", "tendency", "climax",   "contour", "ending_reduction", "waves",
+                                            "central_range", "monotony", "seam",    "closure", "leaps",   "register", NULL};
+
+/*
+ * One row per leaf of the default document, in the order the document writes them, then motif.plan (the one setting the
+ * default document does not hold). A hard key shapes what a request can ask for or what a candidate may be (R-671); the
+ * rest are soft: a preference a listener can move.
+ */
+static const ComposerPreferenceKey KEYS[] = {
+    {"melody.range.low", COMPOSER_KEY_INTEGER, RANGE_LOW_MIN, RANGE_LOW_MAX, true, NULL},
+    {"melody.range.high", COMPOSER_KEY_INTEGER, RANGE_LOW_MIN + RANGE_SPAN_MIN, RANGE_HIGH_MAX, true, NULL},
+    {"melody.nct_types", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_NCT},
+    {"melody.density", COMPOSER_KEY_INTEGER, 0, DENSITY_MAX, false, NULL},
+    {"melody.climax_position", COMPOSER_KEY_INTEGER, 0, SCALE_MAX, false, NULL},
+    {"melody.climax_rise", COMPOSER_KEY_INTEGER, CLIMAX_RISE_MIN, CLIMAX_RISE_MAX, false, NULL},
+    {"melody.climax_slack", COMPOSER_KEY_INTEGER, 0, SCALE_MAX, false, NULL},
+    {"melody.second_nearest_chord_tone", COMPOSER_KEY_RATIO, 0, RATIO_DENOMINATOR_MAX, false, NULL},
+    {"melody.attempts", COMPOSER_KEY_INTEGER, 1, ATTEMPTS_MAX, false, NULL},
+    {"melody.keep", COMPOSER_KEY_INTEGER, 1, MELODY_KEEP_MAX, false, NULL},
+    {"melody.plain_shaping", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"melody.weights.melodic", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.against_bass", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.tendency", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.climax", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.contour", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.ending_reduction", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.waves", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.central_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.monotony", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.weights.seam", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.closure.final", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.closure.first", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.rhythm_repeat_bars", COMPOSER_KEY_INTEGER, 0, RHYTHM_REPEAT_BARS_MAX, true, NULL},
+    {"melody.leaps", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.register", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.waive", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_WAIVE},
+    {"melody.reverse", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_REVERSE},
+    {"motif.bars.one", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.bars.two", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.pickup_one_in", COMPOSER_KEY_INTEGER, 0, PICKUP_ONE_IN_MAX, false, NULL},
+    {"motif.shapes_one_bar.repeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_one_bar.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_two_bars.repeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_two_bars.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.shapes_two_bars.repeat_contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_two.I-V", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_two.I-IV", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_two.I-I", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_three.I-V-I", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.plans_three.I-IV-I", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.features.dotted", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.features.leap", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.features.repeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.leap.low", COMPOSER_KEY_INTEGER, LEAP_MIN, LEAP_MAX, true, NULL},
+    {"motif.leap.high", COMPOSER_KEY_INTEGER, LEAP_MIN, LEAP_MAX, true, NULL},
+    {"motif.rung_moves.step", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.rung_moves.skip", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.chord_tone", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.passing", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.neighbor", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.decorations.escape", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.half_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.two_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.quarter_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.long_short", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.short_long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.triplet", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.durations.triplet_two_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.accented_one_in", COMPOSER_KEY_INTEGER, 0, ACCENTED_ONE_IN_MAX, false, NULL},
+    {"motif.accented_types.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.accented_types.passing", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.accented_types.suspension", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.avoid_repeats", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.leaps_per_motif", COMPOSER_KEY_INTEGER, 0, LEAPS_PER_MOTIF_MAX, true, NULL},
+    {"motif.leap_recovery", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.pickup_from_accent", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.contrast_fidelity_min", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"motif.long_on_weak", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.final_long", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.compound_beats", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"motif.endings.free", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.endings.closed", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.endings.open", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.endings.lead_in", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_one_in", COMPOSER_KEY_INTEGER, 0, LONG_NCT_ONE_IN_MAX, false, NULL},
+    {"motif.long_nct_types.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.suspension", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.retardation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.passing", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_types.neighbor", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.second", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.fourth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.sixth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_intervals.seventh", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_beats.downbeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_beats.middle", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_beats.other", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_lengths.beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_lengths.dotted_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.long_nct_lengths.two_beats", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_one_in", COMPOSER_KEY_INTEGER, 0, SYNCOPATION_ONE_IN_MAX, false, NULL},
+    {"motif.syncopation_types.off_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_types.tie_beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_types.tie_bar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_types.anticipation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_levels.eighth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.syncopation_levels.sixteenth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"motif.skips_per_motif", COMPOSER_KEY_INTEGER, 0, SKIPS_PER_MOTIF_MAX, true, NULL},
+    {"motif.plan", COMPOSER_KEY_PLAN, 0, 0, true, NULL},
+    {"development.fidelity_minimum.melody.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.melody.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.melody.cadential", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.balanced.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.balanced.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.balanced.cadential", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.theme.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.theme.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.fidelity_minimum.theme.cadential", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
+    {"development.continuation.every_segment", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.continuation.fragment_lengths.segment", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.continuation.fragment_lengths.half_bar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.continuation.fragment_lengths.beat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.continuation.diminish", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.continuation.liquidate", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.continuation.faster_harmony", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.basic_as_written", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.contrast.distance.similar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.contrast.distance.distant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.contrast.new_material", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"candidates.variety", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"candidates.pool", COMPOSER_KEY_INTEGER, POOL_MIN, POOL_MAX, false, NULL}};
+
+const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
+    if (count) {
+        *count = sizeof(KEYS) / sizeof(KEYS[0]);
+    }
+    return KEYS;
+}
+
+/* The 13 soft groups, then the 7 hard rules, in enum order; each names the setting that holds it (R-672). */
+static const ComposerRule RULES[] = {
+    {"melodic", false, "melody.weights.melodic"},
+    {"against_bass", false, "melody.weights.against_bass"},
+    {"tendency", false, "melody.weights.tendency"},
+    {"climax", false, "melody.weights.climax"},
+    {"contour", false, "melody.weights.contour"},
+    {"ending_reduction", false, "melody.weights.ending_reduction"},
+    {"waves", false, "melody.weights.waves"},
+    {"central_range", false, "melody.weights.central_range"},
+    {"monotony", false, "melody.weights.monotony"},
+    {"seam", false, "melody.weights.seam"},
+    {"closure", false, "melody.closure"},
+    {"leaps", false, "melody.leaps"},
+    {"register", false, "melody.register"},
+    {"forbidden-leap", true, "melody.waive"},
+    {"forbidden-outline", true, "melody.waive"},
+    {"no-crossing", true, "melody.waive"},
+    {"parallel-octaves", true, "melody.waive"},
+    {"parallel-fifths", true, "melody.waive"},
+    {"dissonance-against-bass", true, "melody.waive"},
+    {"strong-beat-chord-tone", true, "melody.waive"}};
+
+const ComposerRule *composer_preferences_rules(size_t *count) {
+    if (count) {
+        *count = sizeof(RULES) / sizeof(RULES[0]);
+    }
+    return RULES;
+}

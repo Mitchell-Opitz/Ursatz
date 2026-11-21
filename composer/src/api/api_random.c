@@ -130,6 +130,9 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
         return URSATZ_ERR_REQUEST;
     }
     out->preferences = *has_preferences ? &preferences->motif : NULL;
+    /* The candidates group (R-673): variety 0, the default, draws as it always did. */
+    out->variety = *has_preferences ? preferences->candidates.variety : 0;
+    out->pool = *has_preferences ? preferences->candidates.pool : 4;
     return URSATZ_OK;
 }
 
@@ -165,6 +168,59 @@ static UrsatzStatus read_style(const cJSON *request, ComposerStyle **style, Ursa
     }
     return has_style ? api_load_style(path, without, without_count, "/style", "/style_without", style, error)
                      : URSATZ_OK;
+}
+
+/* The most motives a request may ask to avoid. */
+#define AVOID_MAX 64
+
+/*
+ * "avoid" (R-673): 0 to AVOID_MAX motive documents, read like any motive in the JSON format; a bad one is refused at
+ * /avoid/<i> with the reader's message. *out is allocated (free it) when the list is not empty, else NULL.
+ */
+static UrsatzStatus read_avoid(const cJSON *request, const KnowledgeSnapshot *knowledge, Motive **out, size_t *count,
+                               UrsatzError *error) {
+    *out = NULL;
+    *count = 0;
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(request, "avoid");
+    if (!list || cJSON_IsNull(list)) {
+        return URSATZ_OK;
+    }
+    if (!cJSON_IsArray(list)) {
+        return api_fail(error, URSATZ_ERR_REQUEST, "/avoid", "avoid must be a list of motives");
+    }
+    int size = cJSON_GetArraySize(list);
+    if (size > AVOID_MAX) {
+        return api_fail(error, URSATZ_ERR_REQUEST, "/avoid", "avoid has at most %d motives", AVOID_MAX);
+    }
+    if (size == 0) {
+        return URSATZ_OK;
+    }
+    Motive *motives = calloc((size_t)size, sizeof(*motives));
+    if (!motives) {
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    for (int i = 0; i < size; i++) {
+        char *text = cJSON_PrintUnformatted(cJSON_GetArrayItem(list, i));
+        MotiveOptions options;
+        MotiveError reason;
+        memset(&options, 0, sizeof options);
+        memset(&reason, 0, sizeof reason);
+        options.knowledge = knowledge;
+        MotiveResult result = text ? motive_from_json(text, &options, &motives[i], &reason) : MOTIVE_ERR_SYNTAX;
+        cJSON_free(text);
+        if (result != MOTIVE_OK) {
+            char path[32];
+            snprintf(path, sizeof path, "/avoid/%d", i);
+            free(motives);
+            if (reason.location[0]) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "%s (%s)", reason.message, reason.location);
+            }
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "%s", reason.message);
+        }
+    }
+    *out = motives;
+    *count = (size_t)size;
+    return URSATZ_OK;
 }
 
 /* {"seed", "motives": [<motive document>]}. NULL on failure. */
@@ -220,13 +276,21 @@ static UrsatzStatus make_random(const cJSON *request, const KnowledgeSnapshot *k
     if (status != URSATZ_OK) {
         return status;
     }
+    Motive *avoid = NULL;
+    status = read_avoid(request, knowledge, &avoid, &options.avoid_count, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    options.avoid = avoid;
     ComposerStyle *style = NULL;
     status = read_style(request, &style, error);
     if (status != URSATZ_OK) {
+        free(avoid);
         return status;
     }
     if (job_step(job, "random-motive", 0, 1)) {
         composer_style_destroy(style);
+        free(avoid);
         return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
     }
     options.style = style;
@@ -234,6 +298,7 @@ static UrsatzStatus make_random(const cJSON *request, const KnowledgeSnapshot *k
     size_t made = 0;
     MotiveRandomResult result = motive_random(&options, motives, &made);
     composer_style_destroy(style);
+    free(avoid);
     if (result == MOTIVE_RANDOM_ERR_PLAN) {
         return api_fail(error, URSATZ_ERR_REQUEST, "/preferences/motif/plan",
                         "the motif plan does not fit the meter, bars, shapes or endings allowed");
@@ -264,6 +329,12 @@ UrsatzStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON
     UrsatzStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
+    if (status == URSATZ_OK) {
+        Motive *avoid = NULL;
+        size_t avoid_count = 0;
+        status = read_avoid(request, knowledge, &avoid, &avoid_count, error);
+        free(avoid);
+    }
     if (status == URSATZ_OK) {
         status = read_style(request, &style, error);
         composer_style_destroy(style);

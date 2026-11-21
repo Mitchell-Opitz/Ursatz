@@ -1,0 +1,283 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "ratings",
+  "summary": "Ratings: listening sessions with batches, ratings and picks, ratings of item versions, and keep as default.",
+  "commands": [
+    {
+      "name": "ratings.session",
+      "summary": "Open a listening session",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "what",
+          "type": "enum",
+          "required": true,
+          "help": "What the session listens to.",
+          "values": [
+            "motifs",
+            "themes"
+          ]
+        },
+        {
+          "name": "taste",
+          "type": "string",
+          "required": false,
+          "help": "The taste profile the session listens with; none when absent."
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "help": "The style the batches use."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The session.",
+      "job": null,
+      "example": "ratings.session what motifs taste none"
+    },
+    {
+      "name": "ratings.batch",
+      "summary": "Record a batch of samples in a session",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "session",
+          "type": "string",
+          "required": true,
+          "help": "The session."
+        },
+        {
+          "name": "round",
+          "type": "integer",
+          "required": true,
+          "help": "The round, 1 to 10000.",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        {
+          "name": "batch",
+          "type": "string",
+          "required": true,
+          "help": "The batch's name: 1 to 8 letters and digits.",
+          "max_length": 8
+        },
+        {
+          "name": "samples",
+          "type": "array",
+          "required": true,
+          "help": "Up to 64 samples: each {index, seed, status, files, settings}.",
+          "items": "object"
+        }
+      ],
+      "one_of": [],
+      "reply": "The session.",
+      "job": null,
+      "example": "ratings.batch session ses-1 round 1 batch A samples []"
+    },
+    {
+      "name": "ratings.rate",
+      "summary": "Rate a sample of a batch from 1 to 5",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "session",
+          "type": "string",
+          "required": true,
+          "help": "The session."
+        },
+        {
+          "name": "round",
+          "type": "integer",
+          "required": true,
+          "help": "The round.",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        {
+          "name": "batch",
+          "type": "string",
+          "required": true,
+          "help": "The batch.",
+          "max_length": 8
+        },
+        {
+          "name": "seed",
+          "type": "integer",
+          "required": true,
+          "help": "The sample's seed.",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        {
+          "name": "rating",
+          "type": "integer",
+          "required": true,
+          "help": "The rating, 1 to 5.",
+          "minimum": 1,
+          "maximum": 5
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The id of the rating.",
+      "job": null,
+      "example": "ratings.rate session ses-1 round 1 batch A seed 1 rating 4"
+    },
+    {
+      "name": "ratings.pick",
+      "summary": "Say which batch of a round sounded better",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "session",
+          "type": "string",
+          "required": true,
+          "help": "The session."
+        },
+        {
+          "name": "round",
+          "type": "integer",
+          "required": true,
+          "help": "The round.",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        {
+          "name": "seed",
+          "type": "integer",
+          "required": true,
+          "help": "The seed the batches were compared at.",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        {
+          "name": "better",
+          "type": "string",
+          "required": true,
+          "help": "A batch recorded for the round, or same."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The id of the pick.",
+      "job": null,
+      "example": "ratings.pick session ses-1 round 1 seed 1 better B"
+    },
+    {
+      "name": "ratings.rate-version",
+      "summary": "Rate a version of an item from 1 to 5",
+      "target": "item",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The version rated.",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        {
+          "name": "rating",
+          "type": "integer",
+          "required": true,
+          "help": "The rating, 1 to 5.",
+          "minimum": 1,
+          "maximum": 5
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The id of the rating.",
+      "job": null,
+      "example": "ratings.rate-version item:thm-1@v2 version 2 rating 5"
+    },
+    {
+      "name": "ratings.keep",
+      "summary": "Keep a setting as the default of a taste profile, citing the ratings behind it",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "taste",
+          "type": "string",
+          "required": true,
+          "help": "The taste profile."
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "required": true,
+          "help": "The setting's dotted key."
+        },
+        {
+          "name": "value",
+          "type": "value",
+          "required": false,
+          "help": "The value; absent or null drops the key."
+        },
+        {
+          "name": "ratings",
+          "type": "array",
+          "required": true,
+          "help": "The ids of the ratings and picks that say why, at least one.",
+          "items": "string"
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The taste profile's content after the change.",
+      "job": null,
+      "example": "ratings.keep taste none key motif.features.dotted value 1 ratings [pck-1] note \"B won\""
+    }
+  ]
+}

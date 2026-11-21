@@ -15,13 +15,23 @@
  * optional and its default is the value the Composer used before the document existed, so with no preferences every
  * output is byte-identical to what it was (R-413). docs/preferences.md lists every key, its default and its limit.
  *
- * ComposerPreferences holds the melody group, the settings of the melody stage (MelodyFillParams): the range, the
+ * ComposerPreferences holds the candidates group (CandidatePreferences, R-673) and the melody group, the settings of the melody stage (MelodyFillParams): the range, the
  * non-chord tones, the density, where the climax falls and how it is rated, the search (attempts and keep), and the
  * weight each group of soft rules counts in a melody's score. The motif group is the settings of the segments motive
  * generator (MotiveRandomPreferences): the bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and
  * durations it draws from. The development group is the fidelity minimum table of the theme's development
  * (GrowFidelityTable), the continuation settings (GrowContinuation), basic_as_written and the contrast settings (GrowContrast).
  */
+/*
+ * The candidates group (R-673): how a set of random motives is chosen. variety 0 to 20 (default 0) is how much a motive
+ * is chosen for being unlike the ones before it (0 leaves the draw as it was); pool 2 to 8 (default 4) is how many
+ * candidates are drawn for each motive that is chosen among. Off by default.
+ */
+typedef struct {
+    unsigned variety;
+    unsigned pool;
+} CandidatePreferences;
+
 typedef struct {
     MelodyFillParams melody;
     MotiveRandomPreferences motif;
@@ -29,6 +39,7 @@ typedef struct {
     GrowContinuation continuation; /* the development group's continuation settings (phase L3, off by default) */
     bool basic_as_written;         /* the development group's basic_as_written (phase L3, off by default) */
     GrowContrast contrast;         /* the development group's contrast settings (phase L4, R-475: similar 1, the rest 0) */
+    CandidatePreferences candidates; /* the candidates group (R-673, variety 0 and pool 4 by default) */
 } ComposerPreferences;
 
 /*
@@ -65,9 +76,11 @@ typedef struct {
 #define COMPOSER_PREFERENCES_LEAP_MAX 12
 #define COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX 1000
 #define COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX 16
+#define COMPOSER_PREFERENCES_POOL_MIN 2
+#define COMPOSER_PREFERENCES_POOL_MAX 8
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
-#define COMPOSER_PREFERENCES_MESSAGE_MAX 160
+#define COMPOSER_PREFERENCES_MESSAGE_MAX 256
 
 /* Writes the defaults, every setting the Composer used before preferences existed, into *out. */
 void composer_preferences_default(ComposerPreferences *out);
@@ -88,5 +101,39 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
  * it with cJSON_Delete. NULL when memory runs out.
  */
 cJSON *composer_preferences_write(const ComposerPreferences *preferences);
+
+/*
+ * The setting keys (R-672), for an application that edits settings by their dotted key ("melody.weights.melodic"). One
+ * row per leaf of the default document, in document order, and motif.plan last of the motif group's (the one setting the
+ * default document does not hold). type says how the value reads: an integer from min to max, a boolean, a ratio "n/d"
+ * (max is its denominator limit), a list of words (words, NULL-ended, the names it may hold) or a chord plan. hard is
+ * true for a setting that changes what a request may ask for or what a candidate may be, false for a preference (R-671).
+ */
+typedef enum { COMPOSER_KEY_INTEGER, COMPOSER_KEY_BOOLEAN, COMPOSER_KEY_RATIO, COMPOSER_KEY_WORDS, COMPOSER_KEY_PLAN } ComposerKeyType;
+
+typedef struct {
+    const char *key;
+    ComposerKeyType type;
+    int min;
+    int max;
+    bool hard;
+    const char *const *words;
+} ComposerPreferenceKey;
+
+/* The key table, and in *count the number of rows. Static: the caller never frees it. */
+const ComposerPreferenceKey *composer_preferences_keys(size_t *count);
+
+/*
+ * The rules a setting can override (R-672): the 13 soft groups of the melody stage, then its 7 hard rules, in enum
+ * order. key is the setting that holds the rule: the weight of a soft group, melody.waive for a hard rule.
+ */
+typedef struct {
+    const char *name;
+    bool hard;
+    const char *key;
+} ComposerRule;
+
+/* The rule table, and in *count the number of rows. Static: the caller never frees it. */
+const ComposerRule *composer_preferences_rules(size_t *count);
 
 #endif

@@ -13,7 +13,7 @@ the theme body the backend composes (see [Theme bodies and version files](../../
   motif sets it to that motif's mode unless it was changed by hand), meter and
   tempo (blank takes the brief's). An Advanced section, closed by default,
   holds the accompaniment, the brief, the switches, weight, Check with the
-  Analyzer and Seed. Below is the composed theme (Result).
+  Analyzer, Seed and Settings ([what it shows](../frontend.md#the-settings-section)). Below is the composed theme (Result).
 - Structure tab: form: into (sentence, period, hybrid with its pairing, and the
   first cadence for a period or hybrid), bars (3 to 16, `theme_bars`) and cadence, all from the Composer's
   vocabulary. A Construction block (P47, R-468) shows under the form when the bars are not 4 or 8

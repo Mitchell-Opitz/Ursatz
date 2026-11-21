@@ -20,7 +20,7 @@ struct mg_context *test_gui_server_start(const char *port) {
   WorkshopConfig settings;
   char storage[2048];
   UrsatzError error = {{0}};
-  if (workshop_settings_resolve(&flags, &settings, storage, sizeof(storage), &error) != URSATZ_OK ||
+  if (workshop_config_resolve(&flags, &settings, storage, sizeof(storage), &error) != URSATZ_OK ||
       workshop_open(&settings, &g_workshop, &error) != URSATZ_OK) {
     fprintf(stderr, "test_gui_server_start: %s\n", error.message);
     return NULL;

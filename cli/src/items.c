@@ -172,6 +172,36 @@ int run_compose(const CliArgs *args) {
     return run_job(args, "item.compose", &address, params);
 }
 
+int run_explore(const CliArgs *args) {
+    CliAddress address;
+    int status = read_item_address(args, "explore", &address, false);
+    if (status != 0) {
+        return status;
+    }
+    cJSON *params = cJSON_CreateObject();
+    if (!params) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    status = add_seed(args, params);
+    const char *distance_text = cli_value(args, "--distance");
+    long long distance = 0;
+    if (status == 0 && distance_text && !read_whole(distance_text, 1, 8, &distance)) {
+        status = cli_fail(CLI_EXIT_USAGE, "--distance must be a whole number from 1 to 8, not '%s'", distance_text);
+    }
+    if (status == 0 && distance_text && !cJSON_AddNumberToObject(params, "distance", (double)distance)) {
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    const char *taste = cli_value(args, "--taste");
+    if (status == 0 && taste && !cJSON_AddStringToObject(params, "taste", taste)) {
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    if (status != 0) {
+        cJSON_Delete(params);
+        return status;
+    }
+    return run_job(args, "item.explore", &address, params);
+}
+
 int run_restore(const CliArgs *args) {
     CliAddress address;
     int status = read_item_address(args, "restore", &address, true);

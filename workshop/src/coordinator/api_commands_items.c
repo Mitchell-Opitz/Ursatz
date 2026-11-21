@@ -7,6 +7,7 @@
 
 #include "composition/restore.h"
 #include "coordinator/dispatch.h"
+#include "settings/settings_resolve.h"
 
 /* The commands over projects, items and subjects (R-646). */
 
@@ -255,13 +256,58 @@ static bool read_seed(const cJSON *params, bool *has_seed, long long *seed, Ursa
     return true;
 }
 
+/* The settings params of a compose or explore (R-671, R-673): settings, overrides, off and taste, copied into the job. A piece takes none until the
+ * plan node scope (P71). A dry resolution refuses what the run would refuse (an unknown key, rule or word) while the caller is still waiting. */
+static UrsatzStatus read_settings_params(const WorkshopCall *call, bool piece, const char *item_id, WorkshopComposeJob *job, UrsatzError *error) {
+    static const char *const kNames[] = {"settings", "overrides", "off", "taste"};
+    for (size_t i = 0; i < sizeof(kNames) / sizeof(kNames[0]); i++) {
+        const cJSON *member = cJSON_GetObjectItemCaseSensitive(call->params, kNames[i]);
+        if (piece && member && !cJSON_IsNull(member)) {
+            char path[64];
+            snprintf(path, sizeof path, "/params/%s", kNames[i]);
+            return workshop_call_fail(error, URSATZ_ERR_REQUEST, path, "a piece takes no settings until the plan node scope (P71)");
+        }
+    }
+    if (piece) {
+        return URSATZ_OK;
+    }
+    const cJSON *settings = cJSON_GetObjectItemCaseSensitive(call->params, "settings");
+    const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(call->params, "overrides");
+    const cJSON *off = cJSON_GetObjectItemCaseSensitive(call->params, "off");
+    bool bad = false;
+    const char *taste = workshop_param_string(call->params, "taste", &bad);
+    WorkshopSettingsRequest request;
+    memset(&request, 0, sizeof(request));
+    request.item_id = item_id;
+    request.taste = taste;
+    request.values = cJSON_IsObject(settings) ? settings : NULL;
+    request.overrides = cJSON_IsArray(overrides) ? overrides : NULL;
+    request.off = cJSON_IsArray(off) ? off : NULL;
+    request.kind = "theme";
+    cJSON *answer = NULL;
+    UrsatzError failure = {{0}, {0}};
+    UrsatzStatus status = workshop_settings_resolve_request(&request, false, &answer, &failure);
+    cJSON_Delete(answer);
+    if (status != URSATZ_OK) {
+        return workshop_call_fail(error, status == URSATZ_ERR_NOT_FOUND ? URSATZ_ERR_NOT_FOUND : URSATZ_ERR_REQUEST, failure.path, "%s", failure.message);
+    }
+    job->settings = cJSON_IsObject(settings) ? cJSON_Duplicate(settings, true) : NULL;
+    job->overrides = cJSON_IsArray(overrides) ? cJSON_Duplicate(overrides, true) : NULL;
+    job->off = cJSON_IsArray(off) ? cJSON_Duplicate(off, true) : NULL;
+    job->taste = taste ? strdup(taste) : NULL;
+    if ((cJSON_IsObject(settings) && !job->settings) || (cJSON_IsArray(overrides) && !job->overrides) || (cJSON_IsArray(off) && !job->off) || (taste && !job->taste)) {
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    return URSATZ_OK;
+}
+
 static UrsatzStatus submit_compose(WorkshopReply *reply, WorkshopComposeJob *job, WorkshopComposeOp op, UrsatzError *error) {
     return workshop_reply_job(reply, NULL, workshop_compose_job_kind(op), workshop_compose_job_run, job, workshop_compose_job_free, error);
 }
 
 /* Composes the theme or piece into a new version with its files (R-167, R-174): params seed? and update_uses? (every updated use moves to its
  * source's current version first). The reply is the job. */
-WORKSHOP_HANDLER(workshop_c_item_compose) {
+static UrsatzStatus compose_or_explore(const WorkshopCall *call, WorkshopReply *reply, UrsatzError *error, bool explore) {
     const cJSON *update_uses = cJSON_GetObjectItemCaseSensitive(call->params, "update_uses");
     bool has_seed = false;
     long long seed = 0;
@@ -281,6 +327,18 @@ WORKSHOP_HANDLER(workshop_c_item_compose) {
     bool piece = cJSON_IsString(type) && strcmp(type->valuestring, "piece") == 0;
     cJSON_Delete(meta);
     cJSON_Delete(stored);
+    if (explore && piece) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "explore composes themes");
+    }
+    int distance = 0;
+    const cJSON *distance_member = cJSON_GetObjectItemCaseSensitive(call->params, "distance");
+    if (explore && distance_member && !cJSON_IsNull(distance_member)) {
+        if (!cJSON_IsNumber(distance_member) || distance_member->valuedouble < 1 || distance_member->valuedouble > 8 ||
+            distance_member->valuedouble != (double)(int)distance_member->valuedouble) {
+            return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/distance", "distance must be from 1 to 8");
+        }
+        distance = distance_member->valueint;
+    }
     WorkshopComposeOp op = piece ? WORKSHOP_COMPOSE_PIECE : WORKSHOP_COMPOSE_THEME;
     WorkshopComposeJob *job = workshop_compose_job_new(op, call->target);
     if (!job) {
@@ -289,7 +347,24 @@ WORKSHOP_HANDLER(workshop_c_item_compose) {
     job->has_seed = has_seed;
     job->seed = seed;
     job->update_uses = cJSON_IsTrue(update_uses);
+    job->explore = explore;
+    job->distance = distance;
+    UrsatzStatus settings_status = read_settings_params(call, piece, call->target, job, error);
+    if (settings_status != URSATZ_OK) {
+        workshop_compose_job_free(job);
+        return settings_status;
+    }
     return submit_compose(reply, job, op, error);
+}
+
+WORKSHOP_HANDLER(workshop_c_item_compose) {
+    return compose_or_explore(call, reply, error, false);
+}
+
+/* Composes a theme as item.compose does, with settings moved away from the resolved ones (R-673): params distance? (1 to 8), seed? (the compose seed
+ * seeds the moves) and the settings params. The reply is the job. */
+WORKSHOP_HANDLER(workshop_c_item_explore) {
+    return compose_or_explore(call, reply, error, true);
 }
 
 /* The version number params names: a whole number from 1 to 1000000. */
