@@ -81,9 +81,6 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
 
-/* Kept for the apps until their next branch: the occurrence kind is semantics/motive_occurrence_kind.h. */
-typedef MotiveOccurrenceKind StandardFormMotiveKind;
-
 typedef struct StandardFormMotiveShape StandardFormMotiveShape;
 
 /* What an injected matcher says about a candidate window: how it reads against the prototype. */

@@ -33,7 +33,7 @@
  */
 
 typedef struct {
-    int kind;             /* StandardFormMotiveKind */
+    int kind;             /* MotiveOccurrenceKind */
     int mismatches;
     size_t intervals;
     double rhythm_factor;

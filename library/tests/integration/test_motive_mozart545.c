@@ -25,7 +25,7 @@
 typedef struct {
     int measure;
     double beat;
-    StandardFormMotiveKind kind;
+    MotiveOccurrenceKind kind;
 } AnnotatedOccurrence;
 
 typedef struct {
