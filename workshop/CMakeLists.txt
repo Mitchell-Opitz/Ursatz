@@ -58,6 +58,9 @@ add_library(ursatz_workshop_engine STATIC
     src/analysis/piece_view.c
     src/analysis/style_model_io.c
     src/analysis/styles.c
+    src/analysis/styles_build.c
+    src/analysis/styles_corpus.c
+    src/analysis/styles_rebuild.c
     src/composition/compose_common.c
     src/composition/compose_jobs.c
     src/composition/composer_client.c
