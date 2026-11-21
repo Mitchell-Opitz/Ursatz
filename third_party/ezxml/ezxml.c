@@ -447,6 +447,8 @@ char *ezxml_str2utf8(char **s, size_t *len)
             while (b) u[l++] = 0x80 | ((c >> (6 * --b)) & 0x3F); // payload
         }
     }
+    /* Ursatz: no characters after the byte order mark: free the buffer here (a realloc to 0 is a free that valgrind reports) and tell the caller there is no text. */
+    if (! l) { free(u); *s = NULL; *len = 0; return NULL; }
     return *s = realloc(u, *len = l);
 }
 
@@ -476,6 +478,8 @@ ezxml_t ezxml_parse_str(char *s, size_t len)
     root->m = s;
     if (! len) return ezxml_err(root, NULL, "root tag missing");
     root->u = ezxml_str2utf8(&s, &len); // convert utf-16 to utf-8
+    /* Ursatz: a UTF-16 byte order mark with fewer than two bytes of text leaves nothing to parse (the realloc to 0 made s NULL, then s[len - 1] crashed). */
+    if (! len || ! s) return ezxml_err(root, NULL, "no characters after the UTF-16 byte order mark");
     root->e = (root->s = s) + len; // record start and end of work area
     
     e = s[len - 1]; // save end char

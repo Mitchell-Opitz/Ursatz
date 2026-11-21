@@ -172,6 +172,22 @@ static void test_structural_errors(void) {
     musicxml_import_destroy(NULL);
 }
 
+/* Inputs the XML parser must refuse or read without a crash (ezxml, P66b B1). The statuses are the importer's; the valgrind twin of this test finds any bad access. */
+static MusicXmlImportStatus import_bytes(const char *bytes, size_t size, MusicXmlImport *out) {
+    return musicxml_import_buffer(bytes, size, out);
+}
+
+#define BYTES(text) (text), (sizeof(text) - 1)
+
+static void test_utf16_documents_with_no_text(void) {
+    MusicXmlImport import;
+    assert(import_bytes(BYTES("\xFF"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML);   /* one_ff */
+    assert(import_bytes(BYTES("\xFF\xFE"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML); /* utf16_bom_only */
+    assert(import_bytes(BYTES("\xFE" "ab"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML); /* fe_ab */
+    assert(import_bytes(BYTES("\xFF<a/>"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML);  /* ff_doc */
+    assert(import_bytes(BYTES("\xFF\xFE<\x00"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML); /* utf16_odd */
+}
+
 static void test_an_empty_score_is_not_an_error(void) {
     MusicXmlImport import;
     assert(import_text("<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\"/></part></score-partwise>",
@@ -641,6 +657,7 @@ int main(void) {
     test_rests_cues_unpitched_and_grace_notes();
     test_spelling_and_sounding_pitch();
     test_structural_errors();
+    test_utf16_documents_with_no_text();
     test_an_empty_score_is_not_an_error();
     test_a_byte_order_mark_and_entities();
     test_tie_warnings();
