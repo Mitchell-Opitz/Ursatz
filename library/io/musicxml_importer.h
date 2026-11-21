@@ -85,14 +85,14 @@
  * Warnings. Anything skipped, rounded or inconsistent is counted in warnings.count, and the first
  * MUSICXML_IMPORT_MAX_WARNING_MESSAGES messages are kept. A warning never stops the import; a structural error
  * does: malformed XML, a root that is not <score-partwise>, a duration-bearing element before any <divisions>, a
- * value that cannot be read, an input over MUSICXML_IMPORT_MAX_BYTES. On an error *out holds only the status's
+ * value that cannot be read, an input over MUSICXML_IMPORT_MAX_BYTES (16 MiB). On an error *out holds only the status's
  * message in error_message, no notes, and nothing to destroy.
  *
  * The XML parser is vendored under third_party/ezxml and is used by musicxml_importer.c only: no type of it
  * appears here.
  */
 
-#define MUSICXML_IMPORT_MAX_BYTES (256u * 1024u * 1024u)
+#define MUSICXML_IMPORT_MAX_BYTES (16u * 1024u * 1024u)
 #define MUSICXML_IMPORT_MAX_WARNING_MESSAGES 16
 #define MUSICXML_IMPORT_WARNING_MESSAGE_SIZE 192
 #define MUSICXML_IMPORT_ERROR_MESSAGE_SIZE 256
