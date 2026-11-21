@@ -10,7 +10,8 @@ add_library(ursatz_realization
     movement.c
     work.c
     piano_reduction.c
-    realization_json.c
+    realization_json_read.c
+    realization_json_write.c
 )
 ursatz_public_headers(ursatz_realization
     BASE ${PROJECT_SOURCE_DIR}
