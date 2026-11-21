@@ -59,9 +59,14 @@ static bool scope_sketch(const MotiveLinkScope *scope, const char *piece_id, siz
     return false;
 }
 
-int main(void) {
+/* No argument: Mozart 545. With "smoke": Bach 114, which has 36 motive families in its snapshot (the fast set, and the
+   valgrind twin, which is slow for the instrumented run). */
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    const char *file = smoke ? "Bach 114.mid" : "Mozart 545.mid";
+    const char *slug = smoke ? "bach-114" : "mozart-545";
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, file);
     ImportedScore notes;
     ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(&notes, &report)) {
@@ -71,7 +76,7 @@ int main(void) {
     char *json = test_render_document(path, &notes, &report);
     MotiveLinkScope *scope = analyzer_links_scope_create(test_knowledge());
     CHECK(json != NULL && scope != NULL);
-    CHECK(json && scope && analyzer_links_scope_add_document(scope, "mozart-545", json) == URSATZ_OK);
+    CHECK(json && scope && analyzer_links_scope_add_document(scope, slug, json) == URSATZ_OK);
     CHECK(report.motive_count > 0);
     size_t mapped = 0;
     for (size_t i = 0; i < report.motive_count; i++) {
@@ -86,12 +91,12 @@ int main(void) {
         snprintf(fingerprint, sizeof fingerprint, "%016llx", motive_sketch_fingerprint(&from_report));
         CHECK(strcmp(fingerprint, motive->features.fingerprint) == 0);
         CHECK(transposed_to_c(&from_report));
-        CHECK(scope_sketch(scope, "mozart-545", i, &from_document));
+        CHECK(scope_sketch(scope, slug, i, &from_document));
         check_equal(&from_report, &from_document);
         mapped++;
     }
     CHECK(mapped > 0);
-    printf("Mozart 545: %zu motive families mapped both ways\n", mapped);
+    printf("%s: %zu motive families mapped both ways\n", slug, mapped);
     analyzer_links_scope_destroy(scope);
     free(json);
     test_release_report(&report);

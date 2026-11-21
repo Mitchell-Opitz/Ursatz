@@ -418,19 +418,29 @@ static void test_messages(const char *work) {
     CHECKF(reports.with_message == 1 && reports.message[0] != '\0', "the failed piece's importer text reaches the callback: '%s'", reports.message);
 }
 
-int main(void) {
+/* With "smoke" the mixed corpus, the arguments and the messages run, not the reference corpus or the resume rules (the fast
+   set); the golden is checked and rewritten only by the full run. */
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     const char *work = URSATZ_CORPUS_WORK_DIR;
     remove_tree(work);
     make_dir(work);
 
-    test_reference(work);
+    if (!smoke) {
+        test_reference(work);
+    }
     test_mixed(work);
-    test_resume_changes(work);
+    if (!smoke) {
+        test_resume_changes(work);
+    }
     test_arguments(work);
     test_messages(work);
 
     if (test_failure_count == 0) {
         remove_tree(work);
+    }
+    if (smoke) {
+        return test_finish("test_corpus smoke");
     }
     return test_update_goldens() ? test_goldens_updated("test_corpus") : test_finish("test_corpus");
 }

@@ -175,7 +175,7 @@ ursatz_test(test_motive_sketch_map LIBS ursatz_analyzer_engine analyzer_test_sup
     LABELS slow)
 if(URSATZ_VALGRIND)
     ursatz_test(test_motive_sketch_map_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
-        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_sketch_map> LABELS slow
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_sketch_map> smoke LABELS slow
         valgrind)
 endif()
 
@@ -275,6 +275,8 @@ ursatz_test(test_analyzer_corpus SOURCES test_corpus.c LIBS ursatz_analyzer_engi
     DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK corpus_work)
+# The mixed corpus, the arguments and the messages, without the reference corpus and the resume rules.
+ursatz_test(test_analyzer_corpus_smoke TARGET test_analyzer_corpus ARGS smoke LABELS golden PROPERTIES RESOURCE_LOCK corpus_work)
 
 ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz>
