@@ -1,3 +1,4 @@
 # Copies of shared primitives that stay (tools/ci/check-primitives.sh, R-622).
-# One "<path> <pattern>  # reason, phase" per line; patterns: gcd, int128, type, pitch-names, scale-steps, numerals, fnv.
+# One "<path> <pattern>  # reason, phase" per line; patterns: gcd, int128, type, pitch-names, scale-steps, numerals, fnv, pitch-letters, pitch-octave, chord-intervals, numeral-letters, pc-mod, quality-suffix.
 library/io/musicxml_score.c int128  # kept: a widened product comparison of a notated value, not a number type
+cli/src/motive_text.c pc-mod  # the CLI prints a motive's degrees from its own numbers, P66b R-688
