@@ -182,19 +182,6 @@ typedef struct {
     int last_measure;
 } CommonPracticeKeyWindows;
 
-/*
- * Scores every window: from the first measure that holds a segment start to the last, window i covers
- * measures [first + i, first + i + window_measures - 1], and a piece with fewer measures than the window gets
- * one window over what it has. BAD_CONFIG for a zero window, a non-finite profile value, or a negative or
- * non-finite evidence_weight; BAD_SEGMENT for a
- * segment with a missing or negative time, an end not after its start, a segment out of order, a negative
- * or non-finite weight, or a chord with a root outside 0..11. config may be NULL for the defaults. On OK, *out owns its windows
- * (common_practice_key_windows_destroy); otherwise *out is untouched.
- */
-CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment *segments, size_t segment_count,
-                                                  const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
-                                                  CommonPracticeKeyWindows *out);
-
 void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
 
 /*

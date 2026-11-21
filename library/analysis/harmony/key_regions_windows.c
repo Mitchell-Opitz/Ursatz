@@ -235,25 +235,3 @@ CommonPracticeKeyRegionsStatus key_regions_score_windows(const MeasureWeights *m
     out->last_measure = measures->last_measure;
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }
-
-CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment *segments, size_t segment_count,
-                                                  const MeterMap *map, const CommonPracticeKeyRegionsConfig *config,
-                                                  CommonPracticeKeyWindows *out) {
-    if (out == NULL) {
-        return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
-    }
-    CommonPracticeKeyRegionsConfig effective =
-        config != NULL ? *config : common_practice_key_regions_config_default(NULL); /* the window scores read no materials */
-    CommonPracticeKeyRegionsStatus status = key_regions_validate_inputs(segments, segment_count, map, &effective);
-    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
-        return status;
-    }
-    MeasureWeights measures;
-    status = key_regions_gather_measures(segments, segment_count, map, &measures);
-    if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
-        return status;
-    }
-    status = key_regions_score_windows(&measures, &effective, out);
-    key_regions_measures_release(&measures);
-    return status;
-}

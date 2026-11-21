@@ -2,6 +2,7 @@
 
 #include "framework_v1_chain.h"
 #include "framework_v1_deviations.h"
+#include "key_regions_test_access.h"
 #include "test_knowledge.h"
 
 /*

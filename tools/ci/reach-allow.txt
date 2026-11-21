@@ -9,7 +9,6 @@ workshop/src/analysis/import_cache.c workshop_import_cache_entries  # test hook:
 workshop/src/analysis/import_cache.c workshop_import_cache_imports  # test hook: test_analyzer_route reads the import counter
 workshop/src/analysis/import_cache.c workshop_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 workshop/src/items/piece_lock.c workshop_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
-library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
 library/io/musicxml_importer.c musicxml_import_file  # the imported score reads a file into a buffer and calls musicxml_import_buffer (R-614); its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P69 (composing in modes tests pitches against materials); its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # no app calls it until P65 (addresses name bars and beats); its tests call it

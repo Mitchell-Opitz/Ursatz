@@ -8,6 +8,7 @@
 #include "analysis/harmony/key_regions.h"
 #include "model/time/note_value.h"
 #include "model/time/time_signature.h"
+#include "key_regions_test_access.h"
 #include "tests/key_index_test_util.h"
 #include "test_knowledge.h"
 
