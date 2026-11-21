@@ -9,6 +9,7 @@
 
 #include <cJSON.h>
 
+#include <common/json.h>
 #include <common/strings.h>
 
 /* ---- shared helpers ------------------------------------------------------------------------------------------------------------- */
@@ -587,18 +588,6 @@ static bool is_number_token(const char *s, size_t length) {
     return i == length;
 }
 
-static cJSON *rational_object(long long num, long long den) {
-    cJSON *o = cJSON_CreateObject();
-    if (!o) {
-        return NULL;
-    }
-    if (!cJSON_AddNumberToObject(o, "num", (double)num) || !cJSON_AddNumberToObject(o, "den", (double)den)) {
-        cJSON_Delete(o);
-        return NULL;
-    }
-    return o;
-}
-
 /* The unit of a bare token. */
 static cJSON *bare_unit(const char *s, size_t length, int number, TextError *error) {
     char *token = malloc(length + 1);
@@ -626,8 +615,8 @@ static cJSON *bare_unit(const char *s, size_t length, int number, TextError *err
             set_error(error, number, "'%s' is not a span: write it as n/d..n/d", token);
             reported = true;
         } else {
-            cJSON *start = rational_object(a, b);
-            cJSON *end = rational_object(c, d);
+            cJSON *start = common_json_rational_object(a, b);
+            cJSON *end = common_json_rational_object(c, d);
             out = cJSON_CreateObject();
             if (start && end && out) {
                 cJSON_AddItemToObject(out, "start", start);
@@ -644,7 +633,7 @@ static cJSON *bare_unit(const char *s, size_t length, int number, TextError *err
             set_error(error, number, "'%s' has a denominator that is not above 0", token);
             reported = true;
         } else {
-            out = rational_object(a, b);
+            out = common_json_rational_object(a, b);
         }
     } else if (is_number_token(token, length)) {
         out = cJSON_CreateNumber(strtod(token, NULL));

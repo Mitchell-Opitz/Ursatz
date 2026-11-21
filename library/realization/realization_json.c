@@ -80,11 +80,8 @@ static cJSON *text_item(const char *text) {
     return text ? cJSON_CreateString(text) : cJSON_CreateNull();
 }
 
-static cJSON *rational_item(Writer *w, Rational value) {
-    cJSON *object = cJSON_CreateObject();
-    put(w, object, "num", number_item(value.num));
-    put(w, object, "den", number_item(value.den));
-    return object;
+static cJSON *rational_item(Rational value) {
+    return common_json_rational_object(value.num, value.den);
 }
 
 static cJSON *spelling_item(Writer *w, bool spelled, PitchLetter letter, int accidental) {
@@ -141,7 +138,7 @@ static cJSON *meter_item(Writer *w, const MeterMap *map) {
         char text[24];
         snprintf(text, sizeof(text), "%u/%u", time_signature_top_number(signature), time_signature_bottom_number(signature));
         cJSON *object = cJSON_CreateObject();
-        put(w, object, "position", rational_item(w, meter_map_region_start(region).value));
+        put(w, object, "position", rational_item(meter_map_region_start(region).value));
         put(w, object, "time_signature", cJSON_CreateString(text));
         if (!groups_are_default(signature)) {
             cJSON *groups = cJSON_CreateArray();
@@ -169,8 +166,8 @@ static cJSON *tempo_item(Writer *w, const TempoMap *map) {
             continue;
         }
         cJSON *object = cJSON_CreateObject();
-        put(w, object, "position", rational_item(w, tempo_map_region_start(region).value));
-        put(w, object, "quarters_per_minute", rational_item(w, quarters));
+        put(w, object, "position", rational_item(tempo_map_region_start(region).value));
+        put(w, object, "quarters_per_minute", rational_item(quarters));
         push(w, array, object);
     }
     return array;
@@ -193,9 +190,9 @@ static cJSON *relation_item(Writer *w, const LineRelation *relation) {
     put(w, object, "kind", cJSON_CreateString(RELATION_NAMES[relation->kind]));
     put(w, object, "target", cJSON_CreateString(relation->target));
     put(w, object, "interval", number_item(relation->interval));
-    put(w, object, "delay", rational_item(w, relation->delay.value));
-    put(w, object, "start", relation->has_span ? rational_item(w, relation->span.start.value) : cJSON_CreateNull());
-    put(w, object, "end", relation->has_span ? rational_item(w, relation->span.end.value) : cJSON_CreateNull());
+    put(w, object, "delay", rational_item(relation->delay.value));
+    put(w, object, "start", relation->has_span ? rational_item(relation->span.start.value) : cJSON_CreateNull());
+    put(w, object, "end", relation->has_span ? rational_item(relation->span.end.value) : cJSON_CreateNull());
     return object;
 }
 
@@ -214,8 +211,8 @@ static cJSON *line_item(Writer *w, const Line *line) {
         const LineNote *note = line_note_at(line, i);
         cJSON *item = cJSON_CreateObject();
         put(w, item, "id", cJSON_CreateString(note->id));
-        put(w, item, "onset", rational_item(w, note->onset.value));
-        put(w, item, "duration", rational_item(w, note->duration.value));
+        put(w, item, "onset", rational_item(note->onset.value));
+        put(w, item, "duration", rational_item(note->duration.value));
         put(w, item, "midi", number_item(note->midi));
         put(w, item, "spelling", spelling_item(w, note->spelled, note->letter, note->accidental));
         put(w, item, "derivation", derivation_item(w, &note->derivation));
@@ -231,8 +228,8 @@ static cJSON *assignment_item(Writer *w, const ScoringAssignment *assignment) {
     put(w, object, "line", cJSON_CreateString(assignment->line));
     put(w, object, "part", cJSON_CreateString(assignment->part));
     put(w, object, "whole", cJSON_CreateBool(assignment->whole));
-    put(w, object, "start", assignment->whole ? cJSON_CreateNull() : rational_item(w, assignment->span.start.value));
-    put(w, object, "end", assignment->whole ? cJSON_CreateNull() : rational_item(w, assignment->span.end.value));
+    put(w, object, "start", assignment->whole ? cJSON_CreateNull() : rational_item(assignment->span.start.value));
+    put(w, object, "end", assignment->whole ? cJSON_CreateNull() : rational_item(assignment->span.end.value));
     put(w, object, "staff", number_item(assignment->staff));
     put(w, object, "voice", number_item(assignment->voice));
     cJSON *transform = cJSON_CreateObject();
@@ -260,8 +257,8 @@ static cJSON *part_item(Writer *w, const PerformerPart *part) {
         const PedalMarking *pedal = performer_part_pedal_at(part, i);
         cJSON *item = cJSON_CreateObject();
         put(w, item, "kind", cJSON_CreateString("sustain"));
-        put(w, item, "start", rational_item(w, pedal->span.start.value));
-        put(w, item, "end", rational_item(w, pedal->span.end.value));
+        put(w, item, "start", rational_item(pedal->span.start.value));
+        put(w, item, "end", rational_item(pedal->span.end.value));
         push(w, pedals, item);
     }
     put(w, object, "pedals", pedals);
@@ -270,8 +267,8 @@ static cJSON *part_item(Writer *w, const PerformerPart *part) {
         const PerformerNote *note = performer_part_note_at(part, i);
         cJSON *item = cJSON_CreateObject();
         put(w, item, "id", cJSON_CreateString(note->id));
-        put(w, item, "onset", rational_item(w, note->onset.value));
-        put(w, item, "duration", rational_item(w, note->duration.value));
+        put(w, item, "onset", rational_item(note->onset.value));
+        put(w, item, "duration", rational_item(note->duration.value));
         put(w, item, "midi", number_item(note->midi));
         put(w, item, "spelling", spelling_item(w, note->spelled, note->letter, note->accidental));
         put(w, item, "staff", number_item(note->staff));
@@ -299,7 +296,7 @@ static cJSON *movement_item(Writer *w, const Movement *movement) {
     for (size_t i = 0; i < movement_key_signature_count(movement); i++) {
         const MovementKeySignature *key = movement_key_signature_at(movement, i);
         cJSON *item = cJSON_CreateObject();
-        put(w, item, "position", rational_item(w, key->position.value));
+        put(w, item, "position", rational_item(key->position.value));
         put(w, item, "sharps_flats", number_item(key->sharps_flats));
         put(w, item, "mode", cJSON_CreateString(KEY_MODE_NAMES[key->mode]));
         push(w, keys, item);
@@ -309,7 +306,7 @@ static cJSON *movement_item(Writer *w, const Movement *movement) {
     for (size_t i = 0; i < movement_marker_count(movement); i++) {
         const MovementMarker *marker = movement_marker_at(movement, i);
         cJSON *item = cJSON_CreateObject();
-        put(w, item, "position", rational_item(w, marker->position.value));
+        put(w, item, "position", rational_item(marker->position.value));
         put(w, item, "text", cJSON_CreateString(marker->text));
         push(w, markers, item);
     }
@@ -318,8 +315,8 @@ static cJSON *movement_item(Writer *w, const Movement *movement) {
     for (size_t i = 0; i < movement_played_span_count(movement); i++) {
         const TimeSpan *span = movement_played_span_at(movement, i);
         cJSON *item = cJSON_CreateObject();
-        put(w, item, "start", rational_item(w, span->start.value));
-        put(w, item, "end", rational_item(w, span->end.value));
+        put(w, item, "start", rational_item(span->start.value));
+        put(w, item, "end", rational_item(span->end.value));
         push(w, played, item);
     }
     put(w, object, "played", played);
@@ -329,8 +326,8 @@ static cJSON *movement_item(Writer *w, const Movement *movement) {
         cJSON *item = cJSON_CreateObject();
         put(w, item, "id", cJSON_CreateString(part->id));
         put(w, item, "name", cJSON_CreateString(part->name));
-        put(w, item, "start", rational_item(w, part->span.start.value));
-        put(w, item, "end", rational_item(w, part->span.end.value));
+        put(w, item, "start", rational_item(part->span.start.value));
+        put(w, item, "end", rational_item(part->span.end.value));
         put(w, item, "home", part->has_home ? region_item(w, &part->home) : cJSON_CreateNull());
         push(w, parts, item);
     }

@@ -78,15 +78,9 @@ void doc_notes_span(DocBuild *build, const ImportedScore *notes, const size_t *i
     }
 }
 
-/* Adds item under key, taking ownership; false (item freed) on failure. */
+/* A rational as {"num", "den"}, not reduced; NULL on allocation failure. */
 cJSON *doc_rational_json(Rational value) {
-    cJSON *object = cJSON_CreateObject();
-    if (object && !(common_json_add(object, "num", cJSON_CreateNumber((double)value.num)) &&
-                    common_json_add(object, "den", cJSON_CreateNumber((double)value.den)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
+    return common_json_rational_object(value.num, value.den);
 }
 
 cJSON *doc_span_json(Rational start, Rational end) {

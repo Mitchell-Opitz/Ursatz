@@ -242,13 +242,7 @@ UrsatzStatus analyzer_corpus_passages_numerals(const char *corpus_dir, const Kno
 /* ---- the request member ---- */
 
 static cJSON *fraction_json(Rational value) {
-    cJSON *fraction = cJSON_CreateObject();
-    if (!fraction || !cJSON_AddNumberToObject(fraction, "num", (double)value.num) ||
-        !cJSON_AddNumberToObject(fraction, "den", (double)value.den)) {
-        cJSON_Delete(fraction);
-        return NULL;
-    }
-    return fraction;
+    return common_json_rational_object(value.num, value.den);
 }
 
 static cJSON *place_json(int measure, double beat) {

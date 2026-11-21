@@ -73,23 +73,13 @@ cJSON *json_number(long value) {
     return cJSON_CreateNumber((double)value);
 }
 
-cJSON *rational_json(long long numerator, long long denominator) {
-    cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
-                    plan_json_add(object, "den", json_number((long)denominator)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
-
 static cJSON *span_json(PlanSpan span) {
     Rational end;
     if (plan_span_end(span, &end) != PLAN_OK) {
         return NULL;
     }
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "start", rational_json(span.start.num, span.start.den)) && plan_json_add(object, "end", rational_json(end.num, end.den)))) {
+    if (object && !(plan_json_add(object, "start", common_json_rational_object(span.start.num, span.start.den)) && plan_json_add(object, "end", common_json_rational_object(end.num, end.den)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -258,8 +248,8 @@ static cJSON *notes_json(const PlanNotes *notes) {
         bool spelt = !note->spelled || pitch_spelling_name(note->letter, note->accidental, spelling, sizeof(spelling));
         if (!(object && spelt && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
               (!note->spelled || plan_json_add(object, "spelling", cJSON_CreateString(spelling))) &&
-              plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
-              plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) &&
+              plan_json_add(object, "offset", common_json_rational_object(note->offset.num, note->offset.den)) &&
+              plan_json_add(object, "duration", common_json_rational_object(note->duration.num, note->duration.den)) &&
               plan_json_add(object, "id", json_number((double)note->id)) &&
               (note->source == PLAN_NOTE_NONE ||
                (plan_json_add(object, "source", json_number((double)note->source)) &&

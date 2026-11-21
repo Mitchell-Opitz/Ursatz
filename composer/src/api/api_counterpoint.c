@@ -15,6 +15,7 @@
 #include "motive/motive_internal.h"
 #include "structure/request_parse.h"
 #include "util/util.h"
+#include <common/json.h>
 
 /* `counterpoint` as a composer API entry (cli/docs/cli-counterpoint.md): a counter-melody against a line, in strict species. */
 
@@ -268,17 +269,13 @@ static cJSON *notes_json(const Plan *plan, PlanLaneKind lane, int voice, PlanSpa
             Rational start;
             rational_add(base, notes->notes[n].offset, &start);
             cJSON *entry = cJSON_CreateObject();
-            cJSON *offset = entry ? cJSON_CreateObject() : NULL;
-            cJSON *duration = offset ? cJSON_CreateObject() : NULL;
-            bool ok = duration && cJSON_AddNumberToObject(entry, "midi_pitch", notes->notes[n].midi) &&
-                      cJSON_AddNumberToObject(offset, "num", (double)start.num) &&
-                      cJSON_AddNumberToObject(offset, "den", (double)start.den) && cJSON_AddItemToObject(entry, "offset", offset) &&
-                      cJSON_AddNumberToObject(duration, "num", (double)notes->notes[n].duration.num) &&
-                      cJSON_AddNumberToObject(duration, "den", (double)notes->notes[n].duration.den) &&
-                      cJSON_AddItemToObject(entry, "duration", duration) && cJSON_AddItemToArray(list, entry);
+            /* common_json_add frees an item it cannot add, and the entry owns what was added: only the entry is freed here */
+            bool ok = entry && cJSON_AddNumberToObject(entry, "midi_pitch", notes->notes[n].midi) &&
+                      common_json_add(entry, "offset", common_json_rational_object(start.num, start.den)) &&
+                      common_json_add(entry, "duration",
+                                      common_json_rational_object(notes->notes[n].duration.num, notes->notes[n].duration.den)) &&
+                      cJSON_AddItemToArray(list, entry);
             if (!ok) {
-                cJSON_Delete(duration);
-                cJSON_Delete(offset);
                 cJSON_Delete(entry);
                 cJSON_Delete(list);
                 list = NULL;

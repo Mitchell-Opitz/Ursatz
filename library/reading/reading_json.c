@@ -76,20 +76,17 @@ static cJSON *text_or_null(const char *text) {
     return text ? cJSON_CreateString(text) : cJSON_CreateNull();
 }
 
-static cJSON *rational_item(Writer *w, Rational value) {
-    cJSON *object = cJSON_CreateObject();
-    put(w, object, "num", number_item(value.num));
-    put(w, object, "den", number_item(value.den));
-    return object;
+static cJSON *rational_item(Rational value) {
+    return common_json_rational_object(value.num, value.den);
 }
 
 /* The members every claim begins with. */
 static cJSON *claim_item(Writer *w, const ReadingClaim *claim) {
     cJSON *object = cJSON_CreateObject();
     put(w, object, "id", cJSON_CreateString(claim->id));
-    put(w, object, "start", rational_item(w, claim->start));
-    put(w, object, "end", rational_item(w, claim->end));
-    put(w, object, "confidence", claim->confidence.present ? rational_item(w, claim->confidence.value) : cJSON_CreateNull());
+    put(w, object, "start", rational_item(claim->start));
+    put(w, object, "end", rational_item(claim->end));
+    put(w, object, "confidence", claim->confidence.present ? rational_item(claim->confidence.value) : cJSON_CreateNull());
     cJSON *evidence = cJSON_CreateArray();
     for (size_t i = 0; i < claim->evidence.count; i++) {
         push(w, evidence, cJSON_CreateString(claim->evidence.ids[i]));
@@ -180,7 +177,7 @@ static cJSON *document_item(Writer *w, const Reading *reading) {
         const ReadingCadence *cadence = reading_cadence_at(reading, i);
         cJSON *item = claim_item(w, (const ReadingClaim *)cadence);
         put(w, item, "type", cJSON_CreateString(cadence_type_name(cadence->type)));
-        put(w, item, "arrival", rational_item(w, cadence->arrival));
+        put(w, item, "arrival", rational_item(cadence->arrival));
         put(w, item, "alternatives", cadence_array(w, cadence->alternatives, cadence->alternative_count));
         push(w, list, item);
     }
