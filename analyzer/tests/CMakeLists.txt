@@ -3,6 +3,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/support)
 
 ursatz_test_library(analyzer_test_support SOURCES support/test_support.c LIBS ursatz_analyzer_engine ursatz_test_support cjson
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/support ${PROJECT_SOURCE_DIR}/src)
+# test_reference_document reads the committed snapshots.
+target_compile_definitions(analyzer_test_support PRIVATE URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 
 ursatz_test(test_analysis_pipeline LIBS ursatz_analyzer_engine analyzer_test_support)
 
@@ -102,9 +104,8 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_measure_locations LIBS ursatz_analyzer_engine analyzer_test_support cjson)
-ursatz_test(test_measure_locations_smoke TARGET test_measure_locations ARGS smoke)
-# Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
-ursatz_test(test_measure_locations TARGET test_measure_locations LABELS slow)
+# The five reference pieces read the committed snapshots; the pickup and no-meter files are built and analyzed.
+ursatz_test(test_measure_locations TARGET test_measure_locations)
 
 ursatz_test_executable(test_chord_coverage LIBS ursatz_analyzer_engine analyzer_test_support)
 ursatz_test(test_chord_coverage_smoke TARGET test_chord_coverage ARGS smoke)

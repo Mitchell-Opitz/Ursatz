@@ -31,6 +31,11 @@ AnalysisDocument *test_build_document(const char *input_path, const ChainResult 
    was made from (unused: the result holds it). */
 char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report);
 
+/* The committed analysis document of a reference piece (tests/snapshots/<slug>.analysis.json: bach-114, mozart-545, clementi-36,
+   field-1, field-5), parsed, the caller deletes it. It is the document analyzer_document_to_json prints with metadata.analyzer_version,
+   producer_key and input deleted. Aborts with the path when it cannot be read or parsed. */
+cJSON *test_reference_document(const char *slug);
+
 /* Imports a file (the format is detected), runs the pipeline and returns the parsed analysis document the
    caller deletes. Asserts on any failure. */
 cJSON *test_analyze_midi(const char *path);

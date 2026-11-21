@@ -1,6 +1,7 @@
 #include "test_support.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -8,6 +9,7 @@
 #include <ursatz_analyzer_internal/analysis_result.h>
 #include <ursatz_analyzer_internal/input_pipeline.h>
 #include "test_knowledge.h"
+#include "ursatz_test.h"
 #include "result/analysis_result_internal.h"
 
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
@@ -38,6 +40,23 @@ size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char
     append_u32(buf, &pos, (uint32_t)track_body_size);
     append_bytes(buf, &pos, track_body, track_body_size);
     return pos;
+}
+
+cJSON *test_reference_document(const char *slug) {
+    char path[512];
+    snprintf(path, sizeof(path), URSATZ_SNAPSHOT_DIR "/%s.analysis.json", slug);
+    char *text = test_read_file(path, NULL);
+    if (!text) {
+        fprintf(stderr, "cannot read %s\n", path);
+        abort();
+    }
+    cJSON *document = cJSON_Parse(text);
+    free(text);
+    if (!document) {
+        fprintf(stderr, "cannot parse %s\n", path);
+        abort();
+    }
+    return document;
 }
 
 const cJSON *test_json_require(const cJSON *object, const char *key) {
