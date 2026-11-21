@@ -10,10 +10,14 @@
 #include <cJSON.h>
 
 #include <common/files.h>
+#include <common/hash.h>
 
 
 #include "cli_options.h"
+#include "flags.h"
 #include "motive_input.h"
+#include "session.h"
+#include "workflow.h"
 
 /* The most samples one run makes, and the largest seed a run starts from (seed + index stays a valid seed). */
 #define LISTEN_COUNT_MAX 64
@@ -41,6 +45,10 @@ typedef struct {
     const char *blend_path;
     const char *blend_weight_text;
     const char *blend_weights_text;
+    const char *session_text; /* --session: the data mode (R-674) */
+    const char *round_text;
+    const char *batch_text;
+    const char *taste_text;
     bool check;
     bool themes;
     bool meter_given;
@@ -79,6 +87,10 @@ static int read_options(const CliArgs *args, Options *options) {
     options->blend_path = cli_value(args, "--blend");
     options->blend_weight_text = cli_value(args, "--blend-weight");
     options->blend_weights_text = cli_value(args, "--blend-weights");
+    options->session_text = cli_value(args, "--session");
+    options->round_text = cli_value(args, "--round");
+    options->batch_text = cli_value(args, "--batch");
+    options->taste_text = cli_value(args, "--taste");
     return 0;
 }
 
@@ -87,6 +99,12 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--what must be motifs or themes\n%s", cli_usage_of("listen"));
     }
     options->themes = strcmp(options->what_text, "themes") == 0;
+    if (!options->session_text && (options->round_text || options->batch_text || options->taste_text)) {
+        return cli_fail(CLI_EXIT_USAGE, "--round, --batch and --taste need --session");
+    }
+    if (options->session_text && (!options->round_text || !options->batch_text)) {
+        return cli_fail(CLI_EXIT_USAGE, "--session needs --round <n> and --batch <name>\n%s", cli_usage_of("listen"));
+    }
     if (!options->themes && (options->into_text || options->development_text || options->bars_text || options->motif_path ||
                              options->theme_request_path || options->blend_path || options->blend_weight_text ||
                              options->blend_weights_text || options->check)) {
@@ -595,6 +613,208 @@ static int validate_options(const Options *options, const cJSON *preferences) {
     return result;
 }
 
+/* --- the data mode (R-674): the settings of each sample resolved by the workshop, the batch recorded in a listening session ---------------- */
+
+typedef struct {
+    CliSession *session;
+    char taste[96];       /* the flag's, else the session's */
+    unsigned long share_numerator; /* explore.share of the batch's settings, n/d */
+    unsigned long share_denominator;
+    int distance;         /* explore.distance */
+    cJSON *samples;       /* the samples of the batch, for ratings.batch */
+    char *paths[8];       /* the absolute paths made for the session, freed at the end */
+} DataMode;
+
+/* A path made absolute (the workshop works in the data folder), in place; false when memory ran out. */
+static bool absolutize(const char **path, DataMode *data) {
+    if (!*path) {
+        return true;
+    }
+    for (size_t i = 0; i < sizeof(data->paths) / sizeof(data->paths[0]); i++) {
+        if (!data->paths[i]) {
+            data->paths[i] = cli_path_absolute(*path);
+            *path = data->paths[i];
+            return data->paths[i] != NULL;
+        }
+    }
+    return false;
+}
+
+/* The answer of settings.resolve for params (consumed); *out is a copy the caller deletes. 0 or the exit status after printing the failure. */
+static int resolve_settings(DataMode *data, cJSON *params, cJSON **out) {
+    *out = NULL;
+    WorkshopReply reply;
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    UrsatzStatus status = cli_session_query(data->session, "settings.resolve", params, &reply, &error);
+    cJSON_Delete(params);
+    if (status != URSATZ_OK) {
+        int exit_status = cli_fail(status == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE, "%s%s%s", error.message, error.path[0] ? " at " : "", error.path);
+        workshop_reply_destroy(&reply);
+        return exit_status;
+    }
+    *out = cJSON_Duplicate(reply.json, true);
+    workshop_reply_destroy(&reply);
+    return *out ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+}
+
+static cJSON *resolve_params(const Options *options, const DataMode *data, const cJSON *settings) {
+    cJSON *params = cJSON_CreateObject();
+    if (!params || !cJSON_AddStringToObject(params, "kind", options->themes ? "theme" : "motif") || !cJSON_AddStringToObject(params, "taste", data->taste) ||
+        (settings && !cJSON_AddItemToObject(params, "settings", cJSON_Duplicate(settings, true)))) {
+        cJSON_Delete(params);
+        return NULL;
+    }
+    return params;
+}
+
+/* Opens the session, reads the listening session's taste and the batch's explore share and distance. 0 or the exit status. */
+static int data_mode_open(Options *options, DataMode *data, const cJSON *settings) {
+    bool ok = absolutize(&options->out_dir, data) && absolutize(&options->settings_path, data) && absolutize(&options->style_path, data) &&
+              absolutize(&options->blend_path, data) && absolutize(&options->theme_request_path, data) && absolutize(&options->motif_path, data);
+    if (!ok) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    int status = cli_session_open(cli_global(), &data->session);
+    if (status != 0) {
+        return status;
+    }
+    cJSON *params = cJSON_CreateObject();
+    WorkshopReply reply;
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    if (!params || !cJSON_AddStringToObject(params, "session", options->session_text)) {
+        cJSON_Delete(params);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    UrsatzStatus queried = cli_session_query(data->session, "ratings.session", params, &reply, &error);
+    cJSON_Delete(params);
+    if (queried != URSATZ_OK) {
+        int exit_status = cli_fail(queried == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE, "%s%s%s", error.message, error.path[0] ? " at " : "", error.path);
+        workshop_reply_destroy(&reply);
+        return exit_status;
+    }
+    snprintf(data->taste, sizeof data->taste, "%s", options->taste_text ? options->taste_text : cli_json_string(reply.json, "taste"));
+    workshop_reply_destroy(&reply);
+    /* the batch's own explore share and distance (the taste and settings of the run, before any exploring) */
+    cJSON *base_params = resolve_params(options, data, settings);
+    cJSON *base = NULL;
+    if (!base_params || !cJSON_AddTrueToObject(base_params, "all")) {
+        cJSON_Delete(base_params);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    status = resolve_settings(data, base_params, &base);
+    if (status != 0) {
+        return status;
+    }
+    data->share_numerator = 0;
+    data->share_denominator = 1;
+    data->distance = 2;
+    const cJSON *row;
+    cJSON_ArrayForEach(row, cJSON_GetObjectItemCaseSensitive(base, "values")) {
+        const char *key = cli_json_string(row, "key");
+        const cJSON *value = cJSON_GetObjectItemCaseSensitive(row, "value");
+        if (strcmp(key, "explore.share") == 0 && cJSON_IsString(value)) {
+            unsigned long n = 0;
+            unsigned long d = 1;
+            if (sscanf(value->valuestring, "%lu/%lu", &n, &d) == 2 && d > 0) {
+                data->share_numerator = n;
+                data->share_denominator = d;
+            }
+        } else if (strcmp(key, "explore.distance") == 0 && cJSON_IsNumber(value)) {
+            data->distance = value->valueint;
+        }
+    }
+    cJSON_Delete(base);
+    data->samples = cJSON_CreateArray();
+    return data->samples ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+}
+
+/* Whether sample i (from 0) explores: floor((i + 1) * share) > floor(i * share). */
+static bool explores(const DataMode *data, unsigned long i) {
+    return (i + 1) * data->share_numerator / data->share_denominator > i * data->share_numerator / data->share_denominator;
+}
+
+/* The resolution of sample i: *resolution is the answer of settings.resolve, *document its document (the settings the sample is made with, or NULL). */
+static int resolve_sample(const Options *options, DataMode *data, const cJSON *settings, unsigned long i, unsigned long seed, cJSON **resolution) {
+    cJSON *params = resolve_params(options, data, settings);
+    cJSON *explore = params && explores(data, i) ? cJSON_AddObjectToObject(params, "explore") : NULL;
+    if (!params || (explores(data, i) && (!explore || !cJSON_AddNumberToObject(explore, "seed", (double)seed) || !cJSON_AddNumberToObject(explore, "distance", data->distance)))) {
+        cJSON_Delete(params);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    return resolve_settings(data, params, resolution);
+}
+
+/* One sample of the batch: {index, seed, status, files: [{name, sha256}], settings}. */
+static int record_sample(DataMode *data, unsigned long index, unsigned long seed, const Sample *sample, cJSON *resolution) {
+    cJSON *entry = cJSON_CreateObject();
+    cJSON *files = entry ? cJSON_CreateArray() : NULL;
+    bool ok = files && cJSON_AddNumberToObject(entry, "index", (double)index) && cJSON_AddNumberToObject(entry, "seed", (double)seed) &&
+              cJSON_AddStringToObject(entry, "status", sample->status);
+    for (size_t i = 0; ok && i < sample->file_count; i++) {
+        char *bytes = NULL;
+        size_t size = 0;
+        char hash[65];
+        const char *base = strrchr(sample->files[i], '/');
+        if (!cli_read_file(sample->files[i], &bytes, &size)) {
+            ok = false;
+            break;
+        }
+        common_sha256_hex(bytes, size, hash);
+        free(bytes);
+        cJSON *file = cJSON_CreateObject();
+        ok = file && cJSON_AddStringToObject(file, "name", base ? base + 1 : sample->files[i]) && cJSON_AddStringToObject(file, "sha256", hash) && cJSON_AddItemToArray(files, file);
+        if (!ok) {
+            cJSON_Delete(file);
+        }
+    }
+    ok = ok && cJSON_AddItemToObject(entry, "files", files);
+    files = ok ? NULL : files;
+    ok = ok && cJSON_AddItemToObject(entry, "settings", resolution ? cJSON_Duplicate(resolution, true) : cJSON_CreateNull()) && cJSON_AddItemToArray(data->samples, entry);
+    if (!ok) {
+        cJSON_Delete(files);
+        cJSON_Delete(entry);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot record sample %lu", index);
+    }
+    return 0;
+}
+
+/* After the last sample: one ratings.batch with every sample. 0 or the exit status. */
+static int record_batch(const Options *options, DataMode *data) {
+    cJSON *command = cJSON_CreateObject();
+    cJSON *params = command ? cJSON_AddObjectToObject(command, "params") : NULL;
+    if (!params || !cJSON_AddStringToObject(command, "command", "ratings.batch") || !cJSON_AddStringToObject(params, "session", options->session_text) ||
+        !cJSON_AddNumberToObject(params, "round", atof(options->round_text)) || !cJSON_AddStringToObject(params, "batch", options->batch_text) ||
+        !cJSON_AddItemToObject(params, "samples", data->samples)) {
+        cJSON_Delete(command);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    data->samples = NULL;
+    WorkshopReply reply;
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    UrsatzStatus status = cli_session_command(data->session, command, NULL, &reply, &error);
+    cJSON_Delete(command);
+    if (status != URSATZ_OK) {
+        int exit_status = cli_fail(status == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE, "%s%s%s", error.message, error.path[0] ? " at " : "", error.path);
+        workshop_reply_destroy(&reply);
+        return exit_status;
+    }
+    workshop_reply_destroy(&reply);
+    return 0;
+}
+
+static void data_mode_close(DataMode *data) {
+    if (data->session) {
+        cli_session_close(data->session);
+    }
+    cJSON_Delete(data->samples);
+    for (size_t i = 0; i < sizeof(data->paths) / sizeof(data->paths[0]); i++) {
+        free(data->paths[i]);
+    }
+}
+
 int run_listen(const CliArgs *args) {
     Options options;
     int status = read_options(args, &options);
@@ -634,6 +854,11 @@ int run_listen(const CliArgs *args) {
     if (status == 0 && options.motif_path) {
         status = read_motif_file(&options, &motif_document);
     }
+    DataMode data;
+    memset(&data, 0, sizeof data);
+    if (status == 0 && options.session_text) {
+        status = data_mode_open(&options, &data, preferences);
+    }
     if (status == 0) {
         status = validate_options(&options, preferences);
     }
@@ -652,22 +877,43 @@ int run_listen(const CliArgs *args) {
     Manifest manifest = {file, &options, sent};
     unsigned long written = 0;
     /* A varied batch (settings with candidates.variety above 0, R-673) collects its motives to hand to the samples after them. */
-    const cJSON *candidates = cJSON_GetObjectItemCaseSensitive(sent, "candidates");
-    const cJSON *variety = cJSON_GetObjectItemCaseSensitive(candidates, "variety");
-    cJSON *avoid = !options.themes && cJSON_IsNumber(variety) && variety->valuedouble > 0 ? cJSON_CreateArray() : NULL;
+    cJSON *avoid = NULL;
     for (unsigned long i = 0; status == 0 && i < options.count; i++) {
         Sample sample;
         memset(&sample, 0, sizeof sample);
-        status = options.themes ? make_theme(&options, i + 1, options.seed + i, preferences, motif_document, theme_request, &sample)
-                                : make_motif(&options, i + 1, options.seed + i, preferences, avoid, &sample);
+        /* The settings of the sample: the batch's, or in data mode the workshop's resolution for this sample (the taste, the explore share). */
+        cJSON *resolution = NULL;
+        const cJSON *sample_preferences = data.session ? NULL : preferences;
+        if (data.session) {
+            status = resolve_sample(&options, &data, preferences, i, options.seed + i, &resolution);
+            const cJSON *document = cJSON_GetObjectItemCaseSensitive(resolution, "document");
+            sample_preferences = cJSON_IsObject(document) ? document : NULL;
+        }
+        manifest.preferences = data.session ? sample_preferences : sent;
+        const cJSON *variety = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(manifest.preferences, "candidates"), "variety");
+        if (status == 0 && !avoid && !options.themes && cJSON_IsNumber(variety) && variety->valuedouble > 0) {
+            avoid = cJSON_CreateArray();
+        }
+        if (status == 0) {
+            status = options.themes ? make_theme(&options, i + 1, options.seed + i, sample_preferences, motif_document, theme_request, &sample)
+                                    : make_motif(&options, i + 1, options.seed + i, sample_preferences, variety && avoid ? avoid : NULL, &sample);
+        }
         if (status == 0) {
             status = manifest_add(&manifest, i + 1, options.seed + i, &sample);
         }
+        if (status == 0 && data.session) {
+            status = record_sample(&data, i + 1, options.seed + i, &sample, resolution);
+        }
+        cJSON_Delete(resolution);
         if (status == 0) {
             written += sample.ok ? 1 : 0;
             printf("%02lu  seed %lu  %s\n", i + 1, options.seed + i, sample.status);
         }
     }
+    if (status == 0 && data.session) {
+        status = record_batch(&options, &data);
+    }
+    data_mode_close(&data);
     if (file) {
         fclose(file);
     }

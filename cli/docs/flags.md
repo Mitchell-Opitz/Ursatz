@@ -21,6 +21,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--basic-harmony <text>` | the basic motive's own chords, as --harmony | `variants`, `recognize` |
 | `--basic-pickup <beats>` | the basic motive's pickup, as --pickup | `variants`, `recognize` |
 | `--bass` | write a bass line (the default) | `progression` |
+| `--batch <name>` | listen --session: the name of the batch this run makes, 1 to 8 letters and digits | `listen` |
 | `--below` | the line is the melody and the counter-melody sings below it | `counterpoint` |
 | `--better <batch>` | rate: the batch of the round that sounded better, or same | `rate` |
 | `--blend <file>` | a second style model file, blended with --style | `grow`, `plan`, `fill`, `listen` |
@@ -104,11 +105,12 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--request <request.json>` | the request a loop plan was made from, with --from | `piece` |
 | `--resume` | skip the pieces unchanged since the last run | `corpus` |
 | `--role <role>` | melodic or accompaniment | `motive`, `variants`, `recognize`, `random-motive`, `grow` |
-| `--round <n>` | listen --session and rate: the round of the listening session, 1 to 10000 | `rate` |
+| `--round <n>` | listen --session and rate: the round of the listening session, 1 to 10000 | `listen`, `rate` |
 | `--schema <name>` | build the start of the phrase on a galant schema (see --list-schemas) | `progression` |
 | `--section <letter>` | the section with that form letter or id | `lock`, `regenerate`, `variations`, `harmonize` |
 | `--seed <n>` | a whole number from 0; the same seed gives the same output | `progression`, `develop`, `variants`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `regenerate`, `variations`, `harmonize`, `listen`, `compose`, `rate`, `explore` |
 | `--sequence <name>` | build a continuation on a harmonic sequence (see --list-schemas) | `progression` |
+| `--session <id>` | listen: record the batch in this listening session (needs --round and --batch) | `listen` |
 | `--settings <file>` | a preferences document | `listen` |
 | `--species <1-4>` | the species of counterpoint | `counterpoint` |
 | `--strategy <name>` | how motifs are made: segments or drawn | `random-motive`, `listen` |
@@ -120,7 +122,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--target-format <format>` | the target's input format, as --input-format | `recognize` |
 | `--target-harmony <text>` | the target's own chords, as --harmony | `recognize` |
 | `--target-pickup <beats>` | the target's pickup, as --pickup | `recognize` |
-| `--taste <name>` | listen --session and explore: the taste profile (default: the session's, else the item's, none) | `explore` |
+| `--taste <name>` | listen --session and explore: the taste profile (default: the session's, else the item's, none) | `listen`, `explore` |
 | `--tempo <bpm>` | the tempo of the files in quarter notes per minute, 20 to 400, a whole number or a fraction like 195/2 | `progression`, `motive`, `develop`, `counterpoint`, `grow`, `fill`, `regenerate`, `variations`, `harmonize`, `render`, `listen` |
 | `--texture <name>` | the texture the accompaniment is to be heard as | `grow`, `plan` |
 | `--theme-request <file>` | the theme request every theme of the batch is made from | `listen` |

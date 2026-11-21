@@ -62,7 +62,7 @@ static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--ro
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
-static const char *const FLAGS_LISTEN[] = {"--bars", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--seed", "--settings", "--strategy", "--style", "--tempo", "--theme-request", "--what", NULL};
+static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
     {"progression",
@@ -523,12 +523,17 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz --data ~/ursatz-data render item:itm-3f2a@v2 --midi piece.mid",
      FLAGS_RENDER, 1, 1, run_render},
     {"listen",
-    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>]\n"
+    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
     "listen --print-settings",
      "Make batches of motifs or themes from fixed seeds for listening",
     "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n"
     "session plays and reads. Sample i (from 0) uses the seed --seed + i, so the same options, settings and seed\n"
     "give the same files. See cli/docs/cli-listen.md.\n"
+    "\n"
+    "With --session <ses-id> (and then --round and --batch) the settings of each sample are resolved by the workshop of the data folder (the taste\n"
+    "profile of --taste or of the session, the scopes, and for the share explore.share of the samples the settings moved away from the taste) and the\n"
+    "batch is recorded in the listening session with the files' sha256 (ratings.batch). rate records what you thought of it. --round, --batch and\n"
+    "--taste are refused without --session.\n"
     "\n"
     "Files, i from 01: <i>.mid, <i>.musicxml, <i>.json (the API response) and one line per sample in listen.jsonl.\n"
     "Notes on options:\n"
