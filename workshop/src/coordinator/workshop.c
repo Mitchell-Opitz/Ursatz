@@ -10,7 +10,9 @@
 #include <common/json.h>
 
 #include "coordinator.h"
+#include "composition/composer_client.h"
 #include "coordinator/command_schemas.h"
+#include "settings/settings_keys.h"
 #include "items/migrate.h"
 #include "items/recover.h"
 #include "items/store.h"
@@ -28,6 +30,14 @@ static void forget_item_in_subjects(WorkshopTxn *txn, const char *item_id) {
     (void)workshop_subject_forget_item(txn, item_id);
 }
 
+/* The setting keys and rules the Composer lists (R-672) and the workshop's own, installed once at open (settings/settings_keys.h). */
+static UrsatzStatus install_settings_tables(UrsatzError *error) {
+    if (!workshop_settings_keys_install(workshop_composer_vocabulary_list("preference_keys"), workshop_composer_vocabulary_list("rules"))) {
+        return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the Composer gave no setting keys");
+    }
+    return URSATZ_OK;
+}
+
 /* One workshop per process (R-656): the workshops open now. A tools workshop is refused while any is open. */
 static int g_open = 0;
 
@@ -43,8 +53,13 @@ UrsatzStatus workshop_tools_open(Workshop **out, UrsatzError *error) {
         workshop_knowledge_shutdown();
         return URSATZ_ERR_INTERNAL;
     }
+    if (install_settings_tables(error) != URSATZ_OK) {
+        workshop_knowledge_shutdown();
+        return URSATZ_ERR_INTERNAL;
+    }
     Workshop *workshop = calloc(1, sizeof(*workshop));
     if (!workshop) {
+        workshop_settings_keys_clear();
         workshop_knowledge_shutdown();
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
@@ -94,8 +109,14 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
         workshop_data_lock_release(lock);
         return URSATZ_ERR_INTERNAL;
     }
+    if (install_settings_tables(error) != URSATZ_OK) {
+        workshop_knowledge_shutdown();
+        workshop_data_lock_release(lock);
+        return URSATZ_ERR_INTERNAL;
+    }
     Workshop *workshop = calloc(1, sizeof(*workshop));
     if (!workshop) {
+        workshop_settings_keys_clear();
         workshop_knowledge_shutdown();
         workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
@@ -107,6 +128,7 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     const char *folder = realpath(resolved->data_dir, absolute) ? absolute : resolved->data_dir;
     if (strlen(folder) >= sizeof(workshop->data_dir)) {
         free(workshop);
+        workshop_settings_keys_clear();
         workshop_knowledge_shutdown();
         workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "the data folder path is too long");
@@ -197,6 +219,7 @@ void workshop_close(Workshop *workshop) {
         if (!workshop->tools_only) {
             workshop_store_set_forget_item(NULL);
         }
+        workshop_settings_keys_clear();
         workshop_knowledge_shutdown();
         workshop_data_lock_release(workshop->lock_descriptor); /* -1 for a tools workshop: nothing to release */
         if (g_open > 0) {

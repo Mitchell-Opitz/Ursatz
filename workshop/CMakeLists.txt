@@ -43,6 +43,9 @@ add_library(ursatz_workshop_engine STATIC
     src/items/views.c
     src/items/piece_lock.c
     src/items/subjects.c
+    src/settings/settings_keys.c
+    src/settings/settings_scopes.c
+    src/settings/settings_resolve.c
     src/analysis/analysis.c
     src/analysis/analyze_tool.c
     src/analysis/corpus_tools.c

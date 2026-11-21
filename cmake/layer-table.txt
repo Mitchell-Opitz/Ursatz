@@ -157,6 +157,7 @@ module workshop-base        workshop/src/base          root workshop/src
 module workshop-jobs        workshop/src/jobs          root workshop/src
 module workshop-items       workshop/src/items         root workshop/src
 module workshop-analysis    workshop/src/analysis      root workshop/src
+module workshop-settings    workshop/src/settings      root workshop/src
 module workshop-composition workshop/src/composition   root workshop/src
 module workshop-rendering   workshop/src/rendering     root workshop/src
 module workshop-coordinator workshop/src/coordinator   root workshop/src workshop/include
@@ -211,9 +212,10 @@ uses workshop-base common composer-api analyzer-api theory pitch cjson
 uses workshop-jobs workshop-base common composer-api cjson
 uses workshop-items workshop-api workshop-base workshop-jobs common composer-api analyzer-api theory-knowledge plan realization reading text cjson
 uses workshop-analysis workshop-base workshop-items workshop-jobs common composer-api analyzer-api theory-style theory-knowledge io plan realization reading text cjson
-uses workshop-composition workshop-base workshop-items workshop-analysis workshop-jobs common composer-api analyzer-api cjson
+uses workshop-settings workshop-api workshop-base workshop-items common cjson
+uses workshop-composition workshop-base workshop-items workshop-analysis workshop-settings workshop-jobs common composer-api analyzer-api cjson
 uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
-uses workshop-coordinator workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering composer-api analyzer-api text common cjson
+uses workshop-coordinator workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-settings workshop-composition workshop-rendering composer-api analyzer-api text common cjson
 allow workshop/src/items/body_migrate.c composition/composer_client.h -- the migration of the old mode and key words and the slot count of a theme's uses still read the Composer's words; B15 moves them
 allow workshop/src/items/body_requests.c composition/composer_client.h -- the migration of a format 1 body names the theme slots and the sized forms of the Composer's vocabulary once, in the migration only
 allow workshop/src/items/references.c composition/composer_client.h -- the migration of the old mode and key words and the slot count of a theme's uses still read the Composer's words; B15 moves them
@@ -392,6 +394,7 @@ like workshop-tests workshop-base
 like workshop-tests workshop-jobs
 like workshop-tests workshop-items
 like workshop-tests workshop-analysis
+like workshop-tests workshop-settings
 like workshop-tests workshop-composition
 like workshop-tests workshop-rendering
 like gui-tests gui
