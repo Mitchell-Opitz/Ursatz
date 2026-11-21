@@ -16,11 +16,7 @@
 #include "structure/plan_util.h"
 
 static uint64_t hash_value(uint64_t hash, uint64_t value) {
-    for (int i = 0; i < 8; i++) {
-        unsigned char byte = (unsigned char)((value >> (8 * i)) & 0xFFu);
-        hash = common_fnv1a64(&byte, 1, hash);
-    }
-    return hash;
+    return common_fnv1a64_u64(value, hash);
 }
 
 /* A fraction as its reduced numerator and denominator, into the hash. */

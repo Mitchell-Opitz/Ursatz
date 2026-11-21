@@ -84,10 +84,7 @@ static unsigned long long fnv_byte(unsigned long long hash, unsigned char byte) 
 
 /* A 64-bit value as 8 bytes, least significant first, whatever the platform. */
 static unsigned long long fnv_value(unsigned long long hash, unsigned long long value) {
-    for (int i = 0; i < 8; i++) {
-        hash = fnv_byte(hash, (unsigned char)(value >> (8 * i)));
-    }
-    return hash;
+    return common_fnv1a64_u64(value, hash);
 }
 
 static unsigned long long fnv_signed(unsigned long long hash, long long value) {
