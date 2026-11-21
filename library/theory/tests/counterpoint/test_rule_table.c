@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 /* A table of three rules: "alpha" and "gamma" are hard, "beta" is soft. */
@@ -14,23 +13,9 @@ static bool is_hard(int which) {
     return which != BETA;
 }
 
-static RulePair g_pairs[COUNT];
-static UrsatzOnce g_built[COUNT];
-static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "test-group", NAMES, COUNT, is_hard, g_pairs, g_built};
-
-static RulePair g_bare_pairs[COUNT];
-static UrsatzOnce g_bare_built[COUNT];
-static const RuleTable BARE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built};
-
-static RulePair g_soft_pairs[COUNT];
-static UrsatzOnce g_soft_built[COUNT];
-static const RuleTable SOFT = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "test-soft", NAMES, COUNT, rule_table_never_hard, g_soft_pairs, g_soft_built};
+static const RuleTable TABLE = {.name = "test-group", .names = NAMES, .count = COUNT, .is_hard = is_hard};
+static const RuleTable BARE = {.names = NAMES, .count = COUNT};
+static const RuleTable SOFT = {.name = "test-soft", .names = NAMES, .count = COUNT, .is_hard = rule_table_never_hard};
 
 /* The subject is a bit mask of the rules that hold. */
 static bool holds(int which, const void *subject) {

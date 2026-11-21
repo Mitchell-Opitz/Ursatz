@@ -5,7 +5,6 @@
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/harmonic_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT] = {
@@ -22,11 +21,8 @@ static bool table_is_hard(int which) {
     return !rule_is_soft((StandardCounterpointFirstSpeciesHarmonyRule)which);
 }
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "first-species-harmony", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "first-species-harmony", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT, .is_hard = table_is_hard};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesHarmonyRule which) {
     return rule_table_valid(&TABLE, (int)which);

@@ -5,7 +5,6 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 #include "model/pitch/midi_pitch.h"
@@ -13,11 +12,8 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT] = {"begin", "opening-bar", "final-bar",
                                                                                     "clausula-vera"};
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "third-species-ends", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built};
+    .name = "third-species-ends", .names = NAMES, .count = STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesEndsRule which) {
     return rule_table_valid(&TABLE, (int)which);

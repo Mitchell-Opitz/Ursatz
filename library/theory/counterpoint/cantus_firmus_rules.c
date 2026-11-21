@@ -6,7 +6,6 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "model/pitch/midi_pitch.h"
 
@@ -25,11 +24,8 @@ static bool table_is_hard(int which) {
     return !rule_is_soft((StandardCounterpointCantusRule)which);
 }
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "cantus-firmus", NAMES, STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "cantus-firmus", .names = NAMES, .count = STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT, .is_hard = table_is_hard};
 
 static bool valid_rule(StandardCounterpointCantusRule which) {
     return rule_table_valid(&TABLE, (int)which);

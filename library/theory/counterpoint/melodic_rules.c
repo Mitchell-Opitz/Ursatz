@@ -5,7 +5,6 @@
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT] = {
@@ -23,11 +22,8 @@ static bool table_is_hard(int which) {
     return rule_is_hard((StandardCounterpointMelodicRule)which);
 }
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "melodic", NAMES, STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "melodic", .names = NAMES, .count = STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT, .is_hard = table_is_hard};
 
 static bool valid_rule(StandardCounterpointMelodicRule which) {
     return rule_table_valid(&TABLE, (int)which);

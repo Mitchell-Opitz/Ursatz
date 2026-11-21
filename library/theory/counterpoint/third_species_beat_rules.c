@@ -4,7 +4,6 @@
 
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/third_species_figure.h"
 
@@ -21,11 +20,8 @@ static bool table_is_hard(int which) {
     return rule_is_hard((StandardCounterpointThirdSpeciesBeatRule)which);
 }
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "third-species-beat", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "third-species-beat", .names = NAMES, .count = STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT, .is_hard = table_is_hard};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesBeatRule which) {
     return rule_table_valid(&TABLE, (int)which);

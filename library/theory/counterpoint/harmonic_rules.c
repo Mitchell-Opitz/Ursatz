@@ -6,7 +6,6 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/motion_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
@@ -24,11 +23,8 @@ static bool table_is_hard(int which) {
     return !rule_is_soft((StandardCounterpointHarmonicRule)which);
 }
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "harmonic", NAMES, STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "harmonic", .names = NAMES, .count = STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, .is_hard = table_is_hard};
 
 static bool valid_rule(StandardCounterpointHarmonicRule which) {
     return rule_table_valid(&TABLE, (int)which);

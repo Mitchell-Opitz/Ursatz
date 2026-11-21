@@ -13,10 +13,6 @@ add_library(ursatz_theory
     style/style_model.c
     style/style_model_blend.c
     style/style_model_build.c
-    rules/constraint.c
-    rules/preference.c
-    rules/rule.c
-    rules/rule_pair.c
     rules/rule_table.c
     knowledge/instrument.c
     knowledge/knowledge_snapshot.c

@@ -1,7 +1,6 @@
 #include "theory/harmony/harmony_cadence_rules.h"
 
 #include "theory/harmony/harmony_cadence_kinds.h"
-#include "theory/harmony/harmony_framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[HARMONY_CADENCE_RULE_COUNT] = {"cadential-progression", "half-without-seventh"};
@@ -10,11 +9,8 @@ static bool table_is_hard(int which) {
     return which == HARMONY_CADENCE_CADENTIAL_PROGRESSION;
 }
 
-static RulePair g_pairs[HARMONY_CADENCE_RULE_COUNT];
-static UrsatzOnce g_built[HARMONY_CADENCE_RULE_COUNT];
 static const RuleTable TABLE = {
-    "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "cadence", NAMES, HARMONY_CADENCE_RULE_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "cadence", .names = NAMES, .count = HARMONY_CADENCE_RULE_COUNT, .is_hard = table_is_hard};
 
 bool harmony_cadence_rule_soft(HarmonyCadenceRule which) {
     return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);

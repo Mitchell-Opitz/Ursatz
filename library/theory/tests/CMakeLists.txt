@@ -2,7 +2,6 @@ ursatz_test_includes()
 
 add_subdirectory(framework)
 add_subdirectory(style)
-add_subdirectory(rules)
 add_subdirectory(vocabulary)
 add_subdirectory(tonality)
 add_subdirectory(harmony)

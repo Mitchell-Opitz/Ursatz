@@ -1,17 +1,15 @@
 #include "theory/harmony/harmony_resolution_rules.h"
 
-#include "theory/harmony/harmony_framework.h"
+#include <stddef.h>
+
 #include "theory/rules/rule_table.h"
 #include "theory/harmony/harmony_steps.h"
 
 static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolves-down",
                                                                  "leading-tone-resolves"};
 
-static RulePair g_pairs[HARMONY_RESOLUTION_RULE_COUNT];
-static UrsatzOnce g_built[HARMONY_RESOLUTION_RULE_COUNT];
 static const RuleTable TABLE = {
-    "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "resolution", NAMES, HARMONY_RESOLUTION_RULE_COUNT, NULL, g_pairs, g_built};
+    .name = "resolution", .names = NAMES, .count = HARMONY_RESOLUTION_RULE_COUNT};
 
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which) {
     return rule_table_name(&TABLE, (int)which);

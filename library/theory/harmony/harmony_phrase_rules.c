@@ -1,7 +1,6 @@
 #include "theory/harmony/harmony_phrase_rules.h"
 
 #include "theory/harmony/harmony_functions.h"
-#include "theory/harmony/harmony_framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[HARMONY_PHRASE_RULE_COUNT] = {"tonic-then-dominant", "no-backward-motion",
@@ -11,11 +10,8 @@ static bool table_is_hard(int which) {
     return which == HARMONY_PHRASE_TONIC_THEN_DOMINANT || which == HARMONY_PHRASE_IV_BEFORE_II;
 }
 
-static RulePair g_pairs[HARMONY_PHRASE_RULE_COUNT];
-static UrsatzOnce g_built[HARMONY_PHRASE_RULE_COUNT];
 static const RuleTable TABLE = {
-    "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "phrase", NAMES, HARMONY_PHRASE_RULE_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "phrase", .names = NAMES, .count = HARMONY_PHRASE_RULE_COUNT, .is_hard = table_is_hard};
 
 bool harmony_phrase_rule_soft(HarmonyPhraseRule which) {
     return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);

@@ -52,7 +52,7 @@ uses structure       L0-L2 events containers
 uses io              model realization ezxml common
 uses theory-framework    model
 uses theory-style        model theory-tonality cjson common
-uses theory-rules        model theory-framework
+uses theory-rules        model
 uses theory-vocabulary   model
 uses theory-knowledge    model cjson common
 uses theory-tonality     model theory-framework theory-knowledge
@@ -281,7 +281,6 @@ uses tests-text test-helpers
 
 module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library
-module tests-theory-rules        library/theory/tests/rules        root library/tests library/tests/support library
 module tests-theory-vocabulary   library/theory/tests/vocabulary   root library/tests library/tests/support library
 module tests-theory-tonality     library/theory/tests/tonality     root library/tests library/tests/support library
 module tests-theory-harmony      library/theory/tests/harmony      root library/tests library/tests/support library
@@ -294,7 +293,6 @@ module tests-theory-markings     library/theory/tests/markings     root library/
 module tests-theory-knowledge    library/theory/tests/knowledge    root library/tests library/tests/support library
 like tests-theory-framework theory-framework
 like tests-theory-style theory-style
-like tests-theory-rules theory-rules
 like tests-theory-vocabulary theory-vocabulary
 like tests-theory-tonality theory-tonality
 like tests-theory-harmony theory-harmony
@@ -307,7 +305,6 @@ like tests-theory-markings theory-markings
 like tests-theory-knowledge theory-knowledge
 uses tests-theory-framework test-helpers
 uses tests-theory-style test-helpers
-uses tests-theory-rules test-helpers
 uses tests-theory-vocabulary test-helpers
 uses tests-theory-tonality test-helpers
 uses tests-theory-harmony test-helpers

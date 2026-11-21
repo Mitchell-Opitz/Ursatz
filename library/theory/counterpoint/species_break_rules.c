@@ -5,7 +5,6 @@
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT] = {"downbeat-consonant", "weak-passing",
@@ -19,11 +18,8 @@ static bool table_is_hard(int which) {
     return !rule_is_soft((StandardCounterpointSpeciesBreakRule)which);
 }
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "species-break", NAMES, STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT, table_is_hard, g_pairs, g_built};
+    .name = "species-break", .names = NAMES, .count = STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT, .is_hard = table_is_hard};
 
 static bool valid_rule(StandardCounterpointSpeciesBreakRule which) {
     return rule_table_valid(&TABLE, (int)which);

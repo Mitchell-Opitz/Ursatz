@@ -4,18 +4,13 @@
 
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT] = {
     "motion-variety", "contrary-preferred", "similar-with-leap", "similar-with-large-leap"};
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "first-species-motion", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, rule_table_never_hard,
-    g_pairs, g_built};
+    .name = "first-species-motion", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, .is_hard = rule_table_never_hard};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesMotionRule which) {
     return rule_table_valid(&TABLE, (int)which);

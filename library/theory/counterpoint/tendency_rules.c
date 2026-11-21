@@ -5,18 +5,13 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_TENDENCY_COUNT] = {
     "pitch-proximity", "step-declination", "step-inertia", "melodic-regression", "melodic-arch"};
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_TENDENCY_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_TENDENCY_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "tendency", NAMES, STANDARD_COUNTERPOINT_TENDENCY_COUNT, rule_table_never_hard,
-    g_pairs, g_built};
+    .name = "tendency", .names = NAMES, .count = STANDARD_COUNTERPOINT_TENDENCY_COUNT, .is_hard = rule_table_never_hard};
 
 static bool valid_rule(StandardCounterpointTendency which) {
     return rule_table_valid(&TABLE, (int)which);

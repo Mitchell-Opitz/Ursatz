@@ -5,7 +5,6 @@
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 #include "model/pitch/midi_pitch.h"
@@ -13,11 +12,8 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
     "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "first-species-ends", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built};
+    .name = "first-species-ends", .names = NAMES, .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
     return rule_table_valid(&TABLE, (int)which);

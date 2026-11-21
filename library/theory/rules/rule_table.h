@@ -3,35 +3,19 @@
 
 #include <stdbool.h>
 
-#include "model/core/once.h"
-#include <stddef.h>
-
-#include "model/core/value.h"
-#include "theory/framework/framework.h"
-#include "theory/rules/constraint.h"
-#include "theory/rules/preference.h"
-#include "theory/rules/rule.h"
-#include "theory/rules/rule_pair.h"
-
 /*
  * Shared table for a group of rules, the same for every area (counterpoint, harmony, galant, scale harmonization). Every rule
- * module has the same parts: the rule names, which rules are hard and which soft, one cached Rule/Constraint pair for each rule
- * (rule_pair.h), and a check that runs the whole group and reports the rules a subject breaks as hard and soft bit masks. This
- * table holds those parts so a module states only what is its own: its names and its hardness.
+ * module has the same parts: the rule names, which rules are hard and which soft, and a check that runs the whole group and
+ * reports the rules a subject breaks as hard and soft bit masks. This table holds those parts so a module states only what is its
+ * own: its names and its hardness.
  *
- * A module defines its table at file scope, with static storage for the cache:
+ * A module defines its table at file scope:
  *
- *   static RulePair g_pairs[N];
- *   static UrsatzOnce g_built[N];
- *   static const RuleTable TABLE = {"standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint", "prefix",
- *                                   NAMES, N, is_hard, g_pairs, g_built};
+ *   static const RuleTable TABLE = {.name = "prefix", .names = NAMES, .count = N, .is_hard = is_hard};
  *
- * A pair is built the first time it is asked for, with the ids "<id_prefix>-rule-<prefix>-<name>" and the like (the bare name
- * when the prefix is NULL), and cached for the life of the process. Rules are numbered 0 to count - 1, the values of the
- * module's enum; every function returns false or NULL for a number out of range.
- *
- * A table that only counts and classifies its rules (galant, scale harmonization: they use valid, is_hard and check) sets only
- * `count` and `is_hard` and leaves the rest NULL.
+ * Rules are numbered 0 to count - 1, the values of the module's enum; every function returns false or NULL for a number out of
+ * range. A table that only counts and classifies its rules (galant, scale harmonization: they use valid, is_hard and check) sets
+ * only `count` and `is_hard`.
  */
 
 /* True when rule `which` is hard. */
@@ -42,19 +26,12 @@ typedef bool (*RuleHard)(int which);
 typedef bool (*RuleHolds)(int which, const void *subject);
 
 typedef struct {
-    /* The framework's name, for the candidate type "<framework_name>/<prefix>": "standard-counterpoint". */
-    const char *framework_name;
-    const Framework *(*framework)(void);
-    /* The id prefix of the pairs it builds: "standard-counterpoint" gives "standard-counterpoint-rule-<name>". */
-    const char *id_prefix;
-    /* NULL: a rule's name is its bare name. */
-    const char *prefix;
+    /* The group's name ("harmonic", "cantus-firmus"); NULL for a table that only counts and classifies. */
+    const char *name;
     const char *const *names;
     int count;
     /* NULL when every rule is hard. */
     RuleHard is_hard;
-    RulePair *pairs;
-    UrsatzOnce *built;
 } RuleTable;
 
 /* True for a rule number from 0 to count - 1. */
