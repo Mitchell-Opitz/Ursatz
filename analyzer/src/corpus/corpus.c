@@ -365,6 +365,12 @@ static UrsatzStatus load_previous_index(const char *output_dir, cJSON **out, Urs
         return status;
     }
     free(path);
+    /* an index of another schema version is not reused: the run writes it again */
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(root, "schema_version");
+    if (!cJSON_IsNumber(version) || version->valuedouble != ANALYZER_CORPUS_INDEX_VERSION) {
+        cJSON_Delete(root);
+        return URSATZ_OK;
+    }
 
     const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(root, "analyzer_version");
     const cJSON *producer_key = cJSON_GetObjectItemCaseSensitive(root, "producer_key");

@@ -43,7 +43,6 @@ const char *analyzer_producer_key(void);
 #define ANALYZER_CORPUS_INDEX_VERSION 2
 #define ANALYZER_LINK_CACHE_VERSION 2
 #define ANALYZER_MOTIVE_LINKS_VERSION 1
-#define ANALYZER_SIMILAR_VERSION 1
 
 /* ------------------------------------------------------------------ import */
 

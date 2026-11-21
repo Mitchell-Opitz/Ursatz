@@ -437,6 +437,22 @@ static void test_refusals(void) {
                style_profile_piece_count(profile) == 1,
            "an empty document of the current version counts as a piece with no labels");
     CHECKF(analyzer_style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");
+    /* a corpus index of another schema version is not read (R-692); one of this version with no pieces is */
+    {
+        static const char *const INDEXES[2] = {
+            "{\"schema\": \"ursatz-corpus-index\", \"schema_version\": 3, \"input_dir\": \"in\", \"pieces\": []}",
+            "{\"schema\": \"ursatz-corpus-index\", \"schema_version\": 2, \"input_dir\": \"in\", \"pieces\": []}"};
+        static const StyleProfileResult WANTED[2] = {STYLE_PROFILE_ERR_FORMAT, STYLE_PROFILE_OK};
+        for (int v = 0; v < 2; v++) {
+            char folder[1024], index[1100];
+            snprintf(folder, sizeof(folder), "%s/index-version-%d", work_dir, v);
+            snprintf(index, sizeof(index), "%s/corpus-index.json", folder);
+            CHECKF(common_dir_make(folder, NULL) == URSATZ_OK && test_write_file(index, INDEXES[v], strlen(INDEXES[v])), "cannot write %s", index);
+            StyleProfile *other = style_profile_create();
+            CHECKF(other && analyzer_style_profile_add_corpus(other, folder) == WANTED[v], "the corpus index of version %d", v == 0 ? 3 : 2);
+            style_profile_destroy(other);
+        }
+    }
     CHECKF(analyzer_style_add_document_json(NULL, "{}") == STYLE_PROFILE_ERR_ARGUMENT, "no profile");
     style_profile_destroy(profile);
 

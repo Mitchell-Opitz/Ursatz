@@ -4,7 +4,7 @@ The similar material search over a corpus, by motive or by progression. Back to 
 
 The search has no command of its own: the workshop's API and the GUI call it (the `corpus-passages` tool of `ursatz` reads the same passages for the Composer's `--from-corpus`). Its inputs are a corpus output folder, a motive or a progression (Roman numerals), a minimum similarity and a maximum count.
 
-Library: `src/include/ursatz_analyzer_internal/similar_material.h`. Output schema: `schema/similar-material.v1.schema.json`.
+Library: `src/include/ursatz_analyzer_internal/similar_material.h`.
 
 The search finds passages of an analyzed corpus that look like a motive or a progression. It reads only the analysis
 documents of a corpus run (see [corpus.md](corpus.md)), never the scores. A match says how much two passages agree on

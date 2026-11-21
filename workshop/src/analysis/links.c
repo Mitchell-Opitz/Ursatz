@@ -394,6 +394,18 @@ static int compare_text(const void *a, const void *b) {
     return strcmp(*(char *const *)a, *(char *const *)b);
 }
 
+/* The links of a run's result, when the result is of the schema version this build reads (ANALYZER_MOTIVE_LINKS_VERSION, as the
+   link cache checks its own): NULL for a run with no result yet and for a result of another version, whose members may mean
+   something else (R-692). */
+static const cJSON *current_links(const cJSON *run) {
+    const cJSON *result = cJSON_GetObjectItemCaseSensitive(run, "result");
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(result, "schema_version");
+    if (!cJSON_IsObject(result) || !cJSON_IsNumber(version) || version->valuedouble != ANALYZER_MOTIVE_LINKS_VERSION) {
+        return NULL;
+    }
+    return cJSON_GetObjectItemCaseSensitive(result, "links");
+}
+
 /* Fills a summary from a run record. false on allocation failure. */
 static bool summary_fill(RunSummary *summary, const cJSON *run) {
     memset(summary, 0, sizeof(*summary));
@@ -418,7 +430,7 @@ static bool summary_fill(RunSummary *summary, const cJSON *run) {
     }
     CommonNames pieces = {0};
     const cJSON *link = NULL;
-    cJSON_ArrayForEach(link, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links")) {
+    cJSON_ArrayForEach(link, current_links(run)) {
         const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
         const char *b = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
         if ((a[0] && !common_names_contains(&pieces, a) && !common_names_add(&pieces, a)) ||
@@ -1135,7 +1147,7 @@ UrsatzStatus workshop_link_piece_links(const char *piece_id, cJSON **out_links) 
             workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL) != URSATZ_OK) {
             continue;
         }
-        const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
+        const cJSON *links = current_links(run);
         const cJSON *link = NULL;
         cJSON_ArrayForEach(link, links) {
             const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
