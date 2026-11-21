@@ -59,9 +59,6 @@ void performer_part_destroy(PerformerPart *part);
    outside 0 to 127, onset below 0, duration not above 0, a spelled letter or accidental out of range, an invalid derivation). */
 RealizationResult performer_part_add_note(PerformerPart *part, const PerformerNote *note);
 
-/* Sets the edited and detached flags of the note with this id. UNKNOWN_REFERENCE when the part has no such note. */
-RealizationResult performer_part_set_note_flags(PerformerPart *part, const char *note_id, bool edited, bool detached);
-
 /* Adds a pedal marking, kept in start order. BAD_VALUE for a kind out of range, a span that does not hold, a start below 0 or an
    overlap with another marking of the part. */
 RealizationResult performer_part_add_pedal(PerformerPart *part, const PedalMarking *pedal);

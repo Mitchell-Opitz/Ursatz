@@ -89,19 +89,6 @@ RealizationResult performer_part_add_note(PerformerPart *part, const PerformerNo
     return REALIZATION_OK;
 }
 
-RealizationResult performer_part_set_note_flags(PerformerPart *part, const char *note_id, bool edited, bool detached) {
-    if (part == NULL || note_id == NULL) {
-        return REALIZATION_ERR_NULL;
-    }
-    PerformerNote *note = (PerformerNote *)note_named(part, note_id);
-    if (note == NULL) {
-        return REALIZATION_ERR_UNKNOWN_REFERENCE;
-    }
-    note->edited = edited;
-    note->detached = detached;
-    return REALIZATION_OK;
-}
-
 RealizationResult performer_part_add_pedal(PerformerPart *part, const PedalMarking *pedal) {
     if (part == NULL || pedal == NULL) {
         return REALIZATION_ERR_NULL;

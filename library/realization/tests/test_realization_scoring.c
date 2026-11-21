@@ -5,6 +5,7 @@
 #include "realization/line.h"
 #include "realization/performer_part.h"
 #include "realization/scoring.h"
+#include "realization_test_access.h"
 
 /*
  * Scoring: a four-line chorale into four parts and into one two-staff part, an octave transform, one line doubled into two parts, a
