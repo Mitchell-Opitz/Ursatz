@@ -1,17 +1,18 @@
 #include "analysis/motive/motive_relation.h"
-
 #include "analysis/motive/motive_chord_internal.h"
 #include "analysis/motive/motive_tone_roles.h"
-
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "model/pitch/midi_pitch.h"
+#include "analysis/motive/motive_relation_internal.h"
 
 _Static_assert(MOTIVE_SKETCH_MAX_NOTES == MOTIVE_RELATION_NOTE_LIMIT, "the vocabulary limits are the sketch's");
+
 _Static_assert(MOTIVE_SKETCH_MAX_CHORDS == MOTIVE_RELATION_CHORD_LIMIT, "the vocabulary limits are the sketch's");
+
 _Static_assert(MOTIVE_SKETCH_MAX_FEATURES == MOTIVE_RELATION_FEATURE_LIMIT, "the vocabulary limits are the sketch's");
 
 typedef MotiveRelationResult (*ApplyFn)(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
@@ -23,7 +24,7 @@ typedef struct {
 
 /* --- helpers ------------------------------------------------------------------ */
 
-static bool pitched(const MotiveSketch *sketch) {
+bool motive_relation_pitched(const MotiveSketch *sketch) {
     for (size_t i = 0; i < sketch->note_count; i++) {
         if (sketch->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
             return false;
@@ -32,16 +33,16 @@ static bool pitched(const MotiveSketch *sketch) {
     return true;
 }
 
-static Rational note_end(const MotiveSketchNote *note) {
+Rational motive_relation_note_end(const MotiveSketchNote *note) {
     return msk_add(note->onset, note->duration);
 }
 
 /* A sketch is as long as its notes; a chord at or after the end goes. */
-static void settle(MotiveSketch *sketch) {
+void motive_relation_settle(MotiveSketch *sketch) {
     if (sketch->note_count == 0) {
         return;
     }
-    sketch->length = note_end(&sketch->notes[sketch->note_count - 1]);
+    sketch->length = motive_relation_note_end(&sketch->notes[sketch->note_count - 1]);
     size_t kept = 0;
     for (size_t i = 0; i < sketch->chord_count; i++) {
         if (msk_ok(sketch->length) && msk_cmp(sketch->chords[i].onset, sketch->length) < 0) {
@@ -87,7 +88,7 @@ static MotiveRelationResult apply_exact(const MotiveSketch *in, const MotiveRela
 
 /* --- transpose, invert -------------------------------------------------------------- */
 
-static bool midi(long pitch) {
+bool motive_relation_midi(long pitch) {
     return pitch >= 0 && pitch <= 127;
 }
 
@@ -96,7 +97,7 @@ static MotiveRelationResult apply_transpose(const MotiveSketch *in, const Motive
     bool tonal = step->value[0] != 0;
     long by = step->value[1];
     long degree = step->value[2];
-    if (!pitched(in)) {
+    if (!motive_relation_pitched(in)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     if (degree != 0) {
@@ -124,7 +125,7 @@ static MotiveRelationResult apply_transpose(const MotiveSketch *in, const Motive
         } else {
             pitch = in->notes[i].pitch + by;
         }
-        if (!midi(pitch)) {
+        if (!motive_relation_midi(pitch)) {
             return MOTIVE_RELATION_RANGE;
         }
         out->notes[i].pitch = (int)pitch;
@@ -135,10 +136,10 @@ static MotiveRelationResult apply_transpose(const MotiveSketch *in, const Motive
 static MotiveRelationResult apply_invert(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out) {
     long axis = step->value[0];
     bool tonal = step->value[1] != 0;
-    if (!pitched(in)) {
+    if (!motive_relation_pitched(in)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    if (axis != -1 && !midi(axis)) {
+    if (axis != -1 && !motive_relation_midi(axis)) {
         return MOTIVE_RELATION_INVALID;
     }
     if (tonal && !in->has_scale) {
@@ -157,7 +158,7 @@ static MotiveRelationResult apply_invert(const MotiveSketch *in, const MotiveRel
         } else {
             pitch = 2 * axis - in->notes[i].pitch;
         }
-        if (!midi(pitch)) {
+        if (!motive_relation_midi(pitch)) {
             return MOTIVE_RELATION_RANGE;
         }
         out->notes[i].pitch = (int)pitch;
@@ -172,12 +173,12 @@ static MotiveRelationResult apply_retrograde(const MotiveSketch *in, const Motiv
     (void)step;
     size_t count = in->note_count;
     /* Each note moves to the mirror of its span about the middle of the notes; the order reverses. */
-    Rational span = msk_add(in->notes[0].onset, note_end(&in->notes[count - 1]));
+    Rational span = msk_add(in->notes[0].onset, motive_relation_note_end(&in->notes[count - 1]));
     for (size_t i = 0; i < count; i++) {
         const MotiveSketchNote *note = &in->notes[count - 1 - i];
         out->notes[i].pitch = note->pitch;
         out->notes[i].duration = note->duration;
-        out->notes[i].onset = msk_sub(span, note_end(note));
+        out->notes[i].onset = msk_sub(span, motive_relation_note_end(note));
     }
     for (size_t f = 0; f < in->feature_count; f++) {
         out->features[f].first = count - 1 - in->features[f].last;
@@ -198,7 +199,7 @@ static MotiveRelationResult apply_interval_change(const MotiveSketch *in, const 
     long amount = step->value[1];
     bool keep_contour = step->value[2] != 0;
     size_t count = in->note_count;
-    if (!pitched(in) || count < 2) {
+    if (!motive_relation_pitched(in) || count < 2) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     if (which < 0 || (size_t)which > count - 1) {
@@ -212,7 +213,7 @@ static MotiveRelationResult apply_interval_change(const MotiveSketch *in, const 
             offset += moved > 0 ? amount : -amount;
         }
         long pitch = in->notes[i].pitch + offset;
-        if (!midi(pitch)) {
+        if (!motive_relation_midi(pitch)) {
             return MOTIVE_RELATION_RANGE;
         }
         out->notes[i].pitch = (int)pitch;
@@ -282,7 +283,7 @@ static MotiveRelationResult apply_fragment(const MotiveSketch *in, const MotiveR
     return MOTIVE_RELATION_OK;
 }
 
-static bool nice_time(const MotiveSketch *source, Rational duration);
+bool motive_relation_nice_time(const MotiveSketch *source, Rational duration);
 
 static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const MotiveRelationStep *step,
                                             MotiveSketch *out) {
@@ -332,13 +333,13 @@ static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const Motive
     out->note_count = kept;
     if (keep_rhythm) {
         /* A dropped note's time goes to the kept note before it; a dropped first note's, to the first kept note. */
-        Rational end = note_end(&in->notes[total - 1]);
+        Rational end = motive_relation_note_end(&in->notes[total - 1]);
         for (size_t k = kept; k-- > 0;) {
             if (k == 0) {
                 out->notes[0].onset = in->notes[0].onset;
             }
             out->notes[k].duration = msk_sub(end, out->notes[k].onset);
-            if (!nice_time(in, out->notes[k].duration)) {
+            if (!motive_relation_nice_time(in, out->notes[k].duration)) {
                 return MOTIVE_RELATION_NOT_EXPRESSIBLE;
             }
             end = out->notes[k].onset;
@@ -370,7 +371,7 @@ static bool whole_beats(const MotiveSketch *sketch, Rational time) {
     return msk_ok(beats) && beats.den == 1;
 }
 
-static MotiveRelationResult scale_time(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out,
+MotiveRelationResult motive_relation_scale_time(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out,
                                        bool augment) {
     long num = step->value[0];
     long den = step->den[0];
@@ -398,7 +399,7 @@ static MotiveRelationResult scale_time(const MotiveSketch *in, const MotiveRelat
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     /* A source of whole beats stays one. */
-    if (whole_beats(in, in->length) && !whole_beats(in, note_end(&out->notes[in->note_count - 1]))) {
+    if (whole_beats(in, in->length) && !whole_beats(in, motive_relation_note_end(&out->notes[in->note_count - 1]))) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     return MOTIVE_RELATION_OK;
@@ -406,12 +407,12 @@ static MotiveRelationResult scale_time(const MotiveSketch *in, const MotiveRelat
 
 static MotiveRelationResult apply_augment(const MotiveSketch *in, const MotiveRelationStep *step,
                                           MotiveSketch *out) {
-    return scale_time(in, step, out, true);
+    return motive_relation_scale_time(in, step, out, true);
 }
 
 static MotiveRelationResult apply_diminish(const MotiveSketch *in, const MotiveRelationStep *step,
                                            MotiveSketch *out) {
-    return scale_time(in, step, out, false);
+    return motive_relation_scale_time(in, step, out, false);
 }
 
 /* --- rhythm (ch. III, Exs. 17, 18, 22 to 24) ------------------------------------------------- */
@@ -466,7 +467,7 @@ static MotiveRelationResult apply_rhythm_repeat(const MotiveSketch *in, const Mo
         return MOTIVE_RELATION_INVALID;
     }
     Rational at = in->notes[target].onset;
-    Rational old_end = note_end(&in->notes[target + length - 1]);
+    Rational old_end = motive_relation_note_end(&in->notes[target + length - 1]);
     for (long k = 0; k < length; k++) {
         out->notes[target + k].duration = in->notes[first + k].duration;
         out->notes[target + k].onset = at;
@@ -476,8 +477,8 @@ static MotiveRelationResult apply_rhythm_repeat(const MotiveSketch *in, const Mo
     for (size_t i = (size_t)(target + length); i < total; i++) {
         Rational gap = msk_sub(in->notes[i].onset, old_end);
         out->notes[i].onset = msk_add(at, gap);
-        old_end = note_end(&in->notes[i]);
-        at = note_end(&out->notes[i]);
+        old_end = motive_relation_note_end(&in->notes[i]);
+        at = motive_relation_note_end(&out->notes[i]);
     }
     for (size_t i = 0; i < total; i++) {
         if (!motive_sketch_time_writable(in, out->notes[i].duration) ||
@@ -532,7 +533,7 @@ static MotiveRelationResult apply_add_upbeat(const MotiveSketch *in, const Motiv
         note->pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
         if (known) {
             long pitch = motive_sketch_pitch_at_step(in, into - approach * (count - k), 0);
-            if (!midi(pitch)) {
+            if (!motive_relation_midi(pitch)) {
                 return MOTIVE_RELATION_RANGE;
             }
             note->pitch = (int)pitch;
@@ -599,7 +600,7 @@ static void features_after_insert(const MotiveSketch *in, MotiveSketch *out, siz
 }
 
 /* The sketch with notes[0..at) kept, then the added notes, then notes[at..) as they are. */
-static bool insert_notes(const MotiveSketch *in, MotiveSketch *out, size_t at, const MotiveSketchNote *added,
+bool motive_relation_insert_notes(const MotiveSketch *in, MotiveSketch *out, size_t at, const MotiveSketchNote *added,
                          size_t count) {
     if (in->note_count + count > MOTIVE_SKETCH_MAX_NOTES) {
         return false;
@@ -615,7 +616,7 @@ static bool insert_notes(const MotiveSketch *in, MotiveSketch *out, size_t at, c
     return true;
 }
 
-static bool nice_time(const MotiveSketch *source, Rational duration) {
+bool motive_relation_nice_time(const MotiveSketch *source, Rational duration) {
     return motive_sketch_time_writable(source, duration) && motive_sketch_time_on_grid(source, duration);
 }
 
@@ -626,25 +627,25 @@ static MotiveRelationResult apply_add_interval(const MotiveSketch *in, const Mot
     if (interval < 1 || (size_t)interval >= in->note_count || steps == 0) {
         return MOTIVE_RELATION_INVALID;
     }
-    if (!pitched(in)) {
+    if (!motive_relation_pitched(in)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     size_t before = (size_t)interval - 1;
     int alteration;
     long at = motive_sketch_step(in, in->notes[before].pitch, &alteration);
     long pitch = motive_sketch_pitch_at_step(in, at + steps, alteration);
-    if (!midi(pitch)) {
+    if (!motive_relation_midi(pitch)) {
         return MOTIVE_RELATION_RANGE;
     }
     Rational half = msk_div(in->notes[before].duration, msk_int(2));
-    if (!nice_time(in, half)) {
+    if (!motive_relation_nice_time(in, half)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     MotiveSketchNote added;
     added.pitch = (int)pitch;
     added.onset = msk_add(in->notes[before].onset, half);
     added.duration = half;
-    if (!insert_notes(in, out, (size_t)interval, &added, 1)) {
+    if (!motive_relation_insert_notes(in, out, (size_t)interval, &added, 1)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     out->notes[before].duration = half;
@@ -661,8 +662,8 @@ static MotiveRelationResult apply_omit_interval(const MotiveSketch *in, const Mo
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     size_t gone = (size_t)interval;
-    Rational lengthened = msk_sub(note_end(&in->notes[gone]), in->notes[gone - 1].onset);
-    if (!nice_time(in, lengthened)) {
+    Rational lengthened = msk_sub(motive_relation_note_end(&in->notes[gone]), in->notes[gone - 1].onset);
+    if (!motive_relation_nice_time(in, lengthened)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     for (size_t i = gone; i + 1 < in->note_count; i++) {
@@ -695,7 +696,7 @@ static MotiveRelationResult apply_ancillary_fill(const MotiveSketch *in, const M
     if (interval < 1 || (size_t)interval >= in->note_count || (kind != 0 && kind != 1)) {
         return MOTIVE_RELATION_INVALID;
     }
-    if (!pitched(in)) {
+    if (!motive_relation_pitched(in)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     size_t before = (size_t)interval - 1;
@@ -711,20 +712,20 @@ static MotiveRelationResult apply_ancillary_fill(const MotiveSketch *in, const M
     /* The added notes share the second half of the first note. */
     Rational half = msk_div(in->notes[before].duration, msk_int(2));
     Rational part = msk_div(half, msk_int((unsigned long long)count));
-    if (!nice_time(in, half) || !nice_time(in, part)) {
+    if (!motive_relation_nice_time(in, half) || !motive_relation_nice_time(in, part)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     MotiveSketchNote added[6];
     for (long k = 0; k < count; k++) {
         long pitch = motive_sketch_pitch_at_step(in, from + direction * (k + 1), kind == 1 ? alteration : 0);
-        if (!midi(pitch)) {
+        if (!motive_relation_midi(pitch)) {
             return MOTIVE_RELATION_RANGE;
         }
         added[k].pitch = (int)pitch;
         added[k].duration = part;
         added[k].onset = msk_add(msk_add(in->notes[before].onset, half), msk_mul(part, msk_int((unsigned long long)k)));
     }
-    if (!insert_notes(in, out, (size_t)interval, added, (size_t)count)) {
+    if (!motive_relation_insert_notes(in, out, (size_t)interval, added, (size_t)count)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     out->notes[before].duration = half;
@@ -742,7 +743,7 @@ static MotiveRelationResult apply_condense(const MotiveSketch *in, const MotiveR
     }
     Rational ratio = msk_make((unsigned long long)num, (unsigned long long)den);
     Rational start = in->notes[first].onset;
-    Rational old_span = msk_sub(note_end(&in->notes[last]), start);
+    Rational old_span = msk_sub(motive_relation_note_end(&in->notes[last]), start);
     Rational saved = msk_sub(old_span, msk_mul(old_span, ratio));
     for (long i = first; i <= last; i++) {
         out->notes[i].onset = msk_add(start, msk_mul(msk_sub(in->notes[i].onset, start), ratio));
@@ -752,7 +753,7 @@ static MotiveRelationResult apply_condense(const MotiveSketch *in, const MotiveR
         out->notes[i].onset = msk_sub(in->notes[i].onset, saved);
     }
     for (size_t i = 0; i < in->note_count; i++) {
-        if (!nice_time(in, out->notes[i].duration) || !motive_sketch_time_on_grid(in, out->notes[i].onset)) {
+        if (!motive_relation_nice_time(in, out->notes[i].duration) || !motive_sketch_time_on_grid(in, out->notes[i].onset)) {
             return MOTIVE_RELATION_NOT_EXPRESSIBLE;
         }
     }
@@ -777,7 +778,7 @@ static MotiveRelationResult apply_repeat_feature(const MotiveSketch *in, const M
     if (in->note_count + added > MOTIVE_SKETCH_MAX_NOTES) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    Rational from = note_end(&in->notes[last]);
+    Rational from = motive_relation_note_end(&in->notes[last]);
     Rational span = msk_sub(from, in->notes[first].onset);
     Rational shift = msk_mul(span, msk_int((unsigned long long)times));
     for (size_t i = last + 1; i < in->note_count; i++) {
@@ -791,7 +792,7 @@ static MotiveRelationResult apply_repeat_feature(const MotiveSketch *in, const M
                 int alteration;
                 long at = motive_sketch_step(in, note.pitch, &alteration);
                 long pitch = motive_sketch_pitch_at_step(in, at + t * steps, alteration);
-                if (!midi(pitch)) {
+                if (!motive_relation_midi(pitch)) {
                     return MOTIVE_RELATION_RANGE;
                 }
                 note.pitch = (int)pitch;
@@ -840,7 +841,7 @@ static MotiveRelationResult apply_shift_feature(const MotiveSketch *in, const Mo
         out->notes[first - 1].duration = msk_add(in->notes[first - 1].duration, offset);
     }
     for (size_t i = (first > 0 ? first - 1 : first); i <= last; i++) {
-        if (!nice_time(in, out->notes[i].duration) || !motive_sketch_time_on_grid(in, out->notes[i].onset)) {
+        if (!motive_relation_nice_time(in, out->notes[i].duration) || !motive_sketch_time_on_grid(in, out->notes[i].onset)) {
             return MOTIVE_RELATION_NOT_EXPRESSIBLE;
         }
     }
@@ -850,11 +851,11 @@ static MotiveRelationResult apply_shift_feature(const MotiveSketch *in, const Mo
 /* --- harmony and melody adaptation (Exs. 25 to 29) ----------------------------------------------- */
 
 /* A harmony relation's start: a scale, pitches, and chords (the best implied chord at 0 when there are none). */
-static MotiveRelationResult prepare_harmony(MotiveSketch *work) {
+MotiveRelationResult motive_relation_prepare_harmony(MotiveSketch *work) {
     if (!work->has_scale) {
         return MOTIVE_RELATION_NO_SCALE;
     }
-    if (!pitched(work)) {
+    if (!motive_relation_pitched(work)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     if (work->chord_count == 0) {
@@ -885,7 +886,7 @@ static bool keeps_directions(const MotiveSketch *before, const MotiveSketch *ske
     return true;
 }
 
-/* The pitch of the new chord's tones nearest note i (within an octave), by the rules of adapt_melody; -1 for none. */
+/* The pitch of the new chord's tones nearest note i (within an octave), by the rules of motive_relation_adapt_melody; -1 for none. */
 static int nearest_chord_pitch(const MotiveSketch *before, const MotiveSketch *sketch, size_t i, const int *pcs,
                                size_t count) {
     int pitch = sketch->notes[i].pitch;
@@ -894,7 +895,7 @@ static int nearest_chord_pitch(const MotiveSketch *before, const MotiveSketch *s
     for (int distance = 1; distance <= 12; distance++) {
         for (int k = 0; k < 2; k++) {
             int candidate = pitch + (k == 0 ? preferred : -preferred) * distance;
-            if (!midi(candidate) || !mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
+            if (!motive_relation_midi(candidate) || !mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
                 continue;
             }
             if (nearest < 0) {
@@ -921,7 +922,7 @@ static int nearest_chord_pitch(const MotiveSketch *before, const MotiveSketch *s
  *  - a non-chord tone whose resolution target moved moves by the same scale steps, so it still resolves the way it
  *    did. One whose figure no longer fits after that is left as it is (it is unclassified in the result).
  */
-static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
+void motive_relation_adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
     MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
     if (motive_tone_roles(before, NULL, 0, labels) != MOTIVE_TONE_OK) {
         return;
@@ -962,7 +963,7 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
         int alteration;
         long at = motive_sketch_step(sketch, sketch->notes[i].pitch, &alteration);
         long pitch = motive_sketch_pitch_at_step(sketch, at + delta, alteration);
-        if (midi(pitch)) {
+        if (motive_relation_midi(pitch)) {
             sketch->notes[i].pitch = (int)pitch;
         }
     }
@@ -1036,7 +1037,7 @@ static void move_bass(MotiveSketch *sketch, size_t chord, int old_inversion) {
     for (int distance = 1; distance <= 12; distance++) {
         for (int k = 0; k < 2; k++) {
             int candidate = pitch + (k == 0 ? -distance : distance);
-            if (midi(candidate) && pitch_class_of_midi(candidate) == now) {
+            if (motive_relation_midi(candidate) && pitch_class_of_midi(candidate) == now) {
                 sketch->notes[lowest].pitch = candidate;
                 return;
             }
@@ -1046,7 +1047,7 @@ static void move_bass(MotiveSketch *sketch, size_t chord, int old_inversion) {
 
 static MotiveRelationResult apply_harmony_inversion(const MotiveSketch *in, const MotiveRelationStep *step,
                                                     MotiveSketch *out) {
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1065,7 +1066,7 @@ static MotiveRelationResult apply_harmony_inversion(const MotiveSketch *in, cons
     int old_inversion = out->chords[chord].inversion;
     out->chords[chord].inversion = (int)inversion;
     move_bass(out, (size_t)chord, old_inversion);
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     (void)in;
     return MOTIVE_RELATION_OK;
 }
@@ -1077,7 +1078,7 @@ static MotiveRelationResult apply_harmony_append(const MotiveSketch *in, const M
     if (degree < 1 || degree > 7 || (step->value[1] != 0 && step->value[1] != 1)) {
         return MOTIVE_RELATION_INVALID;
     }
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1090,7 +1091,7 @@ static MotiveRelationResult apply_harmony_append(const MotiveSketch *in, const M
     if (!insert_chord(out, out->chord_count, chord)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     return MOTIVE_RELATION_OK;
 }
 
@@ -1102,7 +1103,7 @@ static MotiveRelationResult apply_harmony_insert(const MotiveSketch *in, const M
     if (degree < 1 || degree > 7) {
         return MOTIVE_RELATION_INVALID;
     }
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1118,7 +1119,7 @@ static MotiveRelationResult apply_harmony_insert(const MotiveSketch *in, const M
     if (!insert_chord(out, (size_t)chord + 1, added)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     return MOTIVE_RELATION_OK;
 }
 
@@ -1131,7 +1132,7 @@ static MotiveRelationResult apply_harmony_substitute(const MotiveSketch *in, con
     if (degree < 1 || degree > 7 || then < 0 || then > 7) {
         return MOTIVE_RELATION_INVALID;
     }
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1154,7 +1155,7 @@ static MotiveRelationResult apply_harmony_substitute(const MotiveSketch *in, con
         }
     }
     out->chords[chord] = replaced;
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     return MOTIVE_RELATION_OK;
 }
 
@@ -1162,7 +1163,7 @@ static MotiveRelationResult apply_passing_harmony(const MotiveSketch *in, const 
                                                   MotiveSketch *out) {
     (void)in;
     long chord = step->value[0];
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1203,7 +1204,7 @@ static MotiveRelationResult apply_passing_harmony(const MotiveSketch *in, const 
     if (!insert_chord(out, (size_t)chord + 1, added)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     return MOTIVE_RELATION_OK;
 }
 
@@ -1213,7 +1214,7 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
     if (!in->accompaniment) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1236,7 +1237,7 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
             for (int d = 1; d <= 12 && target < 0; d++) {
                 for (int k = 0; k < 2 && target < 0; k++) {
                     int candidate = pitch + (k == 0 ? d : -d);
-                    if (midi(candidate) && mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
+                    if (motive_relation_midi(candidate) && mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
                         target = candidate;
                     }
                 }
@@ -1252,7 +1253,7 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
                         stepped = goal;
                     }
                     long moved = motive_sketch_pitch_at_step(out, stepped, stepped == goal ? 0 : alteration);
-                    out->notes[n].pitch = stepped == goal ? target : (midi(moved) ? (int)moved : pitch);
+                    out->notes[n].pitch = stepped == goal ? target : (motive_relation_midi(moved) ? (int)moved : pitch);
                 }
             }
         }
@@ -1270,7 +1271,7 @@ static MotiveRelationResult apply_dominant_form(const MotiveSketch *in, const Mo
                                                 MotiveSketch *out) {
     (void)in;
     (void)step;
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1310,7 +1311,7 @@ static MotiveRelationResult apply_dominant_form(const MotiveSketch *in, const Mo
             int alteration;
             long at = motive_sketch_step(&before, before.notes[i].pitch, &alteration);
             long pitch = motive_sketch_pitch_at_step(&before, at + MOVES[m], alteration);
-            moved = midi(pitch);
+            moved = motive_relation_midi(pitch);
             pitches[i] = (int)pitch;
         }
         if (moved) {
@@ -1322,7 +1323,7 @@ static MotiveRelationResult apply_dominant_form(const MotiveSketch *in, const Mo
     if (!moved) {
         return MOTIVE_RELATION_RANGE;
     }
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     return MOTIVE_RELATION_OK;
 }
 
@@ -1391,7 +1392,7 @@ static MotiveRelationResult replace_with_chord_tone(const MotiveSketch *source, 
     for (int d = 0; d <= 12 && pitch < 0 && count > 0; d++) {
         for (int k = 0; k < 2 && pitch < 0; k++) {
             int candidate = first.pitch + (k == 0 ? d : -d);
-            if (midi(candidate) && mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
+            if (motive_relation_midi(candidate) && mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
                 pitch = candidate;
             }
         }
@@ -1428,7 +1429,7 @@ static MotiveRelationResult apply_liquidate_features(const MotiveSketch *in, con
     if (steps < 1 || steps > 3 || (step->value[1] != 0 && step->value[1] != 1)) {
         return MOTIVE_RELATION_INVALID;
     }
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1456,9 +1457,9 @@ static MotiveRelationResult apply_liquidate_features(const MotiveSketch *in, con
     }
     if (step->value[1] != 0) {
         MotiveRelationStep half = {MOTIVE_RELATION_DIMINISH, {1}, {2}};
-        settle(out);
+        motive_relation_settle(out);
         MotiveSketch shortened = *out;
-        MotiveRelationResult scaled = scale_time(&shortened, &half, out, false);
+        MotiveRelationResult scaled = motive_relation_scale_time(&shortened, &half, out, false);
         if (scaled != MOTIVE_RELATION_OK) {
             return scaled;
         }
@@ -1504,7 +1505,7 @@ static MotiveRelationResult drop_notes(const MotiveSketch *source, MotiveSketch 
     kept[0].onset = msk_sub(kept[0].onset, leading);
     kept[0].duration = msk_add(kept[0].duration, leading);
     for (size_t k = 0; k < kept_count; k++) {
-        if (!nice_time(source, kept[k].duration) || !msk_ok(kept[k].onset) ||
+        if (!motive_relation_nice_time(source, kept[k].duration) || !msk_ok(kept[k].onset) ||
             !motive_sketch_time_on_grid(source, kept[k].onset)) {
             return MOTIVE_RELATION_NOT_EXPRESSIBLE;
         }
@@ -1535,7 +1536,7 @@ static bool frame_roles(const MotiveSketch *sketch, MotiveToneLabel *labels, Mot
         *refused = MOTIVE_RELATION_NO_SCALE;
         return false;
     }
-    if (!pitched(sketch)) {
+    if (!motive_relation_pitched(sketch)) {
         *refused = MOTIVE_RELATION_NOT_APPLICABLE;
         return false;
     }
@@ -1592,7 +1593,7 @@ static bool form_single(MotiveSketch *sketch, size_t index, NonChordTone type) {
             long at = motive_sketch_step(sketch, around[k], &alteration);
             for (int direction = 1; direction >= -1; direction -= 2) {
                 long pitch = motive_sketch_pitch_at_step(sketch, at + direction * reach, alteration);
-                if (midi(pitch)) {
+                if (motive_relation_midi(pitch)) {
                     candidates[count++] = (int)pitch;
                 }
             }
@@ -1631,7 +1632,7 @@ static bool form_pair(MotiveSketch *sketch, size_t first, NonChordTone type) {
     int pairs[4][2] = {{(int)above, (int)below}, {(int)below, (int)above}, {c + 1, c - 1}, {c - 1, c + 1}};
     int was[2] = {sketch->notes[first].pitch, sketch->notes[first + 1].pitch};
     for (size_t k = 0; k < (type == NON_CHORD_TONE_DOUBLE_NEIGHBOR ? 4u : 2u); k++) {
-        if (!midi(pairs[k][0]) || !midi(pairs[k][1])) {
+        if (!motive_relation_midi(pairs[k][0]) || !motive_relation_midi(pairs[k][1])) {
             continue;
         }
         sketch->notes[first].pitch = pairs[k][0];
@@ -1664,7 +1665,7 @@ static MotiveRelationResult apply_add_non_chord_tone(const MotiveSketch *in, con
     size_t added = pair_type((NonChordTone)type) ? 2 : 1;
     Rational half = msk_div(in->notes[before].duration, msk_int(2));
     Rational part = msk_div(half, msk_int(added));
-    if (!nice_time(in, half) || !nice_time(in, part)) {
+    if (!motive_relation_nice_time(in, half) || !motive_relation_nice_time(in, part)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     MotiveSketchNote notes[2];
@@ -1673,7 +1674,7 @@ static MotiveRelationResult apply_add_non_chord_tone(const MotiveSketch *in, con
         notes[k].duration = part;
         notes[k].onset = msk_add(msk_add(in->notes[before].onset, half), msk_mul(part, msk_int(k)));
     }
-    if (!insert_notes(in, out, before + 1, notes, added)) {
+    if (!motive_relation_insert_notes(in, out, before + 1, notes, added)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     out->notes[before].duration = half;
@@ -1753,7 +1754,7 @@ static MotiveRelationResult apply_reharmonize_frame(const MotiveSketch *in, cons
     if (degree < 1 || degree > 7 || (step->value[1] != 0 && step->value[1] != 1)) {
         return MOTIVE_RELATION_INVALID;
     }
-    MotiveRelationResult ready = prepare_harmony(out);
+    MotiveRelationResult ready = motive_relation_prepare_harmony(out);
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
@@ -1761,7 +1762,7 @@ static MotiveRelationResult apply_reharmonize_frame(const MotiveSketch *in, cons
     MotiveSketchChord chord = {msk_int(0), (int)degree, 0, 0, step->value[1] != 0};
     out->chords[0] = chord;
     out->chord_count = 1;
-    adapt_melody(&before, out);
+    motive_relation_adapt_melody(&before, out);
     return MOTIVE_RELATION_OK;
 }
 
@@ -1832,13 +1833,13 @@ MotiveRelationResult motive_relation_apply(const MotiveSketch *in, const MotiveR
     if (result != MOTIVE_RELATION_OK) {
         return result;
     }
-    settle(&work);
+    motive_relation_settle(&work);
     if (!motive_sketch_validate(&work)) {
         return MOTIVE_RELATION_INVALID;
     }
     if (step->kind != MOTIVE_RELATION_EXACT) {
         MotiveSketch base = *in;
-        settle(&base);
+        motive_relation_settle(&base);
         if (motive_sketch_equal(&base, &work)) {
             return MOTIVE_RELATION_UNCHANGED;
         }
