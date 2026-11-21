@@ -126,6 +126,12 @@ static const CommandEntry kCommands[] = {
     {"section.move", workshop_c_section_move},
     {"section.resize", workshop_c_section_resize},
     {"section.set", workshop_c_section_set},
+    {"settings.set", workshop_c_settings_set},
+    {"settings.unset", workshop_c_settings_unset},
+    {"settings.import", workshop_c_settings_import},
+    {"settings.override", workshop_c_settings_override},
+    {"settings.switch", workshop_c_settings_switch},
+    {"settings.use-taste", workshop_c_settings_use_taste},
     {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };
 

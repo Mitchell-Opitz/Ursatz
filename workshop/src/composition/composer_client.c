@@ -176,6 +176,32 @@ const cJSON *workshop_composer_vocabulary_list(const char *name) {
   return cJSON_IsArray(list) ? list : NULL;
 }
 
+bool workshop_composer_validate_preferences(const cJSON *document, char *path, size_t path_size, char *message, size_t message_size) {
+  cJSON *request = cJSON_CreateObject();
+  bool built = request && cJSON_AddStringToObject(request, "material", "major") && cJSON_AddStringToObject(request, "meter", "4/4") &&
+               cJSON_AddNumberToObject(request, "count", 1) && cJSON_AddStringToObject(request, "seed", "1") &&
+               cJSON_AddItemToObject(request, "preferences", cJSON_Duplicate(document, true));
+  char *text = built ? cJSON_PrintUnformatted(request) : NULL;
+  cJSON_Delete(request);
+  if (!text) {
+    snprintf(path, path_size, "%s", "");
+    snprintf(message, message_size, "out of memory");
+    return false;
+  }
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  UrsatzStatus status = composer_api_validate(workshop_composer_context_global(), "random_motive", text, &response);
+  cJSON_free(text);
+  path[0] = '\0';
+  message[0] = '\0';
+  if (status != URSATZ_OK) {
+    snprintf(path, path_size, "%s", response.error.path);
+    snprintf(message, message_size, "%s", response.error.message[0] ? response.error.message : "the Composer refused the settings");
+  }
+  composer_response_destroy(&response);
+  return status == URSATZ_OK;
+}
+
 bool workshop_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size) {
   if (!workshop_composer_vocabulary() || !g_vocabulary_tree || !material) {
     return false;

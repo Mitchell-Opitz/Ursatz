@@ -85,7 +85,7 @@ const answered = (status, body) => async () => ({ ok: status >= 200 && status < 
         known.add(command.name);
       }
     }
-    check(known.size >= 49 && known.has("item.restore") && known.has("section.insert"), "the schemas define the workshop's commands");
+    check(known.size >= 55 && known.has("item.restore") && known.has("section.insert"), "the schemas define the workshop's commands");
     const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
     const sent = new Set();
     const walk = (dir) => {

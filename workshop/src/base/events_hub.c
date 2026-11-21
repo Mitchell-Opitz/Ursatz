@@ -60,5 +60,7 @@ void workshop_events_after_commit(const char *command, const char *target, const
         event_with_id("style-changed", "style_id", target);
     } else if (strncmp(command, "links.", 6) == 0) {
         event_with_id("links-changed", "run_id", target);
+    } else if (strncmp(command, "settings.", 9) == 0) {
+        workshop_event("settings-changed", cJSON_CreateObject());
     }
 }

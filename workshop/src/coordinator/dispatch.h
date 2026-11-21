@@ -159,6 +159,22 @@ WORKSHOP_HANDLER(workshop_q_settings_scope);
 WORKSHOP_HANDLER(workshop_q_settings_list);
 WORKSHOP_HANDLER(workshop_q_settings_keys);
 
+/* settings commands (api_commands_settings.c) */
+WORKSHOP_HANDLER(workshop_c_settings_set);
+WORKSHOP_HANDLER(workshop_c_settings_unset);
+WORKSHOP_HANDLER(workshop_c_settings_import);
+WORKSHOP_HANDLER(workshop_c_settings_override);
+WORKSHOP_HANDLER(workshop_c_settings_switch);
+WORKSHOP_HANDLER(workshop_c_settings_use_taste);
+
+/* Checks a setting's value as a set or an import does (R-676): the key exists, motif.plan only in a request scope, an explore value against its
+ * limits, any other by the Composer. REQUEST at where (the Composer's path below it). */
+UrsatzStatus workshop_settings_check_value(const char *key, const cJSON *value, const char *where, bool request_scope, UrsatzError *error);
+
+/* Adds {key, value, ratings, note, actor, at} to the `kept` list of a taste file (made when missing); value NULL is null. */
+UrsatzStatus workshop_settings_keep_record(cJSON *file, const char *key, const cJSON *value, const cJSON *ratings, const char *note, const char *actor,
+                                           UrsatzError *error);
+
 /* library, collections, styles, links, jobs commands (api_commands_library.c) */
 WORKSHOP_HANDLER(workshop_c_library_import);
 WORKSHOP_HANDLER(workshop_c_library_update);

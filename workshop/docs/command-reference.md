@@ -99,6 +99,19 @@ Sections: add, remove, move, resize and set the sections of a piece version's re
 | `section.resize` | `item:<id>@v<n>` | `id string [bars int] [beats int] [note string]` | Change the length of a section |
 | `section.set` | `item:<id>@v<n>` | `id string [role intro\|body\|turnaround\|ending] [letter string] [function transition\|coda\|none] [cadence PAC\|IAC\|HC\|DC\|PC\|none] [pickup n/d] [fill empty\|motif] [region object] [harmony object] [note string]` | Change the role, letter, function, cadence, pickup, fill, region or harmony |
 
+## Settings
+
+Settings: the values, overrides and switches of a style, project or item, and the taste profile it uses.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `settings.set` | none | `scope string key string value value` | Set one setting in a scope |
+| `settings.unset` | none | `scope string key string` | Take one setting out of a scope |
+| `settings.import` | none | `scope string document object [replace bool] [note string]` | Set the settings of a document in a scope |
+| `settings.override` | none | `scope string rule string action off\|reverse\|reweight\|waive\|clear [weight int] [note string]` | Waive, reverse, reweight or switch off a rule in a project or item |
+| `settings.switch` | none | `scope string off list` | Switch scopes off for a project or an item |
+| `settings.use-taste` | none | `scope string [taste string]` | Name the taste profile a style, project or item uses |
+
 ## Style
 
 Styles: style models built from library pieces or a brief.
