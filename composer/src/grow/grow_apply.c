@@ -635,3 +635,15 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
     return result == PLAN_OK ? grow_ending_build(&build) : result;
 }
 
+
+void grow_build_init(GrowBuild *build, Plan *plan, const GrowThemeRequest *theme, size_t bars) {
+    memset(build, 0, sizeof(*build));
+    build->plan = plan;
+    build->request = theme;
+    build->cadence.kind = PLAN_CONSTRAINT_CADENCE;
+    build->cadence.params.cadence = theme->cadence;
+    build->material = plan_node_parent(plan, theme->source);
+    build->material_span = plan_node_span(plan, build->material);
+    build->source = theme->source;
+    build->slot_base = grow_first_free_bar(plan, build->material, build->material_span, theme->bar, bars);
+}

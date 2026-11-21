@@ -202,22 +202,6 @@ bool workshop_composer_validate_preferences(const cJSON *document, char *path, s
   return status == URSATZ_OK;
 }
 
-bool workshop_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size) {
-  if (!workshop_composer_vocabulary() || !g_vocabulary_tree || !material) {
-    return false;
-  }
-  const cJSON *entry = NULL;
-  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "pitch_class_names")) {
-    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
-    const cJSON *name = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "names"), material);
-    if (cJSON_IsNumber(value) && value->valueint == pitch_class && cJSON_IsString(name)) {
-      snprintf(out, out_size, "%s", name->valuestring);
-      return true;
-    }
-  }
-  return false;
-}
-
 bool workshop_composer_key_word(const char *material, char *out, size_t out_size) {
   if (!workshop_composer_vocabulary() || !g_vocabulary_tree || !material) {
     return false;

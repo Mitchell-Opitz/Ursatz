@@ -35,7 +35,7 @@ bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_oct
 }
 
 void note_name(long midi, bool prefer_flats, char out[16]) {
-    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of_midi((int)midi), prefer_flats), (int)(midi / 12) - 1);
+    pitch_name_of_midi((int)midi, prefer_flats, out, 16);
 }
 
 int spelling_from_name(const char *name, PitchSpelling **out) {

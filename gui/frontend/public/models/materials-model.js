@@ -66,8 +66,8 @@ function newItemBody(type) {
       motif: {
         role: "melodic",
         form: "full",
-        notes: "C4:q",
-        meter: "4/4",
+        notes: Vocab.defaults().motif.notes,
+        meter: Vocab.defaults().meter,
         material: null,
         pickup: "0",
         harmony: null,
@@ -518,7 +518,7 @@ function motifFormValues(body) {
     role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
     form: motif.form || "full",
     notes: typeof motif.notes === "string" ? motif.notes : "",
-    meter: typeof motif.meter === "string" ? motif.meter : "4/4",
+    meter: typeof motif.meter === "string" ? motif.meter : Vocab.defaults().meter,
     material: motifMaterial(motif.material),
     pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
     harmony: typeof motif.harmony === "string" ? motif.harmony : "",
@@ -551,7 +551,7 @@ function importToFormValues(answer) {
   return {
     form: "full",
     notes: typeof a.notes_text === "string" ? a.notes_text : "",
-    meter: typeof a.meter === "string" ? a.meter : "4/4",
+    meter: typeof a.meter === "string" ? a.meter : Vocab.defaults().meter,
     material: motifMaterial(a.material),
     pickup: typeof a.pickup === "string" ? a.pickup : "0",
   };
@@ -631,7 +631,7 @@ function renderRequest(body, keyText) {
   const request = {
     form: motif.form || "full",
     degrees: typeof motif.degrees === "string" ? motif.degrees : "",
-    meter: typeof motif.meter === "string" ? motif.meter : "4/4",
+    meter: typeof motif.meter === "string" ? motif.meter : Vocab.defaults().meter,
     pickup: typeof motif.pickup === "string" && motif.pickup !== "" ? motif.pickup : "0",
     role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
   };
@@ -703,7 +703,7 @@ function randomCandidateToBody(candidate, values) {
       role: v.role === "accompaniment" ? "accompaniment" : "melodic",
       form,
       notes: typeof analysis[textName] === "string" ? analysis[textName] : "",
-      meter: String(v.meter || "").trim() || "4/4",
+      meter: String(v.meter || "").trim() || Vocab.defaults().meter,
       material,
       pickup: typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : "0",
       harmony: baseHarmony === "" ? null : baseHarmony,

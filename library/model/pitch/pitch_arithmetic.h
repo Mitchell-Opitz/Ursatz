@@ -58,6 +58,15 @@ int pitch_spelling_fifths(PitchLetter letter, int accidental);
 /* The inverse of pitch_spelling_fifths. letter and accidental must not be NULL. */
 void pitch_spelling_from_fifths(int fifths, PitchLetter *letter, int *accidental);
 
+/* The spelling of a pitch class inside the window of 12 fifths that starts at lowest_fifths (the window holds each pitch class
+ * once): the sharps are the window at -1 (C C# D D# E F F# G G# A A# B), the flats the window at -6 (C Db D Eb E F Gb G Ab A Bb B),
+ * a major tonic the window at -5 and a minor tonic the window at -3. False (outputs untouched) for a pitch class outside 0 to 11,
+ * a window that leaves the names from -6 to 10, or a NULL output. */
+bool pitch_class_spelling(int pitch_class, int lowest_fifths, PitchLetter *letter, int *accidental);
+
+/* The name ("Db", "F#") of the pitch class in that window; NULL where pitch_class_spelling is false. */
+const char *pitch_class_window_name(int pitch_class, int lowest_fifths);
+
 /*
  * Writes the name without octave: C, F#, Bb, Cx, Ebb. Accidentals -2 to +2
  * only. Returns false (buffer untouched) for an invalid letter, an accidental
@@ -74,7 +83,16 @@ bool pitch_spelling_name(PitchLetter letter, int accidental, char *buffer, size_
 bool pitch_spelling_parse_name(const char *text, PitchLetter *letter, int *accidental,
                                int *octave_or_null);
 
+/* The shortest signed step in semitones from one pitch class (or MIDI number) to another, -5 to +6 when tritone_up, else -6 to
+ * +5: the tritone is +6 (up) or -6 (down) as the caller chooses; every other distance is the one under six semitones. */
+int pitch_class_step(int from, int to, bool tritone_up);
+
 /* "C", "C#" or "Db" ... for 0 to 11; NULL outside that range. */
 const char *pitch_class_name(int pitch_class, bool prefer_flats);
+
+/* The name and octave of a MIDI number, "C#4" or "Db4" (middle C, 60, is C4): the pitch class name of pitch_class_name followed
+ * by midi / 12 - 1 with C's truncating division (below MIDI 0 the octave is 0 for -1 to -11, not -1). False (out untouched)
+ * for a NULL out or a size too small for the text and its terminator. */
+bool pitch_name_of_midi(int midi, bool prefer_flats, char *out, size_t size);
 
 #endif

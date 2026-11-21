@@ -8,7 +8,7 @@ static bool comparable(const StandardFormMotiveShape *a, const StandardFormMotiv
     return a != NULL && b != NULL && a->generic == b->generic && a->intervals == b->intervals && a->intervals > 0;
 }
 
-static void full(StandardFormMotiveMatch *out, StandardFormMotiveKind kind, size_t intervals) {
+static void full(StandardFormMotiveMatch *out, MotiveOccurrenceKind kind, size_t intervals) {
     out->kind = (int)kind;
     out->mismatches = 0;
     out->intervals = intervals;

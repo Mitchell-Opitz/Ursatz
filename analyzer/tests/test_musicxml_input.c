@@ -12,6 +12,7 @@
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include <common/files.h>
 
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
@@ -66,13 +67,7 @@ static void write_bytes(const char *path, const void *bytes, size_t size) {
 }
 
 static void copy_file(const char *from, const char *to) {
-    FILE *file = fopen(from, "rb");
-    assert(file != NULL);
-    char buffer[8192];
-    size_t size = fread(buffer, 1, sizeof(buffer), file);
-    fclose(file);
-    assert(size > 0 && size < sizeof(buffer));
-    write_bytes(to, buffer, size);
+    assert(common_file_copy(from, to, NULL) == URSATZ_OK);
 }
 
 static void test_format_names(void) {

@@ -57,7 +57,7 @@ function emptyState(id) {
     form: DEFAULT_FORM,
     key: "C",
     material: (materials()[0] || {}).value || "",
-    meter: "4/4",
+    meter: Vocab.defaults().meter,
     tempo: "",
     bars: 0,
     count: 0,
@@ -230,21 +230,14 @@ function defaultRole(form) {
   return required ? required.value : "";
 }
 
-/* The beats in a bar of a meter, as the Composer lists it: 2/4 is 2, 6/8 is 6 (the eighth is the beat). A meter the
- * Composer does not list (a piece saved with another) reads its numerator. */
+/* The beats in a bar of a meter as the Composer lists it: 2/4 is 2, 6/8 is 6 (the eighth is the beat). */
 function barBeats(meter) {
-  const listed = (Vocab.entry("meters", meter) || {}).beats;
-  if (Number.isInteger(listed)) {
-    return listed;
-  }
-  const n = parseInt(meter, 10);
-  return Number.isInteger(n) && n > 0 ? n : 4;
+  return Vocab.meterBeats(meter);
 }
 
 /* The beat unit of a meter as the denominator of a whole note: 4/4 is 4, 6/8 is 8. */
 function beatUnit(meter) {
-  const d = parseInt(String(meter || "").split("/")[1], 10);
-  return Number.isInteger(d) && d > 0 ? d : 4;
+  return Vocab.meterUnit(meter);
 }
 
 /* --- section ids and letters ------------------------------------------ */
@@ -890,10 +883,11 @@ function themeComposed(body) {
  * construction. */
 function constructionPossible(section, meter) {
   const bars = Number(section.beats) / barBeats(meter);
-  const limit = (Vocab.get().limits || {}).construction_bars || {};
+  const limits = Vocab.get().limits || {};
+  const limit = limits.construction_bars || {};
   const pickup = Number(section.pickup);
   const noPickup = section.pickup === undefined || section.pickup === null || section.pickup === "" || pickup === 0;
-  return Number.isInteger(bars) && bars >= limit.min && bars <= limit.max && noPickup;
+  return Number.isInteger(bars) && bars >= limit.min && bars <= limit.max && (limits.construction_pickup === true || noPickup);
 }
 
 /* A motif fill takes its theme form (sentence, period, hybrid) at 4 or 8 whole bars without a pickup, or at any whole
@@ -1246,7 +1240,7 @@ function resultView(result, options) {
   const form = formOf(options && options.form);
   const rowOptions = Object.assign({}, options, { form });
   const summary = r.summary && typeof r.summary === "object" ? r.summary : {};
-  const meter = typeof summary.meter === "string" ? summary.meter : "4/4";
+  const meter = typeof summary.meter === "string" ? summary.meter : Vocab.defaults().meter;
   const versions = summary.versions && typeof summary.versions === "object" ? summary.versions : {};
   const brief = summary.brief || {};
   const tempo = brief.tempo || {};

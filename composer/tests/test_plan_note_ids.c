@@ -83,10 +83,10 @@ static void test_ids_in_insertion_order(void) {
     assert(note_at(f.plan, f.bass, 0)->id == 4 && note_at(f.plan, f.bass, 1)->id == 5);
     assert(plan_next_note_id(f.plan) == 6);
     LaneSpanId in_span = PLAN_LANE_SPAN_NONE;
-    const PlanNote *found = plan_note_by_id(f.plan, 5, &in_span);
+    const PlanNote *found = test_plan_note_by_id(f.plan, 5, &in_span);
     assert(found == note_at(f.plan, f.bass, 1) && in_span == f.bass && found->midi == 43);
-    assert(plan_note_by_id(f.plan, 3, NULL) == note_at(f.plan, f.melody, 2));
-    assert(plan_note_by_id(f.plan, 0, &in_span) == NULL && plan_note_by_id(f.plan, 6, NULL) == NULL && plan_note_by_id(NULL, 1, NULL) == NULL);
+    assert(test_plan_note_by_id(f.plan, 3, NULL) == note_at(f.plan, f.melody, 2));
+    assert(test_plan_note_by_id(f.plan, 0, &in_span) == NULL && test_plan_note_by_id(f.plan, 6, NULL) == NULL && test_plan_note_by_id(NULL, 1, NULL) == NULL);
     for (size_t i = 0; i < 5; i++) {
         const PlanNote *n = i < 3 ? note_at(f.plan, f.melody, i) : note_at(f.plan, f.bass, i - 3);
         assert(n->source == PLAN_NOTE_NONE && n->operation == PLAN_NOTE_FROM_NONE);
@@ -115,7 +115,7 @@ static void test_a_rewrite_keeps_ids(void) {
     payload.notes.note_count = 2;
     assert(plan_lane_span_write(f.plan, f.melody, &payload) == PLAN_OK);
     assert(note_at(f.plan, f.melody, 0)->id == 7 && note_at(f.plan, f.melody, 1)->id == 8 && plan_next_note_id(f.plan) == 9);
-    assert(plan_note_by_id(f.plan, 1, NULL) == NULL); /* an id of an overwritten note finds nothing */
+    assert(test_plan_note_by_id(f.plan, 1, NULL) == NULL); /* an id of an overwritten note finds nothing */
     plan_destroy(f.plan);
 }
 
@@ -172,7 +172,7 @@ static void test_ids_are_not_reused_after_removal(void) {
     Fixture f = make_fixture();
     assert(plan_remove_subtree(f.plan, f.form) == PLAN_OK); /* every section under the form, and the notes they own */
     for (PlanNoteId id = 1; id <= 5; id++) {
-        assert(plan_note_by_id(f.plan, id, NULL) == NULL);
+        assert(test_plan_note_by_id(f.plan, id, NULL) == NULL);
     }
     assert(plan_next_note_id(f.plan) == 6);
     NodeId later;
@@ -190,7 +190,7 @@ static void test_ids_are_not_reused_after_removal(void) {
     char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL && strstr(text, "\"next_note_id\": 7") != NULL);
     Plan *read = NULL;
-    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK && plan_next_note_id(read) == 7 && plan_note_by_id(read, 6, NULL) != NULL);
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK && plan_next_note_id(read) == 7 && test_plan_note_by_id(read, 6, NULL) != NULL);
     plan_destroy(read);
     free(text);
     plan_destroy(f.plan);
@@ -364,8 +364,8 @@ static void test_a_return_names_its_source(void) {
         returned++;
         LaneSpanId at, from;
         assert(notes[i].source != PLAN_NOTE_NONE && notes[i].source < notes[i].id);
-        assert(plan_note_by_id(plan, notes[i].id, &at) != NULL);
-        const PlanNote *source = plan_note_by_id(plan, notes[i].source, &from);
+        assert(test_plan_note_by_id(plan, notes[i].id, &at) != NULL);
+        const PlanNote *source = test_plan_note_by_id(plan, notes[i].source, &from);
         assert(source != NULL && from != at && source->operation != PLAN_NOTE_FROM_RETURN);
     }
     assert(returned > 0);
@@ -462,7 +462,7 @@ static void test_a_theme_links_melody_notes_to_its_motive(void) {
                 continue;
             }
             LaneSpanId from;
-            const PlanNote *source = plan_note_by_id(plan, note->source, &from);
+            const PlanNote *source = test_plan_note_by_id(plan, note->source, &from);
             assert(source != NULL && from != id && plan_lane_span_lane(plan, from) == PLAN_LANE_MELODY);
             /* the motive's note lives in a motive node's melody span, or in the idea's before it that an exact restatement repeats */
             PlanNodeKind kind = plan_node_kind(plan, plan_lane_span_owner(plan, from));

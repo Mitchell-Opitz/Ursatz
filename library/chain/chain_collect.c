@@ -388,8 +388,3 @@ const ChainResult *analysis_chain_result(const AnalysisChain *chain) {
 const ImportedScore *analysis_chain_score(const AnalysisChain *chain) {
     return chain != NULL ? chain->score : NULL;
 }
-
-void chain_result_take(AnalysisChain *chain, ChainResult *out) {
-    *out = chain->result;
-    result_reset(&chain->result);
-}

@@ -11,6 +11,7 @@
 #include <common/files.h>
 #include "items/layout.h"
 #include "ursatz_check.h"
+#include "command_context_support.h"
 
 #define OK URSATZ_OK
 
@@ -247,7 +248,7 @@ static void forget_item_in_subjects(WorkshopTxn *txn, const char *item_id) {
 
 /* A piece's links are dropped in a transaction, as the Library's delete does. */
 static UrsatzStatus forget_piece(const char *piece_id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.delete", "michelle", piece_id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.delete", piece_id, 0);
     UrsatzStatus result = workshop_subject_forget_piece(txn, piece_id);
     UrsatzError error;
     memset(&error, 0, sizeof(error));
@@ -364,6 +365,7 @@ static void remove_stores(void) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)getpid());
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)getpid());
     snprintf(g_piece, sizeof(g_piece), "piece-%d", (int)getpid());
@@ -382,6 +384,12 @@ int main(void) {
         fputs("{}", meta);
         fclose(meta);
     }
+
+    /* A write needs a command: with no context the service refuses (items/txn.h). */
+    command_context_support_end();
+    cJSON *refused = NULL;
+    check_quiet(workshop_material_project_create("Nobody", "", &refused) == URSATZ_ERR_INTERNAL && refused == NULL, "a write outside a command is refused");
+    command_context_support_begin();
 
     cJSON *project = NULL;
     check_quiet(workshop_material_project_create("Subjects", "", &project) == URSATZ_OK, "project");

@@ -87,38 +87,6 @@ static void test_member(void) {
 
 }
 
-static void test_region_key(void) {
-    /* Every key index maps to the tonic and mode the vocabulary names. */
-    for (int index = 0; index < COMMON_PRACTICE_KEY_COUNT; index++) {
-        CommonPracticeKeyRegion region;
-        memset(&region, 0, sizeof(region));
-        region.key_index = index;
-        SpelledKey key;
-        assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
-        assert(spelled_key_tonic_pitch_class(&key) == common_practice_key_index_tonic(index));
-        assert(key.id == NULL);
-        assert(key.material == common_practice_material(test_materials(), common_practice_key_index_mode(index)));
-    }
-    CommonPracticeKeyRegion region;
-    memset(&region, 0, sizeof(region));
-    SpelledKey key = {NULL, PITCH_LETTER_C, 0, test_materials()->major};
-    region.key_index = test_key_index_of(3, COMMON_PRACTICE_KEY_MINOR);
-    assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
-    assert(key.tonic_letter == PITCH_LETTER_E && key.tonic_accidental == -1 &&
-           key.material == test_materials()->natural_minor);
-    region.key_index = test_key_index_of(6, COMMON_PRACTICE_KEY_MAJOR);
-    assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
-    assert(key.tonic_letter == PITCH_LETTER_F && key.tonic_accidental == 1 &&
-           key.material == test_materials()->major);
-
-    region.key_index = 24;
-    assert(!common_practice_key_region_analysis_key(&region, test_materials(), &key));
-    assert(!common_practice_key_region_analysis_key(NULL, test_materials(), &key));
-    assert(!common_practice_key_region_analysis_key(&region, test_materials(), NULL));
-    region.key_index = 0;
-    assert(!common_practice_key_region_analysis_key(&region, NULL, &key));
-}
-
 static void test_signature_event(void) {
     MusicalTime time;
     assert(musical_time_make(2, 1, &time) == MUSICAL_TIME_OK);
@@ -145,7 +113,6 @@ static void test_signature_event(void) {
 
 int main(void) {
     test_member();
-    test_region_key();
     test_signature_event();
     printf("test_common_practice_analysis_note: ok\n");
     return 0;

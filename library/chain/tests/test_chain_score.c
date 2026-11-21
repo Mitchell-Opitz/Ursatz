@@ -137,10 +137,6 @@ static void test_a_score_with_no_notes(void) {
     const ChainResult *result = analysis_chain_result(chain);
     assert(result->entry_count == 0 && result->key_region_count == 0 && result->home_duration.den == 1);
     assert(analysis_chain_segments(chain) == NULL && analysis_chain_segment_count(chain) == 0);
-    ChainResult moved;
-    chain_result_take(chain, &moved);
-    assert(moved.entry_count == 0);
-    chain_result_destroy(&moved);
     analysis_chain_destroy(chain);
     imported_score_destroy(&score);
     /* A NULL chain reads as an empty result too. */

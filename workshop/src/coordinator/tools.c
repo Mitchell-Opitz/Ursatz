@@ -11,6 +11,7 @@
 #include "coordinator/command_sheet.h"
 #include "items/views.h"
 #include "coordinator/dispatch.h"
+#include <common/json.h>
 
 /* The tools (R-656): the calls that work on the files their params name and never on the data folder or the journal. dispatch.c lists them. */
 
@@ -23,10 +24,6 @@ WORKSHOP_HANDLER(workshop_t_versions) {
     }
     cJSON_DeleteItemFromObjectCaseSensitive(status, "data_dir");
     return workshop_reply_tree(reply, status, error);
-}
-
-static bool add_text(cJSON *object, const char *name, const char *text) {
-    return text ? cJSON_AddStringToObject(object, name, text) != NULL : cJSON_AddNullToObject(object, name) != NULL;
 }
 
 /* One Composer API entry (composition/composer_tool.h): params entry, request and kind; the reply holds the response's three texts and its
@@ -48,8 +45,8 @@ WORKSHOP_HANDLER(workshop_t_composer) {
     /* A refusal may still carry an answer (a plan that could not be completed lists what is stuck): the reply holds it too. */
     if (status == URSATZ_OK || response.json || response.plan_json || response.musicxml) {
         cJSON *object = workshop_reply_object(reply);
-        if (!object || !add_text(object, "json", response.json) || !add_text(object, "plan_json", response.plan_json) ||
-            !add_text(object, "musicxml", response.musicxml)) {
+        if (!object || !common_json_add_string_or_null(object, "json", response.json) || !common_json_add_string_or_null(object, "plan_json", response.plan_json) ||
+            !common_json_add_string_or_null(object, "musicxml", response.musicxml)) {
             status = workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
         } else if (response.midi) {
             workshop_reply_take_bytes(reply, response.midi, response.midi_size, "audio/midi");

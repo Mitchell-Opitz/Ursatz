@@ -6,39 +6,27 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/motion_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
     "first-interval",   "last-interval",    "max-gap",          "mostly-within-octave", "no-crossing",
     "parallel-octaves", "parallel-fifths",  "direct-perfects",  "interior-unisons",     "climax-coordination"};
 
-static bool rule_is_soft(StandardCounterpointHarmonicRule which) {
-    return which == STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE ||
-           which == STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS ||
-           which == STANDARD_COUNTERPOINT_HARMONIC_RULE_INTERIOR_UNISONS ||
-           which == STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_MOSTLY_WITHIN_OCTAVE] = true,
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS] = true,
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_INTERIOR_UNISONS] = true,
+    [STANDARD_COUNTERPOINT_HARMONIC_RULE_CLIMAX_COORDINATION] = true};
 
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointHarmonicRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "harmonic", NAMES, STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT, table_is_hard, g_pairs, g_built, evaluate_candidate, score_candidate};
+    .name = "harmonic", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointHarmonicRule which) {
     return rule_table_valid(&TABLE, (int)which);
 }
 
-const Preference *standard_counterpoint_harmonic_preference(StandardCounterpointHarmonicRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool standard_counterpoint_harmonic_rule_soft(StandardCounterpointHarmonicRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_harmonic_rule_name(StandardCounterpointHarmonicRule which) {
@@ -208,8 +196,6 @@ static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_harmonic_rule_holds((StandardCounterpointHarmonicRule)which, subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointPair)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointPair)
 
 bool standard_counterpoint_harmonic_check(const StandardCounterpointPair *pair, unsigned *hard_violations,
                                           unsigned *soft_violations) {

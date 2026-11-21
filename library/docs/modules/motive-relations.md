@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Files: `analysis/motive/motive_sketch.h/.c`, `analysis/motive/motive_relation.h/.c`. Tests: `analysis/tests/motive/test_motive_sketch.c`, `analysis/tests/motive/test_motive_sketch_value.c`, `analysis/tests/motive/test_motive_relation.c`, `analysis/tests/motive/test_motive_relation_params.c`. Tone labels for a sketch's notes: `docs/modules/motive-tone-roles.md`. Part of `analysis` (see `docs/modules/analysis.md`); includes only kernel headers (`core/rational.h`, `pitch/`, `semantics/`, `time/`) and C headers.
+Files: `analysis/motive/motive_sketch.h/.c`, `analysis/motive/motive_relation.h/.c` (table, cost, apply) and the operators in `motive_relation_{pitch,rhythm,interval,harmony,frame}.c`, sharing `motive_relation_internal.h`. Tests: `analysis/tests/motive/test_motive_sketch.c`, `analysis/tests/motive/test_motive_sketch_value.c`, `analysis/tests/motive/test_motive_relation.c`, `analysis/tests/motive/test_motive_relation_params.c`. Tone labels for a sketch's notes: `docs/modules/motive-tone-roles.md`. Part of `analysis` (see `docs/modules/analysis.md`); includes only kernel headers (`core/rational.h`, `pitch/`, `semantics/`, `time/`) and C headers.
 
 A theory-neutral catalog of the ways a motive can be made into a variant of itself, one relation per operation of a composer's variant registry, with an `apply` over a plain value. The variant recognizer searches chains of these relations. A registry row maps to a relation by name, with the same parameters in the same order. Citations are Schoenberg, *Fundamentals of Musical Composition*.
 

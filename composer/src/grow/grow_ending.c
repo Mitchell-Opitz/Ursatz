@@ -13,6 +13,7 @@
 #include "util/position.h"
 #include "motive/motive_internal.h"
 #include "util/util.h"
+#include <model/pitch/pitch_arithmetic.h>
 
 /*
  * The weights of the choices of a continuation by GrowDevelopment (ch. VIII, XI); the balanced rows are the default. A 0
@@ -339,8 +340,7 @@ static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType ca
     int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : composer_material_third(motive->material))) % 12;
     MotiveSketchNote *last = &motive->notes[motive->note_count - 1];
     int pitch = motive_pitch(motive, motive->note_count - 1);
-    int shift = util_pitch_class(want - pitch);
-    int nearest = shift > 6 ? shift - 12 : shift;
+    int nearest = pitch_class_step(pitch, want, true);
     last->pitch = pitch + (other ? (nearest > 0 ? nearest - 12 : nearest + 12) : nearest);
     return true;
 }
@@ -547,8 +547,7 @@ static bool head_residue(const GrowThemeSpec *spec, const Motive *base, int allo
                 Motive moved = residue;
                 if (other == 2) {
                     int from = moved.notes[1].pitch;
-                    int shift = util_pitch_class(moved.notes[2].pitch - from);
-                    moved.notes[2].pitch = from + (shift > 6 ? shift - 12 : shift);
+                    moved.notes[2].pitch = from + pitch_class_step(from, moved.notes[2].pitch, true);
                 }
                 if (!liquid_take_cadence(&moved, has_cadence, cadence, other == 1)) {
                     break;

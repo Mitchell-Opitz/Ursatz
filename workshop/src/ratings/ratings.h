@@ -28,7 +28,7 @@ UrsatzStatus workshop_ratings_sessions(cJSON **out, UrsatzError *error);
  * Records a batch (round 1 to 10000, a name of 1 to 8 letters and digits, up to 64 samples each {index, seed, status, files, settings}); a batch
  * recorded already is refused ("batch B of round 1 is recorded"). *out is the session after the change.
  */
-UrsatzStatus workshop_ratings_batch(const char *session, int round, const char *batch, const cJSON *samples, const char *actor, cJSON **out,
+UrsatzStatus workshop_ratings_batch(const char *session, int round, const char *batch, const cJSON *samples, cJSON **out,
                                     UrsatzError *error);
 
 /* Rates a sample (recorded with status ok) of a batch from 1 to 5; a new rating of it replaces the earlier one. *out_id is the rating's id (free it). */

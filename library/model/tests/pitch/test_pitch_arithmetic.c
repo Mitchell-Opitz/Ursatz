@@ -148,6 +148,72 @@ static void test_parse_rejects(void) {
     assert(!pitch_spelling_parse_name("C12345678901", &letter, &accidental, &(int){0}));
 }
 
+/* The windows of the line of fifths: each holds every pitch class once, and the four the library uses give the names the
+   tables had (sharps, flats, a major tonic, a minor tonic). */
+static void test_pitch_class_windows(void) {
+    static const struct {
+        int lowest;
+        const char *names[12];
+    } WINDOWS[] = {
+        {-1, {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}},
+        {-6, {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"}},
+        {-5, {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"}},
+        {-3, {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"}},
+    };
+    for (size_t w = 0; w < sizeof(WINDOWS) / sizeof(WINDOWS[0]); w++) {
+        for (int pc = 0; pc < 12; pc++) {
+            PitchLetter letter;
+            int accidental;
+            char name[8];
+            assert(pitch_class_spelling(pc, WINDOWS[w].lowest, &letter, &accidental));
+            assert(pitch_spelling_name(letter, accidental, name, sizeof(name)));
+            assert(strcmp(name, WINDOWS[w].names[pc]) == 0);
+            assert(pitch_class_of_letter(letter, accidental) == pc);
+            assert(strcmp(pitch_class_window_name(pc, WINDOWS[w].lowest), WINDOWS[w].names[pc]) == 0);
+        }
+    }
+    PitchLetter letter = PITCH_LETTER_C;
+    int accidental = 7;
+    assert(!pitch_class_spelling(12, -1, &letter, &accidental));
+    assert(!pitch_class_spelling(-1, -1, &letter, &accidental));
+    assert(!pitch_class_spelling(0, -7, &letter, &accidental));
+    assert(!pitch_class_spelling(0, 0, &letter, &accidental));
+    assert(!pitch_class_spelling(0, -1, NULL, &accidental));
+    assert(letter == PITCH_LETTER_C && accidental == 7);
+    assert(pitch_class_window_name(0, 0) == NULL);
+}
+
+static void test_pitch_name_of_midi(void) {
+    char name[8];
+    assert(pitch_name_of_midi(60, false, name, sizeof(name)) && strcmp(name, "C4") == 0);
+    assert(pitch_name_of_midi(61, false, name, sizeof(name)) && strcmp(name, "C#4") == 0);
+    assert(pitch_name_of_midi(61, true, name, sizeof(name)) && strcmp(name, "Db4") == 0);
+    assert(pitch_name_of_midi(0, false, name, sizeof(name)) && strcmp(name, "C-1") == 0);
+    assert(pitch_name_of_midi(127, true, name, sizeof(name)) && strcmp(name, "G9") == 0);
+    /* below MIDI 0 the octave truncates toward zero, as every copy did */
+    assert(pitch_name_of_midi(-1, false, name, sizeof(name)) && strcmp(name, "B-1") == 0);
+    assert(pitch_name_of_midi(-13, false, name, sizeof(name)) && strcmp(name, "B-2") == 0);
+    char small[3] = "zz";
+    assert(!pitch_name_of_midi(61, false, small, sizeof(small)));
+    assert(!pitch_name_of_midi(60, false, NULL, 8));
+}
+
+static void test_pitch_class_step(void) {
+    assert(pitch_class_step(0, 0, true) == 0 && pitch_class_step(0, 5, true) == 5 && pitch_class_step(0, 7, true) == -5);
+    assert(pitch_class_step(0, 6, true) == 6 && pitch_class_step(0, 6, false) == -6);
+    assert(pitch_class_step(0, 11, false) == -1 && pitch_class_step(11, 0, false) == 1);
+    /* a MIDI number or a negative one steps the same as its pitch class */
+    assert(pitch_class_step(60, 67, true) == -5 && pitch_class_step(-1, 1, true) == 2 && pitch_class_step(1, 7, false) == -6);
+    for (int from = 0; from < 12; from++) {
+        for (int to = 0; to < 12; to++) {
+            int up = pitch_class_step(from, to, true);
+            int down = pitch_class_step(from, to, false);
+            assert(up >= -5 && up <= 6 && down >= -6 && down <= 5);
+            assert((up - down) % 12 == 0 && ((from + up - to) % 12 + 12) % 12 == 0);
+        }
+    }
+}
+
 static void test_pitch_class_names(void) {
     static const char *const SHARPS[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     static const char *const FLATS[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
@@ -243,6 +309,9 @@ int main(void) {
     test_parse_accepts();
     test_parse_rejects();
     test_pitch_class_names();
+    test_pitch_class_windows();
+    test_pitch_name_of_midi();
+    test_pitch_class_step();
     test_letter_from_char();
     test_step_number_and_generic_size();
     test_direction_and_same_name();

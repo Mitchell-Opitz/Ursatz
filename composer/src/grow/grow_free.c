@@ -31,7 +31,6 @@
 #define MAX_BARLINES 4096
 /* Draws of a middle idea's development before the draw is given up. */
 #define IDEA_DRAWS 12
-#define DRAWS_PER_CANDIDATE 6
 /* Chords a phrase model has between its first and its last: up to two predominants and a dominant. */
 #define PHRASE_MODEL_SLOTS 4
 
@@ -134,38 +133,11 @@ static bool read_free(const Plan *plan, FillTarget target, FreeRequest *out) {
         plan_section_or_empty(plan, target.id)->leads_in) {
         return false;
     }
-    theme->section = target.id;
-    theme->span = plan_node_span(plan, target.id);
-    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
-    if (cadence) {
-        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
-    }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
-            theme->has_accompaniment = true;
-            theme->accompaniment = constraint->params.accompaniment;
-        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
-            theme->has_voicing = true;
-            theme->voicing = constraint->params.voicing;
-        }
-    }
-    LaneSpanId lane[2];
-    if (!cadence ||
-        (theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_HALF) ||
-        plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
-        return false;
-    }
-    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
-    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
-    if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
-        return false;
-    }
-    plan_meter_bar_length(&theme->meter, &theme->bar);
-    theme->source = grow_find_source(plan);
-    if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
-        theme->bar.num == 0 || !lay_ideas(theme, meter_start, &request)) {
+    Rational meter_start;
+    if (!grow_read_section_target(plan, target, theme, &meter_start) ||
+        (theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+         theme->cadence != CADENCE_TYPE_HALF) ||
+        theme->has_start_change || theme->has_end_change || !lay_ideas(theme, meter_start, &request)) {
         return false;
     }
     /* The chords: a phrase model if the section has room for one, else the cadential progression alone. */
@@ -254,14 +226,9 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
 
 /* The development of m0 the last idea is: m0 liquidated, as a theme's cadential idea is. */
 static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, MotiveRelationStep *dev, Motive *result) {
-    size_t count = source->note_count;
-    size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     memset(dev, 0, sizeof(*dev));
     dev->kind = MOTIVE_RELATION_LIQUIDATE;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, drop_most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
+    size_t drop = grow_draw_drop(rng, source->note_count);
     dev->value[0] = (long)drop;
     dev->value[2] = 1;
     return drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK && rational_cmp(result->length, room) <= 0;
@@ -312,43 +279,29 @@ static void free_label(const GrowFreeSpec *spec, char *label, size_t size) {
     }
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool free_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    (void)context;
+    return draw_free(plan, (const FreeRequest *)request, rng, (GrowFreeSpec *)spec);
+}
+
+static bool free_same_spec(const void *a, const void *b) {
+    return same_free((const GrowFreeSpec *)a, (const GrowFreeSpec *)b);
+}
+
+static void free_label_spec(const void *spec, char *out, size_t size) {
+    free_label((const GrowFreeSpec *)spec, out, size);
+}
+
+static const GrowSpecKind FREE_KIND = {sizeof(GrowFreeSpec), free_draw_spec, free_same_spec, free_label_spec};
+
 bool grow_free_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     FreeRequest request;
     if (!read_free(plan, target, &request)) {
         return true;
     }
-    size_t wanted = context && context->candidates > 0 ? context->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowFreeSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowFreeSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!draw_free(plan, &request, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_free(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        free_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, context, rng, &FREE_KIND, out);
 }
 
 /*
@@ -398,15 +351,7 @@ PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *sp
         return PLAN_ERR_BAD_PAYLOAD;
     }
     GrowBuild build;
-    memset(&build, 0, sizeof(build));
-    build.plan = plan;
-    build.request = &request.theme;
-    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    build.cadence.params.cadence = request.theme.cadence;
-    build.material = plan_node_parent(plan, request.theme.source);
-    build.material_span = plan_node_span(plan, build.material);
-    build.source = request.theme.source;
-    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.theme.bar, spec->count - 1);
+    grow_build_init(&build, plan, &request.theme, spec->count - 1);
 
     /* The phrase over the section, with the chords and the bass over all of it. */
     NodeId phrase;

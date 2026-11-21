@@ -17,6 +17,7 @@
 #include "items/store.h"
 #include "test_knowledge.h"
 #include "ursatz_check.h"
+#include "command_context_support.h"
 
 static const char *text(const cJSON *object, const char *name) {
   const cJSON *item = object ? cJSON_GetObjectItemCaseSensitive(object, name) : NULL;
@@ -136,6 +137,7 @@ static void test_piece(const char *theme_id) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
   if (system("rm -rf stage projects") != 0) {
     return 1;
   }

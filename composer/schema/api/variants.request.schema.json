@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variants.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/variants.request.schema.json",
   "title": "composer_api_variants request",
   "description": "A motive request (docs/api.md, Motive requests) with the variant options. Only input is required.",
   "type": "object",

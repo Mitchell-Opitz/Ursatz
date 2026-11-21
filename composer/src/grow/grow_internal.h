@@ -577,6 +577,52 @@ NodeId grow_find_theme(const Plan *plan, bool open_only);
 
 /* How many candidates are drawn for each one asked for before the search is given up. */
 #define DRAWS_PER_CANDIDATE 6
+
+/* One kind of spec the candidate loop draws (coda, liquidation, free phrase, theme): its size, the draw of one spec from the request
+   (the context is NULL or the shared one), whether two specs are the same, and the label of one. */
+typedef struct {
+    size_t size;
+    bool (*draw)(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec);
+    bool (*same)(const void *a, const void *b);
+    void (*label)(const void *spec, char *out, size_t size);
+} GrowSpecKind;
+
+/*
+ * The candidate loop of every grow generator: up to context->candidates (GROW_DEFAULT_CANDIDATES when none, at most 16) distinct
+ * specs, each added to out with its label and freed with it. A draw that fails and a repeat both count against the
+ * DRAWS_PER_CANDIDATE draws each candidate gets; one draw call per iteration. False on a failed allocation.
+ */
+bool grow_generate_specs(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, const GrowSpecKind *kind,
+                         FillCandidateList *out);
+
+/*
+ * What a coda, a liquidation and a free phrase read the same way of their target section (each keeps its own guard, role, cadence and key
+ * checks): the section and its span, the cadence if it has one, the accompaniment and voicing constraints, the one meter lane that holds
+ * the span (*meter_start is its start), the keys (grow_read_keys), the bar, the source motive and the cells per bar. False when the section
+ * has no cadence, no single meter lane over it, or no source; the caller judges the cadence's type and the key changes.
+ */
+bool grow_read_section_target(const Plan *plan, FillTarget target, GrowThemeRequest *theme, Rational *meter_start);
+
+/* Whether the span of theme is `bars` whole bars that start on a barline of the meter lane that starts at meter_start. */
+bool grow_whole_bars(const GrowThemeRequest *theme, Rational meter_start, size_t bars);
+
+/* Sets up the GrowBuild of a coda, a liquidation or a free phrase over theme: its plan, cadence, the material the source is in, and
+   the first bar of the material `bars` motive slots are free from (slot_base). */
+void grow_build_init(GrowBuild *build, Plan *plan, const GrowThemeRequest *theme, size_t bars);
+
+/* Whether each of count ideas is no longer than its span (the hard rule "an idea is longer than its bars"). */
+bool grow_ideas_fit(const Motive *const *ideas, const PlanSpan *spans, size_t count);
+
+/* How many notes a liquidation drops of a motive of count notes: one draw, 1 to half of them (at least 1), fewer than all. */
+size_t grow_draw_drop(FillRng *rng, size_t count);
+
+/*
+ * The residues of a motive (a coda's phrase 2, a retransition): the drop of grow_draw_drop, then the motive liquidated by it and
+ * once more by one note further. In the plan value[2] is 0, the least the operator keeps. False when a residue does not fit the bar
+ * or the form's range, or the second is not shorter than the first (the next is drawn); the drop is then not set.
+ */
+bool grow_draw_residues(const Motive *source, FillRng *rng, Rational bar, Motive *liquidated, Motive *repeated,
+                        MotiveRelationStep *liquidation, MotiveRelationStep *repetition, size_t *drop);
 /* The most gaps Given material leaves in one idea or one subphrase for one lane. */
 #define GROW_MAX_GAPS 16
 

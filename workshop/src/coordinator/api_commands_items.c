@@ -81,13 +81,14 @@ WORKSHOP_HANDLER(workshop_c_item_create) {
     if (!version_body) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
-    if (!workshop_motif_tonic_ok(version_body)) {
-        cJSON_Delete(version_body);
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/body", "motifs are written with C as the tonic");
-    }
     char analysis_error[WORKSHOP_MOTIF_ANALYSIS_ERROR_SIZE];
     char refusal[512] = "";
     char refusal_path[128] = "";
+    WorkshopMotifAnalysis stored_check = workshop_motif_check_stored(version_body, refusal, sizeof(refusal), refusal_path, sizeof(refusal_path));
+    if (stored_check != WORKSHOP_MOTIF_ANALYSIS_DONE) {
+        cJSON_Delete(version_body);
+        return analysis_failure(stored_check, refusal, refusal_path, error);
+    }
     WorkshopMotifAnalysis analysis =
         workshop_motif_analyze_body(version_body, NULL, analysis_error, refusal, sizeof(refusal), refusal_path, sizeof(refusal_path));
     if (analysis != WORKSHOP_MOTIF_ANALYSIS_DONE) {
@@ -160,9 +161,6 @@ WORKSHOP_HANDLER(workshop_c_item_save) {
     if (bad || !cJSON_IsObject(params_body)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "an object body is required; note is a string");
     }
-    if (!workshop_motif_tonic_ok(params_body)) {
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/body", "motifs are written with C as the tonic");
-    }
     cJSON *version_body = cJSON_Duplicate(params_body, true);
     if (!version_body) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
@@ -170,6 +168,11 @@ WORKSHOP_HANDLER(workshop_c_item_save) {
     char analysis_error[WORKSHOP_MOTIF_ANALYSIS_ERROR_SIZE];
     char refusal[512] = "";
     char refusal_path[128] = "";
+    WorkshopMotifAnalysis stored_check = workshop_motif_check_stored(version_body, refusal, sizeof(refusal), refusal_path, sizeof(refusal_path));
+    if (stored_check != WORKSHOP_MOTIF_ANALYSIS_DONE) {
+        cJSON_Delete(version_body);
+        return analysis_failure(stored_check, refusal, refusal_path, error);
+    }
     /* The previous version tells whether proposed segments are to be proposed again (R-312). */
     cJSON *previous_meta = NULL;
     cJSON *previous_body = NULL;

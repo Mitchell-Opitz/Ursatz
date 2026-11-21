@@ -154,6 +154,21 @@ static void test_midi(void) {
     assert(composer_api_motive_from_midi(test_context(), bytes, size, "{\"pickup\":\"1/2\"}", NULL, &response) == URSATZ_OK);
     assert(strstr(response.json, "\"pickup\": \"1/2\""));
     composer_response_destroy(&response);
+
+    /* write_in_c (R-179): the key the file is in and its notes with C as the tonic in the same mode; nothing is added without it. */
+    assert(composer_api_motive_from_midi(test_context(), bytes, size, "{}", NULL, &response) == URSATZ_OK);
+    assert(!strstr(response.json, "key_text") && !strstr(response.json, "notes_text_in_c"));
+    composer_response_destroy(&response);
+    assert(composer_api_motive_from_midi(test_context(), bytes, size, "{\"write_in_c\":true}", NULL, &response) == URSATZ_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    const cJSON *found = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+    const cJSON *key_text = cJSON_GetObjectItemCaseSensitive(found, "key_text");
+    const cJSON *in_c = cJSON_GetObjectItemCaseSensitive(found, "notes_text_in_c");
+    assert(cJSON_IsString(key_text) && strcmp(key_text->valuestring, "D minor") == 0);
+    assert(cJSON_IsString(in_c) && in_c->valuestring[0] != '\0');
+    assert(strcmp(in_c->valuestring, cJSON_GetObjectItemCaseSensitive(found, "notes_text")->valuestring) != 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
     free(bytes);
 
     /* Ten bytes that are not a MIDI file. */

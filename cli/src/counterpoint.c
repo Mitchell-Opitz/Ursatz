@@ -1,5 +1,6 @@
 #include "counterpoint.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include "cli_tools.h"
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "motive_input.h"
 #include "workflow.h"
 
@@ -35,32 +37,36 @@ typedef struct {
 
 /* --- reading the options -------------------------------------------------- */
 
+static const CliOptionRow ROWS[] = {
+    {"--above", offsetof(Options, above), true},
+    {"--below", offsetof(Options, below), true},
+    {"--species", offsetof(Options, species_text), false},
+    {"--key", offsetof(Options, key_text), false},
+    {"--material", offsetof(Options, material_text), false},
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--suggest", offsetof(Options, suggest_text), false},
+    {"--out", offsetof(Options, out_path), false},
+    {"--midi", offsetof(Options, midi_path), false},
+    {"--musicxml", offsetof(Options, musicxml_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--format", offsetof(Options, format_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->above = cli_switch(args, "--above");
-    options->below = cli_switch(args, "--below");
-    options->species_text = cli_value(args, "--species");
-    options->key_text = cli_value(args, "--key");
-    options->material_text = cli_value(args, "--material");
-    options->meter_text = cli_value(args, "--meter");
-    options->seed_text = cli_value(args, "--seed");
-    options->suggest_text = cli_value(args, "--suggest");
-    options->out_path = cli_value(args, "--out");
-    options->midi_path = cli_value(args, "--midi");
-    options->musicxml_path = cli_value(args, "--musicxml");
-    options->tempo_text = cli_value(args, "--tempo");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->format_text = cli_value(args, "--format");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     return 0;
 }
 
 static int check_options(Options *options) {
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "counterpoint needs a line\n%s", cli_usage_of("counterpoint"));
+        return cli_needs("counterpoint", "a line", true);
     }
     if (!options->species_text || !options->key_text || !options->meter_text) {
-        return cli_fail(CLI_EXIT_USAGE, "counterpoint needs --species, --key and --meter (see --help)");
+        return cli_needs("counterpoint", "--species, --key and --meter", false);
     }
     if (options->above && options->below) {
         return cli_fail(CLI_EXIT_USAGE, "--above and --below cannot both be given");
@@ -127,6 +133,11 @@ static void print_line(const cJSON *notes, char (*names)[8], long long bar_num, 
         long long length_num = (long long)cli_json_number(duration, "num");
         long long length_den = (long long)cli_json_number(duration, "den");
         char length[24];
+        if (start_den <= 0 || length_den <= 0) {
+            /* a time with no denominator cannot be placed: the note is left out, its name is not reused */
+            index++;
+            continue;
+        }
         if (start_num * at_den > at_num * start_den) {
             long long gap_num = start_num * at_den - at_num * start_den;
             long long gap_den = start_den * at_den;

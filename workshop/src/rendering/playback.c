@@ -45,9 +45,10 @@ UrsatzStatus workshop_playback_of_midi_bytes(const uint8_t *bytes, size_t size, 
     if (!name) {
         return workshop_fail(URSATZ_ERR_ALLOC, NULL);
     }
-    int length = snprintf(path, sizeof(path), "%s/%s.mid", tmp_dir, name);
+    char leaf[160];
+    int length = snprintf(leaf, sizeof(leaf), "%s.mid", name);
     free(name);
-    if (length < 0 || length >= (int)sizeof(path) || !(common_dir_make(tmp_dir, NULL) == URSATZ_OK) ||
+    if (length < 0 || length >= (int)sizeof(leaf) || !common_path_join(path, sizeof(path), tmp_dir, leaf) || !(common_dir_make(tmp_dir, NULL) == URSATZ_OK) ||
         !(common_file_write_atomic(path, bytes, size, NULL) == URSATZ_OK)) {
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }

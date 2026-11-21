@@ -92,17 +92,16 @@ by the semitones above the tonic), `style_label_join` (the `motive-degrees` and 
 ```
 
 Statistics are sorted by category, then label, and the same profile always writes the same bytes. `--out` defaults to
-`<corpus output dir>/style-model.json`. The writer (`style_model_file_write(profile, name, model_version, path)`) takes the version of the producer as an argument;
-the Analyzer passes its own. The reader (`style_model_file_read`) rejects another schema or version, an
+`<corpus output dir>/style-model.json`. The printer (`style_model_file_text(profile, name, model_version, &text)`) takes the version of the producer as an argument;
+the Analyzer passes its own, and the workshop writes the text (`workshop_style_model_write`). The parser (`style_model_file_parse`, over the text of a file the program read) rejects another schema or version, an
 unknown dimension or category, a category under the wrong dimension, and a total that is not the sum of the counts.
 It builds a Ursatz `StyleModel` through `style_model_from_statistics`. The library has no id generator, so the id is
-`style-model-` and the 16 hex digits of the FNV-1a 64 hash of the file's bytes: the same file always gives the same id.
+`style-model-` and the 16 hex digits of the FNV-1a 64 hash of the text's bytes: the same file always gives the same id.
 
 ## Leaving categories out
 
-`style_model_file_read_without(path, categories, count, &model, &pieces)` reads a model file and drops the named
-categories before the model is built, so the model holds no statistics of them (`style_model_file_read` is this with
-none). An unknown category name is `STYLE_MODEL_FILE_ERR_ARGUMENT`. `--compare-styles` takes `--without <category>`,
+`style_model_file_parse(text, categories, count, &model, &pieces)` parses a model file's text and drops the named
+categories before the model is built, so the model holds no statistics of them (none is count 0). An unknown category name is `STYLE_MODEL_FILE_ERR_ARGUMENT`. `--compare-styles` takes `--without <category>`,
 repeatable, and drops the categories from both models; an unknown name is exit code 1. The Composer reads styles
 without the four motive categories until it uses them as preferences. To measure a fragment against such a model, use
 `style_reference_create` with the same list (`theory/style/style_reference.h`); the plain call

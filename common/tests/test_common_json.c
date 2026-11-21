@@ -175,13 +175,142 @@ static void test_rational_writers(void) {
     free(printed);
     cJSON_Delete(object);
 
-    char text[16];
-    assert(common_json_rational_text(-3, 4, text, sizeof(text)) && strcmp(text, "-3/4") == 0);
-    char tight[8];
-    assert(!common_json_rational_text(123456789, 987654321, tight, sizeof(tight)));
-    cJSON *string = cJSON_CreateString(text);
+    cJSON *string = cJSON_CreateString("-3/4");
     assert(common_json_rational_read(string, COMMON_RATIONAL_TEXT, &n, &d) && n == -3 && d == 4);
     cJSON_Delete(string);
+}
+
+static void test_string_adders(void) {
+    cJSON *object = cJSON_CreateObject();
+    assert(common_json_add_string_or_null(object, "a", "text") && common_json_add_string_or_null(object, "b", NULL));
+    assert(strcmp(common_json_string(object, "a"), "text") == 0 && cJSON_IsNull(common_json_member(object, "b")));
+    assert(common_json_add_string_if(object, "c", "here") && common_json_add_string_if(object, "d", NULL));
+    assert(strcmp(common_json_string(object, "c"), "here") == 0 && common_json_member(object, "d") == NULL);
+    cJSON_Delete(object);
+}
+
+enum { TEST_BAD = 7, TEST_OTHER = 9 };
+
+static void reader_for(CommonJsonReader *reader, char *path, char *message) {
+    common_json_reader_init(reader, path, 128, message, 160, TEST_BAD, "missing required member");
+}
+
+static void test_reader_refusals(void) {
+    char path[128] = "", message[160] = "";
+    CommonJsonReader reader;
+    reader_for(&reader, path, message);
+    assert(!reader.failed);
+    assert(!common_json_bad(&reader, "a.b", "first"));
+    assert(reader.failed && reader.code == TEST_BAD && strcmp(path, "a.b") == 0 && strcmp(message, "first") == 0);
+    /* the first refusal stays */
+    assert(!common_json_refuse(&reader, TEST_OTHER, "c", "second %d", 2));
+    assert(reader.code == TEST_BAD && strcmp(path, "a.b") == 0 && strcmp(message, "first") == 0);
+    /* a refusal needs no destination */
+    CommonJsonReader quiet;
+    common_json_reader_init(&quiet, NULL, 0, NULL, 0, TEST_BAD, "missing");
+    assert(!common_json_refuse(&quiet, TEST_OTHER, "x", "no place %s", "to go"));
+    assert(quiet.failed && quiet.code == TEST_OTHER);
+    reader_for(&reader, path, message);
+    assert(!common_json_refuse(&reader, TEST_OTHER, "p", "%d of %s", 3, "four"));
+    assert(reader.code == TEST_OTHER && strcmp(message, "3 of four") == 0);
+}
+
+static void test_reader_paths(void) {
+    char out[16];
+    common_json_child_path(out, sizeof(out), "", "key");
+    assert(strcmp(out, "key") == 0);
+    common_json_child_path(out, sizeof(out), "work.lines", "id");
+    assert(strcmp(out, "work.lines.id") == 0);
+    common_json_index_path(out, sizeof(out), "notes", 12);
+    assert(strcmp(out, "notes[12]") == 0);
+    common_json_child_path(out, sizeof(out), "abcdefghijklmnop", "q");
+    assert(strlen(out) == 15);
+}
+
+static void test_reader_members(void) {
+    char path[128], message[160];
+    CommonJsonReader reader;
+    cJSON *doc = cJSON_Parse("{\"obj\":{},\"arr\":[1],\"n\":5,\"f\":1.5,\"b\":true,\"s\":\"x\"}");
+    assert(doc != NULL);
+
+    reader_for(&reader, path, message);
+    assert(common_json_require(&reader, doc, "", "n") != NULL && !reader.failed);
+    assert(common_json_require(&reader, doc, "top", "gone") == NULL);
+    assert(reader.failed && reader.code == TEST_BAD && strcmp(path, "top.gone") == 0 && strcmp(message, "missing required member") == 0);
+
+    reader_for(&reader, path, message);
+    assert(common_json_expect_object(&reader, common_json_member(doc, "obj"), "obj") && !reader.failed);
+    assert(!common_json_expect_object(&reader, common_json_member(doc, "n"), "n"));
+    assert(strcmp(message, "expected an object") == 0 && strcmp(path, "n") == 0);
+
+    char at[128];
+    reader_for(&reader, path, message);
+    assert(common_json_require_array(&reader, doc, "d", "arr", at, sizeof(at)) != NULL && strcmp(at, "d.arr") == 0);
+    assert(common_json_require_array(&reader, doc, "d", "n", at, sizeof(at)) == NULL && strcmp(message, "expected an array") == 0);
+    assert(strcmp(path, "d.n") == 0);
+    reader_for(&reader, path, message);
+    assert(common_json_require_array(&reader, doc, "", "none", at, sizeof(at)) == NULL && strcmp(message, "missing required member") == 0);
+
+    long long whole = 0;
+    reader_for(&reader, path, message);
+    assert(common_json_require_whole(&reader, doc, "", "n", 0, 10, &whole) && whole == 5);
+    assert(!common_json_require_whole(&reader, doc, "", "n", 6, 10, &whole));
+    assert(strcmp(message, "expected an integer from 6 to 10") == 0 && strcmp(path, "n") == 0);
+    reader_for(&reader, path, message);
+    assert(!common_json_require_whole(&reader, doc, "", "f", 0, 10, &whole) && strcmp(message, "expected an integer from 0 to 10") == 0);
+    reader_for(&reader, path, message);
+    assert(!common_json_require_whole(&reader, doc, "", "s", 0, 10, &whole) && strcmp(message, "expected a number") == 0);
+    reader_for(&reader, path, message);
+    assert(!common_json_require_whole(&reader, doc, "", "none", 0, 10, &whole) && strcmp(path, "none") == 0);
+    reader_for(&reader, path, message);
+    assert(common_json_read_whole(&reader, common_json_member(doc, "n"), "n", 5, 5, &whole) && !reader.failed);
+
+    bool flag = false;
+    reader_for(&reader, path, message);
+    assert(common_json_require_bool(&reader, doc, "", "b", &flag) && flag);
+    assert(!common_json_require_bool(&reader, doc, "", "n", &flag) && strcmp(message, "expected true or false") == 0);
+    reader_for(&reader, path, message);
+    assert(!common_json_require_bool(&reader, doc, "", "none", &flag) && strcmp(message, "missing required member") == 0);
+    cJSON_Delete(doc);
+}
+
+static void test_reader_time(void) {
+    char path[128], message[160];
+    CommonJsonReader reader;
+    long long num = 0, den = 0;
+    const char *shape = "expected a time";
+    cJSON *good = cJSON_Parse("{\"num\":6,\"den\":8}");
+    reader_for(&reader, path, message);
+    assert(common_json_read_time(&reader, good, "t", 1000, shape, &num, &den) && num == 6 && den == 8);
+    cJSON_Delete(good);
+
+    cJSON *text = cJSON_Parse("\"1/4\"");
+    reader_for(&reader, path, message);
+    assert(!common_json_read_time(&reader, text, "t", 1000, shape, &num, &den) && strcmp(message, shape) == 0 && strcmp(path, "t") == 0);
+    cJSON_Delete(text);
+
+    cJSON *big = cJSON_Parse("{\"num\":5000,\"den\":1}");
+    reader_for(&reader, path, message);
+    assert(!common_json_read_time(&reader, big, "t", 1000, shape, &num, &den));
+    assert(strcmp(path, "t.num") == 0 && strcmp(message, "expected an integer from -1000 to 1000") == 0);
+    cJSON_Delete(big);
+
+    cJSON *zero = cJSON_Parse("{\"num\":1,\"den\":0}");
+    reader_for(&reader, path, message);
+    assert(!common_json_read_time(&reader, zero, "t", 1000, shape, &num, &den));
+    assert(strcmp(path, "t.den") == 0 && strcmp(message, "expected an integer from 1 to 1000") == 0);
+    cJSON_Delete(zero);
+
+    cJSON *missing = cJSON_Parse("{\"num\":1}");
+    reader_for(&reader, path, message);
+    assert(!common_json_read_time(&reader, missing, "t", 1000, shape, &num, &den));
+    assert(strcmp(path, "t.den") == 0 && strcmp(message, "missing required member") == 0);
+    cJSON_Delete(missing);
+
+    cJSON *negative = cJSON_Parse("{\"num\":-3,\"den\":2}");
+    reader_for(&reader, path, message);
+    assert(common_json_read_time(&reader, negative, "t", 1000, shape, &num, &den) && num == -3 && den == 2);
+    cJSON_Delete(negative);
 }
 
 int main(void) {
@@ -191,5 +320,10 @@ int main(void) {
     test_rational_forms();
     test_rational_denominators();
     test_rational_writers();
+    test_string_adders();
+    test_reader_refusals();
+    test_reader_paths();
+    test_reader_members();
+    test_reader_time();
     return 0;
 }

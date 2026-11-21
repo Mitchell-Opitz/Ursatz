@@ -15,7 +15,7 @@
 #include <plan/plan.h>
 
 /*
- * A style the Composer prefers (R-080): a StyleModel file the Analyzer wrote from a corpus (style_model_file_write),
+ * A style the Composer prefers (R-080): a StyleModel file the Analyzer wrote from a corpus (workshop_style_model_write),
  * read through the Analyzer's own reader and kept as, per category, how often each label was seen. A style is a
  * count, not a rule (Laws 12 and 13): it is used to prefer one candidate over another, never to reject one.
  */
@@ -36,7 +36,7 @@ const char *composer_style_result_name(ComposerStyleResult result);
 
 /*
  * Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. The named categories are
- * left out (style_model_file_read_without): the style holds no statistics of them, and keeps the list. A category that is
+ * left out (style_model_file_parse): the style holds no statistics of them, and keeps the list. A category that is
  * not one the Analyzer defines is COMPOSER_STYLE_ERR_ARGUMENT. NULL and 0 keep every category.
  */
 ComposerStyleResult composer_style_load_without(const char *path, const char *const *categories, size_t count,

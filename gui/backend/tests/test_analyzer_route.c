@@ -32,6 +32,7 @@
 #include "server.h"
 #include "coordinator/services.h"
 #include "test_http.h"
+#include "../../../workshop/tests/command_context_support.h"
 
 /* The full test serves on 18766, the smoke run (the argument smoke) on 18778, so both can run at once. */
 static const char *g_port = "18766";
@@ -897,6 +898,7 @@ static void check_import_cache(const char *id) {
 }
 
 int main(int argc, char **argv) {
+    command_context_support_begin(); /* the route tests call some services directly: a write needs a command */
   const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
   if (smoke) {
     g_port = "18778";

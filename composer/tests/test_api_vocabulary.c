@@ -142,6 +142,19 @@ static void test_lists(void) {
         list(NAMES[i]);
     }
     assert(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups")));
+    /* The defaults a form starts with (API 4.4). */
+    const cJSON *form_defaults = cJSON_GetObjectItemCaseSensitive(vocabulary, "defaults");
+    const cJSON *motif_defaults = cJSON_GetObjectItemCaseSensitive(form_defaults, "motif");
+    const cJSON *theme_defaults = cJSON_GetObjectItemCaseSensitive(form_defaults, "theme");
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(form_defaults, "meter")->valuestring, "4/4") == 0);
+    assert(cJSON_GetArraySize(list("theme_form_members")) == 10 && strcmp(value_of(cJSON_GetArrayItem(list("theme_form_members"), 0)), "into") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(motif_defaults, "form")->valuestring, "full") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(motif_defaults, "notes")->valuestring, "C4:q") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(motif_defaults, "pickup")->valuestring, "0") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "into")->valuestring, "sentence") == 0);
+    assert(cJSON_GetObjectItemCaseSensitive(theme_defaults, "bars")->valueint == 8);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "cadence")->valuestring, "PAC") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "development")->valuestring, "balanced") == 0);
     assert(cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"));
 
     /* The functions a game loop section can be (R-510): transition on intro and body, coda on ending. */
@@ -216,6 +229,8 @@ static void test_lists(void) {
         const char *value = value_of(meter);
         assert(cJSON_IsNumber(beats) && beats->valueint == (value[0] == '6' ? 6 : value[0] - '0'));
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(meter, "chord_onset_step")->valuestring, "1/2") == 0);
+        const cJSON *unit = cJSON_GetObjectItemCaseSensitive(meter, "beat_unit");
+        assert(cJSON_IsNumber(unit) && unit->valueint == atoi(strchr(value, '/') + 1));
         if (strcmp(value, "4/4") == 0) {
             assert(second && second->valueint == 2);
         } else if (strcmp(value, "6/8") == 0) {
@@ -807,7 +822,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "4.3") == 0);
+    assert(strcmp(composer_api_version(), "4.4") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

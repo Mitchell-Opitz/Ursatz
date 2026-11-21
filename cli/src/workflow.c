@@ -90,37 +90,35 @@ bool cli_add_target(cJSON *request, const CliTargetOptions *target) {
 #define PATH_SIZE 1024
 
 int cli_write_files(const CliFile *files, size_t count) {
-    char (*names)[PATH_SIZE + 8] = calloc(count ? count : 1, PATH_SIZE + 8);
-    if (!names) {
+    CliPendingFile *pending_files = calloc(count ? count : 1, sizeof(*pending_files));
+    if (!pending_files) {
         return cli_fail(CLI_EXIT_WRITE, "out of memory");
     }
     size_t pending = 0;
     int status = 0;
     for (size_t i = 0; i < count && status == 0; i++) {
         const CliFile *file = &files[i];
-        if (strlen(file->path) >= PATH_SIZE || snprintf(names[i], PATH_SIZE + 8, "%s.tmp", file->path) >= PATH_SIZE + 8) {
+        CliPendingFile *entry = &pending_files[i];
+        if (strlen(file->path) >= sizeof(entry->final_path) ||
+            snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", file->path) >= (int)sizeof(entry->temporary)) {
             status = cli_fail(CLI_EXIT_WRITE, "file name '%s' is too long", file->path);
             break;
         }
+        snprintf(entry->final_path, sizeof(entry->final_path), "%s", file->path);
         pending++;
         if (file->kind == CLI_FILE_PLAN) {
-            status = cli_write_plan_object(file->plan, names[i], file->path);
-        } else if (!cli_write_bytes(names[i], file->data, file->size)) {
-            status = file->detailed ? cli_fail(CLI_EXIT_WRITE, "cannot write '%s': could not write '%s'", file->path, names[i])
+            status = cli_write_plan_object(file->plan, entry->temporary, file->path);
+        } else if (!cli_write_bytes(entry->temporary, file->data, file->size)) {
+            status = file->detailed ? cli_fail(CLI_EXIT_WRITE, "cannot write '%s': could not write '%s'", file->path, entry->temporary)
                                     : cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", file->path);
         }
     }
-    for (size_t i = 0; status == 0 && i < count; i++) {
-        if (rename(names[i], files[i].path) != 0) {
-            status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", files[i].path);
-        }
+    if (status == 0) {
+        status = cli_pending_commit(pending_files, count);
+    } else {
+        cli_discard_pending(pending_files, pending);
     }
-    if (status != 0) {
-        for (size_t i = 0; i < pending; i++) {
-            remove(names[i]);
-        }
-    }
-    free(names);
+    free(pending_files);
     return status;
 }
 

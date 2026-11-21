@@ -16,7 +16,7 @@
 #include "model/time/meter_map.h"
 #include "model/time/score_time.h"
 
-int standard_form_motive_kind_rank(StandardFormMotiveKind kind) {
+int standard_form_motive_kind_rank(MotiveOccurrenceKind kind) {
     return motive_occurrence_kind_rank(kind);
 }
 
@@ -95,7 +95,7 @@ static int compare_cands(const void *a, const void *b) {
 
 /* The kind of an occurrence of the prototype's pattern: the same semitone intervals from the same first pitch is EXACT, from
    another pitch REAL; with other semitones (a generic pattern only) TONAL. */
-static StandardFormMotiveKind pattern_kind(const StandardFormMotiveShape *proto, const StandardFormMotiveShape *other) {
+static MotiveOccurrenceKind pattern_kind(const StandardFormMotiveShape *proto, const StandardFormMotiveShape *other) {
     if (memcmp(proto->semitones, other->semitones, proto->intervals * sizeof(int)) != 0) {
         return MOTIVE_OCCURRENCE_TONAL;
     }
@@ -302,8 +302,8 @@ static int compare_recs_by_window(const void *a, const void *b) {
     if (left->occ.n != right->occ.n) {
         return left->occ.n < right->occ.n ? -1 : 1;
     }
-    int rank_left = standard_form_motive_kind_rank((StandardFormMotiveKind)left->occ.kind);
-    int rank_right = standard_form_motive_kind_rank((StandardFormMotiveKind)right->occ.kind);
+    int rank_left = standard_form_motive_kind_rank((MotiveOccurrenceKind)left->occ.kind);
+    int rank_right = standard_form_motive_kind_rank((MotiveOccurrenceKind)right->occ.kind);
     if (rank_left != rank_right) {
         return rank_left - rank_right;
     }
@@ -320,8 +320,8 @@ static int compare_recs_by_quality(const void *a, const void *b) {
     if (left->fam != right->fam) {
         return left->fam < right->fam ? -1 : 1;
     }
-    int rank_left = standard_form_motive_kind_rank((StandardFormMotiveKind)left->occ.kind);
-    int rank_right = standard_form_motive_kind_rank((StandardFormMotiveKind)right->occ.kind);
+    int rank_left = standard_form_motive_kind_rank((MotiveOccurrenceKind)left->occ.kind);
+    int rank_right = standard_form_motive_kind_rank((MotiveOccurrenceKind)right->occ.kind);
     if (rank_left != rank_right) {
         return rank_left - rank_right;
     }

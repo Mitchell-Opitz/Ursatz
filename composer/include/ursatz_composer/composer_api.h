@@ -46,10 +46,11 @@
  * Composer's own, and the versions response gives "producer_key" in place of "ursatz_commit".
  * 4.3 adds waive and reverse to the melody group of the preferences, and preference_keys and rules to the vocabulary (R-672),
  * the candidates group of the preferences and the random motive's avoid (R-673).
+ * 4.4 adds write_in_c to the MIDI motive, and meter beat units and defaults to the vocabulary (R-693).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 3
+#define COMPOSER_API_VERSION_MINOR 4
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -92,8 +93,8 @@ UrsatzStatus composer_api_versions(ComposerResponse *out);
 
 /*
  * Renders a plan once and exports it. Request: {"plan": <plan object>, "midi": bool, "musicxml": bool, "tempo": <quarter
- * notes per minute, 20 to 400, a whole number or a string like "195/2", or null>, "plain_midi": bool}; each flag defaults
- * to false. "loop": {"start": "2/1", "end": "14/1"} (times in whole notes from the start of the plan) puts the loopStart and
+ * notes per minute, 20 to 400, a whole number or a string like "195/2", or null>, "plain_midi": bool, "plan_file": bool}; each flag defaults
+ * to false; "plan_file" fills plan_json with the plan as the library writes plan files. "loop": {"start": "2/1", "end": "14/1"} (times in whole notes from the start of the plan) puts the loopStart and
  * loopEnd markers into the MIDI file. midi/midi_size and musicxml are filled for the formats asked for. json: {"skipped":
  * [{"span", "lane", "reason"}]}, the lane spans the render left out.
  */
@@ -394,6 +395,7 @@ UrsatzStatus composer_api_forms(ComposerResponse *out);
  * composer_api_theme), "piece" (the piece request object, docs/piece-request.md, not the wrapper of composer_api_piece; one of a form with sizes
  * gets the "bars" and "count" of the size it chose and no section defaults) or
  * "random_motive" (of composer_api_random_motive). json: {"request": <the request with the Composer's defaults filled>}: a
+ * motive with "stored": true is refused unless its key is C major or C minor (path /params/body, R-179); a
  * motive gets its "meter", "role", "input" "format" and "form" when it has none and its "harmony" as [{"numeral", "onset"}]
  * (the onset in beats of the meter, as "3/2"); a piece gets the "cadence" of every section that has none and the default
  * ending section; a random motive gets its "seed" and the "mode" and "meter" a "random" drew; a theme comes back as it is

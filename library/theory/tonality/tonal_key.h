@@ -34,6 +34,11 @@ int standard_tonality_material_degree_semitone(const PitchMaterial *material, in
 /* The material on `center` (any integer, reduced to 0 to 11) as a 12-bit mask over pitch classes; 0 for NULL (pitch_material_mask). */
 unsigned standard_tonality_material_pitch_classes(int center, const PitchMaterial *material);
 
+/* The next pitch above (direction > 0) or below (direction < 0) `pitch` whose pitch class is in `mask` (bit n set for pitch class n,
+   as the two masks below make). The pitch itself for a mask with no pitch class, or for a direction of 0. A caller whose mask is
+   relative to a tonic passes the pitch above the tonic and adds the tonic back. */
+int standard_tonality_mask_step(unsigned mask, int pitch, int direction);
+
 /* The same mask plus the leading tone, pitch class center + 11. 0 for NULL. */
 unsigned standard_tonality_material_pitch_classes_with_leading_tone(int center, const PitchMaterial *material);
 

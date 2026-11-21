@@ -16,6 +16,7 @@
 #include "motive/motive_internal.h"
 #include "structure/plan_util.h"
 #include "util/util.h"
+#include <model/pitch/pitch_arithmetic.h>
 
 /*
  * The plans of a form whose sections the request gives (the game loop, R-419): the loop version and the ending version
@@ -325,8 +326,7 @@ static bool theme_motive(const PieceRequest *request, const PieceSection *sectio
         composer_key_is_minor(&key) != composer_key_is_minor(&request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
-    int shift = util_pitch_class(spelled_key_tonic_pitch_class(&request->key) - spelled_key_tonic_pitch_class(&key));
-    shift = shift > 6 ? shift - 12 : shift;
+    int shift = pitch_class_step(spelled_key_tonic_pitch_class(&key), spelled_key_tonic_pitch_class(&request->key), true);
     for (size_t i = 0; i < out->note_count; i++) {
         if (out->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
             continue;

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variant_operations.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/variant_operations.schema.json",
   "title": "composer_api_variant_operations response",
   "description": "The operation registry: what `ursatz variants --list-ops --format json` prints.",
   "type": "object",

@@ -258,7 +258,9 @@ static UrsatzStatus resolve_plan(cJSON *fill, const char *section, const char *d
     if (!workshop_material_version_dir(common_json_string(reference, "item_id"), reference_version(reference), source, sizeof(source))) {
         return ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, path, "a theme fill names no version");
     }
-    snprintf(plan, sizeof(plan), "%s/%s", source, file);
+    if (!common_path_join(plan, sizeof(plan), source, file)) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, path, "the file name of the theme fill is too long");
+    }
     char target[PATH_BYTES + 64];
     if (!dir) {
         snprintf(target, sizeof(target), "%s", plan);

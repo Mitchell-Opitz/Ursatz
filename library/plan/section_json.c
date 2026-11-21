@@ -1,4 +1,4 @@
-#include "plan/section_json.h"
+#include "plan/section_json_internal.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -18,14 +18,6 @@
 #define USE_O SECTION_USE_OVERLAY
 
 /* ------------------------------------------------------------- reading helpers */
-
-typedef struct {
-    SectionUse use;
-    SectionError *error;
-    bool failed;
-    bool seen_beginning;
-    bool seen_ending;
-} Reader;
 
 static bool fail(Reader *reader, const char *path, const char *format, ...) {
     if (!reader->failed && reader->error) {
@@ -128,15 +120,6 @@ static bool check_members(Reader *reader, const cJSON *object, const char *path,
 }
 
 /* ------------------------------------------------------------- the members: reading */
-
-typedef struct Member Member;
-struct Member {
-    const char *name;
-    unsigned uses;
-    bool (*present)(const SectionDescription *);
-    bool (*read)(Reader *, const cJSON *, SectionDescription *);
-    cJSON *(*write)(const SectionDescription *, SectionUse);
-};
 
 static bool read_name(Reader *r, const cJSON *item, SectionDescription *d) {
     return read_text(r, item, "/name", d->name, sizeof(d->name));
@@ -1084,7 +1067,7 @@ static bool p_harmony(const SectionDescription *d) { return d->harmony.kind != S
 /* ------------------------------------------------------------- the table */
 
 /* One row per member, in the order they are written. Nothing else in this file names a member. */
-static const Member MEMBERS[] = {
+const Member section_json_members[] = {
     {"name", USE_F | USE_O, p_name, read_name, w_name},
     {"id", USE_P | USE_R, p_id, read_id, w_id},
     {"letter", USE_F | USE_P | USE_R, p_letter, read_letter, w_letter},
@@ -1118,22 +1101,12 @@ static const Member MEMBERS[] = {
     {"harmony", USE_P | USE_R | USE_O, p_harmony, read_harmony, w_harmony},
 };
 
-size_t section_json_member_count(void) {
-    return COUNT_OF(MEMBERS);
-}
-
-const char *section_json_member_name(size_t index) {
-    return index < COUNT_OF(MEMBERS) ? MEMBERS[index].name : NULL;
-}
-
-unsigned section_json_member_uses(size_t index) {
-    return index < COUNT_OF(MEMBERS) ? MEMBERS[index].uses : 0;
-}
+const size_t section_json_member_total = COUNT_OF(section_json_members);
 
 static const Member *member_find(const char *name) {
-    for (size_t i = 0; name && i < COUNT_OF(MEMBERS); i++) {
-        if (strcmp(MEMBERS[i].name, name) == 0) {
-            return &MEMBERS[i];
+    for (size_t i = 0; name && i < section_json_member_total; i++) {
+        if (strcmp(section_json_members[i].name, name) == 0) {
+            return &section_json_members[i];
         }
     }
     return NULL;
@@ -1195,13 +1168,13 @@ bool section_from_json(const cJSON *object, SectionUse use, const char *const *s
             }
         }
     }
-    for (size_t i = 0; i < COUNT_OF(MEMBERS); i++) {
+    for (size_t i = 0; i < section_json_member_total; i++) {
         const cJSON *item;
-        if ((MEMBERS[i].uses & (unsigned)use) == 0 || skipped(MEMBERS[i].name, skip, skip_count)) {
+        if ((section_json_members[i].uses & (unsigned)use) == 0 || skipped(section_json_members[i].name, skip, skip_count)) {
             continue;
         }
-        item = cJSON_GetObjectItemCaseSensitive(object, MEMBERS[i].name);
-        if (item && !MEMBERS[i].read(&reader, item, out)) {
+        item = cJSON_GetObjectItemCaseSensitive(object, section_json_members[i].name);
+        if (item && !section_json_members[i].read(&reader, item, out)) {
             return false;
         }
     }
@@ -1229,12 +1202,12 @@ cJSON *section_to_json(const SectionDescription *description, SectionUse use) {
     if (!object) {
         return NULL;
     }
-    for (size_t i = 0; i < COUNT_OF(MEMBERS); i++) {
-        if ((MEMBERS[i].uses & (unsigned)use) == 0 || !MEMBERS[i].present(description)) {
+    for (size_t i = 0; i < section_json_member_total; i++) {
+        if ((section_json_members[i].uses & (unsigned)use) == 0 || !section_json_members[i].present(description)) {
             continue;
         }
         /* a form's function comes from its role, so it is not written */
-        if (!add(object, MEMBERS[i].name, MEMBERS[i].write(description, use))) {
+        if (!add(object, section_json_members[i].name, section_json_members[i].write(description, use))) {
             cJSON_Delete(object);
             return NULL;
         }

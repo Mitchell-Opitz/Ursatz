@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/regenerate.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/regenerate.request.schema.json",
   "title": "composer_api_regenerate request",
   "description": "One node of a filled plan written again.",
   "type": "object",

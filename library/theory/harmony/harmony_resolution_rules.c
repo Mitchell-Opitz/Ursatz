@@ -1,19 +1,17 @@
 #include "theory/harmony/harmony_resolution_rules.h"
 
-#include "theory/harmony/harmony_framework.h"
+#include <stddef.h>
+
 #include "theory/rules/rule_table.h"
 #include "theory/harmony/harmony_steps.h"
 
 static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolves-down",
                                                                  "leading-tone-resolves"};
 
-static RulePair g_pairs[HARMONY_RESOLUTION_RULE_COUNT];
-static UrsatzOnce g_built[HARMONY_RESOLUTION_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                                    const Context *context);
+static const bool SOFT[HARMONY_RESOLUTION_RULE_COUNT] = {false};
+
 static const RuleTable TABLE = {
-    "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "resolution", NAMES, HARMONY_RESOLUTION_RULE_COUNT, NULL, g_pairs, g_built, evaluate_candidate};
+    .name = "resolution", .names = NAMES, .soft = SOFT, .count = HARMONY_RESOLUTION_RULE_COUNT};
 
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which) {
     return rule_table_name(&TABLE, (int)which);
@@ -72,21 +70,4 @@ bool harmony_resolution_rule_holds(HarmonyResolutionRule which,
     return !resolution->outer && resolution->complete_dominant_seventh &&
            resolution->from.seventh && resolution->from.degree == 5 && move == -2 &&
            harmony_step_degree(resolution->to_step) == 5;
-}
-
-static bool holds_adapter(int which, const void *subject) {
-    return harmony_resolution_rule_holds((HarmonyResolutionRule)which, subject);
-}
-
-static bool applies_adapter(int which, const void *subject) {
-    return harmony_resolution_rule_applies((HarmonyResolutionRule)which, subject);
-}
-
-/* A rule that does not apply to the voice (not the seventh, not the leading tone) is NOT_APPLICABLE rather than a
- * vacuous PASS. */
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context) {
-    (void)context;
-    return rule_table_evaluate(&TABLE, holds_adapter, applies_adapter, sizeof(HarmonyVoiceResolution),
-                                       constraint, candidate);
 }

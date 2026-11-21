@@ -1,5 +1,6 @@
 #include "base/command_context.h"
 #include "base/events_hub.h"
+#include "base/last_error.h"
 #include "txn.h"
 
 #include <dirent.h>
@@ -92,24 +93,19 @@ bool workshop_txn_aside_path(const char *kind, long long seq, const char *final_
     return written > 0 && (size_t)written < size;
 }
 
-static bool make_parent(const char *path) {
-    char parent[PATH_BYTES];
-    snprintf(parent, sizeof(parent), "%s", path);
-    char *slash = strrchr(parent, '/');
-    if (!slash) {
-        return true;
-    }
-    *slash = '\0';
-    return common_dir_make(parent, NULL) == URSATZ_OK;
-}
-
 static char *copy_text(const char *text) {
     return common_strdup(text ? text : "");
 }
 
 /* --- begin -------------------------------------------------------------------------------------------------------------------------- */
 
-WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const char *actor, const char *target, long base_version) {
+WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const char *target, long base_version) {
+    /* A record names who gave the command it belongs to: a write that is not part of one has no one to name (R-692). */
+    const WorkshopCommandContext *context = workshop_command_context();
+    if (!context || context->actor[0] == '\0') {
+        workshop_fail(URSATZ_ERR_INTERNAL, "a write needs a command");
+        return NULL;
+    }
     WorkshopStore *use = store ? store : &g_store;
     pthread_mutex_lock(&use->lock);
     if (use->next_seq == 0) {
@@ -127,12 +123,9 @@ WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const
         workshop_journal_free(&journal);
     }
     /* A command in progress names its records, gives their actor and the version it was made against (base/command_context.h). */
-    const WorkshopCommandContext *context = workshop_command_context();
-    if (context) {
-        command = context->command[0] != '\0' ? context->command : command;
-        actor = context->actor[0] != '\0' ? context->actor : actor;
-        base_version = context->base_version >= 0 ? context->base_version : base_version;
-    }
+    const char *actor = context->actor;
+    command = context->command[0] != '\0' ? context->command : command;
+    base_version = context->base_version >= 0 ? context->base_version : base_version;
     WorkshopTxn *txn = calloc(1, sizeof(*txn));
     if (!txn) {
         pthread_mutex_unlock(&use->lock);
@@ -200,7 +193,7 @@ static UrsatzStatus add_write(WorkshopTxn *txn, const char *pending, const char 
 
 UrsatzStatus workshop_txn_stage_folder(WorkshopTxn *txn, const char *final_path, const char **out_pending) {
     char pending[PATH_BYTES];
-    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || !make_parent(pending)) {
+    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || common_dir_make_parent(pending, NULL) != URSATZ_OK) {
         return URSATZ_ERR_IO;
     }
     common_dir_remove(pending, NULL);
@@ -219,7 +212,7 @@ UrsatzStatus workshop_txn_stage_folder(WorkshopTxn *txn, const char *final_path,
 
 UrsatzStatus workshop_txn_adopt_folder(WorkshopTxn *txn, const char *folder, const char *final_path, const char **out_pending) {
     char pending[PATH_BYTES];
-    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || !make_parent(pending)) {
+    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || common_dir_make_parent(pending, NULL) != URSATZ_OK) {
         return URSATZ_ERR_IO;
     }
     common_dir_remove(pending, NULL);
@@ -238,7 +231,7 @@ UrsatzStatus workshop_txn_adopt_folder(WorkshopTxn *txn, const char *folder, con
 
 UrsatzStatus workshop_txn_stage_file(WorkshopTxn *txn, const char *final_path, const void *data, size_t size) {
     char pending[PATH_BYTES];
-    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || !make_parent(pending)) {
+    if (!workshop_txn_aside_path("pending", txn->seq, final_path, pending, sizeof(pending)) || common_dir_make_parent(pending, NULL) != URSATZ_OK) {
         return URSATZ_ERR_IO;
     }
     UrsatzStatus written = common_file_write_atomic(pending, data, size, NULL);
@@ -371,7 +364,7 @@ static bool realization_beside(const char *path, char *out, size_t size) {
         return false;
     }
     *slash = '\0';
-    return snprintf(out, size, "%s/%s", folder, WORKSHOP_FILE_REALIZATION) < (int)size;
+    return common_path_join(out, size, folder, WORKSHOP_FILE_REALIZATION);
 }
 
 /* Checks a layer file: a realization must read, a reading must read and name the realization beside it (the one this transaction staged, the one in the
@@ -431,8 +424,8 @@ static UrsatzStatus validate_entry(const WorkshopTxn *txn, const char *actual, c
     for (size_t i = 0; status == URSATZ_OK && i < names.count; i++) {
         char child[PATH_BYTES];
         char virtual_path[PATH_BYTES];
-        if (snprintf(child, sizeof(child), "%s/%s", actual, names.items[i]) >= (int)sizeof(child) ||
-            snprintf(virtual_path, sizeof(virtual_path), "%s/%s", final_path, names.items[i]) >= (int)sizeof(virtual_path)) {
+        if (!common_path_join(child, sizeof(child), actual, names.items[i]) ||
+            !common_path_join(virtual_path, sizeof(virtual_path), final_path, names.items[i])) {
             status = ursatz_error_set(error, URSATZ_ERR_IO, final_path, "a path under %s is too long", final_path);
         } else {
             status = validate_entry(txn, child, virtual_path, error);

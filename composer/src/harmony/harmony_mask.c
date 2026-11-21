@@ -43,7 +43,7 @@ bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned
 unsigned melody_melodic_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
-        count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
+        count += standard_counterpoint_melodic_rule_soft((StandardCounterpointMelodicRule)rule);
     }
     return count;
 }

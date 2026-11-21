@@ -186,6 +186,7 @@ static bool add_meters(cJSON *root) {
         cJSON *entry = add_choice(list, API_METERS[i].value, API_METERS[i].label);
         Rational cell;
         if (!entry || !cJSON_AddNumberToObject(entry, "beats", meter.beats_per_bar) ||
+            !cJSON_AddNumberToObject(entry, "beat_unit", meter.beat_unit) ||
             !cJSON_AddStringToObject(entry, "chord_onset_step", "1/2")) {
             return false;
         }
@@ -732,8 +733,33 @@ static bool add_limits(cJSON *root) {
            add_preference_limits(limits);
 }
 
+/* The members of a theme request that make its form (API 4.4): what a page copies from its form into a request body. */
+static bool add_theme_form_members(cJSON *root) {
+    static const char *const MEMBERS[] = {"into",    "hybrid",        "material", "mode",        "meter",
+                                          "bars",    "cadence",       "first_cadence", "development", "construction"};
+    cJSON *list = add_list(root, "theme_form_members");
+    for (size_t i = 0; list && i < sizeof MEMBERS / sizeof MEMBERS[0]; i++) {
+        if (!add_choice(list, MEMBERS[i], MEMBERS[i])) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/* The values a form starts with (API 4.4): the meter, a new motif's form, notes and pickup, and a new theme's into, bars, cadence and
+   development. */
+static bool add_defaults(cJSON *root) {
+    cJSON *defaults = cJSON_AddObjectToObject(root, "defaults");
+    cJSON *motif = defaults ? cJSON_AddObjectToObject(defaults, "motif") : NULL;
+    cJSON *theme = defaults ? cJSON_AddObjectToObject(defaults, "theme") : NULL;
+    return motif && theme && cJSON_AddStringToObject(defaults, "meter", "4/4") && cJSON_AddStringToObject(motif, "form", "full") &&
+           cJSON_AddStringToObject(motif, "notes", "C4:q") && cJSON_AddStringToObject(motif, "pickup", "0") &&
+           cJSON_AddStringToObject(theme, "into", "sentence") && cJSON_AddNumberToObject(theme, "bars", 8) &&
+           cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "balanced");
+}
+
 bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials) {
-    return add_meters(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
+    return add_meters(root) && add_defaults(root) && add_theme_form_members(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
            add_keys(root, materials) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&

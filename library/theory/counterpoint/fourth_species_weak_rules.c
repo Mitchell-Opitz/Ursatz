@@ -5,30 +5,18 @@
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT] = {
     "consonant", "no-repeated-perfect", "max-same-imperfect-run", "no-direct-perfect", "no-interior-unison"};
 
-static bool rule_is_soft(StandardCounterpointFourthSpeciesWeakRule which) {
-    return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_NO_INTERIOR_UNISON;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT] = {
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_NO_INTERIOR_UNISON] = true};
 
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointFourthSpeciesWeakRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "fourth-species-weak", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "fourth-species-weak", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesWeakRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -161,8 +149,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                 subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
 
 bool standard_counterpoint_fourth_species_weak_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      unsigned *hard_violations, unsigned *soft_violations) {

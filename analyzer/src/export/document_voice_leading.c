@@ -1,6 +1,7 @@
 /* The voice-leading areas of the analysis document: markings, voice leading, schemas and sequences. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* The metronome mark of a tempo claim: the beat unit in whole notes and the beats per minute, both rational. */
 static cJSON *metronome_json(DocBuild *build, const AnalysisTempoMarking *marking) {
@@ -182,7 +183,7 @@ static cJSON *voice_resolution_json(DocBuild *build, const ImportedScore *notes,
     Rational start;
     Rational end;
     voice_leading_entries_span(build, report, resolution->entry_from, resolution->entry_to, &start, &end);
-    cJSON *claim = doc_claim_json_with(build, framework_name(standard_harmony_framework()), notes, resolution->note_ids, 2, start, end, "resolution",
+    cJSON *claim = doc_claim_json_with(build, FRAMEWORK_STANDARD_HARMONY, notes, resolution->note_ids, 2, start, end, "resolution",
                                    cJSON_CreateNumber(resolution->uncertainty));
     if (!(claim && common_json_add(claim, "rule", cJSON_CreateString(resolution->rule)) &&
           common_json_add(claim, "voice", cJSON_CreateNumber((double)resolution->voice)) &&
@@ -241,7 +242,7 @@ static cJSON *voice_chord_json(DocBuild *build, const ImportedScore *notes, cons
     Rational start;
     Rational end;
     voice_leading_entries_span(build, report, chord->entry, chord->entry, &start, &end);
-    cJSON *claim = doc_claim_json_with(build, chain_voicing_framework_name(), notes, chord->note_ids, chord->note_id_count, start, end,
+    cJSON *claim = doc_claim_json_with(build, FRAMEWORK_STANDARD_VOICING, notes, chord->note_ids, chord->note_id_count, start, end,
                                    "doubling", cJSON_CreateNumber(chord->uncertainty));
     if (!(claim && common_json_add(claim, "chord", cJSON_CreateNumber((double)chord->entry)) &&
           common_json_add(claim, "voices", cJSON_CreateNumber((double)chord->voices_sounding)) &&

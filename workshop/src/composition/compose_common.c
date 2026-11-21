@@ -120,8 +120,7 @@ bool workshop_compose_add_files(cJSON *summary, const char *dir, const char *con
     cJSON *files = cJSON_AddArrayToObject(summary, "files");
     for (size_t i = 0; files && i < count; i++) {
         char path[PATH_BYTES + 64];
-        snprintf(path, sizeof(path), "%s/%s", dir, names[i]);
-        if (!cJSON_AddItemToArray(files, cJSON_CreateString(path))) {
+        if (!common_path_join(path, sizeof(path), dir, names[i]) || !cJSON_AddItemToArray(files, cJSON_CreateString(path))) {
             return false;
         }
     }
@@ -210,8 +209,11 @@ static void dump_request(const WorkshopComposeKind *kind, const cJSON *body, con
                 hash = hash * 33 + (unsigned char)*p;
             }
             char path[PATH_BYTES + 64];
-            snprintf(path, sizeof(path), "%s/%s-%08lx.json", folder, kind->member, hash & 0xffffffffUL);
-            common_file_write_atomic(path, text, strlen(text), NULL);
+            char leaf[128];
+            snprintf(leaf, sizeof(leaf), "%s-%08lx.json", kind->member, hash & 0xffffffffUL);
+            if (common_path_join(path, sizeof(path), folder, leaf)) {
+                common_file_write_atomic(path, text, strlen(text), NULL);
+            }
         }
         free(text);
     }
@@ -312,9 +314,8 @@ static UrsatzStatus resolve_theme_settings(const cJSON *meta, const char *id, co
                                         cJSON_GetObjectItemCaseSensitive(answer, "explore") ? cJSON_DetachItemFromObjectCaseSensitive(answer, "explore") : cJSON_CreateNull()) &&
                   cJSON_AddItemToObject(snapshot, "document", cJSON_IsObject(document) ? cJSON_DetachItemFromObjectCaseSensitive(answer, "document") : cJSON_CreateNull());
         char path[PATH_BYTES + 64];
-        snprintf(path, sizeof(path), "%s/%s", stage, WORKSHOP_FILE_SETTINGS);
         UrsatzError written = {{0}, {0}};
-        ok = ok && workshop_format_write(path, WORKSHOP_FORMAT_SETTINGS_SNAPSHOT, snapshot, &written) == URSATZ_OK;
+        ok = ok && common_path_join(path, sizeof(path), stage, WORKSHOP_FILE_SETTINGS) && workshop_format_write(path, WORKSHOP_FORMAT_SETTINGS_SNAPSHOT, snapshot, &written) == URSATZ_OK;
         cJSON_Delete(snapshot);
         if (!ok) {
             cJSON_Delete(answer);

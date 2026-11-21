@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/fill.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/fill.response.schema.json",
   "title": "composer_api_fill response",
   "description": "What `fill --format json` prints, without the files; the realized plan, MIDI and MusicXML are separate members of the response.",
   "type": "object",

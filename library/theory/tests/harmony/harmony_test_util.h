@@ -4,7 +4,6 @@
 #include <stddef.h>
 
 #include "theory/harmony/harmony_chord.h"
-#include "theory/harmony/harmony_framework.h"
 
 /* Test helpers shared by the standard-harmony tests. */
 

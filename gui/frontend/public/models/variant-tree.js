@@ -10,7 +10,6 @@ import { commandRequest } from "../core/commands.js";
 import Vocab from "../core/vocabulary.js";
 
 /* The Composer's words (R-270): the phrase functions and the distances are read from the vocabulary when asked. */
-const CATEGORY_ORDER = ["exact", "rhythm", "intervals", "harmony", "melody adaptation"];
 const FLAGS = ["unflagged", "approved", "rejected"];
 const KINDS = ["exact", "motive-form", "variant"];
 const KIND_LABELS = { exact: "Exact", "motive-form": "Motive-form", variant: "Variant" };
@@ -311,7 +310,7 @@ function opChecksPutRequest(id, checks) {
 }
 
 /* The operations of GET /api/materials/variant-operations by category, in
- * Schoenberg's order, then any other category alphabetically. */
+ * the order the Composer lists them in. */
 function operationGroups(operations) {
   const groups = new Map();
   for (const op of Array.isArray(operations) ? operations : []) {
@@ -327,9 +326,7 @@ function operationGroups(operations) {
       forms: Array.isArray(op.forms) ? op.forms : [],
     });
   }
-  const known = CATEGORY_ORDER.filter((category) => groups.has(category));
-  const other = [...groups.keys()].filter((category) => !CATEGORY_ORDER.includes(category)).sort();
-  return [...known, ...other].map((category) => ({
+  return [...groups.keys()].map((category) => ({
     category,
     title: titleOf(category),
     operations: groups.get(category),

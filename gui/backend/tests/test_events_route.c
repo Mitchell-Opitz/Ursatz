@@ -19,7 +19,7 @@
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
 #endif
 
-#define PORT "18774"
+#define PORT "18782"
 
 static int open_stream(void) {
   int sock = socket(AF_INET, SOCK_STREAM, 0);

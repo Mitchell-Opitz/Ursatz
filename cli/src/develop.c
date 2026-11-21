@@ -1,5 +1,6 @@
 #include "develop.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include "cli_tools.h"
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "motive_input.h"
 #include "workflow.h"
 
@@ -47,32 +49,36 @@ typedef struct {
 
 /* --- reading the options -------------------------------------------------- */
 
+static const CliOptionRow ROWS[] = {
+    {"--op", offsetof(Options, op_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--suggest", offsetof(Options, suggest_text), false},
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--key", offsetof(Options, key_text), false},
+    {"--input-format", offsetof(Options, format_text), false},
+    {"--midi", offsetof(Options, midi_path), false},
+    {"--musicxml", offsetof(Options, musicxml_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--by", offsetof(Options, by_text), false},
+    {"--degree", offsetof(Options, degree_text), false},
+    {"--axis", offsetof(Options, axis_text), false},
+    {"--interval", offsetof(Options, interval_text), false},
+    {"--amount", offsetof(Options, amount_text), false},
+    {"--position", offsetof(Options, position_text), false},
+    {"--length", offsetof(Options, length_text), false},
+    {"--min", offsetof(Options, min_text), false},
+    {"--drop", offsetof(Options, drop_text), false},
+    {"--ratio", offsetof(Options, ratio_text), false},
+    {"--tonal", offsetof(Options, tonal), true},
+    {"--keep-contour", offsetof(Options, keep_contour), true},
+    {"--keep-rhythm", offsetof(Options, keep_rhythm), true},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->op_text = cli_value(args, "--op");
-    options->seed_text = cli_value(args, "--seed");
-    options->suggest_text = cli_value(args, "--suggest");
-    options->meter_text = cli_value(args, "--meter");
-    options->key_text = cli_value(args, "--key");
-    options->format_text = cli_value(args, "--input-format");
-    options->midi_path = cli_value(args, "--midi");
-    options->musicxml_path = cli_value(args, "--musicxml");
-    options->tempo_text = cli_value(args, "--tempo");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->by_text = cli_value(args, "--by");
-    options->degree_text = cli_value(args, "--degree");
-    options->axis_text = cli_value(args, "--axis");
-    options->interval_text = cli_value(args, "--interval");
-    options->amount_text = cli_value(args, "--amount");
-    options->position_text = cli_value(args, "--position");
-    options->length_text = cli_value(args, "--length");
-    options->min_text = cli_value(args, "--min");
-    options->drop_text = cli_value(args, "--drop");
-    options->ratio_text = cli_value(args, "--ratio");
-    options->tonal = cli_switch(args, "--tonal");
-    options->keep_contour = cli_switch(args, "--keep-contour");
-    options->keep_rhythm = cli_switch(args, "--keep-rhythm");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     return 0;
 }
 
@@ -121,7 +127,7 @@ int run_develop(const CliArgs *args) {
         return status;
     }
     if (!options.input) {
-        return cli_fail(EXIT_USAGE, "develop needs an input file\n%s", cli_usage_of("develop"));
+        return cli_needs("develop", "an input file", true);
     }
     if (!options.op_text) {
         return cli_fail(EXIT_USAGE, "develop needs --op: restate, invert, retrograde, interval, fragment, liquidate, "

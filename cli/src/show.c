@@ -8,6 +8,7 @@
 
 #include "address.h"
 #include "cli_options.h"
+#include "cli_params.h"
 #include "cli_tools.h"
 #include "session.h"
 #include "workflow.h"
@@ -90,7 +91,7 @@ int run_show(const CliArgs *args) {
     const char *view = cli_value(args, "--view");
     const char *measures = cli_value(args, "--measures");
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "show needs an address or a file\n%s", cli_usage_of("show"));
+        return cli_needs("show", "an address or a file", true);
     }
     const char *input = args->inputs[0];
     bool is_address = cli_is_address(input);

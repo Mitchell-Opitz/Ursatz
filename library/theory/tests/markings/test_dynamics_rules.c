@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "theory/markings/dynamics_rules.h"
-#include "theory/markings/framework.h"
 
 static int rank_of(const char *marking) {
     int rank = 0;

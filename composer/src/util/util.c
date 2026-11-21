@@ -30,8 +30,7 @@ int util_pitch_class(int pitch) {
 }
 
 void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size) {
-    snprintf(out, size, "%s%d", pitch_class_name(util_pitch_class(midi), prefer_flats),
-             midi / PITCH_SEMITONES_PER_OCTAVE - 1);
+    pitch_name_of_midi(midi, prefer_flats, out, size);
 }
 
 bool composer_material_is_minor(const PitchMaterial *material) {

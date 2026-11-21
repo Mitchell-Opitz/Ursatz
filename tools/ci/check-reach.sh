@@ -10,6 +10,8 @@
 # It writes <dir>/reach/unreached.txt, one "<source path> <function>" line per unreached function.
 # With tools/ci/reach-allow.txt present it exits 1 when an unreached function is not listed there, or a listed one
 # is reached or gone. Without that file it only reports.
+# A function only a test calls does not belong in the library: delete it, or move it into the tests (a test access header under
+# library/tests/support, or the Composer's tests/support) and drop its row.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"

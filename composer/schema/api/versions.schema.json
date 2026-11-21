@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/versions.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/versions.schema.json",
   "title": "composer_api_versions response",
   "description": "The versions the Composer was built with; a host compares them with the ones it saved (docs/api.md).",
   "type": "object",

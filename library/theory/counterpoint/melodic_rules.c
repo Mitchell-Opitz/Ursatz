@@ -5,7 +5,6 @@
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT] = {
@@ -13,31 +12,25 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT] = {
     "leap-density",     "repeated-generic", "unique-climax",    "climax-not-final",
     "climax-by-leap",   "forbidden-leap",  "forbidden-outline"};
 
-static bool rule_is_hard(StandardCounterpointMelodicRule which) {
-    return which == STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA ||
-           which == STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_LEAP ||
-           which == STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_REPEATED_NOTES] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_PITCH_OCCURRENCES] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_CONSECUTIVE_LEAPS] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_LEAP_DENSITY] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_REPEATED_GENERIC] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_UNIQUE_CLIMAX] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_CLIMAX_NOT_FINAL] = true,
+    [STANDARD_COUNTERPOINT_MELODIC_RULE_CLIMAX_BY_LEAP] = true};
 
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointMelodicRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "melodic", NAMES, STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT, table_is_hard, g_pairs, g_built, evaluate_candidate, score_candidate};
+    .name = "melodic", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointMelodicRule which) {
     return rule_table_valid(&TABLE, (int)which);
 }
 
-const Preference *standard_counterpoint_melodic_preference(StandardCounterpointMelodicRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool standard_counterpoint_melodic_rule_soft(StandardCounterpointMelodicRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_melodic_rule_name(StandardCounterpointMelodicRule which) {
@@ -251,8 +244,6 @@ static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_melodic_rule_holds((StandardCounterpointMelodicRule)which, s->line, s->limits);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_melodic_check(const StandardCounterpointLine *line,
                                          const StandardCounterpointLimits *limits, unsigned *hard_violations,

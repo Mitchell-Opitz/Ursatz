@@ -128,8 +128,8 @@ static UrsatzStatus save_new_piece(const char *dir_path, const unsigned char *da
     }
 
     char source_path[400];
-    snprintf(source_path, sizeof(source_path), "%s/%s", dir_path, workshop_library_source_name(format, original_filename));
-    if (rename(upload_path, source_path) != 0) {
+    if (!common_path_join(source_path, sizeof(source_path), dir_path, workshop_library_source_name(format, original_filename)) ||
+        rename(upload_path, source_path) != 0) {
         common_dir_remove(dir_path, NULL);
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }
@@ -181,15 +181,16 @@ UrsatzStatus workshop_analysis_import_and_save(const char *pieces_dir, const uns
     static unsigned serial = 0;
     char stage[400];
     char final_dir[320];
-    snprintf(final_dir, sizeof(final_dir), "%s/%s", pieces_dir, id);
-    snprintf(stage, sizeof(stage), "%s/%s.stage-%d-%u", pieces_dir, id, (int)getpid(), __atomic_add_fetch(&serial, 1, __ATOMIC_RELAXED));
-    if (common_dir_create(stage, NULL) != URSATZ_OK) {
+    char stage_name[160];
+    snprintf(stage_name, sizeof(stage_name), "%s.stage-%d-%u", id, (int)getpid(), __atomic_add_fetch(&serial, 1, __ATOMIC_RELAXED));
+    if (!common_path_join(final_dir, sizeof(final_dir), pieces_dir, id) || !common_path_join(stage, sizeof(stage), pieces_dir, stage_name) ||
+        common_dir_create(stage, NULL) != URSATZ_OK) {
         free(id);
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }
     result = save_new_piece(stage, data, size, original_filename);
     if (result == URSATZ_OK) {
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", "michelle", id, 0);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", id, 0);
         if (!txn) {
             result = workshop_fail(URSATZ_ERR_IO, NULL);
         } else if (workshop_txn_adopt_folder(txn, stage, final_dir, NULL) != URSATZ_OK) {
@@ -758,7 +759,7 @@ UrsatzStatus workshop_analysis_get_document(const char *pieces_dir, const char *
 /* --- the Library's writers: each begins its transaction before any lock and commits it after (items/txn.h) ----------------------------------- */
 
 static WorkshopTxn *begin_library(const char *command, const char *id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, command, "michelle", id ? id : "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, command, id ? id : "", 0);
     workshop_library_set_txn(txn);
     return txn;
 }

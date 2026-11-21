@@ -27,11 +27,12 @@ typedef struct WorkshopTxn WorkshopTxn;
 /* The store is the journal of the data folder and the lock over it; there is one per process, and NULL passed to workshop_txn_begin means it. */
 
 /*
- * Opens a transaction: command is the name of the command (B11 lists them: "item.save", "library.import"...), actor who gave it ("michelle"),
- * target what it changes (an id, or "" for none) and base_version the version it was made against (0 for none). NULL when the journal cannot
- * be read; the lock is held until commit or abort.
+ * Opens a transaction: command is the name of the command (B11 lists them: "item.save", "library.import"...), target what it changes (an
+ * id, or "" for none) and base_version the version it was made against (0 for none). The actor, and the command's own name and base version,
+ * come from the command the thread is running (base/command_context.h): a write outside a command is refused, NULL with URSATZ_ERR_INTERNAL
+ * and "a write needs a command". NULL too when the journal cannot be read; the lock is held until commit or abort.
  */
-WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const char *actor, const char *target, long base_version);
+WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const char *target, long base_version);
 
 /* Makes the folder the caller writes the new entry's files into ("<parent of final_path>/.pending-<seq>-<name>") and gives its path in
  * *out_pending (valid until commit). The folder becomes final_path, which must not exist. */

@@ -7,6 +7,7 @@
 #include <cJSON.h>
 #include <io/midi_importer.h>
 #include <plan/plan_json.h>
+#include <plan/plan_lanes.h>
 
 /* The stamp the tests write plans with: the Composer's own (name, version, producer key) and no knowledge hash. */
 const PlanProducer *test_plan_producer(void);
@@ -24,6 +25,12 @@ void test_write_text(const char *path, const char *text);
  * older formats (what the plan reads from them is checked against the plan the format 6 text holds).
  */
 void test_plan_document_as_format_five(cJSON *document);
+
+/*
+ * The note with an id among the live note spans of the plan (R-601), and the span that holds it in *span_out when that is not NULL; NULL
+ * for an unknown id (0 included). The pointer stays valid until the span is rewritten or the plan is destroyed.
+ */
+const PlanNote *test_plan_note_by_id(const Plan *plan, PlanNoteId id, LaneSpanId *span_out);
 
 /* The same as text: newly allocated, the caller frees it; NULL when the text is not JSON. */
 char *test_plan_text_as_format_five(const char *text);

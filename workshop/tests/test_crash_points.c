@@ -33,6 +33,7 @@
 #include "analysis/links.h"
 #include "composition/motifs.h"
 #include "composition/themes.h"
+#include "command_context_support.h"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
@@ -529,6 +530,7 @@ int main(int argc, char **argv) {
     /* "smoke" runs the item commands alone (the whole test is slow: a Library piece is analyzed and a theme composed at each stop) */
     bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     assert(getcwd(g_home, sizeof(g_home)));
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
     make_base();
     static const Command kCommands[] = {
         {"item create", run_item_create, is_new_item_create},

@@ -1,6 +1,7 @@
 /* The form areas of the analysis document: phrases, themes, the form plan and repeats. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* An idea of a phrase: the claim over its soprano notes (label the library's IdeaLabel name) with its place in the
    phrase, its measures and length, and the similarity to the phrase's first idea (null for the first idea). */
@@ -154,7 +155,7 @@ cJSON *doc_phrases_json(DocBuild *build, const ImportedScore *notes, const Chain
     if (!list) {
         return NULL;
     }
-    const char *framework = framework_name(standard_form_framework());
+    const char *framework = FRAMEWORK_STANDARD_FORM;
     for (size_t g = 0; g < reading_group_count(build->reading); g++) {
         const ReadingGroup *held = reading_group_at(build->reading, g);
         if (held->kind != READING_GROUP_PHRASE) {
@@ -269,7 +270,7 @@ cJSON *doc_themes_json(DocBuild *build, const ImportedScore *notes, const ChainR
     if (!list) {
         return NULL;
     }
-    const char *framework = framework_name(standard_form_framework());
+    const char *framework = FRAMEWORK_STANDARD_FORM;
     for (size_t g = 0; g < reading_group_count(build->reading); g++) {
         const ReadingGroup *held = reading_group_at(build->reading, g);
         if (held->kind != READING_GROUP_THEME) {
@@ -436,7 +437,7 @@ static cJSON *section_json(DocBuild *build, const ImportedScore *notes, const Ch
                                                                   &id_count)
                                            : NULL;
     cJSON *claim = (ids || section->entry_count == 0)
-                       ? doc_claim_json_with(build, framework_name(standard_form_framework()), notes, ids, id_count, start, end,
+                       ? doc_claim_json_with(build, FRAMEWORK_STANDARD_FORM, notes, ids, id_count, start, end,
                                          section->label, cJSON_CreateNumber(section->uncertainty))
                        : NULL;
     free(ids);
@@ -473,7 +474,7 @@ static cJSON *return_json(DocBuild *build, const ImportedScore *notes, const Cha
     const AnalysisTheme *later = &report->themes[item->later_theme];
     Rational start = doc_rational(build, later->start.num, later->start.den);
     Rational end = doc_rational(build, later->end.num, later->end.den);
-    cJSON *claim = doc_claim_json_with(build, framework_name(standard_form_framework()), notes, later->note_ids,
+    cJSON *claim = doc_claim_json_with(build, FRAMEWORK_STANDARD_FORM, notes, later->note_ids,
                                    later->note_id_count, start, end, "thematic-return",
                                    cJSON_CreateNumber(1.0 - item->similarity));
     if (!(claim && common_json_add(claim, "earlier_theme", cJSON_CreateNumber((double)item->earlier_theme)) &&
@@ -537,7 +538,7 @@ static cJSON *repeat_json(DocBuild *build, const ImportedScore *notes, const Ana
     const char *kind = repeat->is_return ? "return" : "repeat";
     Rational start = doc_rational(build, repeat->start.num, repeat->start.den);
     Rational end = doc_rational(build, repeat->end.num, repeat->end.den);
-    cJSON *claim = doc_claim_json_with(build, framework_name(standard_form_framework()), notes, repeat->note_ids,
+    cJSON *claim = doc_claim_json_with(build, FRAMEWORK_STANDARD_FORM, notes, repeat->note_ids,
                                    repeat->note_id_count, start, end, kind, cJSON_CreateNumber(0.0));
     if (!(claim && common_json_add(claim, "kind", cJSON_CreateString(kind)) &&
           common_json_add(claim, "earlier", doc_measures_json(repeat->earlier_first, repeat->earlier_last)) &&

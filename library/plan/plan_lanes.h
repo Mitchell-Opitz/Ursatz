@@ -168,9 +168,7 @@ PlanSpan plan_lane_span_span(const Plan *plan, LaneSpanId id);
 const PlanLanePayload *plan_lane_span_payload(const Plan *plan, LaneSpanId id);
 
 /*
- * Note ids (R-601). plan_next_note_id is the id the next new note gets (1 in a new plan; it only rises). plan_note_by_id finds the
- * note with an id among the live note spans of the plan, and writes the span that holds it to *span_out when that is not NULL; NULL
- * for an unknown id (0 included). The pointer stays valid until the span is rewritten or the plan is destroyed.
+ * Note ids (R-601). plan_next_note_id is the id the next new note gets (1 in a new plan; it only rises).
  *
  * The plan gives ids when a span is added (plan_add_lane_span) or written (plan_lane_span_write): a note with id 0 gets the next id;
  * a note whose id another note of a live span holds (the span being rewritten does not count, nor does the rest of its own old
@@ -179,7 +177,6 @@ const PlanLanePayload *plan_lane_span_payload(const Plan *plan, LaneSpanId id);
  * plan gets fresh ones, and an id is never held by two live notes.
  */
 PlanNoteId plan_next_note_id(const Plan *plan);
-const PlanNote *plan_note_by_id(const Plan *plan, PlanNoteId id, LaneSpanId *span_out);
 
 /*
  * Finds the spans of one lane and voice that overlap range, ordered by start.

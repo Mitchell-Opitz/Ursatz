@@ -7,7 +7,6 @@
 #include "theory/counterpoint/counterpoint_line.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 
@@ -17,26 +16,16 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT] =
     "leaps",         "final-step", "range",           "leading-tone",     "single-climax",
     "no-repeated-motive", "stepwise", "leap-placement", "secondary-climaxes"};
 
-static bool rule_is_hard(StandardCounterpointThirdSpeciesLineRule which) {
-    return which == STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_LEAPS ||
-           which == STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_FINAL_STEP ||
-           which == STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_RANGE ||
-           which == STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_LEADING_TONE;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT] = {
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_SINGLE_CLIMAX] = true,
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_NO_REPEATED_MOTIVE] = true,
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_STEPWISE] = true,
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_LEAP_PLACEMENT] = true,
+    [STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_SECONDARY_CLIMAXES] = true};
 
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointThirdSpeciesLineRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "third-species-line", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "third-species-line", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesLineRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -182,8 +171,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                s->exercise, s->tonic);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_third_species_line_check(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,

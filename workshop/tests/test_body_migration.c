@@ -18,10 +18,12 @@
 #include <common/files.h>
 #include <ursatz_workshop/workshop_api.h>
 
+#include "items/body_requests.h"
 #include "composition/request_resolve.h"
 #include "items/store.h"
 #include "test_knowledge.h"
 #include "ursatz_check.h"
+#include "command_context_support.h"
 
 #ifndef URSATZ_WORKSHOP_DATA_V0
 #error "URSATZ_WORKSHOP_DATA_V0 must name the version 0 fixture folder"
@@ -227,6 +229,7 @@ static void test_layout_one(void) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
   sh("rm -rf stage projects");
   test_knowledge();
   check_quiet(workshop_material_service_init(), "the store starts");

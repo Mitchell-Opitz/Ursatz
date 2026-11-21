@@ -51,20 +51,6 @@ static void slash_path(const char *key, char *out, size_t size) {
     out[used] = '\0';
 }
 
-/* explore.share: a ratio n/d from 0/1 to 1/2, d up to 16. */
-static bool explore_share_ok(const cJSON *value) {
-    if (!cJSON_IsString(value)) {
-        return false;
-    }
-    unsigned long n = 0;
-    unsigned long d = 0;
-    char extra = 0;
-    if (sscanf(value->valuestring, "%lu/%lu%c", &n, &d, &extra) != 2 || d < 1 || d > 16) {
-        return false;
-    }
-    return n * 2 <= d;
-}
-
 UrsatzStatus workshop_settings_check_value(const char *key_name, const cJSON *value, const char *where, bool request_scope, UrsatzError *error) {
     const WorkshopSettingKey *key = workshop_settings_key_find(key_name);
     if (!key) {
@@ -73,14 +59,11 @@ UrsatzStatus workshop_settings_check_value(const char *key_name, const cJSON *va
     if (strcmp(key->key, "motif.plan") == 0 && !request_scope) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, where, "a chord plan is intent, not a setting: give it with the request");
     }
-    if (strcmp(key->key, "explore.share") == 0) {
-        return explore_share_ok(value) ? URSATZ_OK
-                                       : workshop_call_fail(error, URSATZ_ERR_REQUEST, where, "explore.share must be a ratio from 0/1 to 1/2 with a denominator up to 16");
-    }
-    if (strcmp(key->key, "explore.distance") == 0) {
-        return cJSON_IsNumber(value) && value->valuedouble == (double)(long long)value->valuedouble && value->valuedouble >= 1 && value->valuedouble <= 8
+    if (key->own) {
+        char message[160];
+        return workshop_settings_own_value_ok(key, value, message, sizeof message)
                    ? URSATZ_OK
-                   : workshop_call_fail(error, URSATZ_ERR_REQUEST, where, "explore.distance must be a whole number from 1 to 8");
+                   : workshop_call_fail(error, URSATZ_ERR_REQUEST, where, "%s", message);
     }
     cJSON *document = nested(key->key, value);
     if (!document) {
@@ -151,8 +134,8 @@ static void put(cJSON *object, const char *name, cJSON *item) {
 }
 
 /* Stages the scope's file in one transaction and answers with its content. The file is consumed. */
-static UrsatzStatus save_scope(const WorkshopCall *call, WorkshopReply *reply, Scope *scope, UrsatzError *error) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "settings", call->actor, "", 0);
+static UrsatzStatus save_scope(WorkshopReply *reply, Scope *scope, UrsatzError *error) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "settings", "", 0);
     if (!txn) {
         cJSON_Delete(scope->file);
         return workshop_call_fail(error, URSATZ_ERR_IO, "", "the journal cannot be read");
@@ -211,7 +194,7 @@ WORKSHOP_HANDLER(workshop_c_settings_set) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     put(values, key, copy);
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.unset: scope, key. */
@@ -228,7 +211,7 @@ WORKSHOP_HANDLER(workshop_c_settings_unset) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/key", "unknown setting '%s'", key);
     }
     cJSON_DeleteItemFromObjectCaseSensitive(values_of(scope.file), key);
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* The leaves of a nested document, each checked as settings.set checks a value and put into values at its dotted key. */
@@ -311,7 +294,7 @@ WORKSHOP_HANDLER(workshop_c_settings_import) {
     if (scope.kind == WORKSHOP_SCOPE_TASTE) {
         TAKE(workshop_settings_keep_record(scope.file, "*", NULL, NULL, note, call->actor, error));
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.override: scope, rule, action, weight, note. */
@@ -366,7 +349,7 @@ WORKSHOP_HANDLER(workshop_c_settings_override) {
     if (cJSON_GetArraySize(list) == 0) {
         cJSON_DeleteItemFromObjectCaseSensitive(scope.file, "overrides");
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.switch: scope, off. */
@@ -420,7 +403,7 @@ WORKSHOP_HANDLER(workshop_c_settings_switch) {
         cJSON_Delete(scope.file);
         return workshop_call_fail(error, status, "/params/off", "%s", failure.message);
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.use-taste: scope, taste (absent or null clears). */
@@ -445,5 +428,5 @@ WORKSHOP_HANDLER(workshop_c_settings_use_taste) {
             return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
         }
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }

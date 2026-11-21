@@ -83,10 +83,6 @@ bool workshop_composer_vocabulary_has(const char *list, const char *value);
  * the process; NULL when the list is missing or the Composer gave no vocabulary. */
 const cJSON *workshop_composer_vocabulary_list(const char *name);
 
-/* The spelling of the tonic of pitch_class (0 to 11) in a key of the material (its id, "omt.material.major") in the vocabulary's
- * pitch_class_names; false when it has none. */
-bool workshop_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size);
-
 /* The key word of the material (its id) in the vocabulary's materials ("minor" for "omt.material.natural-minor"); false when
  * it names none. */
 bool workshop_composer_key_word(const char *material, char *out, size_t out_size);

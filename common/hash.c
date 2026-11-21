@@ -13,6 +13,14 @@ uint64_t common_fnv1a64(const void *data, size_t size, uint64_t seed) {
     return hash;
 }
 
+uint64_t common_fnv1a64_u64(uint64_t value, uint64_t seed) {
+    unsigned char bytes[8];
+    for (int i = 0; i < 8; i++) {
+        bytes[i] = (unsigned char)((value >> (8 * i)) & 0xFFu);
+    }
+    return common_fnv1a64(bytes, sizeof(bytes), seed);
+}
+
 void common_fnv1a64_hex(uint64_t hash, char out[17]) {
     snprintf(out, 17, "%016llx", (unsigned long long)hash);
 }

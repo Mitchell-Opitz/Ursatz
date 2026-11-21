@@ -36,7 +36,7 @@ of a passage; its target is the passage's `EntityID`.
   category, so homorhythm to melody and accompaniment is not a change of
   category). No container type is added for the list.
 
-Each rule is a pure check function; no rule builds a `Rule` or `Constraint`.
+Each rule is a pure check function.
 
 ## Not covered
 

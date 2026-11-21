@@ -30,7 +30,6 @@
 /* The pitches a form may use, as in grow_liquidate.c. */
 #define FORM_LOW 58
 #define FORM_HIGH 84
-#define DRAWS_PER_CANDIDATE 6
 #define BARS 8
 #define PHRASES 3
 #define IDEAS 7
@@ -100,47 +99,13 @@ static bool read_coda(const Plan *plan, FillTarget target, CodaRequest *out) {
     if (!plan_section_function_of(plan, target.id, &function) || function.function != SECTION_FUNCTION_CODA) {
         return false;
     }
-    theme->section = target.id;
-    theme->span = plan_node_span(plan, target.id);
-    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
-    if (cadence) {
-        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
-    }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
-            theme->has_accompaniment = true;
-            theme->accompaniment = constraint->params.accompaniment;
-        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
-            theme->has_voicing = true;
-            theme->voicing = constraint->params.voicing;
-        }
-    }
-    LaneSpanId lane[2];
-    if (!cadence || theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC ||
-        plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
-        return false;
-    }
-    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
-    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
-    /* One key over all eight bars: the coda is at home. */
-    if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
-        return false;
-    }
-    plan_meter_bar_length(&theme->meter, &theme->bar);
-    theme->source = grow_find_source(plan);
-    if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
-        theme->bar.num == 0) {
+    Rational meter_start;
+    if (!grow_read_section_target(plan, target, theme, &meter_start) || theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC ||
+        theme->has_start_change || theme->has_end_change) {
         return false;
     }
     /* Eight whole bars from a barline. */
-    Rational eight;
-    Rational offset;
-    Rational bars_in;
-    if (rational_mul_int(theme->bar, BARS, &eight) != RATIONAL_OK || rational_cmp(theme->span.length, eight) != 0 ||
-        rational_sub(theme->span.start, meter_start, &offset) != RATIONAL_OK ||
-        rational_div(offset, theme->bar, &bars_in) != RATIONAL_OK || bars_in.den != 1) {
+    if (!grow_whole_bars(theme, meter_start, BARS)) {
         return false;
     }
     /* m0 (when it is made yet; the draw reads it again): two notes or more, at most a bar, in range. */
@@ -225,7 +190,6 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
         rational_cmp(spec->source.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->source)) {
         return false;
     }
-    const size_t count = spec->source.note_count;
     /* Phrase 1's cadential idea: m0 augmented 2:1 when two bars hold it and the meter can write it, else m0 exact. */
     Rational two;
     memset(&spec->augmentation, 0, sizeof(spec->augmentation));
@@ -238,30 +202,10 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
     spec->augmented = motive_develop(&spec->source, &spec->augmentation, &spec->augment) == MOTIVE_DEV_OK &&
                       rational_cmp(spec->augment.length, two) <= 0 && grow_motive_in_form_range(&spec->augment);
     /* Phrase 2: m0 liquidated, 1 to half the notes dropped, then one note further (as the retransition's residues). */
-    size_t most = count / 2 > 1 ? count / 2 : 1;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
-    MotiveRelationStep first;
-    memset(&first, 0, sizeof(first));
-    first.kind = MOTIVE_RELATION_LIQUIDATE;
-    first.value[0] = (long)drop;
-    first.value[2] = 1;
-    MotiveRelationStep second = first;
-    second.value[0] = (long)drop + 1;
-    second.value[2] = 0;
-    if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
-        spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
-        spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->repeated)) {
+    if (!grow_draw_residues(&spec->source, rng, theme->bar, &spec->liquidated, &spec->repeated, &spec->liquidation, &spec->repetition,
+                            &spec->drop)) {
         return false;
     }
-    spec->liquidation = first;
-    spec->liquidation.value[2] = 0;
-    spec->repetition = second;
-    spec->drop = drop;
     /* Phrase 3: the main theme head, then the tonic nearest its last note. */
     Rational half;
     if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK ||
@@ -280,43 +224,29 @@ static void coda_label(const GrowCodaSpec *spec, char *label, size_t size) {
     snprintf(label, size, "coda %zu dropped", spec->drop);
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool coda_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    (void)context;
+    return draw_coda(plan, (const CodaRequest *)request, rng, (GrowCodaSpec *)spec);
+}
+
+static bool coda_same_spec(const void *a, const void *b) {
+    return same_coda((const GrowCodaSpec *)a, (const GrowCodaSpec *)b);
+}
+
+static void coda_label_spec(const void *spec, char *out, size_t size) {
+    coda_label((const GrowCodaSpec *)spec, out, size);
+}
+
+static const GrowSpecKind CODA_KIND = {sizeof(GrowCodaSpec), coda_draw_spec, coda_same_spec, coda_label_spec};
+
 bool grow_coda_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     CodaRequest request;
     if (!read_coda(plan, target, &request)) {
         return true;
     }
-    size_t wanted = context && context->candidates > 0 ? context->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowCodaSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowCodaSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!draw_coda(plan, &request, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_coda(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        coda_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, context, rng, &CODA_KIND, out);
 }
 
 /*
@@ -333,10 +263,8 @@ const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *
     const Motive *ideas[IDEAS] = {&spec->source,     &spec->source,   spec->augmented ? &spec->augment : &spec->source,
                                   &spec->liquidated, &spec->repeated, &spec->head,
                                   &spec->tone};
-    for (size_t i = 0; i < IDEAS; i++) {
-        if (rational_cmp(ideas[i]->length, spec->idea_span[i].length) > 0) {
-            return "an idea is longer than its bars";
-        }
+    if (!grow_ideas_fit(ideas, spec->idea_span, IDEAS)) {
+        return "an idea is longer than its bars";
     }
     if (spec->liquidated.note_count >= spec->source.note_count) {
         return "fragment 1 not shorter than the basic idea";
@@ -383,16 +311,7 @@ PlanResult grow_coda_apply(Plan *plan, FillTarget target, const GrowCodaSpec *sp
         return PLAN_ERR_BAD_PAYLOAD;
     }
     GrowBuild build;
-    memset(&build, 0, sizeof(build));
-    build.plan = plan;
-    build.request = &request.theme;
-    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    build.cadence.params.cadence = request.theme.cadence;
-    build.material = plan_node_parent(plan, request.theme.source);
-    build.material_span = plan_node_span(plan, build.material);
-    build.source = request.theme.source;
-    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.theme.bar,
-                                          MOTIVE_BARS + (spec->augmented ? 1 : 0));
+    grow_build_init(&build, plan, &request.theme, MOTIVE_BARS + (spec->augmented ? 1 : 0));
 
     /* The motive nodes, bar by bar from slot_base: m1 (when augmented), m2, m3, the head and the tonic. */
     NodeId nodes[IDEAS];

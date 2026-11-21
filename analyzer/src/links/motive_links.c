@@ -38,21 +38,11 @@ static bool int_member(const cJSON *object, const char *name, int *out) {
 }
 
 /* "n/d" with d above zero. */
-static bool fraction_value(const cJSON *item, unsigned long long *numerator, unsigned long long *denominator) {
-    long long n, d;
-    if (!common_json_rational_read(item, COMMON_RATIONAL_TEXT, &n, &d) || n < 0) {
-        return false;
-    }
-    *numerator = (unsigned long long)n;
-    *denominator = (unsigned long long)d;
-    return true;
-}
-
 static bool fraction_member(const cJSON *object, const char *name, Rational *out) {
-    unsigned long long numerator;
-    unsigned long long denominator;
-    return fraction_value(common_json_member(object, name), &numerator, &denominator) && numerator <= LLONG_MAX &&
-           denominator <= LLONG_MAX && rational_make((long long)numerator, (long long)denominator, out) == RATIONAL_OK;
+    long long numerator;
+    long long denominator;
+    return analyzer_fraction_read(common_json_member(object, name), COMMON_RATIONAL_TEXT, &numerator, &denominator) &&
+           rational_make(numerator, denominator, out) == RATIONAL_OK;
 }
 
 /* The prototype's sketch from a family's "features": the document side of motive_features_to_sketch. */

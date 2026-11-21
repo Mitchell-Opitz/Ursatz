@@ -84,7 +84,7 @@ This module builds no `Rule` or `Constraint` and evaluates none (the
 Same ceiling as `Framework` itself: `identity` (L0), `core` (L1),
 `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5),
 `context`/`semantics`/`relationship`/`interpretation` (L6) -- plus
-`theory/framework.h`, `rules/rule.h`, and `rules/constraint.h`
+`theory/rules/rule_table.h`
 specifically. Enforced by
 the layer table (`cmake/layer-table.txt`).
 
@@ -100,6 +100,6 @@ the layer table (`cmake/layer-table.txt`).
 
 ## Neutral analysis input
 
-`common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps a region's key to an `SpelledKey` (`common_practice_key_region_analysis_key`) and an `SpelledKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).
+`common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps an `SpelledKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).
 
 Leftover tones are labelled by `common_practice_label_leftover_tones`, the fallback when no classifier is injected. `CommonPracticeWeightedConfig.classifier` takes a `NonChordToneClassifier` (`semantics/tone_line.h`; the owner is `motive_tone_roles_line`): the leftover members that have a `voice_id` are labelled per voice, as a line of the voice's members with the chord mask of the segment each sounds in; members without a voice and a classifier that refuses keep the framework rule.

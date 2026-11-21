@@ -6,8 +6,9 @@
 /*
  * The command a thread is running (R-646): its name, its actor and the version the caller read. The dispatcher sets it for the length of a
  * command, a transaction (items/txn.h) takes the name, the actor and the base version from it for its journal record, and a job captures it
- * when it is queued and sets it again on the worker that runs it. A thread with no context (a test, the recovery) is the actor "workshop"
- * with each transaction's own name.
+ * when it is queued and sets it again on the worker that runs it. A write needs a command: a transaction opened on a thread with no context is
+ * refused (items/txn.h). A test that calls a service directly runs it inside a context (tests/command_context_support.h), and the startup
+ * work that writes (the first project) runs inside one of its own.
  */
 
 typedef struct {

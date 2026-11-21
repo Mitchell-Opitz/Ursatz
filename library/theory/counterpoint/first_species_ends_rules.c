@@ -5,7 +5,6 @@
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 #include "model/pitch/midi_pitch.h"
@@ -13,15 +12,11 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
     "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
 
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
+static const bool SOFT[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {false};
+
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "first-species-ends", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "first-species-ends", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -106,8 +101,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                s->pair, s->cantus_part, s->tonic);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_first_species_ends_check(const StandardCounterpointPair *pair,
                                                     StandardCounterpointCantusPart cantus_part,

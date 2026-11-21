@@ -32,6 +32,7 @@
 #include "support/test_knowledge.h"
 #include "ursatz_test.h"
 #include <ursatz_composer/piece_plan_keys.h>
+#include "style_model_file_io.h"
 
 /*
  * Styles (style.h, docs/style.md): a StyleModel file the Analyzer wrote is loaded and the harmony and melody stages
@@ -436,7 +437,7 @@ static void write_style(const char *path) {
     Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = heard_profile(&analysis);
-    assert(style_model_file_write(profile, "block", composer_version(), path) == STYLE_MODEL_FILE_OK);
+    assert(test_style_model_write(profile, "block", composer_version(), path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
     heard_destroy(&analysis);
     plan_destroy(plan);

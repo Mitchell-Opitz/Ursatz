@@ -12,7 +12,6 @@ const SCOPE_KINDS = [
   { kind: "subject", title: "Subject" },
   { kind: "project", title: "Project" },
 ];
-const DIMENSIONS = ["rhythm", "intervals", "contour", "harmony"];
 
 function scopeTitle(kind) {
   const found = SCOPE_KINDS.find((entry) => entry.kind === kind);
@@ -110,8 +109,8 @@ function linkRows(result) {
       reversed: Boolean(link.reversed),
       steps: (link.steps || []).join(" then "),
       distance: percentText(link.distance),
-      kept: DIMENSIONS.filter((name) => similarity[name] === 1),
-      changed: DIMENSIONS.filter((name) => similarity[name] !== 1),
+      kept: Object.keys(similarity).filter((name) => similarity[name] === 1),
+      changed: Object.keys(similarity).filter((name) => similarity[name] !== 1),
     };
   });
 }

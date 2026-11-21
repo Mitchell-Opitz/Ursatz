@@ -7,6 +7,7 @@
 #include "formats.h"
 #include "ids.h"
 #include "layout.h"
+#include "base/params.h"
 
 bool store_ready = false;
 WorkshopLock store_lock = WORKSHOP_LOCK_INIT;
@@ -23,7 +24,7 @@ void store_forget_item(WorkshopTxn *txn, const char *item_id) {
 }
 
 WorkshopTxn *store_txn_begin(const char *command, const char *target) {
-    return workshop_txn_begin(NULL, command, "michelle", target, 0);
+    return workshop_txn_begin(NULL, command, target, 0);
 }
 
 UrsatzStatus store_txn_end(WorkshopTxn *txn, UrsatzStatus result) {
@@ -51,52 +52,7 @@ bool store_is_valid_id(const char *id) {
 
 /* --- text ---------------------------------------------------------------- */
 
-/*
- * Trims surrounding whitespace and counts UTF-8 characters. Returns a copy
- * of the trimmed text, or NULL when it has more than max_chars characters,
- * holds a control character, or on allocation failure (*alloc_failed set).
- */
-static char *trim_text(const char *text, size_t max_chars, bool *alloc_failed) {
-    *alloc_failed = false;
-    char *copy = common_strdup(text ? text : "");
-    if (!copy) {
-        *alloc_failed = true;
-        return NULL;
-    }
-    size_t length = common_trim(copy);
-    size_t chars = 0;
-    for (size_t i = 0; i < length; i++) {
-        unsigned char c = (unsigned char)copy[i];
-        if (c < 0x20 || c == 0x7f || (chars += (c & 0xC0) != 0x80) > max_chars) {
-            free(copy);
-            return NULL;
-        }
-    }
-    return copy;
-}
-
-static UrsatzStatus normalize_name(const char *text, char **out) {
-    bool alloc_failed;
-    *out = trim_text(text, NAME_MAX_CHARS, &alloc_failed);
-    if (!*out) {
-        return alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-    }
-    if ((*out)[0] == '\0') {
-        free(*out);
-        *out = NULL;
-        return workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-    }
-    return URSATZ_OK;
-}
-
-static UrsatzStatus normalize_description(const char *text, char **out) {
-    bool alloc_failed;
-    *out = trim_text(text, DESCRIPTION_MAX_CHARS, &alloc_failed);
-    if (!*out) {
-        return alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-    }
-    return URSATZ_OK;
-}
+#define REFUSED_TEXT "invalid name, description or note"
 
 /* --- paths --------------------------------------------------------------- */
 
@@ -230,9 +186,9 @@ static UrsatzStatus save_project_locked(WorkshopTxn *txn, const cJSON *project, 
 static UrsatzStatus create_project_locked(WorkshopTxn *txn, const char *name, const char *description, cJSON **out_project) {
     char *clean_name = NULL;
     char *clean_description = NULL;
-    UrsatzStatus result = normalize_name(name, &clean_name);
+    UrsatzStatus result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     if (result == URSATZ_OK) {
-        result = normalize_description(description, &clean_description);
+        result = workshop_text_normalize(description, DESCRIPTION_MAX_CHARS, false, REFUSED_TEXT, &clean_description);
     }
     if (result != URSATZ_OK) {
         free(clean_name);
@@ -281,7 +237,7 @@ static UrsatzStatus create_project_locked(WorkshopTxn *txn, const char *name, co
     return result;
 }
 
-bool workshop_material_service_init(void) {
+static bool service_init(void) {
     WorkshopTxn *txn = store_txn_begin("project.create", "");
     if (!txn) {
         return false;
@@ -310,6 +266,25 @@ bool workshop_material_service_init(void) {
     }
     UNLOCK();
     return store_txn_end(txn, ok ? URSATZ_OK : URSATZ_ERR_INTERNAL) == URSATZ_OK && ok;
+}
+
+bool workshop_material_service_init(void) {
+    /* The first project of an empty folder is written while the workshop starts, which no command runs: a startup context of its own gives the
+       record its actor (a write needs a command, items/txn.h), the one the journal always named. */
+    const WorkshopCommandContext *outer = workshop_command_context();
+    WorkshopCommandContext before;
+    bool had_outer = outer != NULL;
+    if (had_outer) {
+        before = *outer;
+    }
+    WorkshopCommandContext startup;
+    memset(&startup, 0, sizeof(startup));
+    snprintf(startup.actor, sizeof(startup.actor), "%s", "michelle");
+    startup.base_version = -1;
+    workshop_command_context_set(&startup);
+    bool ok = service_init();
+    workshop_command_context_set(had_outer ? &before : NULL);
+    return ok;
 }
 
 void workshop_material_service_shutdown(void) {
@@ -438,10 +413,10 @@ UrsatzStatus workshop_material_project_update(const char *id, const char *name, 
     char *clean_description = NULL;
     UrsatzStatus result = load_project_locked(id, &project);
     if (result == URSATZ_OK && name) {
-        result = normalize_name(name, &clean_name);
+        result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     }
     if (result == URSATZ_OK && description) {
-        result = normalize_description(description, &clean_description);
+        result = workshop_text_normalize(description, DESCRIPTION_MAX_CHARS, false, REFUSED_TEXT, &clean_description);
     }
     if (result == URSATZ_OK) {
         char now[32];
@@ -662,7 +637,7 @@ static UrsatzStatus write_version_files_locked(const char *dir, const char *id, 
     cJSON *stored = cJSON_Duplicate(body, 1);
     UrsatzStatus result = stored ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     if (result == URSATZ_OK) {
-        result = snprintf(path, sizeof(path), "%s/%s", dir, WORKSHOP_FILE_BODY) < (int)sizeof(path) &&
+        result = common_path_join(path, sizeof(path), dir, WORKSHOP_FILE_BODY) &&
                          workshop_format_write(path, body_format_of(type), stored, NULL) == URSATZ_OK
                      ? URSATZ_OK
                      : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
@@ -692,7 +667,7 @@ static UrsatzStatus write_version_files_locked(const char *dir, const char *id, 
         }
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    result = snprintf(path, sizeof(path), "%s/%s", dir, WORKSHOP_FILE_ENVELOPE) < (int)sizeof(path) &&
+    result = common_path_join(path, sizeof(path), dir, WORKSHOP_FILE_ENVELOPE) &&
                      workshop_format_write(path, WORKSHOP_FORMAT_ITEM_VERSION, envelope, NULL) == URSATZ_OK
                  ? URSATZ_OK
                  : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
@@ -729,13 +704,9 @@ static UrsatzStatus create_item_locked(WorkshopTxn *txn, const char *type, const
     }
     char *clean_name = NULL;
     char *clean_note = NULL;
-    UrsatzStatus result = normalize_name(name, &clean_name);
+    UrsatzStatus result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     if (result == URSATZ_OK) {
-        bool alloc_failed = false;
-        clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
-        if (!clean_note) {
-            result = alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-        }
+        result = workshop_text_normalize(note, NOTE_MAX_CHARS, false, REFUSED_TEXT, &clean_note);
     }
     if (result == URSATZ_OK && !project_exists_locked(project_id)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
@@ -986,16 +957,13 @@ static bool copy_folder(const char *from, const char *to) {
     for (size_t i = 0; ok && i < names.count; i++) {
         char source[PATH_BYTES * 2];
         char target[PATH_BYTES * 2];
-        if (snprintf(source, sizeof(source), "%s/%s", from, names.items[i]) >= (int)sizeof(source) ||
-            snprintf(target, sizeof(target), "%s/%s", to, names.items[i]) >= (int)sizeof(target)) {
+        if (!common_path_join(source, sizeof(source), from, names.items[i]) ||
+            !common_path_join(target, sizeof(target), to, names.items[i])) {
             ok = false;
         } else if (common_path_is_dir(source)) {
             ok = common_dir_make(target, NULL) == URSATZ_OK && copy_folder(source, target);
         } else {
-            char *data = NULL;
-            size_t size = 0;
-            ok = common_file_read(source, &data, &size, NULL) == URSATZ_OK && common_file_write_atomic(target, data, size, NULL) == URSATZ_OK;
-            free(data);
+            ok = common_file_copy(source, target, NULL) == URSATZ_OK;
         }
     }
     common_names_free(&names);
@@ -1022,7 +990,7 @@ static UrsatzStatus change_item(const char *command, const char *id, const char 
     char *clean_name = NULL;
     UrsatzStatus result = store_load_item_locked(id, &item);
     if (result == URSATZ_OK && name) {
-        result = normalize_name(name, &clean_name);
+        result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     }
     if (result == URSATZ_OK && project_id) {
         if (!store_is_valid_id(project_id)) {
@@ -1139,13 +1107,9 @@ static UrsatzStatus add_version(const char *id, const cJSON *body, const char *n
     }
     cJSON *item = NULL;
     char *clean_note = NULL;
-    bool alloc_failed = false;
     UrsatzStatus result = store_load_item_locked(id, &item);
     if (result == URSATZ_OK) {
-        clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
-        if (!clean_note) {
-            result = alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-        }
+        result = workshop_text_normalize(note, NOTE_MAX_CHARS, false, REFUSED_TEXT, &clean_note);
     }
     if (result == URSATZ_OK) {
         result = workshop_material_body_validate(common_json_string(item, "type"), body, NULL);
@@ -1201,8 +1165,9 @@ UrsatzStatus workshop_material_version_copy(const char *id, int number, const ch
     if (result == URSATZ_OK) {
         /* the envelope is the new version's own */
         char envelope[PATH_BYTES * 2];
-        snprintf(envelope, sizeof(envelope), "%s/%s", to_folder, WORKSHOP_FILE_ENVELOPE);
-        unlink(envelope);
+        if (common_path_join(envelope, sizeof(envelope), to_folder, WORKSHOP_FILE_ENVELOPE)) {
+            unlink(envelope);
+        }
     }
     cJSON_Delete(item);
     UNLOCK();

@@ -80,15 +80,15 @@ function emptyState(id) {
   return {
     id: id || "",
     uses: [],
-    into: "sentence",
+    into: Vocab.defaults().theme.into,
     hybrid: "presentation+continuation",
     material: defaultMaterial(),
     materialChosen: false,
-    meter: "4/4",
-    bars: 8,
-    cadence: "PAC",
+    meter: Vocab.defaults().meter,
+    bars: Vocab.defaults().theme.bars,
+    cadence: Vocab.defaults().theme.cadence,
     firstCadence: "",
-    development: "balanced",
+    development: Vocab.defaults().theme.development,
     construction: null,
     slots: [],
     ideas: [],
@@ -436,14 +436,12 @@ function motiveId(motives, reference) {
   return motives[at].id;
 }
 
-const FORM_MEMBERS = ["into", "hybrid", "material", "mode", "meter", "bars", "cadence", "first_cadence", "development", "construction"];
-
 /* The body of a theme version from the theme member the form builds ({form, slots, ideas, chords, accompaniment, brief, style_weight,
  * without, tempo, check, seed}). */
 function requestBodyOf(uses, theme) {
   const form = theme.form && typeof theme.form === "object" ? theme.form : {};
   const request = { schema: "ursatz-theme-request", schema_version: 2, key: "C" };
-  for (const name of FORM_MEMBERS) {
+  for (const name of Vocab.values("theme_form_members")) {
     if (form[name] !== undefined && form[name] !== null) {
       request[name] = form[name];
     }
@@ -518,7 +516,7 @@ function themeOfBody(body) {
       return reference ? [{ [name]: key, ...reference }] : [];
     });
   const form = {};
-  for (const name of FORM_MEMBERS) {
+  for (const name of Vocab.values("theme_form_members")) {
     if (request[name] !== undefined) {
       form[name] = request[name];
     }
@@ -568,7 +566,7 @@ function bodyFromForm(state) {
       bars: Number(s.bars),
       cadence: s.cadence,
       first_cadence: firstCadence,
-      development: developmentChoices().some((entry) => entry.value === s.development) ? s.development : "balanced",
+      development: developmentChoices().some((entry) => entry.value === s.development) ? s.development : Vocab.defaults().theme.development,
       construction: constructionBody(s.construction, pairingIdeaNames(pairing(s))),
     },
     slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
@@ -903,7 +901,6 @@ const SOURCE_TEXT = {
   registry: "registry form",
   operator: "operator",
 };
-const DISTANCE_LABELS = ["harmony", "rhythm", "melody", "form", "overall"];
 
 function firstTheme(summary) {
   return summary && Array.isArray(summary.themes) && summary.themes.length > 0 ? summary.themes[0] : null;
@@ -979,7 +976,7 @@ function resultView(result, options) {
           (Array.isArray(pieces.skipped) && pieces.skipped.length > 0 ? `, ${pieces.skipped.length} skipped` : "")
         : "",
     distance: distance
-      ? DISTANCE_LABELS.filter((label) => Number.isFinite(distance[label])).map((label) => ({
+      ? Object.keys(distance).filter((label) => Number.isFinite(distance[label])).map((label) => ({
           label,
           value: distance[label].toFixed(4),
         }))

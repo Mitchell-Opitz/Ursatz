@@ -11,19 +11,6 @@ struct SimilarityModel {
     Rational total;
 };
 
-const char *similarity_dimension_name(SimilarityDimension dimension) {
-    switch (dimension) {
-        case SIMILARITY_DIMENSION_INTERVAL:
-            return "interval";
-        case SIMILARITY_DIMENSION_RHYTHM:
-            return "rhythm";
-        case SIMILARITY_DIMENSION_CONTOUR:
-            return "contour";
-        default:
-            return NULL;
-    }
-}
-
 SimilarityModelResult similarity_model_create(const SimilarityDimensionWeight *weights, size_t count,
                                               SimilarityModel **out) {
     if (out == NULL || (count > 0 && weights == NULL)) {

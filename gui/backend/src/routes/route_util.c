@@ -179,25 +179,11 @@ cJSON *ursatz_gui_read_json_body_max(struct mg_connection *conn, size_t max_byte
 }
 
 int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
+  /* the one difference from the workshop's table: a body past the size the route takes is 413 */
   if (status == URSATZ_ERR_REQUEST && error && strcmp(error->path, "/body/size") == 0) {
     return 413;
   }
-  switch (status) {
-    case URSATZ_OK:
-      return 200;
-    case URSATZ_ERR_REQUEST:
-      return error && error->path[0] != '\0' ? 422 : 400;
-    case URSATZ_ERR_UNSATISFIABLE:
-      return 422;
-    case URSATZ_ERR_NOT_FOUND:
-      return 404;
-    case URSATZ_ERR_CONFLICT:
-      return 409;
-    case URSATZ_ERR_CANCELLED:
-      return 499;
-    default:
-      return 500;
-  }
+  return workshop_http_status(status, error);
 }
 
 bool ursatz_gui_valid_id(const char *text) {
@@ -345,14 +331,9 @@ cJSON *ursatz_gui_request_params(struct mg_connection *conn, ...) {
   return params;
 }
 
-/* A path that points into the call itself ("/params/...", "/target", "/bytes") says what is wrong with the request's own members: a 400. A path into
- * the request the Composer reads (the body of a motif, a theme, a piece) is the member the Composer refused: a 422. */
-static int is_call_path(const char *path) {
-  return strncmp(path, "/params", 7) == 0 || strncmp(path, "/body", 5) == 0 || strncmp(path, "/target", 7) == 0 || strncmp(path, "/bytes", 6) == 0 ||
-         strncmp(path, "/base_version", 13) == 0;
-}
-
+/* A path that points into the call itself (workshop_is_call_path) says what is wrong with the request's own members: a 400. A path into the
+ * request the Composer reads (the body of a motif, a theme, a piece) is the member the Composer refused: a 422. */
 int ursatz_gui_failed(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  int http = ursatz_gui_http_status(status, is_call_path(error->path) && strcmp(error->path, "/body/size") != 0 ? NULL : error);
+  int http = ursatz_gui_http_status(status, workshop_is_call_path(error->path) && strcmp(error->path, "/body/size") != 0 ? NULL : error);
   return ursatz_gui_send_failure_at(conn, http, error->message, ursatz_status_name(status), error->path);
 }

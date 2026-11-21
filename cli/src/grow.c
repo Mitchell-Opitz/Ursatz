@@ -1,11 +1,13 @@
 #include "grow.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "grow_text.h"
 #include "motive_extras.h"
 #include "motive_input.h"
@@ -57,40 +59,44 @@ typedef struct {
 
 /* --- reading the options -------------------------------------------------- */
 
+static const CliOptionRow ROWS[] = {
+    {"--from-corpus", offsetof(Options, from_corpus), false},
+    {"--like", offsetof(Options, like_path), false},
+    {"--into", offsetof(Options, into), false},
+    {"--hybrid", offsetof(Options, hybrid), false},
+    {"--key", offsetof(Options, key), false},
+    {"--material", offsetof(Options, material), false},
+    {"--meter", offsetof(Options, meter), false},
+    {"--bars", offsetof(Options, bars), false},
+    {"--cadence", offsetof(Options, cadence), false},
+    {"--first-cadence", offsetof(Options, first_cadence), false},
+    {"--accompaniment", offsetof(Options, accompaniment), false},
+    {"--accompaniment-motive", offsetof(Options, accompaniment_motive_path), false},
+    {"--accompaniment-format", offsetof(Options, accompaniment_format_text), false},
+    {"--accompaniment-pickup", offsetof(Options, accompaniment_pickup_text), false},
+    {"--texture", offsetof(Options, texture), false},
+    {"--voicing", offsetof(Options, voicing), true},
+    {"--check", offsetof(Options, check), true},
+    {"--style", offsetof(Options, style_path), false},
+    {"--style-weight", offsetof(Options, style_weight), false},
+    {"--blend", offsetof(Options, blend_path), false},
+    {"--blend-weight", offsetof(Options, blend_weight_text), false},
+    {"--blend-weights", offsetof(Options, blend_weights_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--suggest", offsetof(Options, suggest_text), false},
+    {"--out", offsetof(Options, out_path), false},
+    {"--midi", offsetof(Options, midi_path), false},
+    {"--musicxml", offsetof(Options, musicxml_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--explain", offsetof(Options, explain_path), false},
+    {"--format", offsetof(Options, format_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->from_corpus = cli_value(args, "--from-corpus");
-    options->like_path = cli_value(args, "--like");
-    options->into = cli_value(args, "--into");
-    options->hybrid = cli_value(args, "--hybrid");
-    options->key = cli_value(args, "--key");
-    options->material = cli_value(args, "--material");
-    options->meter = cli_value(args, "--meter");
-    options->bars = cli_value(args, "--bars");
-    options->cadence = cli_value(args, "--cadence");
-    options->first_cadence = cli_value(args, "--first-cadence");
-    options->accompaniment = cli_value(args, "--accompaniment");
-    options->accompaniment_motive_path = cli_value(args, "--accompaniment-motive");
-    options->accompaniment_format_text = cli_value(args, "--accompaniment-format");
-    options->accompaniment_pickup_text = cli_value(args, "--accompaniment-pickup");
-    options->texture = cli_value(args, "--texture");
-    options->voicing = cli_switch(args, "--voicing");
-    options->check = cli_switch(args, "--check");
-    options->style_path = cli_value(args, "--style");
-    options->style_weight = cli_value(args, "--style-weight");
-    options->blend_path = cli_value(args, "--blend");
-    options->blend_weight_text = cli_value(args, "--blend-weight");
-    options->blend_weights_text = cli_value(args, "--blend-weights");
-    options->seed_text = cli_value(args, "--seed");
-    options->suggest_text = cli_value(args, "--suggest");
-    options->out_path = cli_value(args, "--out");
-    options->midi_path = cli_value(args, "--midi");
-    options->musicxml_path = cli_value(args, "--musicxml");
-    options->tempo_text = cli_value(args, "--tempo");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->explain_path = cli_value(args, "--explain");
-    options->format_text = cli_value(args, "--format");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     int extras_status = motive_extras_read(&options->extras, args, false);
     if (extras_status != 0) {
         return extras_status;
@@ -110,10 +116,10 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "give a motive input or --from-corpus, not both");
     }
     if (!options->input && !options->from_corpus) {
-        return cli_fail(CLI_EXIT_USAGE, "grow needs a motive input\n%s", cli_usage_of("grow"));
+        return cli_needs("grow", "a motive input", true);
     }
     if (!options->into || !options->key || !options->meter) {
-        return cli_fail(CLI_EXIT_USAGE, "grow needs --into, --key and --meter (see --help)");
+        return cli_needs("grow", "--into, --key and --meter", false);
     }
     if ((options->accompaniment_format_text || options->accompaniment_pickup_text) && !options->accompaniment_motive_path) {
         return cli_fail(CLI_EXIT_USAGE, "--accompaniment-format and --accompaniment-pickup need --accompaniment-motive <file>");

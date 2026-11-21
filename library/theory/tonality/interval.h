@@ -43,6 +43,16 @@ typedef struct {
    letter steps than the lower one. */
 bool standard_tonality_interval_between(const PitchSpelling *a, const PitchSpelling *b, StandardTonalityInterval *out);
 
+/* The interval of a generic size 1 or more (simple_size by whole octaves removed, an octave stays 8). Its quality is read from no
+   pitches, so it is PERFECT: a caller that needs the quality uses standard_tonality_interval_between. A size under 1 gives a
+   unison. */
+StandardTonalityInterval standard_tonality_interval_of_size(int size);
+
+/* The generic size a number of semitones (either direction) implies when no letter names are known: 0 is a unison (1), 1 and 2 a
+   second (2), 3 and 4 a third, 5 and 6 a fourth, 7 a fifth, 8 and 9 a sixth, 10 and 11 a seventh, then the same again an octave
+   up (12 is an octave, 8). */
+int standard_tonality_generic_size_of_semitones(long semitones);
+
 /* True for a second (generic size 2), false otherwise. A step is a minor
    or major second (or an augmented or diminished one), in either direction. */
 bool standard_tonality_interval_is_step(const StandardTonalityInterval *interval);

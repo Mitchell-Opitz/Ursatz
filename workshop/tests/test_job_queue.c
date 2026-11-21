@@ -168,6 +168,30 @@ static void test_cancel(void) {
   workshop_job_info_destroy(&info);
 }
 
+/* --- a job found and waited for by its subject (R-645) ------------------------------ */
+
+static void test_subject(void) {
+  char id[WORKSHOP_JOB_ID_BYTES];
+  char found[WORKSHOP_JOB_ID_BYTES];
+  WorkshopJobInfo info = {0};
+  g_release = 0;
+  check(workshop_job_submit_subject("progress", "run-7", progress_job, NULL, NULL, id), "a job about a subject is accepted");
+  check(workshop_job_find("run-7", found, sizeof(found)) && strcmp(found, id) == 0, "a running job is found by its subject");
+  check(!workshop_job_find("run-8", found, sizeof(found)) && !workshop_job_find("", found, sizeof(found)) && !workshop_job_find(NULL, found, sizeof(found)),
+        "another subject, an empty one and none find nothing");
+  char plain[WORKSHOP_JOB_ID_BYTES];
+  workshop_job_submit("progress", progress_job, NULL, NULL, plain);
+  check(!workshop_job_find("", found, sizeof(found)), "a job with no subject is not found by an empty one");
+  g_release = 1;
+  workshop_job_wait(id);
+  check(workshop_job_get(id, &info) && info.state != WORKSHOP_JOB_QUEUED && info.state != WORKSHOP_JOB_RUNNING, "the wait returns when the job has finished");
+  workshop_job_info_destroy(&info);
+  check(!workshop_job_find("run-7", found, sizeof(found)), "a finished job is not found by its subject");
+  workshop_job_wait(plain);
+  workshop_job_wait("job-nothere");
+  check(true, "waiting for an unknown job returns at once");
+}
+
 /* --- two workers at once ------------------------------------------------------------ */
 
 static pthread_mutex_t g_meet_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -336,6 +360,7 @@ int main(void) {
   test_answer();
   test_progress();
   test_cancel();
+  test_subject();
   test_two_workers();
   test_limits_and_list();
   test_retention();

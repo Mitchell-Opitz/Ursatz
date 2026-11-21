@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "theory/tonality/framework.h"
 #include "theory/tonality/roman_numeral_rules.h"
 #include "theory/tonality/seventh_in_key_rules.h"
 #include "theory/tonality/triad_in_key_rules.h"
@@ -193,6 +192,9 @@ static void test_degree_of_letters(void) {
     }
     /* mixed case reads as the numeral it spells, and only the first `length` characters count */
     assert(standard_tonality_roman_numeral_degree_of("Iv", 2) == 4);
+    assert(standard_tonality_roman_numeral_letters("viiO7") == 3 && standard_tonality_roman_numeral_letters("V7") == 1);
+    assert(standard_tonality_roman_numeral_letters("Iv6") == 2 && standard_tonality_roman_numeral_letters("bVI") == 0);
+    assert(standard_tonality_roman_numeral_letters("") == 0 && standard_tonality_roman_numeral_letters(NULL) == 0);
     assert(standard_tonality_roman_numeral_degree_of("vII", 3) == 7);
     assert(standard_tonality_roman_numeral_degree_of("V7", 1) == 5);
     assert(standard_tonality_roman_numeral_degree_of("ii6", 2) == 2);

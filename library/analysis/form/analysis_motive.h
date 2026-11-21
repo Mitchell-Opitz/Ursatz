@@ -36,7 +36,7 @@
  * match another: a window the kernel does not match is an error (DETECTOR), since equal intervals and equal rhythm imply the kernel's
  * test. The kernel only compares directions; the adapter's interval comparison is the finer, and decides.
  *
- * KINDS of an occurrence (StandardFormMotiveKind), each relative to the prototype:
+ * KINDS of an occurrence (MotiveOccurrenceKind), each relative to the prototype:
  *   EXACT     the same pitches (semitones, the first note included) and rhythm
  *   REAL      the same semitone intervals from another pitch: a real transposition
  *   TONAL     the same generic intervals but not the same semitones: a diatonic transposition or sequence
@@ -46,11 +46,9 @@
  * (its note ids) with its StandardFormMotiveOccurrenceClaim, the KIND, and an uncertainty of 1 - score (0 for a full match).
  */
 
-/* StandardFormMotiveKind is MotiveOccurrenceKind (semantics/motive_occurrence_kind.h), kept as an alias until B12. */
-
 /* The precedence rank of a kind when several apply (lower wins): exact 0, real and tonal 1, inverted and retrograde 2, augmented and
    diminished 3, fragmented 4, varied 5. -1 for an invalid kind. */
-int standard_form_motive_kind_rank(StandardFormMotiveKind kind);
+int standard_form_motive_kind_rank(MotiveOccurrenceKind kind);
 
 /* One window handed to the injected matcher: the kernel's MotifWindow (semantics/motif_window.h). Borrowed for the call. */
 typedef MotifWindow StandardFormMotifWindow;
@@ -73,7 +71,7 @@ typedef struct {
     int line;
     int note_first;       /* the occurrence's notes: [note_first, note_first + note_count) of the line */
     int note_count;
-    int kind;             /* StandardFormMotiveKind */
+    int kind;             /* MotiveOccurrenceKind */
     int dimension_generic;
     int mismatches;       /* interval mismatches of a varied occurrence, else 0 */
     int intervals;        /* the intervals compared */

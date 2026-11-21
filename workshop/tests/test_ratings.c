@@ -23,7 +23,8 @@ static const char *const kMotifBody =
     "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}";
 
 static UrsatzStatus run(const char *name, const char *target, const char *params, WorkshopReply *reply, UrsatzError *error) {
-    return command(name, target, params, -1, reply, error);
+    /* a rating of a version of an item is made against the version read: the item's current one (1) */
+    return command(name, target, params, strcmp(name, "ratings.rate-version") == 0 ? 1 : -1, reply, error);
 }
 
 static void expect_refusal(const char *name, const char *target, const char *params, UrsatzStatus status, const char *path, const char *message_part) {

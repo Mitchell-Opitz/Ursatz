@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "theory/harmony/harmony_chord.h"
-#include "theory/rules/preference.h"
 
 /*
  * Phrase model rules for standard-harmony-v1. The phrase model is the typical
@@ -58,8 +57,8 @@ typedef enum {
 /* True for a valid mode and one or more valid chords. */
 bool harmony_phrase_valid(const HarmonyPhrase *phrase);
 
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *harmony_phrase_preference(HarmonyPhraseRule which);
+/* True when the rule is soft (a preference, not a requirement); false for a hard rule and for an invalid rule. */
+bool harmony_phrase_rule_soft(HarmonyPhraseRule which);
 
 /* True when the phrase satisfies the rule. False when it does not, and for an
    invalid phrase or an invalid rule. */

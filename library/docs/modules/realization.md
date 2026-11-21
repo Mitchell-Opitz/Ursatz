@@ -16,7 +16,7 @@ Path `library/realization/`, target `ursatz_realization`, on `model` and `theory
 | `movement.h` | `Movement`, `MovementKeySignature`, `MovementMarker`, `MovementPart` |
 | `work.h` | `Work`, `work_movement_ensemble` |
 | `piano_reduction.h` | `movement_reduce_to_piano` |
-| `realization_json.h` | The codec: `realization_work_to_json`, `realization_work_to_compact_json`, `realization_work_from_json`, `realization_digest` |
+| `realization_json.h` | The codec, in `realization_json_write.c` and `realization_json_read.c` (the reader sits on `CommonJsonReader`) sharing `realization_json_internal.h`: `realization_work_to_json`, `realization_work_to_compact_json`, `realization_work_from_json`, `realization_digest` |
 
 ## Ids
 

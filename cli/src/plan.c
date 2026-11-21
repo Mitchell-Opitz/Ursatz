@@ -1,6 +1,7 @@
 #include "plan_cmd.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 #include <stdint.h>
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "workflow.h"
 
 #define MAX_GIVEN 8
@@ -61,28 +63,32 @@ typedef struct {
 
 /* --- reading the options -------------------------------------------------- */
 
+static const CliOptionRow ROWS[] = {
+    {"--form", offsetof(Options, form_text), false},
+    {"--key", offsetof(Options, key_text), false},
+    {"--material", offsetof(Options, material_text), false},
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--bars", offsetof(Options, bars_text), false},
+    {"--count", offsetof(Options, count_text), false},
+    {"--modulate", offsetof(Options, modulate), true},
+    {"--motive", offsetof(Options, motive_path), false},
+    {"--from-corpus", offsetof(Options, from_corpus), false},
+    {"--like", offsetof(Options, like_path), false},
+    {"--accompaniment", offsetof(Options, accompaniment_text), false},
+    {"--texture", offsetof(Options, texture_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--style", offsetof(Options, style_path), false},
+    {"--style-weight", offsetof(Options, style_weight_text), false},
+    {"--blend", offsetof(Options, blend_path), false},
+    {"--blend-weight", offsetof(Options, blend_weight_text), false},
+    {"--blend-weights", offsetof(Options, blend_weights_text), false},
+    {"--out", offsetof(Options, out_path), false},
+    {"--format", offsetof(Options, format_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->form_text = cli_value(args, "--form");
-    options->key_text = cli_value(args, "--key");
-    options->material_text = cli_value(args, "--material");
-    options->meter_text = cli_value(args, "--meter");
-    options->bars_text = cli_value(args, "--bars");
-    options->count_text = cli_value(args, "--count");
-    options->modulate = cli_switch(args, "--modulate");
-    options->motive_path = cli_value(args, "--motive");
-    options->from_corpus = cli_value(args, "--from-corpus");
-    options->like_path = cli_value(args, "--like");
-    options->accompaniment_text = cli_value(args, "--accompaniment");
-    options->texture_text = cli_value(args, "--texture");
-    options->seed_text = cli_value(args, "--seed");
-    options->style_path = cli_value(args, "--style");
-    options->style_weight_text = cli_value(args, "--style-weight");
-    options->blend_path = cli_value(args, "--blend");
-    options->blend_weight_text = cli_value(args, "--blend-weight");
-    options->blend_weights_text = cli_value(args, "--blend-weights");
-    options->out_path = cli_value(args, "--out");
-    options->format_text = cli_value(args, "--format");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     int added = cli_style_without_read(&options->without, args);
     if (added != 0) {
         return added;
@@ -120,7 +126,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 static int check_options(Options *options) {
     if ((!options->form_text && options->given_count == 0) || !options->key_text || !options->meter_text || !options->out_path) {
-        return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", cli_usage_of("plan"));
+        return cli_needs("plan", "--form, --key, --meter and --out (see --help)", true);
     }
     bool likes_progression = false;
     for (size_t i = 0; i < options->given_count; i++) {

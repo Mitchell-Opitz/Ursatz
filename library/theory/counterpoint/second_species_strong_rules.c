@@ -4,31 +4,19 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT] = {
     "consonant", "imperfect-preferred", "no-strong-unison", "no-repeated-perfect", "no-dissonant-outline",
     "max-same-imperfect-run"};
 
-static bool rule_is_soft(StandardCounterpointSecondSpeciesStrongRule which) {
-    return which == STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_IMPERFECT_PREFERRED ||
-           which == STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_NO_STRONG_UNISON;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT] = {
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_IMPERFECT_PREFERRED] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_NO_STRONG_UNISON] = true};
 
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointSecondSpeciesStrongRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "second-species-strong", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "second-species-strong", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesStrongRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -195,8 +183,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                   subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointSecondSpeciesExercise)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointSecondSpeciesExercise)
 
 bool standard_counterpoint_second_species_strong_check(const StandardCounterpointSecondSpeciesExercise *exercise,
                                                        unsigned *hard_violations, unsigned *soft_violations) {

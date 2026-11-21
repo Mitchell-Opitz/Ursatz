@@ -31,8 +31,7 @@ This framework holds the prototypes and decides whether an exemplar resembles on
   degrees can be lowered in a minor key (mi or me, la or le).
 
 Every rule is a pure check function. A rule that states what the schema
-requires is hard; "less fixed" and "usually" features are soft. No rule builds
-a `Rule` or `Constraint`.
+requires is hard; "less fixed" and "usually" features are soft.
 
 - **Prototypes** (`galant_prototypes.h`), 26 schemas. Meyer, Prinner, and the
   modulating Prinner are as the Galant schemas chapter of Open Music Theory sets

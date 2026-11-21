@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/strings.h>
+
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 
@@ -16,18 +18,6 @@ StandardCounterpointMelodyConfig standard_counterpoint_melody_config_default(voi
 }
 
 /* --- the line --- */
-
-static char *copy_string(const char *text) {
-    if (text == NULL) {
-        return NULL;
-    }
-    size_t size = strlen(text) + 1;
-    char *copy = (char *)malloc(size);
-    if (copy != NULL) {
-        memcpy(copy, text, size);
-    }
-    return copy;
-}
 
 void standard_counterpoint_melody_line_init(StandardCounterpointMelodyLine *line) {
     if (line != NULL) {
@@ -94,8 +84,8 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_line_add_note(Stan
     }
     StandardCounterpointMelodyNote *slot = &line->notes[line->count];
     *slot = *note;
-    slot->note_id = copy_string(note->note_id);
-    slot->nct_ref = copy_string(note->nct_ref);
+    slot->note_id = common_strdup(note->note_id);
+    slot->nct_ref = common_strdup(note->nct_ref);
     if (slot->note_id == NULL || (note->nct_ref != NULL && slot->nct_ref == NULL)) {
         free((void *)slot->note_id);
         free((void *)slot->nct_ref);
@@ -125,21 +115,6 @@ static int generic_from_degrees(const StandardCounterpointMelodyNote *a, const S
         octaves = 0;
     }
     return letters + 7 * (int)octaves + 1;
-}
-
-/* The generic size read from the semitones alone (used only to decide leap and step when none is known). */
-static int generic_from_semitones(long semitones) {
-    static const int WITHIN_OCTAVE[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
-    long size = labs(semitones);
-    return WITHIN_OCTAVE[size % 12] + 7 * (int)(size / 12);
-}
-
-static StandardTonalityInterval make_interval(int size) {
-    StandardTonalityInterval interval;
-    interval.size = size;
-    interval.simple_size = size == 1 ? 1 : ((size - 2) % 7) + 2;
-    interval.quality = STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT;
-    return interval;
 }
 
 /* --- intervals --- */
@@ -233,12 +208,12 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
         } else if (a->degree != 0 && b->degree != 0) {
             claim->generic_size = generic_from_degrees(a, b, semitones);
             claim->generic_source = (int)STANDARD_COUNTERPOINT_GENERIC_DEGREE;
-            item->effective = make_interval(claim->generic_size);
+            item->effective = standard_tonality_interval_of_size(claim->generic_size);
         } else {
             claim->generic_size = 0;
             claim->generic_source = (int)STANDARD_COUNTERPOINT_GENERIC_NONE;
             claim->approximate = 1;
-            item->effective = make_interval(generic_from_semitones(semitones));
+            item->effective = standard_tonality_interval_of_size(standard_tonality_generic_size_of_semitones(semitones));
         }
         claim->leap = standard_tonality_interval_is_leap(&item->effective) ? 1 : 0;
         claim->step = standard_tonality_interval_is_step(&item->effective) ? 1 : 0;

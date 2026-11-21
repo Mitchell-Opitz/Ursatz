@@ -14,6 +14,10 @@
 /* Folds size bytes into seed: for each byte in order, seed xor the byte, times the FNV prime (hash.c). Returns the new hash. */
 uint64_t common_fnv1a64(const void *data, size_t size, uint64_t seed);
 
+/* Folds a 64-bit value into seed as 8 bytes, least significant first (the same on every platform): the hash of a number in a larger
+   structure. Returns the new hash. */
+uint64_t common_fnv1a64_u64(uint64_t value, uint64_t seed);
+
 /* The hash as 16 lowercase hexadecimal digits and a terminating NUL. */
 void common_fnv1a64_hex(uint64_t hash, char out[17]);
 

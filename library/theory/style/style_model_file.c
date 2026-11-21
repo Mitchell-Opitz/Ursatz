@@ -7,7 +7,6 @@
 
 #include <cJSON.h>
 
-#include <common/files.h>
 #include <common/hash.h>
 #include "model/identity/entity_id.h"
 #include "theory/style/style_labels.h"
@@ -28,13 +27,9 @@ static bool count_member(const cJSON *object, const char *name, unsigned long *o
     return true;
 }
 
-StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, size_t *pieces) {
-    return style_model_file_read_without(path, NULL, 0, out, pieces);
-}
-
-StyleModelFileResult style_model_file_read_without(const char *path, const char *const *categories, size_t dropped,
-                                                   StyleModel **out, size_t *pieces) {
-    if (!path || !out || (dropped > 0 && !categories)) {
+StyleModelFileResult style_model_file_parse(const char *text, const char *const *categories, size_t dropped, StyleModel **out,
+                                            size_t *pieces) {
+    if (!text || !out || (dropped > 0 && !categories)) {
         return STYLE_MODEL_FILE_ERR_ARGUMENT;
     }
     for (size_t i = 0; i < dropped; i++) {
@@ -44,14 +39,8 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
         }
     }
     *out = NULL;
-    char *text = NULL;
-    common_file_read(path, &text, NULL, NULL);
-    if (!text) {
-        return STYLE_MODEL_FILE_ERR_IO;
-    }
     cJSON *root = cJSON_Parse(text);
     uint64_t hash = common_fnv1a64(text, strlen(text), COMMON_FNV1A64_OFFSET);
-    free(text);
 
     StyleModelFileResult result = STYLE_MODEL_FILE_ERR_FORMAT;
     StyleStatistic *statistics = NULL;
@@ -150,9 +139,8 @@ StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatis
 
 /* ---- writing ---- */
 
-StyleModelFileResult style_model_file_write(const StyleProfile *profile, const char *name, const char *model_version,
-                                            const char *path) {
-    if (!profile || !name || !name[0] || !model_version || !path) {
+StyleModelFileResult style_model_file_text(const StyleProfile *profile, const char *name, const char *model_version, char **out) {
+    if (!profile || !name || !name[0] || !model_version || !out) {
         return STYLE_MODEL_FILE_ERR_ARGUMENT;
     }
     StyleStatistic *statistics;
@@ -195,17 +183,24 @@ StyleModelFileResult style_model_file_write(const StyleProfile *profile, const c
         cJSON_AddItemToArray(list, entry);
     }
     free(statistics);
-    char *text = ok ? cJSON_Print(root) : NULL;
+    char *printed = ok ? cJSON_Print(root) : NULL;
     cJSON_Delete(root);
+    if (!printed) {
+        return STYLE_MODEL_FILE_ERR_ALLOC;
+    }
+    /* the file is the print and a newline */
+    size_t length = strlen(printed);
+    char *text = malloc(length + 2);
+    if (text) {
+        memcpy(text, printed, length);
+        text[length] = '\n';
+        text[length + 1] = '\0';
+    }
+    free(printed);
     if (!text) {
         return STYLE_MODEL_FILE_ERR_ALLOC;
     }
-    FILE *file = fopen(path, "wb");
-    bool wrote = file && fputs(text, file) >= 0 && fputc('\n', file) != EOF;
-    if (file && fclose(file) != 0) {
-        wrote = false;
-    }
-    free(text);
-    return wrote ? STYLE_MODEL_FILE_OK : STYLE_MODEL_FILE_ERR_IO;
+    *out = text;
+    return STYLE_MODEL_FILE_OK;
 }
 

@@ -18,7 +18,4 @@
 
 int chain_voicing_first_wide_spacing(const PitchSpelling *const voices[4]);
 
-/* The library's framework name for the doubling and spacing claims. */
-const char *chain_voicing_framework_name(void);
-
 #endif

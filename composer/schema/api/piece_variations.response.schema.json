@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece_variations.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/piece_variations.response.schema.json",
   "title": "composer_api_piece_variations response",
   "description": "The variations kept, each with its loop version (its plan inline), the loop markers of its MIDI file and, when asked, its MusicXML.",
   "type": "object",

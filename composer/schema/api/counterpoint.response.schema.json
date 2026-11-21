@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/counterpoint.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/counterpoint.response.schema.json",
   "title": "composer_api_counterpoint response",
   "description": "What `counterpoint --format json` prints, without the files.",
   "type": "object",

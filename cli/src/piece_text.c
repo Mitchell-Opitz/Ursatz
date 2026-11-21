@@ -4,15 +4,11 @@
 #include <string.h>
 
 #include "grow_text.h"
+#include <common/json.h>
 
 static double number_of(const cJSON *object, const char *name) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
     return cJSON_IsNumber(item) ? item->valuedouble : 0;
-}
-
-static const char *string_of(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
-    return cJSON_IsString(item) ? item->valuestring : "";
 }
 
 /* A time "2/1" as the text writes it: a whole number, else numerator/denominator. */
@@ -35,23 +31,23 @@ static void print_version_text(const char *label, const cJSON *version) {
     const cJSON *row = NULL;
     cJSON_ArrayForEach(row, cJSON_GetObjectItemCaseSensitive(version, "sections")) {
         /* A form whose sections the request gives names the part of a row, a form with sizes its role. */
-        const char *part = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "part")) ? string_of(row, "part") : string_of(row, "role");
-        printf("  %-10s %-2s %-3s start ", string_of(row, "id"), part, string_of(row, "letter"));
-        print_time(string_of(row, "start"));
+        const char *part = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "part")) ? common_json_string(row, "part") : common_json_string(row, "role");
+        printf("  %-10s %-2s %-3s start ", common_json_string(row, "id"), part, common_json_string(row, "letter"));
+        print_time(common_json_string(row, "start"));
         printf(", %.0f beats", number_of(row, "beats"));
         if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "cadence"))) {
-            printf(", cadence %s", string_of(row, "cadence"));
+            printf(", cadence %s", common_json_string(row, "cadence"));
         }
         if (cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(row, "in_scope"))) {
             printf(" (kept)");
         } else if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "heard"))) {
-            printf(" (heard %s)", string_of(row, "heard"));
+            printf(" (heard %s)", common_json_string(row, "heard"));
         }
         if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "fill"))) {
-            printf(", %s fill (%s)", string_of(row, "fill"), string_of(row, "source"));
+            printf(", %s fill (%s)", common_json_string(row, "fill"), common_json_string(row, "source"));
         }
         if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "returns"))) {
-            printf(", returns %s", string_of(row, "returns"));
+            printf(", returns %s", common_json_string(row, "returns"));
         }
         printf("\n");
     }
@@ -80,12 +76,12 @@ static void print_version_text(const char *label, const cJSON *version) {
 }
 
 void cli_print_piece_text(const cJSON *document, const char *const *files, size_t file_count) {
-    printf("piece in %s, meter %s, seed %.0f\n", string_of(document, "key"), string_of(document, "meter"), number_of(document, "seed"));
+    printf("piece in %s, meter %s, seed %.0f\n", common_json_string(document, "key"), common_json_string(document, "meter"), number_of(document, "seed"));
     cli_print_brief_json(cJSON_GetObjectItemCaseSensitive(document, "brief"));
     const cJSON *regenerated = cJSON_GetObjectItemCaseSensitive(document, "regenerated");
     if (cJSON_IsObject(regenerated)) {
-        const char *lane = string_of(regenerated, "lane");
-        printf("regenerated %s of section %s\n", strcmp(lane, "all") == 0 ? "all lanes" : lane, string_of(regenerated, "section"));
+        const char *lane = common_json_string(regenerated, "lane");
+        printf("regenerated %s of section %s\n", strcmp(lane, "all") == 0 ? "all lanes" : lane, common_json_string(regenerated, "section"));
     } else if (regenerated) {
         printf(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "ending")
                    ? "regenerated nothing; the ending version is built again\n"
@@ -94,9 +90,9 @@ void cli_print_piece_text(const cJSON *document, const char *const *files, size_
     const cJSON *loop = cJSON_GetObjectItemCaseSensitive(document, "loop");
     if (cJSON_IsObject(loop)) {
         printf("loop from ");
-        print_time(string_of(loop, "start"));
+        print_time(common_json_string(loop, "start"));
         printf(" to ");
-        print_time(string_of(loop, "end"));
+        print_time(common_json_string(loop, "end"));
         printf(" (whole notes)\n");
     }
     const cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
@@ -116,8 +112,8 @@ const cJSON *cli_piece_variation_version(const cJSON *item) {
 
 void cli_print_piece_variations_text(const cJSON *document, const char *const *plans, const char *const *midis,
                                      const char *const *musicxmls) {
-    printf("%s of section %s\n", strcmp(string_of(document, "lane"), "harmony") == 0 ? "harmonizations" : "variations",
-           string_of(document, "section"));
+    printf("%s of section %s\n", strcmp(common_json_string(document, "lane"), "harmony") == 0 ? "harmonizations" : "variations",
+           common_json_string(document, "section"));
     const cJSON *item = NULL;
     size_t at = 0;
     cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(document, "variations")) {

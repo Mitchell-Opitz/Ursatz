@@ -7,6 +7,7 @@
 #include "theory/style/style_profile.h"
 
 #include "ursatz_test.h"
+#include "style_model_file_io.h"
 
 /* The style model file (R-617): a profile written with the version of its producer, read back as a model with the same
    statistics, the named categories dropped on request, and every refusal. */
@@ -53,8 +54,8 @@ static void test_round_trip(void) {
     char first[600], second[600];
     path_of("first.json", first, sizeof first);
     path_of("second.json", second, sizeof second);
-    CHECKF(profile && style_model_file_write(profile, "hand", "1.2.3", first) == STYLE_MODEL_FILE_OK &&
-               style_model_file_write(profile, "hand", "1.2.3", second) == STYLE_MODEL_FILE_OK,
+    CHECKF(profile && test_style_model_write(profile, "hand", "1.2.3", first) == STYLE_MODEL_FILE_OK &&
+               test_style_model_write(profile, "hand", "1.2.3", second) == STYLE_MODEL_FILE_OK,
            "write");
     char *a = read_file(first), *b = read_file(second);
     CHECKF(a && b && strcmp(a, b) == 0, "the same profile always gives the same bytes");
@@ -68,7 +69,7 @@ static void test_round_trip(void) {
     size_t pieces = 0;
     StyleStatistic *written = NULL, *read = NULL;
     size_t written_count = 0, read_count = 0;
-    CHECKF(style_model_file_read(first, &model, &pieces) == STYLE_MODEL_FILE_OK && model && pieces == 2, "read");
+    CHECKF(test_style_model_read(first, &model, &pieces) == STYLE_MODEL_FILE_OK && model && pieces == 2, "read");
     CHECKF(model && style_model_statistics(model, &read, &read_count) == STYLE_MODEL_FILE_OK &&
                style_profile_statistics(profile, &written, &written_count) == STYLE_PROFILE_OK && read_count == written_count,
            "statistics of the model and of the profile");
@@ -87,12 +88,12 @@ static void test_read_without(void) {
     StyleProfile *profile = hand_profile();
     char path[600];
     path_of("without.json", path, sizeof path);
-    CHECKF(style_model_file_write(profile, "hand", "test", path) == STYLE_MODEL_FILE_OK, "write");
+    CHECKF(test_style_model_write(profile, "hand", "test", path) == STYLE_MODEL_FILE_OK, "write");
     const char *const dropped[] = {"cadence-type", "mode"};
     StyleModel *model = NULL;
     StyleStatistic *statistics = NULL;
     size_t count = 0;
-    CHECKF(style_model_file_read_without(path, dropped, 2, &model, NULL) == STYLE_MODEL_FILE_OK && model &&
+    CHECKF(test_style_model_read_without(path, dropped, 2, &model, NULL) == STYLE_MODEL_FILE_OK && model &&
                style_model_statistics(model, &statistics, &count) == STYLE_MODEL_FILE_OK,
            "read without two categories");
     for (size_t i = 0; i < count; i++) {
@@ -104,7 +105,7 @@ static void test_read_without(void) {
     style_model_destroy(model);
     const char *const unknown[] = {"no-such-category"};
     model = (StyleModel *)1;
-    CHECKF(style_model_file_read_without(path, unknown, 1, &model, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT,
+    CHECKF(test_style_model_read_without(path, unknown, 1, &model, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT,
            "an unknown category name is refused");
     style_profile_destroy(profile);
 }
@@ -115,24 +116,24 @@ static void test_refusals(void) {
     path_of("refusals.json", path, sizeof path);
     path_of("missing.json", missing, sizeof missing);
     path_of("garbage.json", garbage, sizeof garbage);
-    CHECKF(style_model_file_write(NULL, "hand", "v", path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
-               style_model_file_write(profile, NULL, "v", path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
-               style_model_file_write(profile, "", "v", path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
-               style_model_file_write(profile, "hand", NULL, path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
-               style_model_file_write(profile, "hand", "v", NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT,
+    CHECKF(test_style_model_write(NULL, "hand", "v", path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
+               test_style_model_write(profile, NULL, "v", path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
+               test_style_model_write(profile, "", "v", path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
+               test_style_model_write(profile, "hand", NULL, path) == STYLE_MODEL_FILE_ERR_ARGUMENT &&
+               test_style_model_write(profile, "hand", "v", NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT,
            "an unnamed style, no version or no path is refused");
-    CHECKF(style_model_file_write(profile, "hand", "v", "/no/such/directory/model.json") == STYLE_MODEL_FILE_ERR_IO,
+    CHECKF(test_style_model_write(profile, "hand", "v", "/no/such/directory/model.json") == STYLE_MODEL_FILE_ERR_IO,
            "an unwritable path is an I/O error");
     StyleModel *model = NULL;
-    CHECKF(style_model_file_read(missing, &model, NULL) == STYLE_MODEL_FILE_ERR_IO && !model, "a missing file");
+    CHECKF(test_style_model_read(missing, &model, NULL) == STYLE_MODEL_FILE_ERR_IO && !model, "a missing file");
     FILE *file = fopen(garbage, "wb");
     CHECKF(file != NULL, "cannot write the garbage file");
     if (file) {
         fputs("{\"schema\": \"something-else\"}\n", file);
         fclose(file);
-        CHECKF(style_model_file_read(garbage, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && !model, "not a style model file");
+        CHECKF(test_style_model_read(garbage, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && !model, "not a style model file");
     }
-    CHECKF(style_model_file_read(NULL, &model, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no path");
+    CHECKF(test_style_model_read(NULL, &model, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no path");
     style_profile_destroy(profile);
 }
 

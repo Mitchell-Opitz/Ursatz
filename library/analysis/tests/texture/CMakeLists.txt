@@ -1,4 +1,3 @@
-ursatz_test(standard_texture_framework SOURCES test_framework.c LIBS ursatz_analysis)
 
 ursatz_test(standard_texture_texture_rules SOURCES test_texture_rules.c LIBS ursatz_analysis)
 

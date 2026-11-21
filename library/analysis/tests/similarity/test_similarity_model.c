@@ -61,11 +61,6 @@ static void test_a_valid_model(void) {
     similarity_model_total_weight(NULL, &numerator, &denominator);
     assert(numerator == 0 && denominator == 1);
     similarity_model_destroy(NULL);
-
-    assert(strcmp(similarity_dimension_name(SIMILARITY_DIMENSION_INTERVAL), "interval") == 0);
-    assert(strcmp(similarity_dimension_name(SIMILARITY_DIMENSION_RHYTHM), "rhythm") == 0);
-    assert(strcmp(similarity_dimension_name(SIMILARITY_DIMENSION_CONTOUR), "contour") == 0);
-    assert(similarity_dimension_name(SIMILARITY_DIMENSION_COUNT) == NULL);
 }
 
 static void test_invalid_models(void) {

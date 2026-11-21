@@ -3,30 +3,20 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/second_species_pattern.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT] = {
     "dissonant-passing", "pattern-fit", "mixture", "register-change-rare"};
 
-static bool rule_is_hard(StandardCounterpointSecondSpeciesWeakRule which) {
-    return which == STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_DISSONANT_PASSING;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT] = {
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_PATTERN_FIT] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_MIXTURE] = true,
+    [STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_REGISTER_CHANGE_RARE] = true};
 
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointSecondSpeciesWeakRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "second-species-weak", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "second-species-weak", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesWeakRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -145,8 +135,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                 subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointSecondSpeciesExercise)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointSecondSpeciesExercise)
 
 bool standard_counterpoint_second_species_weak_check(const StandardCounterpointSecondSpeciesExercise *exercise,
                                                      unsigned *hard_violations, unsigned *soft_violations) {

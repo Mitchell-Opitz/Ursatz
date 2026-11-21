@@ -241,7 +241,7 @@ void cli_print_json(const cJSON *document) {
 /* Writes the text to dir/name; the message names the file. */
 static int write_layer(const char *dir, const char *name, const char *text) {
     char path[1100];
-    if (snprintf(path, sizeof path, "%s/%s", dir, name) >= (int)sizeof path || !text || !cli_write_bytes(path, text, strlen(text))) {
+    if (!common_path_join(path, sizeof path, dir, name) || !text || !cli_write_bytes(path, text, strlen(text))) {
         return cli_fail(CLI_EXIT_WRITE, "cannot write '%s/%s'", dir, name);
     }
     return 0;
@@ -249,8 +249,7 @@ static int write_layer(const char *dir, const char *name, const char *text) {
 
 int cli_write_layers(const char *dir, const CliResponse *response) {
     char readings[1100];
-    if (snprintf(readings, sizeof readings, "%s/readings", dir) >= (int)sizeof readings ||
-        (mkdir(dir, 0755) != 0 && errno != EEXIST) || (mkdir(readings, 0755) != 0 && errno != EEXIST)) {
+    if (!common_path_join(readings, sizeof readings, dir, "readings") || common_dir_make(readings, NULL) != URSATZ_OK) {
         return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", dir);
     }
     cJSON *document = response->json ? cJSON_Parse(response->json) : NULL;
@@ -284,13 +283,7 @@ bool cli_alternative_path(const char *path, size_t k, bool several, char *out, s
 }
 
 bool cli_write_bytes(const char *path, const void *data, size_t size) {
-    FILE *file = fopen(path, "wb");
-    bool wrote = file && fwrite(data, 1, size, file) == size;
-    bool closed = file && fclose(file) == 0;
-    if (!wrote || !closed) {
-        remove(path);
-    }
-    return wrote && closed;
+    return common_file_write_atomic(path, data, size, NULL) == URSATZ_OK;
 }
 
 int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *final_path) {
@@ -343,6 +336,17 @@ void cli_discard_pending(CliPendingFile *pending, size_t count) {
     for (size_t i = 0; i < count; i++) {
         remove(pending[i].temporary);
     }
+}
+
+int cli_pending_commit(CliPendingFile *pending, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        if (rename(pending[i].temporary, pending[i].final_path) != 0) {
+            int status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
+            cli_discard_pending(pending, count);
+            return status;
+        }
+    }
+    return 0;
 }
 
 /* "12-16" as an inclusive range of measure numbers as written in the score; false for anything else. */

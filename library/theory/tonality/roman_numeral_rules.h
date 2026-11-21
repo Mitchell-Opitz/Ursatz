@@ -64,6 +64,10 @@ const char *standard_tonality_roman_numeral_degree(int degree, bool uppercase);
  */
 int standard_tonality_roman_numeral_degree_of(const char *letters, size_t length);
 
+/* The length of the leading run of numeral letters (i, v, I, V) of `text`: 0 for NULL or text that starts with any other
+   character. A caller that scans a numeral keeps its own rule for what may come before and after the run. */
+size_t standard_tonality_roman_numeral_letters(const char *text);
+
 /* TRIAD_SYMBOLS: "" for major and minor, "°" (the degree sign)
    diminished, "+" augmented. NULL for an invalid quality. */
 const char *standard_tonality_roman_numeral_triad_symbol(StandardTonalityTriadQuality quality);

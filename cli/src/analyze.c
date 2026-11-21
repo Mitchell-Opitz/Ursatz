@@ -11,13 +11,17 @@
 #include <common/files.h>
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "cli_tools.h"
 
 /* Writes <dir>/<relative> (making the folders); the failure is printed. */
 static bool write_layer(const char *dir, const char *relative, const char *text) {
     char path[1200];
     char folder[1200];
-    snprintf(path, sizeof path, "%s/%s", dir, relative);
+    if (!common_path_join(path, sizeof path, dir, relative)) {
+        fprintf(stderr, "Error: cannot write '%s/%s'\n", dir, relative);
+        return false;
+    }
     snprintf(folder, sizeof folder, "%s", path);
     char *slash = strrchr(folder, '/');
     if (slash) {
@@ -75,7 +79,7 @@ static int report_failure(UrsatzStatus status, const UrsatzError *error, const c
 int run_analyze(const CliArgs *args) {
     const char *path = args->input_count > 0 ? args->inputs[0] : NULL;
     if (!path) {
-        return cli_fail(CLI_EXIT_USAGE, "analyze needs an input file\n%s", cli_usage_of("analyze"));
+        return cli_needs("analyze", "an input file", true);
     }
     const char *view = cli_value(args, "--view");
     const char *measures = cli_value(args, "--measures");

@@ -224,7 +224,7 @@ function buildPieceThemePicker(options) {
 function pieceNewFill(kind) {
   switch (kind) {
     case "motif":
-      return { kind, item_id: "", version: 0, into: "sentence", hybrid: "presentation+continuation" };
+      return { kind, item_id: "", version: 0, into: Vocabulary.defaults().theme.into, hybrid: "presentation+continuation" };
     case "theme":
       return { kind, item_id: "", version: 0 };
     default:
@@ -1061,7 +1061,7 @@ export function buildPieceEditor(ctx) {
           if (free) {
             return;
           }
-          const into = themeField(intoEl, "Into", themeSelect(PiecesModel.INTOS, fill.into || "sentence"));
+          const into = themeField(intoEl, "Into", themeSelect(PiecesModel.INTOS, fill.into || Vocabulary.defaults().theme.into));
           const [beginning, ending] = (fill.hybrid || "presentation+continuation").split("+");
           const beginningSelect = themeField(intoEl, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
           const endingSelect = themeField(intoEl, "Ending", themeSelect(ThemesModel.ENDINGS, ending));

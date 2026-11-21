@@ -89,10 +89,26 @@ async function sendRequest(request, fetchFn) {
   }
 }
 
+/*
+ * The fetch of a text answer (a MusicXML score, a plain-text export): resolves to {ok, status, contentType, text}; ok is the status being a success.
+ * A network failure is {ok: false, status: 0, contentType: "", text: "", error}. request is a url or {url, method, headers, body}; fetchFn is the page's fetch.
+ */
+async function sendText(request, fetchFn) {
+  const doFetch = fetchFn || ((url, init) => globalThis.fetch(url, init));
+  const given = typeof request === "string" ? { url: request } : request;
+  try {
+    const res = await doFetch(given.url, given.method ? { method: given.method, headers: given.headers, body: given.body } : undefined);
+    const text = await res.text();
+    return { ok: Boolean(res.ok), status: res.status, contentType: (res.headers && res.headers.get("Content-Type")) || "", text };
+  } catch (error) {
+    return { ok: false, status: 0, contentType: "", text: "", error: `Could not reach backend: ${error}` };
+  }
+}
+
 /* sendRequest for a method, a url and a body that is sent as JSON when given (undefined for none). */
 function apiRequest(method, url, body, fetchFn) {
   return sendRequest(jsonRequest(method, url, body), fetchFn);
 }
 
-const api = { sendRequest, apiRequest, jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions };
+const api = { sendRequest, sendText, apiRequest, jsonRequest, errorText, fieldForPath, validateRequest, rememberVersions, knownVersion, forgetVersions };
 export default api;

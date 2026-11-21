@@ -1,6 +1,7 @@
 # Layer table (spec/target-architecture.md 12.2): the module of every C file, and what each module may include.
 # Checked by cmake/check_layer_table.py (test layer_table, in the fast set). Its header explains the rows.
-# A new folder of C files needs a module row; a new edge needs a uses row, and an exception gives its reason.
+# A new folder of C files needs a module row; a new edge needs a uses row, and an exception gives its reason. A uses token no include of a
+# non-test module needs fails the check: delete it.
 
 # Third party (vendored, not checked).
 module cjson     third_party/cjson     prefix cJSON.h
@@ -21,7 +22,6 @@ module events          library/model/events          prefix model/events/
 module containers      library/model/containers      prefix model/containers/
 module structure       library/model/structure       prefix model/structure/
 # The theory group (library/theory, A20261115-507).
-module theory-framework    library/theory/framework    prefix theory/framework/
 module theory-style        library/theory/style        prefix theory/style/
 module theory-rules        library/theory/rules        prefix theory/rules/
 module theory-vocabulary   library/theory/vocabulary   prefix theory/vocabulary/
@@ -41,28 +41,25 @@ group L0-L1 identity core
 group L0-L2 L0-L1 time pitch
 group L0-L5 L0-L2 events containers structure
 group model identity core time pitch events containers structure
-group theory theory-framework theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
+group theory theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
 
-uses core            identity common
+uses core identity
 uses time            L0-L1
 uses pitch           L0-L1
 uses events          L0-L2
-uses containers      L0-L2 events
-uses structure       L0-L2 events containers
+uses containers L0-L2
+uses structure L0-L2
 uses io              model realization ezxml common
-uses theory-framework    model
 uses theory-style        model theory-tonality cjson common
-uses theory-rules        model theory-framework
-uses theory-vocabulary   model
 uses theory-knowledge    model cjson common
-uses theory-tonality     model theory-framework theory-knowledge
-uses theory-harmony      model theory-framework theory-rules theory-tonality theory-vocabulary
-uses theory-voicing      model theory-framework theory-vocabulary
-uses theory-counterpoint model theory-framework theory-rules theory-tonality theory-vocabulary
-uses theory-form         model theory-framework theory-harmony theory-vocabulary
-uses theory-meter        model theory-framework theory-vocabulary
-uses theory-galant       model theory-framework theory-rules theory-tonality theory-vocabulary
-uses theory-markings     model theory-framework
+uses theory-tonality     model theory-knowledge
+uses theory-harmony      model theory-rules theory-tonality theory-vocabulary
+uses theory-voicing      model theory-vocabulary
+uses theory-counterpoint model theory-rules theory-tonality theory-vocabulary
+uses theory-form theory-harmony theory-vocabulary
+uses theory-meter        model theory-vocabulary
+uses theory-galant       model theory-rules theory-tonality theory-vocabulary
+uses theory-markings     model
 
 # The analysis group (library/analysis, A20261115-507).
 module analysis-notes        library/analysis/notes        prefix analysis/notes/
@@ -83,7 +80,7 @@ uses analysis-harmony      model theory analysis-notes
 uses analysis-form         model theory analysis-notes analysis-motive
 uses analysis-meter        model theory analysis-notes
 uses analysis-texture      model theory analysis-notes
-uses analysis-counterpoint model theory analysis-notes
+uses analysis-counterpoint model theory analysis-notes common
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
@@ -102,7 +99,7 @@ uses plan model theory cjson common
 module text            library/text               prefix text/
 group text text
 uses text model theory realization plan reading cjson common
-only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
+only ezxml library/io/musicxml_importer.c library/io/musicxml_import_parts.c library/io/musicxml_import_maps.c library/io/musicxml_import_internal.h -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
 
 
@@ -116,7 +113,7 @@ module analyzer-api  analyzer/include  prefix ursatz_analyzer/analyzer_api.h
 module analyzer      analyzer/src      root analyzer/src analyzer/include analyzer/src/include
 # The Analyzer's internal headers (R-640): the API header's siblings for its command line, its tests and its own files.
 module analyzer-internal analyzer/src/include prefix ursatz_analyzer_internal/ root analyzer/src analyzer/include analyzer/src/include
-uses analyzer-internal model theory analysis chain io realization reading analyzer-api cjson ezxml common
+uses analyzer-internal model theory analysis analyzer-api common
 # The Analyzer's sources by job (R-621's neighbour, A20261115-608): util at the bottom, then store and result, then export, style, corpus
 # and links, and the command line over all of them.
 module analyzer-util   analyzer/src/util   root analyzer/src analyzer/include analyzer/src/include
@@ -179,44 +176,43 @@ generated chain producer_key.h chain/producer_key.h
 generated composer-util composer/composition_key.h
 
 uses analyzer-api  model theory analysis chain io realization reading common
-uses analyzer      model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-internal common
-uses analyzer-util   model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-internal common
-uses analyzer-store  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-internal common
-uses analyzer-result model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-internal common
-uses analyzer-export model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-internal common
-uses analyzer-style  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-internal common
+uses analyzer-util cjson common
+uses analyzer-store analyzer-api cjson analyzer-util analyzer-internal common
+uses analyzer-result chain io realization reading analyzer-api analyzer-internal
+uses analyzer-export model theory chain io reading analyzer-api cjson analyzer-util analyzer-store analyzer-result analyzer-internal common
+uses analyzer-style cjson analyzer-util analyzer-store analyzer-internal common
 # corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
-uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h analyzer-internal common
-uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-internal common
+uses analyzer-corpus model theory analysis analyzer-api cjson analyzer-util analyzer-store export/analysis_document_internal.h analyzer-internal common
+uses analyzer-links analysis chain cjson analyzer-util analyzer-store analyzer-internal common
 # The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for UrsatzJob, UrsatzStatus and UrsatzError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
-uses composer-util model theory realization plan reading analysis chain io cjson composer-api common
-uses composer-structure model theory realization plan reading analysis chain io cjson composer-util common
-uses composer-fill model theory realization plan reading analysis chain io cjson composer-api composer-structure composer-util common
-uses composer-render model theory realization plan reading analysis chain io cjson composer-structure composer-util common
-uses composer-style model theory realization plan reading analysis chain io cjson composer-fill composer-structure composer-util common
-uses composer-harmony model theory realization plan reading analysis chain io cjson composer-core common
-uses composer-motive model theory realization plan reading analysis chain io cjson composer-harmony composer-core common
-uses composer-melody model theory realization plan reading analysis chain io cjson composer-harmony composer-motive composer-core common
-uses composer-texture model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core common
-uses composer-counterpoint model theory realization plan reading analysis chain io cjson composer-harmony composer-texture composer-core common
-uses composer-material model theory realization plan reading analysis chain io cjson composer-harmony composer-melody composer-core common
-uses composer-grow model theory realization plan reading analysis chain io cjson composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
-uses composer-check model theory realization plan reading analysis chain io cjson composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core common
-uses composer-piece model theory realization plan reading analysis chain io cjson composer-api composer-check composer-operators composer-grow composer-core common
-uses composer-candidates model theory realization plan reading analysis chain io cjson composer-piece composer-core common
-uses composer-explain model theory realization plan reading analysis chain io cjson composer-piece composer-check composer-grow composer-core common
-uses composer-request model theory realization plan reading analysis chain io cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
+uses composer-util model theory plan chain composer-api
+uses composer-structure model theory plan cjson composer-util common
+uses composer-fill model plan composer-api composer-structure composer-util common
+uses composer-render model theory realization plan io composer-structure composer-util common
+uses composer-style model theory plan composer-fill composer-util common
+uses composer-harmony model theory plan analysis composer-core
+uses composer-motive model theory plan analysis io cjson composer-harmony composer-core common
+uses composer-melody model theory plan analysis composer-harmony composer-motive composer-core
+uses composer-texture model theory plan analysis chain io composer-harmony composer-core
+uses composer-counterpoint model theory plan composer-harmony composer-core
+uses composer-material model theory plan composer-harmony composer-melody composer-core
+uses composer-grow model theory plan composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
+uses composer-check model theory plan reading analysis chain io composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
+uses composer-piece model theory plan cjson composer-api composer-check composer-operators composer-grow composer-core
+uses composer-candidates model plan composer-piece composer-core common
+uses composer-explain theory plan composer-piece composer-check composer-core common
+uses composer-request model theory realization plan reading chain cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
 # The command line calls the workshop and nothing else (R-656, R-657).
 uses cli           workshop-api common cjson civetweb
 uses workshop-api common cjson
-uses workshop-base common composer-api analyzer-api theory pitch cjson
-uses workshop-jobs workshop-base common composer-api cjson
-uses workshop-items workshop-api workshop-base workshop-jobs common composer-api analyzer-api theory-knowledge plan realization reading text cjson
-uses workshop-analysis workshop-base workshop-items workshop-jobs common composer-api analyzer-api theory-style theory-knowledge io plan realization reading text cjson
-uses workshop-settings workshop-api workshop-base workshop-items common cjson
-uses workshop-ratings workshop-api workshop-base workshop-items workshop-settings common cjson
-uses workshop-composition workshop-base workshop-items workshop-analysis workshop-settings workshop-jobs common composer-api analyzer-api cjson
-uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
+uses workshop-base common composer-api theory pitch cjson
+uses workshop-jobs workshop-base common cjson
+uses workshop-items workshop-api workshop-base common analyzer-api plan realization reading text cjson
+uses workshop-analysis workshop-base workshop-items workshop-jobs common analyzer-api theory-style io plan realization reading text cjson
+uses workshop-settings workshop-api workshop-items common cjson
+uses workshop-ratings workshop-api workshop-items common cjson
+uses workshop-composition workshop-base workshop-items workshop-analysis workshop-settings workshop-jobs common composer-api cjson
+uses workshop-rendering workshop-base workshop-items workshop-composition common analyzer-api cjson
 uses workshop-coordinator workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-settings workshop-ratings workshop-composition workshop-rendering composer-api analyzer-api text common cjson
 allow workshop/src/items/body_migrate.c composition/composer_client.h -- the migration of the old mode and key words and the slot count of a theme's uses still read the Composer's words; B15 moves them
 allow workshop/src/items/body_requests.c composition/composer_client.h -- the migration of a format 1 body names the theme slots and the sized forms of the Composer's vocabulary once, in the migration only
@@ -225,7 +221,7 @@ uses gui           cjson civetweb common workshop-api
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
 # Tests: a test folder may include its module and what that module may include, plus the rows below.
-module test-support          tests/support prefix ursatz_test.h ursatz_check.h test_http.h
+module test-support          tests/support prefix ursatz_test.h ursatz_check.h test_http.h style_model_file_io.h
 module root-tests            tests
 module library-tests         library/tests          root library/tests library/tests/support
 module library-test-support  library/tests/support
@@ -279,9 +275,7 @@ module tests-text                library/text/tests                root library/
 like tests-text text
 uses tests-text test-helpers
 
-module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library
-module tests-theory-rules        library/theory/tests/rules        root library/tests library/tests/support library
 module tests-theory-vocabulary   library/theory/tests/vocabulary   root library/tests library/tests/support library
 module tests-theory-tonality     library/theory/tests/tonality     root library/tests library/tests/support library
 module tests-theory-harmony      library/theory/tests/harmony      root library/tests library/tests/support library
@@ -292,9 +286,7 @@ module tests-theory-meter        library/theory/tests/meter        root library/
 module tests-theory-galant       library/theory/tests/galant       root library/tests library/tests/support library
 module tests-theory-markings     library/theory/tests/markings     root library/tests library/tests/support library
 module tests-theory-knowledge    library/theory/tests/knowledge    root library/tests library/tests/support library
-like tests-theory-framework theory-framework
 like tests-theory-style theory-style
-like tests-theory-rules theory-rules
 like tests-theory-vocabulary theory-vocabulary
 like tests-theory-tonality theory-tonality
 like tests-theory-harmony theory-harmony
@@ -305,9 +297,7 @@ like tests-theory-meter theory-meter
 like tests-theory-galant theory-galant
 like tests-theory-markings theory-markings
 like tests-theory-knowledge theory-knowledge
-uses tests-theory-framework test-helpers
 uses tests-theory-style test-helpers
-uses tests-theory-rules test-helpers
 uses tests-theory-vocabulary test-helpers
 uses tests-theory-tonality test-helpers
 uses tests-theory-harmony test-helpers
@@ -375,7 +365,7 @@ module composer-consumer  composer/tests/consumer
 module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src workshop/src
 module workshop-tests     workshop/tests            root workshop/tests workshop/src workshop/include
 module cli-tests          cli/tests                 root cli/tests cli/src
-uses analyzer-tests test-support
+uses analyzer-tests test-support analyzer-api analyzer-internal chain cjson common io model reading realization theory analyzer-result
 like analyzer-tests analyzer
 like analyzer-tests analyzer-util
 like analyzer-tests analyzer-store
@@ -385,10 +375,10 @@ like analyzer-tests analyzer-style
 like analyzer-tests analyzer-corpus
 like analyzer-tests analyzer-links
 like analyzer-tests analyzer-internal
-uses composer-tests test-support
+uses composer-tests test-support analysis io
 like composer-tests composer-request
-uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
-uses workshop-tests test-support
+uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator workshop-items workshop-tests theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
+uses workshop-tests test-support composer-api analyzer-api workshop-jobs workshop-base workshop-settings workshop-analysis
 uses cli-tests test-support
 like cli-tests cli
 like workshop-tests workshop-coordinator

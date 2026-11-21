@@ -7,6 +7,7 @@
 #include <plan/plan_common.h>
 
 #include <theory/counterpoint/melodic_rules.h>
+#include <theory/tonality/tonal_key.h>
 
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds
@@ -67,12 +68,11 @@ static bool in_scale(SpelledKey key, int pitch) {
 static bool choose_tone(SpelledKey key, int from, int to, FillRng *rng, int *out) {
     int difference = to - from;
     if (difference == 0) {
-        int up = 0;
-        int down = 0;
-        for (int step = 1; step <= 2; step++) {
-            up = up == 0 && in_scale(key, from + step) ? from + step : up;
-            down = down == 0 && in_scale(key, from - step) ? from - step : down;
-        }
+        unsigned scale = util_scale_mask(spelled_key_tonic_pitch_class(&key), key.material);
+        int up = standard_tonality_mask_step(scale, from, 1);
+        int down = standard_tonality_mask_step(scale, from, -1);
+        up = up != from && up - from <= 2 ? up : 0;
+        down = down != from && from - down <= 2 ? down : 0;
         if (up == 0 && down == 0) {
             return false;
         }
@@ -686,21 +686,6 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
     out->score_numerator = added_total > 0 ? 1 : 0;
 }
 
-/* Whether the notes of two spans are the same, the second's pitches shift semitones from the first's (mapped when the mode changes). */
-static bool same_notes(const ReturnPayload *payload, const ReturnSpan *a, const ReturnSpan *b, int shift) {
-    if (a->note_count != b->note_count) {
-        return false;
-    }
-    for (size_t n = 0; n < a->note_count; n++) {
-        if (return_mode_pitch(payload, a->notes[n].midi + shift) != b->notes[n].midi ||
-            rational_cmp(a->notes[n].offset, b->notes[n].offset) != 0 ||
-            rational_cmp(a->notes[n].duration, b->notes[n].duration) != 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
 /*
  * The harmony, bass and inner voices are open (the harmony spans with the shape they were written from), the melody
  * is written, and the open harmony covers the returned section's. A violation is recorded in out.
@@ -759,7 +744,7 @@ static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
             continue;
         }
         const ReturnSpan *result = next_melody_span(&payload->result, &next_melody);
-        if (!result || !same_notes(payload, span, result, payload->transpose)) {
+        if (!result || !return_same_notes(span, result, payload->transpose, payload)) {
             reject(out, "reharmonization changes the melody");
             return;
         }

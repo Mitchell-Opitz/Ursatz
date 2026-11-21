@@ -6,14 +6,9 @@
 
 This is why the deleted `generation/candidate_evaluator.h`'s `CandidateEvaluation` could not reuse the deleted `analysis/analyzer.h`'s `AnalysisResult`, even though both held the identical Interpretation/Evidence shape.
 
-## L7 rules decisions made for CandidateEvaluator (deleted in P55)
+## L7 rules decisions made for CandidateEvaluator (deleted in P55 and P66b)
 
-`rules/rule.h` had a `RuleEvaluation` shape with no confirmed Registry row; it was flagged, reviewed and resolved in the same L7 pass. The consumer, `CandidateEvaluator`, and then `RuleEvaluation`, `constraint_evaluate`, `preference_rank`, `preference_rank_candidates` and the weight arithmetic were all deleted in P55, since nothing called them. What the decisions leave in `rules/` (see `docs/modules/rules.md`):
-
-- A framework registers its `Constraint` callback, which takes an optional `Context`. A framework candidate is a `Value` with type tag `standard-<framework>/<table prefix>` holding the rule's subject struct; an unrecognised tag is `NOT_APPLICABLE`.
-- `ConstraintEvalResult` has `CONSTRAINT_EVAL_NOT_APPLICABLE`, distinct from `CONSTRAINT_EVAL_FAIL`. A caller folding many results into one score must treat NOT_APPLICABLE as excluded from the score, never as a failure.
-- A `Preference` callback never rejects a candidate: it returns a score.
-- `CONSTRAINT_TYPE_WEIGHTED` stays on the same PASS/FAIL/NOT_APPLICABLE contract as every other `ConstraintType`: it does not get its own return shape.
+`CandidateEvaluator`, `RuleEvaluation`, `constraint_evaluate`, `preference_rank`, `preference_rank_candidates` and the weight arithmetic were deleted in P55, since nothing called them. P66b B2 deleted the rest of the objects: Rule, Constraint, Preference, their callbacks and `Context` (R-685). What stays in `rules/` is the rule table (`docs/modules/rules.md`): a rule area answers `*_rule_holds` on its subject directly, and says whether a rule is soft with its own `*_rule_soft` query.
 
 ## Chord and Key
 

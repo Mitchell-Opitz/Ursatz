@@ -8,10 +8,10 @@
 
 #include "style/style_profile_internal.h"
 #include <common/json.h>
+#include "util/misc_util.h"
 
 static bool fraction_member(const cJSON *object, const char *name, long long *numerator, long long *denominator) {
-    return common_json_rational_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, numerator, denominator) &&
-           *numerator >= 0;
+    return analyzer_fraction_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, numerator, denominator);
 }
 
 static bool read_harmony(StylePiece *piece, const cJSON *document) {

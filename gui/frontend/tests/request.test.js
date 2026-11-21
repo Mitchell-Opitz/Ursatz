@@ -30,5 +30,15 @@ const answered = (status, body) => async () => ({ ok: status >= 200 && status < 
   check(answer.ok && answer.data === null, "an answer that is not JSON has no data");
   answer = await Req.apiRequest("GET", "/api/x", undefined, async () => { throw new Error("down"); });
   check(!answer.ok && answer.status === 0 && answer.data.code === "unreachable" && Req.errorText(answer.data).includes("down"), "a network failure is an envelope");
+  /* The fetch of a text answer: the status, the content type and the text; a network failure has status 0. */
+  const texted = (status, type, text) => async () => ({ ok: status >= 200 && status < 300, status, headers: { get: () => type }, text: async () => text });
+  let text = await Req.sendText("/api/score.xml", texted(200, "application/vnd.recordare.musicxml+xml", "<score/>"));
+  check(text.ok && text.status === 200 && text.contentType.includes("musicxml") && text.text === "<score/>", "a text answer is {ok, status, contentType, text}");
+  text = await Req.sendText({ url: "/api/x", method: "POST", body: "b" }, async (url, init) => ({ ok: true, status: 200, headers: { get: () => null }, text: async () => `${url} ${init.method} ${init.body}` }));
+  check(text.text === "/api/x POST b" && text.contentType === "", "a request object sends its method and body");
+  text = await Req.sendText("/api/x", texted(404, "application/json", '{"error":"no"}'));
+  check(!text.ok && text.status === 404 && text.text === '{"error":"no"}', "a failure status keeps its text");
+  text = await Req.sendText("/api/x", async () => { throw new Error("down"); });
+  check(!text.ok && text.status === 0 && text.text === "" && text.error.includes("down"), "a network failure of a text fetch has status 0");
   finish();
 })();

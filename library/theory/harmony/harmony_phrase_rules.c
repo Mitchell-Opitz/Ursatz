@@ -1,28 +1,18 @@
 #include "theory/harmony/harmony_phrase_rules.h"
 
 #include "theory/harmony/harmony_functions.h"
-#include "theory/harmony/harmony_framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[HARMONY_PHRASE_RULE_COUNT] = {"tonic-then-dominant", "no-backward-motion",
                                                              "weak-predominant-leads-on", "iv-before-ii"};
 
-static bool table_is_hard(int which) {
-    return which == HARMONY_PHRASE_TONIC_THEN_DOMINANT || which == HARMONY_PHRASE_IV_BEFORE_II;
-}
+static const bool SOFT[HARMONY_PHRASE_RULE_COUNT] = {
+    [HARMONY_PHRASE_NO_BACKWARD_MOTION] = true, [HARMONY_PHRASE_WEAK_PREDOMINANT_LEADS_ON] = true};
 
-static RulePair g_pairs[HARMONY_PHRASE_RULE_COUNT];
-static UrsatzOnce g_built[HARMONY_PHRASE_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                                    const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static const RuleTable TABLE = {
-    "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "phrase", NAMES, HARMONY_PHRASE_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate, score_candidate};
+static const RuleTable TABLE = {.name = "phrase", .names = NAMES, .soft = SOFT, .count = HARMONY_PHRASE_RULE_COUNT};
 
-const Preference *harmony_phrase_preference(HarmonyPhraseRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool harmony_phrase_rule_soft(HarmonyPhraseRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 bool harmony_phrase_valid(const HarmonyPhrase *phrase) {
@@ -116,8 +106,6 @@ static bool holds_adapter(int which, const void *subject) {
     return harmony_phrase_rule_holds((HarmonyPhraseRule)which, subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyPhrase)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyPhrase)
 
 bool harmony_phrase_check(const HarmonyPhrase *phrase, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_phrase_valid(phrase)) {

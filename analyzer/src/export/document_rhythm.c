@@ -1,6 +1,7 @@
 /* The rhythm areas of the analysis document: rhythm and meter, and texture. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* The line a density profile is of, as the document names it: "all" for every note of the phrase, then the outer-voice
    soprano and bass, and "other" for the rest. */
@@ -247,7 +248,7 @@ static cJSON *meter_fit_json(DocBuild *build, const ImportedScore *notes, const 
     Rational start;
     Rational end;
     doc_notes_span(build, notes, NULL, notes->count, &start, &end);
-    cJSON *claim = doc_claim_json_with(build, "standard-meter-v1", notes, NULL, 0, start, end, "meter-fit",
+    cJSON *claim = doc_claim_json_with(build, FRAMEWORK_STANDARD_METER, notes, NULL, 0, start, end, "meter-fit",
                                    cJSON_CreateNumber(check->uncertainty));
     if (!(claim && common_json_add(claim, "declared", meter_reading_json(build, &check->effective)) &&
           common_json_add(claim, "alternative",

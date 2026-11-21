@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/piece.response.schema.json",
   "title": "composer_api_piece response",
   "description": "What `piece --format json` prints (without the files it wrote), with the plans of the versions (\"loop\" and \"ending\" of the game loop, \"piece\" of another form), and the explanation, the ending version's MusicXML and the MusicXML of the later versions when asked.",
   "type": "object",

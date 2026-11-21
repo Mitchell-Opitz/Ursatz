@@ -25,7 +25,10 @@ CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVis
     const char *schema = common_json_string_or_null(index, "schema");
     const char *input = common_json_string_or_null(index, "input_dir");
     const cJSON *pieces = common_json_member(index, "pieces");
-    if (!schema || strcmp(schema, "ursatz-corpus-index") != 0 || (input_dir && !input) || !cJSON_IsArray(pieces)) {
+    const cJSON *version = common_json_member(index, "schema_version");
+    /* an index of another version is not read: its members may mean something else (R-692) */
+    if (!schema || strcmp(schema, "ursatz-corpus-index") != 0 || !cJSON_IsNumber(version) ||
+        version->valuedouble != ANALYZER_CORPUS_INDEX_VERSION || (input_dir && !input) || !cJSON_IsArray(pieces)) {
         cJSON_Delete(index);
         return CORPUS_WALK_ERR_FORMAT;
     }

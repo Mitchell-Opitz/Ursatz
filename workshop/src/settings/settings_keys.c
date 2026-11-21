@@ -33,7 +33,28 @@ static void add_workshop_key(WorkshopSettingKey *row, const char *key, const cha
     snprintf(row->type, sizeof(row->type), "%s", type);
     row->min = min;
     row->max = max;
+    row->own = true;
     row->dflt = dflt;
+}
+
+bool workshop_settings_own_value_ok(const WorkshopSettingKey *key, const cJSON *value, char *message, size_t size) {
+    if (strcmp(key->type, "ratio") == 0) {
+        unsigned long n = 0;
+        unsigned long d = 0;
+        char extra = 0;
+        if (cJSON_IsString(value) && sscanf(value->valuestring, "%lu/%lu%c", &n, &d, &extra) == 2 && d >= 1 && d <= (unsigned long)key->max &&
+            n * 2 <= d) {
+            return true;
+        }
+        snprintf(message, size, "%s must be a ratio from 0/1 to 1/2 with a denominator up to %d", key->key, key->max);
+        return false;
+    }
+    if (cJSON_IsNumber(value) && value->valuedouble == (double)(long long)value->valuedouble && value->valuedouble >= key->min &&
+        value->valuedouble <= key->max) {
+        return true;
+    }
+    snprintf(message, size, "%s must be a whole number from %d to %d", key->key, key->min, key->max);
+    return false;
 }
 
 bool workshop_settings_keys_install(const cJSON *preference_keys, const cJSON *rules) {

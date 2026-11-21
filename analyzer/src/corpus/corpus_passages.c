@@ -145,7 +145,7 @@ static bool passage_from_match(const char *corpus_dir, const SimilarMatch *match
     }
     char path[2048];
     char *text = NULL;
-    if (snprintf(path, sizeof path, "%s/%s", corpus_dir, match->document) >= (int)sizeof path || common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
+    if (!common_path_join(path, sizeof path, corpus_dir, match->document) || common_file_read(path, &text, NULL, NULL) != URSATZ_OK) {
         return true;
     }
     cJSON *document = cJSON_Parse(text);
@@ -242,13 +242,7 @@ UrsatzStatus analyzer_corpus_passages_numerals(const char *corpus_dir, const Kno
 /* ---- the request member ---- */
 
 static cJSON *fraction_json(Rational value) {
-    cJSON *fraction = cJSON_CreateObject();
-    if (!fraction || !cJSON_AddNumberToObject(fraction, "num", (double)value.num) ||
-        !cJSON_AddNumberToObject(fraction, "den", (double)value.den)) {
-        cJSON_Delete(fraction);
-        return NULL;
-    }
-    return fraction;
+    return common_json_rational_object(value.num, value.den);
 }
 
 static cJSON *place_json(int measure, double beat) {

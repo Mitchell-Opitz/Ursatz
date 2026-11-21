@@ -37,11 +37,20 @@ static void test_table(void) {
         check_quiet(workshop_http_status(rows[i].status, NULL) == rows[i].plain, "a status without an error");
         check_quiet(workshop_http_status(rows[i].status, &without) == rows[i].plain, "a status whose error names no path");
         check_quiet(workshop_http_status(rows[i].status, &with) == rows[i].with_path, "a status whose error names a path");
-        /* the GUI's table is the same one (the workshop's is for the job results it keeps) */
-        check_quiet(ursatz_gui_http_status(rows[i].status, NULL) == rows[i].plain, "the GUI's table: a status without an error");
-        check_quiet(ursatz_gui_http_status(rows[i].status, &without) == rows[i].plain, "the GUI's table: an error that names no path");
-        check_quiet(ursatz_gui_http_status(rows[i].status, &with) == rows[i].with_path, "the GUI's table: an error that names a path");
+        /* the GUI answers with the workshop's table, but for the one case below */
+        check_quiet(ursatz_gui_http_status(rows[i].status, &with) == rows[i].with_path, "the GUI's answer is the workshop's");
     }
+}
+
+/* The one difference: a body past the size the route takes is 413, not 400 or 422. */
+static void test_body_size(void) {
+    UrsatzError size = error_at("/body/size");
+    check_quiet(ursatz_gui_http_status(URSATZ_ERR_REQUEST, &size) == 413, "a REQUEST at /body/size is 413");
+    check_quiet(ursatz_gui_http_status(URSATZ_ERR_NOT_FOUND, &size) == 404, "another status at /body/size is the workshop's");
+    check_quiet(workshop_http_status(URSATZ_ERR_REQUEST, &size) == 422, "the workshop's table has no 413");
+    check_quiet(workshop_is_call_path("/params/x") && workshop_is_call_path("/query") && workshop_is_call_path("/actor") &&
+                    workshop_is_call_path("/name") && workshop_is_call_path("/command") && !workshop_is_call_path("/meter") && !workshop_is_call_path(""),
+                "the call's own paths");
 }
 
 static void test_last_error(void) {
@@ -65,6 +74,7 @@ static void test_last_error(void) {
 
 int main(void) {
     test_table();
+    test_body_size();
     test_last_error();
     return test_finish("gui_http_status");
 }

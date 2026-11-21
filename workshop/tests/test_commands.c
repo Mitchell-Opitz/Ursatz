@@ -197,7 +197,7 @@ static void test_projects_and_items(void) {
     workshop_reply_destroy(&reply);
     check(run("item.reanalyze", g_motif, NULL, 2, &reply) && version_of(g_motif) == 3 && journaled("item.reanalyze", g_motif), "item.reanalyze saves the analysis again as a version");
     workshop_reply_destroy(&reply);
-    check(run("item.set-op-checks", g_motif, "{\"checks\":{}}", -1, &reply) && journaled("item.set-op-checks", g_motif), "item.set-op-checks replaces the marks");
+    check(run("item.set-op-checks", g_motif, "{\"checks\":{}}", version_of(g_motif), &reply) && journaled("item.set-op-checks", g_motif), "item.set-op-checks replaces the marks");
     workshop_reply_destroy(&reply);
 
     /* A candidate from the Composer is saved as a variant, flagged, rerolled and promoted. */
@@ -218,7 +218,7 @@ static void test_projects_and_items(void) {
     cJSON_Delete(variant_params);
     cJSON_Delete(job);
     workshop_reply_destroy(&candidates);
-    check(run("item.save-variant", g_motif, variant_text, -1, &reply) && journaled("item.save-variant", NULL), "item.save-variant keeps the candidate as a variant of the motif");
+    check(run("item.save-variant", g_motif, variant_text, version_of(g_motif), &reply) && journaled("item.save-variant", NULL), "item.save-variant keeps the candidate as a variant of the motif");
     free(variant_text);
     snprintf(g_variant, sizeof(g_variant), "%s", str(member(reply.json, "item"), "id"));
     workshop_reply_destroy(&reply);

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/motive.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/motive.response.schema.json",
   "title": "composer_api_motive, composer_api_motive_from_midi and composer_api_motive_render response",
   "description": "What `ursatz motive --format json` prints: the motive, its analysis, and for composer_api_motive_render the motive as it sounds. The MIDI and MusicXML are in the ComposerResponse, not in the JSON.",
   "type": "object",
@@ -59,6 +59,8 @@
         "rhythm_text": { "type": "string" },
         "contour_text": { "type": "string" },
         "harmony_text": { "type": "string" },
+        "key_text": { "type": "string", "description": "With write_in_c and a key: the key as D minor." },
+        "notes_text_in_c": { "type": "string", "description": "With write_in_c and a key: the notes with C as the tonic in the same mode." },
         "note_count": { "type": "integer", "minimum": 1 },
         "length": { "$ref": "#/$defs/rational" },
         "bars": { "$ref": "#/$defs/rational" },

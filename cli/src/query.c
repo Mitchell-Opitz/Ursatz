@@ -7,6 +7,7 @@
 #include <cJSON.h>
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "cli_tools.h"
 #include "session.h"
 #include "workflow.h"
@@ -61,7 +62,7 @@ static cJSON *read_params(const char *path, int *status) {
 
 int run_query(const CliArgs *args) {
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "query needs the name of a query\n%s", cli_usage_of("query"));
+        return cli_needs("query", "the name of a query", true);
     }
     const char *name = args->inputs[0];
     const char *format = cli_value(args, "--format");

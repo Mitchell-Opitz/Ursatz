@@ -34,6 +34,23 @@ bool common_path_join(char *out, size_t capacity, const char *a, const char *b) 
     return written >= 0 && (size_t)written < capacity;
 }
 
+char *common_path_join_alloc(const char *a, const char *b) {
+    if (a == NULL || b == NULL) {
+        return NULL;
+    }
+    size_t length = strlen(a);
+    if (length == 0) {
+        return common_strdup(b);
+    }
+    bool slash = a[length - 1] == '/';
+    size_t size = length + strlen(b) + 2;
+    char *out = malloc(size);
+    if (out != NULL) {
+        snprintf(out, size, "%s%s%s", a, slash ? "" : "/", b);
+    }
+    return out;
+}
+
 UrsatzStatus common_file_read(const char *path, char **data, size_t *size, UrsatzError *error) {
     *data = NULL;
     if (size) {
@@ -158,6 +175,33 @@ UrsatzStatus common_dir_create(const char *path, UrsatzError *error) {
         return io_error(error, path, "cannot create folder");
     }
     return URSATZ_OK;
+}
+
+UrsatzStatus common_file_copy(const char *from, const char *to, UrsatzError *error) {
+    char *data = NULL;
+    size_t size = 0;
+    UrsatzStatus status = common_file_read(from, &data, &size, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    status = common_file_write_atomic(to, data, size, error);
+    free(data);
+    return status;
+}
+
+UrsatzStatus common_dir_make_parent(const char *path, UrsatzError *error) {
+    const char *slash = strrchr(path, '/');
+    if (slash == NULL || slash == path) {
+        return URSATZ_OK;
+    }
+    char folder[PATH_BYTES];
+    size_t length = (size_t)(slash - path);
+    if (length >= sizeof(folder)) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, path, "the path \"%s\" is too long", path);
+    }
+    memcpy(folder, path, length);
+    folder[length] = '\0';
+    return common_dir_make(folder, error);
 }
 
 UrsatzStatus common_dir_make(const char *path, UrsatzError *error) {

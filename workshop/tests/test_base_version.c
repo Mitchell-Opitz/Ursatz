@@ -77,7 +77,7 @@ static void test_refusals(void) {
     for (int i = 0; i < 2; i++) {
         const char *name = i == 0 ? "item.update" : "item.delete";
         status = command(name, g_motif, i == 0 ? "{\"name\":\"Renamed\"}" : "{}", 1, &reply, &error);
-        check(status == URSATZ_ERR_CONFLICT && num(reply.json, "current_version") == 2, "a stale rename or delete is refused with the current version");
+        CHECKF(status == URSATZ_ERR_CONFLICT && num(reply.json, "current_version") == 2, "a stale rename or delete is refused with the current version");
         workshop_reply_destroy(&reply);
     }
     status = command("item.update", g_motif, "{\"name\":\"Renamed\"}", 2, &reply, &error);
@@ -169,6 +169,32 @@ static void test_update_uses(void) {
     workshop_reply_destroy(&reply);
 }
 
+/* The four commands that took no base version before (R-679): item.variations, item.set-op-checks, item.save-variant and
+   ratings.rate-version are refused without one and on a stale one, as every other change of an item is. */
+static void test_four_commands(void) {
+    static const struct {
+        const char *name;
+        const char *params;
+    } COMMANDS[] = {
+        {"item.variations", "{\"version\":1,\"section_id\":\"a\",\"lane\":\"melody\",\"count\":1}"},
+        {"item.set-op-checks", "{\"checks\":{}}"},
+        {"item.save-variant", "{\"variant\":{\"chain\":{\"steps\":[]},\"seed\":1,\"kind\":\"variant\",\"derivation\":\"x\"}}"},
+        {"ratings.rate-version", "{\"version\":1,\"rating\":3}"},
+    };
+    int current = current_version(g_other);
+    for (size_t i = 0; i < sizeof(COMMANDS) / sizeof(COMMANDS[0]); i++) {
+        WorkshopReply reply;
+        UrsatzError error;
+        UrsatzStatus status = command(COMMANDS[i].name, g_other, COMMANDS[i].params, -1, &reply, &error);
+        CHECKF(status == URSATZ_ERR_REQUEST && strcmp(error.path, "/base_version") == 0, "%s without a base version is refused", COMMANDS[i].name);
+        workshop_reply_destroy(&reply);
+        status = command(COMMANDS[i].name, g_other, COMMANDS[i].params, current + 5, &reply, &error);
+        CHECKF(status == URSATZ_ERR_CONFLICT && strcmp(error.path, "/base_version") == 0 && (int)num(reply.json, "current_version") == current,
+              "%s on a stale base version is refused with the current version", COMMANDS[i].name);
+        workshop_reply_destroy(&reply);
+    }
+}
+
 int main(void) {
     if (!harness_open(18991)) {
         return 1;
@@ -187,6 +213,7 @@ int main(void) {
         test_refusals();
         test_compose();
         test_update_uses();
+        test_four_commands();
     }
     harness_close();
     return test_finish("workshop_base_version");

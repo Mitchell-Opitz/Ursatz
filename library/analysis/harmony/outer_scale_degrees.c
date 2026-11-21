@@ -6,7 +6,6 @@
 
 #include "model/core/provenance_reference.h"
 #include "model/core/value.h"
-#include "theory/tonality/common_practice_framework.h"
 #include "model/pitch/midi_pitch.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/tonality/common_practice_materials.h"

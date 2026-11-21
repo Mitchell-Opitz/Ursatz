@@ -7,7 +7,6 @@
 #include "theory/counterpoint/counterpoint_line.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 
@@ -16,24 +15,13 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT] = {
     "leaps", "final-step", "range", "leading-tone", "downward-steps", "upward-leap"};
 
-static bool rule_is_soft(StandardCounterpointFourthSpeciesLineRule which) {
-    return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_DOWNWARD_STEPS ||
-           which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_UPWARD_LEAP;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT] = {
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_DOWNWARD_STEPS] = true,
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_UPWARD_LEAP] = true};
 
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointFourthSpeciesLineRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "fourth-species-line", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "fourth-species-line", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesLineRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -135,8 +123,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                 s->exercise, s->tonic);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_fourth_species_line_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,

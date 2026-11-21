@@ -32,7 +32,7 @@
 static unsigned phrase_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < HARMONY_PHRASE_RULE_COUNT; rule++) {
-        count += harmony_phrase_preference((HarmonyPhraseRule)rule) != NULL;
+        count += harmony_phrase_rule_soft((HarmonyPhraseRule)rule);
     }
     return count;
 }
@@ -40,7 +40,7 @@ static unsigned phrase_soft_rules(void) {
 static unsigned cadence_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < HARMONY_CADENCE_RULE_COUNT; rule++) {
-        count += harmony_cadence_preference((HarmonyCadenceRule)rule) != NULL;
+        count += harmony_cadence_rule_soft((HarmonyCadenceRule)rule);
     }
     return count;
 }

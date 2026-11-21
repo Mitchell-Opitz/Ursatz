@@ -9,7 +9,7 @@ The library is eight groups, each one folder under `library/` and one CMake targ
 | Group | Target | Areas |
 |---|---|---|
 | `model/` | `ursatz_model` | `identity`, `core`, `time`, `pitch`, `events`, `containers`, `structure`: the value types (the former layers L0 to L6 without `context` and `semantics`, in that order) |
-| `theory/` | `ursatz_theory` | `framework` (the Framework type and singleton), `style`, `rules` (Rule, Constraint, Preference, Context), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
+| `theory/` | `ursatz_theory` | `style`, `rules` (the rule table), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
 | `realization/` | `ursatz_realization` | lines, performer parts, scoring assignments, movements and works, one folder, on `model` and `theory` |
 | `plan/` | `ursatz_plan` | the section description shared by forms, plans and piece requests, one folder, on `model` and `theory` (and cJSON for its codec) |
 | `analysis/` | `ursatz_analysis` | `notes` (the neutral analysis types and segmentation), `motive`, `voices`, `harmony`, `form`, `meter`, `texture`, `counterpoint`, `galant`, `similarity`: the analyses and the framework adapters |
@@ -29,7 +29,7 @@ Under everything is `common/` (target `ursatz_common`, R-638): the status set, f
 
 The analysis chain (`chain/`, target `ursatz_chain`) joins `analysis` and everything below it; a theory or analysis file never includes it. Headers are included as `chain/<name>.h`. The chain keeps the stage inputs it builds (harmony inputs, prepared harmony, form and motive inputs, voice grid, galant segments) and exposes them through `analysis_chain_*` accessors, and it reads the outer lines on the chord segments (`chain_build_segment_lines`) alongside the lines on the voice segments (`analysis_chain_outer_voices`).
 
-The rules are enforced by `cmake/layer-table.txt` (test `layer_table`, in the fast set): every C file belongs to a module, each module row lists what it may include, with a reason for each exception, and a disallowed include fails the test. The `target` rows name the modules one CMake target builds; an include between two targets (or from an application) must name a staged header, and a staged header that nothing outside its target includes fails as well ([public-surface.md](public-surface.md)). Test sources follow the same rules (the `tests-*` rows, one per test folder).
+The rules are enforced by `cmake/layer-table.txt` (test `layer_table`, in the fast set): every C file belongs to a module, each module row lists what it may include, with a reason for each exception, and a disallowed include fails the test. A `uses` token that no include of the module's own files needs fails it too (delete the token); test modules (every path in a `tests` folder) and `free` modules are exempt, and a token a test module reaches through `like` is listed on that test module's row. The `target` rows name the modules one CMake target builds; an include between two targets (or from an application) must name a staged header, and a staged header that nothing outside its target includes fails as well ([public-surface.md](public-surface.md)). Test sources follow the same rules (the `tests-*` rows, one per test folder).
 
 ## Open issues
 

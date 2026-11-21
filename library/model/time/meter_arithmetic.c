@@ -143,35 +143,6 @@ MeterMapResult meter_map_position_of(const MeterMap *map, MusicalTime t, Notated
     return METER_MAP_OK;
 }
 
-MeterMapResult meter_map_time_of(const MeterMap *map, NotatedPosition p, MusicalTime *out) {
-    if (map == NULL || out == NULL) {
-        return METER_MAP_ERR_NULL_ARGUMENT;
-    }
-    Rational start;
-    Rational end;
-    const MeterMapRegion *region = NULL;
-    TRY(meter_map_measure_bounds(map, p.measure, &start, &end));
-    TRY(meter_map_region_of_measure(map, p.measure, &region));
-    const TimeSignature *signature = meter_map_region_time_signature(region);
-    if (signature == NULL) {
-        return METER_MAP_ERR_NOT_FOUND;
-    }
-    if (p.beat < 1 || (size_t)p.beat > time_signature_group_count(signature) || rational_is_negative(p.offset)) {
-        return METER_MAP_ERR_INDEX_OUT_OF_RANGE;
-    }
-    Rational begin;
-    Rational in_measure;
-    Rational time;
-    TRY(group_start(signature, (size_t)p.beat - 1, &begin));
-    TRY(from_rational(rational_add(begin, p.offset, &in_measure)));
-    TRY(from_rational(rational_add(start, in_measure, &time)));
-    if (rational_cmp(time, end) >= 0) {
-        return METER_MAP_ERR_INDEX_OUT_OF_RANGE;
-    }
-    *out = musical_time_of(time);
-    return METER_MAP_OK;
-}
-
 MeterMapResult meter_map_grid_at(const MeterMap *map, MusicalTime t, MeterGrid *out) {
     if (map == NULL || out == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;

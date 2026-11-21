@@ -302,49 +302,6 @@ static struct {
     bool ready;
 } g_state;
 
-/* The runs that are queued or running and the queue job of each (R-645): deleting a run cancels its job first. */
-#define MAX_ACTIVE 64
-static struct {
-    char run[64];
-    char job[WORKSHOP_JOB_ID_BYTES];
-} g_active[MAX_ACTIVE];
-static size_t g_active_count = 0;
-
-static void active_add(const char *run, const char *job) {
-    LOCK();
-    if (g_active_count < MAX_ACTIVE) {
-        snprintf(g_active[g_active_count].run, sizeof(g_active[0].run), "%s", run);
-        snprintf(g_active[g_active_count].job, sizeof(g_active[0].job), "%s", job);
-        g_active_count++;
-    }
-    UNLOCK();
-}
-
-static void active_remove(const char *run) {
-    LOCK();
-    for (size_t i = 0; i < g_active_count; i++) {
-        if (strcmp(g_active[i].run, run) == 0) {
-            g_active[i] = g_active[--g_active_count];
-            break;
-        }
-    }
-    UNLOCK();
-}
-
-/* The job id of the run when it is queued or running; false otherwise. */
-static bool active_job_of(const char *run, char *job, size_t size) {
-    bool found = false;
-    LOCK();
-    for (size_t i = 0; i < g_active_count && !found; i++) {
-        if (strcmp(g_active[i].run, run) == 0) {
-            snprintf(job, size, "%s", g_active[i].job);
-            found = true;
-        }
-    }
-    UNLOCK();
-    return found;
-}
-
 static bool runs_dir_path(char *out, size_t out_size) {
     return snprintf(out, out_size, "%s", WORKSHOP_DIR_LINKS) < (int)out_size;
 }
@@ -394,6 +351,18 @@ static int compare_text(const void *a, const void *b) {
     return strcmp(*(char *const *)a, *(char *const *)b);
 }
 
+/* The links of a run's result, when the result is of the schema version this build reads (ANALYZER_MOTIVE_LINKS_VERSION, as the
+   link cache checks its own): NULL for a run with no result yet and for a result of another version, whose members may mean
+   something else (R-692). */
+static const cJSON *current_links(const cJSON *run) {
+    const cJSON *result = cJSON_GetObjectItemCaseSensitive(run, "result");
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(result, "schema_version");
+    if (!cJSON_IsObject(result) || !cJSON_IsNumber(version) || version->valuedouble != ANALYZER_MOTIVE_LINKS_VERSION) {
+        return NULL;
+    }
+    return cJSON_GetObjectItemCaseSensitive(result, "links");
+}
+
 /* Fills a summary from a run record. false on allocation failure. */
 static bool summary_fill(RunSummary *summary, const cJSON *run) {
     memset(summary, 0, sizeof(*summary));
@@ -418,7 +387,7 @@ static bool summary_fill(RunSummary *summary, const cJSON *run) {
     }
     CommonNames pieces = {0};
     const cJSON *link = NULL;
-    cJSON_ArrayForEach(link, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links")) {
+    cJSON_ArrayForEach(link, current_links(run)) {
         const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
         const char *b = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
         if ((a[0] && !common_names_contains(&pieces, a) && !common_names_add(&pieces, a)) ||
@@ -639,7 +608,7 @@ static bool job_commit(Job *job, bool is_new) {
     if (!run_file_path(job->id, path, sizeof(path)) || !run_dir_path(job->id, dir, sizeof(dir))) {
         return false;
     }
-    WorkshopTxn *txn = workshop_txn_begin(NULL, is_new ? "links.start" : "links.finish", "michelle", job->id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, is_new ? "links.start" : "links.finish", job->id, 0);
     if (!txn) {
         return false;
     }
@@ -847,7 +816,6 @@ static UrsatzStatus link_job_run(void *input, const UrsatzJob *handle, WorkshopJ
     set_member(job->run, "status", cJSON_CreateString("running"));
     job_write(job);
     UrsatzStatus status = job_run(job);
-    active_remove(job->id);
     if (status == URSATZ_OK) {
         cJSON *answer = cJSON_CreateObject();
         if (answer && cJSON_AddBoolToObject(answer, "ok", 1) && cJSON_AddItemToObject(answer, "run", cJSON_Duplicate(job->run, 1))) {
@@ -919,7 +887,6 @@ void workshop_link_service_shutdown(void) {
     /* The jobs are stopped by workshop_jobs_stop, which the server calls first. */
     LOCK();
     g_state.ready = false;
-    g_active_count = 0;
     UNLOCK();
     workshop_lock_acquire(&g_index_lock);
     index_clear_locked();
@@ -976,21 +943,18 @@ UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_
     } else if (!job_commit(job, true)) { /* the record of a queued run is a transaction: links.start */
         result = workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     } else {
-        /* A second run waits in the queue: the "links" kind runs one job at a time. The queue owns the job from here and frees it. */
-        active_add(run_id, "");
+        /* A second run waits in the queue: the "links" kind runs one job at a time. The queue owns the job from here and frees it; the
+           run's id is the job's subject, so a delete finds the job by it (R-645). */
         Job *submitted = job;
         job = NULL;
-        if (!workshop_job_submit("links", link_job_run, submitted, link_job_free, job_id)) {
+        if (!workshop_job_submit_subject("links", run_id, link_job_run, submitted, link_job_free, job_id)) {
             char dir[PATH_BYTES];
-            active_remove(run_id);
             if (run_dir_path(run_id, dir, sizeof(dir))) {
                 common_dir_remove(dir, NULL);
             }
             index_remove(run_id);
             return workshop_fail(URSATZ_ERR_INTERNAL, "the job queue is not running");
         }
-        active_remove(run_id);
-        active_add(run_id, job_id);
         if (out_job) {
             snprintf(out_job, WORKSHOP_JOB_ID_BYTES, "%s", job_id);
         }
@@ -1066,21 +1030,9 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
     }
     /* A run that is queued or running is cancelled first: its job stops between pieces and pairs and leaves no half-written file. */
     char job_id[WORKSHOP_JOB_ID_BYTES];
-    if (active_job_of(id, job_id, sizeof(job_id))) {
-        if (job_id[0] != '\0') {
-            workshop_job_cancel(job_id);
-            for (int waited = 0; waited < 3000; waited++) {
-                WorkshopJobInfo info;
-                bool known = workshop_job_get(job_id, &info);
-                bool done = !known || (info.state != WORKSHOP_JOB_QUEUED && info.state != WORKSHOP_JOB_RUNNING);
-                workshop_job_info_destroy(&info);
-                if (done) {
-                    break;
-                }
-                usleep(10 * 1000);
-            }
-        }
-        active_remove(id);
+    if (workshop_job_find(id, job_id, sizeof(job_id))) {
+        workshop_job_cancel(job_id);
+        workshop_job_wait(job_id);
     }
     LOCK();
     UrsatzStatus result = URSATZ_OK;
@@ -1088,7 +1040,7 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else {
         /* the lock of this file is taken first, as at the start of a run, so the order against the transaction is the same */
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "links.delete", "michelle", id, 0);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "links.delete", id, 0);
         UrsatzError error;
         memset(&error, 0, sizeof(error));
         if (!txn || workshop_txn_remove(txn, dir) != URSATZ_OK) {
@@ -1135,7 +1087,7 @@ UrsatzStatus workshop_link_piece_links(const char *piece_id, cJSON **out_links) 
             workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL) != URSATZ_OK) {
             continue;
         }
-        const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
+        const cJSON *links = current_links(run);
         const cJSON *link = NULL;
         cJSON_ArrayForEach(link, links) {
             const char *a = common_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");

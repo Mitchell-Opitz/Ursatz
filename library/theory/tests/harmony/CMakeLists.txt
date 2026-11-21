@@ -1,4 +1,3 @@
-ursatz_test(standard_harmony_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_harmony_functions SOURCES test_harmony_functions.c LIBS ursatz_theory)
 
@@ -44,6 +43,5 @@ ursatz_test(standard_harmony_six_four_type SOURCES test_six_four_type.c LIBS urs
 
 ursatz_test(standard_harmony_resolution_rules SOURCES test_harmony_resolution_rules.c LIBS ursatz_theory)
 
-ursatz_test(standard_harmony_rule_table SOURCES test_harmony_rule_table.c LIBS ursatz_theory)
 
 ursatz_test(standard_harmony_applied_label_grammar SOURCES test_harmony_applied_label_grammar.c LIBS ursatz_theory)

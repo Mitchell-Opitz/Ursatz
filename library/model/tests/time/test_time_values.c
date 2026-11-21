@@ -99,10 +99,10 @@ static void test_duration_values(void) {
 }
 
 static void test_duration_cmp_and_plus(void) {
-    assert(duration_cmp(du(1, 3), du(1, 2)) < 0);
-    assert(duration_cmp(du(1, 2), du(1, 3)) > 0);
-    assert(duration_cmp(du(2, 6), du(1, 3)) == 0);
-    assert(duration_cmp(du(LLONG_MAX, LLONG_MAX - 1), du(LLONG_MAX - 1, LLONG_MAX - 2)) < 0);
+    assert(rational_cmp(du(1, 3).value, du(1, 2).value) < 0);
+    assert(rational_cmp(du(1, 2).value, du(1, 3).value) > 0);
+    assert(duration_same(du(2, 6), du(1, 3)));
+    assert(rational_cmp(du(LLONG_MAX, LLONG_MAX - 1).value, du(LLONG_MAX - 1, LLONG_MAX - 2).value) < 0);
 
     Duration out;
     assert(duration_plus(du(1, 3), du(1, 6), &out) == DURATION_OK);
@@ -118,20 +118,26 @@ static bool span_same(TimeSpan a, TimeSpan b) {
            memcmp(&a.start, &b.start, sizeof a.start) == 0 && memcmp(&a.end, &b.end, sizeof a.end) == 0;
 }
 
+/* end - start of a span as a Duration; DURATION_ERR_OVERFLOW when it does not fit. */
+static DurationResult span_length(TimeSpan span, Duration *out) {
+    Rational length;
+    return rational_sub(span.end.value, span.start.value, &length) == RATIONAL_OK ? duration_of(length, out) : DURATION_ERR_OVERFLOW;
+}
+
 static void test_time_span_values(void) {
     TimeSpan span;
     assert(time_span_make(mt(1, 4), mt(3, 4), &span) == TIME_SPAN_OK);
     assert(musical_time_same(span.start, mt(1, 4)) && musical_time_same(span.end, mt(3, 4)));
     assert(time_span_holds(span));
     Duration len;
-    assert(time_span_length(span, &len) == DURATION_OK);
+    assert(span_length(span, &len) == DURATION_OK);
     assert(duration_same(len, du(1, 2)));
 
     /* An empty span is made, holds nothing, has length zero. */
     TimeSpan empty;
     assert(time_span_make(mt(1, 2), mt(2, 4), &empty) == TIME_SPAN_OK);
     assert(!time_span_holds(empty));
-    assert(time_span_length(empty, &len) == DURATION_OK);
+    assert(span_length(empty, &len) == DURATION_OK);
     assert(duration_same(len, du(0, 1)));
 
     TimeSpan keep = span;
@@ -141,13 +147,13 @@ static void test_time_span_values(void) {
 
     /* Negative starts (pickups) and the length across zero. */
     assert(time_span_make(mt(-1, 4), mt(1, 4), &span) == TIME_SPAN_OK);
-    assert(time_span_length(span, &len) == DURATION_OK && duration_same(len, du(1, 2)));
+    assert(span_length(span, &len) == DURATION_OK && duration_same(len, du(1, 2)));
 
     /* A length that does not fit. */
     assert(time_span_make(mt(-LLONG_MAX, 1), mt(LLONG_MAX, 1), &span) == TIME_SPAN_OK);
     Duration kept = du(1, 7);
     len = kept;
-    assert(time_span_length(span, &len) == DURATION_ERR_OVERFLOW);
+    assert(span_length(span, &len) == DURATION_ERR_OVERFLOW);
     assert(duration_same(len, kept));
 
     /* A span literal equals the made span. */

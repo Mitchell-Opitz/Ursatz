@@ -64,6 +64,17 @@ void workshop_jobs_stop(void);
 bool workshop_job_submit(const char *kind, WorkshopJobFn run, void *input, void (*free_input)(void *),
                            char id_out[WORKSHOP_JOB_ID_BYTES]);
 
+/* workshop_job_submit for a job about something: `subject` (up to 63 characters, "" or NULL for none) names it, so a caller can find the job by
+ * what it is about (a link run's id) instead of keeping a list of its own. */
+bool workshop_job_submit_subject(const char *kind, const char *subject, WorkshopJobFn run, void *input, void (*free_input)(void *),
+                                 char id_out[WORKSHOP_JOB_ID_BYTES]);
+
+/* The id of the queued or running job whose subject is `subject`; false when there is none (a finished job is not found). */
+bool workshop_job_find(const char *subject, char *job_id, size_t size);
+
+/* Waits until job id is neither queued nor running (finished, cancelled, dropped or unknown), on the queue's own wake-up: no polling. */
+void workshop_job_wait(const char *job_id);
+
 /* Copies the state of job id into info. false when there is no such job. */
 bool workshop_job_get(const char *id, WorkshopJobInfo *info);
 

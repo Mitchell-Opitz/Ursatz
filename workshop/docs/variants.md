@@ -25,11 +25,13 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
 - `POST /api/materials/items/<id>/reanalyze` (motifs only, else 400 `only
   motifs are analyzed`) analyzes the current version again and writes a new
   version with the note `Re-analyzed`. A refusal is 400 and writes nothing.
-- A motif body whose `key` is not `C major` or `C minor` is 400 `motifs are
-  written with C as the tonic`, checked before the Composer runs (re-analyze
-  keeps an older motif's key).
+- A motif body whose key is not `C major` or `C minor` is 400 `motifs are
+  written with C as the tonic`, at `/params/body`: the Composer refuses it
+  (`composer_api_validate` of the motive with `stored`) before the analysis; a
+  body that is not yet a motive request is left to the material service
+  (re-analyze keeps an older motif's key).
 - `POST /api/materials/motifs/import` answers the notes in C (a motif found on another tonic moves its notes to C
-  through `composer_api_motive`, `input.format` `degrees`, `key` `"C <mode>"`): `{notes_text,
+  in the Composer: `composer_api_motive_from_midi` with `write_in_c`, `key_text` and `notes_text_in_c`): `{notes_text,
   meter, key: "C <mode>", moved_from: "D minor" | null, key_found, pickup,
   analysis}`. With no key found the notes are unchanged and the key is `C
   major`.

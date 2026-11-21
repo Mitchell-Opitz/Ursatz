@@ -26,7 +26,7 @@ UrsatzStatus workshop_pitch_names(const cJSON *midi, cJSON **names, UrsatzError 
         }
         int number = (int)item->valuedouble;
         char text[16];
-        snprintf(text, sizeof(text), "%s%d", pitch_class_name(number % 12, false), number / 12 - 1);
+        pitch_name_of_midi(number, false, text, sizeof(text));
         cJSON *name = cJSON_CreateString(text);
         if (!name) {
             cJSON_Delete(array);

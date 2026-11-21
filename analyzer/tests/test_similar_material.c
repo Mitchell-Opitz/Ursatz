@@ -57,6 +57,12 @@ static const char *motive_piece = "Mozart 545.mid";
 static size_t corpus_pieces = 5;
 
 /* One line per match: "<score> <piece> m.<start> b.<beat> - m.<end> b.<beat> <dimension> <score>..., numerals <n>". */
+/* The dimension names the golden output prints. */
+static const char *dimension_name(SimilarityDimension dimension) {
+    static const char *const NAMES[SIMILARITY_DIMENSION_COUNT] = {"interval", "rhythm", "contour"};
+    return (unsigned)dimension < SIMILARITY_DIMENSION_COUNT ? NAMES[dimension] : "unknown";
+}
+
 static char *render(const SimilarResults *results) {
     size_t capacity = 512 + results->count * 512;
     char *text = malloc(capacity);
@@ -71,7 +77,7 @@ static char *render(const SimilarResults *results) {
                                    m->end_beat);
         for (size_t d = 0; d < m->score.dimension_score_count; d++) {
             length += (size_t)snprintf(text + length, capacity - length, " %s %lld/%lld",
-                                       similarity_dimension_name(m->score.dimension_scores[d].dimension),
+                                       dimension_name(m->score.dimension_scores[d].dimension),
                                        m->score.dimension_scores[d].score.num, m->score.dimension_scores[d].score.den);
         }
         length += (size_t)snprintf(text + length, capacity - length, ", numerals %zu, notes %zu\n", m->numeral_matches, m->note_count);

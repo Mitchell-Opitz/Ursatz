@@ -10,21 +10,19 @@
 #include "model/core/rational.h"
 #include "analysis/galant/galant_analysis_input.h"
 #include "analysis/galant/galant_analysis_match.h"
-#include "theory/galant/galant_framework.h"
 #include "analysis/galant/scale_analysis_detect.h"
 #include "theory/galant/scale_direction.h"
-#include "theory/galant/scale_framework.h"
 #include "theory/galant/scale_patterns.h"
 #include "theory/galant/schema_function.h"
 #include "theory/galant/sequence_kind.h"
 #include "theory/vocabulary/beat_strength.h"
-#include "theory/framework/framework.h"
 #include "model/time/duration.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* The segments of the library's input (the chain's galant segments, borrowed) and the range of chord entries each
    segment covers (parallel to list.items). */
@@ -207,7 +205,7 @@ bool schema_stage_collect(const ImportedScore *notes, const AnalysisChain *libra
     if (ok && schemas->count > 0) {
         report->schemas = calloc(schemas->count, sizeof(AnalysisSchema));
         ok = report->schemas != NULL;
-        const char *framework = framework_name(galant_schemas_framework());
+        const char *framework = FRAMEWORK_GALANT_SCHEMAS;
         for (size_t i = 0; ok && i < schemas->count; i++) {
             ok = copy_schema(&build, &schemas->items[i], framework, &report->schemas[i]);
             report->schema_count++;
@@ -216,7 +214,7 @@ bool schema_stage_collect(const ImportedScore *notes, const AnalysisChain *libra
     if (ok && sequences->count > 0) {
         report->sequences = calloc(sequences->count, sizeof(AnalysisSequence));
         ok = report->sequences != NULL;
-        const char *framework = framework_name(scale_harmonization_framework());
+        const char *framework = FRAMEWORK_SCALE_HARMONIZATION;
         for (size_t i = 0; ok && i < sequences->count; i++) {
             ok = copy_sequence(&build, &sequences->items[i], framework, &report->sequences[i]);
             report->sequence_count++;

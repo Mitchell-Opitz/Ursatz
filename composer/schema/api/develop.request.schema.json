@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/develop.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/develop.request.schema.json",
   "title": "composer_api_develop request",
   "description": "Motives related to one motive: the motive request with an operation and the members it takes.",
   "type": "object",

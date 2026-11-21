@@ -25,8 +25,7 @@ each scale degree, in an ascending and a descending form. A sequence
 harmonies that repeats in the direction of the scale.
 
 Every rule is a pure check function. A rule that states what the pattern requires
-is hard; "avoid" and "usually" features are soft. No rule builds a `Rule` or
-`Constraint`.
+is hard; "avoid" and "usually" features are soft.
 
 - **Sequence patterns** (`scale_patterns.h`), as the Harmonizing the Scale with
   Sequences chapter describes them. A pattern is a repeating unit of stages over

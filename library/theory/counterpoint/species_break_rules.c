@@ -5,29 +5,16 @@
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT] = {"downbeat-consonant", "weak-passing",
                                                                               "limits"};
 
-static bool rule_is_soft(StandardCounterpointSpeciesBreakRule which) {
-    return which == STANDARD_COUNTERPOINT_SPECIES_BREAK_LIMITS;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT] = {
+    [STANDARD_COUNTERPOINT_SPECIES_BREAK_LIMITS] = true};
 
-static bool table_is_hard(int which) {
-    return !rule_is_soft((StandardCounterpointSpeciesBreakRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "species-break", NAMES, STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    .name = "species-break", .names = NAMES, .soft = SOFT, .count = STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT};
 
 static bool valid_rule(StandardCounterpointSpeciesBreakRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -130,8 +117,6 @@ static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_species_break_rule_holds((StandardCounterpointSpeciesBreakRule)which, subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
 
 bool standard_counterpoint_species_break_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                unsigned *hard_violations, unsigned *soft_violations) {

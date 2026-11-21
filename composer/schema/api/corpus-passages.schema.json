@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/corpus-passages.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/corpus-passages.schema.json",
   "title": "Corpus passages",
   "description": "Passages of an analyzed corpus, ranked best first, that a grow or plan request seeds a motive or a progression from (R-619). The Analyzer finds them (analyzer_corpus_passages_like, analyzer_corpus_passages_numerals; analyzer_corpus_passages_to_json writes this array); the Composer does not search. A passage with a similarity of 1/2 or more is a match.",
   "type": "array",

@@ -22,7 +22,5 @@ typedef enum {
 TimeSpanResult time_span_make(MusicalTime start, MusicalTime end, TimeSpan *out);
 /* True when the end is strictly after the start (a non-empty span). */
 bool time_span_holds(TimeSpan span);
-/* end - start; DURATION_ERR_OVERFLOW when it does not fit. */
-DurationResult time_span_length(TimeSpan span, Duration *out);
 
 #endif

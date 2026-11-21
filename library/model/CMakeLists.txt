@@ -5,7 +5,6 @@ add_library(ursatz_model
     identity/schema_version.c
     core/entity.c
     core/string_copy.c
-    core/once.c
     core/rational.c
     core/value.c
     core/occurrence.c
@@ -51,7 +50,6 @@ ursatz_public_headers(ursatz_model
         model/containers/section.h
         model/core/entity.h
         model/core/occurrence.h
-        model/core/once.h
         model/core/provenance_reference.h
         model/core/rational.h
         model/core/string_copy.h
@@ -95,7 +93,7 @@ ursatz_public_headers(ursatz_model
 target_link_libraries(ursatz_model PUBLIC ursatz_common)
 # lround, floor and friends
 target_link_libraries(ursatz_model PUBLIC m)
-# core/once.c (thread-safe lazy initialization)
+# threads (the servers and the tests that start threads link ursatz_model)
 find_package(Threads REQUIRED)
 target_link_libraries(ursatz_model PUBLIC Threads::Threads)
 

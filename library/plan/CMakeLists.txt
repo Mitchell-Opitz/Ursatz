@@ -10,6 +10,9 @@ add_library(ursatz_plan
     plan_constraint_kinds.c
     plan_edit.c
     plan_json.c
+    plan_json_constraints.c
+    plan_json_lanes.c
+    plan_json_nodes.c
     plan_key_spans.c
     plan_lanes.c
     plan_state.c

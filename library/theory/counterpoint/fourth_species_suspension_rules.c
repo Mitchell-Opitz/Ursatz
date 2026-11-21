@@ -4,29 +4,18 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/counterpoint/fourth_species_suspension.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT] = {"proper", "many",
                                                                                                "few-nine-eight"};
 
-static bool rule_is_hard(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return which == STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_PROPER;
-}
+static const bool SOFT[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT] = {
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_MANY] = true,
+    [STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_FEW_NINE_EIGHT] = true};
 
-static bool table_is_hard(int which) {
-    return rule_is_hard((StandardCounterpointFourthSpeciesSuspensionRule)which);
-}
-
-static RulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "fourth-species-suspension", NAMES, STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT, table_is_hard,
-    g_pairs, g_built, evaluate_candidate, score_candidate};
+    .name = "fourth-species-suspension", .names = NAMES, .soft = SOFT,
+    .count = STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT};
 
 static bool valid_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -111,8 +100,6 @@ static bool holds_adapter(int which, const void *subject) {
         (StandardCounterpointFourthSpeciesSuspensionRule)which, subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointFourthSpeciesExercise)
 
 bool standard_counterpoint_fourth_species_suspension_check(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                            unsigned *hard_violations, unsigned *soft_violations) {

@@ -50,6 +50,7 @@ static void thread_join(thread_t thread) {
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 #include "test_http.h"
+#include "command_context_support.h"
 
 #ifndef URSATZ_GUI_TEST_SOURCE
 #error "URSATZ_GUI_TEST_SOURCE must name the MusicXML file the pieces are made from"
@@ -123,6 +124,7 @@ typedef struct {
 } Writer;
 
 static thread_result_t THREAD_CALL patch_notation(void *arg) {
+  command_context_support_begin(); /* a thread of its own has no command context */
   Writer *writer = arg;
   for (int i = 0; i < ROUNDS; i++) {
     WorkshopNotation notation;
@@ -141,6 +143,7 @@ static thread_result_t THREAD_CALL patch_notation(void *arg) {
 }
 
 static thread_result_t THREAD_CALL reanalyze_piece(void *arg) {
+  command_context_support_begin(); /* a thread of its own has no command context */
   Writer *writer = arg;
   for (int i = 0; i < ROUNDS; i++) {
     if (workshop_analysis_reanalyze(kPiecesDir, writer->id) != URSATZ_OK) {
@@ -411,6 +414,7 @@ static void test_service_reads(void) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
   test_knowledge();
   test_lock_table();
   test_concurrent_writers();

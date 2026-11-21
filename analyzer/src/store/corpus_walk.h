@@ -10,7 +10,7 @@ typedef enum {
     CORPUS_WALK_OK = 0,
     CORPUS_WALK_ERR_ALLOC,
     CORPUS_WALK_ERR_IO,     /* the index or a document cannot be read */
-    CORPUS_WALK_ERR_FORMAT, /* the index is not a corpus index */
+    CORPUS_WALK_ERR_FORMAT, /* the index is not a corpus index, or is one of another schema version */
     CORPUS_WALK_ERR_VISIT   /* the visitor returned false; it keeps its own error */
 } CorpusWalkResult;
 

@@ -230,11 +230,7 @@ static const char *role_name(GrowIdeaRole role) {
 
 /* A 64-bit value as 8 bytes, least significant first, into the hash. */
 static unsigned long long hash_value(unsigned long long hash, long long value) {
-    unsigned char bytes[8];
-    for (int i = 0; i < 8; i++) {
-        bytes[i] = (unsigned char)(((unsigned long long)value >> (8 * i)) & 0xFFu);
-    }
-    return common_fnv1a64(bytes, sizeof(bytes), hash);
+    return common_fnv1a64_u64((unsigned long long)value, hash);
 }
 
 /*

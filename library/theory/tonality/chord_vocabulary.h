@@ -75,4 +75,11 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]);
 bool common_practice_triad_candidate(CommonPracticeTriad triad, unsigned long confidence_numerator,
                                      unsigned long confidence_denominator, ChordCandidate *out);
 
+/*
+ * The suffix a chord symbol puts after the root for a quality name as the Analyzer's chord claims carry it: "major" "",
+ * "minor" "m", "dominant7" "7", "major7" "maj7", "minor7" "m7", "diminished" "dim", "diminished7" "dim7",
+ * "half-diminished7" "m7b5", "augmented" "aug". An unknown quality is returned as given; NULL gives NULL.
+ */
+const char *common_practice_chord_symbol_suffix(const char *quality);
+
 #endif

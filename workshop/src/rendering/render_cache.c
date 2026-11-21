@@ -15,6 +15,7 @@
 #include "items/layout.h"
 #include "items/store.h"
 #include "rendering/playback.h"
+#include "base/params.h"
 
 typedef struct {
   const char *form;
@@ -40,19 +41,6 @@ static UrsatzStatus store_failure(UrsatzStatus status, int *http_status, UrsatzE
   const UrsatzError *last = workshop_last_error();
   *http_status = workshop_http_status(status, last);
   return ursatz_error_set(error, status, NULL, "%s", last->message[0] != '\0' ? last->message : "material store failure");
-}
-
-/* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
-static const char *optional_string(const cJSON *body, const char *key, bool *bad) {
-  const cJSON *item = cJSON_GetObjectItemCaseSensitive(body, key);
-  if (!item || cJSON_IsNull(item)) {
-    return NULL;
-  }
-  if (!cJSON_IsString(item)) {
-    *bad = true;
-    return NULL;
-  }
-  return item->valuestring;
 }
 
 /* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text and *out_midi
@@ -142,14 +130,14 @@ UrsatzStatus workshop_motif_render(const cJSON *body, cJSON **answer_out, int *h
   *answer_out = NULL;
   bool bad = false;
   RenderInput in = {0};
-  in.form = optional_string(body, "form", &bad);
-  in.degrees = optional_string(body, "degrees", &bad);
-  in.meter = optional_string(body, "meter", &bad);
-  in.key = optional_string(body, "key", &bad);
-  in.pickup = optional_string(body, "pickup", &bad);
-  in.render_key = optional_string(body, "render_key", &bad);
-  in.role = optional_string(body, "role", &bad);
-  in.harmony = optional_string(body, "harmony", &bad);
+  in.form = workshop_param_string(body, "form", &bad);
+  in.degrees = workshop_param_string(body, "degrees", &bad);
+  in.meter = workshop_param_string(body, "meter", &bad);
+  in.key = workshop_param_string(body, "key", &bad);
+  in.pickup = workshop_param_string(body, "pickup", &bad);
+  in.render_key = workshop_param_string(body, "render_key", &bad);
+  in.role = workshop_param_string(body, "role", &bad);
+  in.harmony = workshop_param_string(body, "harmony", &bad);
   in.features = cJSON_GetObjectItemCaseSensitive(body, "features");
   if (!in.pickup) {
     in.pickup = "0";
@@ -200,7 +188,7 @@ static bool render_cache_dir(const char *id, int number, char *out, size_t out_s
 }
 
 static bool render_cache_file(const char *dir, const char *name, char *out, size_t out_size) {
-  return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
+  return common_path_join(out, out_size, dir, name);
 }
 
 /* True when the string member name of meta equals value and value is not empty. */
@@ -287,7 +275,7 @@ static UrsatzStatus version_file_playback(const char *id, int number, const char
   }
   cJSON_Delete(version_body);
   FILE *exists = workshop_material_version_dir(id, number, dir, sizeof(dir)) &&
-                         snprintf(path, sizeof(path), "%s/%s", dir, name) < (int)sizeof(path)
+                         common_path_join(path, sizeof(path), dir, name)
                      ? fopen(path, "rb")
                      : NULL;
   if (!exists) {
@@ -316,15 +304,15 @@ UrsatzStatus workshop_motif_version_render(const char *id, int number, const cha
   }
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
   RenderInput in = {0};
-  in.form = optional_string(motif, "form", &(bool){false});
-  in.degrees = optional_string(motif, "degrees", &(bool){false});
-  in.meter = optional_string(motif, "meter", &(bool){false});
+  in.form = workshop_param_string(motif, "form", &(bool){false});
+  in.degrees = workshop_param_string(motif, "degrees", &(bool){false});
+  in.meter = workshop_param_string(motif, "meter", &(bool){false});
   char motif_key[64];
   in.key = workshop_motif_key_text(motif, motif_key, sizeof(motif_key));
-  in.pickup = optional_string(motif, "pickup", &(bool){false});
-  in.role = optional_string(version_body, "role", &(bool){false});
+  in.pickup = workshop_param_string(motif, "pickup", &(bool){false});
+  in.role = workshop_param_string(version_body, "role", &(bool){false});
   if (!in.role) {
-    in.role = optional_string(motif, "role", &(bool){false});
+    in.role = workshop_param_string(motif, "role", &(bool){false});
   }
   in.harmony = workshop_motif_harmony(motif);
   in.features = cJSON_GetObjectItemCaseSensitive(motif, "features");

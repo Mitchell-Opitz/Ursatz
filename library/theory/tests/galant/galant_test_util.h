@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "theory/galant/galant_exemplar.h"
-#include "theory/galant/galant_framework.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/vocabulary/beat_strength.h"
 

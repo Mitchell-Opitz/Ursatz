@@ -9,20 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "base/params.h"
 
-
-/* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
-static const char *optional_string(const cJSON *body, const char *key, bool *bad) {
-  const cJSON *item = cJSON_GetObjectItemCaseSensitive(body, key);
-  if (!item || cJSON_IsNull(item)) {
-    return NULL;
-  }
-  if (!cJSON_IsString(item)) {
-    *bad = true;
-    return NULL;
-  }
-  return item->valuestring;
-}
 
 /* ---- the Composer calls of a motif (R-219) ----------------------------- */
 
@@ -215,10 +203,8 @@ static bool add_tone_overrides(cJSON *request, const cJSON *motif) {
   return true;
 }
 
-/* The motive request (composer_api_motive) of a motif: form full, rhythm or contour with notes, meter and pickup, its
-   key when it has one, and its harmony, features, role and tone overrides. NULL on allocation failure or when the motif
-   lacks the members of a request (a draft); nothing is judged here, the Composer refuses a value it does not read. */
-cJSON *workshop_motif_request(const cJSON *motif) {
+/* The request of a motif; without extras only its notes, meter, key and pickup. */
+static cJSON *motif_request(const cJSON *motif, bool extras) {
   const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
   const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
   const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
@@ -233,13 +219,21 @@ cJSON *workshop_motif_request(const cJSON *motif) {
   const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
   cJSON *request = workshop_motif_motive_request(full ? "notes" : NULL, full ? NULL : form->valuestring, notes->valuestring,
                                   meter->valuestring, key, pickup->valuestring);
-  if (!request || !workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
+  if (!request ||
+      (extras && (!workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                                      cJSON_IsString(role) ? role->valuestring : NULL) ||
-      (full && has_key && !add_tone_overrides(request, motif))) {
+                  (full && has_key && !add_tone_overrides(request, motif))))) {
     cJSON_Delete(request);
     return NULL;
   }
   return request;
+}
+
+/* The motive request (composer_api_motive) of a motif: form full, rhythm or contour with notes, meter and pickup, its
+   key when it has one, and its harmony, features, role and tone overrides. NULL on allocation failure or when the motif
+   lacks the members of a request (a draft); nothing is judged here, the Composer refuses a value it does not read. */
+cJSON *workshop_motif_request(const cJSON *motif) {
+  return motif_request(motif, true);
 }
 
 /* ---- variants ------------------------------------------------------------ */
@@ -252,12 +246,12 @@ cJSON *workshop_motif_run_variants(const cJSON *motif, const cJSON *basic_body, 
                            bool each_op, const cJSON *chain, int count, double seed, const UrsatzJob *job, int *status,
                            UrsatzError *error) {
   bool bad = false;
-  const char *form = optional_string(motif, "form", &bad);
-  const char *degrees = optional_string(motif, "degrees", &bad);
-  const char *meter = optional_string(motif, "meter", &bad);
+  const char *form = workshop_param_string(motif, "form", &bad);
+  const char *degrees = workshop_param_string(motif, "degrees", &bad);
+  const char *meter = workshop_param_string(motif, "meter", &bad);
   char key_text[64];
   const char *key = workshop_motif_key_text(motif, key_text, sizeof(key_text));
-  const char *pickup = optional_string(motif, "pickup", &bad);
+  const char *pickup = workshop_param_string(motif, "pickup", &bad);
   if (bad || !form || !degrees || degrees[0] == '\0' || !meter) {
     *status = 400;
     workshop_error_printf(error, "this motif has no degrees to vary");
@@ -266,13 +260,13 @@ cJSON *workshop_motif_run_variants(const cJSON *motif, const cJSON *basic_body, 
   bool full = strcmp(form, "full") == 0;
   cJSON *request = workshop_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, degrees, meter,
                                   key, pickup);
-  const char *role = optional_string(motif, "role", &(bool){false});
+  const char *role = workshop_param_string(motif, "role", &(bool){false});
   bool ok = request && workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                                          role);
   /* The basic motive (the tree root) when this motif is derived: its list, pickup and harmony. */
   const cJSON *basic = cJSON_GetObjectItemCaseSensitive(basic_body, "motif");
-  const char *basic_degrees = optional_string(basic, "degrees", &(bool){false});
-  const char *basic_pickup = optional_string(basic, "pickup", &(bool){false});
+  const char *basic_degrees = workshop_param_string(basic, "degrees", &(bool){false});
+  const char *basic_pickup = workshop_param_string(basic, "pickup", &(bool){false});
   if (ok && basic_degrees && basic_degrees[0] != '\0') {
     cJSON *basic_request = workshop_motif_motive_request(full ? "degrees" : form, NULL, basic_degrees, NULL, NULL, basic_pickup);
     ok = basic_request && workshop_motif_add_extras(basic_request, workshop_motif_harmony(basic), NULL, NULL) &&
@@ -483,6 +477,40 @@ WorkshopMotifAnalysis workshop_motif_analyze_body(cJSON *version_body, const cJS
   return WORKSHOP_MOTIF_ANALYSIS_DONE;
 }
 
+/* Asks the Composer whether a motif body may be stored (R-179): the request of the motif with "stored": true. */
+WorkshopMotifAnalysis workshop_motif_check_stored(const cJSON *version_body, char *refusal, size_t refusal_size, char *refusal_path,
+                                          size_t refusal_path_size) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  if (!cJSON_IsObject(motif) || !cJSON_IsString(form) ||
+      (strcmp(form->valuestring, "full") != 0 && strcmp(form->valuestring, "rhythm") != 0 &&
+       strcmp(form->valuestring, "contour") != 0)) {
+    return WORKSHOP_MOTIF_ANALYSIS_DONE;
+  }
+  /* Only what names the tonic: the notes, meter, key and pickup; the harmony and the features are judged with the analysis. */
+  cJSON *request = motif_request(motif, false);
+  if (!request) {
+    return WORKSHOP_MOTIF_ANALYSIS_DONE;
+  }
+  if (!cJSON_AddTrueToObject(request, "stored")) {
+    cJSON_Delete(request);
+    return WORKSHOP_MOTIF_ANALYSIS_ALLOC;
+  }
+  WorkshopComposerReply reply;
+  bool called = workshop_motif_validate("motive", request, &reply);
+  cJSON_Delete(request);
+  if (!called) {
+    return WORKSHOP_MOTIF_ANALYSIS_ALLOC;
+  }
+  bool refused = workshop_composer_reply_refused(&reply);
+  if (refused) {
+    snprintf(refusal, refusal_size, "%s", reply.message[0] ? reply.message : "composer could not read the motif");
+    snprintf(refusal_path, refusal_path_size, "%s", reply.path);
+  }
+  workshop_composer_reply_destroy(&reply);
+  return refused ? WORKSHOP_MOTIF_ANALYSIS_REFUSED : WORKSHOP_MOTIF_ANALYSIS_DONE;
+}
+
 /* ---- rules of the routes' motif requests --------------------------------- */
 
 /* Fills error and *http_status for a failure. */
@@ -502,21 +530,6 @@ static bool has_text(const char *text) {
   return false;
 }
 
-/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major"
-   or "C minor" is read as before). Bodies without a motif are left alone. */
-bool workshop_motif_tonic_ok(const cJSON *version_body) {
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
-  if (!cJSON_IsObject(motif)) {
-    return true;
-  }
-  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
-  if (material) {
-    return cJSON_IsString(material) && workshop_composer_vocabulary_has("materials", material->valuestring);
-  }
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
-  return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
-}
-
 bool workshop_motif_version_note_ok(const char *type, const char *note) {
   /* Every new version of a motif or a theme says what changed. */
   return has_text(note) || !type || !(strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0);
@@ -532,14 +545,14 @@ const char *workshop_motif_first_note(const char *type, const char *note) {
 UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int *http_status, UrsatzError *error) {
   *document_out = NULL;
   bool bad = false;
-  const char *material = optional_string(body, "material", &bad);
-  const char *old_mode = optional_string(body, "mode", &bad);
+  const char *material = workshop_param_string(body, "material", &bad);
+  const char *old_mode = workshop_param_string(body, "mode", &bad);
   const char *mode = material ? material : old_mode;
-  const char *meter = optional_string(body, "meter", &bad);
-  const char *key = optional_string(body, "key", &bad);
-  const char *form = optional_string(body, "form", &bad);
-  const char *style_id = optional_string(body, "style_id", &bad);
-  const char *role = optional_string(body, "role", &bad);
+  const char *meter = workshop_param_string(body, "meter", &bad);
+  const char *key = workshop_param_string(body, "key", &bad);
+  const char *form = workshop_param_string(body, "form", &bad);
+  const char *style_id = workshop_param_string(body, "style_id", &bad);
+  const char *role = workshop_param_string(body, "role", &bad);
   const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
   const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
   if (cJSON_IsNull(count_item)) {
@@ -582,8 +595,8 @@ UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int 
   if (built && workshop_settings_key_count() > 0) {
     WorkshopSettingsRequest resolve;
     memset(&resolve, 0, sizeof(resolve));
-    const char *project_id = optional_string(body, "project_id", &bad);
-    const char *taste = optional_string(body, "taste", &bad);
+    const char *project_id = workshop_param_string(body, "project_id", &bad);
+    const char *taste = workshop_param_string(body, "taste", &bad);
     const cJSON *values = cJSON_GetObjectItemCaseSensitive(body, "settings");
     const cJSON *off = cJSON_GetObjectItemCaseSensitive(body, "off");
     resolve.project_id = project_id && project_id[0] ? project_id : NULL;

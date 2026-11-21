@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/piece.request.schema.json",
   "title": "composer_api_piece request",
   "description": "The piece request of docs/piece-request.md with a theme fill carrying its plan object, an earlier plan to regenerate a section of, and the options of the piece command as members. Schema version 2 names a built-in form.",
   "type": "object",

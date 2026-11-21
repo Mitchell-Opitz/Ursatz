@@ -11,6 +11,9 @@
 #include "cJSON.h"
 
 
+#include "theory/harmony/harmony_cadence_kinds.h"
+#include "theory/tonality/chord_vocabulary.h"
+#include "theory/vocabulary/cadence_type.h"
 #include "util/misc_util.h"
 #include "export/score_export_internal.h"
 #include "export/text_export_internal.h"
@@ -343,21 +346,6 @@ static void collect_key_changes(Claims *claims, const ScoreTextScore *score, con
     }
 }
 
-static const char *quality_suffix(const char *quality) {
-    static const struct {
-        const char *quality;
-        const char *suffix;
-    } SUFFIXES[] = {{"major", ""},         {"minor", "m"},     {"dominant7", "7"},
-                    {"major7", "maj7"},    {"minor7", "m7"},   {"diminished", "dim"},
-                    {"diminished7", "dim7"}, {"half-diminished7", "m7b5"}, {"augmented", "aug"}};
-    for (size_t i = 0; i < sizeof(SUFFIXES) / sizeof(SUFFIXES[0]); i++) {
-        if (strcmp(quality, SUFFIXES[i].quality) == 0) {
-            return SUFFIXES[i].suffix;
-        }
-    }
-    return quality;
-}
-
 static void collect_chords(Claims *claims, const ScoreTextScore *score, const cJSON *document) {
     const cJSON *chord;
     cJSON_ArrayForEach(chord, member(document, "chords")) {
@@ -371,7 +359,7 @@ static void collect_chords(Claims *claims, const ScoreTextScore *score, const cJ
         const char *numeral = string_of(member(chord, "roman_numeral"), "label");
         size_t m = measure_at(score, start);
         CommonText line = line_begin("chord ");
-        common_text_appendf(&line, "%s%s", root, quality_suffix(quality));
+        common_text_appendf(&line, "%s%s", root, common_practice_chord_symbol_suffix(quality));
         if (bass && strcmp(bass, root) != 0) {
             common_text_appendf(&line, "/%s", bass);
         }
@@ -385,16 +373,13 @@ static void collect_chords(Claims *claims, const ScoreTextScore *score, const cJ
     }
 }
 
+/* The abbreviation the library's cadence kinds give (PAC, IAC, AC, HC, PC, DC); a type that is not one of the six, or a
+   subverted or unknown one, prints its text. */
 static const char *cadence_name(const char *type) {
-    static const struct {
-        const char *type;
-        const char *name;
-    } NAMES[] = {{"perfect-authentic", "PAC"},   {"imperfect-authentic", "IAC"}, {"authentic-unspecified", "AC"},
-                 {"half", "HC"},                 {"plagal", "PC"},               {"deceptive", "DC"}};
-    for (size_t i = 0; i < sizeof(NAMES) / sizeof(NAMES[0]); i++) {
-        if (strcmp(type, NAMES[i].type) == 0) {
-            return NAMES[i].name;
-        }
+    const HarmonyCadenceKind *kind = harmony_cadence_kind_find(type);
+    if (kind != NULL && kind->core != CADENCE_TYPE_SUBVERTED && kind->core != CADENCE_TYPE_UNKNOWN &&
+        strcmp(kind->name, cadence_type_name(kind->core)) == 0) {
+        return kind->abbreviation;
     }
     return type;
 }

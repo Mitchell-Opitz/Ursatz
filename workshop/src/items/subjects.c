@@ -21,6 +21,7 @@
 #include "ids.h"
 #include "store.h"
 #include "txn.h"
+#include "base/params.h"
 
 #define NAME_MAX_CHARS 200
 #define NOTE_MAX_CHARS 4000
@@ -59,29 +60,7 @@ static bool has_suffix(const char *name, const char *suffix) {
 
 /* --- text ---------------------------------------------------------------- */
 
-/*
- * Trims surrounding whitespace and counts UTF-8 characters. Returns a copy
- * of the trimmed text, or NULL when it has more than max_chars characters,
- * holds a control character, or on allocation failure (*alloc_failed set).
- */
-static char *trim_text(const char *text, size_t max_chars, bool *alloc_failed) {
-    *alloc_failed = false;
-    char *copy = common_strdup(text ? text : "");
-    if (!copy) {
-        *alloc_failed = true;
-        return NULL;
-    }
-    size_t length = common_trim(copy);
-    size_t chars = 0;
-    for (size_t i = 0; i < length; i++) {
-        unsigned char c = (unsigned char)copy[i];
-        if (c < 0x20 || c == 0x7f || (chars += (c & 0xC0) != 0x80) > max_chars) {
-            free(copy);
-            return NULL;
-        }
-    }
-    return copy;
-}
+#define REFUSED_TEXT "invalid name or note"
 
 static bool valid_kind(const char *kind) {
     return kind && (strcmp(kind, "character") == 0 || strcmp(kind, "place") == 0 || strcmp(kind, "idea") == 0 ||
@@ -90,30 +69,6 @@ static bool valid_kind(const char *kind) {
 
 static bool subject_path(const char *id, char *out, size_t out_size) {
     return is_valid_id(id) && workshop_layout_subject_file(id, out, out_size);
-}
-
-
-static UrsatzStatus normalize_name(const char *text, char **out) {
-    bool alloc_failed;
-    *out = trim_text(text, NAME_MAX_CHARS, &alloc_failed);
-    if (!*out) {
-        return alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name or note");
-    }
-    if ((*out)[0] == '\0') {
-        free(*out);
-        *out = NULL;
-        return workshop_fail(URSATZ_ERR_REQUEST, "invalid name or note");
-    }
-    return URSATZ_OK;
-}
-
-static UrsatzStatus normalize_note(const char *text, char **out) {
-    bool alloc_failed;
-    *out = trim_text(text, NOTE_MAX_CHARS, &alloc_failed);
-    if (!*out) {
-        return alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name or note");
-    }
-    return URSATZ_OK;
 }
 
 /* Loads <id>.json; the file name is the id, a copy inside the file is not trusted. */
@@ -170,9 +125,9 @@ static UrsatzStatus create_subject_locked(const char *name, const char *kind, co
     }
     char *clean_name = NULL;
     char *clean_note = NULL;
-    UrsatzStatus result = normalize_name(name, &clean_name);
+    UrsatzStatus result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     if (result == URSATZ_OK) {
-        result = normalize_note(note, &clean_note);
+        result = workshop_text_normalize(note, NOTE_MAX_CHARS, false, REFUSED_TEXT, &clean_note);
     }
     if (result != URSATZ_OK) {
         free(clean_name);
@@ -344,10 +299,10 @@ static UrsatzStatus subject_update_impl(const char *id, const char *name, const 
         result = workshop_fail(URSATZ_ERR_REQUEST, "invalid kind");
     }
     if (result == URSATZ_OK && name) {
-        result = normalize_name(name, &clean_name);
+        result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     }
     if (result == URSATZ_OK && note) {
-        result = normalize_note(note, &clean_note);
+        result = workshop_text_normalize(note, NOTE_MAX_CHARS, false, REFUSED_TEXT, &clean_note);
     }
     if (result == URSATZ_OK) {
         char now[32];
@@ -806,7 +761,7 @@ static UrsatzStatus end_txn(WorkshopTxn *txn, UrsatzStatus result) {
 }
 
 UrsatzStatus workshop_subject_create(const char *name, const char *kind, const char *note, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.create", "michelle", "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.create", "", 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -822,7 +777,7 @@ UrsatzStatus workshop_subject_create(const char *name, const char *kind, const c
 }
 
 UrsatzStatus workshop_subject_update(const char *id, const char *name, const char *kind, const char *note, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.update", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.update", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -838,7 +793,7 @@ UrsatzStatus workshop_subject_update(const char *id, const char *name, const cha
 }
 
 UrsatzStatus workshop_subject_delete(const char *id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.delete", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.delete", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -850,7 +805,7 @@ UrsatzStatus workshop_subject_delete(const char *id) {
 }
 
 UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, bool *out_already, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-item", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-item", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -866,7 +821,7 @@ UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, boo
 }
 
 UrsatzStatus workshop_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-item", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-item", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -882,7 +837,7 @@ UrsatzStatus workshop_subject_unlink_item(const char *id, const char *item_id, c
 }
 
 UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, bool *out_already, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-piece", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-piece", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -898,7 +853,7 @@ UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, b
 }
 
 UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-piece", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-piece", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -914,7 +869,7 @@ UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id,
 }
 
 UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool *out_already, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.relate", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.relate", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -930,7 +885,7 @@ UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool 
 }
 
 UrsatzStatus workshop_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unrelate", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unrelate", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }

@@ -65,6 +65,23 @@ bool standard_tonality_interval_between(const PitchSpelling *a, const PitchSpell
     return true;
 }
 
+StandardTonalityInterval standard_tonality_interval_of_size(int size) {
+    StandardTonalityInterval interval;
+    if (size < 1) {
+        size = 1;
+    }
+    interval.size = size;
+    interval.simple_size = size == 1 ? 1 : ((size - 2) % 7) + 2;
+    interval.quality = STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT;
+    return interval;
+}
+
+int standard_tonality_generic_size_of_semitones(long semitones) {
+    static const int WITHIN_OCTAVE[PITCH_SEMITONES_PER_OCTAVE] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
+    long size = semitones < 0 ? -semitones : semitones;
+    return WITHIN_OCTAVE[size % PITCH_SEMITONES_PER_OCTAVE] + 7 * (int)(size / PITCH_SEMITONES_PER_OCTAVE);
+}
+
 bool standard_tonality_interval_is_step(const StandardTonalityInterval *interval) {
     return interval != NULL && interval->size == 2;
 }

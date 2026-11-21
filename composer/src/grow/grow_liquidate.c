@@ -33,7 +33,6 @@
 /* The pitches a form may use, as in grow_free.c. */
 #define FORM_LOW 58
 #define FORM_HIGH 84
-#define DRAWS_PER_CANDIDATE 6
 #define IDEAS 5
 /* The motive bars the ideas take in the material: the liquidation's repetition, liquidation, scale line and broken chord (4);
    the retransition's two residues, scale line, broken chord and head (5). */
@@ -87,47 +86,14 @@ static bool read_liquidate(const Plan *plan, FillTarget target, LiquidateRequest
     if (!liquidation && !request.retransition) {
         return false;
     }
-    theme->section = target.id;
-    theme->span = plan_node_span(plan, target.id);
-    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
-    if (cadence) {
-        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
-    }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
-            theme->has_accompaniment = true;
-            theme->accompaniment = constraint->params.accompaniment;
-        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
-            theme->has_voicing = true;
-            theme->voicing = constraint->params.voicing;
-        }
-    }
-    LaneSpanId lane[2];
-    if (!cadence || theme->cadence != CADENCE_TYPE_HALF ||
-        plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
-        return false;
-    }
-    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
-    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
+    Rational meter_start;
     /* A retransition opens home from any region: the key before it is the region's (R-505). */
-    if (!grow_read_keys(plan, theme) || (theme->has_start_change && !request.retransition) || theme->has_end_change) {
-        return false;
-    }
-    plan_meter_bar_length(&theme->meter, &theme->bar);
-    theme->source = grow_find_source(plan);
-    if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
-        theme->bar.num == 0) {
+    if (!grow_read_section_target(plan, target, theme, &meter_start) || theme->cadence != CADENCE_TYPE_HALF ||
+        (theme->has_start_change && !request.retransition) || theme->has_end_change) {
         return false;
     }
     /* Whole bars from a barline: the section starts on one of the meter span's barlines and is 4 bars. */
-    Rational four;
-    Rational offset;
-    Rational bars_in;
-    if (rational_mul_int(theme->bar, 4, &four) != RATIONAL_OK || rational_cmp(theme->span.length, four) != 0 ||
-        rational_sub(theme->span.start, meter_start, &offset) != RATIONAL_OK ||
-        rational_div(offset, theme->bar, &bars_in) != RATIONAL_OK || bars_in.den != 1) {
+    if (!grow_whole_bars(theme, meter_start, 4)) {
         return false;
     }
     /* The ideas: 1, 1, 1, 1/2 and 1/2 bars from the start. */
@@ -315,33 +281,11 @@ bool grow_main_theme_head(const Motive *source, Rational half, Motive *out) {
 static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, GrowLiquidateSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     spec->retransition = true;
-    size_t count = spec->source.note_count;
-    size_t most = count / 2 > 1 ? count / 2 : 1;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
-    /* The residue: 1 to half the notes dropped. The residue one note further keeps two notes at least (else it is drawn
-       again). In the plan value[2] is 0, the least the operator keeps. */
-    MotiveRelationStep first;
-    memset(&first, 0, sizeof(first));
-    first.kind = MOTIVE_RELATION_LIQUIDATE;
-    first.value[0] = (long)drop;
-    first.value[2] = 1;
-    MotiveRelationStep second = first;
-    second.value[0] = (long)drop + 1;
-    second.value[2] = 0;
-    if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
-        spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
-        spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->repeated)) {
+    /* The residue: 1 to half the notes dropped. The residue one note further keeps two notes at least (else it is drawn again). */
+    if (!grow_draw_residues(&spec->source, rng, theme->bar, &spec->liquidated, &spec->repeated, &spec->liquidation, &spec->repetition,
+                            &spec->drop)) {
         return false;
     }
-    spec->liquidation = first;
-    spec->liquidation.value[2] = 0;
-    spec->repetition = second;
-    spec->drop = drop;
     spec->down = fill_rng_below(rng, 2) == 0;
     spec->first_degree = fill_rng_below(rng, 2) == 0 ? 2 : 4;
     Rational half;
@@ -375,11 +319,7 @@ static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, Fi
     }
     /* The liquidation: 1 to half the notes dropped, fewer than the notes. */
     size_t count = spec->source.note_count;
-    size_t most = count / 2 > 1 ? count / 2 : 1;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
+    size_t drop = grow_draw_drop(rng, count);
     MotiveRelationStep drawn;
     memset(&drawn, 0, sizeof(drawn));
     drawn.kind = MOTIVE_RELATION_LIQUIDATE;
@@ -408,43 +348,29 @@ static void liquidate_label(const GrowLiquidateSpec *spec, char *label, size_t s
              spec->down ? "down" : "up");
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool liquidate_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    (void)context;
+    return draw_liquidate(plan, (const LiquidateRequest *)request, rng, (GrowLiquidateSpec *)spec);
+}
+
+static bool liquidate_same_spec(const void *a, const void *b) {
+    return same_liquidate((const GrowLiquidateSpec *)a, (const GrowLiquidateSpec *)b);
+}
+
+static void liquidate_label_spec(const void *spec, char *out, size_t size) {
+    liquidate_label((const GrowLiquidateSpec *)spec, out, size);
+}
+
+static const GrowSpecKind LIQUIDATE_KIND = {sizeof(GrowLiquidateSpec), liquidate_draw_spec, liquidate_same_spec, liquidate_label_spec};
+
 bool grow_liquidate_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                              FillCandidateList *out) {
     LiquidateRequest request;
     if (!read_liquidate(plan, target, &request)) {
         return true;
     }
-    size_t wanted = context && context->candidates > 0 ? context->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowLiquidateSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowLiquidateSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!draw_liquidate(plan, &request, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_liquidate(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        liquidate_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, context, rng, &LIQUIDATE_KIND, out);
 }
 
 /*
@@ -467,10 +393,8 @@ const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, 
         ideas[3] = &spec->broken;
         ideas[4] = &spec->head;
     }
-    for (size_t i = 0; i < IDEAS; i++) {
-        if (rational_cmp(ideas[i]->length, spec->span[i].length) > 0) {
-            return "an idea is longer than its bars";
-        }
+    if (!grow_ideas_fit(ideas, spec->span, IDEAS)) {
+        return "an idea is longer than its bars";
     }
     if (spec->retransition ? spec->repeated.note_count >= spec->liquidated.note_count
                            : spec->liquidated.note_count >= spec->source.note_count) {
@@ -495,16 +419,7 @@ PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquida
         return PLAN_ERR_BAD_PAYLOAD;
     }
     GrowBuild build;
-    memset(&build, 0, sizeof(build));
-    build.plan = plan;
-    build.request = &request.theme;
-    build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
-    build.cadence.params.cadence = request.theme.cadence;
-    build.material = plan_node_parent(plan, request.theme.source);
-    build.material_span = plan_node_span(plan, build.material);
-    build.source = request.theme.source;
-    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.theme.bar,
-                                          spec->retransition ? RETRANSITION_MOTIVE_BARS : MOTIVE_BARS);
+    grow_build_init(&build, plan, &request.theme, spec->retransition ? RETRANSITION_MOTIVE_BARS : MOTIVE_BARS);
 
     /* The phrase over the section, with the chords and the bass over all of it: V prolonged over the pedal. */
     NodeId phrase;

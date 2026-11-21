@@ -8,6 +8,7 @@
 
 #include "address.h"
 #include "cli_options.h"
+#include "cli_params.h"
 #include "flags.h"
 #include "session.h"
 #include "workflow.h"
@@ -28,9 +29,11 @@ static bool whole(const char *text, long long min, long long max, long long *out
 }
 
 /* Sends one command ({"command", "params"} and a target when given); the id of its reply is copied into id (empty when it has none). 0 or the exit status. */
-static int send(CliSession *session, const char *name, const char *target, cJSON *params, char *id, size_t id_size) {
+/* base_version is the version the command was made against (R-679), or -1 for a command that takes none. */
+static int send(CliSession *session, const char *name, const char *target, long base_version, cJSON *params, char *id, size_t id_size) {
     cJSON *command = cJSON_CreateObject();
     if (!command || !cJSON_AddStringToObject(command, "command", name) || (target && !cJSON_AddStringToObject(command, "target", target)) ||
+        (base_version >= 0 && !cJSON_AddNumberToObject(command, "base_version", (double)base_version)) ||
         !cJSON_AddItemToObject(command, "params", params)) {
         cJSON_Delete(command);
         cJSON_Delete(params);
@@ -85,7 +88,7 @@ static int rate_version(const CliArgs *args, const CliAddress *address) {
         cJSON_Delete(params);
         status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     } else {
-        status = send(session, "ratings.rate-version", address->id, params, id, sizeof id);
+        status = send(session, "ratings.rate-version", address->id, address->version, params, id, sizeof id);
     }
     if (status == 0) {
         printf("%s v%ld %lld\n", id, address->version, rating);
@@ -96,7 +99,7 @@ static int rate_version(const CliArgs *args, const CliAddress *address) {
 
 int run_rate(const CliArgs *args) {
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "rate needs a session id or an item address\n%s", cli_usage_of("rate"));
+        return cli_needs("rate", "a session id or an item address", true);
     }
     CliAddress address;
     if (cli_is_address(args->inputs[0])) {
@@ -118,7 +121,7 @@ int run_rate(const CliArgs *args) {
     size_t ratings = cli_repeat_count(args, "--rating");
     const char *better = cli_value(args, "--better");
     if (ratings == 0 && !better) {
-        return cli_fail(CLI_EXIT_USAGE, "rate needs a --rating <batch>=<1-5> or --better <batch>|same\n%s", cli_usage_of("rate"));
+        return cli_needs("rate", "a --rating <batch>=<1-5> or --better <batch>|same", true);
     }
     /* every --rating is read before anything is sent */
     char batches[64][16];
@@ -150,7 +153,7 @@ int run_rate(const CliArgs *args) {
             status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
             break;
         }
-        status = send(session, "ratings.rate", NULL, params, id, sizeof id);
+        status = send(session, "ratings.rate", NULL, -1, params, id, sizeof id);
         if (status == 0) {
             printf("%s %s %lld\n", id, batches[i], values[i]);
         }
@@ -163,7 +166,7 @@ int run_rate(const CliArgs *args) {
             cJSON_Delete(params);
             status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         } else {
-            status = send(session, "ratings.pick", NULL, params, id, sizeof id);
+            status = send(session, "ratings.pick", NULL, -1, params, id, sizeof id);
         }
         if (status == 0) {
             printf("%s better %s\n", id, better);

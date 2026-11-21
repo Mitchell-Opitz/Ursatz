@@ -2,10 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "model/core/value.h"
-#include "preference_test_access.h"
-#include "model/identity/entity_id.h"
-#include "theory/counterpoint/framework.h"
 #include "theory/rules/rule_table.h"
 
 /* A table of three rules: "alpha" and "gamma" are hard, "beta" is soft. */
@@ -13,45 +9,18 @@ enum { ALPHA = 0, BETA, GAMMA, COUNT };
 
 static const char *const NAMES[COUNT] = {"alpha", "beta", "gamma"};
 
-static bool is_hard(int which) {
-    return which != BETA;
-}
+static const bool SOFT_BETA[COUNT] = {[BETA] = true};
+static const bool NONE_SOFT[COUNT] = {false};
+static const bool ALL_SOFT[COUNT] = {true, true, true};
 
-static RulePair g_pairs[COUNT];
-static UrsatzOnce g_built[COUNT];
-static const RuleTable TABLE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "test-group", NAMES, COUNT, is_hard, g_pairs, g_built};
-
-static RulePair g_bare_pairs[COUNT];
-static UrsatzOnce g_bare_built[COUNT];
-static const RuleTable BARE = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built};
-
-static RulePair g_soft_pairs[COUNT];
-static UrsatzOnce g_soft_built[COUNT];
-static const RuleTable SOFT = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "test-soft", NAMES, COUNT, rule_table_never_hard, g_soft_pairs, g_soft_built};
+static const RuleTable TABLE = {.name = "test-group", .names = NAMES, .soft = SOFT_BETA, .count = COUNT};
+static const RuleTable BARE = {.names = NAMES, .soft = NONE_SOFT, .count = COUNT};
+static const RuleTable SOFT = {.name = "test-soft", .names = NAMES, .soft = ALL_SOFT, .count = COUNT};
 
 /* The subject is a bit mask of the rules that hold. */
 static bool holds(int which, const void *subject) {
     return (*(const unsigned *)subject & (1u << which)) != 0;
 }
-
-/* A table that registers an evaluation callback; the subject is the same bit mask of the rules that hold. */
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static RulePair g_eval_pairs[COUNT];
-static UrsatzOnce g_eval_built[COUNT];
-static const RuleTable EVAL = {
-    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "test-eval", NAMES, COUNT,         is_hard,
-                                                   g_eval_pairs,  g_eval_built, evaluate_candidate, score_candidate};
-RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)
-RULE_TABLE_SCORER(score_candidate, EVAL, holds, unsigned)
 
 static void test_valid_and_names(void) {
     for (int i = 0; i < COUNT; i++) {
@@ -71,7 +40,7 @@ static void test_hardness(void) {
     assert(rule_table_is_hard(&TABLE, GAMMA));
     assert(!rule_table_is_hard(&TABLE, COUNT));
 
-    /* No predicate: all hard. Never hard: all soft. */
+    /* No soft rule: all hard. Every rule soft: none hard. */
     for (int i = 0; i < COUNT; i++) {
         assert(rule_table_is_hard(&BARE, i));
         assert(!rule_table_is_hard(&SOFT, i));
@@ -107,90 +76,10 @@ static void test_check(void) {
     assert(soft == all);
 }
 
-static void test_evaluate(void) {
-    const char *tag = "standard-counterpoint/test-eval";
-    char written[64];
-    assert(rule_table_candidate_type(&EVAL, written, sizeof(written)));
-    assert(strcmp(written, tag) == 0);
-    assert(!rule_table_candidate_type(&EVAL, written, 8));
-    assert(!rule_table_candidate_type(&BARE, written, sizeof(written)));
-    assert(!rule_table_candidate_type(NULL, written, sizeof(written)));
-
-    /* The helper itself: a NULL constraint is refused. */
-    Value *candidate;
-    unsigned mask = (1u << COUNT) - 1;
-    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
-    assert(rule_table_evaluate(&EVAL, holds, NULL, sizeof(mask), NULL, candidate) ==
-           CONSTRAINT_EVAL_ERR_NULL_CANDIDATE);
-    value_destroy(candidate);
-}
-
-static PreferenceRankResult rank_mask(const Preference *preference, const char *tag, unsigned mask,
-                                      unsigned long *numerator, unsigned long *denominator) {
-    Value *candidate;
-    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
-    PreferenceRankResult result = preference_rank(preference, candidate, NULL, numerator, denominator);
-    value_destroy(candidate);
-    return result;
-}
-
-static void test_preferences(void) {
-    const char *tag = "standard-counterpoint/test-eval";
-
-    /* A soft rule gets a Preference with the table's callback; a hard rule, and a table with no callback, get none. */
-    for (int i = 0; i < COUNT; i++) {
-        const Preference *preference = rule_table_preference(&EVAL, i);
-        assert((preference != NULL) == !is_hard(i));
-        assert(rule_table_preference(&TABLE, i) == NULL);
-        assert(rule_table_preference(&BARE, i) == NULL);
-        if (preference != NULL) {
-            assert(preference_score_fn(preference) == score_candidate);
-        }
-    }
-    assert(rule_table_preference(&EVAL, COUNT) == NULL);
-    assert(rule_table_preference(&EVAL, -1) == NULL);
-    assert(rule_table_preference(NULL, 0) == NULL);
-    const Preference *beta = rule_table_preference(&EVAL, BETA);
-    assert(beta == rule_table_preference(&EVAL, BETA));
-
-    /* The soft rule scores 1/1 when it holds and 0/1 when it does not, and never rejects: no other result exists. */
-    unsigned long numerator = 99, denominator = 99;
-    assert(rank_mask(beta, tag, 1u << BETA, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
-    assert(numerator == 1 && denominator == 1);
-    assert(rank_mask(beta, tag, 0, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
-    assert(numerator == 0 && denominator == 1);
-
-    /* A candidate it cannot score (another type, wrong size) is unscored rather than given a bad score. */
-    numerator = 99;
-    denominator = 99;
-    assert(rank_mask(beta, "standard-counterpoint/other", 1u << BETA, &numerator, &denominator) ==
-           PREFERENCE_RANK_NOT_IMPLEMENTED);
-    Value *wrong_size;
-    assert(value_create(tag, "ab", 2, &wrong_size) == VALUE_OK);
-    assert(preference_rank(beta, wrong_size, NULL, &numerator, &denominator) == PREFERENCE_RANK_NOT_IMPLEMENTED);
-    value_destroy(wrong_size);
-    assert(numerator == 99 && denominator == 99);
-
-    /* The helper itself: NULL arguments, a table with no prefix. */
-    unsigned mask = 1u << BETA;
-    Value *candidate;
-    assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
-    PreferenceScore score = rule_table_score(&EVAL, holds, sizeof(mask), beta, candidate);
-    assert(score.numerator == 1 && score.denominator == 1);
-    assert(rule_table_score(NULL, holds, sizeof(mask), beta, candidate).denominator == 0);
-    assert(rule_table_score(&EVAL, NULL, sizeof(mask), beta, candidate).denominator == 0);
-    assert(rule_table_score(&EVAL, holds, sizeof(mask), NULL, candidate).denominator == 0);
-    assert(rule_table_score(&EVAL, holds, sizeof(mask), beta, NULL).denominator == 0);
-    assert(rule_table_score(&BARE, holds, sizeof(mask), beta, candidate).denominator == 0);
-    value_destroy(candidate);
-}
-
 int main(void) {
-    test_preferences();
     test_valid_and_names();
     test_hardness();
     test_check();
-    test_evaluate();
     printf("test_rule_table (standard-counterpoint): ok\n");
     return 0;
 }

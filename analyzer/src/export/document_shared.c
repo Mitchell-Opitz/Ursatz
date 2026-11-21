@@ -2,6 +2,7 @@
    metadata and the input, and the helpers more than one area uses. */
 
 #include "export/analysis_document_internal.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* Source ids for the meter: a time signature the MIDI file declares or the score notates, and
    the 4/4 the library assumes when it declares none. */
@@ -77,15 +78,9 @@ void doc_notes_span(DocBuild *build, const ImportedScore *notes, const size_t *i
     }
 }
 
-/* Adds item under key, taking ownership; false (item freed) on failure. */
+/* A rational as {"num", "den"}, not reduced; NULL on allocation failure. */
 cJSON *doc_rational_json(Rational value) {
-    cJSON *object = cJSON_CreateObject();
-    if (object && !(common_json_add(object, "num", cJSON_CreateNumber((double)value.num)) &&
-                    common_json_add(object, "den", cJSON_CreateNumber((double)value.den)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
+    return common_json_rational_object(value.num, value.den);
 }
 
 cJSON *doc_span_json(Rational start, Rational end) {
@@ -334,8 +329,7 @@ cJSON *doc_meter_json(DocBuild *build, const ImportedScore *notes) {
 }
 
 const char *doc_library_framework_name(void) {
-    const Framework *framework = common_practice_minimal_framework();
-    return framework ? framework_name(framework) : "unknown";
+    return FRAMEWORK_COMMON_PRACTICE_MINIMAL;
 }
 
 static const char *mode_hint_name(MidiModeHint hint) {

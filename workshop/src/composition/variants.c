@@ -11,6 +11,8 @@
 #include "composition/composer_client.h"
 #include "composition/motifs.h"
 #include "items/store.h"
+#include "base/params.h"
+#include <common/json.h>
 
 /* The variant engine of the motif area (A20261109-76): variants and each-op jobs, reroll, save, flag, promote, recognize, link form and
    the variant tree. The routes parse a request and call one function here. */
@@ -20,19 +22,6 @@ static UrsatzStatus store_failure(UrsatzStatus status, UrsatzError *error) {
   const UrsatzError *last = workshop_last_error();
   ursatz_error_set(error, status, NULL, "%s", last->message[0] != '\0' ? last->message : "material store failure");
   return status;
-}
-
-/* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
-static const char *optional_string(const cJSON *body, const char *key, bool *bad) {
-  const cJSON *item = cJSON_GetObjectItemCaseSensitive(body, key);
-  if (!item || cJSON_IsNull(item)) {
-    return NULL;
-  }
-  if (!cJSON_IsString(item)) {
-    *bad = true;
-    return NULL;
-  }
-  return item->valuestring;
 }
 
 /* The names --function takes, the vocabulary's functions; the stored derived.functions hold the same. */
@@ -238,17 +227,17 @@ UrsatzStatus workshop_variants_recognize(const cJSON *request, cJSON **document_
     return status;
   }
   bool bad = false;
-  const char *form = optional_string(source, "form", &bad);
-  const char *meter = optional_string(source, "meter", &bad);
+  const char *form = workshop_param_string(source, "form", &bad);
+  const char *meter = workshop_param_string(source, "meter", &bad);
   char source_key[64];
   char target_key_text[64];
   const char *key = workshop_motif_key_text(source, source_key, sizeof(source_key));
-  const char *pickup = optional_string(source, "pickup", &bad);
-  const char *target_pickup = optional_string(target, "pickup", &bad);
-  const char *source_degrees = optional_string(source, "degrees", &bad);
-  const char *target_degrees = optional_string(target, "degrees", &bad);
-  const char *target_form = optional_string(target, "form", &bad);
-  const char *target_meter = optional_string(target, "meter", &bad);
+  const char *pickup = workshop_param_string(source, "pickup", &bad);
+  const char *target_pickup = workshop_param_string(target, "pickup", &bad);
+  const char *source_degrees = workshop_param_string(source, "degrees", &bad);
+  const char *target_degrees = workshop_param_string(target, "degrees", &bad);
+  const char *target_form = workshop_param_string(target, "form", &bad);
+  const char *target_meter = workshop_param_string(target, "meter", &bad);
   const char *target_key = workshop_motif_key_text(target, target_key_text, sizeof(target_key_text));
   if (bad || !form || !meter || !source_degrees || !target_degrees ||
       (target_form && strcmp(form, target_form) != 0) || (target_meter && strcmp(meter, target_meter) != 0) ||
@@ -261,7 +250,7 @@ UrsatzStatus workshop_variants_recognize(const cJSON *request, cJSON **document_
   bool full = strcmp(form, "full") == 0;
   cJSON *source_request = workshop_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, source_degrees, NULL, NULL, NULL);
   cJSON *target_request = workshop_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, target_degrees, NULL, NULL, NULL);
-  const char *role = optional_string(source, "role", &(bool){false});
+  const char *role = workshop_param_string(source, "role", &(bool){false});
   cJSON *recognize = cJSON_CreateObject();
   bool built = source_request && target_request && recognize &&
                workshop_motif_add_extras(source_request, workshop_motif_harmony(source), cJSON_GetObjectItemCaseSensitive(source, "features"),
@@ -270,9 +259,9 @@ UrsatzStatus workshop_variants_recognize(const cJSON *request, cJSON **document_
                                  NULL) &&
                cJSON_AddStringToObject(recognize, "meter", meter) &&
                (!key || key[0] == '\0' || cJSON_AddStringToObject(recognize, "key", key)) &&
-               (!role || cJSON_AddStringToObject(recognize, "role", role)) &&
-               (!pickup || cJSON_AddStringToObject(recognize, "pickup", pickup)) &&
-               (!target_pickup || cJSON_AddStringToObject(recognize, "target_pickup", target_pickup));
+               common_json_add_string_if(recognize, "role", role) &&
+               common_json_add_string_if(recognize, "pickup", pickup) &&
+               common_json_add_string_if(recognize, "target_pickup", target_pickup);
   if (built) {
     built = cJSON_AddItemToObject(recognize, "source", source_request);
     source_request = built ? NULL : source_request;
@@ -410,8 +399,8 @@ UrsatzStatus workshop_variants_save(const char *id, const cJSON *body, cJSON **i
   *item_out = NULL;
   bool bad = false;
   const cJSON *variant = cJSON_GetObjectItemCaseSensitive(body, "variant");
-  const char *name = optional_string(body, "name", &bad);
-  const char *flag = optional_string(body, "flag", &bad);
+  const char *name = workshop_param_string(body, "name", &bad);
+  const char *flag = workshop_param_string(body, "flag", &bad);
   if (!flag) {
     flag = "unflagged";
   }
@@ -425,7 +414,7 @@ UrsatzStatus workshop_variants_save(const char *id, const cJSON *body, cJSON **i
     return store_failure(result, error);
   }
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(source, "motif");
-  const char *form = optional_string(motif, "form", &(bool){false});
+  const char *form = workshop_param_string(motif, "form", &(bool){false});
   const char *text = form ? variant_text(variant, form, false) : NULL;
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
   if (!cJSON_IsObject(motif) || !form || !text || !variant_text(variant, form, true) || !cJSON_IsNumber(version)) {
@@ -433,8 +422,8 @@ UrsatzStatus workshop_variants_save(const char *id, const cJSON *body, cJSON **i
     cJSON_Delete(source);
     return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "the variant does not match this motif");
   }
-  const char *source_name = optional_string(meta, "name", &(bool){false});
-  const char *project_id = optional_string(meta, "project_id", &(bool){false});
+  const char *source_name = workshop_param_string(meta, "name", &(bool){false});
+  const char *project_id = workshop_param_string(meta, "project_id", &(bool){false});
   char default_name[256];
   variant_default_name(source_name ? source_name : "", cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "chain"), "steps"),
                        default_name, sizeof(default_name));
@@ -500,17 +489,12 @@ static cJSON *derived_of(cJSON *version_body) {
   return cJSON_IsObject(derived) ? derived : NULL;
 }
 
-/* Replaces a string member of object. */
-static bool set_string(cJSON *object, const char *name, const char *value) {
-  cJSON_DeleteItemFromObjectCaseSensitive(object, name);
-  return cJSON_AddStringToObject(object, name, value) != NULL;
-}
 /* A new version that changes only derived.flag (and kind): body {flag, kind?}. */
 UrsatzStatus workshop_variants_flag(const char *id, const cJSON *body, cJSON **item_out, UrsatzError *error) {
   *item_out = NULL;
   bool bad = false;
-  const char *flag = optional_string(body, "flag", &bad);
-  const char *kind = optional_string(body, "kind", &bad);
+  const char *flag = workshop_param_string(body, "flag", &bad);
+  const char *kind = workshop_param_string(body, "kind", &bad);
   if (bad || !flag_ok(flag) || (kind && !kind_ok(kind))) {
     return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "flag is approved, rejected or unflagged; kind is exact, motive-form or variant");
   }
@@ -524,7 +508,7 @@ UrsatzStatus workshop_variants_flag(const char *id, const cJSON *body, cJSON **i
     cJSON_Delete(current);
     return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "only a derived motif has a flag");
   }
-  if (!set_string(derived, "flag", flag) || (kind && !set_string(derived, "kind", kind))) {
+  if (!common_json_set_string(derived, "flag", flag) || (kind && !common_json_set_string(derived, "kind", kind))) {
     cJSON_Delete(current);
     return ursatz_error_set(error, URSATZ_ERR_ALLOC, NULL, "out of memory");
   }
@@ -543,9 +527,9 @@ UrsatzStatus workshop_variants_flag(const char *id, const cJSON *body, cJSON **i
 UrsatzStatus workshop_variants_promote(const char *id, const cJSON *body, cJSON **item_out, UrsatzError *error) {
   *item_out = NULL;
   bool bad = false;
-  const char *name = optional_string(body, "name", &bad);
-  const char *project_id = optional_string(body, "project_id", &bad);
-  const char *note = optional_string(body, "note", &bad);
+  const char *name = workshop_param_string(body, "name", &bad);
+  const char *project_id = workshop_param_string(body, "project_id", &bad);
+  const char *note = workshop_param_string(body, "note", &bad);
   if (bad || !name || !project_id) {
     return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "promote needs a name and a project_id; note is a string");
   }
@@ -923,7 +907,7 @@ static void reroll_run(const char *id, const UrsatzJob *composer_job, WorkshopJo
             replace_member(derived, "kept", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "kept"), 1)) &&
             replace_member(derived, "changed", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "changed"), 1)) &&
             apply_variant_extras(derived, variant) && set_variant_motif_members(motif, variant) &&
-            set_string(derived, "flag", "unflagged");
+            common_json_set_string(derived, "flag", "unflagged");
   char note[501];
   if (ok) {
     bounded_note(note, sizeof(note), "rerolled: ", derivation->valuestring);
@@ -1065,7 +1049,7 @@ UrsatzStatus workshop_variants_tree(const char *id, cJSON **tree_out, UrsatzErro
     return ursatz_error_set(error, URSATZ_ERR_REQUEST, NULL, "only a motif has variants");
   }
   result = workshop_material_derived_motifs(&index);
-  const char *name = optional_string(meta, "name", &(bool){false});
+  const char *name = workshop_param_string(meta, "name", &(bool){false});
   const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "current_version");
   const char *ancestors[33];
   cJSON *tree = result == URSATZ_OK

@@ -309,26 +309,6 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }
 
-bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
-                                             SpelledKey *out) {
-    if (region == NULL || materials == NULL || out == NULL) {
-        return false;
-    }
-    const char *name = common_practice_key_index_tonic_name(region->key_index);
-    if (name == NULL) {
-        return false;
-    }
-    PitchLetter letter;
-    if (!pitch_letter_from_char(name[0], &letter)) {
-        return false;
-    }
-    out->id = NULL;
-    out->tonic_letter = letter;
-    out->tonic_accidental = name[1] == '#' ? 1 : (name[1] == 'b' ? -1 : 0);
-    out->material = common_practice_material(materials, common_practice_key_index_mode(region->key_index));
-    return out->material != NULL;
-}
-
 bool common_practice_key_signature_event_from_analysis(const SpelledKeyEvent *event, CommonPracticeKeySignatureEvent *out) {
     if (event == NULL || out == NULL) {
         return false;

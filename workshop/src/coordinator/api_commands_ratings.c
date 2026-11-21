@@ -63,7 +63,7 @@ WORKSHOP_HANDLER(workshop_c_ratings_batch) {
     }
     cJSON *session = NULL;
     UrsatzError failure = {{0}, {0}};
-    UrsatzStatus status = workshop_ratings_batch(session_id, (int)round, batch, cJSON_GetObjectItemCaseSensitive(call->params, "samples"), call->actor, &session, &failure);
+    UrsatzStatus status = workshop_ratings_batch(session_id, (int)round, batch, cJSON_GetObjectItemCaseSensitive(call->params, "samples"), &session, &failure);
     if (status != URSATZ_OK) {
         return failed(error, status, &failure);
     }
@@ -197,7 +197,7 @@ WORKSHOP_HANDLER(workshop_c_ratings_keep) {
         cJSON_Delete(file);
         return status;
     }
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "ratings.keep", call->actor, "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "ratings.keep", "", 0);
     if (!txn) {
         cJSON_Delete(file);
         return workshop_call_fail(error, URSATZ_ERR_IO, "", "the journal cannot be read");

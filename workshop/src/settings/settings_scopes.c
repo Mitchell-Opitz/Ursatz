@@ -184,8 +184,9 @@ static bool add_names(cJSON *list, const char *folder, bool files, const char *n
             snprintf(text, sizeof text, "%.*s", (int)(length - 5), name);
         } else {
             char path[384];
-            snprintf(path, sizeof path, "%s/%s/%s", folder, name, needs_file);
-            if (name[0] == '.' || !common_path_exists(path)) {
+            char scope_folder[384];
+            if (name[0] == '.' || !common_path_join(scope_folder, sizeof scope_folder, folder, name) ||
+                !common_path_join(path, sizeof path, scope_folder, needs_file) || !common_path_exists(path)) {
                 continue;
             }
             snprintf(text, sizeof text, "%s", name);

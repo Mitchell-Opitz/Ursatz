@@ -443,13 +443,9 @@ static bool plan_digits(const char *text, size_t *at, unsigned *out) {
 
 /* One plan chord: a Roman numeral I to VII in any case, an optional o or degree sign, an optional @bar or @bar:beat. */
 static PlanChordResult parse_plan_chord(const char *text, MotiveRandomPlanChord *out) {
-    size_t n = 0;
-    size_t at = 0;
+    size_t n = standard_tonality_roman_numeral_letters(text);
+    size_t at = n;
     unsigned value;
-    while ((text[at] == 'i' || text[at] == 'I' || text[at] == 'v' || text[at] == 'V') && n < 7) {
-        n++;
-        at++;
-    }
     int degree = standard_tonality_roman_numeral_degree_of(text, n);
     if (degree == 0) {
         return PLAN_CHORD_SYNTAX;

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/progression.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/progression.request.schema.json",
   "title": "composer_api_progression request",
   "description": "A chord progression for one phrase, or (list_schemas) the names of the schemas and sequences.",
   "type": "object",

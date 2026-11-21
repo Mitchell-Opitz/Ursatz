@@ -1,4 +1,5 @@
 #include "model/time/meter_arithmetic.h"
+#include "meter_test_access.h"
 
 #include <assert.h>
 #include <stdio.h>

@@ -1,6 +1,7 @@
 #include "piece.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,8 +13,11 @@
 
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "workflow.h"
 #include "piece_text.h"
+#include <common/json.h>
+#include <common/files.h>
 
 #define SCHEMA_NAME "ursatz-piece-request"
 #define OUTPUT_MAX 8
@@ -45,28 +49,32 @@ typedef struct {
 } Options;
 
 
+static const CliOptionRow ROWS[] = {
+    {"--check", offsetof(Options, check), true},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--seed", offsetof(Options, seed), false},
+    {"--out", offsetof(Options, out), false},
+    {"--layers", offsetof(Options, layers), false},
+    {"--ending-out", offsetof(Options, ending_out), false},
+    {"--midi", offsetof(Options, midi), false},
+    {"--musicxml", offsetof(Options, musicxml), false},
+    {"--ending-midi", offsetof(Options, ending_midi), false},
+    {"--ending-musicxml", offsetof(Options, ending_musicxml), false},
+    {"--explain", offsetof(Options, explain), false},
+    {"--format", offsetof(Options, format), false},
+    {"--from", offsetof(Options, from), false},
+    {"--request", offsetof(Options, request), false},
+    {"--regenerate", offsetof(Options, regenerate), false},
+    {"--lane", offsetof(Options, lane), false},
+    {"--variations", offsetof(Options, variations), false},
+    {"--count", offsetof(Options, count), false},
+    {"--out-dir", offsetof(Options, out_dir), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->check = cli_switch(args, "--check");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->seed = cli_value(args, "--seed");
-    options->out = cli_value(args, "--out");
-    options->layers = cli_value(args, "--layers");
-    options->ending_out = cli_value(args, "--ending-out");
-    options->midi = cli_value(args, "--midi");
-    options->musicxml = cli_value(args, "--musicxml");
-    options->ending_midi = cli_value(args, "--ending-midi");
-    options->ending_musicxml = cli_value(args, "--ending-musicxml");
-    options->explain = cli_value(args, "--explain");
-    options->format = cli_value(args, "--format");
-    options->from = cli_value(args, "--from");
-    options->request = cli_value(args, "--request");
-    options->regenerate = cli_value(args, "--regenerate");
-    options->lane = cli_value(args, "--lane");
-    options->variations = cli_value(args, "--variations");
-    options->count = cli_value(args, "--count");
-    options->out_dir = cli_value(args, "--out-dir");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     return 0;
 }
 
@@ -106,7 +114,7 @@ static int check_edit_options(const Options *options) {
                         cli_usage_of("piece"));
     }
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "piece needs a request file\n%s", cli_usage_of("piece"));
+        return cli_needs("piece", "a request file", true);
     }
     return 0;
 }
@@ -232,12 +240,6 @@ static double document_tempo(const cJSON *brief) {
     return cJSON_IsNumber(qpm) ? qpm->valuedouble : 0;
 }
 
-/* Sets (or replaces) a string member of object. */
-static void set_string(cJSON *object, const char *name, const char *value) {
-    cJSON_DeleteItemFromObjectCaseSensitive(object, name);
-    cJSON_AddStringToObject(object, name, value);
-}
-
 static void print_document(const cJSON *document) {
     char *text = cJSON_PrintUnformatted(document);
     printf("%s\n", text ? text : "{}");
@@ -258,14 +260,10 @@ typedef enum {
 
 /* Renames every file written, or removes them all. Returns 0 or the status. */
 static int finish_files(CliPendingFile *pending, size_t count, int status) {
-    for (size_t i = 0; status == 0 && i < count; i++) {
-        if (rename(pending[i].temporary, pending[i].final_path) != 0) {
-            status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
-        }
+    if (status == 0) {
+        return cli_pending_commit(pending, count);
     }
-    if (status != 0) {
-        cli_discard_pending(pending, count);
-    }
+    cli_discard_pending(pending, count);
     return status;
 }
 
@@ -354,7 +352,7 @@ static void print_json(cJSON *document, const Options *options, const CliPending
     const cJSON *plan = cJSON_GetObjectItemCaseSensitive(document, "plans")->child;
     for (int v = 0; v < 2 && plan; v++, plan = plan->next) {
         if (paths[v]) {
-            set_string(cJSON_GetObjectItemCaseSensitive(versions, plan->string), "plan", paths[v]);
+            common_json_set_string(cJSON_GetObjectItemCaseSensitive(versions, plan->string), "plan", paths[v]);
         }
     }
     cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
@@ -402,20 +400,17 @@ typedef struct {
     char musicxml[PATH_SIZE];
 } VariationFiles;
 
-/* Writes what the document holds to path next to its final name, then renames it. */
+/* Writes what the document holds to path (atomically). */
 static int write_result_file(const cJSON *document, const char *path) {
-    char temporary[PATH_SIZE + 8];
-    snprintf(temporary, sizeof(temporary), "%s.tmp", path);
     char *printed = cJSON_PrintUnformatted(document);
     char *text = printed ? malloc(strlen(printed) + 2) : NULL;
     if (text) {
         sprintf(text, "%s\n", printed);
     }
-    bool ok = text && cli_write_bytes(temporary, text, strlen(text));
+    bool ok = text && cli_write_bytes(path, text, strlen(text));
     cJSON_free(printed);
     free(text);
-    if (!ok || rename(temporary, path) != 0) {
-        remove(temporary);
+    if (!ok) {
         return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", path);
     }
     return 0;
@@ -426,8 +421,9 @@ static int write_variations(const Options *options, cJSON *document, bool json) 
     cJSON *list = cJSON_GetObjectItemCaseSensitive(document, "variations");
     size_t kept = (size_t)cJSON_GetArraySize(list);
     double qpm = document_tempo(cJSON_GetObjectItemCaseSensitive(document, "brief"));
-    if (mkdir(options->out_dir, 0755) != 0 && errno != EEXIST) {
-        return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", options->out_dir, strerror(errno));
+    UrsatzError made = {0};
+    if (common_dir_make(options->out_dir, &made) != URSATZ_OK) {
+        return cli_fail(CLI_EXIT_WRITE, "%s", made.message);
     }
     VariationFiles files[VARIATIONS_MAX];
     CliPendingFile pending[3 * VARIATIONS_MAX];
@@ -467,9 +463,9 @@ static int write_variations(const Options *options, cJSON *document, bool json) 
         }
         cli_response_destroy(&exported);
         /* The document as printed: the plan of the version is its file, and the files are named. */
-        set_string(loop, "plan", named->plan);
-        set_string(item, "midi", named->midi);
-        set_string(item, "musicxml", named->musicxml);
+        common_json_set_string(loop, "plan", named->plan);
+        common_json_set_string(item, "midi", named->midi);
+        common_json_set_string(item, "musicxml", named->musicxml);
         cJSON_DeleteItemFromObjectCaseSensitive(item, "loop_markers");
     }
     cJSON_DeleteItemFromObjectCaseSensitive(document, "brief");

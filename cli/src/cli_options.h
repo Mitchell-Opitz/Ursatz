@@ -81,7 +81,12 @@ typedef struct {
 /* Removes the temporary files of the first `count` pending files. */
 void cli_discard_pending(CliPendingFile *pending, size_t count);
 
-/* Writes data to path; false when it cannot be (a partly written file is removed). */
+/* Renames the first `count` pending files into place; if one cannot be, prints "cannot write '<final path>'", removes the temporary
+   files and returns CLI_EXIT_WRITE. Returns 0 when every file is in place. */
+int cli_pending_commit(CliPendingFile *pending, size_t count);
+
+/* Writes data to path atomically (common_file_write_atomic); false when it cannot be (the folder in front of it is not made). An
+   existing file is kept when the write fails. */
 bool cli_write_bytes(const char *path, const void *data, size_t size);
 
 /*

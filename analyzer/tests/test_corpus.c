@@ -12,6 +12,7 @@
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include <common/files.h>
 
 /*
  * Corpus mode over the corpora CMake builds in the build tree: "reference" (the five framework-v1 pieces) and "mixed"
@@ -44,11 +45,7 @@ static void remove_tree(const char *path) {
 }
 
 static bool copy_file(const char *from, const char *to) {
-    size_t length = 0;
-    char *data = test_read_file(from, &length);
-    bool ok = data && test_write_file(to, data, length);
-    free(data);
-    return ok;
+    return common_file_copy(from, to, NULL) == URSATZ_OK;
 }
 
 static bool exists(const char *path) {

@@ -2,7 +2,7 @@
  * then POST /api/styles builds a StyleModel file from a tag, a collection or
  * a list of ids, and the list, read, rebuild and delete routes work on what
  * is stored under styles/<id>/. The model is read back with the Analyzer's
- * style_model_file_read. Uses the shared HTTP client (tests/support/test_http.h).
+ * the style model file (test_style_model_read). Uses the shared HTTP client (tests/support/test_http.h).
  * Runs in its own working directory (pieces/, collections/ and styles/ are created there). */
 
 #include <civetweb.h>
@@ -36,6 +36,8 @@
 static const char *g_port = "18769";
 #define PORT g_port
 #include "coordinator/services.h"
+#include "style_model_file_io.h"
+#include "../../../workshop/tests/command_context_support.h"
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -87,7 +89,7 @@ static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
   snprintf(path, sizeof(path), "settings/styles/%s/style-model.json", id);
   StyleModel *model = NULL;
   size_t pieces = 0;
-  if (style_model_file_read(path, &model, &pieces) != STYLE_MODEL_FILE_OK) {
+  if (test_style_model_read(path, &model, &pieces) != STYLE_MODEL_FILE_OK) {
     return false;
   }
   style_model_destroy(model);
@@ -145,6 +147,7 @@ static int smoke_run(const char *clementi_path) {
 }
 
 int main(int argc, char **argv) {
+    command_context_support_begin(); /* the route tests call some services directly: a write needs a command */
   const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
   if (smoke) {
     g_port = "18779";

@@ -11,6 +11,7 @@
 #include "items/store.h"
 #include "test_knowledge.h"
 #include "ursatz_check.h"
+#include "command_context_support.h"
 
 /*
  * The variant engine through the workshop functions, without HTTP: the lineage root of a three-deep variant, the reroll seed search
@@ -110,6 +111,7 @@ static void remove_store(void) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
     test_knowledge();
     snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
     check_quiet(workshop_material_service_init(), "init");

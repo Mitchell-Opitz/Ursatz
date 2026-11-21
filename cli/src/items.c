@@ -8,6 +8,7 @@
 
 #include "address.h"
 #include "cli_options.h"
+#include "cli_params.h"
 #include "cli_tools.h"
 #include "render.h"
 #include "session.h"
@@ -209,7 +210,7 @@ int run_restore(const CliArgs *args) {
         return status;
     }
     if (address.version == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "restore needs the version to copy: write item:<id>@v<n>\n%s", cli_usage_of("restore"));
+        return cli_needs("restore", "the version to copy: write item:<id>@v<n>", true);
     }
     const char *base_text = cli_value(args, "--base");
     long long base_value = 0;
@@ -313,7 +314,7 @@ int run_render_item(const CliArgs *args) {
     const char *midi_path = cli_value(args, "--midi");
     const char *musicxml_path = cli_value(args, "--musicxml");
     if (!midi_path && !musicxml_path) {
-        return cli_fail(CLI_EXIT_USAGE, "render needs at least one of --midi or --musicxml\n%s", cli_usage_of("render"));
+        return cli_needs("render", "at least one of --midi or --musicxml", true);
     }
     char *midi_absolute = midi_path ? cli_path_absolute(midi_path) : NULL;
     char *musicxml_absolute = musicxml_path ? cli_path_absolute(musicxml_path) : NULL;

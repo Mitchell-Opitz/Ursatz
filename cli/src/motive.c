@@ -1,6 +1,7 @@
 #include "motive.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #include <cJSON.h>
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "motive_extras.h"
 #include "motive_input.h"
 #include "motive_text.h"
@@ -46,18 +48,22 @@ static int fail(int status, const char *format, ...) {
     return status;
 }
 
+static const CliOptionRow ROWS[] = {
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--key", offsetof(Options, key_text), false},
+    {"--input-format", offsetof(Options, format_text), false},
+    {"--form", offsetof(Options, form_text), false},
+    {"--pickup", offsetof(Options, pickup_text), false},
+    {"--render-key", offsetof(Options, render_key_text), false},
+    {"--midi", offsetof(Options, midi_path), false},
+    {"--musicxml", offsetof(Options, musicxml_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->meter_text = cli_value(args, "--meter");
-    options->key_text = cli_value(args, "--key");
-    options->format_text = cli_value(args, "--input-format");
-    options->form_text = cli_value(args, "--form");
-    options->pickup_text = cli_value(args, "--pickup");
-    options->render_key_text = cli_value(args, "--render-key");
-    options->midi_path = cli_value(args, "--midi");
-    options->musicxml_path = cli_value(args, "--musicxml");
-    options->tempo_text = cli_value(args, "--tempo");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     const char *print_format = cli_value(args, "--format");
     if (print_format) {
         options->json = cli_equals_ignore_case(print_format, "json");
@@ -80,12 +86,7 @@ static int read_options(const CliArgs *args, Options *options) {
 
 /* Writes the bytes of an output the response holds to the path the user gave. Returns 0, or the status of the failure. */
 static int write_output(const char *path, const void *bytes, size_t size) {
-    FILE *file = fopen(path, "wb");
-    bool ok = file && (size == 0 || fwrite(bytes, 1, size, file) == size);
-    if (file && fclose(file) != 0) {
-        ok = false;
-    }
-    return ok ? 0 : fail(EXIT_OUTPUT, "cannot write '%s': could not write '%s'", path, path);
+    return cli_write_bytes(path, bytes, size) ? 0 : fail(EXIT_OUTPUT, "cannot write '%s': could not write '%s'", path, path);
 }
 
 /* Adds the members of the command's own options to the request. False when out of memory. */
@@ -170,7 +171,7 @@ int run_motive(const CliArgs *args) {
         return status;
     }
     if (!options.input) {
-        return fail(EXIT_USAGE, "motive needs an input file\n%s", cli_usage_of("motive"));
+        return cli_needs("motive", "an input file", true);
     }
 
     MotiveInput input;

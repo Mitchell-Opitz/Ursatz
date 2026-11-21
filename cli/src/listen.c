@@ -1,6 +1,7 @@
 #include "listen.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,6 +15,7 @@
 
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "flags.h"
 #include "motive_input.h"
 #include "session.h"
@@ -65,32 +67,36 @@ typedef struct {
 } Sample;
 
 
+static const CliOptionRow ROWS[] = {
+    {"--print-settings", offsetof(Options, print_settings), true},
+    {"--check", offsetof(Options, check), true},
+    {"--what", offsetof(Options, what_text), false},
+    {"--count", offsetof(Options, count_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--out-dir", offsetof(Options, out_dir), false},
+    {"--settings", offsetof(Options, settings_path), false},
+    {"--material", offsetof(Options, material_text), false},
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--style", offsetof(Options, style_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--strategy", offsetof(Options, strategy_text), false},
+    {"--into", offsetof(Options, into_text), false},
+    {"--development", offsetof(Options, development_text), false},
+    {"--bars", offsetof(Options, bars_text), false},
+    {"--motif", offsetof(Options, motif_path), false},
+    {"--theme-request", offsetof(Options, theme_request_path), false},
+    {"--blend", offsetof(Options, blend_path), false},
+    {"--blend-weight", offsetof(Options, blend_weight_text), false},
+    {"--blend-weights", offsetof(Options, blend_weights_text), false},
+    {"--session", offsetof(Options, session_text), false},
+    {"--round", offsetof(Options, round_text), false},
+    {"--batch", offsetof(Options, batch_text), false},
+    {"--taste", offsetof(Options, taste_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
-    options->print_settings = cli_switch(args, "--print-settings");
-    options->check = cli_switch(args, "--check");
-    options->what_text = cli_value(args, "--what");
-    options->count_text = cli_value(args, "--count");
-    options->seed_text = cli_value(args, "--seed");
-    options->out_dir = cli_value(args, "--out-dir");
-    options->settings_path = cli_value(args, "--settings");
-    options->material_text = cli_value(args, "--material");
-    options->meter_text = cli_value(args, "--meter");
-    options->style_path = cli_value(args, "--style");
-    options->tempo_text = cli_value(args, "--tempo");
-    options->strategy_text = cli_value(args, "--strategy");
-    options->into_text = cli_value(args, "--into");
-    options->development_text = cli_value(args, "--development");
-    options->bars_text = cli_value(args, "--bars");
-    options->motif_path = cli_value(args, "--motif");
-    options->theme_request_path = cli_value(args, "--theme-request");
-    options->blend_path = cli_value(args, "--blend");
-    options->blend_weight_text = cli_value(args, "--blend-weight");
-    options->blend_weights_text = cli_value(args, "--blend-weights");
-    options->session_text = cli_value(args, "--session");
-    options->round_text = cli_value(args, "--round");
-    options->batch_text = cli_value(args, "--batch");
-    options->taste_text = cli_value(args, "--taste");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     return 0;
 }
 
@@ -139,7 +145,7 @@ static int check_options(Options *options) {
         options->bars_text = "8";
     }
     if (!options->out_dir) {
-        return cli_fail(CLI_EXIT_USAGE, "listen needs --out-dir <dir>\n%s", cli_usage_of("listen"));
+        return cli_needs("listen", "--out-dir <dir>", true);
     }
     options->count = LISTEN_COUNT_DEFAULT;
     if (options->count_text &&

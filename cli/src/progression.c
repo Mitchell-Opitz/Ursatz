@@ -1,5 +1,6 @@
 #include "progression.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include "cli_tools.h"
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "flags.h"
 #include "workflow.h"
 
@@ -42,30 +44,34 @@ typedef struct {
 /* --- reading the options -------------------------------------------------- */
 
 /* Reads the options from the parsed arguments; returns 0, or the exit status. The values are checked by the composer API. */
+static const CliOptionRow ROWS[] = {
+    {"--key", offsetof(Options, key_text), false},
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--bars", offsetof(Options, bars_text), false},
+    {"--cadence", offsetof(Options, cadence_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--embellish", offsetof(Options, embellish_text), false},
+    {"--format", offsetof(Options, format_text), false},
+    {"--list-schemas", offsetof(Options, list_schemas), true},
+    {"--schema", offsetof(Options, schema_text), false},
+    {"--sequence", offsetof(Options, sequence_text), false},
+    {"--suggest", offsetof(Options, suggest_text), false},
+    {"--out", offsetof(Options, out_path), false},
+    {"--midi", offsetof(Options, midi_path), false},
+    {"--musicxml", offsetof(Options, musicxml_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->bass = !cli_switch(args, "--no-bass"); /* --bass is the default; --no-bass wins when both are given */
-    options->key_text = cli_value(args, "--key");
-    options->meter_text = cli_value(args, "--meter");
-    options->bars_text = cli_value(args, "--bars");
-    options->cadence_text = cli_value(args, "--cadence");
-    options->seed_text = cli_value(args, "--seed");
-    options->embellish_text = cli_value(args, "--embellish");
-    options->format_text = cli_value(args, "--format");
-    options->list_schemas = cli_switch(args, "--list-schemas");
-    options->schema_text = cli_value(args, "--schema");
-    options->sequence_text = cli_value(args, "--sequence");
-    options->suggest_text = cli_value(args, "--suggest");
-    options->out_path = cli_value(args, "--out");
-    options->midi_path = cli_value(args, "--midi");
-    options->musicxml_path = cli_value(args, "--musicxml");
-    options->tempo_text = cli_value(args, "--tempo");
-    options->plain_midi = cli_switch(args, "--plain-midi");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     if (options->list_schemas) {
         return 0;
     }
     if (!options->key_text || !options->meter_text || !options->bars_text || !options->cadence_text) {
-        return cli_fail(EXIT_USAGE, "progression needs --key, --meter, --bars and --cadence (see --help)");
+        return cli_needs("progression", "--key, --meter, --bars and --cadence", false);
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {

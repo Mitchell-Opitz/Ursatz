@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/random_motive.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/random_motive.request.schema.json",
   "title": "composer_api_random_motive request",
   "description": "Random motives: material (or the old mode) and meter are required and may be \"random\", drawn from the seed.",
   "type": "object",
@@ -71,7 +71,7 @@
       ]
     },
     "preferences": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
       "description": "The settings; the motif group steers the segments strategy."
     },
     "avoid": {

@@ -1,4 +1,3 @@
-ursatz_test(standard_meter_framework SOURCES test_framework.c LIBS ursatz_theory)
 
 ursatz_test(standard_meter_meter_class_rules SOURCES test_meter_class_rules.c LIBS ursatz_theory)
 

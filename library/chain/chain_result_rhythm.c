@@ -20,9 +20,7 @@
 #include "analysis/meter/meter_analysis_syncopation.h"
 #include "theory/meter/borrowed_rules.h"
 #include "analysis/notes/analysis_note.h"
-#include "theory/meter/framework.h"
 #include "model/structure/structure.h"
-#include "theory/framework/framework.h"
 #include "model/time/duration.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
@@ -32,6 +30,7 @@
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
 #include "model/time/tuplet.h"
+#include "theory/vocabulary/framework_names.h"
 
 /* qsort comparator for size_t values, ascending. */
 static int size_less(const void *left, const void *right) {
@@ -132,7 +131,7 @@ static bool collect_densities(const RhythmBuild *build, const ImportedScore *not
     size_t count = densities.count;
     AnalysisDensity *items = calloc(count > 0 ? count : 1, sizeof(AnalysisDensity));
     bool ok = items != NULL;
-    const char *framework = framework_name(standard_meter_framework());
+    const char *framework = FRAMEWORK_STANDARD_METER;
     for (size_t i = 0; ok && i < count; i++) {
         const StandardMeterDensityClaim *claim = &densities.items[i].claim;
         AnalysisDensity *item = &items[i];
@@ -210,7 +209,7 @@ static bool collect_syncopations(const RhythmBuild *build, ChainResult *report) 
     }
     size_t count = found.count;
     AnalysisSyncopation *items = calloc(count > 0 ? count : 1, sizeof(AnalysisSyncopation));
-    const char *framework = framework_name(standard_meter_framework());
+    const char *framework = FRAMEWORK_STANDARD_METER;
     bool ok = items != NULL;
     for (size_t i = 0; ok && i < count; i++) {
         const StandardMeterSyncopationClaim *claim = &found.items[i].claim;
@@ -255,7 +254,7 @@ static bool collect_hemiolas(const RhythmBuild *build, ChainResult *report) {
     }
     size_t count = found.count;
     AnalysisHemiola *items = calloc(count > 0 ? count : 1, sizeof(AnalysisHemiola));
-    const char *framework = framework_name(standard_meter_framework());
+    const char *framework = FRAMEWORK_STANDARD_METER;
     bool ok = items != NULL;
     for (size_t i = 0; ok && i < count; i++) {
         const StandardMeterHemiola *hemiola = &found.items[i];
@@ -325,7 +324,7 @@ static bool collect_hypermeter(const RhythmBuild *build, const ImportedScore *no
     }
     size_t count = found.phrase_count;
     AnalysisHypermeter *items = calloc(count > 0 ? count : 1, sizeof(AnalysisHypermeter));
-    const char *framework = framework_name(standard_meter_framework());
+    const char *framework = FRAMEWORK_STANDARD_METER;
     bool ok = items != NULL;
     for (size_t i = 0; ok && i < count; i++) {
         const StandardMeterPhraseHypermeter *phrase = &found.phrases[i];
@@ -408,7 +407,7 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes
         item->note_id_count = tuplet->note_count;
         /* The notes of a tuplet in import order, as the report has always had them (the input is in time order). */
         qsort(item->note_ids, item->note_id_count, sizeof(size_t), size_less);
-        item->framework = framework_name(standard_meter_framework());
+        item->framework = FRAMEWORK_STANDARD_METER;
         item->actual = tuplet->actual;
         item->normal = tuplet->normal;
         item->name = tuplet->name;

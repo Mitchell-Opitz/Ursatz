@@ -6,6 +6,7 @@
 #include <cJSON.h>
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "cli_tools.h"
 #include "workflow.h"
 
@@ -51,7 +52,7 @@ static void print_piece(const cJSON *piece) {
 
 int run_corpus(const CliArgs *args) {
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "corpus needs the folder of pieces\n%s", cli_usage_of("corpus"));
+        return cli_needs("corpus", "the folder of pieces", true);
     }
     cJSON *params = cJSON_CreateObject();
     if (params) {
@@ -79,10 +80,10 @@ int run_corpus(const CliArgs *args) {
 int run_style_profile(const CliArgs *args) {
     const char *name = cli_value(args, "--name");
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "style-profile needs the output folder of a corpus run\n%s", cli_usage_of("style-profile"));
+        return cli_needs("style-profile", "the output folder of a corpus run", true);
     }
     if (!name || name[0] == '\0') {
-        return cli_fail(CLI_EXIT_USAGE, "style-profile needs --name <name>\n%s", cli_usage_of("style-profile"));
+        return cli_needs("style-profile", "--name <name>", true);
     }
     cJSON *params = cJSON_CreateObject();
     if (params) {

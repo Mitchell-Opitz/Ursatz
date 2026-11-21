@@ -11,32 +11,11 @@
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/tonality/common_practice_materials.h"
-#include "theory/framework/framework.h"
 #include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
 
 #define NO_RESOLUTION ((size_t)-1)
 
-
-typedef struct {
-    int intervals[3];
-    StandardTonalityTriadQuality quality;
-} TriadShape;
-
-typedef struct {
-    int intervals[4];
-    StandardTonalitySeventhQuality quality;
-} SeventhShape;
-
-static const TriadShape TRIADS[] = {{{0, 4, 7}, STANDARD_TONALITY_TRIAD_MAJOR},
-                                    {{0, 3, 7}, STANDARD_TONALITY_TRIAD_MINOR},
-                                    {{0, 3, 6}, STANDARD_TONALITY_TRIAD_DIMINISHED},
-                                    {{0, 4, 8}, STANDARD_TONALITY_TRIAD_AUGMENTED}};
-static const SeventhShape SEVENTHS[] = {{{0, 4, 7, 11}, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR},
-                                        {{0, 4, 7, 10}, STANDARD_TONALITY_SEVENTH_MAJOR_MINOR},
-                                        {{0, 3, 7, 10}, STANDARD_TONALITY_SEVENTH_MINOR_MINOR},
-                                        {{0, 3, 6, 10}, STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED},
-                                        {{0, 3, 6, 9}, STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED}};
 
 /* The degree 1..7 of the root `offset` semitones above the tonic, or 0; *raised set for minor's raised 7th,
    *raised_sixth for its raised 6th (melodic minor). */
@@ -94,17 +73,23 @@ static bool melodic_minor_fits(int degree, bool raised, bool raised_sixth, const
     return false;
 }
 
+/* The numeral of a chord whose intervals above its root are those of a triad or seventh quality (triad_rules.h,
+   seventh_rules.h); false for any other set. */
 static bool numeral_from_intervals(const int *intervals, size_t count, int degree, StandardTonalityRomanNumeral *out) {
     if (count == 3) {
-        for (size_t i = 0; i < sizeof(TRIADS) / sizeof(TRIADS[0]); i++) {
-            if (memcmp(intervals, TRIADS[i].intervals, sizeof(TRIADS[i].intervals)) == 0) {
-                return standard_tonality_roman_numeral_triad(degree, TRIADS[i].quality, out);
+        for (int q = 0; q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
+            int owner[3];
+            if (standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)q, owner) &&
+                memcmp(intervals, owner, sizeof(owner)) == 0) {
+                return standard_tonality_roman_numeral_triad(degree, (StandardTonalityTriadQuality)q, out);
             }
         }
     } else if (count == 4) {
-        for (size_t i = 0; i < sizeof(SEVENTHS) / sizeof(SEVENTHS[0]); i++) {
-            if (memcmp(intervals, SEVENTHS[i].intervals, sizeof(SEVENTHS[i].intervals)) == 0) {
-                return standard_tonality_roman_numeral_seventh_chord(degree, SEVENTHS[i].quality, out);
+        for (int q = 0; q < STANDARD_TONALITY_SEVENTH_QUALITY_COUNT; q++) {
+            int owner[4];
+            if (standard_tonality_seventh_quality_semitones((StandardTonalitySeventhQuality)q, owner) &&
+                memcmp(intervals, owner, sizeof(owner)) == 0) {
+                return standard_tonality_roman_numeral_seventh_chord(degree, (StandardTonalitySeventhQuality)q, out);
             }
         }
     }

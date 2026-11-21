@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common/strings.h>
+
 #include "plan/plan_internal.h"
 #include "plan/plan_common.h"
 
@@ -61,11 +63,10 @@ static PlanResult nodes_clone(const Plan *plan, Plan *copy, const NodeId *node_m
         to->state = from->state;
         to->section = from->section;
         if (from->name) {
-            to->name = malloc(strlen(from->name) + 1);
+            to->name = common_strdup(from->name);
             if (!to->name) {
                 return PLAN_ERR_ALLOC;
             }
-            memcpy(to->name, from->name, strlen(from->name) + 1);
         }
         if (from->child_count > 0) {
             to->children = malloc(from->child_count * sizeof(NodeId));

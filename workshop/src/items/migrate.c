@@ -18,6 +18,7 @@
 #include "items/formats.h"
 #include "items/layout.h"
 #include "items/store.h"
+#include "items/body_requests.h"
 
 #define PATH_BYTES 1024
 #define BUILD_DIR ".migrate-1"
@@ -68,22 +69,6 @@ static UrsatzStatus fail(Run *run, UrsatzStatus status, const char *path, const 
     return ursatz_error_set(run->error, status, path, "%s", message);
 }
 
-static bool join(char *out, const char *a, const char *b) {
-    return snprintf(out, PATH_BYTES, "%s/%s", a, b) < PATH_BYTES;
-}
-
-/* Makes the parent folder of path. */
-static bool make_parent(const char *path) {
-    char parent[PATH_BYTES];
-    snprintf(parent, sizeof(parent), "%s", path);
-    char *slash = strrchr(parent, '/');
-    if (!slash) {
-        return true;
-    }
-    *slash = '\0';
-    return common_dir_make(parent, NULL) == URSATZ_OK;
-}
-
 /* --- building layout 1 ------------------------------------------------------------------------------------------------ */
 
 /* Writes object (stamped as format, owned by the caller) as <build>/<relative>. */
@@ -93,7 +78,7 @@ static UrsatzStatus put_json(Run *run, const char *relative, const char *format,
         return URSATZ_OK;
     }
     char path[PATH_BYTES];
-    if (!join(path, run->build, relative) || !make_parent(path)) {
+    if (!common_path_join(path, PATH_BYTES, run->build, relative) || common_dir_make_parent(path, NULL) != URSATZ_OK) {
         return fail(run, URSATZ_ERR_IO, relative, "cannot make the folder of %s", relative);
     }
     UrsatzStatus written = workshop_format_write(path, format, object, run->error);
@@ -112,7 +97,7 @@ static UrsatzStatus copy_file(Run *run, const char *source, const char *relative
     UrsatzStatus written = URSATZ_OK;
     if (!run->dry) {
         char path[PATH_BYTES];
-        if (!join(path, run->build, relative) || !make_parent(path)) {
+        if (!common_path_join(path, PATH_BYTES, run->build, relative) || common_dir_make_parent(path, NULL) != URSATZ_OK) {
             written = fail(run, URSATZ_ERR_IO, relative, "cannot make the folder of %s", relative);
         } else {
             written = common_file_write_atomic(path, data, size, run->error);
@@ -132,7 +117,7 @@ static UrsatzStatus copy_tree(Run *run, const char *source, const char *relative
         if (in_list(names.items[i], skip, skip_count)) {
             continue;
         }
-        if (!join(from, source, names.items[i]) || !join(to, relative, names.items[i])) {
+        if (!common_path_join(from, PATH_BYTES, source, names.items[i]) || !common_path_join(to, PATH_BYTES, relative, names.items[i])) {
             status = fail(run, URSATZ_ERR_IO, source, "a path under %s is too long", source);
             break;
         }
@@ -183,7 +168,7 @@ static const char *id_from_file(const char *file, char *out, size_t size) {
 static UrsatzStatus migrate_projects(Run *run) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (!join(dir, run->root, "materials/projects") || !common_path_is_dir(dir)) {
+    if (!common_path_join(dir, PATH_BYTES, run->root, "materials/projects") || !common_path_is_dir(dir)) {
         return URSATZ_OK;
     }
     UrsatzStatus status = common_dir_list(dir, &names, run->error);
@@ -191,7 +176,7 @@ static UrsatzStatus migrate_projects(Run *run) {
         char id[128];
         char path[PATH_BYTES];
         char relative[PATH_BYTES];
-        if (!id_from_file(names.items[i], id, sizeof(id)) || !join(path, dir, names.items[i])) {
+        if (!id_from_file(names.items[i], id, sizeof(id)) || !common_path_join(path, PATH_BYTES, dir, names.items[i])) {
             continue;
         }
         cJSON *project = NULL;
@@ -263,7 +248,7 @@ static UrsatzStatus migrate_render(Run *run, const char *render_dir, const char 
         return URSATZ_OK;
     }
     cJSON *meta = NULL;
-    if (!join(path, render_dir, "render.json") || read_object(run, path, &meta) != URSATZ_OK) {
+    if (!common_path_join(path, PATH_BYTES, render_dir, "render.json") || read_object(run, path, &meta) != URSATZ_OK) {
         return URSATZ_OK; /* a cache without its key never matched */
     }
     cJSON *render = cJSON_CreateObject();
@@ -279,13 +264,13 @@ static UrsatzStatus migrate_render(Run *run, const char *render_dir, const char 
     for (size_t i = 0; status == URSATZ_OK && i < COUNT(kFiles); i++) {
         char from[PATH_BYTES];
         char to[PATH_BYTES];
-        if (join(from, render_dir, kFiles[i]) && common_path_exists(from) && join(to, relative, kFiles[i])) {
+        if (common_path_join(from, PATH_BYTES, render_dir, kFiles[i]) && common_path_exists(from) && common_path_join(to, PATH_BYTES, relative, kFiles[i])) {
             status = copy_file(run, from, to);
         }
     }
     if (status == URSATZ_OK) {
         char to[PATH_BYTES];
-        status = join(to, relative, "render.json") ? put_json(run, to, WORKSHOP_FORMAT_RENDER, render)
+        status = common_path_join(to, PATH_BYTES, relative, "render.json") ? put_json(run, to, WORKSHOP_FORMAT_RENDER, render)
                                                    : fail(run, URSATZ_ERR_IO, relative, "a path is too long");
         run->renders++;
     }
@@ -296,7 +281,7 @@ static UrsatzStatus migrate_render(Run *run, const char *render_dir, const char 
 static UrsatzStatus migrate_item(Run *run, const char *items_dir, const char *id) {
     char dir[PATH_BYTES];
     char path[PATH_BYTES];
-    if (!join(dir, items_dir, id) || !join(path, dir, "item.json") || !common_path_exists(path)) {
+    if (!common_path_join(dir, PATH_BYTES, items_dir, id) || !common_path_join(path, PATH_BYTES, dir, "item.json") || !common_path_exists(path)) {
         return URSATZ_OK; /* a folder without item.json is not an item */
     }
     cJSON *item = NULL;
@@ -342,7 +327,7 @@ static UrsatzStatus migrate_item(Run *run, const char *items_dir, const char *id
         char relative[PATH_BYTES];
         char name[64];
         snprintf(name, sizeof(name), "v%d.json", number);
-        if (snprintf(version_dir, sizeof(version_dir), "%s/v%d", dir, number) >= (int)sizeof(version_dir) || !join(body_path, dir, name) ||
+        if (snprintf(version_dir, sizeof(version_dir), "%s/v%d", dir, number) >= (int)sizeof(version_dir) || !common_path_join(body_path, PATH_BYTES, dir, name) ||
             !common_path_exists(body_path)) {
             continue;
         }
@@ -401,7 +386,7 @@ static UrsatzStatus migrate_item(Run *run, const char *items_dir, const char *id
                 status = copy_tree(run, version_dir, target, kSkip, COUNT(kSkip));
             }
             char render_dir[PATH_BYTES];
-            if (status == URSATZ_OK && join(render_dir, version_dir, "render")) {
+            if (status == URSATZ_OK && common_path_join(render_dir, PATH_BYTES, version_dir, "render")) {
                 status = migrate_render(run, render_dir, id, number);
             }
         }
@@ -414,7 +399,7 @@ static UrsatzStatus migrate_item(Run *run, const char *items_dir, const char *id
     }
 
     char marks[PATH_BYTES];
-    if (status == URSATZ_OK && join(marks, dir, WORKSHOP_FILE_OP_CHECKS) && common_path_exists(marks)) {
+    if (status == URSATZ_OK && common_path_join(marks, PATH_BYTES, dir, WORKSHOP_FILE_OP_CHECKS) && common_path_exists(marks)) {
         cJSON *checks = NULL;
         char relative[PATH_BYTES];
         status = read_object(run, marks, &checks);
@@ -448,7 +433,7 @@ static UrsatzStatus migrate_item(Run *run, const char *items_dir, const char *id
 static UrsatzStatus migrate_items(Run *run) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (!join(dir, run->root, "materials/items") || !common_path_is_dir(dir)) {
+    if (!common_path_join(dir, PATH_BYTES, run->root, "materials/items") || !common_path_is_dir(dir)) {
         return URSATZ_OK;
     }
     UrsatzStatus status = common_dir_list(dir, &names, run->error);
@@ -465,7 +450,7 @@ static UrsatzStatus migrate_items(Run *run) {
 static UrsatzStatus migrate_json_folder(Run *run, const char *folder, const char *relative_dir, const char *format, long *count) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (!join(dir, run->root, folder) || !common_path_is_dir(dir)) {
+    if (!common_path_join(dir, PATH_BYTES, run->root, folder) || !common_path_is_dir(dir)) {
         return URSATZ_OK;
     }
     UrsatzStatus status = common_dir_list(dir, &names, run->error);
@@ -473,8 +458,8 @@ static UrsatzStatus migrate_json_folder(Run *run, const char *folder, const char
         char id[128];
         char path[PATH_BYTES];
         char relative[PATH_BYTES];
-        if (!id_from_file(names.items[i], id, sizeof(id)) || !join(path, dir, names.items[i]) ||
-            snprintf(relative, sizeof(relative), "%s/%s", relative_dir, names.items[i]) >= (int)sizeof(relative)) {
+        if (!id_from_file(names.items[i], id, sizeof(id)) || !common_path_join(path, PATH_BYTES, dir, names.items[i]) ||
+            !common_path_join(relative, sizeof(relative), relative_dir, names.items[i])) {
             continue;
         }
         cJSON *object = NULL;
@@ -495,7 +480,7 @@ static UrsatzStatus migrate_json_folder(Run *run, const char *folder, const char
 static UrsatzStatus migrate_pieces(Run *run) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (!join(dir, run->root, "pieces") || !common_path_is_dir(dir)) {
+    if (!common_path_join(dir, PATH_BYTES, run->root, "pieces") || !common_path_is_dir(dir)) {
         return URSATZ_OK;
     }
     UrsatzStatus status = common_dir_list(dir, &names, run->error);
@@ -503,8 +488,8 @@ static UrsatzStatus migrate_pieces(Run *run) {
         char piece_dir[PATH_BYTES];
         char meta_path[PATH_BYTES];
         char relative[PATH_BYTES];
-        if (!workshop_layout_id_ok(names.items[i]) || !join(piece_dir, dir, names.items[i]) || !common_path_is_dir(piece_dir) ||
-            !join(meta_path, piece_dir, "meta.json") || !common_path_exists(meta_path) ||
+        if (!workshop_layout_id_ok(names.items[i]) || !common_path_join(piece_dir, PATH_BYTES, dir, names.items[i]) || !common_path_is_dir(piece_dir) ||
+            !common_path_join(meta_path, PATH_BYTES, piece_dir, "meta.json") || !common_path_exists(meta_path) ||
             snprintf(relative, sizeof(relative), WORKSHOP_DIR_PIECES "/%s", names.items[i]) >= (int)sizeof(relative)) {
             continue; /* anything that is not a folder with a meta.json is left out, as the Library list left it out */
         }
@@ -526,8 +511,8 @@ static UrsatzStatus migrate_pieces(Run *run) {
         static const char *const kFiles[] = {"source.mid", "source.musicxml", "source.xml", "source.mxl", "analysis.json"};
         for (size_t f = 0; status == URSATZ_OK && f < COUNT(kFiles); f++) {
             char from[PATH_BYTES];
-            if (join(from, piece_dir, kFiles[f]) && common_path_exists(from) &&
-                snprintf(file, sizeof(file), "%s/%s", relative, kFiles[f]) < (int)sizeof(file)) {
+            if (common_path_join(from, PATH_BYTES, piece_dir, kFiles[f]) && common_path_exists(from) &&
+                common_path_join(file, sizeof(file), relative, kFiles[f])) {
                 status = copy_file(run, from, file);
             }
         }
@@ -544,7 +529,7 @@ static UrsatzStatus migrate_pieces(Run *run) {
 static UrsatzStatus migrate_styles(Run *run) {
     char dir[PATH_BYTES];
     CommonNames names = {0};
-    if (!join(dir, run->root, "styles") || !common_path_is_dir(dir)) {
+    if (!common_path_join(dir, PATH_BYTES, run->root, "styles") || !common_path_is_dir(dir)) {
         return URSATZ_OK;
     }
     UrsatzStatus status = common_dir_list(dir, &names, run->error);
@@ -552,8 +537,8 @@ static UrsatzStatus migrate_styles(Run *run) {
         char style_dir[PATH_BYTES];
         char meta_path[PATH_BYTES];
         char relative[PATH_BYTES];
-        if (!workshop_layout_id_ok(names.items[i]) || !join(style_dir, dir, names.items[i]) || !common_path_is_dir(style_dir) ||
-            !join(meta_path, style_dir, "meta.json") || !common_path_exists(meta_path) ||
+        if (!workshop_layout_id_ok(names.items[i]) || !common_path_join(style_dir, PATH_BYTES, dir, names.items[i]) || !common_path_is_dir(style_dir) ||
+            !common_path_join(meta_path, PATH_BYTES, style_dir, "meta.json") || !common_path_exists(meta_path) ||
             !workshop_layout_style_dir(names.items[i], relative, sizeof(relative))) {
             continue;
         }
@@ -564,7 +549,7 @@ static UrsatzStatus migrate_styles(Run *run) {
         }
         char model_from[PATH_BYTES];
         char target[PATH_BYTES];
-        if (join(model_from, style_dir, WORKSHOP_FILE_STYLE_MODEL) && common_path_exists(model_from) &&
+        if (common_path_join(model_from, PATH_BYTES, style_dir, WORKSHOP_FILE_STYLE_MODEL) && common_path_exists(model_from) &&
             snprintf(target, sizeof(target), "%s/" WORKSHOP_FILE_STYLE_MODEL, relative) < (int)sizeof(target)) {
             status = copy_file(run, model_from, target);
         }
@@ -585,18 +570,19 @@ static UrsatzStatus migrate_links(Run *run) {
     CommonNames names = {0};
     char cache[PATH_BYTES];
     UrsatzStatus status = URSATZ_OK;
-    if (join(cache, run->root, "links/motive-link-cache.json") && common_path_exists(cache)) {
+    if (common_path_join(cache, PATH_BYTES, run->root, "links/motive-link-cache.json") && common_path_exists(cache)) {
         status = copy_file(run, cache, WORKSHOP_FILE_LINK_CACHE);
     }
-    if (status != URSATZ_OK || !join(dir, run->root, "links/runs") || !common_path_is_dir(dir)) {
+    if (status != URSATZ_OK || !common_path_join(dir, PATH_BYTES, run->root, "links/runs") || !common_path_is_dir(dir)) {
         return status;
     }
     status = common_dir_list(dir, &names, run->error);
     for (size_t i = 0; status == URSATZ_OK && i < names.count; i++) {
         char path[PATH_BYTES];
         char relative[PATH_BYTES];
-        if (!workshop_layout_id_ok(names.items[i]) || snprintf(path, sizeof(path), "%s/%s/run.json", dir, names.items[i]) >= (int)sizeof(path) ||
-            !common_path_exists(path) || !workshop_layout_link_file(names.items[i], relative, sizeof(relative))) {
+        char folder[PATH_BYTES];
+        if (!workshop_layout_id_ok(names.items[i]) || !common_path_join(folder, sizeof(folder), dir, names.items[i]) ||
+            !common_path_join(path, sizeof(path), folder, "run.json") || !common_path_exists(path) || !workshop_layout_link_file(names.items[i], relative, sizeof(relative))) {
             continue;
         }
         cJSON *record = NULL;
@@ -634,7 +620,7 @@ static void tree_stats(const char *path, TreeStats *stats) {
     for (size_t i = 0; i < names.count; i++) {
         char child[PATH_BYTES];
         struct stat info;
-        if (!join(child, path, names.items[i]) || lstat(child, &info) != 0) {
+        if (!common_path_join(child, PATH_BYTES, path, names.items[i]) || lstat(child, &info) != 0) {
             continue;
         }
         if (S_ISDIR(info.st_mode)) {
@@ -657,19 +643,13 @@ static UrsatzStatus backup_tree(const char *from, const char *to, UrsatzError *e
         char source[PATH_BYTES];
         char target[PATH_BYTES];
         struct stat info;
-        if (!join(source, from, names.items[i]) || !join(target, to, names.items[i]) || lstat(source, &info) != 0) {
+        if (!common_path_join(source, PATH_BYTES, from, names.items[i]) || !common_path_join(target, PATH_BYTES, to, names.items[i]) || lstat(source, &info) != 0) {
             continue;
         }
         if (S_ISDIR(info.st_mode)) {
             status = backup_tree(source, target, error);
         } else if (S_ISREG(info.st_mode)) {
-            char *data = NULL;
-            size_t size = 0;
-            status = common_file_read(source, &data, &size, error);
-            if (status == URSATZ_OK) {
-                status = common_file_write_atomic(target, data, size, error);
-            }
-            free(data);
+            status = common_file_copy(source, target, error);
         }
     }
     common_names_free(&names);
@@ -680,12 +660,14 @@ static UrsatzStatus backup_tree(const char *from, const char *to, UrsatzError *e
 
 static bool exists_at(const char *root, const char *name) {
     char path[PATH_BYTES];
-    return join(path, root, name) && common_path_exists(path);
+    return common_path_join(path, PATH_BYTES, root, name) && common_path_exists(path);
 }
 
 static bool entry_in(const char *root, const char *folder, const char *name) {
     char path[PATH_BYTES];
-    return snprintf(path, sizeof(path), "%s/%s/%s", root, folder, name) < (int)sizeof(path) && common_path_exists(path);
+    char parent[PATH_BYTES];
+    return common_path_join(parent, sizeof(parent), root, folder) && common_path_join(path, sizeof(path), parent, name) &&
+           common_path_exists(path);
 }
 
 /*
@@ -695,7 +677,7 @@ static bool entry_in(const char *root, const char *folder, const char *name) {
  */
 static UrsatzStatus swap_in(Run *run, bool migrated) {
     char pre[PATH_BYTES];
-    if (!join(pre, run->root, PRE_DIR) || common_dir_make(pre, run->error) != URSATZ_OK) {
+    if (!common_path_join(pre, PATH_BYTES, run->root, PRE_DIR) || common_dir_make(pre, run->error) != URSATZ_OK) {
         return fail(run, URSATZ_ERR_IO, PRE_DIR, "cannot make %s", PRE_DIR);
     }
     for (size_t i = 0; i < COUNT(kOldEntries); i++) {
@@ -706,7 +688,7 @@ static UrsatzStatus swap_in(Run *run, bool migrated) {
         }
         char from[PATH_BYTES];
         char to[PATH_BYTES];
-        if (!join(from, run->root, name) || !join(to, pre, name) || rename(from, to) != 0) {
+        if (!common_path_join(from, PATH_BYTES, run->root, name) || !common_path_join(to, PATH_BYTES, pre, name) || rename(from, to) != 0) {
             return fail(run, URSATZ_ERR_IO, name, "cannot move %s into %s", name, PRE_DIR);
         }
     }
@@ -717,8 +699,9 @@ static UrsatzStatus swap_in(Run *run, bool migrated) {
         }
         char from[PATH_BYTES];
         char to[PATH_BYTES];
-        if (snprintf(from, sizeof(from), "%s/%s/%s", run->root, BUILD_DIR, name) >= (int)sizeof(from) || !join(to, run->root, name) ||
-            rename(from, to) != 0) {
+        char build[PATH_BYTES];
+        if (!common_path_join(build, sizeof(build), run->root, BUILD_DIR) || !common_path_join(from, sizeof(from), build, name) ||
+            !common_path_join(to, sizeof(to), run->root, name) || rename(from, to) != 0) {
             return fail(run, URSATZ_ERR_IO, name, "cannot move %s into place", name);
         }
     }
@@ -727,12 +710,12 @@ static UrsatzStatus swap_in(Run *run, bool migrated) {
     common_utc_now(now);
     char path[PATH_BYTES];
     bool ok = marker && cJSON_AddStringToObject(marker, "created_at", now) && (!migrated || cJSON_AddNumberToObject(marker, "migrated_from", 0)) &&
-              join(path, run->root, WORKSHOP_FILE_DATA_FOLDER);
+              common_path_join(path, PATH_BYTES, run->root, WORKSHOP_FILE_DATA_FOLDER);
     UrsatzStatus status = ok ? workshop_format_write(path, WORKSHOP_FORMAT_DATA_FOLDER, marker, run->error) : fail(run, URSATZ_ERR_ALLOC, path, "out of memory");
     cJSON_Delete(marker);
     if (status == URSATZ_OK) {
         char build[PATH_BYTES];
-        if (join(build, run->root, BUILD_DIR)) {
+        if (common_path_join(build, PATH_BYTES, run->root, BUILD_DIR)) {
             common_dir_remove(build, NULL);
         }
     }
@@ -801,7 +784,7 @@ static bool has_old_entries(const char *root) {
 UrsatzStatus workshop_data_folder_layout(const char *data_dir, int *layout, UrsatzError *error) {
     char path[PATH_BYTES];
     *layout = 0;
-    if (!join(path, data_dir, WORKSHOP_FILE_DATA_FOLDER) || !common_path_exists(path)) {
+    if (!common_path_join(path, PATH_BYTES, data_dir, WORKSHOP_FILE_DATA_FOLDER) || !common_path_exists(path)) {
         return URSATZ_OK;
     }
     cJSON *marker = NULL;
@@ -885,14 +868,14 @@ static UrsatzStatus migrate_layout_1(Run *run, const WorkshopMigrateOptions *opt
     UrsatzStatus status = run->dry ? URSATZ_OK : make_backup(run, run->root, options, backup, sizeof(backup));
     char projects[PATH_BYTES];
     CommonNames names = {0};
-    if (status == URSATZ_OK && join(projects, run->root, WORKSHOP_DIR_PROJECTS) && common_path_is_dir(projects)) {
+    if (status == URSATZ_OK && common_path_join(projects, PATH_BYTES, run->root, WORKSHOP_DIR_PROJECTS) && common_path_is_dir(projects)) {
         status = common_dir_list(projects, &names, error);
     }
     for (size_t i = 0; status == URSATZ_OK && i < names.count; i++) {
         CommonNames items = {0};
         char project_dir[PATH_BYTES];
         char items_dir[PATH_BYTES];
-        if (!workshop_layout_id_ok(names.items[i]) || !join(project_dir, projects, names.items[i]) || !join(items_dir, project_dir, "items") ||
+        if (!workshop_layout_id_ok(names.items[i]) || !common_path_join(project_dir, PATH_BYTES, projects, names.items[i]) || !common_path_join(items_dir, PATH_BYTES, project_dir, "items") ||
             !common_path_is_dir(items_dir)) {
             continue;
         }
@@ -906,7 +889,7 @@ static UrsatzStatus migrate_layout_1(Run *run, const WorkshopMigrateOptions *opt
                     break;
                 }
                 char absolute[PATH_BYTES];
-                if (!join(absolute, run->root, path) || !common_path_exists(absolute)) {
+                if (!common_path_join(absolute, PATH_BYTES, run->root, path) || !common_path_exists(absolute)) {
                     break;
                 }
                 status = migrate_body_file(run, absolute, format);
@@ -922,7 +905,7 @@ static UrsatzStatus migrate_layout_1(Run *run, const WorkshopMigrateOptions *opt
         char path[PATH_BYTES];
         common_utc_now(now);
         if (!marker || !cJSON_AddStringToObject(marker, "created_at", now) || !cJSON_AddNumberToObject(marker, "migrated_from", 1) ||
-            !join(path, run->root, WORKSHOP_FILE_DATA_FOLDER)) {
+            !common_path_join(path, PATH_BYTES, run->root, WORKSHOP_FILE_DATA_FOLDER)) {
             cJSON_Delete(marker);
             return fail(run, URSATZ_ERR_ALLOC, run->root, "out of memory");
         }
@@ -954,7 +937,7 @@ static UrsatzStatus migrate_run(const char *data_dir, const WorkshopMigrateOptio
         snprintf(root, sizeof(root), "%s", data_dir);
     }
     run.root = root;
-    if (!join(run.build, root, BUILD_DIR)) {
+    if (!common_path_join(run.build, PATH_BYTES, root, BUILD_DIR)) {
         return fail(&run, URSATZ_ERR_REQUEST, data_dir, "the data folder path is too long");
     }
 
@@ -1015,7 +998,7 @@ static UrsatzStatus migrate_run(const char *data_dir, const WorkshopMigrateOptio
         status = status == URSATZ_OK ? migrate_links(&run) : status;
         if (status == URSATZ_OK && !run.dry) {
             char complete[PATH_BYTES];
-            status = join(complete, run.build, COMPLETE_MARKER) ? common_file_write_atomic(complete, "complete\n", 9, error) : URSATZ_ERR_IO;
+            status = common_path_join(complete, PATH_BYTES, run.build, COMPLETE_MARKER) ? common_file_write_atomic(complete, "complete\n", 9, error) : URSATZ_ERR_IO;
         }
         if (run.dry || status != URSATZ_OK) {
             if (status != URSATZ_OK && !run.dry) {
@@ -1068,7 +1051,7 @@ UrsatzStatus workshop_data_folder_prepare(const char *data_dir, UrsatzError *err
                                 data_dir, data_dir, data_dir);
     }
     char build[PATH_BYTES];
-    if (has_old_entries(data_dir) || (join(build, data_dir, BUILD_DIR) && common_path_exists(build))) {
+    if (has_old_entries(data_dir) || (common_path_join(build, PATH_BYTES, data_dir, BUILD_DIR) && common_path_exists(build))) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, data_dir,
                                 "the data folder %s is in the GUI's old layout; back it up and migrate it: ursatz --data %s migrate "
                                 "--dry-run, then ursatz --data %s migrate",
@@ -1079,7 +1062,7 @@ UrsatzStatus workshop_data_folder_prepare(const char *data_dir, UrsatzError *err
     char now[32];
     char path[PATH_BYTES];
     common_utc_now(now);
-    if (!marker || !cJSON_AddStringToObject(marker, "created_at", now) || !join(path, data_dir, WORKSHOP_FILE_DATA_FOLDER)) {
+    if (!marker || !cJSON_AddStringToObject(marker, "created_at", now) || !common_path_join(path, PATH_BYTES, data_dir, WORKSHOP_FILE_DATA_FOLDER)) {
         cJSON_Delete(marker);
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, data_dir, "out of memory");
     }

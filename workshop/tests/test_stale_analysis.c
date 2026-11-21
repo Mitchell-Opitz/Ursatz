@@ -35,6 +35,7 @@
 #include "jobs/job_queue.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
+#include "command_context_support.h"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
@@ -279,6 +280,7 @@ static void test_link(const char *id, const char *other) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
   test_knowledge();
     check_quiet(workshop_jobs_start(2), "the job queue starts");
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)time(NULL));

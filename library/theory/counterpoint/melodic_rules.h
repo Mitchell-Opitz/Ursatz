@@ -5,7 +5,6 @@
 
 #include "theory/counterpoint/counterpoint_limits.h"
 #include "theory/counterpoint/counterpoint_line.h"
-#include "theory/rules/preference.h"
 
 /*
  * Melodic writing rules for standard-counterpoint-v1: the horizontal
@@ -64,8 +63,8 @@ typedef enum {
     STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT
 } StandardCounterpointMelodicRule;
 
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_melodic_preference(StandardCounterpointMelodicRule which);
+/* True when the rule is soft (a preference, not a requirement); false for a hard rule and for an invalid rule. */
+bool standard_counterpoint_melodic_rule_soft(StandardCounterpointMelodicRule which);
 
 /* "clausula-vera" "repeated-notes" "pitch-occurrences" "consecutive-leaps"
    "leap-density" "repeated-generic" "unique-climax" "climax-not-final"

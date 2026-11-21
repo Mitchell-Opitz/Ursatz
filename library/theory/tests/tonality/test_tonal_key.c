@@ -135,12 +135,24 @@ static void test_enharmonic_keys(void) {
     }
 }
 
+static void test_mask_step(void) {
+    unsigned c_major = 0xAB5u;
+    assert(standard_tonality_mask_step(c_major, 60, 1) == 62 && standard_tonality_mask_step(c_major, 60, -1) == 59);
+    assert(standard_tonality_mask_step(c_major, 64, 1) == 65 && standard_tonality_mask_step(c_major, 65, -1) == 64);
+    assert(standard_tonality_mask_step(c_major, 61, 1) == 62 && standard_tonality_mask_step(c_major, 61, -1) == 60);
+    assert(standard_tonality_mask_step(c_major, 0, -1) == -1);
+    assert(standard_tonality_mask_step(1u << 3, 60, 1) == 63 && standard_tonality_mask_step(1u << 3, 60, -1) == 51);
+    /* no pitch class, or no direction: the pitch itself */
+    assert(standard_tonality_mask_step(0, 60, 1) == 60 && standard_tonality_mask_step(c_major, 60, 0) == 60);
+}
+
 int main(void) {
     test_degree_semitones();
     test_key_signatures_for_all_thirty_keys();
     test_known_signatures();
     test_key_of_fifths();
     test_enharmonic_keys();
+    test_mask_step();
     printf("test_tonal_key: ok\n");
     return 0;
 }

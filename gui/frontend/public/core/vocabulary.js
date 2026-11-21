@@ -101,6 +101,31 @@ function entry(name, value) {
   return list(name).find((item) => String(item.value) === String(value)) || null;
 }
 
+/* The values a form starts with (the vocabulary's defaults, Composer API 4.4): meter, motif {form, notes, pickup} and
+ * theme {into, bars, cadence, development}. */
+function defaults() {
+  const found = get().defaults;
+  if (!found || typeof found !== "object") {
+    throw new Error("The Composer vocabulary gives no defaults.");
+  }
+  return found;
+}
+
+/* The entry of a meter, or the default meter's when the Composer does not list it (a piece saved with another meter). */
+function meterEntry(meter) {
+  return entry("meters", meter) || entry("meters", defaults().meter);
+}
+
+/* The beats in a bar of a meter, as the Composer lists it (2/4 is 2, 6/8 is 6) and the beat unit as the denominator of a whole
+ * note (4/4 is 4, 6/8 is 8). */
+function meterBeats(meter) {
+  return meterEntry(meter).beats;
+}
+
+function meterUnit(meter) {
+  return meterEntry(meter).beat_unit;
+}
+
 /* A number of the limits member (motive_notes, tempo_min...), or fallback when the Composer does not give it. */
 function limit(name, fallback) {
   const value = (get().limits || {})[name];
@@ -179,5 +204,5 @@ function createValidator(options) {
   return { check, now, cancel };
 }
 
-const api = { load, set, loaded, get, forms, form, list, keyWord, materialWord, materialChoices, values, labelOf, entry, limit, seedMax, createValidator };
+const api = { load, set, loaded, get, forms, form, list, keyWord, materialWord, materialChoices, values, labelOf, entry, defaults, meterBeats, meterUnit, limit, seedMax, createValidator };
 export default api;

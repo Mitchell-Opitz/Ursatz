@@ -17,6 +17,7 @@
 
 #include "base/last_error.h"
 #include "coordinator/services.h"
+#include "base/params.h"
 
 typedef struct {
     Workshop *workshop;
@@ -30,12 +31,6 @@ typedef struct {
 typedef UrsatzStatus (*WorkshopHandler)(const WorkshopCall *call, WorkshopReply *reply, UrsatzError *error);
 
 /* --- parameters ------------------------------------------------------------------------------------------------------------------ */
-
-/* The string member of params, NULL when absent or null; *bad is set when it is present and not a string. */
-const char *workshop_param_string(const cJSON *params, const char *name, bool *bad);
-
-/* A required string member: false (and error filled: REQUEST at the member's path) when absent or not a string. */
-bool workshop_param_require_string(const cJSON *params, const char *name, const char **out, UrsatzError *error);
 
 /* The number in text (digits only, 1 to max_digits of them), false when it is not one. */
 bool workshop_parse_whole(const char *text, int max_digits, long long *out);
