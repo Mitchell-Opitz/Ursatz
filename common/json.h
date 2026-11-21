@@ -45,6 +45,10 @@ bool common_json_set_string(cJSON *object, const char *name, const char *value);
 bool common_json_add_copy_or_null(cJSON *dst, const cJSON *src, const char *name);
 /* Adds a copy of src's member name to dst when it is there and not null. false on allocation failure. */
 bool common_json_add_copy_if(cJSON *dst, const cJSON *src, const char *name);
+/* Adds the string text under name, or a JSON null when text is NULL. false on allocation failure. */
+bool common_json_add_string_or_null(cJSON *object, const char *name, const char *text);
+/* Adds the string text under name when text is not NULL (a NULL text adds nothing and succeeds). false on allocation failure. */
+bool common_json_add_string_if(cJSON *object, const char *name, const char *text);
 /* cJSON's tab-indented print as a 2-space indent, "key": value, and a trailing newline. Caller frees; NULL on allocation failure. */
 char *common_json_indent(const char *printed);
 

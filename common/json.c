@@ -131,6 +131,14 @@ bool common_json_add_copy_if(cJSON *dst, const cJSON *src, const char *name) {
 }
 
 /* cJSON prints with tabs; the project's JSON uses a 2-space indent and "key": value. */
+bool common_json_add_string_or_null(cJSON *object, const char *name, const char *text) {
+    return text ? cJSON_AddStringToObject(object, name, text) != NULL : cJSON_AddNullToObject(object, name) != NULL;
+}
+
+bool common_json_add_string_if(cJSON *object, const char *name, const char *text) {
+    return text == NULL || cJSON_AddStringToObject(object, name, text) != NULL;
+}
+
 char *common_json_indent(const char *printed) {
     size_t tabs = 0;
     size_t length = strlen(printed);

@@ -184,6 +184,15 @@ static void test_rational_writers(void) {
     cJSON_Delete(string);
 }
 
+static void test_string_adders(void) {
+    cJSON *object = cJSON_CreateObject();
+    assert(common_json_add_string_or_null(object, "a", "text") && common_json_add_string_or_null(object, "b", NULL));
+    assert(strcmp(common_json_string(object, "a"), "text") == 0 && cJSON_IsNull(common_json_member(object, "b")));
+    assert(common_json_add_string_if(object, "c", "here") && common_json_add_string_if(object, "d", NULL));
+    assert(strcmp(common_json_string(object, "c"), "here") == 0 && common_json_member(object, "d") == NULL);
+    cJSON_Delete(object);
+}
+
 enum { TEST_BAD = 7, TEST_OTHER = 9 };
 
 static void reader_for(CommonJsonReader *reader, char *path, char *message) {
@@ -315,6 +324,7 @@ int main(void) {
     test_rational_forms();
     test_rational_denominators();
     test_rational_writers();
+    test_string_adders();
     test_reader_refusals();
     test_reader_paths();
     test_reader_members();

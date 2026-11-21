@@ -42,10 +42,20 @@ static void test_sha256(void) {
     assert(strcmp(hex, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1") == 0);
 }
 
+/* A 64-bit value folds as its 8 bytes, least significant first. */
+static void test_fold_u64(void) {
+    const unsigned char bytes[8] = {0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11};
+    assert(common_fnv1a64_u64(0x1122334455667788ULL, COMMON_FNV1A64_OFFSET) == common_fnv1a64(bytes, 8, COMMON_FNV1A64_OFFSET));
+    assert(common_fnv1a64_u64(0, 5) == common_fnv1a64("\0\0\0\0\0\0\0\0", 8, 5));
+    uint64_t chained = common_fnv1a64_u64(2, common_fnv1a64_u64(1, COMMON_FNV1A64_OFFSET));
+    assert(chained != common_fnv1a64_u64(1, common_fnv1a64_u64(2, COMMON_FNV1A64_OFFSET)));
+}
+
 int main(void) {
     test_sha256();
     test_published_values();
     test_continuing_and_seeds();
     test_hex_form();
+    test_fold_u64();
     return 0;
 }

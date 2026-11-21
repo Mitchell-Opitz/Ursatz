@@ -140,6 +140,44 @@ static void test_list(void) {
     assert(common_dir_list(missing, &listed, &error) == URSATZ_ERR_NOT_FOUND && listed.count == 0);
 }
 
+static void test_join_alloc_copy_parent(void) {
+    char *joined = common_path_join_alloc("dir", "file.txt");
+    assert(joined && strcmp(joined, "dir/file.txt") == 0);
+    free(joined);
+    joined = common_path_join_alloc("dir/", "file.txt");
+    assert(joined && strcmp(joined, "dir/file.txt") == 0);
+    free(joined);
+    /* an empty folder part leaves the stored relative path as it is */
+    joined = common_path_join_alloc("", "rel/file.txt");
+    assert(joined && strcmp(joined, "rel/file.txt") == 0);
+    free(joined);
+    assert(common_path_join_alloc(NULL, "x") == NULL && common_path_join_alloc("x", NULL) == NULL);
+
+    char from[160], to[160], deep[200];
+    assert(common_path_join(from, sizeof(from), g_root, "from.txt"));
+    assert(common_path_join(to, sizeof(to), g_root, "to.txt"));
+    put(from, "copy me");
+    assert(common_file_copy(from, to, NULL) == URSATZ_OK);
+    char *data = NULL;
+    size_t size = 0;
+    assert(common_file_read(to, &data, &size, NULL) == URSATZ_OK && size == 7 && strcmp(data, "copy me") == 0);
+    free(data);
+    assert(common_file_copy(from, from, NULL) == URSATZ_OK);
+    UrsatzError error = {0};
+    char missing[160];
+    assert(common_path_join(missing, sizeof(missing), g_root, "absent.txt"));
+    assert(common_file_copy(missing, to, &error) == URSATZ_ERR_NOT_FOUND);
+
+    snprintf(deep, sizeof(deep), "%s/a/b/c.txt", g_root);
+    assert(common_dir_make_parent(deep, NULL) == URSATZ_OK);
+    char folder[200];
+    snprintf(folder, sizeof(folder), "%s/a/b", g_root);
+    assert(common_path_is_dir(folder));
+    assert(common_dir_make_parent(deep, NULL) == URSATZ_OK);
+    assert(common_dir_make_parent("bare.txt", NULL) == URSATZ_OK);
+    assert(common_dir_make_parent("/top.txt", NULL) == URSATZ_OK);
+}
+
 int main(void) {
     snprintf(g_root, sizeof(g_root), "common-files-%ld", (long)getpid());
     assert(common_dir_make(g_root, NULL) == URSATZ_OK);
@@ -149,6 +187,7 @@ int main(void) {
     test_append();
     test_folders();
     test_list();
+    test_join_alloc_copy_parent();
     assert(common_dir_remove(g_root, NULL) == URSATZ_OK);
     return 0;
 }
