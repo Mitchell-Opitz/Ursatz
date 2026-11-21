@@ -23,13 +23,9 @@ static bool table_is_hard(int which) {
 
 static RulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT];
 static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
     "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "third-species-beat", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    "third-species-beat", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT, table_is_hard, g_pairs, g_built};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesBeatRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -120,8 +116,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointThirdSpeciesExercise)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointThirdSpeciesExercise)
 
 bool standard_counterpoint_third_species_beat_check(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                     unsigned *hard_violations, unsigned *soft_violations) {

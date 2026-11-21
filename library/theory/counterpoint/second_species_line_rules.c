@@ -31,13 +31,9 @@ static bool table_is_hard(int which) {
 
 static RulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT];
 static UrsatzOnce g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                               const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
     "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
-    "second-species-line", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built,
-    evaluate_candidate, score_candidate};
+    "second-species-line", NAMES, STANDARD_COUNTERPOINT_SECOND_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built};
 
 static bool valid_rule(StandardCounterpointSecondSpeciesLineRule which) {
     return rule_table_valid(&TABLE, (int)which);
@@ -201,8 +197,6 @@ static bool holds_adapter(int which, const void *subject) {
                                                                 s->exercise, s->tonic);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_second_species_line_check(const StandardCounterpointSecondSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,

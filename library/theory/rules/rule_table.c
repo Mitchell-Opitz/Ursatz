@@ -1,7 +1,6 @@
 #include "theory/rules/rule_table.h"
 
 #include <stdio.h>
-#include <string.h>
 
 bool rule_table_valid(const RuleTable *table, int which) {
     return table != NULL && which >= 0 && which < table->count;
@@ -35,7 +34,7 @@ static void build_pair(void *arg) {
     }
     rule_pair_build(
         table->framework != NULL ? table->framework() : NULL, table->id_prefix, name,
-        rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT, table->evaluate, table->score, &table->pairs[which]);
+        rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT, &table->pairs[which]);
 }
 
 static void ensure_built(const RuleTable *table, int which) {
@@ -44,11 +43,6 @@ static void ensure_built(const RuleTable *table, int which) {
     }
     BuildPairArg arg = {table, which};
     ursatz_once(&table->built[which], build_pair, &arg);
-}
-
-const Preference *rule_table_preference(const RuleTable *table, int which) {
-    ensure_built(table, which);
-    return rule_table_valid(table, which) ? table->pairs[which].preference : NULL;
 }
 
 const char *rule_table_name(const RuleTable *table, int which) {
@@ -72,74 +66,4 @@ void rule_table_check(const RuleTable *table, RuleHolds holds,
     }
     *hard_violations = hard;
     *soft_violations = soft;
-}
-
-bool rule_table_candidate_type(const RuleTable *table, char *out, size_t capacity) {
-    if (table == NULL || table->framework_name == NULL || table->prefix == NULL || out == NULL) {
-        return false;
-    }
-    int written = snprintf(out, capacity, "%s/%s", table->framework_name, table->prefix);
-    return written > 0 && (size_t)written < capacity;
-}
-
-ConstraintEvalResult rule_table_evaluate(const RuleTable *table, RuleHolds holds,
-                                                 RuleApplies applies, size_t subject_size,
-                                                 const Constraint *constraint, const Value *candidate) {
-    if (table == NULL || holds == NULL || constraint == NULL || candidate == NULL) {
-        return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
-    }
-    int which = -1;
-    for (int i = 0; i < table->count; i++) {
-        if (ursatz_once_is_done(&table->built[i]) && table->pairs[i].constraint == constraint) {
-            which = i;
-            break;
-        }
-    }
-    if (which < 0) {
-        return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
-    }
-
-    char tag[96];
-    if (!rule_table_candidate_type(table, tag, sizeof(tag))) {
-        return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
-    }
-    if (strcmp(value_type(candidate), tag) != 0) {
-        return CONSTRAINT_EVAL_NOT_APPLICABLE;
-    }
-    size_t size = 0;
-    const void *subject = value_content(candidate, &size);
-    if (subject == NULL || size != subject_size) {
-        return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
-    }
-    if (applies != NULL && !applies(which, subject)) {
-        return CONSTRAINT_EVAL_NOT_APPLICABLE;
-    }
-    return holds(which, subject) ? CONSTRAINT_EVAL_PASS : CONSTRAINT_EVAL_FAIL;
-}
-
-PreferenceScore rule_table_score(const RuleTable *table, RuleHolds holds, size_t subject_size,
-                                         const Preference *preference, const Value *candidate) {
-    PreferenceScore unscorable = {0, 0};
-    if (table == NULL || holds == NULL || preference == NULL || candidate == NULL) {
-        return unscorable;
-    }
-    int which = -1;
-    for (int i = 0; i < table->count; i++) {
-        if (ursatz_once_is_done(&table->built[i]) && table->pairs[i].preference == preference) {
-            which = i;
-            break;
-        }
-    }
-    char tag[96];
-    if (which < 0 || !rule_table_candidate_type(table, tag, sizeof(tag)) ||
-        strcmp(value_type(candidate), tag) != 0) {
-        return unscorable;
-    }
-    size_t size = 0;
-    const void *subject = value_content(candidate, &size);
-    if (subject == NULL || size != subject_size) {
-        return unscorable;
-    }
-    PreferenceScore score = {holds(which, subject) ? 1UL : 0UL, 1UL};
-    return score;
 }

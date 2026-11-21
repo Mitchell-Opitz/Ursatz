@@ -5,7 +5,7 @@
 #include "model/identity/entity_id.h"
 
 bool rule_pair_build(const Framework *framework, const char *id_prefix, const char *name, ConstraintType type,
-                     ConstraintEvaluateFn evaluate, PreferenceScoreFn score, RulePair *out) {
+                     RulePair *out) {
     if (type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
@@ -39,28 +39,8 @@ bool rule_pair_build(const Framework *framework, const char *id_prefix, const ch
         return false;
     }
 
-    constraint_set_evaluate_fn(constraint, evaluate);
-
-    Preference *preference = NULL;
-    if (type == CONSTRAINT_TYPE_SOFT && score != NULL) {
-        snprintf(id_value, sizeof(id_value), "%s-preference-%s", id_prefix, name);
-        EntityID *preference_id;
-        if (entity_id_create(id_value, &preference_id) != ENTITY_ID_OK) {
-            constraint_destroy(constraint);
-            rule_destroy(rule);
-            return false;
-        }
-        if (preference_create(preference_id, framework, &preference) != PREFERENCE_OK) {
-            entity_id_destroy(preference_id);
-            constraint_destroy(constraint);
-            rule_destroy(rule);
-            return false;
-        }
-        preference_set_score_fn(preference, score);
-    }
-
     out->rule = rule;
     out->constraint = constraint;
-    out->preference = preference;
+    out->preference = NULL;
     return true;
 }

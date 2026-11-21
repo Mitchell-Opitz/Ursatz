@@ -13,13 +13,9 @@ static bool table_is_hard(int which) {
 
 static RulePair g_pairs[HARMONY_PHRASE_RULE_COUNT];
 static UrsatzOnce g_built[HARMONY_PHRASE_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                                    const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
     "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "phrase", NAMES, HARMONY_PHRASE_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate, score_candidate};
+    "phrase", NAMES, HARMONY_PHRASE_RULE_COUNT, table_is_hard, g_pairs, g_built};
 
 bool harmony_phrase_rule_soft(HarmonyPhraseRule which) {
     return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
@@ -116,8 +112,6 @@ static bool holds_adapter(int which, const void *subject) {
     return harmony_phrase_rule_holds((HarmonyPhraseRule)which, subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyPhrase)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyPhrase)
 
 bool harmony_phrase_check(const HarmonyPhrase *phrase, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_phrase_valid(phrase)) {

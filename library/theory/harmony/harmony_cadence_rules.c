@@ -12,13 +12,9 @@ static bool table_is_hard(int which) {
 
 static RulePair g_pairs[HARMONY_CADENCE_RULE_COUNT];
 static UrsatzOnce g_built[HARMONY_CADENCE_RULE_COUNT];
-static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
-                                                    const Context *context);
-static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static const RuleTable TABLE = {
     "standard-harmony", standard_harmony_framework, "standard-harmony",
-    "cadence", NAMES, HARMONY_CADENCE_RULE_COUNT, table_is_hard, g_pairs, g_built,
-                                       evaluate_candidate, score_candidate};
+    "cadence", NAMES, HARMONY_CADENCE_RULE_COUNT, table_is_hard, g_pairs, g_built};
 
 bool harmony_cadence_rule_soft(HarmonyCadenceRule which) {
     return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
@@ -52,8 +48,6 @@ static bool holds_adapter(int which, const void *subject) {
     return harmony_cadence_rule_holds((HarmonyCadenceRule)which, subject);
 }
 
-RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadence)
-RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyCadence)
 
 bool harmony_cadence_check(const HarmonyCadence *cadence, unsigned *hard_violations, unsigned *soft_violations) {
     if (hard_violations == NULL || soft_violations == NULL || !harmony_cadence_valid(cadence)) {
