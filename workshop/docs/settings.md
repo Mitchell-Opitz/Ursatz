@@ -29,6 +29,14 @@ Format `ursatz-settings` 1: `scope`, `values` (dotted key to value), and the opt
 
 An override maps through the rule table: `reweight` sets the group's weight (`closure` both of its weights), `off` or `waive` on a soft group sets its weight to 0, on a hard rule adds its name to `melody.waive`, `reverse` adds the group to `melody.reverse`.
 
+## Composing with settings and exploring
+
+A theme composed through `item.compose` resolves its settings right after its request is resolved: the item's project, the item, the style its brief names when it names exactly one, the request's own `preferences` (merged under the call's `settings`), the call's `overrides`, `off` and `taste`. A resolution with a document becomes the request's `preferences`, so `request.json` records it, and the version gets `settings.json` (format `ursatz-settings-snapshot`: `taste`, `off`, `values`, `overrides`, `explore`, `document`) when the resolution holds a document, an override, a switch or exploration moves. With nothing set the request and every output are byte for byte what they were. A piece takes none of these params until the plan node scope (P71): `/params/settings` and the others are refused with "a piece takes no settings until the plan node scope (P71)". `regenerate`, `variations` and `choose` read the version's `request.json` and stay as they are.
+
+`item.explore` (a theme only) composes as `item.compose` does with some settings moved away from the resolved ones: params `distance` (1 to 8, default the resolved `explore.distance`) and `seed` (drawn when absent, and also the compose seed), and the settings params of compose. The moves are chosen from the soft settings of the groups a theme reads (`melody`, `motif`, `development`) that are booleans or integers from 0 to 20, sorted by key: a xorshift64 generator (`x ^= x << 13; x ^= x >> 7; x ^= x << 17`, seed 0 is 1) picks `distance` distinct ones, and each moves from its resolved value: a boolean flips, an integer of 3 or more goes to 0, a smaller one to the lesser of its value plus 3 and 20. A moved setting comes from `explore`; the resolution holds `explore: {seed, distance, moves: [{key, from, to}]}`. `settings.resolve` takes `explore` (`{seed, distance}`) and `kind` (`theme`, the default, or `motif`: the `motif` group only).
+
+`composer.random-motifs` takes `project_id`, `taste`, `off` and `settings` (its `style_id` is the style scope), resolves with kind `motif`, sends a non-null document to the Composer as `preferences` and adds `settings` (the resolution) to its reply. With nothing set the request and the reply are as they were.
+
 ## Commands
 
 All take a `scope`, are journaled, and answer with the scope's content after the change. A scope that names a style, project or item that is not there is `NOT_FOUND` at `/params/scope`.

@@ -26,11 +26,13 @@ A command that runs long answers with its job (`{"job": {"id", "kind", "state"}}
 
 ## Commands
 
-55 commands; `job.cancel` is a runtime control and writes no record, the others are journaled under their name. Each is defined once, as a schema in `workshop/commands/<family>.json` (target, base version, params with their types and limits, reply, job, example); `workshop_command` checks a command's target and params from it before the handler runs, and the generated [command reference](command-reference.md) lists every command with its params. The tool `commands` prints the reference (`sheet`, `markdown`), the grammar of the text form, every schema as JSON and the help of one command ([tools](tools.md#commands)); a command written as text is read by `ursatz apply` ([data folder](../../cli/docs/data-folder.md)).
+56 commands; `job.cancel` is a runtime control and writes no record, the others are journaled under their name. Each is defined once, as a schema in `workshop/commands/<family>.json` (target, base version, params with their types and limits, reply, job, example); `workshop_command` checks a command's target and params from it before the handler runs, and the generated [command reference](command-reference.md) lists every command with its params. The tool `commands` prints the reference (`sheet`, `markdown`), the grammar of the text form, every schema as JSON and the help of one command ([tools](tools.md#commands)); a command written as text is read by `ursatz apply` ([data folder](../../cli/docs/data-folder.md)).
 
 A check that fails is `URSATZ_ERR_REQUEST` at its path: `/target` (`<command> needs a target`, `<command> takes no target`), `/params/<name>` (`<name> is required`, `<name> must be a string`, `a whole number`, `true or false`, `one of a, b, c`, `a rational like 3/4`, `an object`, `a list`; `<name> must be from <min> to <max>`; `<name> is longer than <n> characters`; `/params/<name>/<i>` for the item of a list) and `give exactly one of <a>, <b>`. A member no schema declares passes until the GUI sends exactly the declared params; the handlers keep the checks of meaning (a note a motif needs, a thing that is not found, a conflict).
 
 ### The settings commands
+
+`item.compose` and `item.explore` take `settings`, `overrides`, `off` and `taste` for one compose ([settings](settings.md#composing-with-settings-and-exploring)).
 
 `settings.set`, `settings.unset`, `settings.import`, `settings.override`, `settings.switch` and `settings.use-taste` change one scope file of the [settings](settings.md): each takes a `scope` (`style:<id>`, `project:<id>`, `item:<id>`, and `taste:<name>` for an import) and answers with the scope's content. Their `value` param is a number, true or false, a word, `n/d` or a list.
 

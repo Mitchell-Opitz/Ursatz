@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P66 B5: compose with settings (2026-11)
+
+- **Compose with settings.** A theme's request gets the resolved settings as `preferences` and the version a `settings.json` snapshot; `item.compose` takes `settings`, `overrides`, `off` and `taste`; the new `item.explore` (56 commands) moves settings from the taste by `distance` with a seed; `settings.resolve` takes `explore` and `kind`; `composer.random-motifs` resolves settings for motifs. See [settings](settings.md).
+
 ## P66 B4: settings (2026-11)
 
 - **Settings.** The format `ursatz-settings` for a taste profile, a style, a project and an item, `ursatz-settings-snapshot` for a composed version; the resolver over its scopes with the source of each value; the queries `settings.resolve`, `settings.scope`, `settings.list` and `settings.keys`; the commands `settings.set`, `settings.unset`, `settings.import`, `settings.override`, `settings.switch` and `settings.use-taste` (55 commands); the param type `value`; the event `settings-changed`. `workshop_settings_resolve` is `workshop_config_resolve` (it resolves the app configuration, `ursatz.json`). See [settings](settings.md).
