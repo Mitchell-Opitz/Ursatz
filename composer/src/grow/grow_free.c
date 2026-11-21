@@ -253,14 +253,9 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
 
 /* The development of m0 the last idea is: m0 liquidated, as a theme's cadential idea is. */
 static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, MotiveRelationStep *dev, Motive *result) {
-    size_t count = source->note_count;
-    size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     memset(dev, 0, sizeof(*dev));
     dev->kind = MOTIVE_RELATION_LIQUIDATE;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, drop_most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
+    size_t drop = grow_draw_drop(rng, source->note_count);
     dev->value[0] = (long)drop;
     dev->value[2] = 1;
     return drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK && rational_cmp(result->length, room) <= 0;

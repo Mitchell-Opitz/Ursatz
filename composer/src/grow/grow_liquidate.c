@@ -314,33 +314,11 @@ bool grow_main_theme_head(const Motive *source, Rational half, Motive *out) {
 static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, GrowLiquidateSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     spec->retransition = true;
-    size_t count = spec->source.note_count;
-    size_t most = count / 2 > 1 ? count / 2 : 1;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
-    /* The residue: 1 to half the notes dropped. The residue one note further keeps two notes at least (else it is drawn
-       again). In the plan value[2] is 0, the least the operator keeps. */
-    MotiveRelationStep first;
-    memset(&first, 0, sizeof(first));
-    first.kind = MOTIVE_RELATION_LIQUIDATE;
-    first.value[0] = (long)drop;
-    first.value[2] = 1;
-    MotiveRelationStep second = first;
-    second.value[0] = (long)drop + 1;
-    second.value[2] = 0;
-    if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
-        spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
-        spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->repeated)) {
+    /* The residue: 1 to half the notes dropped. The residue one note further keeps two notes at least (else it is drawn again). */
+    if (!grow_draw_residues(&spec->source, rng, theme->bar, &spec->liquidated, &spec->repeated, &spec->liquidation, &spec->repetition,
+                            &spec->drop)) {
         return false;
     }
-    spec->liquidation = first;
-    spec->liquidation.value[2] = 0;
-    spec->repetition = second;
-    spec->drop = drop;
     spec->down = fill_rng_below(rng, 2) == 0;
     spec->first_degree = fill_rng_below(rng, 2) == 0 ? 2 : 4;
     Rational half;
@@ -374,11 +352,7 @@ static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, Fi
     }
     /* The liquidation: 1 to half the notes dropped, fewer than the notes. */
     size_t count = spec->source.note_count;
-    size_t most = count / 2 > 1 ? count / 2 : 1;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
+    size_t drop = grow_draw_drop(rng, count);
     MotiveRelationStep drawn;
     memset(&drawn, 0, sizeof(drawn));
     drawn.kind = MOTIVE_RELATION_LIQUIDATE;

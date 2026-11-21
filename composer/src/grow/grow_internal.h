@@ -594,6 +594,17 @@ typedef struct {
  */
 bool grow_generate_specs(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, const GrowSpecKind *kind,
                          FillCandidateList *out);
+
+/* How many notes a liquidation drops of a motive of count notes: one draw, 1 to half of them (at least 1), fewer than all. */
+size_t grow_draw_drop(FillRng *rng, size_t count);
+
+/*
+ * The residues of a motive (a coda's phrase 2, a retransition): the drop of grow_draw_drop, then the motive liquidated by it and
+ * once more by one note further. In the plan value[2] is 0, the least the operator keeps. False when a residue does not fit the bar
+ * or the form's range, or the second is not shorter than the first (the next is drawn); the drop is then not set.
+ */
+bool grow_draw_residues(const Motive *source, FillRng *rng, Rational bar, Motive *liquidated, Motive *repeated,
+                        MotiveRelationStep *liquidation, MotiveRelationStep *repetition, size_t *drop);
 /* The most gaps Given material leaves in one idea or one subphrase for one lane. */
 #define GROW_MAX_GAPS 16
 

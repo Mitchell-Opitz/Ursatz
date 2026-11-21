@@ -224,7 +224,6 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
         rational_cmp(spec->source.length, theme->bar) > 0 || !grow_motive_in_form_range(&spec->source)) {
         return false;
     }
-    const size_t count = spec->source.note_count;
     /* Phrase 1's cadential idea: m0 augmented 2:1 when two bars hold it and the meter can write it, else m0 exact. */
     Rational two;
     memset(&spec->augmentation, 0, sizeof(spec->augmentation));
@@ -237,30 +236,10 @@ static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng
     spec->augmented = motive_develop(&spec->source, &spec->augmentation, &spec->augment) == MOTIVE_DEV_OK &&
                       rational_cmp(spec->augment.length, two) <= 0 && grow_motive_in_form_range(&spec->augment);
     /* Phrase 2: m0 liquidated, 1 to half the notes dropped, then one note further (as the retransition's residues). */
-    size_t most = count / 2 > 1 ? count / 2 : 1;
-    size_t drop = 1 + (size_t)fill_rng_below(rng, most);
-    if (drop >= count) {
-        drop = count - 1;
-    }
-    MotiveRelationStep first;
-    memset(&first, 0, sizeof(first));
-    first.kind = MOTIVE_RELATION_LIQUIDATE;
-    first.value[0] = (long)drop;
-    first.value[2] = 1;
-    MotiveRelationStep second = first;
-    second.value[0] = (long)drop + 1;
-    second.value[2] = 0;
-    if (motive_develop(&spec->source, &first, &spec->liquidated) != MOTIVE_DEV_OK ||
-        spec->liquidated.note_count >= count || rational_cmp(spec->liquidated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->liquidated) || motive_develop(&spec->source, &second, &spec->repeated) != MOTIVE_DEV_OK ||
-        spec->repeated.note_count >= spec->liquidated.note_count || rational_cmp(spec->repeated.length, theme->bar) > 0 ||
-        !grow_motive_in_form_range(&spec->repeated)) {
+    if (!grow_draw_residues(&spec->source, rng, theme->bar, &spec->liquidated, &spec->repeated, &spec->liquidation, &spec->repetition,
+                            &spec->drop)) {
         return false;
     }
-    spec->liquidation = first;
-    spec->liquidation.value[2] = 0;
-    spec->repetition = second;
-    spec->drop = drop;
     /* Phrase 3: the main theme head, then the tonic nearest its last note. */
     Rational half;
     if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK ||
