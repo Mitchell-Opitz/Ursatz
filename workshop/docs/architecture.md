@@ -31,12 +31,12 @@ It holds no music logic: a query or command reads or changes files and asks the 
 
 | Folder | Holds |
 |---|---|
-| `base/` | what every service uses: the command context (name, actor, target, base version, per thread), the event hub, the HTTP-status table of job results, the knowledge snapshot, the last error |
+| `base/` | what every service uses: the command context (name, actor, target, base version, per thread), the event hub, the HTTP-status table of job results, the knowledge snapshot, the last error, the parameter readers and the text normalizer (`params.h`) |
 | `jobs/` | the job queue ([jobs](jobs-and-events.md)) |
 | `items/` | the store: layout and formats, the transaction, journal and recovery, projects and items with their versions, bodies and references, layers, subjects, collections, the Library piece store and metadata, the migration and the data check |
 | `settings/` | the setting keys and rules (installed at open from the Composer's vocabulary: `preference_keys`, `rules`), the scope files of a taste profile, a style, a project and an item, and the resolver with the source of each value ([settings](settings.md)) |
 | `ratings/` | listening sessions with their batches, ratings and picks, and the ratings of item versions ([ratings](ratings.md)); keep as default is a coordinator handler that cites them |
-| `analysis/` | the Analyzer's services: import and re-analysis (and their jobs), styles, motive links, the import cache |
+| `analysis/` | the Analyzer's services: import and re-analysis (and their jobs), styles (the style model file is read and written in `style_model_io.c`, the library holds only its text), motive links, the import cache |
 | `composition/` | the Composer's services: compose jobs, themes, pieces, motifs, the variant engine ([variants](variants.md)), the request resolver, the Composer client |
 | `rendering/` | the render cache, playback of versions and pieces, the export of a version's files |
 | `coordinator/` | the API: `workshop.c` (open, start, stop), `dispatch.c` (the two tables of names), `api_*.c` (one file per family of handlers, `api_settings.c` and `api_commands_settings.c` for the settings, `api_ratings.c` and `api_commands_ratings.c` for the ratings), `events.c`, `config.c`, `data_lock.c` |

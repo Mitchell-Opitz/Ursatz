@@ -225,7 +225,7 @@ When a piece's stored analysis is not current (another schema, Analyzer version 
 [Staleness keys](../../../workshop/docs/data-folder.md#the-library)), the piece is analyzed again first, so older pieces still count. Only analysis documents are read,
 never the scores. A build is a job (kind `style`) and one runs at a time.
 
-Storage: `settings/styles/<id>/style-model.json` (written by `style_model_file_write`,
+Storage: `settings/styles/<id>/style-model.json` (written by `workshop_style_model_write`,
 the same bytes for the same pieces) and `settings/styles/<id>/style.json` (`id`, `name`,
 `created_at`, `updated_at`, `source`, `pieces`, `skipped`, `piece_count`),
 each written by one transaction. Ids are `sty-<16 lowercase hex>`.

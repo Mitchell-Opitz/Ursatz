@@ -62,7 +62,7 @@ A data folder belongs to one process at a time: it is locked with `.ursatz.lock`
 | 0 | success |
 | 1 | usage, an invalid argument, an input that cannot be read, or a request the workshop refuses |
 | 2 | the command could not be done: nothing composed, a folder that cannot be opened or reached, a job that failed |
-| 3 | an output file could not be written (the commands that write files) |
+| 3 | an output file could not be written (the commands that write files). Each file is written atomically (a temporary file, then a rename), the files of one command all or none, and an existing file is kept when its write fails; the folder in front of a file is not made |
 
 Each command's help names what 1, 2 and 3 mean for it.
 
