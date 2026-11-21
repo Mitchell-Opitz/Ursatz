@@ -84,7 +84,7 @@ This module builds no `Rule` or `Constraint` and evaluates none (the
 Same ceiling as `Framework` itself: `identity` (L0), `core` (L1),
 `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5),
 `context`/`semantics`/`relationship`/`interpretation` (L6) -- plus
-`theory/framework.h`, `rules/rule.h`, and `rules/constraint.h`
+`theory/rules/rule_table.h`
 specifically. Enforced by
 the layer table (`cmake/layer-table.txt`).
 

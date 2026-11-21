@@ -9,7 +9,7 @@ The library is eight groups, each one folder under `library/` and one CMake targ
 | Group | Target | Areas |
 |---|---|---|
 | `model/` | `ursatz_model` | `identity`, `core`, `time`, `pitch`, `events`, `containers`, `structure`: the value types (the former layers L0 to L6 without `context` and `semantics`, in that order) |
-| `theory/` | `ursatz_theory` | `framework` (the Framework type and singleton), `style`, `rules` (Rule, Constraint, Preference, Context), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
+| `theory/` | `ursatz_theory` | `style`, `rules` (the rule table), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
 | `realization/` | `ursatz_realization` | lines, performer parts, scoring assignments, movements and works, one folder, on `model` and `theory` |
 | `plan/` | `ursatz_plan` | the section description shared by forms, plans and piece requests, one folder, on `model` and `theory` (and cJSON for its codec) |
 | `analysis/` | `ursatz_analysis` | `notes` (the neutral analysis types and segmentation), `motive`, `voices`, `harmony`, `form`, `meter`, `texture`, `counterpoint`, `galant`, `similarity`: the analyses and the framework adapters |

@@ -17,11 +17,9 @@ of sounding `PitchSpelling`s, one per note. A two-part texture is
 `StandardCounterpointPair`: two lines of equal length, the note at position
 i of the upper line sounding with the note at position i of the lower line.
 Rhythm is not modeled. Each group below has a pure check function. The soft
-rules of the melodic and harmonic groups have a `Preference`
-(`standard_counterpoint_melodic_preference`, `standard_counterpoint_harmonic_preference`)
-whose scoring callback scores a candidate `Value` tagged
-`standard-counterpoint/<table prefix>`, holding the rule's subject, 1/1 when the rule holds
-and 0/1 when it does not; the multi-input subjects are in `counterpoint_subject.h`.
+rules of the melodic and harmonic groups are asked with
+`standard_counterpoint_melodic_rule_soft` and `standard_counterpoint_harmonic_rule_soft`;
+the multi-input subjects are in `counterpoint_subject.h`.
 
 - **Consonance** (`consonance_rules.h`): harmonic intervals are perfect
   consonances (unison, fifth, octave), imperfect consonances (major and minor
@@ -70,9 +68,8 @@ Every group of rules (a species' strong beats, its line rules, the common
 melodic rules) follows one pattern, built on two shared helpers.
 
 - **`theory/rules/rule_table.h`**: the one table for a group, shared with every other area. The module defines its rule
-  names, a function that says which rules are hard, and static storage for the
-  cached pairs, then points the table at them. The table reports a group's
-  failures as hard and soft bit masks. The module writes only how one rule is evaluated and a small adapter
+  names and a `SOFT` bool table of the soft rules, then points the table at them. The table reports a group's
+  failures as hard and soft bit masks. The module writes only how one rule holds and a small adapter
   that hands the table the exercise (or the exercise and the tonic).
 - **`species_aggregate.h`**: the parts every species aggregate shares: the
   helper that records a group's result in the hard and soft masks, and the

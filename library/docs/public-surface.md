@@ -22,7 +22,7 @@ The layer table holds the rule (`cmake/layer-table.txt`, `cmake/check_layer_tabl
 
 Headers no consumer includes are not staged, among them `io/smf_reader.h`, `chain/form_bridge.h` and `chain/kernel_owners.h`. The chain's own sources and tests reach them through the library folders.
 
-The accessors only tests read are not in the public headers. The struct of such a type is in a `*_internal.h` header beside it (never staged), and the tests read it through `tests/support/*_test_access.h` (chain, framework, interpretation, preference, relationship, semantics, structure), which `ursatz_test_includes` puts on every test's include path. An application cannot include either.
+The accessors only tests read are not in the public headers. The struct of such a type is in a `*_internal.h` header beside it (never staged), and the tests read it through `tests/support/*_test_access.h` (chain, interpretation, relationship, semantics, structure), which `ursatz_test_includes` puts on every test's include path. An application cannot include either.
 
 A test sees the internals of what it tests (`ursatz_test_includes()`, which puts `library/`, `tests/support` and the test folder's parent on the path); an app does not.
 

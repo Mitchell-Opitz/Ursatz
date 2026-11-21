@@ -1,6 +1,6 @@
 # Theory
 
-The theory group (`library/theory/`, target `ursatz_theory`): the `Framework` type, the style model, the rule objects,
+The theory group (`library/theory/`, target `ursatz_theory`): the style model, the rule table,
 the shared vocabulary enums and the rule libraries of the 11 Theory Frameworks. A framework is no longer a CMake target
 or a folder of its own: its rules, vocabularies and predicates are an area here, its analysis adapter is an area of
 [analysis/](../analysis/README.md), and its identity stays (`standard-harmony-v1` and the others are in Analyzer
@@ -10,9 +10,8 @@ documents). Code that needs the whole stack lives in the analysis chain (`chain/
 
 | Area | Holds | Former framework |
 |---|---|---|
-| `framework/` | The `Framework` type and `framework_singleton_get` | kernel `theory` |
 | `style/` | Style models from corpus statistics, the labels and the profile counting (see Style below) | kernel `theory` |
-| `rules/` | `Rule`, `Constraint`, `Preference`, `Context` | kernel `rules`, `context` |
+| `rules/` | `RuleTable`: the names, the soft rules and the check of a rule group | kernel `rules` |
 | `knowledge/` | The knowledge snapshot: the entries of `knowledge/` embedded in the build, and the pitch material read from them | none (new, R-536) |
 | `vocabulary/` | Shared theory enums (`CadenceType`, `VoicePart`, ...) | kernel `semantics` |
 | `tonality/` | Roman numeral grammar, keys, triad and seventh rules, chord and key vocabulary, the common-practice materials, and regions named by relations and brightness (see Tonality below) | standard-tonality, common-practice-minimal (vocabulary) |
@@ -76,13 +75,11 @@ textbook; each README names the chapters it covers.
   `standard-texture`, `galant-schemas`, `scale-harmonization`) also have an `analysis/` adapter
   that builds `Interpretation`s from neutral input. The `chain/` target builds that input from
   imported notes (`chain/README.md`).
-- **Framework singleton.** Each exposes one lazily built `Framework` instance. Rules are
-  checked with the framework's own `*_rule_holds()` and check functions. standard-harmony and
-  standard-counterpoint also build a `Preference` per soft rule, scored by the
-  `Preference`'s callback; no other framework builds a `Rule`, `Constraint` or `Preference`.
+- **Framework names.** A framework is a name, not an object: its `<name>-v1` string is a constant in `theory/vocabulary/framework_names.h` (R-687). Rules are
+  checked with the framework's own `*_rule_holds()` and check functions; a rule area says whether a rule is soft with a `*_rule_soft` query (R-685).
 - **Hard vs. soft.** Rules phrased as "must" are hard. Rules phrased as "limit", "avoid" or
   "prefer" are soft.
-- **Dependency ceiling.** The model group, `theory/framework/` and `theory/rules/`, and any area listed in its row of
+- **Dependency ceiling.** The model group, `theory/rules/`, and any area listed in its row of
   `cmake/layer-table.txt` (`theory-<area>` rows, test `layer_table`); a new include edge updates its row in the same
   commit. Input from `analysis` is passed in by the caller as plain data, never included.
 - **Test-only edges.** Area tests follow the same layer rules (the `tests-theory-<area>` rows of the layer table). Edges the tests have beyond the table are rows there with a reason: harmony tests include tonality (Roman numeral grammar cases), meter tests include the MIDI importer.
@@ -102,9 +99,9 @@ Framework adapters accept the neutral types in `analysis/notes/` (`AnalysisNote`
 
 A framework builds its durable claims through the kernel helpers in `interpretation/claim_interpretation.h`. Each `analysis/*claim.c` keeps its public names and is a one-line call with the framework's id and short name: `claim_interpretation_create` for the Interpretation, `claim_interpretation_note_group` for the note shell, `claim_interpretation_relationship` for the Relationship. standard-harmony and standard-counterpoint use the one rule table and pair builder (`theory/rules/rule_table.h`, `rule_pair.h`), the pairs used only for the Preferences of their soft rules; scale-harmonization and galant-schemas set only the count and the hardness of it. A framework needs no claim code of its own.
 
-## Singleton and rule table
+## Rule table
 
-A framework declares its `Framework` with `static FrameworkSingleton g_singleton = FRAMEWORK_SINGLETON_INIT("<framework>-v1");` and an accessor that returns `framework_singleton_get(&g_singleton)` (`theory/framework_singleton.h`). A rule table with scoring callbacks (standard-harmony and standard-counterpoint) is declared with `static UrsatzOnce g_built[N];` and its pairs are built once under `ursatz_once` (`core/once.h`), so the first call may come from any thread. Any other lazily built static in a framework uses `ursatz_once` the same way; never a bare `static bool` check-then-set.
+A rule group declares its names, a `static const bool SOFT[N] = {[RULE] = true, ...}` for the rules that are soft (every other rule is hard) and `static const RuleTable TABLE = {.name = "...", .names = NAMES, .soft = SOFT, .count = N};` (`theory/rules/rule_table.h`). A static that is built lazily by a framework is a plain value computed from constants; there is no `Framework` object and no once primitive.
 
 ## Knowledge
 

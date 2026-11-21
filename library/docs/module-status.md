@@ -11,7 +11,6 @@ The implementation status and doc of each kernel module. [Docs index](README.md)
 | events | L3 | Implemented | [events](modules/events.md) |
 | containers | L4 | Implemented (partial, see doc) | [containers](modules/containers.md) |
 | structure | L5 | Implemented (partial, see doc) | [structure](modules/structure.md) |
-| context | L6 | Implemented (the opaque type only, see doc) | [context](modules/context.md) |
 | semantics | L6 | Implemented | [semantics](modules/semantics.md) |
 | theory | L7 | Implemented (partial, see doc) | [theory](modules/theory.md) |
 | rules | L7 | Implemented (partial, see doc) | [rules](modules/rules.md) |

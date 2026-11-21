@@ -35,16 +35,15 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/events.md](modules/events.md): L3 events: the canonical NoteEvent.
 - [docs/modules/containers.md](modules/containers.md): L4 containers: sections and phrases.
 - [docs/modules/structure.md](modules/structure.md): L5 structure: occurrences of structures.
-- [docs/modules/context.md](modules/context.md): L6 context: the opaque Context type.
 - [docs/modules/semantics.md](modules/semantics.md): L6 semantics: shared theory vocabulary and neutral analysis inputs.
-- [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
+- [docs/modules/theory.md](modules/theory.md): L7 theory: style models and the framework names.
 - [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
 - [docs/modules/realization.md](modules/realization.md): Realization: lines, performer parts, scoring assignments.
 - [docs/modules/reading.md](modules/reading.md): Reading: what one reader says about one realization, as claims; the builder and the JSON codec.
 - [text/README.md](../text/README.md): Text: Ursatz Text, the lossless text form of plans, readings, realizations and knowledge (grammar 1, codecs, API).
 - [docs/modules/plan.md](modules/plan.md): Plan: the plan (nodes, lanes, constraints, states, edits, the JSON codec) and the section description.
 - [docs/modules/plan-format.md](modules/plan-format.md): the plan JSON file, its nodes, lanes, state and versions.
-- [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference and their callbacks.
+- [docs/modules/rules.md](modules/rules.md): L7 rules: the rule table (names, hard and soft rules, the check).
 - [docs/modules/analysis.md](modules/analysis.md): L8 analysis: overview of the analyzers and what is deferred.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
 - [docs/modules/export.md](modules/export.md): L9 export: MusicXML writer.
