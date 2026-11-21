@@ -7,6 +7,7 @@
 #include <plan/plan_common.h>
 
 #include <theory/counterpoint/melodic_rules.h>
+#include <theory/tonality/tonal_key.h>
 
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds
@@ -67,12 +68,11 @@ static bool in_scale(SpelledKey key, int pitch) {
 static bool choose_tone(SpelledKey key, int from, int to, FillRng *rng, int *out) {
     int difference = to - from;
     if (difference == 0) {
-        int up = 0;
-        int down = 0;
-        for (int step = 1; step <= 2; step++) {
-            up = up == 0 && in_scale(key, from + step) ? from + step : up;
-            down = down == 0 && in_scale(key, from - step) ? from - step : down;
-        }
+        unsigned scale = util_scale_mask(spelled_key_tonic_pitch_class(&key), key.material);
+        int up = standard_tonality_mask_step(scale, from, 1);
+        int down = standard_tonality_mask_step(scale, from, -1);
+        up = up != from && up - from <= 2 ? up : 0;
+        down = down != from && from - down <= 2 ? down : 0;
         if (up == 0 && down == 0) {
             return false;
         }

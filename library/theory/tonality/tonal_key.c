@@ -9,6 +9,18 @@
 #define KEY_DEGREE_COUNT 7
 #define KEY_MAX_ACCIDENTAL_OFFSET 2
 
+int standard_tonality_mask_step(unsigned mask, int pitch, int direction) {
+    if ((mask & ((1u << PITCH_SEMITONES_PER_OCTAVE) - 1u)) == 0 || direction == 0) {
+        return pitch;
+    }
+    int step = direction > 0 ? 1 : -1;
+    int next = pitch;
+    do {
+        next += step;
+    } while (!((mask >> pitch_class_of_midi(next)) & 1u));
+    return next;
+}
+
 static bool letter_valid(PitchLetter letter) {
     return letter >= PITCH_LETTER_A && letter <= PITCH_LETTER_G;
 }

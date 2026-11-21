@@ -29,18 +29,10 @@
 /* The most melody spans read over a section. */
 #define CONNECTIVE_MAX_SPANS 64
 
-/* The scale a line is written in: major, or harmonic minor (the raised seventh). */
-static bool in_scale(int tonic, const PitchMaterial *material, int pitch) {
-    return (util_scale_mask_raised_seventh(0, material) >> util_pitch_class(pitch - tonic)) & 1u;
-}
-
-/* The next pitch of the scale strictly above (direction 1) or below (-1) the pitch. */
+/* The next pitch of the scale strictly above (direction 1) or below (-1) the pitch; the scale a line is written in is major, or
+   harmonic minor (the raised seventh). */
 static int scale_step(int tonic, const PitchMaterial *material, int pitch, int direction) {
-    int next = pitch;
-    do {
-        next += direction;
-    } while (!in_scale(tonic, material, next));
-    return next;
+    return tonic + standard_tonality_mask_step(util_scale_mask_raised_seventh(0, material), pitch - tonic, direction);
 }
 
 static Rational tick_before(Rational time) {

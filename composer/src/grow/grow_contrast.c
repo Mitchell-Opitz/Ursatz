@@ -168,11 +168,7 @@ static bool same_rhythm_over_common(const Motive *a, const Motive *b) {
 /* The pitch one step of the key's scale from `pitch` in `direction` (the nearest scale pitch that way). */
 static int scale_step(int pitch, int direction, int tonic_pc, const PitchMaterial *material) {
     unsigned scale = standard_tonality_material_pitch_classes_with_leading_tone(0, material);
-    int next = pitch;
-    do {
-        next += direction;
-    } while (!((scale >> util_pitch_class(next - tonic_pc)) & 1u));
-    return next;
+    return tonic_pc + standard_tonality_mask_step(scale, pitch - tonic_pc, direction);
 }
 
 /* One draw of the motif generator for the idea at `place`: a motive of the key and the meter, one bar when the idea has

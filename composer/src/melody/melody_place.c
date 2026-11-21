@@ -7,6 +7,7 @@
 #include "util/util.h"
 
 #include <theory/counterpoint/melodic_rules.h>
+#include <theory/tonality/tonal_key.h>
 
 #define MAX_OPTIONS 128
 /* The widest a note after the motive moves from the one before it, in semitones. */
@@ -332,13 +333,8 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
 
 /* The pitch a step (a semitone or a tone, within the scale) from `from` in a direction, in range; -1 when none. */
 static int scale_step(unsigned scale, int from, int direction, int low, int high) {
-    for (int distance = 1; distance <= 2; distance++) {
-        int pitch = from + direction * distance;
-        if (pitch >= low && pitch <= high && ((scale >> util_pitch_class(pitch)) & 1u)) {
-            return pitch;
-        }
-    }
-    return -1;
+    int pitch = standard_tonality_mask_step(scale, from, direction);
+    return pitch != from && util_absolute(pitch - from) <= 2 && pitch >= low && pitch <= high ? pitch : -1;
 }
 
 /*
