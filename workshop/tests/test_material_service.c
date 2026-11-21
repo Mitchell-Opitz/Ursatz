@@ -11,6 +11,7 @@
 #include "items/store.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
+#include "command_context_support.h"
 
 #define OK URSATZ_OK
 
@@ -1214,6 +1215,7 @@ static void remove_store(void) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
     test_knowledge();
     snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
     check_quiet(mkdir(g_dir, 0755) == 0 && chdir(g_dir) == 0, "enter a folder of the test's own");

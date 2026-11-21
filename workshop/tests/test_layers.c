@@ -27,6 +27,7 @@
 #include "items/store.h"
 #include "items/subjects.h"
 #include "items/txn.h"
+#include "command_context_support.h"
 
 #ifndef URSATZ_WORKSHOP_TEST_MOZART
 #error "URSATZ_WORKSHOP_TEST_MOZART must name Mozart 545's MIDI file"
@@ -210,6 +211,7 @@ static void test_theme(const char *general) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
     char home[512];
     assert(getcwd(home, sizeof(home)));
     char folder[600];

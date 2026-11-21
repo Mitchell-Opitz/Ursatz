@@ -37,6 +37,7 @@ static const char *g_port = "18769";
 #define PORT g_port
 #include "coordinator/services.h"
 #include "style_model_file_io.h"
+#include "../../../workshop/tests/command_context_support.h"
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -146,6 +147,7 @@ static int smoke_run(const char *clementi_path) {
 }
 
 int main(int argc, char **argv) {
+    command_context_support_begin(); /* the route tests call some services directly: a write needs a command */
   const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
   if (smoke) {
     g_port = "18779";

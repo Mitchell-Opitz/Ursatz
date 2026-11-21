@@ -11,6 +11,7 @@
 #include <common/files.h>
 #include "items/layout.h"
 #include "ursatz_check.h"
+#include "command_context_support.h"
 
 #define OK URSATZ_OK
 
@@ -364,6 +365,7 @@ static void remove_stores(void) {
 }
 
 int main(void) {
+    command_context_support_begin(); /* the services are called directly: a write needs a command (command_context_support.h) */
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)getpid());
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)getpid());
     snprintf(g_piece, sizeof(g_piece), "piece-%d", (int)getpid());

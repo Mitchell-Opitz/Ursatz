@@ -379,7 +379,7 @@ like analyzer-tests analyzer-links
 like analyzer-tests analyzer-internal
 uses composer-tests test-support
 like composer-tests composer-request
-uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator workshop-items theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
+uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator workshop-items workshop-tests theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
 uses workshop-tests test-support
 uses cli-tests test-support
 like cli-tests cli

@@ -67,6 +67,7 @@ static cJSON *test_http_json_body_v2(const char *port, const char *method, const
 
 #define PORT "18770"
 #include "playback_check.h"
+#include "../../../workshop/tests/command_context_support.h"
 
 static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
@@ -2429,6 +2430,7 @@ static void test_material_export(void) {
 #endif
 
 int main(void) {
+    command_context_support_begin(); /* the route tests call some services directly: a write needs a command */
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
   system("rmdir /s /q library settings cache projects subjects data 2> nul");
