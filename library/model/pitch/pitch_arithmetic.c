@@ -1,5 +1,6 @@
 #include "model/pitch/pitch_arithmetic.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -137,12 +138,43 @@ int pitch_spelling_fifths(PitchLetter letter, int accidental) {
     return letter_fifths(letter) + 7 * accidental;
 }
 
+/* The one name table of the line of fifths, from -6 (Gb) to 10 (A#): every name of a sharp, flat or tonic window is in it, and
+   the natural letters F C G D A E B at -1 to 5 are the letters of the line. */
+#define NAMES_LOWEST_FIFTHS (-6)
+#define NAMES_HIGHEST_FIFTHS 10
+#define NAMES_NATURALS_AT 5
+static const char *const FIFTHS_NAMES[NAMES_HIGHEST_FIFTHS - NAMES_LOWEST_FIFTHS + 1] = {
+    "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#"};
+
 void pitch_spelling_from_fifths(int fifths, PitchLetter *letter, int *accidental) {
-    static const PitchLetter FIFTHS_LETTERS[PITCH_LETTER_COUNT] = {
-        PITCH_LETTER_F, PITCH_LETTER_C, PITCH_LETTER_G, PITCH_LETTER_D,
-        PITCH_LETTER_A, PITCH_LETTER_E, PITCH_LETTER_B};
-    *letter = FIFTHS_LETTERS[floor_mod(fifths + 1, PITCH_LETTER_COUNT)];
+    PitchLetter natural = PITCH_LETTER_C;
+    pitch_letter_from_char(FIFTHS_NAMES[NAMES_NATURALS_AT + floor_mod(fifths + 1, PITCH_LETTER_COUNT)][0], &natural);
+    *letter = natural;
     *accidental = floor_div(fifths + 1, PITCH_LETTER_COUNT);
+}
+
+/* The fifths of the pitch class inside the window, or INT_MIN when the window or the pitch class is out of range. */
+static int window_fifths(int pitch_class, int lowest_fifths) {
+    if (pitch_class < 0 || pitch_class >= PITCH_SEMITONES_PER_OCTAVE || lowest_fifths < NAMES_LOWEST_FIFTHS ||
+        lowest_fifths + PITCH_SEMITONES_PER_OCTAVE - 1 > NAMES_HIGHEST_FIFTHS) {
+        return INT_MIN;
+    }
+    /* a step of a fifth is 7 semitones and 7 * 7 = 1 modulo 12, so the pitch class sits 7 * pc fifths along */
+    return lowest_fifths + floor_mod(7 * pitch_class - lowest_fifths, PITCH_SEMITONES_PER_OCTAVE);
+}
+
+bool pitch_class_spelling(int pitch_class, int lowest_fifths, PitchLetter *letter, int *accidental) {
+    int fifths = window_fifths(pitch_class, lowest_fifths);
+    if (fifths == INT_MIN || letter == NULL || accidental == NULL) {
+        return false;
+    }
+    pitch_spelling_from_fifths(fifths, letter, accidental);
+    return true;
+}
+
+const char *pitch_class_window_name(int pitch_class, int lowest_fifths) {
+    int fifths = window_fifths(pitch_class, lowest_fifths);
+    return fifths == INT_MIN ? NULL : FIFTHS_NAMES[fifths - NAMES_LOWEST_FIFTHS];
 }
 
 static bool letter_valid(PitchLetter letter) {
@@ -248,12 +280,5 @@ bool pitch_spelling_parse_name(const char *text, PitchLetter *letter, int *accid
 }
 
 const char *pitch_class_name(int pitch_class, bool prefer_flats) {
-    static const char *const SHARP_NAMES[PITCH_SEMITONES_PER_OCTAVE] = {
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    static const char *const FLAT_NAMES[PITCH_SEMITONES_PER_OCTAVE] = {
-        "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
-    if (pitch_class < 0 || pitch_class >= PITCH_SEMITONES_PER_OCTAVE) {
-        return NULL;
-    }
-    return prefer_flats ? FLAT_NAMES[pitch_class] : SHARP_NAMES[pitch_class];
+    return pitch_class_window_name(pitch_class, prefer_flats ? -6 : -1);
 }

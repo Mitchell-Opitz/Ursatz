@@ -148,6 +148,41 @@ static void test_parse_rejects(void) {
     assert(!pitch_spelling_parse_name("C12345678901", &letter, &accidental, &(int){0}));
 }
 
+/* The windows of the line of fifths: each holds every pitch class once, and the four the library uses give the names the
+   tables had (sharps, flats, a major tonic, a minor tonic). */
+static void test_pitch_class_windows(void) {
+    static const struct {
+        int lowest;
+        const char *names[12];
+    } WINDOWS[] = {
+        {-1, {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}},
+        {-6, {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"}},
+        {-5, {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"}},
+        {-3, {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"}},
+    };
+    for (size_t w = 0; w < sizeof(WINDOWS) / sizeof(WINDOWS[0]); w++) {
+        for (int pc = 0; pc < 12; pc++) {
+            PitchLetter letter;
+            int accidental;
+            char name[8];
+            assert(pitch_class_spelling(pc, WINDOWS[w].lowest, &letter, &accidental));
+            assert(pitch_spelling_name(letter, accidental, name, sizeof(name)));
+            assert(strcmp(name, WINDOWS[w].names[pc]) == 0);
+            assert(pitch_class_of_letter(letter, accidental) == pc);
+            assert(strcmp(pitch_class_window_name(pc, WINDOWS[w].lowest), WINDOWS[w].names[pc]) == 0);
+        }
+    }
+    PitchLetter letter = PITCH_LETTER_C;
+    int accidental = 7;
+    assert(!pitch_class_spelling(12, -1, &letter, &accidental));
+    assert(!pitch_class_spelling(-1, -1, &letter, &accidental));
+    assert(!pitch_class_spelling(0, -7, &letter, &accidental));
+    assert(!pitch_class_spelling(0, 0, &letter, &accidental));
+    assert(!pitch_class_spelling(0, -1, NULL, &accidental));
+    assert(letter == PITCH_LETTER_C && accidental == 7);
+    assert(pitch_class_window_name(0, 0) == NULL);
+}
+
 static void test_pitch_class_names(void) {
     static const char *const SHARPS[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     static const char *const FLATS[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
@@ -243,6 +278,7 @@ int main(void) {
     test_parse_accepts();
     test_parse_rejects();
     test_pitch_class_names();
+    test_pitch_class_windows();
     test_letter_from_char();
     test_step_number_and_generic_size();
     test_direction_and_same_name();

@@ -58,6 +58,15 @@ int pitch_spelling_fifths(PitchLetter letter, int accidental);
 /* The inverse of pitch_spelling_fifths. letter and accidental must not be NULL. */
 void pitch_spelling_from_fifths(int fifths, PitchLetter *letter, int *accidental);
 
+/* The spelling of a pitch class inside the window of 12 fifths that starts at lowest_fifths (the window holds each pitch class
+ * once): the sharps are the window at -1 (C C# D D# E F F# G G# A A# B), the flats the window at -6 (C Db D Eb E F Gb G Ab A Bb B),
+ * a major tonic the window at -5 and a minor tonic the window at -3. False (outputs untouched) for a pitch class outside 0 to 11,
+ * a window that leaves the names from -6 to 10, or a NULL output. */
+bool pitch_class_spelling(int pitch_class, int lowest_fifths, PitchLetter *letter, int *accidental);
+
+/* The name ("Db", "F#") of the pitch class in that window; NULL where pitch_class_spelling is false. */
+const char *pitch_class_window_name(int pitch_class, int lowest_fifths);
+
 /*
  * Writes the name without octave: C, F#, Bb, Cx, Ebb. Accidentals -2 to +2
  * only. Returns false (buffer untouched) for an invalid letter, an accidental
