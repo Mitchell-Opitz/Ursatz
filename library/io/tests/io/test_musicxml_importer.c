@@ -188,6 +188,26 @@ static void test_utf16_documents_with_no_text(void) {
     assert(import_bytes(BYTES("\xFF\xFE<\x00"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML); /* utf16_odd */
 }
 
+static void test_an_internal_dtd_subset_is_refused(void) {
+    MusicXmlImport import;
+    assert(import_bytes(BYTES("<!DOCTYPE a [<!ATTLIST a b CDATA \"x\">]><a/>"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML); /* attlist */
+    assert(import_bytes(BYTES("<!DOCTYPE a [<!ATTLIST"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML);                       /* attlist_trunc */
+    assert(import_bytes(BYTES("<!DOCTYPE a [<!ENTITY"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML);                        /* dtd_trunc */
+    assert(import_bytes(BYTES("<!DOCTYPE a [<!ENTITY x \"&y;\"><!ENTITY y \"z\">]><a>&x;</a>"), &import) ==
+           MUSICXML_IMPORT_ERR_MALFORMED_XML);                                                                                /* ent_fwd */
+    assert(import_bytes(BYTES("<!DOCTYPE a [<!ENTITY x \"a&#38;x;b\">]><a>&x;</a>"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML); /* ent_selfref_charref */
+    assert(import_bytes(BYTES("<!DOCTYPE a [<!ENTITY a \"1234567890\"><!ENTITY b \"&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;\">"
+                              "<!ENTITY c \"&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;\"><!ENTITY d \"&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;\">"
+                              "<!ENTITY e \"&d;&d;&d;&d;&d;&d;&d;&d;&d;&d;\">]><a>&e;</a>"),
+                       &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML);                                                       /* laughs */
+    assert(import_bytes(BYTES("<!DOCTYPE a [ %x; ]><a/>"), &import) == MUSICXML_IMPORT_ERR_MALFORMED_XML);                    /* pe */
+    /* an external DTD, as MusicXML files declare, still reads */
+    assert(import_text("<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 4.0 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">"
+                       "<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\"/></part></score-partwise>",
+                       &import) == MUSICXML_IMPORT_OK);
+    musicxml_import_destroy(&import);
+}
+
 static void test_an_empty_score_is_not_an_error(void) {
     MusicXmlImport import;
     assert(import_text("<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\"/></part></score-partwise>",
@@ -658,6 +678,7 @@ int main(void) {
     test_spelling_and_sounding_pitch();
     test_structural_errors();
     test_utf16_documents_with_no_text();
+    test_an_internal_dtd_subset_is_refused();
     test_an_empty_score_is_not_an_error();
     test_a_byte_order_mark_and_entities();
     test_tie_warnings();

@@ -263,21 +263,6 @@ ezxml_t ezxml_close_tag(ezxml_root_t root, char *name, char *s)
     return NULL;
 }
 
-// checks for circular entity references, returns non-zero if no circular
-// references are found, zero otherwise
-int ezxml_ent_ok(char *name, char *s, char **ent)
-{
-    int i;
-
-    for (; ; s++) {
-        while (*s && *s != '&') s++; // find next entity reference
-        if (! *s) return 1;
-        if (! strncmp(s + 1, name, strlen(name))) return 0; // circular ref.
-        for (i = 0; ent[i] && strncmp(ent[i], s + 1, strlen(ent[i])); i += 2);
-        if (ent[i] && ! ezxml_ent_ok(name, ent[i + 1], ent)) return 0;
-    }
-}
-
 // called when the parser finds a processing instruction
 void ezxml_proc_inst(ezxml_root_t root, char *s, size_t len)
 {
@@ -313,108 +298,6 @@ void ezxml_proc_inst(ezxml_root_t root, char *s, size_t len)
     strcpy(root->pi[i][j + 2] + j - 1, (root->xml.name) ? ">" : "<");
     root->pi[i][j + 1] = NULL; // null terminate pi list for this target
     root->pi[i][j] = s; // set instruction
-}
-
-// called when the parser finds an internal doctype subset
-short ezxml_internal_dtd(ezxml_root_t root, char *s, size_t len)
-{
-    char q, *c, *t, *n = NULL, *v, **ent, **pe;
-    int i, j;
-    
-    pe = memcpy(malloc(sizeof(EZXML_NIL)), EZXML_NIL, sizeof(EZXML_NIL));
-
-    for (s[len] = '\0'; s; ) {
-        while (*s && *s != '<' && *s != '%') s++; // find next declaration
-
-        if (! *s) break;
-        else if (! strncmp(s, "<!ENTITY", 8)) { // parse entity definitions
-            c = s += strspn(s + 8, EZXML_WS) + 8; // skip white space separator
-            n = s + strspn(s, EZXML_WS "%"); // find name
-            *(s = n + strcspn(n, EZXML_WS)) = ';'; // append ; to name
-
-            v = s + strspn(s + 1, EZXML_WS) + 1; // find value
-            if ((q = *(v++)) != '"' && q != '\'') { // skip externals
-                s = strchr(s, '>');
-                continue;
-            }
-
-            for (i = 0, ent = (*c == '%') ? pe : root->ent; ent[i]; i++);
-            ent = realloc(ent, (i + 3) * sizeof(char *)); // space for next ent
-            if (*c == '%') pe = ent;
-            else root->ent = ent;
-
-            *(++s) = '\0'; // null terminate name
-            if ((s = strchr(v, q))) *(s++) = '\0'; // null terminate value
-            ent[i + 1] = ezxml_decode(v, pe, '%'); // set value
-            ent[i + 2] = NULL; // null terminate entity list
-            if (! ezxml_ent_ok(n, ent[i + 1], ent)) { // circular reference
-                if (ent[i + 1] != v) free(ent[i + 1]);
-                ezxml_err(root, v, "circular entity declaration &%s", n);
-                break;
-            }
-            else ent[i] = n; // set entity name
-        }
-        else if (! strncmp(s, "<!ATTLIST", 9)) { // parse default attributes
-            t = s + strspn(s + 9, EZXML_WS) + 9; // skip whitespace separator
-            if (! *t) { ezxml_err(root, t, "unclosed <!ATTLIST"); break; }
-            if (*(s = t + strcspn(t, EZXML_WS ">")) == '>') continue;
-            else *s = '\0'; // null terminate tag name
-            for (i = 0; root->attr[i] && strcmp(n, root->attr[i][0]); i++);
-
-            while (*(n = ++s + strspn(s, EZXML_WS)) && *n != '>') {
-                if (*(s = n + strcspn(n, EZXML_WS))) *s = '\0'; // attr name
-                else { ezxml_err(root, t, "malformed <!ATTLIST"); break; }
-
-                s += strspn(s + 1, EZXML_WS) + 1; // find next token
-                c = (strncmp(s, "CDATA", 5)) ? "*" : " "; // is it cdata?
-                if (! strncmp(s, "NOTATION", 8))
-                    s += strspn(s + 8, EZXML_WS) + 8;
-                s = (*s == '(') ? strchr(s, ')') : s + strcspn(s, EZXML_WS);
-                if (! s) { ezxml_err(root, t, "malformed <!ATTLIST"); break; }
-
-                s += strspn(s, EZXML_WS ")"); // skip white space separator
-                if (! strncmp(s, "#FIXED", 6))
-                    s += strspn(s + 6, EZXML_WS) + 6;
-                if (*s == '#') { // no default value
-                    s += strcspn(s, EZXML_WS ">") - 1;
-                    if (*c == ' ') continue; // cdata is default, nothing to do
-                    v = NULL;
-                }
-                else if ((*s == '"' || *s == '\'')  &&  // default value
-                         (s = strchr(v = s + 1, *s))) *s = '\0';
-                else { ezxml_err(root, t, "malformed <!ATTLIST"); break; }
-
-                if (! root->attr[i]) { // new tag name
-                    root->attr = (! i) ? malloc(2 * sizeof(char **))
-                                       : realloc(root->attr,
-                                                 (i + 2) * sizeof(char **));
-                    root->attr[i] = malloc(2 * sizeof(char *));
-                    root->attr[i][0] = t; // set tag name
-                    root->attr[i][1] = (char *)(root->attr[i + 1] = NULL);
-                }
-
-                for (j = 1; root->attr[i][j]; j += 3); // find end of list
-                root->attr[i] = realloc(root->attr[i],
-                                        (j + 4) * sizeof(char *));
-
-                root->attr[i][j + 3] = NULL; // null terminate list
-                root->attr[i][j + 2] = c; // is it cdata?
-                root->attr[i][j + 1] = (v) ? ezxml_decode(v, root->ent, *c)
-                                           : NULL;
-                root->attr[i][j] = n; // attribute name 
-            }
-        }
-        else if (! strncmp(s, "<!--", 4)) s = strstr(s + 4, "-->"); // comments
-        else if (! strncmp(s, "<?", 2)) { // processing instructions
-            if ((s = strstr(c = s + 2, "?>")))
-                ezxml_proc_inst(root, c, s++ - c);
-        }
-        else if (*s == '<') s = strchr(s, '>'); // skip other declarations
-        else if (*(s++) == '%' && ! root->standalone) break;
-    }
-
-    free(pe);
-    return ! *root->err;
 }
 
 // Converts a UTF-16 string to UTF-8. Returns a new string that must be freed
@@ -576,8 +459,8 @@ ezxml_t ezxml_parse_str(char *s, size_t len)
                  l = (*s == '[') ? 1 : l) s += strcspn(s + 1, "[]>") + 1;
             if (! *s && e != '>')
                 return ezxml_err(root, d, "unclosed <!DOCTYPE");
-            d = (l) ? strchr(d, '[') + 1 : d;
-            if (l && ! ezxml_internal_dtd(root, d, s++ - d)) return &root->xml;
+            /* Ursatz: an internal DTD subset is refused. It held the entity expansion (a 436-byte nested entity document grew to 100 MB) and the <!ATTLIST and <!ENTITY parser bugs; MusicXML files name only an external DTD. ezxml_internal_dtd and ezxml_ent_ok are deleted. */
+            if (l) return ezxml_err(root, d, "internal DTD subset not supported");
         }
         else if (*s == '?') { // <?...?> processing instructions
             do { s = strchr(s, '?'); } while (s && *(++s) && *s != '>');
