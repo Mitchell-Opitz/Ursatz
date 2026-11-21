@@ -61,23 +61,23 @@ check(isCommand(promoteRequest, "item.promote", "v1") &&
   same(params(promoteRequest), { name: "Own", project_id: "prj-1" }), "the promote request names the motif and its project");
 
 const operations = [
-  { name: "augment", label: "Augment", category: "rhythm", citation: "ch. III", params: [{ name: "ratio", kind: "ratio", min: 0, max: 0 }], forms: ["full"] },
-  { name: "transpose", label: "Transpose", category: "melody adaptation", citation: "ch. III", params: [{ name: "steps", kind: "int", min: -7, max: 7 }], forms: [] },
   { name: "exact", label: "Exact", category: "exact", citation: "ch. III, Ex. 14", params: [], forms: [] },
+  { name: "augment", label: "Augment", category: "rhythm", citation: "ch. III", params: [{ name: "ratio", kind: "ratio", min: 0, max: 0 }], forms: ["full"] },
   { name: "invert", label: "Invert", category: "intervals", citation: "ch. III", params: [{ name: "axis", kind: "pitch", min: 0, max: 127 }, { name: "tonal", kind: "bool", min: 0, max: 1 }], forms: [] },
+  { name: "transpose", label: "Transpose", category: "melody adaptation", citation: "ch. III", params: [{ name: "steps", kind: "int", min: -7, max: 7 }], forms: [] },
 ];
 const groups = V.operationGroups(operations);
-check(same(groups.map((g) => g.category), ["exact", "rhythm", "intervals", "melody adaptation"]), "groups follow Schoenberg's order");
+check(same(groups.map((g) => g.category), ["exact", "rhythm", "intervals", "melody adaptation"]), "groups follow the Composer's order");
 check(groups[3].title === "Melody adaptation" && groups[0].operations[0].citation === "ch. III, Ex. 14", "titles and citations");
 
-let made = V.stepFromValues(operations[0], { ratio: "2:1" });
+let made = V.stepFromValues(operations[1], { ratio: "2:1" });
 check(same(made, { step: { op: "augment", params: { ratio: "2:1" } } }), "a ratio step");
-made = V.stepFromValues(operations[3], { axis: "", tonal: true });
+made = V.stepFromValues(operations[2], { axis: "", tonal: true });
 check(same(made, { step: { op: "invert", params: { tonal: true } } }), "an empty text leaves the parameter open");
-check(same(V.stepFromValues(operations[2], {}), { step: { op: "exact" } }), "a step without parameters");
-check(V.stepFromValues(operations[1], { steps: "9" }).error !== undefined, "a whole number outside its range is refused");
-check(V.stepFromValues(operations[1], { steps: "x" }).error !== undefined, "text for a whole number is refused");
-check(V.stepFromValues(operations[0], { ratio: "2/1" }).error !== undefined, "a bad ratio is refused");
+check(same(V.stepFromValues(operations[0], {}), { step: { op: "exact" } }), "a step without parameters");
+check(V.stepFromValues(operations[3], { steps: "9" }).error !== undefined, "a whole number outside its range is refused");
+check(V.stepFromValues(operations[3], { steps: "x" }).error !== undefined, "text for a whole number is refused");
+check(V.stepFromValues(operations[1], { ratio: "2/1" }).error !== undefined, "a bad ratio is refused");
 check(V.chainFromSteps([]) === null, "no steps gives no chain");
 
 let request = V.generateRequest("m1", { count: "4", seed: "12", steps: [{ op: "invert" }] });

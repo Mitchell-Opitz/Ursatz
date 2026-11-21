@@ -733,6 +733,19 @@ static bool add_limits(cJSON *root) {
            add_preference_limits(limits);
 }
 
+/* The members of a theme request that make its form (API 4.4): what a page copies from its form into a request body. */
+static bool add_theme_form_members(cJSON *root) {
+    static const char *const MEMBERS[] = {"into",    "hybrid",        "material", "mode",        "meter",
+                                          "bars",    "cadence",       "first_cadence", "development", "construction"};
+    cJSON *list = add_list(root, "theme_form_members");
+    for (size_t i = 0; list && i < sizeof MEMBERS / sizeof MEMBERS[0]; i++) {
+        if (!add_choice(list, MEMBERS[i], MEMBERS[i])) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 /* The values a form starts with (API 4.4): the meter, a new motif's form, notes and pickup, and a new theme's into, bars, cadence and
    development. */
 static bool add_defaults(cJSON *root) {
@@ -746,7 +759,7 @@ static bool add_defaults(cJSON *root) {
 }
 
 bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials) {
-    return add_meters(root) && add_defaults(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
+    return add_meters(root) && add_defaults(root) && add_theme_form_members(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
            add_keys(root, materials) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&

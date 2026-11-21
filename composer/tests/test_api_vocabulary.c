@@ -147,6 +147,7 @@ static void test_lists(void) {
     const cJSON *motif_defaults = cJSON_GetObjectItemCaseSensitive(form_defaults, "motif");
     const cJSON *theme_defaults = cJSON_GetObjectItemCaseSensitive(form_defaults, "theme");
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(form_defaults, "meter")->valuestring, "4/4") == 0);
+    assert(cJSON_GetArraySize(list("theme_form_members")) == 10 && strcmp(value_of(cJSON_GetArrayItem(list("theme_form_members"), 0)), "into") == 0);
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(motif_defaults, "form")->valuestring, "full") == 0);
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(motif_defaults, "notes")->valuestring, "C4:q") == 0);
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(motif_defaults, "pickup")->valuestring, "0") == 0);

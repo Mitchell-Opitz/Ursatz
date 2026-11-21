@@ -7,6 +7,7 @@
   "required": [
     "meters",
     "defaults",
+    "theme_form_members",
     "materials",
     "piece_materials",
     "keys",
@@ -99,6 +100,12 @@
       "items": {
         "$ref": "#/$defs/relation"
       }
+    },
+    "theme_form_members": {
+      "description": "The members of a theme request that make its form (Composer API 4.4).",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/choice" }
     },
     "defaults": {
       "description": "The values a form starts with (Composer API 4.4): the meter, a new motif's form, notes and pickup, a new theme's into, bars, cadence and development.",
