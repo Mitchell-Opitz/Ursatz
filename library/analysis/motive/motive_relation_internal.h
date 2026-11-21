@@ -42,5 +42,11 @@ MotiveRelationResult motive_relation_apply_harmony_substitute(const MotiveSketch
 MotiveRelationResult motive_relation_apply_passing_harmony(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
 MotiveRelationResult motive_relation_apply_counter_line(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
 MotiveRelationResult motive_relation_apply_dominant_form(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_liquidate_features(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_reduce_to_frame(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_add_non_chord_tone(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_remove_non_chord_tone(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_change_non_chord_tone(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_reharmonize_frame(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
 
 #endif
