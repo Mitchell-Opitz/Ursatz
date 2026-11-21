@@ -86,8 +86,8 @@ uncertainty.
 | ` key G major c=0.82 (m1-m16)` | `keys.regions` | The label and the measures it covers. |
 | ` tonicization F major (m9-m11)` | `tonicizations` | The key tonicized. |
 | ` modulation G major to D minor (m62-m65)` | `modulations` | |
-| ` chord D7 V7 @1 c=0.91` | `chords` | The chord symbol (root, then `m`, `7`, `maj7`, `m7`, `dim`, `dim7`, `m7b5` or `aug`; `/bass` when the bass is not the root), the Roman numeral with its figures when it has one, and the beat. A chord with no root ("no match") is left out. |
-| ` cadence PAC m12 @1 c=0.77` | `cadences` | `PAC`, `IAC`, `AC` (authentic, unspecified), `HC`, `PC`, `DC`, or the library's own name (`subverted`). The measure and beat are where the cadence arrives; the line sits in the measure where it starts (its dominant). |
+| ` chord D7 V7 @1 c=0.91` | `chords` | The chord symbol (root, then the suffix from `common_practice_chord_symbol_suffix`: `m`, `7`, `maj7`, `m7`, `dim`, `dim7`, `m7b5` or `aug`; `/bass` when the bass is not the root), the Roman numeral with its figures when it has one, and the beat. A chord with no root ("no match") is left out. |
+| ` cadence PAC m12 @1 c=0.77` | `cadences` | `PAC`, `IAC`, `AC` (authentic, unspecified), `HC`, `PC`, `DC` (the abbreviations of the library's cadence kinds, `theory/harmony/harmony_cadence_kinds.h`), or the library's own name (`subverted`). The measure and beat are where the cadence arrives; the line sits in the measure where it starts (its dominant). |
 | ` phrase 2 m9-m12 c=0.75 \| form A` | `phrases` | Numbered from 1, with the form section that holds it. |
 | ` theme hybrid m1-m15` | `themes` | The theme type and its measures. |
 | ` form A m1-m15` | `form.sections` | The section label and its measures. |
