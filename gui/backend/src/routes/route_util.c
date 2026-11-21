@@ -331,14 +331,9 @@ cJSON *ursatz_gui_request_params(struct mg_connection *conn, ...) {
   return params;
 }
 
-/* A path that points into the call itself ("/params/...", "/target", "/bytes") says what is wrong with the request's own members: a 400. A path into
- * the request the Composer reads (the body of a motif, a theme, a piece) is the member the Composer refused: a 422. */
-static int is_call_path(const char *path) {
-  return strncmp(path, "/params", 7) == 0 || strncmp(path, "/body", 5) == 0 || strncmp(path, "/target", 7) == 0 || strncmp(path, "/bytes", 6) == 0 ||
-         strncmp(path, "/base_version", 13) == 0;
-}
-
+/* A path that points into the call itself (workshop_is_call_path) says what is wrong with the request's own members: a 400. A path into the
+ * request the Composer reads (the body of a motif, a theme, a piece) is the member the Composer refused: a 422. */
 int ursatz_gui_failed(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  int http = ursatz_gui_http_status(status, is_call_path(error->path) && strcmp(error->path, "/body/size") != 0 ? NULL : error);
+  int http = ursatz_gui_http_status(status, workshop_is_call_path(error->path) && strcmp(error->path, "/body/size") != 0 ? NULL : error);
   return ursatz_gui_send_failure_at(conn, http, error->message, ursatz_status_name(status), error->path);
 }

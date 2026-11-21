@@ -22,17 +22,6 @@
  * the one table's (ursatz_gui_http_status).
  */
 
-/* Paths that name the call's own members (a 400), not a member of a request a service read (a 422). */
-static bool is_call_path(const char *path) {
-  static const char *const kCallPaths[] = {"/params", "/body", "/target", "/bytes", "/base_version", "/command", "/actor", "/name", "/query"};
-  for (size_t i = 0; i < sizeof(kCallPaths) / sizeof(kCallPaths[0]); i++) {
-    if (strncmp(path, kCallPaths[i], strlen(kCallPaths[i])) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /* Answers a refused call: the envelope with the members the failed call's reply holds (current_version). Frees the reply. */
 static int send_refusal(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error, WorkshopReply *reply) {
   cJSON *object = cJSON_CreateObject();
@@ -58,7 +47,7 @@ static int send_refusal(struct mg_connection *conn, UrsatzStatus status, const U
     return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
   /* A body past the limit is 413 (R-647), whatever member it was read as. */
-  bool call = is_call_path(error->path) && strcmp(error->path, "/body/size") != 0;
+  bool call = workshop_is_call_path(error->path) && strcmp(error->path, "/body/size") != 0;
   return ursatz_gui_send_object(conn, ursatz_gui_http_status(status, call ? NULL : error), object);
 }
 
