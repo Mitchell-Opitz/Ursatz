@@ -30,7 +30,7 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | `text/` | Ursatz Text: the tree form of any JSON object and the codecs of plans, readings, realizations and knowledge through it, above `plan` and `reading`, target `ursatz_text` | [text/README.md](../text/README.md) |
 | `<group>/tests/`, `tests/` | Tests beside the code they test; the accuracy harness, integration tests and test support in `tests/` | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
-| `cmake/`, `scripts/` | Public header staging, docs check | [Public surface](public-surface.md) |
+| `cmake/` | Public header staging, docs check | [Public surface](public-surface.md) |
 
 ## Public API
 
