@@ -15,5 +15,19 @@ MotiveRelationResult motive_relation_scale_time(const MotiveSketch *in, const Mo
 bool motive_relation_insert_notes(const MotiveSketch *in, MotiveSketch *out, size_t at, const MotiveSketchNote *added, size_t count);
 MotiveRelationResult motive_relation_prepare_harmony(MotiveSketch *work);
 void motive_relation_adapt_melody(const MotiveSketch *before, MotiveSketch *sketch);
+MotiveRelationResult motive_relation_apply_exact(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_transpose(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_invert(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_retrograde(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_interval_change(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_fragment(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_liquidate(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_augment(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_diminish(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_note_repeat(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_rhythm_repeat(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_rhythm_shift(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_add_upbeat(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
+MotiveRelationResult motive_relation_apply_change_meter(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
 
 #endif
