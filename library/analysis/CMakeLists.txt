@@ -157,7 +157,6 @@ ursatz_public_headers(ursatz_analysis
         analysis/texture/texture_analysis_features.h
         analysis/texture/texture_analysis_input.h
         analysis/texture/texture_classification_rules.h
-        theory/vocabulary/texture_rules.h
         analysis/counterpoint/analysis_grid.h
         analysis/counterpoint/analysis_melody.h
         analysis/counterpoint/analysis_melody_climax.h
