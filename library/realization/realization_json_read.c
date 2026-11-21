@@ -50,11 +50,8 @@ static bool group_refused(Reader *r, RealizationResult result, const char *path,
 }
 
 static bool read_int_member(Reader *r, const cJSON *object, const char *path, const char *key, long long min, long long max, int *out) {
-    const cJSON *item = common_json_require(&r->json, object, path, key);
-    char at[REALIZATION_JSON_PATH_MAX];
     long long value;
-    common_json_child_path(at, REALIZATION_JSON_PATH_MAX, path, key);
-    if (!item || !common_json_read_whole(&r->json, item, at, min, max, &value)) {
+    if (!common_json_require_whole(&r->json, object, path, key, min, max, &value)) {
         return false;
     }
     *out = (int)value;
