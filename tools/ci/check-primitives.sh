@@ -3,12 +3,14 @@
 # *Fraction or *Ratio, a table of the twelve pitch-class names, a scale-step table of integers, a Roman numeral table, the FNV-1a 64
 # prime, a run of pitch letters C C D (the sharp spelling table), a pitch name with an octave from MIDI (pitch_class_name followed
 # by / 12 - 1), a chord-quality interval set ({0, 4, 7}, {0, 3, 6, 10} and the like), a scan of the numeral letters i v I V, a
-# pitch class by ((x % 12) + 12) % 12, and the chord symbol suffixes "m7b5" and "maj7". Matched after stripping comments.
-# Scans common/, library/, analyzer/, composer/ and gui/backend/src (C and H files, no tests/ folder). The owners are
+# pitch class by ((x % 12) + 12) % 12, the chord symbol suffixes "m7b5" and "maj7", a file path joined by snprintf "%s/%s", a string
+# copied by malloc(strlen + 1), the byte fold of an FNV hash and a file copied by a read and an atomic write (R-691). Matched after
+# stripping comments.
+# Scans common/, library/, analyzer/, composer/, cli/, workshop/ and gui/backend/src (C and H files, no tests/ folder). The owners are
 # library/model/core/rational.{c,h}, common/hash.c (the FNV prime), library/model/pitch/, library/theory/tonality/
 # and knowledge/. A hit that stays is listed in tools/ci/primitive-allow.txt as "<path> <pattern>  # reason, phase" (patterns: gcd,
 # int128, type, pitch-names, scale-steps, numerals, fnv, pitch-letters, pitch-octave, chord-intervals, numeral-letters, pc-mod,
-# quality-suffix). Prints each other hit as
+# quality-suffix, path-join, strdup-copy, fnv-fold, file-copy). Prints each other hit as
 # "FAIL <file>:<line> <pattern>: <text>".
 set -euo pipefail
 
@@ -19,8 +21,8 @@ python3 - "$root" <<'PY'
 import os, re, sys
 
 root = sys.argv[1]
-scan = ["common", "library", "analyzer", "composer", "cli", "gui/backend/src"]
-owners = ["library/model/core/rational.c", "library/model/core/rational.h", "common/hash.c", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
+scan = ["common", "library", "analyzer", "composer", "cli", "workshop", "gui/backend/src"]
+owners = ["library/model/core/rational.c", "library/model/core/rational.h", "common/hash.c", "common/files.c", "common/files.h", "common/strings.c", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
 
 allowed = set()
 with open(os.path.join(root, "tools/ci/primitive-allow.txt"), encoding="utf-8") as handle:
@@ -43,10 +45,15 @@ CHORD_INTERVALS = re.compile(r"\{\s*0\s*,\s*(?:4\s*,\s*[78]|3\s*,\s*[67])\s*(?:,
 NUMERAL_LETTERS = re.compile(r"==\s*'i'\s*\|\|[^;]*==\s*'I'|strchr\(\"ivIV\"")
 PC_MOD = re.compile(r"\(\([^()]*%\s*12\s*\)\s*\+\s*12\s*\)\s*%\s*12")
 QUALITY_SUFFIX = re.compile(r'"m7b5"|"maj7"')
+PATH_JOIN = re.compile(r'snprintf\([^;]*"%s/%s')
+STRDUP_COPY = re.compile(r"malloc\(strlen\([^)]*\)\s*\+\s*1\)")
+FNV_FOLD = re.compile(r">>\s*\(8\s*\*\s*i\)")
+FILE_COPY = re.compile(r"common_file_read[^;]*;\s*[^;]*common_file_write_atomic", re.S)
 COMMENTS = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
 PATTERNS = [("fnv", FNV), ("gcd", GCD), ("int128", INT128), ("type", TYPE), ("pitch-names", PITCH_NAMES), ("scale-steps", SCALE_STEPS), ("numerals", NUMERALS),
             ("pitch-letters", PITCH_LETTERS), ("pitch-octave", PITCH_OCTAVE), ("chord-intervals", CHORD_INTERVALS),
-            ("numeral-letters", NUMERAL_LETTERS), ("pc-mod", PC_MOD), ("quality-suffix", QUALITY_SUFFIX)]
+            ("numeral-letters", NUMERAL_LETTERS), ("pc-mod", PC_MOD), ("quality-suffix", QUALITY_SUFFIX),
+            ("path-join", PATH_JOIN), ("strdup-copy", STRDUP_COPY), ("fnv-fold", FNV_FOLD), ("file-copy", FILE_COPY)]
 
 failed = 0
 for top in scan:

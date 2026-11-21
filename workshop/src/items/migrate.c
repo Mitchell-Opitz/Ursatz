@@ -648,13 +648,7 @@ static UrsatzStatus backup_tree(const char *from, const char *to, UrsatzError *e
         if (S_ISDIR(info.st_mode)) {
             status = backup_tree(source, target, error);
         } else if (S_ISREG(info.st_mode)) {
-            char *data = NULL;
-            size_t size = 0;
-            status = common_file_read(source, &data, &size, error);
-            if (status == URSATZ_OK) {
-                status = common_file_write_atomic(target, data, size, error);
-            }
-            free(data);
+            status = common_file_copy(source, target, error);
         }
     }
     common_names_free(&names);
