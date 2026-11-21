@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P66 B6: listening judgments (2026-11)
+
+- **Ratings.** The formats `ursatz-listening-session` and `ursatz-item-ratings`; the `ratings` commands (62 commands): `ratings.session`, `ratings.batch`, `ratings.rate`, `ratings.pick`, `ratings.rate-version` and `ratings.keep`; the queries `ratings.session`, `ratings.sessions` and `ratings.item`; the event `ratings-changed`. Keep as default sets a taste value only with the ids of the ratings and picks behind it. See [ratings](ratings.md).
+
 ## P66 B5: compose with settings (2026-11)
 
 - **Compose with settings.** A theme's request gets the resolved settings as `preferences` and the version a `settings.json` snapshot; `item.compose` takes `settings`, `overrides`, `off` and `taste`; the new `item.explore` (56 commands) moves settings from the taste by `distance` with a seed; `settings.resolve` takes `explore` and `kind`; `composer.random-motifs` resolves settings for motifs. See [settings](settings.md).

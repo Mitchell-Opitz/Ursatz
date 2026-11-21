@@ -26,9 +26,13 @@ A command that runs long answers with its job (`{"job": {"id", "kind", "state"}}
 
 ## Commands
 
-56 commands; `job.cancel` is a runtime control and writes no record, the others are journaled under their name. Each is defined once, as a schema in `workshop/commands/<family>.json` (target, base version, params with their types and limits, reply, job, example); `workshop_command` checks a command's target and params from it before the handler runs, and the generated [command reference](command-reference.md) lists every command with its params. The tool `commands` prints the reference (`sheet`, `markdown`), the grammar of the text form, every schema as JSON and the help of one command ([tools](tools.md#commands)); a command written as text is read by `ursatz apply` ([data folder](../../cli/docs/data-folder.md)).
+62 commands; `job.cancel` is a runtime control and writes no record, the others are journaled under their name. Each is defined once, as a schema in `workshop/commands/<family>.json` (target, base version, params with their types and limits, reply, job, example); `workshop_command` checks a command's target and params from it before the handler runs, and the generated [command reference](command-reference.md) lists every command with its params. The tool `commands` prints the reference (`sheet`, `markdown`), the grammar of the text form, every schema as JSON and the help of one command ([tools](tools.md#commands)); a command written as text is read by `ursatz apply` ([data folder](../../cli/docs/data-folder.md)).
 
 A check that fails is `URSATZ_ERR_REQUEST` at its path: `/target` (`<command> needs a target`, `<command> takes no target`), `/params/<name>` (`<name> is required`, `<name> must be a string`, `a whole number`, `true or false`, `one of a, b, c`, `a rational like 3/4`, `an object`, `a list`; `<name> must be from <min> to <max>`; `<name> is longer than <n> characters`; `/params/<name>/<i>` for the item of a list) and `give exactly one of <a>, <b>`. A member no schema declares passes until the GUI sends exactly the declared params; the handlers keep the checks of meaning (a note a motif needs, a thing that is not found, a conflict).
+
+### The ratings commands
+
+`ratings.session`, `ratings.batch`, `ratings.rate`, `ratings.pick`, `ratings.rate-version` and `ratings.keep` record what was listened to and keep a setting as a taste default citing the ratings behind it ([ratings](ratings.md)).
 
 ### The settings commands
 
@@ -58,6 +62,7 @@ Names are `<family>.<what>`; params go in one JSON object. `id` names the thing 
 | Journal | `journal.list` (`target`: a record's target, `limit`: 1 to 1000, default 20; the records newest first, each `{seq, id, command, actor, at, target, base_version, writes, removes}` with the final paths it wrote and removed) |
 | Projects and items | `project.list`, `project.get`, `item.list`, `item.get`, `item.version`, `item.view`, `item.export`, `item.score`, `item.playback`, `item.file`, `item.variation-file`, `item.variation-playback`, `item.op-checks`, `item.variant-tree`, `item.validate`, `item.variants`, `item.each-op` |
 | Subjects | `subject.list`, `subject.groups`, `subject.get` |
+| Ratings | `ratings.session` (`session`), `ratings.sessions`, `ratings.item` (`item_id`) ([ratings](ratings.md)) |
 | Settings | `settings.resolve` (`project_id`, `item_id`, `style_id`, `taste`, `settings`, `overrides`, `off`, `all`), `settings.scope` (`scope`), `settings.list`, `settings.keys` ([settings](settings.md)) |
 
 `item.validate` resolves the references of a body and calls `composer_api_validate`; it answers the Composer's refusal with its path (`/request/...`). `item.variants` and `item.each-op` run the Composer's variant engine on a motif body and answer the candidates without storing them (the page stores one with `item.save-variant`). `library.piece` also publishes `analysis-stale` when the piece's analysis is stale.
