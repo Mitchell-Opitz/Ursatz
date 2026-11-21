@@ -7,7 +7,7 @@
 /*
  * Duration: an exact rational magnitude over a checked Rational (lowest
  * terms, den > 0, value >= 0). A plain value: copy it, compare it with
- * duration_cmp or duration_same, never allocate it. Never represented as
+ * duration_same (or rational_cmp of the values), never allocate it. Never represented as
  * float/double (Law 19).
  *
  * A Duration is a magnitude, not a position — it is structurally similar
@@ -28,8 +28,6 @@ typedef enum {
 /* Value API. DURATION_ERR_NEGATIVE for a negative value. */
 DurationResult duration_make(long long num, long long den, Duration *out);
 DurationResult duration_of(Rational value, Duration *out);
-/* -1, 0 or 1; overflow-free. */
-int duration_cmp(Duration a, Duration b);
 bool duration_same(Duration a, Duration b);
 DurationResult duration_plus(Duration a, Duration b, Duration *out);
 

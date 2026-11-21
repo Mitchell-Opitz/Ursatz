@@ -59,7 +59,7 @@ static void check_notes(const ImportedScore *score, const Movement *movement, ch
         const PerformerNote *note = note_named(movement_part_at(movement, part), ids[i]);
         assert(note != NULL);
         assert(musical_time_cmp(note->onset, *temporal_anchor_position(note_event_temporal_anchor(score->events[i]))) == 0);
-        assert(duration_cmp(note->duration, *note_event_duration(score->events[i])) == 0);
+        assert(duration_same(note->duration, *note_event_duration(score->events[i])));
         assert(note->midi == (int)pitch_numeric_value_position_numerator(score->pitch_values[i]));
         assert(!note_derivation_present(&note->derivation) && !note->edited && !note->detached && !note->review);
     }

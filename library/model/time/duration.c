@@ -19,10 +19,6 @@ DurationResult duration_of(Rational value, Duration *out) {
     return DURATION_OK;
 }
 
-int duration_cmp(Duration a, Duration b) {
-    return rational_cmp(a.value, b.value);
-}
-
 bool duration_same(Duration a, Duration b) {
     return rational_equals(a.value, b.value);
 }

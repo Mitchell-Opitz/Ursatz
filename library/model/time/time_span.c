@@ -12,11 +12,3 @@ TimeSpanResult time_span_make(MusicalTime start, MusicalTime end, TimeSpan *out)
 bool time_span_holds(TimeSpan span) {
     return musical_time_cmp(span.end, span.start) > 0;
 }
-
-DurationResult time_span_length(TimeSpan span, Duration *out) {
-    Rational length;
-    if (rational_sub(span.end.value, span.start.value, &length) != RATIONAL_OK) {
-        return DURATION_ERR_OVERFLOW;
-    }
-    return duration_of(length, out);
-}

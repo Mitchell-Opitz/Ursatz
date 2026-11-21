@@ -61,7 +61,7 @@ static void test_equality_scale_invariant(void) {
     for (long long k = 1; k <= 20; k++) {
         Duration scaled = du(3 * k, 4 * k);
         assert(duration_same(base, scaled));
-        assert(duration_cmp(base, scaled) == 0);
+        assert(rational_cmp(base.value, scaled.value) == 0);
     }
 }
 
@@ -86,7 +86,7 @@ static void test_inequality_different_reduced_value(void) {
     Duration b = du(1, 4);
 
     assert(!duration_same(a, b));
-    assert(duration_cmp(a, b) > 0);
+    assert(rational_cmp(a.value, b.value) > 0);
 }
 
 static void test_add(void) {
