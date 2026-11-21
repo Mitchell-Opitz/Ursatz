@@ -20,6 +20,7 @@
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include <common/json.h>
+#include "model/pitch/pitch_arithmetic.h"
 
 /* ---- reading the document ---- */
 
@@ -376,10 +377,9 @@ static bool numeral_root_offset(const char *numeral, const PitchMaterial *key_ma
            standard_tonality_numeral_root_semitone_of(&parsed, key_material, materials, out);
 }
 
-/* The directed semitone step from one pitch class to another, -6 to +5. */
+/* The directed semitone step from one pitch class to another, -6 to +5 (the tritone goes down). */
 static long root_step(int from, int to) {
-    int step = ((to - from) % 12 + 12) % 12;
-    return step > 5 ? step - 12 : step;
+    return pitch_class_step(from, to, false);
 }
 
 /* ---- options and scoring ---- */

@@ -10,6 +10,7 @@
 #include "util/util.h"
 #include "structure/plan_util.h"
 #include <plan/plan_constraint.h>
+#include <model/pitch/pitch_arithmetic.h>
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
 #define MAX_KEY_PIECES 8
@@ -444,7 +445,7 @@ bool return_key_shift(const Plan *source_plan, PlanSpan source, const Plan *targ
         }
         difference = step;
     }
-    *shift = difference > 6 ? difference - 12 : difference;
+    *shift = pitch_class_step(0, difference, true);
     return true;
 }
 
@@ -466,7 +467,7 @@ bool return_mode_shift_by(const Plan *source_plan, PlanSpan source, const Plan *
         }
         difference = step;
     }
-    *shift = difference > 6 ? difference - 12 : difference;
+    *shift = pitch_class_step(0, difference, true);
     *to_material = b[0].key.material;
     return true;
 }

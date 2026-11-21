@@ -198,6 +198,22 @@ static void test_pitch_name_of_midi(void) {
     assert(!pitch_name_of_midi(60, false, NULL, 8));
 }
 
+static void test_pitch_class_step(void) {
+    assert(pitch_class_step(0, 0, true) == 0 && pitch_class_step(0, 5, true) == 5 && pitch_class_step(0, 7, true) == -5);
+    assert(pitch_class_step(0, 6, true) == 6 && pitch_class_step(0, 6, false) == -6);
+    assert(pitch_class_step(0, 11, false) == -1 && pitch_class_step(11, 0, false) == 1);
+    /* a MIDI number or a negative one steps the same as its pitch class */
+    assert(pitch_class_step(60, 67, true) == -5 && pitch_class_step(-1, 1, true) == 2 && pitch_class_step(1, 7, false) == -6);
+    for (int from = 0; from < 12; from++) {
+        for (int to = 0; to < 12; to++) {
+            int up = pitch_class_step(from, to, true);
+            int down = pitch_class_step(from, to, false);
+            assert(up >= -5 && up <= 6 && down >= -6 && down <= 5);
+            assert((up - down) % 12 == 0 && ((from + up - to) % 12 + 12) % 12 == 0);
+        }
+    }
+}
+
 static void test_pitch_class_names(void) {
     static const char *const SHARPS[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     static const char *const FLATS[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
@@ -295,6 +311,7 @@ int main(void) {
     test_pitch_class_names();
     test_pitch_class_windows();
     test_pitch_name_of_midi();
+    test_pitch_class_step();
     test_letter_from_char();
     test_step_number_and_generic_size();
     test_direction_and_same_name();

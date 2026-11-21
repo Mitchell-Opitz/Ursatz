@@ -17,6 +17,7 @@
 #include "util/util.h"
 #include "motive/motive_internal.h"
 #include <plan/plan_common.h>
+#include <model/pitch/pitch_arithmetic.h>
 
 /* The beats of a passage's places are compared as doubles; two are the same place within this. */
 #define BEAT_EPSILON 1e-6
@@ -234,8 +235,7 @@ static int transposition(int pitch, const SpelledKey *source, const SpelledKey *
     int beyond = 0;
     standard_tonality_material_degree_at_or_below_semitone(above, source->material, &degree, &beyond);
     int landed = (spelled_key_tonic_pitch_class(target) + util_scale_semitone(target->material, degree) + beyond) % 12;
-    int shift = util_pitch_class(landed - (pitch % 12));
-    return shift > 6 ? shift - 12 : shift;
+    return pitch_class_step(pitch, landed, true);
 }
 
 /* A plan time fits when its parts do: a numerator to 0x7fffffff and a denominator to 0xffffffff. */

@@ -83,6 +83,10 @@ bool pitch_spelling_name(PitchLetter letter, int accidental, char *buffer, size_
 bool pitch_spelling_parse_name(const char *text, PitchLetter *letter, int *accidental,
                                int *octave_or_null);
 
+/* The shortest signed step in semitones from one pitch class (or MIDI number) to another, -5 to +6 when tritone_up, else -6 to
+ * +5: the tritone is +6 (up) or -6 (down) as the caller chooses; every other distance is the one under six semitones. */
+int pitch_class_step(int from, int to, bool tritone_up);
+
 /* "C", "C#" or "Db" ... for 0 to 11; NULL outside that range. */
 const char *pitch_class_name(int pitch_class, bool prefer_flats);
 

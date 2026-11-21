@@ -280,6 +280,14 @@ bool pitch_spelling_parse_name(const char *text, PitchLetter *letter, int *accid
     return true;
 }
 
+int pitch_class_step(int from, int to, bool tritone_up) {
+    int step = floor_mod(to - from, PITCH_SEMITONES_PER_OCTAVE);
+    if (step == PITCH_SEMITONES_PER_OCTAVE / 2) {
+        return tritone_up ? step : -step;
+    }
+    return step > PITCH_SEMITONES_PER_OCTAVE / 2 ? step - PITCH_SEMITONES_PER_OCTAVE : step;
+}
+
 const char *pitch_class_name(int pitch_class, bool prefer_flats) {
     return pitch_class_window_name(pitch_class, prefer_flats ? -6 : -1);
 }
