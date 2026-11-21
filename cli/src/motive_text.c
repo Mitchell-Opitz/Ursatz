@@ -5,26 +5,23 @@
 #include <cJSON.h>
 #include <stdlib.h>
 #include <string.h>
+#include <common/json.h>
 
 
 /* ----------------------------------------------------------------- members */
 
-static const cJSON *member(const cJSON *object, const char *name) {
-    return cJSON_GetObjectItemCaseSensitive(object, name);
-}
-
 static long number(const cJSON *object, const char *name) {
-    const cJSON *item = member(object, name);
+    const cJSON *item = common_json_member(object, name);
     return cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
 }
 
 static const char *string(const cJSON *object, const char *name) {
-    const cJSON *item = member(object, name);
+    const cJSON *item = common_json_member(object, name);
     return cJSON_IsString(item) ? item->valuestring : "";
 }
 
 static bool flag(const cJSON *object, const char *name) {
-    return cJSON_IsTrue(member(object, name));
+    return cJSON_IsTrue(common_json_member(object, name));
 }
 
 /* ------------------------------------------------------------------- texts */
@@ -36,13 +33,13 @@ static void key_text(long tonic, const char *material, char *out, size_t size) {
     const char *spelling = NULL;
     const char *word = NULL;
     const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, member(vocabulary, "pitch_class_names")) {
+    cJSON_ArrayForEach(entry, common_json_member(vocabulary, "pitch_class_names")) {
         if (number(entry, "value") == ((tonic % 12) + 12) % 12) {
-            const cJSON *name = member(member(entry, "names"), material);
+            const cJSON *name = common_json_member(common_json_member(entry, "names"), material);
             spelling = cJSON_IsString(name) ? name->valuestring : NULL;
         }
     }
-    cJSON_ArrayForEach(entry, member(vocabulary, "materials")) {
+    cJSON_ArrayForEach(entry, common_json_member(vocabulary, "materials")) {
         if (strcmp(string(entry, "value"), material) == 0) {
             word = string(entry, "label");
         }
@@ -121,7 +118,7 @@ static const char *note_name(const PitchNames *names, size_t index) {
 /* ------------------------------------------------------------------- parts */
 
 static void print_tones(const cJSON *analysis, const PitchNames *names, FILE *out) {
-    const cJSON *tones = member(analysis, "tones");
+    const cJSON *tones = common_json_member(analysis, "tones");
     if (cJSON_GetArraySize(tones) == 0) {
         fprintf(out, "Tones: none\n");
         return;
@@ -131,7 +128,7 @@ static void print_tones(const cJSON *analysis, const PitchNames *names, FILE *ou
     size_t i = 0;
     cJSON_ArrayForEach(tone, tones) {
         const char *role = string(tone, "role");
-        const cJSON *type = member(tone, "type");
+        const cJSON *type = common_json_member(tone, "type");
         const char *name = strcmp(role, "chord") == 0 || strcmp(role, "unclassified") == 0 ? role
                            : cJSON_IsString(type)                                             ? type->valuestring
                                                                                               : role;
@@ -140,13 +137,13 @@ static void print_tones(const cJSON *analysis, const PitchNames *names, FILE *ou
     }
     fprintf(out, "\n");
     const cJSON *warning = NULL;
-    cJSON_ArrayForEach(warning, member(analysis, "warnings")) {
+    cJSON_ArrayForEach(warning, common_json_member(analysis, "warnings")) {
         fprintf(out, "Warning: %s\n", cJSON_IsString(warning) ? warning->valuestring : "");
     }
 }
 
 static void print_intervals(const cJSON *analysis, bool key_known, FILE *out) {
-    const cJSON *intervals = member(analysis, "intervals");
+    const cJSON *intervals = common_json_member(analysis, "intervals");
     if (!cJSON_IsArray(intervals)) {
         return; /* a rhythm or a contour has no intervals */
     }
@@ -158,7 +155,7 @@ static void print_intervals(const cJSON *analysis, bool key_known, FILE *out) {
     int i = 0;
     const cJSON *interval = NULL;
     cJSON_ArrayForEach(interval, intervals) {
-        if (cJSON_IsNumber(member(interval, "steps"))) {
+        if (cJSON_IsNumber(common_json_member(interval, "steps"))) {
             fprintf(out, " %+ld (%+ld steps)", number(interval, "semitones"), number(interval, "steps"));
         } else {
             fprintf(out, " %+ld", number(interval, "semitones"));
@@ -174,11 +171,11 @@ static void print_intervals(const cJSON *analysis, bool key_known, FILE *out) {
 }
 
 static void print_contour(const cJSON *analysis, FILE *out) {
-    const cJSON *contour = member(analysis, "contour");
+    const cJSON *contour = common_json_member(analysis, "contour");
     if (!cJSON_IsObject(contour)) {
         return;
     }
-    const cJSON *directions = member(contour, "directions");
+    const cJSON *directions = common_json_member(contour, "directions");
     int count = cJSON_GetArraySize(directions);
     fprintf(out, "Contour: %s", string(contour, "shape"));
     for (int i = 0; i < count; i++) {
@@ -192,7 +189,7 @@ static void print_contour(const cJSON *analysis, FILE *out) {
 }
 
 static void print_rhythm(const cJSON *analysis, const PitchNames *names, FILE *out) {
-    const cJSON *rhythm = member(analysis, "rhythm");
+    const cJSON *rhythm = common_json_member(analysis, "rhythm");
     if (!cJSON_IsArray(rhythm)) {
         return;
     }
@@ -220,37 +217,37 @@ static void print_rhythm(const cJSON *analysis, const PitchNames *names, FILE *o
 }
 
 static void print_harmony(const cJSON *analysis, FILE *out) {
-    const cJSON *scale = member(analysis, "scale_degrees");
+    const cJSON *scale = common_json_member(analysis, "scale_degrees");
     char text[64];
     char text2[64];
     if (cJSON_IsObject(scale)) {
         fprintf(out, "Scale degrees:");
         const cJSON *degree = NULL;
-        cJSON_ArrayForEach(degree, member(scale, "all")) {
+        cJSON_ArrayForEach(degree, common_json_member(scale, "all")) {
             degree_text(degree, text, sizeof(text));
             fprintf(out, " %s", text);
         }
-        degree_text(member(scale, "start"), text, sizeof(text));
-        degree_text(member(scale, "end"), text2, sizeof(text2));
+        degree_text(common_json_member(scale, "start"), text, sizeof(text));
+        degree_text(common_json_member(scale, "end"), text2, sizeof(text2));
         fprintf(out, "\n  starts on %s, ends on %s\n", text, text2);
     } else {
         fprintf(out, "Scale degrees: unknown (no key)\n");
     }
 
-    const cJSON *implied = member(analysis, "implied_harmony");
+    const cJSON *implied = common_json_member(analysis, "implied_harmony");
     if (!flag(implied, "key_known")) {
         fprintf(out, "Implied harmony: unknown (no key)\n");
         return;
     }
     fprintf(out, "Implied harmony:\n");
-    const cJSON *candidates = member(implied, "candidates");
+    const cJSON *candidates = common_json_member(implied, "candidates");
     if (cJSON_GetArraySize(candidates) == 0) {
         fprintf(out, "  no chord of the key contains any of the notes\n");
     }
     size_t i = 0;
     const cJSON *candidate = NULL;
     cJSON_ArrayForEach(candidate, candidates) {
-        const cJSON *fit = member(candidate, "fit");
+        const cJSON *fit = common_json_member(candidate, "fit");
         fprintf(out, "  %zu. %s (%s) fits %.0f%%: %ld of %ld notes are chord tones\n", ++i,
                 string(candidate, "roman_numeral"), string(candidate, "function"),
                 (cJSON_IsNumber(fit) ? fit->valuedouble : 0.0) * 100.0, number(candidate, "chord_tones"),
@@ -260,16 +257,16 @@ static void print_harmony(const cJSON *analysis, FILE *out) {
 
 bool motive_text_print(const char *response_json, FILE *out) {
     cJSON *document = response_json ? cJSON_Parse(response_json) : NULL;
-    const cJSON *motive = document ? member(document, "motive") : NULL;
-    const cJSON *analysis = document ? member(document, "analysis") : NULL;
+    const cJSON *motive = document ? common_json_member(document, "motive") : NULL;
+    const cJSON *analysis = document ? common_json_member(document, "analysis") : NULL;
     if (!cJSON_IsObject(motive) || !cJSON_IsObject(analysis)) {
         cJSON_Delete(document);
         return false;
     }
-    const cJSON *notes = member(motive, "notes");
+    const cJSON *notes = common_json_member(motive, "notes");
     char text[64];
     PitchNames names;
-    if (!gather_names(notes, member(analysis, "range"), &names)) {
+    if (!gather_names(notes, common_json_member(analysis, "range"), &names)) {
         cJSON_Delete(document);
         return false;
     }
@@ -278,12 +275,12 @@ bool motive_text_print(const char *response_json, FILE *out) {
         fprintf(out, " %s", note_name(&names, i));
     }
     fprintf(out, "\n");
-    const cJSON *meter = member(motive, "meter");
+    const cJSON *meter = common_json_member(motive, "meter");
     fprintf(out, "Meter: %ld/%ld\n", number(meter, "beats_per_bar"), number(meter, "beat_unit"));
     fprintf(out, "Form: %s\n", string(analysis, "form"));
     const char *pickup = string(analysis, "pickup");
     fprintf(out, "Pickup: %s\n", strcmp(pickup, "0") == 0 ? "none" : pickup);
-    const cJSON *key = member(analysis, "key");
+    const cJSON *key = common_json_member(analysis, "key");
     if (cJSON_IsObject(key)) {
         key_text(number(key, "tonic_pitch_class"), string(key, "material"), text, sizeof(text));
         fprintf(out, "Key: %s (%s)\n", text, string(key, "source"));
@@ -297,10 +294,10 @@ bool motive_text_print(const char *response_json, FILE *out) {
     } else {
         fprintf(out, "Length: %lld/%lld bars\n", bars_num, bars_den);
     }
-    if (cJSON_IsString(member(analysis, "harmony_text"))) {
+    if (cJSON_IsString(common_json_member(analysis, "harmony_text"))) {
         fprintf(out, "Own harmony: %s\n", string(analysis, "harmony_text"));
     }
-    const cJSON *base = member(analysis, "base_harmony");
+    const cJSON *base = common_json_member(analysis, "base_harmony");
     if (cJSON_IsObject(base)) {
         fprintf(out, "Base harmony: %s%s\n", string(base, "text"), flag(base, "given") ? " (given)" : " (proposed)");
     } else {
@@ -309,7 +306,7 @@ bool motive_text_print(const char *response_json, FILE *out) {
     print_tones(analysis, &names, out);
     const cJSON *feature = NULL;
     size_t i = 0;
-    cJSON_ArrayForEach(feature, member(motive, "features")) {
+    cJSON_ArrayForEach(feature, common_json_member(motive, "features")) {
         fprintf(out, "%s%s: notes %ld to %ld\n", i++ == 0 ? "Features:\n  " : "  ", string(feature, "label"),
                 number(feature, "first"), number(feature, "last"));
     }
@@ -319,8 +316,8 @@ bool motive_text_print(const char *response_json, FILE *out) {
     print_intervals(analysis, cJSON_IsObject(key), out);
     print_contour(analysis, out);
     print_rhythm(analysis, &names, out);
-    if (cJSON_IsObject(member(analysis, "range"))) {
-        const cJSON *range = member(analysis, "range");
+    if (cJSON_IsObject(common_json_member(analysis, "range"))) {
+        const cJSON *range = common_json_member(analysis, "range");
         fprintf(out, "Range: %s to %s (%ld semitones)\n", names.names[names.notes], names.names[names.notes + 1],
                 number(range, "semitones"));
         print_harmony(analysis, out);

@@ -1,5 +1,6 @@
 #include "variations.h"
 
+#include <stddef.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #include "cli_tools.h"
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "workflow.h"
 
 /* The most versions one command keeps (VARIATIONS_MAX). */
@@ -31,20 +33,24 @@ typedef struct {
 
 
 
+static const CliOptionRow ROWS[] = {
+    {"--write-midi", offsetof(Options, midi), true},
+    {"--write-musicxml", offsetof(Options, musicxml), true},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--count", offsetof(Options, count_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--out-dir", offsetof(Options, out_dir), false},
+    {"--format", offsetof(Options, format_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->midi = cli_switch(args, "--write-midi");
-    options->musicxml = cli_switch(args, "--write-musicxml");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->tempo_text = cli_value(args, "--tempo");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     options->target.node_text = cli_value(args, "--node");
     options->target.section_text = cli_value(args, "--section");
     options->target.lane_text = cli_value(args, "--lane");
-    options->count_text = cli_value(args, "--count");
-    options->seed_text = cli_value(args, "--seed");
-    options->out_dir = cli_value(args, "--out-dir");
-    options->format_text = cli_value(args, "--format");
     return 0;
 }
 

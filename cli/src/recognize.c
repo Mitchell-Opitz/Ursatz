@@ -1,6 +1,7 @@
 #include "recognize.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +11,9 @@
 
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "motive_input.h"
+#include <common/json.h>
 
 typedef struct {
     MotiveInput source;
@@ -25,6 +28,13 @@ typedef struct {
     bool json;
 } Options;
 
+
+static const CliOptionRow ROWS[] = {
+    {"--target-format", offsetof(Options, target_format_text), false},
+    {"--target-pickup", offsetof(Options, target_pickup_text), false},
+    {"--target-harmony", offsetof(Options, target_harmony_text), false},
+    {"--depth", offsetof(Options, depth_text), false},
+};
 
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
@@ -52,10 +62,7 @@ static int read_options(const CliArgs *args, Options *options) {
     options->source.format_text = cli_value(args, "--input-format");
     options->source.form_text = cli_value(args, "--form");
     options->source.pickup_text = cli_value(args, "--pickup");
-    options->target_format_text = cli_value(args, "--target-format");
-    options->target_pickup_text = cli_value(args, "--target-pickup");
-    options->target_harmony_text = cli_value(args, "--target-harmony");
-    options->depth_text = cli_value(args, "--depth");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     const char *print_format = cli_value(args, "--format");
     if (print_format) {
         options->json = cli_equals_ignore_case(print_format, "json");
@@ -66,21 +73,17 @@ static int read_options(const CliArgs *args, Options *options) {
     return 0;
 }
 
-static const cJSON *member(const cJSON *object, const char *name) {
-    return cJSON_GetObjectItemCaseSensitive(object, name);
-}
-
 static void print_fraction(const char *label, const cJSON *item) {
     printf("%s: %.0f/%.0f\n", label, cJSON_GetArrayItem(item, 0)->valuedouble, cJSON_GetArrayItem(item, 1)->valuedouble);
 }
 
 static void print_text(const cJSON *document) {
-    if (cJSON_IsTrue(member(document, "found"))) {
+    if (cJSON_IsTrue(common_json_member(document, "found"))) {
         printf("Chain:");
         const cJSON *step = NULL;
         const char *separator = "";
-        cJSON_ArrayForEach(step, member(member(document, "chain"), "steps")) {
-            const cJSON *op = member(step, "op");
+        cJSON_ArrayForEach(step, common_json_member(common_json_member(document, "chain"), "steps")) {
+            const cJSON *op = common_json_member(step, "op");
             printf("%s %s", separator, cJSON_IsString(op) ? op->valuestring : "");
             separator = ",";
         }
@@ -88,9 +91,9 @@ static void print_text(const cJSON *document) {
     } else {
         printf("No chain found\n");
     }
-    print_fraction("Distance", member(document, "distance_fraction"));
-    print_fraction("Remoteness", member(document, "remoteness_fraction"));
-    const cJSON *derivation = member(document, "derivation");
+    print_fraction("Distance", common_json_member(document, "distance_fraction"));
+    print_fraction("Remoteness", common_json_member(document, "remoteness_fraction"));
+    const cJSON *derivation = common_json_member(document, "derivation");
     printf("%s\n", cJSON_IsString(derivation) ? derivation->valuestring : "");
 }
 
@@ -172,7 +175,7 @@ int run_recognize(const CliArgs *args) {
         return status;
     }
     if (!options.have_target) {
-        return cli_fail(CLI_EXIT_USAGE, "recognize needs a source and a target motive\n%s", cli_usage_of("recognize"));
+        return cli_needs("recognize", "a source and a target motive", true);
     }
     if (!options.source.meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "recognize needs --meter, which both motives are read in");

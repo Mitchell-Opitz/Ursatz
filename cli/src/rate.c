@@ -8,6 +8,7 @@
 
 #include "address.h"
 #include "cli_options.h"
+#include "cli_params.h"
 #include "flags.h"
 #include "session.h"
 #include "workflow.h"
@@ -96,7 +97,7 @@ static int rate_version(const CliArgs *args, const CliAddress *address) {
 
 int run_rate(const CliArgs *args) {
     if (args->input_count == 0) {
-        return cli_fail(CLI_EXIT_USAGE, "rate needs a session id or an item address\n%s", cli_usage_of("rate"));
+        return cli_needs("rate", "a session id or an item address", true);
     }
     CliAddress address;
     if (cli_is_address(args->inputs[0])) {
@@ -118,7 +119,7 @@ int run_rate(const CliArgs *args) {
     size_t ratings = cli_repeat_count(args, "--rating");
     const char *better = cli_value(args, "--better");
     if (ratings == 0 && !better) {
-        return cli_fail(CLI_EXIT_USAGE, "rate needs a --rating <batch>=<1-5> or --better <batch>|same\n%s", cli_usage_of("rate"));
+        return cli_needs("rate", "a --rating <batch>=<1-5> or --better <batch>|same", true);
     }
     /* every --rating is read before anything is sent */
     char batches[64][16];

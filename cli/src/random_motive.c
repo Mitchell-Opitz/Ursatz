@@ -1,6 +1,7 @@
 #include "random_motive.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +11,9 @@
 
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "motive_extras.h"
+#include <common/json.h>
 
 #define RANDOM_MOTIVE_COUNT_DEFAULT 1
 
@@ -29,6 +32,17 @@ typedef struct {
 } Options;
 
 
+static const CliOptionRow ROWS[] = {
+    {"--material", offsetof(Options, material_text), false},
+    {"--meter", offsetof(Options, meter_text), false},
+    {"--key", offsetof(Options, key_text), false},
+    {"--form", offsetof(Options, form_text), false},
+    {"--strategy", offsetof(Options, strategy_text), false},
+    {"--style", offsetof(Options, style_path), false},
+    {"--count", offsetof(Options, count_text), false},
+    {"--seed", offsetof(Options, seed_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     int extras_status = motive_extras_read(&options->extras, args, true);
@@ -39,14 +53,7 @@ static int read_options(const CliArgs *args, Options *options) {
     if (added != 0) {
         return added;
     }
-    options->material_text = cli_value(args, "--material");
-    options->meter_text = cli_value(args, "--meter");
-    options->key_text = cli_value(args, "--key");
-    options->form_text = cli_value(args, "--form");
-    options->strategy_text = cli_value(args, "--strategy");
-    options->style_path = cli_value(args, "--style");
-    options->count_text = cli_value(args, "--count");
-    options->seed_text = cli_value(args, "--seed");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     const char *print_format = cli_value(args, "--format");
     if (print_format) {
         options->json = cli_equals_ignore_case(print_format, "json");
@@ -57,32 +64,28 @@ static int read_options(const CliArgs *args, Options *options) {
     return 0;
 }
 
-static const cJSON *member(const cJSON *object, const char *name) {
-    return cJSON_GetObjectItemCaseSensitive(object, name);
-}
-
 static void print_text(const cJSON *document) {
-    printf("Seed: %.0f\n", member(document, "seed")->valuedouble);
-    const cJSON *drawn = member(document, "drawn");
+    printf("Seed: %.0f\n", common_json_member(document, "seed")->valuedouble);
+    const cJSON *drawn = common_json_member(document, "drawn");
     if (drawn) {
-        const cJSON *mode = member(drawn, "material");
-        const cJSON *meter = member(drawn, "meter");
+        const cJSON *mode = common_json_member(drawn, "material");
+        const cJSON *meter = common_json_member(drawn, "meter");
         char word[64];
         printf("Drawn:%s%s%s%s\n", mode ? " mode " : "", mode ? cli_material_word(mode->valuestring, word, sizeof word) : "", meter ? (mode ? ", meter " : " meter ") : "",
                meter ? meter->valuestring : "");
     }
     size_t number = 0;
     const cJSON *item = NULL;
-    cJSON_ArrayForEach(item, member(document, "motives")) {
-        const cJSON *analysis = member(item, "analysis");
-        const cJSON *form = member(analysis, "form");
+    cJSON_ArrayForEach(item, common_json_member(document, "motives")) {
+        const cJSON *analysis = common_json_member(item, "analysis");
+        const cJSON *form = common_json_member(analysis, "form");
         const char *form_name = cJSON_IsString(form) ? form->valuestring : "full";
-        const cJSON *text = member(analysis, strcmp(form_name, "rhythm") == 0    ? "rhythm_text"
+        const cJSON *text = common_json_member(analysis, strcmp(form_name, "rhythm") == 0    ? "rhythm_text"
                                              : strcmp(form_name, "contour") == 0 ? "contour_text"
                                                                                  : "notes_text");
         number++;
         printf("\nMotive %zu: %s\n", number, cJSON_IsString(text) ? text->valuestring : "");
-        const cJSON *degrees = member(analysis, "degrees_text");
+        const cJSON *degrees = common_json_member(analysis, "degrees_text");
         if (strcmp(form_name, "full") == 0) {
             printf("  degrees: %s\n", cJSON_IsString(degrees) ? degrees->valuestring : "");
         }
@@ -118,7 +121,7 @@ int run_random_motive(const CliArgs *args) {
         return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
     if (!options.material_text || !options.meter_text) {
-        return cli_fail(CLI_EXIT_USAGE, "random-motive needs --material and --meter\n%s", cli_usage_of("random-motive"));
+        return cli_needs("random-motive", "--material and --meter", true);
     }
     cJSON *request = cJSON_CreateObject();
     if (!request || !add_members(request, &options)) {

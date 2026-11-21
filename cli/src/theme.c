@@ -1,6 +1,7 @@
 #include "theme.h"
 #include "cli_tools.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "grow_text.h"
 
 #define SCHEMA_NAME "ursatz-theme-request"
@@ -33,19 +35,23 @@ typedef struct {
 } Options;
 
 
+static const CliOptionRow ROWS[] = {
+    {"--check", offsetof(Options, check), true},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--seed", offsetof(Options, seed), false},
+    {"--suggest", offsetof(Options, suggest), false},
+    {"--out", offsetof(Options, out), false},
+    {"--layers", offsetof(Options, layers), false},
+    {"--midi", offsetof(Options, midi), false},
+    {"--musicxml", offsetof(Options, musicxml), false},
+    {"--explain", offsetof(Options, explain), false},
+    {"--format", offsetof(Options, format), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->check = cli_switch(args, "--check");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->seed = cli_value(args, "--seed");
-    options->suggest = cli_value(args, "--suggest");
-    options->out = cli_value(args, "--out");
-    options->layers = cli_value(args, "--layers");
-    options->midi = cli_value(args, "--midi");
-    options->musicxml = cli_value(args, "--musicxml");
-    options->explain = cli_value(args, "--explain");
-    options->format = cli_value(args, "--format");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     return 0;
 }
 
@@ -196,7 +202,7 @@ int run_theme(const CliArgs *args) {
         return status;
     }
     if (!options.input) {
-        return cli_fail(CLI_EXIT_USAGE, "theme needs a request file\n%s", cli_usage_of("theme"));
+        return cli_needs("theme", "a request file", true);
     }
     bool json = false;
     if (options.format) {

@@ -1,5 +1,6 @@
 #include "fill.h"
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include "cli_tools.h"
 
 #include "cli_options.h"
+#include "cli_params.h"
 #include "workflow.h"
 
 #define MAX_CANDIDATES 32
@@ -36,32 +38,36 @@ typedef struct {
 } Options;
 
 
+static const CliOptionRow ROWS[] = {
+    {"--seed", offsetof(Options, seed_text), false},
+    {"--check", offsetof(Options, check), true},
+    {"--candidates", offsetof(Options, candidates_text), false},
+    {"--style", offsetof(Options, style_path), false},
+    {"--style-weight", offsetof(Options, style_weight_text), false},
+    {"--blend", offsetof(Options, blend_path), false},
+    {"--blend-weight", offsetof(Options, blend_weight_text), false},
+    {"--blend-weights", offsetof(Options, blend_weights_text), false},
+    {"--out", offsetof(Options, out_path), false},
+    {"--layers", offsetof(Options, layers_path), false},
+    {"--midi", offsetof(Options, midi_path), false},
+    {"--musicxml", offsetof(Options, musicxml_path), false},
+    {"--tempo", offsetof(Options, tempo_text), false},
+    {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--record", offsetof(Options, record_path), false},
+    {"--explain", offsetof(Options, explain_path), false},
+    {"--format", offsetof(Options, format_text), false},
+};
+
 static int read_options(const CliArgs *args, Options *options) {
     memset(options, 0, sizeof(*options));
     options->input = args->input_count > 0 ? args->inputs[0] : NULL;
-    options->seed_text = cli_value(args, "--seed");
-    options->check = cli_switch(args, "--check");
-    options->candidates_text = cli_value(args, "--candidates");
-    options->style_path = cli_value(args, "--style");
-    options->style_weight_text = cli_value(args, "--style-weight");
-    options->blend_path = cli_value(args, "--blend");
-    options->blend_weight_text = cli_value(args, "--blend-weight");
-    options->blend_weights_text = cli_value(args, "--blend-weights");
-    options->out_path = cli_value(args, "--out");
-    options->layers_path = cli_value(args, "--layers");
-    options->midi_path = cli_value(args, "--midi");
-    options->musicxml_path = cli_value(args, "--musicxml");
-    options->tempo_text = cli_value(args, "--tempo");
-    options->plain_midi = cli_switch(args, "--plain-midi");
-    options->record_path = cli_value(args, "--record");
-    options->explain_path = cli_value(args, "--explain");
-    options->format_text = cli_value(args, "--format");
+    cli_options_read(args, ROWS, sizeof(ROWS) / sizeof(ROWS[0]), options);
     return cli_style_without_read(&options->without, args);
 }
 
 static int check_options(Options *options) {
     if (!options->input) {
-        return cli_fail(CLI_EXIT_USAGE, "fill needs a plan file\n%s", cli_usage_of("fill"));
+        return cli_needs("fill", "a plan file", true);
     }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
