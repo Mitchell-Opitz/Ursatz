@@ -1,6 +1,7 @@
 # Layer table (spec/target-architecture.md 12.2): the module of every C file, and what each module may include.
 # Checked by cmake/check_layer_table.py (test layer_table, in the fast set). Its header explains the rows.
-# A new folder of C files needs a module row; a new edge needs a uses row, and an exception gives its reason.
+# A new folder of C files needs a module row; a new edge needs a uses row, and an exception gives its reason. A uses token no include of a
+# non-test module needs fails the check: delete it.
 
 # Third party (vendored, not checked).
 module cjson     third_party/cjson     prefix cJSON.h

@@ -9,7 +9,8 @@ Rows of the table, one per line; # starts a comment and " -- " starts the reason
         C files under each path belong to <name> (the deepest listed path wins). An include starting with a prefix
         (one ending in /) or equal to it names <name>. <name>'s own includes are also looked up in each root dir.
   group <name> <module or group>...   a name for several modules, usable wherever a module is
-  uses <name> <module|group|header>...  <name> may include these; a token ending in .h allows that one header
+  uses <name> <module|group|header>...  <name> may include these; a token ending in .h allows that one header. A token no
+        include of <name>'s own files needs is an error (test modules, every path in a tests folder, and free modules are exempt)
   like <name> <module>                <name> may also include <module> and everything <module> may include
   allow <file> <module|group|header>...  one file's extra edge
   only <module|header> <path>...      only files under these paths may include this module or header
@@ -44,7 +45,7 @@ def bad_table(lineno, text):
 
 def read_table(path):
     t = {"module": {}, "prefix": [], "root": {}, "group": {}, "uses": {}, "like": {}, "allow": {}, "only": [],
-         "staged": set(), "generated": {}, "forbid": [], "free": set(), "target": {}}
+         "staged": set(), "generated": {}, "forbid": [], "free": set(), "target": {}, "uses_at": {}}
     refs = []  # (lineno, token) to check once every module and group is known
     with open(path, encoding="utf-8") as f:
         for lineno, raw in enumerate(f, 1):
@@ -76,6 +77,8 @@ def read_table(path):
                 refs += [(lineno, a) for a in args[1:] if not a.endswith(".h")]
                 if kind == "uses":
                     refs.append((lineno, args[0]))
+                    for a in args[1:]:
+                        t["uses_at"].setdefault((args[0], a), lineno)
             elif kind == "like" and len(args) == 2:
                 t["like"].setdefault(args[0], []).append(args[1])
                 refs += [(lineno, args[0]), (lineno, args[1])]
@@ -178,10 +181,15 @@ def main():
             elif n == "CMakeLists.txt" or n.endswith(".cmake"):
                 cmake_files.append(rel)
 
+    def is_test_module(name):
+        return all(p == "tests" or "tests" in p.split("/") for p in t["module"][name])
+
     def is_library_test(rel):
         return rel.startswith("library/") and ("/tests/" in rel or rel.startswith("library/tests/"))
 
     errors = []
+    used = set()  # (module, uses token) some include of the module's own files needs
+    covers = {token: expand(t, {token}) for tokens in t["uses"].values() for token in tokens}
     included_from_outside = set()  # staged headers an include from outside their target names
     includes_of = collections.defaultdict(set)  # file -> staged headers it includes
     for rel in c_files + cmake_files:
@@ -238,11 +246,17 @@ def main():
                     included_from_outside.add(header)
             if target == name:
                 continue
+            for token in t["uses"].get(name, ()):
+                if token in (inc, target_path) or target in covers[token]:
+                    used.add((name, token))
             if target not in allowed and inc not in allowed and target_path not in allowed:
                 errors.append(f'{rel}:{i}: {name} includes "{inc}" ({target}), which it does not use')
             elif (staged_headers is not None and name in staged_modules and target in library and target_path is None
                     and inc not in staged_headers and target_of.get(name) != target_of.get(target)):
                 errors.append(f'{rel}:{i}: "{inc}" is not a staged library header')
+    for (name, token), lineno in sorted(t["uses_at"].items(), key=lambda pair: pair[1]):
+        if (name, token) not in used and name not in t["free"] and not is_test_module(name):
+            errors.append(f"cmake/layer-table.txt:{lineno}: uses {name} {token}: no include of {name} needs it")
     if staged_headers is not None and t["target"]:
         reached = set()
         pending = sorted(included_from_outside)
