@@ -14,7 +14,7 @@ documents). Code that needs the whole stack lives in the analysis chain (`chain/
 | `rules/` | `RuleTable`: the names, the soft rules and the check of a rule group | kernel `rules` |
 | `knowledge/` | The knowledge snapshot: the entries of `knowledge/` embedded in the build, and the pitch material read from them | none (new, R-536) |
 | `vocabulary/` | Shared theory enums (`CadenceType`, `VoicePart`, ...) | kernel `semantics` |
-| `tonality/` | Roman numeral grammar, keys, triad and seventh rules, chord and key vocabulary (the chord-quality intervals and the chord symbol suffixes have one owner each), the common-practice materials, and regions named by relations and brightness (see Tonality below) | standard-tonality, common-practice-minimal (vocabulary) |
+| `tonality/` | Roman numeral grammar, keys, triad and seventh rules, chord and key vocabulary (the chord-quality intervals and the chord symbol suffixes have one owner each), `standard_tonality_roman_numeral_letters`, the interval size helpers and `standard_tonality_mask_step`, the common-practice materials, and regions named by relations and brightness (see Tonality below) | standard-tonality, common-practice-minimal (vocabulary) |
 | `harmony/` | Function, cadence, six-four and prolongation rules | standard-harmony |
 | `voicing/` | Range, spacing and voicing rules | standard-voicing |
 | `counterpoint/` | Species rules | standard-counterpoint |
