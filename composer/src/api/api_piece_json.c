@@ -29,6 +29,7 @@
 #include "structure/request_parse.h"
 #include "util/util.h"
 #include <ursatz_composer/piece_plan_keys.h>
+#include <common/json.h>
 
 /*
  * The piece entry (docs/api.md): the piece request composed, or its loop plan regenerated in one section, with the ending
@@ -208,14 +209,17 @@ static void length_text(double beats, int per_bar, char *out, size_t size) {
 
 /* start_text, end_text and length_text of the loop region {"start": "n/d", "end": "n/d"} (whole notes), in the request's meter. */
 bool api_piece_loop_texts(const PieceSpec *request, cJSON *loop) {
-    long start_num = 0;
-    long start_den = 0;
-    long end_num = 0;
-    long end_den = 0;
+    long long start_num = 0;
+    long long start_den = 0;
+    long long end_num = 0;
+    long long end_den = 0;
     const cJSON *start = cJSON_GetObjectItemCaseSensitive(loop, "start");
     const cJSON *end = cJSON_GetObjectItemCaseSensitive(loop, "end");
-    if (!cJSON_IsString(start) || !cJSON_IsString(end) || sscanf(start->valuestring, "%ld/%ld", &start_num, &start_den) != 2 ||
-        sscanf(end->valuestring, "%ld/%ld", &end_num, &end_den) != 2 || start_den <= 0 || end_den <= 0) {
+    /* "n/d" with a slash and nothing after it ("1/4x" is refused: R-689) */
+    if (!cJSON_IsString(start) || !cJSON_IsString(end) || strchr(start->valuestring, '/') == NULL ||
+        strchr(end->valuestring, '/') == NULL ||
+        !common_json_rational_read(start, COMMON_RATIONAL_TEXT, &start_num, &start_den) ||
+        !common_json_rational_read(end, COMMON_RATIONAL_TEXT, &end_num, &end_den)) {
         return false;
     }
     int per_bar = (int)request->request.meter.beats_per_bar;

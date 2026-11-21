@@ -127,6 +127,11 @@ static void print_line(const cJSON *notes, char (*names)[8], long long bar_num, 
         long long length_num = (long long)cli_json_number(duration, "num");
         long long length_den = (long long)cli_json_number(duration, "den");
         char length[24];
+        if (start_den <= 0 || length_den <= 0) {
+            /* a time with no denominator cannot be placed: the note is left out, its name is not reused */
+            index++;
+            continue;
+        }
         if (start_num * at_den > at_num * start_den) {
             long long gap_num = start_num * at_den - at_num * start_den;
             long long gap_den = start_den * at_den;

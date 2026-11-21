@@ -934,6 +934,13 @@ static bool reader_int_member(MotiveReader *reader, const cJSON *object, const c
 }
 
 static bool read_time(MotiveReader *reader, const cJSON *item, const char *path, long min_num, Rational *out) {
+    long long fast_num;
+    long long fast_den;
+    /* a time in range is read by the rational reader; any other value falls through to the checks that say what is wrong */
+    if (common_json_rational_read(item, COMMON_RATIONAL_OBJECT, &fast_num, &fast_den) && fast_num >= min_num &&
+        fast_num <= 1000000000L && fast_den <= 1000000000L) {
+        return rational_make(fast_num, fast_den, out) == RATIONAL_OK;
+    }
     if (!cJSON_IsObject(item)) {
         return reader_bad(reader, path, "expected an object with num and den");
     }

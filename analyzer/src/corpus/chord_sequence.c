@@ -12,6 +12,7 @@
 #include "corpus/chord_sequence_internal.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include <common/json.h>
+#include "util/misc_util.h"
 
 /* ---- the join rule ---- */
 
@@ -105,7 +106,7 @@ static void joiner_finish(Joiner *joiner, AnalyzerChord **out, size_t *count) {
 
 static bool fraction_member(const cJSON *object, const char *name, Rational *out) {
     long long n, d;
-    return common_json_rational_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d) && n >= 0 &&
+    return analyzer_fraction_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d) &&
            rational_make(n, d, out) == RATIONAL_OK;
 }
 

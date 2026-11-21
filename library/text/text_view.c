@@ -8,6 +8,7 @@
 
 #include <cJSON.h>
 
+#include <common/json.h>
 #include <common/strings.h>
 
 #include <model/core/rational.h>
@@ -72,12 +73,12 @@ static long long rat_ceil(Rat a) {
 }
 
 static bool rat_read(const cJSON *o, Rat *out) {
-    const cJSON *n = cJSON_GetObjectItemCaseSensitive(o, "num");
-    const cJSON *d = cJSON_GetObjectItemCaseSensitive(o, "den");
-    if (!cJSON_IsNumber(n) || !cJSON_IsNumber(d) || d->valuedouble <= 0) {
+    long long num;
+    long long den;
+    if (!common_json_rational_read(o, COMMON_RATIONAL_OBJECT, &num, &den)) {
         return false;
     }
-    *out = rat((long long)n->valuedouble, (long long)d->valuedouble);
+    *out = rat(num, den);
     return true;
 }
 

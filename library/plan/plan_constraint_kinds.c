@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <common/json.h>
 #include <theory/vocabulary/texture_rules.h>
 #include <theory/galant/galant_prototypes.h>
 #include "plan/plan_lanes.h"
@@ -226,6 +227,16 @@ static bool read_motive_ref_members(JsonReader *reader, const cJSON *item, const
     return true;
 }
 
+/* A time written "n/d" (the slash is required: a bare "n" is refused) with n from `least` to TIME_LIMIT and d from 1 to TIME_LIMIT. */
+static bool read_fraction_text(const cJSON *text, long least, Rational *out) {
+    long long numerator;
+    long long denominator;
+    return cJSON_IsString(text) && text->valuestring && strchr(text->valuestring, '/') != NULL &&
+           common_json_rational_read(text, COMMON_RATIONAL_TEXT, &numerator, &denominator) && numerator >= least &&
+           numerator <= TIME_LIMIT && denominator >= 1 && denominator <= TIME_LIMIT &&
+           rational_make(numerator, denominator, out) == RATIONAL_OK;
+}
+
 /* A time like "1/4" in whole notes: the numerator not below `least`. */
 static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *path, const char *name, long least,
                             Rational *out) {
@@ -235,12 +246,7 @@ static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *p
     }
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, name);
-    long numerator;
-    unsigned long denominator;
-    char rest;
-    if (!cJSON_IsString(text) || sscanf(text->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
-        denominator == 0 || numerator < least || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-        rational_make(numerator, denominator, out) != RATIONAL_OK) {
+    if (!read_fraction_text(text, least, out)) {
         return json_bad_format(reader, at, "expected a time in whole notes like \"1/4\"");
     }
     return true;
@@ -870,17 +876,12 @@ static bool write_pickup(cJSON *object, const Plan *plan, const PlanConstraint *
 
 static bool read_pickup(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     const cJSON *length = plan_json_member(reader, item, path, "length", true);
-    long numerator;
-    unsigned long denominator;
-    char rest;
     if (!length) {
         return false;
     }
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, "length");
-    if (!cJSON_IsString(length) || sscanf(length->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
-        denominator == 0 || numerator <= 0 || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-        rational_make(numerator, denominator, &out->params.pickup) != RATIONAL_OK) {
+    if (!read_fraction_text(length, 1, &out->params.pickup)) {
         return json_bad_format(reader, at, "expected a length in whole notes like \"1/4\"");
     }
     return true;

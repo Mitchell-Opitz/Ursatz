@@ -21,12 +21,13 @@
 #include "theory/tonality/roman_numeral_grammar.h"
 #include <common/json.h>
 #include "model/pitch/pitch_arithmetic.h"
+#include "util/misc_util.h"
 
 /* ---- reading the document ---- */
 
 static bool fraction_member(const cJSON *object, const char *name, unsigned long *numerator, unsigned long *denominator) {
     long long n, d;
-    if (!common_json_rational_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d) || n < 0) {
+    if (!analyzer_fraction_read(common_json_member(object, name), COMMON_RATIONAL_OBJECT, &n, &d)) {
         return false;
     }
     *numerator = (unsigned long)n;
