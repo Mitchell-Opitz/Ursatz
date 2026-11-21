@@ -23,6 +23,16 @@ export function commandResult(name, options) {
   return sendCommand(name, options);
 }
 
+/* A query (R-671): the query `name` posted with its params as JSON to POST /api/workshop/query/<name>; resolves to {ok, status, data} as fetchJsonResult
+ * does (data is the answer with its ok member). The views that read workshop state through the generic route use it. */
+export function queryResult(name, params) {
+  return fetchJsonResult(`/api/workshop/query/${encodeURIComponent(name)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params === undefined || params === null ? {} : params),
+  });
+}
+
 /* commandResult for a command that runs as a job (a compose, an import, a style build): followed to its end. */
 export function commandJobResult(name, options) {
   return runJobResult(commandRequest(name, options || {}));
