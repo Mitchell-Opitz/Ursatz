@@ -123,6 +123,7 @@ add_library(ursatz_composer_engine STATIC
     grow/grow_draw.c
     grow/grow_idea.c
     grow/grow_theme.c
+    grow/grow_generate.c
     grow/grow_layout.c
     structure/theme_shape.c
     grow/grow_develop.c

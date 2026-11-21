@@ -31,7 +31,6 @@
 #define MAX_BARLINES 4096
 /* Draws of a middle idea's development before the draw is given up. */
 #define IDEA_DRAWS 12
-#define DRAWS_PER_CANDIDATE 6
 /* Chords a phrase model has between its first and its last: up to two predominants and a dominant. */
 #define PHRASE_MODEL_SLOTS 4
 
@@ -312,43 +311,29 @@ static void free_label(const GrowFreeSpec *spec, char *label, size_t size) {
     }
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool free_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    (void)context;
+    return draw_free(plan, (const FreeRequest *)request, rng, (GrowFreeSpec *)spec);
+}
+
+static bool free_same_spec(const void *a, const void *b) {
+    return same_free((const GrowFreeSpec *)a, (const GrowFreeSpec *)b);
+}
+
+static void free_label_spec(const void *spec, char *out, size_t size) {
+    free_label((const GrowFreeSpec *)spec, out, size);
+}
+
+static const GrowSpecKind FREE_KIND = {sizeof(GrowFreeSpec), free_draw_spec, free_same_spec, free_label_spec};
+
 bool grow_free_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     FreeRequest request;
     if (!read_free(plan, target, &request)) {
         return true;
     }
-    size_t wanted = context && context->candidates > 0 ? context->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowFreeSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowFreeSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!draw_free(plan, &request, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_free(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        free_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, context, rng, &FREE_KIND, out);
 }
 
 /*

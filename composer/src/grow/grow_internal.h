@@ -577,6 +577,23 @@ NodeId grow_find_theme(const Plan *plan, bool open_only);
 
 /* How many candidates are drawn for each one asked for before the search is given up. */
 #define DRAWS_PER_CANDIDATE 6
+
+/* One kind of spec the candidate loop draws (coda, liquidation, free phrase, theme): its size, the draw of one spec from the request
+   (the context is NULL or the shared one), whether two specs are the same, and the label of one. */
+typedef struct {
+    size_t size;
+    bool (*draw)(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec);
+    bool (*same)(const void *a, const void *b);
+    void (*label)(const void *spec, char *out, size_t size);
+} GrowSpecKind;
+
+/*
+ * The candidate loop of every grow generator: up to context->candidates (GROW_DEFAULT_CANDIDATES when none, at most 16) distinct
+ * specs, each added to out with its label and freed with it. A draw that fails and a repeat both count against the
+ * DRAWS_PER_CANDIDATE draws each candidate gets; one draw call per iteration. False on a failed allocation.
+ */
+bool grow_generate_specs(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, const GrowSpecKind *kind,
+                         FillCandidateList *out);
 /* The most gaps Given material leaves in one idea or one subphrase for one lane. */
 #define GROW_MAX_GAPS 16
 

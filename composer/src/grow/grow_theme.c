@@ -104,6 +104,21 @@ static bool starts_in_home_key(const Plan *plan, const GrowThemeRequest *request
            composer_key_is_minor(home) == composer_key_is_minor(&request->key);
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool theme_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    return grow_draw_spec(plan, (const GrowThemeRequest *)request, context, rng, (GrowThemeSpec *)spec);
+}
+
+static bool theme_same_spec(const void *a, const void *b) {
+    return grow_same_spec((const GrowThemeSpec *)a, (const GrowThemeSpec *)b);
+}
+
+static void theme_label_spec(const void *spec, char *out, size_t size) {
+    grow_spec_label((const GrowThemeSpec *)spec, out, size);
+}
+
+static const GrowSpecKind THEME_KIND = {sizeof(GrowThemeSpec), theme_draw_spec, theme_same_spec, theme_label_spec};
+
 bool grow_read_request(const Plan *plan, FillTarget target, GrowThemeRequest *out) {
     GrowThemeRequest request;
     memset(&request, 0, sizeof(request));
@@ -263,37 +278,7 @@ static bool grow_generate(const Plan *plan, FillTarget target, FillRng *rng, voi
         /* A transition liquidates its continuation (R-504); on the request copy only, so the context stays (R-405). */
         request.continuation.liquidate = true;
     }
-    size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowThemeSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowThemeSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!grow_draw_spec(plan, &request, shared, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || grow_same_spec(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        grow_spec_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, shared, rng, &THEME_KIND, out);
 }
 
 FillResult grow_register(FillOperatorRegistry *registry, const GrowContext *context) {

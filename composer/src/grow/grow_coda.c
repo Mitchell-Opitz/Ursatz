@@ -30,7 +30,6 @@
 /* The pitches a form may use, as in grow_liquidate.c. */
 #define FORM_LOW 58
 #define FORM_HIGH 84
-#define DRAWS_PER_CANDIDATE 6
 #define BARS 8
 #define PHRASES 3
 #define IDEAS 7
@@ -280,43 +279,29 @@ static void coda_label(const GrowCodaSpec *spec, char *label, size_t size) {
     snprintf(label, size, "coda %zu dropped", spec->drop);
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool coda_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    (void)context;
+    return draw_coda(plan, (const CodaRequest *)request, rng, (GrowCodaSpec *)spec);
+}
+
+static bool coda_same_spec(const void *a, const void *b) {
+    return same_coda((const GrowCodaSpec *)a, (const GrowCodaSpec *)b);
+}
+
+static void coda_label_spec(const void *spec, char *out, size_t size) {
+    coda_label((const GrowCodaSpec *)spec, out, size);
+}
+
+static const GrowSpecKind CODA_KIND = {sizeof(GrowCodaSpec), coda_draw_spec, coda_same_spec, coda_label_spec};
+
 bool grow_coda_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     CodaRequest request;
     if (!read_coda(plan, target, &request)) {
         return true;
     }
-    size_t wanted = context && context->candidates > 0 ? context->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowCodaSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowCodaSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!draw_coda(plan, &request, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_coda(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        coda_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, context, rng, &CODA_KIND, out);
 }
 
 /*

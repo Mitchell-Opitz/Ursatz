@@ -33,7 +33,6 @@
 /* The pitches a form may use, as in grow_free.c. */
 #define FORM_LOW 58
 #define FORM_HIGH 84
-#define DRAWS_PER_CANDIDATE 6
 #define IDEAS 5
 /* The motive bars the ideas take in the material: the liquidation's repetition, liquidation, scale line and broken chord (4);
    the retransition's two residues, scale line, broken chord and head (5). */
@@ -408,43 +407,29 @@ static void liquidate_label(const GrowLiquidateSpec *spec, char *label, size_t s
              spec->down ? "down" : "up");
 }
 
+/* The kind of spec the candidate loop draws (grow_generate_specs). */
+static bool liquidate_draw_spec(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, void *spec) {
+    (void)context;
+    return draw_liquidate(plan, (const LiquidateRequest *)request, rng, (GrowLiquidateSpec *)spec);
+}
+
+static bool liquidate_same_spec(const void *a, const void *b) {
+    return same_liquidate((const GrowLiquidateSpec *)a, (const GrowLiquidateSpec *)b);
+}
+
+static void liquidate_label_spec(const void *spec, char *out, size_t size) {
+    liquidate_label((const GrowLiquidateSpec *)spec, out, size);
+}
+
+static const GrowSpecKind LIQUIDATE_KIND = {sizeof(GrowLiquidateSpec), liquidate_draw_spec, liquidate_same_spec, liquidate_label_spec};
+
 bool grow_liquidate_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                              FillCandidateList *out) {
     LiquidateRequest request;
     if (!read_liquidate(plan, target, &request)) {
         return true;
     }
-    size_t wanted = context && context->candidates > 0 ? context->candidates : GROW_DEFAULT_CANDIDATES;
-    GrowLiquidateSpec *kept[16];
-    size_t kept_count = 0;
-    if (wanted > 16) {
-        wanted = 16;
-    }
-    for (size_t draw = 0; kept_count < wanted && draw < wanted * DRAWS_PER_CANDIDATE; draw++) {
-        GrowLiquidateSpec *spec = malloc(sizeof(*spec));
-        if (!spec) {
-            return false;
-        }
-        bool repeat = false;
-        if (!draw_liquidate(plan, &request, rng, spec)) {
-            free(spec);
-            continue;
-        }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_liquidate(kept[i], spec);
-        }
-        if (repeat) {
-            free(spec);
-            continue;
-        }
-        char label[FILL_LABEL_MAX];
-        liquidate_label(spec, label, sizeof(label));
-        if (!fill_candidates_add(out, label, spec, free)) {
-            return false;
-        }
-        kept[kept_count++] = spec;
-    }
-    return true;
+    return grow_generate_specs(plan, &request, context, rng, &LIQUIDATE_KIND, out);
 }
 
 /*
