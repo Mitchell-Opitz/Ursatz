@@ -9,6 +9,7 @@
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "analysis/harmony/applied_chords.h"
+#include "model/pitch/midi_pitch.h"
 #include "model/time/time_span.h"
 #include "analysis/form/analysis_phrase_grid.h"
 #include "analysis/form/analysis_repeats.h"
@@ -1069,7 +1070,7 @@ const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *
 static unsigned segment_pitch_classes(const CommonPracticeSegment *segment) {
     unsigned mask = 0;
     for (size_t i = 0; i < segment->member_count; i++) {
-        mask |= 1u << (((segment->members[i].pitch % 12) + 12) % 12);
+        mask |= 1u << pitch_class_of_midi((int)segment->members[i].pitch);
     }
     return mask;
 }
@@ -1100,7 +1101,7 @@ AnalysisChainStatus analysis_chain_chord_reading(const AnalysisChain *chain, siz
         sonority.pitch_classes = common_practice_ranked_chord_mask(&result->best, has_numeral ? input->tonic_pitch_class : 0);
         root = result->best.root_pitch_class;
         if (sonority.bass_pitch_class < 0 && segment->has_bass) {
-            sonority.bass_pitch_class = ((segment->bass_pitch % 12) + 12) % 12;
+            sonority.bass_pitch_class = pitch_class_of_midi((int)segment->bass_pitch);
         }
     }
     if (!chord_reading_of_sonority(chain->config.knowledge, sonority, root, out)) {
