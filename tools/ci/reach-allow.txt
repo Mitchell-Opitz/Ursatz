@@ -16,9 +16,6 @@ library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map 
 library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
 library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
-library/plan/section_json.c section_json_member_count  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
-library/plan/section_json.c section_json_member_name  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
-library/plan/section_json.c section_json_member_uses  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P65 (note flags are set by a command on a text form of the realization, which the codec reads and writes but no app edits); its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it

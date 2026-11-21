@@ -26,9 +26,4 @@ bool section_from_json(const cJSON *object, SectionUse use, const char *const *s
 /* The object of a description for one use: its members in table order, only those set and allowed for the use. NULL when out of memory. */
 cJSON *section_to_json(const SectionDescription *description, SectionUse use);
 
-/* The table: its row count, a row's member name, and the SectionUse bits of the uses that hold it. */
-size_t section_json_member_count(void);
-const char *section_json_member_name(size_t index);
-unsigned section_json_member_uses(size_t index);
-
 #endif

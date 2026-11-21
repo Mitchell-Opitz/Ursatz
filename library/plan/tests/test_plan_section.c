@@ -3,6 +3,7 @@
 
 #include "plan/section.h"
 #include "plan/section_json.h"
+#include "section_json_test_access.h"
 #include "ursatz_test.h"
 
 /*
