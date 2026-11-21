@@ -131,3 +131,87 @@ WORKSHOP_HANDLER(workshop_c_ratings_rate_version) {
     free(id);
     return ok ? URSATZ_OK : workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
+
+/* ratings.keep: a taste profile's value, with the ratings and picks that say why (R-674). */
+WORKSHOP_HANDLER(workshop_c_ratings_keep) {
+    const char *taste = NULL;
+    const char *key = NULL;
+    if (!workshop_param_require_string(call->params, "taste", &taste, error) || !workshop_param_require_string(call->params, "key", &key, error)) {
+        return URSATZ_ERR_REQUEST;
+    }
+    const cJSON *ratings = cJSON_GetObjectItemCaseSensitive(call->params, "ratings");
+    if (!cJSON_IsArray(ratings) || cJSON_GetArraySize(ratings) < 1) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/ratings", "keep as default cites the ratings behind it");
+    }
+    int index = 0;
+    const cJSON *cited;
+    cJSON_ArrayForEach(cited, ratings) {
+        char path[64];
+        snprintf(path, sizeof path, "/params/ratings/%d", index++);
+        if (!cJSON_IsString(cited) || !workshop_ratings_id_recorded(cited->valuestring)) {
+            return workshop_call_fail(error, URSATZ_ERR_REQUEST, path, "%s is not a recorded rating or pick", cJSON_IsString(cited) ? cited->valuestring : "(not an id)");
+        }
+    }
+    if (!workshop_layout_id_ok(taste)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/taste", "a taste profile's name is 1 to 64 letters, digits, hyphens and underscores");
+    }
+    if (!workshop_settings_key_find(key)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/key", "unknown setting '%s'", key);
+    }
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(call->params, "value");
+    bool drop = !value || cJSON_IsNull(value);
+    if (!drop) {
+        UrsatzStatus checked = workshop_settings_check_value(key, value, "/params/value", false, error);
+        if (checked != URSATZ_OK) {
+            return checked;
+        }
+    }
+    char scope[96];
+    snprintf(scope, sizeof scope, "taste:%s", taste);
+    cJSON *file = NULL;
+    UrsatzError failure = {{0}, {0}};
+    UrsatzStatus status = workshop_scope_read(scope, &file, &failure);
+    if (status != URSATZ_OK) {
+        return failed(error, status, &failure);
+    }
+    cJSON *values = cJSON_GetObjectItemCaseSensitive(file, "values");
+    if (!cJSON_IsObject(values)) {
+        cJSON_DeleteItemFromObjectCaseSensitive(file, "values");
+        values = cJSON_AddObjectToObject(file, "values");
+    }
+    cJSON *copy = drop ? NULL : cJSON_Duplicate(value, true);
+    if (!values || (!drop && !copy)) {
+        cJSON_Delete(copy);
+        cJSON_Delete(file);
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    if (drop) {
+        cJSON_DeleteItemFromObjectCaseSensitive(values, key);
+    } else if (cJSON_GetObjectItemCaseSensitive(values, key)) {
+        cJSON_ReplaceItemInObjectCaseSensitive(values, key, copy);
+    } else {
+        cJSON_AddItemToObject(values, key, copy);
+    }
+    status = workshop_settings_keep_record(file, key, drop ? NULL : value, ratings, optional_text(call->params, "note"), call->actor, error);
+    if (status != URSATZ_OK) {
+        cJSON_Delete(file);
+        return status;
+    }
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "ratings.keep", call->actor, "", 0);
+    if (!txn) {
+        cJSON_Delete(file);
+        return workshop_call_fail(error, URSATZ_ERR_IO, "", "the journal cannot be read");
+    }
+    status = workshop_scope_stage(txn, scope, file, &failure);
+    if (status != URSATZ_OK) {
+        workshop_txn_abort(txn);
+        cJSON_Delete(file);
+        return failed(error, status, &failure);
+    }
+    status = workshop_txn_commit(txn, &failure);
+    if (status != URSATZ_OK) {
+        cJSON_Delete(file);
+        return workshop_call_fail(error, status, failure.path, "%s", failure.message[0] ? failure.message : "the taste profile cannot be saved");
+    }
+    return workshop_reply_tree(reply, file, error);
+}

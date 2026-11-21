@@ -170,6 +170,7 @@ WORKSHOP_HANDLER(workshop_c_ratings_batch);
 WORKSHOP_HANDLER(workshop_c_ratings_rate);
 WORKSHOP_HANDLER(workshop_c_ratings_pick);
 WORKSHOP_HANDLER(workshop_c_ratings_rate_version);
+WORKSHOP_HANDLER(workshop_c_ratings_keep);
 
 /* settings commands (api_commands_settings.c) */
 WORKSHOP_HANDLER(workshop_c_settings_set);

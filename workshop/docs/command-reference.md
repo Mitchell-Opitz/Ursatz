@@ -88,6 +88,19 @@ Projects: the folders that hold items.
 | `project.update` | `project:<id>` | `[name string] [description string]` | Rename a project or change its description |
 | `project.delete` | `project:<id>` | none | Delete a project |
 
+## Ratings
+
+Ratings: listening sessions with batches, ratings and picks, ratings of item versions, and keep as default.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `ratings.session` | none | `what motifs\|themes [taste string] [style string] [note string]` | Open a listening session |
+| `ratings.batch` | none | `session string round int batch string samples list` | Record a batch of samples in a session |
+| `ratings.rate` | none | `session string round int batch string seed int rating int [note string]` | Rate a sample of a batch from 1 to 5 |
+| `ratings.pick` | none | `session string round int seed int better string [note string]` | Say which batch of a round sounded better |
+| `ratings.rate-version` | `item:<id>` | `version int rating int [note string]` | Rate a version of an item from 1 to 5 |
+| `ratings.keep` | none | `taste string key string ratings list [value value] [note string]` | Keep a setting as the default of a taste profile, citing the ratings behind it |
+
 ## Section
 
 Sections: add, remove, move, resize and set the sections of a piece version's request.

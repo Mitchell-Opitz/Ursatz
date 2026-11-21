@@ -232,6 +232,52 @@
       "reply": "The id of the rating.",
       "job": null,
       "example": "ratings.rate-version item:thm-1@v2 version 2 rating 5"
+    },
+    {
+      "name": "ratings.keep",
+      "summary": "Keep a setting as the default of a taste profile, citing the ratings behind it",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "taste",
+          "type": "string",
+          "required": true,
+          "help": "The taste profile."
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "required": true,
+          "help": "The setting's dotted key."
+        },
+        {
+          "name": "value",
+          "type": "value",
+          "required": false,
+          "help": "The value; absent or null drops the key."
+        },
+        {
+          "name": "ratings",
+          "type": "array",
+          "required": true,
+          "help": "The ids of the ratings and picks that say why, at least one.",
+          "items": "string"
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The taste profile's content after the change.",
+      "job": null,
+      "example": "ratings.keep taste none key motif.features.dotted value 1 ratings [pck-1] note \"B won\""
     }
   ]
 }

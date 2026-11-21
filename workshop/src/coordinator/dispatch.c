@@ -141,6 +141,7 @@ static const CommandEntry kCommands[] = {
     {"ratings.rate", workshop_c_ratings_rate},
     {"ratings.pick", workshop_c_ratings_pick},
     {"ratings.rate-version", workshop_c_ratings_rate_version},
+    {"ratings.keep", workshop_c_ratings_keep},
     {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };
 
