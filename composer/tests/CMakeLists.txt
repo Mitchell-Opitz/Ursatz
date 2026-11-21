@@ -110,12 +110,14 @@ ursatz_test(test_develop_cli LIBS ursatz_composer_engine composer_test_support
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_develop_cli ursatz)
 
-ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support)
+ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support LABELS slow)
+ursatz_test(test_melody_fill_smoke TARGET test_melody_fill ARGS smoke)
 
 ursatz_test(test_preferences LIBS ursatz_composer_engine cjson composer_test_support)
 
 ursatz_test(test_melody_preferences LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_melody_preferences_smoke TARGET test_melody_preferences ARGS smoke)
 
 ursatz_test(test_motif_variety LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
@@ -123,7 +125,8 @@ ursatz_test(test_melody_overrides LIBS ursatz_composer_engine composer_test_supp
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_motif_preferences LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_motif_preferences_smoke TARGET test_motif_preferences ARGS smoke)
 
 ursatz_test(test_form_hear LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

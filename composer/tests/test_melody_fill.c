@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -17,6 +18,10 @@
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+
+/* With "smoke" (the fast set) the three seed loops of test_chord_tones_only, the relaxed pairs and test_tone_roles stop after seed 2. */
+static bool smoke;
+#define LAST_SEED(full) (smoke ? 2UL : (unsigned long)(full))
 
 /*
  * The melody operator, run through the fill loop after the harmony and bass operators, with the motive Given or
@@ -545,7 +550,8 @@ static void test_sweep(void) {
     MelodyFillParams params = melody_fill_params_default();
     int total = 0;
     int written = 0;
-    for (int m = 0; m < 4; m++) {
+    /* The smoke sweeps 4/4 alone (the sweep is 14 s of the 15 s). */
+    for (int m = smoke ? 2 : 0; m < (smoke ? 3 : 4); m++) {
         for (int mode = 0; mode < 2; mode++) {
             for (int t = 0; t < 3; t++) {
                 for (int b = 0; b < 2; b++) {
@@ -572,7 +578,7 @@ static void test_chord_tones_only(void) {
     MelodyFillParams params = melody_fill_params_default();
     int written = 0;
     params.nct_types = 0;
-    for (unsigned long seed = 0; seed < 12; seed++) {
+    for (unsigned long seed = 0; seed <= LAST_SEED(11); seed++) {
         Scenario scenario = {4, 4, HARMONY_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         written += check_scenario(&scenario, false, &params);
     }
@@ -732,7 +738,7 @@ static void test_ideas_in_order(void) {
     int relaxed_pairs = 0;
     for (int m = 0; m < 3; m++) {
         for (int mode = 0; mode < 2; mode++) {
-            for (unsigned long seed = 1; seed <= 12; seed++) {
+            for (unsigned long seed = 1; seed <= LAST_SEED(12); seed++) {
                 IdeaFixture fixture = build_ideas(meters[m][0], meters[m][1], mode ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR,
                                                   mode ? 9 : 0);
                 Fixture harmony_only;
@@ -815,8 +821,8 @@ static void test_ideas_in_order(void) {
         }
     }
     /* Most phrases are written, the first idea is not made to end on the tonic, and the loop did offer the second early. */
-    assert(completed >= 18);
-    assert(relaxed_pairs * 4 <= completed);
+    assert(smoke || (completed >= 18));
+    assert(smoke || (relaxed_pairs * 4 <= completed));
     assert(first_ends_off_tonic > 0);
     assert(stuck_second_first > 0);
 }
@@ -930,7 +936,7 @@ static void test_tone_roles(void) {
     static const bool CHORD_NOTE[6] = {true, false, true, true, false, true};
     int kept[2][2] = {{0, 0}, {0, 0}}; /* [idea][passing, neighbor] kept as non-chord tones */
     int completed = 0;
-    for (unsigned long seed = 1; seed <= 24; seed++) {
+    for (unsigned long seed = 1; seed <= LAST_SEED(24); seed++) {
         ToneScene scene = build_tone_scene(true);
         Fixture fixture;
         FillRecord *record = NULL;
@@ -967,7 +973,7 @@ static void test_tone_roles(void) {
         fill_record_destroy(record);
         plan_destroy(scene.plan);
     }
-    assert(completed >= 12);
+    assert(smoke || (completed >= 12));
     /* Over the chord the motive was written for both figures are kept. Over IV a clash stays only as a figure the framework
        labels (each note was held to chord tone or a resolving step above); the motive's D, E and G are not figures there, so
        they move to chord tones (R-328, R-335). */
@@ -988,7 +994,8 @@ static void test_tone_roles(void) {
     plan_destroy(plain.plan);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     test_ideas_in_order();
     test_sweep();
     test_chord_tones_only();
