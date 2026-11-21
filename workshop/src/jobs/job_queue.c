@@ -22,6 +22,7 @@
 typedef struct Job {
   char id[WORKSHOP_JOB_ID_BYTES];
   char kind[WORKSHOP_JOB_KIND_BYTES];
+  char subject[64]; /* what the job is about: a link run's id; "" for none */
   WorkshopJobState state;
   char stage[WORKSHOP_JOB_STAGE_BYTES];
   unsigned done;
@@ -384,6 +385,11 @@ void workshop_jobs_stop(void) {
 
 bool workshop_job_submit(const char *kind, WorkshopJobFn run, void *input, void (*free_input)(void *),
                            char id_out[WORKSHOP_JOB_ID_BYTES]) {
+  return workshop_job_submit_subject(kind, NULL, run, input, free_input, id_out);
+}
+
+bool workshop_job_submit_subject(const char *kind, const char *subject, WorkshopJobFn run, void *input, void (*free_input)(void *),
+                                 char id_out[WORKSHOP_JOB_ID_BYTES]) {
   Job *job = calloc(1, sizeof(*job));
   if (!job) {
     if (input && free_input) {
@@ -396,6 +402,7 @@ bool workshop_job_submit(const char *kind, WorkshopJobFn run, void *input, void 
   job->input = input;
   job->free_input = free_input;
   snprintf(job->kind, sizeof(job->kind), "%s", kind ? kind : "");
+  snprintf(job->subject, sizeof(job->subject), "%s", subject ? subject : "");
   job->composer_job.progress = on_progress;
   job->composer_job.cancelled = on_cancelled;
   job->composer_job.user = job;
@@ -470,6 +477,33 @@ bool workshop_job_cancel(const char *id) {
   }
   pthread_mutex_unlock(&g_lock);
   return true;
+}
+
+bool workshop_job_find(const char *subject, char *job_id, size_t size) {
+  bool found = false;
+  if (subject && subject[0] != '\0') {
+    pthread_mutex_lock(&g_lock);
+    for (Job *job = g_head; job && !found; job = job->next) {
+      if ((job->state == WORKSHOP_JOB_QUEUED || job->state == WORKSHOP_JOB_RUNNING) && strcmp(job->subject, subject) == 0) {
+        snprintf(job_id, size, "%s", job->id);
+        found = true;
+      }
+    }
+    pthread_mutex_unlock(&g_lock);
+  }
+  return found;
+}
+
+void workshop_job_wait(const char *job_id) {
+  pthread_mutex_lock(&g_lock);
+  for (;;) {
+    Job *job = find_locked(job_id);
+    if (!job || (job->state != WORKSHOP_JOB_QUEUED && job->state != WORKSHOP_JOB_RUNNING)) {
+      break;
+    }
+    pthread_cond_wait(&g_wake, &g_lock);
+  }
+  pthread_mutex_unlock(&g_lock);
 }
 
 void workshop_job_info_destroy(WorkshopJobInfo *info) {
