@@ -99,47 +99,13 @@ static bool read_coda(const Plan *plan, FillTarget target, CodaRequest *out) {
     if (!plan_section_function_of(plan, target.id, &function) || function.function != SECTION_FUNCTION_CODA) {
         return false;
     }
-    theme->section = target.id;
-    theme->span = plan_node_span(plan, target.id);
-    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
-    if (cadence) {
-        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
-    }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
-            theme->has_accompaniment = true;
-            theme->accompaniment = constraint->params.accompaniment;
-        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
-            theme->has_voicing = true;
-            theme->voicing = constraint->params.voicing;
-        }
-    }
-    LaneSpanId lane[2];
-    if (!cadence || theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC ||
-        plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
-        return false;
-    }
-    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
-    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
-    /* One key over all eight bars: the coda is at home. */
-    if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
-        return false;
-    }
-    plan_meter_bar_length(&theme->meter, &theme->bar);
-    theme->source = grow_find_source(plan);
-    if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
-        theme->bar.num == 0) {
+    Rational meter_start;
+    if (!grow_read_section_target(plan, target, theme, &meter_start) || theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC ||
+        theme->has_start_change || theme->has_end_change) {
         return false;
     }
     /* Eight whole bars from a barline. */
-    Rational eight;
-    Rational offset;
-    Rational bars_in;
-    if (rational_mul_int(theme->bar, BARS, &eight) != RATIONAL_OK || rational_cmp(theme->span.length, eight) != 0 ||
-        rational_sub(theme->span.start, meter_start, &offset) != RATIONAL_OK ||
-        rational_div(offset, theme->bar, &bars_in) != RATIONAL_OK || bars_in.den != 1) {
+    if (!grow_whole_bars(theme, meter_start, BARS)) {
         return false;
     }
     /* m0 (when it is made yet; the draw reads it again): two notes or more, at most a bar, in range. */

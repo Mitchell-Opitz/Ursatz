@@ -7,6 +7,7 @@
 #include <theory/harmony/harmony_cadence_rules.h>
 #include <theory/vocabulary/texture_rules.h>
 
+#include <plan/plan_constraint.h>
 #include <plan/plan_lanes.h>
 #include <plan/plan_state.h>
 #include <theory/tonality/roman_numeral_rules.h>
@@ -948,4 +949,45 @@ NodeId grow_find_theme(const Plan *plan, bool open_only) {
         }
     }
     return PLAN_NODE_NONE;
+}
+
+bool grow_read_section_target(const Plan *plan, FillTarget target, GrowThemeRequest *theme, Rational *meter_start) {
+    theme->section = target.id;
+    theme->span = plan_node_span(plan, target.id);
+    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
+    if (cadence) {
+        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
+    }
+    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
+        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
+            theme->has_accompaniment = true;
+            theme->accompaniment = constraint->params.accompaniment;
+        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
+            theme->has_voicing = true;
+            theme->voicing = constraint->params.voicing;
+        }
+    }
+    LaneSpanId lane[2];
+    if (!cadence || plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
+        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
+        return false;
+    }
+    *meter_start = plan_lane_span_span(plan, lane[0]).start;
+    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
+    if (!grow_read_keys(plan, theme)) {
+        return false;
+    }
+    plan_meter_bar_length(&theme->meter, &theme->bar);
+    theme->source = grow_find_source(plan);
+    return theme->source != PLAN_NODE_NONE && grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) && theme->bar.num != 0;
+}
+
+bool grow_whole_bars(const GrowThemeRequest *theme, Rational meter_start, size_t bars) {
+    Rational whole;
+    Rational offset;
+    Rational bars_in;
+    return rational_mul_int(theme->bar, (long long)bars, &whole) == RATIONAL_OK && rational_cmp(theme->span.length, whole) == 0 &&
+           rational_sub(theme->span.start, meter_start, &offset) == RATIONAL_OK &&
+           rational_div(offset, theme->bar, &bars_in) == RATIONAL_OK && bars_in.den == 1;
 }

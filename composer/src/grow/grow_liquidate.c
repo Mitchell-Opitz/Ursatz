@@ -86,47 +86,14 @@ static bool read_liquidate(const Plan *plan, FillTarget target, LiquidateRequest
     if (!liquidation && !request.retransition) {
         return false;
     }
-    theme->section = target.id;
-    theme->span = plan_node_span(plan, target.id);
-    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
-    if (cadence) {
-        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
-    }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
-            theme->has_accompaniment = true;
-            theme->accompaniment = constraint->params.accompaniment;
-        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
-            theme->has_voicing = true;
-            theme->voicing = constraint->params.voicing;
-        }
-    }
-    LaneSpanId lane[2];
-    if (!cadence || theme->cadence != CADENCE_TYPE_HALF ||
-        plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
-        return false;
-    }
-    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
-    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
+    Rational meter_start;
     /* A retransition opens home from any region: the key before it is the region's (R-505). */
-    if (!grow_read_keys(plan, theme) || (theme->has_start_change && !request.retransition) || theme->has_end_change) {
-        return false;
-    }
-    plan_meter_bar_length(&theme->meter, &theme->bar);
-    theme->source = grow_find_source(plan);
-    if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
-        theme->bar.num == 0) {
+    if (!grow_read_section_target(plan, target, theme, &meter_start) || theme->cadence != CADENCE_TYPE_HALF ||
+        (theme->has_start_change && !request.retransition) || theme->has_end_change) {
         return false;
     }
     /* Whole bars from a barline: the section starts on one of the meter span's barlines and is 4 bars. */
-    Rational four;
-    Rational offset;
-    Rational bars_in;
-    if (rational_mul_int(theme->bar, 4, &four) != RATIONAL_OK || rational_cmp(theme->span.length, four) != 0 ||
-        rational_sub(theme->span.start, meter_start, &offset) != RATIONAL_OK ||
-        rational_div(offset, theme->bar, &bars_in) != RATIONAL_OK || bars_in.den != 1) {
+    if (!grow_whole_bars(theme, meter_start, 4)) {
         return false;
     }
     /* The ideas: 1, 1, 1, 1/2 and 1/2 bars from the start. */

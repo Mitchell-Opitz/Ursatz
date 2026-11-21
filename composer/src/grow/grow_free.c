@@ -133,38 +133,11 @@ static bool read_free(const Plan *plan, FillTarget target, FreeRequest *out) {
         plan_section_or_empty(plan, target.id)->leads_in) {
         return false;
     }
-    theme->section = target.id;
-    theme->span = plan_node_span(plan, target.id);
-    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
-    if (cadence) {
-        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
-    }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
-            theme->has_accompaniment = true;
-            theme->accompaniment = constraint->params.accompaniment;
-        } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
-            theme->has_voicing = true;
-            theme->voicing = constraint->params.voicing;
-        }
-    }
-    LaneSpanId lane[2];
-    if (!cadence ||
-        (theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_HALF) ||
-        plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
-        !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
-        return false;
-    }
-    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
-    theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
-    if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
-        return false;
-    }
-    plan_meter_bar_length(&theme->meter, &theme->bar);
-    theme->source = grow_find_source(plan);
-    if (theme->source == PLAN_NODE_NONE || !grow_cells_per_bar(&theme->meter, &theme->cells_per_bar) ||
-        theme->bar.num == 0 || !lay_ideas(theme, meter_start, &request)) {
+    Rational meter_start;
+    if (!grow_read_section_target(plan, target, theme, &meter_start) ||
+        (theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+         theme->cadence != CADENCE_TYPE_HALF) ||
+        theme->has_start_change || theme->has_end_change || !lay_ideas(theme, meter_start, &request)) {
         return false;
     }
     /* The chords: a phrase model if the section has room for one, else the cadential progression alone. */

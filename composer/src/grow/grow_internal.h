@@ -595,6 +595,17 @@ typedef struct {
 bool grow_generate_specs(const Plan *plan, const void *request, const GrowContext *context, FillRng *rng, const GrowSpecKind *kind,
                          FillCandidateList *out);
 
+/*
+ * What a coda, a liquidation and a free phrase read the same way of their target section (each keeps its own guard, role, cadence and key
+ * checks): the section and its span, the cadence if it has one, the accompaniment and voicing constraints, the one meter lane that holds
+ * the span (*meter_start is its start), the keys (grow_read_keys), the bar, the source motive and the cells per bar. False when the section
+ * has no cadence, no single meter lane over it, or no source; the caller judges the cadence's type and the key changes.
+ */
+bool grow_read_section_target(const Plan *plan, FillTarget target, GrowThemeRequest *theme, Rational *meter_start);
+
+/* Whether the span of theme is `bars` whole bars that start on a barline of the meter lane that starts at meter_start. */
+bool grow_whole_bars(const GrowThemeRequest *theme, Rational meter_start, size_t bars);
+
 /* How many notes a liquidation drops of a motive of count notes: one draw, 1 to half of them (at least 1), fewer than all. */
 size_t grow_draw_drop(FillRng *rng, size_t count);
 
