@@ -206,18 +206,17 @@ ursatz_test(test_grow_accompaniment TARGET test_grow_accompaniment LABELS slow)
 # Seed 1 alone, with every check of one theme (B11 of P56).
 ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS smoke)
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
-# in docs/accompaniment.md): the test asserts that it does, so it fails, and the failure is expected. Not tuned away, not
-# skipped.
-ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard PROPERTIES WILL_FAIL TRUE)
+# in docs/accompaniment.md): the test holds the share to the baseline in its source and prints the target (R-698).
+ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard)
 
 ursatz_test(test_voicing LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test_executable(test_voicing_heard LIBS ursatz_composer_engine composer_test_support)
 ursatz_test(test_voicing_heard_chorale TARGET test_voicing_heard ARGS chorale)
-# The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md):
-# the voicing test asserts that it is, so it fails, and the failure is expected. Not tuned away, not skipped. The chorale
-# test heard all 30 themes clean once the shaping preferences (P16 B4) changed the chords chosen, so it passes.
-ursatz_test(test_voicing_heard_voicing TARGET test_voicing_heard ARGS voicing PROPERTIES WILL_FAIL TRUE)
+# The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md): the
+# voicing test holds the counts to the baseline in its source and prints the target (R-698). The chorale test heard all 30
+# themes clean once the shaping preferences (P16 B4) changed the chords chosen, and keeps its rule.
+ursatz_test(test_voicing_heard_voicing TARGET test_voicing_heard ARGS voicing)
 
 ursatz_test_executable(test_counterpoint LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 foreach(species 1 2 3 4)
