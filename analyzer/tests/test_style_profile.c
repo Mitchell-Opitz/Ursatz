@@ -15,6 +15,7 @@
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "style_model_file_io.h"
 
 /* The document version as text, for the literals of a test that writes a document by hand: the constant is the only place the number is written. */
 #define DOCUMENT_VERSION_TEXT_(x) #x
@@ -57,9 +58,9 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
 static StyleModel *model_of(StyleProfile *profile, const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s.style.json", work_dir, name);
-    CHECKF(style_model_file_write(profile, name, URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
+    CHECKF(test_style_model_write(profile, name, URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
     StyleModel *model = NULL;
-    CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK, "cannot read %s", path);
+    CHECKF(test_style_model_read(path, &model, NULL) == STYLE_MODEL_FILE_OK, "cannot read %s", path);
     return model;
 }
 
@@ -140,7 +141,7 @@ static char *masked_model(const char *path) {
 static void test_reference_snapshot(StyleProfile *reference) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
-    CHECKF(style_model_file_write(reference, "reference", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
+    CHECKF(test_style_model_write(reference, "reference", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
 
     char *masked = masked_model(path);
     char snapshot_path[1024];
@@ -166,7 +167,7 @@ static void test_round_trip(StyleProfile *reference) {
 
     StyleModel *model = NULL;
     size_t pieces = 0;
-    CHECKF(style_model_file_read(first, &model, &pieces) == STYLE_MODEL_FILE_OK && model, "cannot read the reference model");
+    CHECKF(test_style_model_read(first, &model, &pieces) == STYLE_MODEL_FILE_OK && model, "cannot read the reference model");
     CHECKF(pieces == 5, "model counts %zu pieces", pieces);
     if (!model) {
         return;
@@ -186,13 +187,13 @@ static void test_round_trip(StyleProfile *reference) {
     style_statistics_free(from_model, model_count);
 
     /* The same profile written again gives the same bytes, and reading a file twice gives the same name. */
-    CHECKF(style_model_file_write(reference, "reference", URSATZ_ANALYZER_VERSION, second) == STYLE_MODEL_FILE_OK, "cannot write again");
+    CHECKF(test_style_model_write(reference, "reference", URSATZ_ANALYZER_VERSION, second) == STYLE_MODEL_FILE_OK, "cannot write again");
     char *a = test_read_file(first, NULL), *b = test_read_file(second, NULL);
     CHECKF(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
     free(a);
     free(b);
     StyleModel *again = NULL;
-    CHECKF(style_model_file_read(first, &again, NULL) == STYLE_MODEL_FILE_OK, "second read");
+    CHECKF(test_style_model_read(first, &again, NULL) == STYLE_MODEL_FILE_OK, "second read");
     if (again) {
         CHECKF(strcmp(style_model_style_name(again), style_model_style_name(model)) == 0, "the same file gave two names");
         style_model_destroy(again);
@@ -381,9 +382,9 @@ static void test_read_without(StyleProfile *reference) {
     snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
     const char *motive[] = {"motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
     StyleModel *all = NULL, *without = NULL, *none = NULL;
-    CHECKF(style_model_file_read(path, &all, NULL) == STYLE_MODEL_FILE_OK, "read all");
-    CHECKF(style_model_file_read_without(path, motive, 4, &without, NULL) == STYLE_MODEL_FILE_OK && without, "read without");
-    CHECKF(style_model_file_read_without(path, NULL, 0, &none, NULL) == STYLE_MODEL_FILE_OK && none, "read without none");
+    CHECKF(test_style_model_read(path, &all, NULL) == STYLE_MODEL_FILE_OK, "read all");
+    CHECKF(test_style_model_read_without(path, motive, 4, &without, NULL) == STYLE_MODEL_FILE_OK && without, "read without");
+    CHECKF(test_style_model_read_without(path, NULL, 0, &none, NULL) == STYLE_MODEL_FILE_OK && none, "read without none");
     StyleStatistic *all_statistics = NULL, *kept = NULL, *same = NULL;
     size_t all_count = 0, kept_count = 0, same_count = 0;
     if (all && without && none && style_model_statistics(all, &all_statistics, &all_count) == STYLE_MODEL_FILE_OK &&
@@ -418,9 +419,9 @@ static void test_read_without(StyleProfile *reference) {
 
     StyleModel *unknown = NULL;
     const char *bad[] = {"no-such-category"};
-    CHECKF(style_model_file_read_without(path, bad, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT && unknown == NULL,
+    CHECKF(test_style_model_read_without(path, bad, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT && unknown == NULL,
            "an unknown category is refused");
-    CHECKF(style_model_file_read_without(path, NULL, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no list");
+    CHECKF(test_style_model_read_without(path, NULL, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no list");
     (void)reference;
 }
 
@@ -468,18 +469,18 @@ static void test_refusals(void) {
     for (size_t i = 0; i < sizeof(refused) / sizeof(refused[0]); i++) {
         StyleModel *model = NULL;
         CHECKF(test_write_file(path, refused[i], strlen(refused[i])), "cannot write %s", path);
-        CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && model == NULL, "refused file %zu was read", i);
+        CHECKF(test_style_model_read(path, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && model == NULL, "refused file %zu was read", i);
         style_model_destroy(model);
     }
     StyleModel *model = NULL;
-    CHECKF(style_model_file_read("/nonexistent.style.json", &model, NULL) == STYLE_MODEL_FILE_ERR_IO, "a missing file is an I/O error");
+    CHECKF(test_style_model_read("/nonexistent.style.json", &model, NULL) == STYLE_MODEL_FILE_ERR_IO, "a missing file is an I/O error");
 
     /* A profile with nothing in it still writes and reads. */
     StyleProfile *empty = style_profile_create();
-    CHECKF(style_model_file_write(empty, "empty", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "empty write");
-    CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK && model, "empty read");
+    CHECKF(test_style_model_write(empty, "empty", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "empty write");
+    CHECKF(test_style_model_read(path, &model, NULL) == STYLE_MODEL_FILE_OK && model, "empty read");
     style_model_destroy(model);
-    CHECKF(style_model_file_write(empty, "", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
+    CHECKF(test_style_model_write(empty, "", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
     style_profile_destroy(empty);
 }
 

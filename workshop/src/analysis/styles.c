@@ -33,6 +33,7 @@
 #include "items/collections.h"
 #include "items/ids.h"
 #include "items/library_metadata.h"
+#include "analysis/style_model_io.h"
 
 static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
 static const char *kStylesDir = WORKSHOP_DIR_STYLES;
@@ -750,7 +751,7 @@ static bool write_style_files(const char *dir, const char *id, const char *name,
     if (!text) {
         return false;
     }
-    bool ok = style_model_file_write(collected->profile, name, analyzer_version(), tmp_path) == STYLE_MODEL_FILE_OK &&
+    bool ok = workshop_style_model_write(collected->profile, name, analyzer_version(), tmp_path) == STYLE_MODEL_FILE_OK &&
               replace_file(tmp_path, model_path) && (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
     free(text);
     if (!ok) {
@@ -912,7 +913,7 @@ UrsatzStatus workshop_style_build_file(const WorkshopStyleSource *source, const 
         return result;
     }
 
-    if (style_model_file_write(collected.profile, final_name, analyzer_version(), tmp_path) != STYLE_MODEL_FILE_OK ||
+    if (workshop_style_model_write(collected.profile, final_name, analyzer_version(), tmp_path) != STYLE_MODEL_FILE_OK ||
         !replace_file(tmp_path, path)) {
         remove(tmp_path);
         result = workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
@@ -1296,7 +1297,7 @@ static int compare_categories(const void *left, const void *right) {
 static UrsatzStatus statistics_json(const char *model_path, cJSON **out) {
     *out = NULL;
     StyleModel *model = NULL;
-    if (style_model_file_read(model_path, &model, NULL) != STYLE_MODEL_FILE_OK) {
+    if (workshop_style_model_read(model_path, &model, NULL) != STYLE_MODEL_FILE_OK) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }
     StyleStatistic *statistics = NULL;

@@ -9,8 +9,8 @@
 
 /*
  * The StyleModel file (schema/style-model.v1.schema.json): a style's statistics with its name, the training corpus, the
- * version of what produced it and the piece count. Reading and writing are the library's (R-617); the Analyzer writes the
- * file from a profile it filled and the Composer reads it through style_model_file_read_without.
+ * version of what produced it and the piece count. Parsing and printing are the library's (R-617, R-691); the workshop writes the
+ * file from a profile the Analyzer filled and the Composer reads it through style_model_file_parse.
  */
 
 #define STYLE_MODEL_FILE_SCHEMA "ursatz-style-model"
@@ -25,28 +25,24 @@ typedef enum {
 } StyleModelFileResult;
 
 /*
- * Reads a style model file into a StyleModel (style_model_from_statistics) the caller destroys with
- * style_model_destroy. Its id is "style-model-" and the 16 hex digits of the FNV-1a 64 hash of the file's bytes, so
- * the same file always gives the same id. pieces may be NULL.
+ * Reads the text of a style model file into a StyleModel (style_model_from_statistics) the caller destroys with
+ * style_model_destroy. Its id is "style-model-" and the 16 hex digits of the FNV-1a 64 hash of the text's bytes (strlen of them),
+ * so the same file always gives the same id. pieces may be NULL. The named categories are dropped before the model is built, so
+ * it holds no statistics of them (pass none with count 0); an unknown category name, a NULL text or out is
+ * STYLE_MODEL_FILE_ERR_ARGUMENT. The Composer reads styles without the motive categories until it uses them as preferences.
+ * The library holds no file IO (R-691): the program reads the file (common_file_read) and passes its text.
  */
-StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, size_t *pieces);
-
-/*
- * style_model_file_read without the named categories: they are dropped before the model is built, so it holds no
- * statistics of them. An unknown category name is STYLE_MODEL_FILE_ERR_ARGUMENT. style_model_file_read is this with none.
- * The Composer reads styles without the motive categories until it uses them as preferences.
- */
-StyleModelFileResult style_model_file_read_without(const char *path, const char *const *categories, size_t count,
-                                                   StyleModel **out, size_t *pieces);
+StyleModelFileResult style_model_file_parse(const char *text, const char *const *categories, size_t count, StyleModel **out,
+                                            size_t *pieces);
 
 /* The statistics a model holds (style_features_decode); free with style_statistics_free. */
 StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatistic **out, size_t *count);
 
 /*
- * Writes the profile as a style model file named name, produced by model_version (what the Analyzer, or any other producer,
- * calls its version). The same profile always gives the same bytes.
+ * The text of the profile as a style model file named name, produced by model_version (what the Analyzer, or any other producer,
+ * calls its version): the print of the JSON and a newline, malloc'd in *out for the caller to write (common_file_write_atomic).
+ * The same profile always gives the same bytes.
  */
-StyleModelFileResult style_model_file_write(const StyleProfile *profile, const char *name, const char *model_version,
-                                            const char *path);
+StyleModelFileResult style_model_file_text(const StyleProfile *profile, const char *name, const char *model_version, char **out);
 
 #endif

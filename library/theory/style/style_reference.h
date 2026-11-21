@@ -22,7 +22,7 @@ typedef enum {
 
 /*
  * Prepares model for distances. without names the categories left out (the list the model was read without,
- * style_model_file_read_without); they appear nowhere in a distance. model_version is the version the reference's own
+ * style_model_file_parse); they appear nowhere in a distance. model_version is the version the reference's own
  * models carry (what produced the statistics). STYLE_REFERENCE_ERR_ARGUMENT for a NULL model or out, an unknown category
  * name, or count > 0 with NULL without. *out is NULL on failure. The reference copies what it needs: model need not outlive it.
  */

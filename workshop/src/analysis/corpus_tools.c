@@ -10,6 +10,7 @@
 
 #include "base/knowledge.h"
 #include <common/files.h>
+#include "analysis/style_model_io.h"
 
 typedef struct {
     cJSON *pieces;
@@ -102,7 +103,7 @@ UrsatzStatus workshop_style_profile(const char *dir, const char *name, const cha
     if (added != STYLE_PROFILE_OK) {
         status = ursatz_error_set(error, added == STYLE_PROFILE_ERR_ALLOC ? URSATZ_ERR_ALLOC : URSATZ_ERR_IO, "/params/dir",
                                   "cannot read the corpus in '%s'", dir);
-    } else if (style_model_file_write(profile, name, analyzer_version(), target) != STYLE_MODEL_FILE_OK) {
+    } else if (workshop_style_model_write(profile, name, analyzer_version(), target) != STYLE_MODEL_FILE_OK) {
         status = ursatz_error_set(error, URSATZ_ERR_IO, "/params/out", "cannot write '%s'", target);
     } else {
         cJSON *answer = cJSON_CreateObject();

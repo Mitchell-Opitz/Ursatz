@@ -8,6 +8,7 @@
 #include <theory/style/style_reference.h>
 
 #include <ursatz_composer/composer.h>
+#include <common/files.h>
 
 typedef struct {
     char *label;
@@ -177,7 +178,11 @@ ComposerStyleResult composer_style_load_without(const char *path, const char *co
     if (!style) {
         return COMPOSER_STYLE_ERR_ALLOC;
     }
-    StyleModelFileResult read = style_model_file_read_without(path, categories, count, &style->model, &style->pieces);
+    char *text = NULL;
+    StyleModelFileResult read = common_file_read(path, &text, NULL, NULL) == URSATZ_OK && text
+                                    ? style_model_file_parse(text, categories, count, &style->model, &style->pieces)
+                                    : STYLE_MODEL_FILE_ERR_IO;
+    free(text);
     if (read != STYLE_MODEL_FILE_OK) {
         free(style);
         switch (read) {

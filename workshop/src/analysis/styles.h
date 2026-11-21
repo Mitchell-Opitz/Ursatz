@@ -17,7 +17,7 @@
  * Analyzer's style profile (R-106).
  *
  * A style is a directory styles/<id>/ holding:
- *   style-model.json   written by style_model_file_write; the Composer reads it with --style
+ *   style-model.json   written by workshop_style_model_write; the Composer reads it with --style
  *   meta.json          {"id", "name", "created_at", "updated_at",
  *                       "source": {"kind": "filter" | "collection" | "pieces" | "brief",
  *                                  "filter": {"composer", "source", "tag"} | null,
@@ -129,7 +129,7 @@ UrsatzStatus workshop_style_list(cJSON **out_styles);
 /*
  * One style with its statistics: the stored meta.json tree (id, name, created_at, updated_at, source, pieces, skipped, piece_count) plus
  * "statistics": {dimension: {category: {"labels": [{"label", "count", "total"}], "more": n}}} (the labels by count, at most 12 a
- * category; style_model_file_read, then style_model_statistics). NOT_FOUND if absent; INTERNAL if the model file cannot be read.
+ * category; workshop_style_model_read, then style_model_statistics). NOT_FOUND if absent; INTERNAL if the model file cannot be read.
  */
 UrsatzStatus workshop_style_get(const char *id, cJSON **out_style);
 
