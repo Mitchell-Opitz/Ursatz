@@ -81,6 +81,32 @@ static cJSON *convert(const char *type, const cJSON *param, const cJSON *unit, c
     if (strcmp(type, "enum") == 0) {
         return cJSON_IsString(unit) ? cJSON_CreateString(unit->valuestring) : NULL;
     }
+    if (strcmp(type, "value") == 0) {
+        /* A setting's value (R-676): the unit as it is, a rational unit as its n/d text, a list of those; null stands for no value. */
+        if (cJSON_IsNull(unit)) {
+            return cJSON_CreateNull();
+        }
+        if (is_rational_unit(unit)) {
+            char *text = text_scalar_print(unit);
+            cJSON *out = text ? cJSON_CreateString(text) : NULL;
+            free(text);
+            return out;
+        }
+        if (cJSON_IsArray(unit)) {
+            cJSON *list = cJSON_CreateArray();
+            const cJSON *item;
+            cJSON_ArrayForEach(item, unit) {
+                cJSON *converted = cJSON_IsArray(item) || cJSON_IsBool(item) || cJSON_IsNull(item) ? NULL : convert("value", param, item, NULL);
+                if (!converted) {
+                    cJSON_Delete(list);
+                    return NULL;
+                }
+                cJSON_AddItemToArray(list, converted);
+            }
+            return list;
+        }
+        return cJSON_IsNumber(unit) || cJSON_IsBool(unit) || cJSON_IsString(unit) ? cJSON_Duplicate(unit, true) : NULL;
+    }
     if (strcmp(type, "object") == 0) {
         const cJSON *word;
         cJSON_ArrayForEach(word, cJSON_GetObjectItemCaseSensitive(param, "words")) {
@@ -114,6 +140,7 @@ static const char *type_words(const char *type, const cJSON *param) {
            : strcmp(type, "integer") == 0  ? "a whole number"
            : strcmp(type, "boolean") == 0  ? "true or false"
            : strcmp(type, "rational") == 0 ? "a rational like 3/4"
+           : strcmp(type, "value") == 0    ? "a number, true or false, a word, n/d or a list"
            : strcmp(type, "object") == 0   ? (cJSON_GetObjectItemCaseSensitive(param, "words") ? "an object (write its members below the command) or one of its words"
                                                                                                  : "an object (write its members below the command)")
            : strcmp(type, "array") == 0    ? "a list like [a b]"

@@ -136,6 +136,9 @@ static const char *type_words(const cJSON *param, char *buffer, size_t size) {
     if (strcmp(type, "rational") == 0) {
         return "a rational like 3/4";
     }
+    if (strcmp(type, "value") == 0) {
+        return "a number, true or false, a word, n/d or a list";
+    }
     if (strcmp(type, "object") == 0) {
         const cJSON *words = cJSON_GetObjectItemCaseSensitive(param, "words");
         if (cJSON_IsArray(words) && cJSON_GetArraySize(words) > 0) {
@@ -198,7 +201,30 @@ static bool is_rational(const cJSON *value) {
     return digits > 0 && *p == '\0' && denominator > 0;
 }
 
+/* A setting's value (R-676): a number, a boolean, a string (a ratio is the string n/d), or a list of numbers and strings. */
+static bool is_setting_value(const cJSON *value, bool inside_list) {
+    if (cJSON_IsNumber(value) || cJSON_IsString(value)) {
+        return true;
+    }
+    if (cJSON_IsBool(value)) {
+        return !inside_list;
+    }
+    if (cJSON_IsArray(value) && !inside_list) {
+        const cJSON *item;
+        cJSON_ArrayForEach(item, value) {
+            if (!is_setting_value(item, true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 static bool type_holds(const char *type, const cJSON *param, const cJSON *value) {
+    if (strcmp(type, "value") == 0) {
+        return is_setting_value(value, false);
+    }
     if (strcmp(type, "string") == 0) {
         return cJSON_IsString(value);
     }
