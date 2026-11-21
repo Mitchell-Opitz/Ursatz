@@ -36,7 +36,8 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 | `item.delete` | `item:<id>@v<n>` | `[force bool]` | Delete an item and its variants |
 | `item.save` | `item:<id>@v<n>` | `body object [note string]` | Save the next version of an item |
 | `item.reanalyze` | `item:<id>@v<n>` | none | Analyze a motif again and save the result as a version |
-| `item.compose` | `item:<id>@v<n>` | `[seed int] [update_uses bool]` | Compose a theme or piece into a new version |
+| `item.compose` | `item:<id>@v<n>` | `[seed int] [update_uses bool] [settings object] [overrides list] [off list] [taste string]` | Compose a theme or piece into a new version |
+| `item.explore` | `item:<id>@v<n>` | `[distance int] [seed int] [settings object] [overrides list] [off list] [taste string]` | Compose a theme with some settings moved away from the taste |
 | `item.regenerate` | `item:<id>@v<n>` | `version int section_id string [lane string] [seed int]` | Write one section of a composed piece again as the next version |
 | `item.variations` | `item:<id>` | `version int section_id string lane string count int [seed int]` | Make variations of a section of a composed piece |
 | `item.choose` | `item:<id>@v<n>` | `version int set int index int` | Make one variation of a set the next version |

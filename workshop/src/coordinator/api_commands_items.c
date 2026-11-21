@@ -361,6 +361,12 @@ WORKSHOP_HANDLER(workshop_c_item_compose) {
     return compose_or_explore(call, reply, error, false);
 }
 
+/* Composes a theme as item.compose does, with settings moved away from the resolved ones (R-673): params distance? (1 to 8), seed? (the compose seed
+ * seeds the moves) and the settings params. The reply is the job. */
+WORKSHOP_HANDLER(workshop_c_item_explore) {
+    return compose_or_explore(call, reply, error, true);
+}
+
 /* The version number params names: a whole number from 1 to 1000000. */
 static bool read_version(const cJSON *params, const char *name, int *out, UrsatzError *error) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(params, name);

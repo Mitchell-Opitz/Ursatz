@@ -101,6 +101,7 @@ static const CommandEntry kCommands[] = {
     {"item.save", workshop_c_item_save},
     {"item.reanalyze", workshop_c_item_reanalyze},
     {"item.compose", workshop_c_item_compose},
+    {"item.explore", workshop_c_item_explore},
     {"item.regenerate", workshop_c_item_regenerate},
     {"item.variations", workshop_c_item_variations},
     {"item.choose", workshop_c_item_choose},

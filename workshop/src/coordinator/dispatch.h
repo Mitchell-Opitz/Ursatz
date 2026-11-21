@@ -207,6 +207,7 @@ WORKSHOP_HANDLER(workshop_c_item_delete);
 WORKSHOP_HANDLER(workshop_c_item_save);
 WORKSHOP_HANDLER(workshop_c_item_reanalyze);
 WORKSHOP_HANDLER(workshop_c_item_compose);
+WORKSHOP_HANDLER(workshop_c_item_explore);
 WORKSHOP_HANDLER(workshop_c_item_regenerate);
 WORKSHOP_HANDLER(workshop_c_item_variations);
 WORKSHOP_HANDLER(workshop_c_item_choose);
