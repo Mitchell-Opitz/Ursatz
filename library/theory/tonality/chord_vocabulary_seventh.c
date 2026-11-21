@@ -6,13 +6,17 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "theory/tonality/seventh_rules.h"
 
 static const char *const SEVENTH_LABELS[COMMON_PRACTICE_SEVENTH_COUNT] = {
     "dominant7", "major7", "minor7", "half-diminished7", "diminished7",
 };
 
-static const int SEVENTH_INTERVALS[COMMON_PRACTICE_SEVENTH_COUNT][4] = {
-    {0, 4, 7, 10}, {0, 4, 7, 11}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9},
+/* The quality of each seventh; its intervals are the owner's (seventh_rules.h). */
+static const StandardTonalitySeventhQuality SEVENTH_QUALITIES[COMMON_PRACTICE_SEVENTH_COUNT] = {
+    STANDARD_TONALITY_SEVENTH_MAJOR_MINOR,    STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR,
+    STANDARD_TONALITY_SEVENTH_MINOR_MINOR,    STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED,
+    STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED,
 };
 
 static bool valid_seventh(CommonPracticeSeventh seventh) {
@@ -23,10 +27,7 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
     if (!valid_seventh(seventh) || out == NULL) {
         return false;
     }
-    for (int i = 0; i < 4; i++) {
-        out[i] = SEVENTH_INTERVALS[seventh][i];
-    }
-    return true;
+    return standard_tonality_seventh_quality_semitones(SEVENTH_QUALITIES[seventh], out);
 }
 
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh) {

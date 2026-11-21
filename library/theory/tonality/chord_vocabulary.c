@@ -6,15 +6,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "theory/tonality/triad_rules.h"
 
 /* vii\xC2\xB0 (diminished) carries the real degree symbol. */
 static const char *const TRIAD_LABELS[COMMON_PRACTICE_TRIAD_COUNT] = {
     "I", "ii", "iii", "IV", "V", "vi", "vii\xC2\xB0", "augmented", "major", "minor", "diminished",
 };
 
-static const int TRIAD_INTERVALS[COMMON_PRACTICE_TRIAD_COUNT][3] = {
-    {0, 4, 7}, {0, 3, 7}, {0, 3, 7}, {0, 4, 7}, {0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8},
-    {0, 4, 7}, {0, 3, 7}, {0, 3, 6},
+/* The quality of each triad; its intervals are the owner's (triad_rules.h). */
+static const StandardTonalityTriadQuality TRIAD_QUALITIES[COMMON_PRACTICE_TRIAD_COUNT] = {
+    STANDARD_TONALITY_TRIAD_MAJOR,      STANDARD_TONALITY_TRIAD_MINOR,  STANDARD_TONALITY_TRIAD_MINOR,
+    STANDARD_TONALITY_TRIAD_MAJOR,      STANDARD_TONALITY_TRIAD_MAJOR,  STANDARD_TONALITY_TRIAD_MINOR,
+    STANDARD_TONALITY_TRIAD_DIMINISHED, STANDARD_TONALITY_TRIAD_AUGMENTED, STANDARD_TONALITY_TRIAD_MAJOR,
+    STANDARD_TONALITY_TRIAD_MINOR,      STANDARD_TONALITY_TRIAD_DIMINISHED,
 };
 
 static bool valid_triad(CommonPracticeTriad triad) {
@@ -25,10 +29,7 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
     if (!valid_triad(triad) || out == NULL) {
         return false;
     }
-    for (int i = 0; i < 3; i++) {
-        out[i] = TRIAD_INTERVALS[triad][i];
-    }
-    return true;
+    return standard_tonality_triad_quality_semitones(TRIAD_QUALITIES[triad], out);
 }
 
 bool common_practice_triad_candidate(CommonPracticeTriad triad, unsigned long confidence_numerator,
