@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   if (workshop_announce(workshop, workshop_port(workshop)) != URSATZ_OK) {
     fprintf(stderr, "ursatz-gui-backend: cannot write the port into the lock file\n");
   }
-  printf("ursatz-gui-backend listening on http://localhost:%s\n", port);
+  printf("ursatz-gui-backend listening on http://127.0.0.1:%s\n", port);
   fflush(stdout);
 
   while (keep_running) {

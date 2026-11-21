@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <cJSON.h>
 
 #include "support/server_support.h"
@@ -53,6 +57,22 @@ static bool last_record_is(const char *command, const char *actor) {
   cJSON_Delete(record);
   free(journal);
   return same;
+}
+
+/* Whether a TCP connection to host:PORT is accepted. */
+static bool connects_to(const char *host) {
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    return false;
+  }
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof addr);
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons((unsigned short)atoi(PORT));
+  inet_pton(AF_INET, host, &addr.sin_addr);
+  bool connected = connect(sock, (struct sockaddr *)&addr, sizeof addr) == 0;
+  close(sock);
+  return connected;
 }
 
 int main(void) {
@@ -161,6 +181,10 @@ int main(void) {
   json = test_http_json(PORT, "GET", "/api/workshop/command", NULL, &status);
   check(status == 405, "the command route accepts only POST");
   cJSON_Delete(json);
+
+  /* the server listens on 127.0.0.1 only (R-684): another loopback address is refused */
+  check(connects_to("127.0.0.1"), "127.0.0.1 connects");
+  check(!connects_to("127.0.0.2"), "127.0.0.2 is refused");
 
   test_gui_server_stop(ctx);
   return test_finish("workshop_routes");

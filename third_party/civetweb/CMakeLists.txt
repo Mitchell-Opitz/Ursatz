@@ -1,5 +1,5 @@
-# civetweb v1.16 (MIT, https://github.com/civetweb/civetweb, tag v1.16), vendored unmodified: src/civetweb.c, the
-# src/*.inl files it includes, include/civetweb.h and LICENSE.md. Built without SSL, as the GUI's server needs none.
+# civetweb v1.16 (MIT, https://github.com/civetweb/civetweb, tag v1.16), vendored: src/civetweb.c (with the upstream fix for
+# CVE-2025-55763 applied, see README.md), the src/*.inl files it includes, include/civetweb.h and LICENSE.md. Built without SSL, as the GUI's server needs none.
 #
 # USE_STACK_SIZE: civetweb builds its request threads with a 100 KB stack by default. The Composer API runs on those
 # threads (R-219) and some of its entries need more (a random motive draws into several motives on the stack), so a
