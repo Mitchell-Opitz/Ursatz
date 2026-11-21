@@ -18,6 +18,7 @@
 #include <common/files.h>
 #include <ursatz_workshop/workshop_api.h>
 
+#include "items/body_requests.h"
 #include "composition/request_resolve.h"
 #include "items/store.h"
 #include "test_knowledge.h"

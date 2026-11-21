@@ -18,6 +18,7 @@
 #include "items/formats.h"
 #include "items/layout.h"
 #include "items/store.h"
+#include "items/body_requests.h"
 
 #define PATH_BYTES 1024
 #define BUILD_DIR ".migrate-1"

@@ -25,6 +25,7 @@
 #include "items/layout.h"
 #include "items/store.h"
 #include "ursatz_check.h"
+#include "items/body_requests.h"
 
 #ifndef URSATZ_WORKSHOP_DATA_V0
 #error "URSATZ_WORKSHOP_DATA_V0 must name the version 0 fixture folder"
