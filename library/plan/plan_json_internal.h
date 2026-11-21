@@ -16,9 +16,6 @@
 bool plan_json_add(cJSON *object, const char *key, cJSON *item);
 bool plan_json_append(cJSON *array, cJSON *item);
 cJSON *json_number(long value);
-/* {"num": n, "den": d} as given: not reduced, so a score fraction keeps its written form. */
-/* cJSON's tab-indented print as 2-space indent, "key": value, and a trailing newline. Caller frees. */
-char *json_indent_with_spaces(const char *printed);
 
 /* Reading helpers of plan_json.c. */
 

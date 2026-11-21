@@ -438,33 +438,6 @@ void json_set_error(PlanJsonError *error, long offset, const char *path, const c
     error->offset = offset;
 }
 
-/* cJSON prints with tabs; the project's JSON uses a 2-space indent and "key": value. */
-char *json_indent_with_spaces(const char *printed) {
-    size_t tabs = 0;
-    size_t length = strlen(printed);
-    for (size_t i = 0; i < length; i++) {
-        tabs += printed[i] == '\t';
-    }
-    char *out = malloc(length + tabs + 2);
-    if (!out) {
-        return NULL;
-    }
-    char *cursor = out;
-    for (size_t i = 0; i < length; i++) {
-        if (printed[i] == '\t' && i > 0 && printed[i - 1] == ':') {
-            *cursor++ = ' ';
-        } else if (printed[i] == '\t') {
-            *cursor++ = ' ';
-            *cursor++ = ' ';
-        } else {
-            *cursor++ = printed[i];
-        }
-    }
-    *cursor++ = '\n';
-    *cursor = '\0';
-    return out;
-}
-
 char *plan_to_json(const Plan *plan, const PlanProducer *producer, PlanJsonError *error) {
     if (!plan) {
         json_set_error(error, -1, "", "plan is NULL");
@@ -477,7 +450,7 @@ char *plan_to_json(const Plan *plan, const PlanProducer *producer, PlanJsonError
     cJSON *document = document_json(plan, producer);
     char *printed = document ? cJSON_Print(document) : NULL;
     cJSON_Delete(document);
-    char *text = printed ? json_indent_with_spaces(printed) : NULL;
+    char *text = printed ? common_json_indent(printed) : NULL;
     cJSON_free(printed);
     if (!text) {
         json_set_error(error, -1, "", "out of memory");

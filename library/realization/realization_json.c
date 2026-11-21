@@ -373,33 +373,6 @@ static cJSON *document_item(Writer *w, const Work *work) {
     return document;
 }
 
-/* cJSON prints with tabs; the project's JSON uses a 2-space indent and "key": value. */
-static char *indent_with_spaces(const char *printed) {
-    size_t tabs = 0;
-    size_t length = strlen(printed);
-    for (size_t i = 0; i < length; i++) {
-        tabs += printed[i] == '\t';
-    }
-    char *out = malloc(length + tabs + 2);
-    if (!out) {
-        return NULL;
-    }
-    char *cursor = out;
-    for (size_t i = 0; i < length; i++) {
-        if (printed[i] == '\t' && i > 0 && printed[i - 1] == ':') {
-            *cursor++ = ' ';
-        } else if (printed[i] == '\t') {
-            *cursor++ = ' ';
-            *cursor++ = ' ';
-        } else {
-            *cursor++ = printed[i];
-        }
-    }
-    *cursor++ = '\n';
-    *cursor = '\0';
-    return out;
-}
-
 static char *write_work(const Work *work, bool compact, RealizationJsonError *error) {
     if (!work) {
         set_error(error, "", "no work");
@@ -411,7 +384,7 @@ static char *write_work(const Work *work, bool compact, RealizationJsonError *er
     if (!writer.failed) {
         char *printed = compact ? cJSON_PrintUnformatted(document) : cJSON_Print(document);
         if (printed) {
-            text = compact ? printed : indent_with_spaces(printed);
+            text = compact ? printed : common_json_indent(printed);
             if (!compact) {
                 cJSON_free(printed);
             }
