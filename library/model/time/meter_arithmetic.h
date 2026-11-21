@@ -47,11 +47,6 @@ typedef struct {
    from its start, as meter_map_measure_of finds its measure. METER_MAP_ERR_TIME_BEFORE_START before 0. */
 MeterMapResult meter_map_position_of(const MeterMap *map, MusicalTime t, NotatedPosition *out);
 
-/* The time of a notated position, the inverse of meter_map_position_of: METER_MAP_ERR_INDEX_OUT_OF_RANGE for a
-   measure below the first, a beat outside the measure's groups, a negative offset, or a position that falls at or past
-   the measure's end. */
-MeterMapResult meter_map_time_of(const MeterMap *map, NotatedPosition p, MusicalTime *out);
-
 /* The local rhythmic grid at a point (R-588): the measure's signature (borrowed from the map), the measure's start, the
    length of its beat (time_signature_beat_length) and of its division: half the beat in a simple meter, a third of it
    in a compound one. */
