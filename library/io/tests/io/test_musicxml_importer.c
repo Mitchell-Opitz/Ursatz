@@ -208,6 +208,22 @@ static void test_an_internal_dtd_subset_is_refused(void) {
     musicxml_import_destroy(&import);
 }
 
+static void test_out_of_range_character_references(void) {
+    MusicXmlImport import;
+    /* none of these may crash; as a root other than score-partwise each is refused for its root (charref_big, charref_neg, attr_ref, crs, pi) */
+    assert(import_bytes(BYTES("<a>&#x7FFFFFFFFFFFFFFF;</a>"), &import) == MUSICXML_IMPORT_ERR_WRONG_ROOT);
+    assert(import_bytes(BYTES("<a>&#-1;</a>"), &import) == MUSICXML_IMPORT_ERR_WRONG_ROOT);
+    assert(import_bytes(BYTES("<a b=\"&#99999999;\"/>"), &import) == MUSICXML_IMPORT_ERR_WRONG_ROOT);
+    assert(import_bytes(BYTES("<a>\r\r\r\n</a>"), &import) == MUSICXML_IMPORT_ERR_WRONG_ROOT);              /* crs: unchanged */
+    assert(import_bytes(BYTES("<?xml version=\"1.0\"?><?a?><a/>"), &import) == MUSICXML_IMPORT_ERR_WRONG_ROOT); /* pi: unchanged */
+    /* inside a score the references stay as text in the words */
+    assert(import_text(DOC(DIV4 "<direction><direction-type><words>&#x7FFFFFFFFFFFFFFF; &#-1; &#99999999; &#65;</words></direction-type></direction>"
+                                 NOTE("C", "4", "4", "")),
+                       &import) == MUSICXML_IMPORT_OK);
+    assert(import.count == 1);
+    musicxml_import_destroy(&import);
+}
+
 static void test_an_empty_score_is_not_an_error(void) {
     MusicXmlImport import;
     assert(import_text("<score-partwise><part-list/><part id=\"P1\"><measure number=\"1\"/></part></score-partwise>",
@@ -679,6 +695,7 @@ int main(void) {
     test_structural_errors();
     test_utf16_documents_with_no_text();
     test_an_internal_dtd_subset_is_refused();
+    test_out_of_range_character_references();
     test_an_empty_score_is_not_an_error();
     test_a_byte_order_mark_and_entities();
     test_tie_warnings();
