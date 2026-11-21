@@ -7,6 +7,7 @@
 #include "formats.h"
 #include "ids.h"
 #include "layout.h"
+#include "base/params.h"
 
 bool store_ready = false;
 WorkshopLock store_lock = WORKSHOP_LOCK_INIT;
@@ -51,52 +52,7 @@ bool store_is_valid_id(const char *id) {
 
 /* --- text ---------------------------------------------------------------- */
 
-/*
- * Trims surrounding whitespace and counts UTF-8 characters. Returns a copy
- * of the trimmed text, or NULL when it has more than max_chars characters,
- * holds a control character, or on allocation failure (*alloc_failed set).
- */
-static char *trim_text(const char *text, size_t max_chars, bool *alloc_failed) {
-    *alloc_failed = false;
-    char *copy = common_strdup(text ? text : "");
-    if (!copy) {
-        *alloc_failed = true;
-        return NULL;
-    }
-    size_t length = common_trim(copy);
-    size_t chars = 0;
-    for (size_t i = 0; i < length; i++) {
-        unsigned char c = (unsigned char)copy[i];
-        if (c < 0x20 || c == 0x7f || (chars += (c & 0xC0) != 0x80) > max_chars) {
-            free(copy);
-            return NULL;
-        }
-    }
-    return copy;
-}
-
-static UrsatzStatus normalize_name(const char *text, char **out) {
-    bool alloc_failed;
-    *out = trim_text(text, NAME_MAX_CHARS, &alloc_failed);
-    if (!*out) {
-        return alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-    }
-    if ((*out)[0] == '\0') {
-        free(*out);
-        *out = NULL;
-        return workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-    }
-    return URSATZ_OK;
-}
-
-static UrsatzStatus normalize_description(const char *text, char **out) {
-    bool alloc_failed;
-    *out = trim_text(text, DESCRIPTION_MAX_CHARS, &alloc_failed);
-    if (!*out) {
-        return alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-    }
-    return URSATZ_OK;
-}
+#define REFUSED_TEXT "invalid name, description or note"
 
 /* --- paths --------------------------------------------------------------- */
 
@@ -230,9 +186,9 @@ static UrsatzStatus save_project_locked(WorkshopTxn *txn, const cJSON *project, 
 static UrsatzStatus create_project_locked(WorkshopTxn *txn, const char *name, const char *description, cJSON **out_project) {
     char *clean_name = NULL;
     char *clean_description = NULL;
-    UrsatzStatus result = normalize_name(name, &clean_name);
+    UrsatzStatus result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     if (result == URSATZ_OK) {
-        result = normalize_description(description, &clean_description);
+        result = workshop_text_normalize(description, DESCRIPTION_MAX_CHARS, false, REFUSED_TEXT, &clean_description);
     }
     if (result != URSATZ_OK) {
         free(clean_name);
@@ -438,10 +394,10 @@ UrsatzStatus workshop_material_project_update(const char *id, const char *name, 
     char *clean_description = NULL;
     UrsatzStatus result = load_project_locked(id, &project);
     if (result == URSATZ_OK && name) {
-        result = normalize_name(name, &clean_name);
+        result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     }
     if (result == URSATZ_OK && description) {
-        result = normalize_description(description, &clean_description);
+        result = workshop_text_normalize(description, DESCRIPTION_MAX_CHARS, false, REFUSED_TEXT, &clean_description);
     }
     if (result == URSATZ_OK) {
         char now[32];
@@ -729,13 +685,9 @@ static UrsatzStatus create_item_locked(WorkshopTxn *txn, const char *type, const
     }
     char *clean_name = NULL;
     char *clean_note = NULL;
-    UrsatzStatus result = normalize_name(name, &clean_name);
+    UrsatzStatus result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     if (result == URSATZ_OK) {
-        bool alloc_failed = false;
-        clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
-        if (!clean_note) {
-            result = alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-        }
+        result = workshop_text_normalize(note, NOTE_MAX_CHARS, false, REFUSED_TEXT, &clean_note);
     }
     if (result == URSATZ_OK && !project_exists_locked(project_id)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
@@ -1019,7 +971,7 @@ static UrsatzStatus change_item(const char *command, const char *id, const char 
     char *clean_name = NULL;
     UrsatzStatus result = store_load_item_locked(id, &item);
     if (result == URSATZ_OK && name) {
-        result = normalize_name(name, &clean_name);
+        result = workshop_text_normalize(name, NAME_MAX_CHARS, true, REFUSED_TEXT, &clean_name);
     }
     if (result == URSATZ_OK && project_id) {
         if (!store_is_valid_id(project_id)) {
@@ -1136,13 +1088,9 @@ static UrsatzStatus add_version(const char *id, const cJSON *body, const char *n
     }
     cJSON *item = NULL;
     char *clean_note = NULL;
-    bool alloc_failed = false;
     UrsatzStatus result = store_load_item_locked(id, &item);
     if (result == URSATZ_OK) {
-        clean_note = trim_text(note, NOTE_MAX_CHARS, &alloc_failed);
-        if (!clean_note) {
-            result = alloc_failed ? workshop_fail(URSATZ_ERR_ALLOC, "out of memory") : workshop_fail(URSATZ_ERR_REQUEST, "invalid name, description or note");
-        }
+        result = workshop_text_normalize(note, NOTE_MAX_CHARS, false, REFUSED_TEXT, &clean_note);
     }
     if (result == URSATZ_OK) {
         result = workshop_material_body_validate(common_json_string(item, "type"), body, NULL);

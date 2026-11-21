@@ -9,20 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "base/params.h"
 
-
-/* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
-static const char *optional_string(const cJSON *body, const char *key, bool *bad) {
-  const cJSON *item = cJSON_GetObjectItemCaseSensitive(body, key);
-  if (!item || cJSON_IsNull(item)) {
-    return NULL;
-  }
-  if (!cJSON_IsString(item)) {
-    *bad = true;
-    return NULL;
-  }
-  return item->valuestring;
-}
 
 /* ---- the Composer calls of a motif (R-219) ----------------------------- */
 
@@ -252,12 +240,12 @@ cJSON *workshop_motif_run_variants(const cJSON *motif, const cJSON *basic_body, 
                            bool each_op, const cJSON *chain, int count, double seed, const UrsatzJob *job, int *status,
                            UrsatzError *error) {
   bool bad = false;
-  const char *form = optional_string(motif, "form", &bad);
-  const char *degrees = optional_string(motif, "degrees", &bad);
-  const char *meter = optional_string(motif, "meter", &bad);
+  const char *form = workshop_param_string(motif, "form", &bad);
+  const char *degrees = workshop_param_string(motif, "degrees", &bad);
+  const char *meter = workshop_param_string(motif, "meter", &bad);
   char key_text[64];
   const char *key = workshop_motif_key_text(motif, key_text, sizeof(key_text));
-  const char *pickup = optional_string(motif, "pickup", &bad);
+  const char *pickup = workshop_param_string(motif, "pickup", &bad);
   if (bad || !form || !degrees || degrees[0] == '\0' || !meter) {
     *status = 400;
     workshop_error_printf(error, "this motif has no degrees to vary");
@@ -266,13 +254,13 @@ cJSON *workshop_motif_run_variants(const cJSON *motif, const cJSON *basic_body, 
   bool full = strcmp(form, "full") == 0;
   cJSON *request = workshop_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, degrees, meter,
                                   key, pickup);
-  const char *role = optional_string(motif, "role", &(bool){false});
+  const char *role = workshop_param_string(motif, "role", &(bool){false});
   bool ok = request && workshop_motif_add_extras(request, workshop_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                                          role);
   /* The basic motive (the tree root) when this motif is derived: its list, pickup and harmony. */
   const cJSON *basic = cJSON_GetObjectItemCaseSensitive(basic_body, "motif");
-  const char *basic_degrees = optional_string(basic, "degrees", &(bool){false});
-  const char *basic_pickup = optional_string(basic, "pickup", &(bool){false});
+  const char *basic_degrees = workshop_param_string(basic, "degrees", &(bool){false});
+  const char *basic_pickup = workshop_param_string(basic, "pickup", &(bool){false});
   if (ok && basic_degrees && basic_degrees[0] != '\0') {
     cJSON *basic_request = workshop_motif_motive_request(full ? "degrees" : form, NULL, basic_degrees, NULL, NULL, basic_pickup);
     ok = basic_request && workshop_motif_add_extras(basic_request, workshop_motif_harmony(basic), NULL, NULL) &&
@@ -532,14 +520,14 @@ const char *workshop_motif_first_note(const char *type, const char *note) {
 UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int *http_status, UrsatzError *error) {
   *document_out = NULL;
   bool bad = false;
-  const char *material = optional_string(body, "material", &bad);
-  const char *old_mode = optional_string(body, "mode", &bad);
+  const char *material = workshop_param_string(body, "material", &bad);
+  const char *old_mode = workshop_param_string(body, "mode", &bad);
   const char *mode = material ? material : old_mode;
-  const char *meter = optional_string(body, "meter", &bad);
-  const char *key = optional_string(body, "key", &bad);
-  const char *form = optional_string(body, "form", &bad);
-  const char *style_id = optional_string(body, "style_id", &bad);
-  const char *role = optional_string(body, "role", &bad);
+  const char *meter = workshop_param_string(body, "meter", &bad);
+  const char *key = workshop_param_string(body, "key", &bad);
+  const char *form = workshop_param_string(body, "form", &bad);
+  const char *style_id = workshop_param_string(body, "style_id", &bad);
+  const char *role = workshop_param_string(body, "role", &bad);
   const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
   const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
   if (cJSON_IsNull(count_item)) {
@@ -582,8 +570,8 @@ UrsatzStatus workshop_motif_random(const cJSON *body, cJSON **document_out, int 
   if (built && workshop_settings_key_count() > 0) {
     WorkshopSettingsRequest resolve;
     memset(&resolve, 0, sizeof(resolve));
-    const char *project_id = optional_string(body, "project_id", &bad);
-    const char *taste = optional_string(body, "taste", &bad);
+    const char *project_id = workshop_param_string(body, "project_id", &bad);
+    const char *taste = workshop_param_string(body, "taste", &bad);
     const cJSON *values = cJSON_GetObjectItemCaseSensitive(body, "settings");
     const cJSON *off = cJSON_GetObjectItemCaseSensitive(body, "off");
     resolve.project_id = project_id && project_id[0] ? project_id : NULL;

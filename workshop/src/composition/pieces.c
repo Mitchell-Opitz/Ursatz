@@ -60,7 +60,6 @@ static const char *const kFileNames[] = {"request.json", "brief.style.json"};
 #define VERSIONS_MAX 4
 
 static cJSON *read_json(const char *path);
-static bool set_string(cJSON *object, const char *name, const char *text);
 
 /* A copy of the request as the command read it: the plan file of each theme fill read into the request (the API takes
    plans, not paths; cli/piece.c read_request_file) and its path kept as the source. */
@@ -229,7 +228,7 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
                 result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
                 break;
             }
-            set_string((cJSON *)entry, "plan", path);
+            common_json_set_string((cJSON *)entry, "plan", path);
         }
         cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
         cJSON_DeleteItemFromObjectCaseSensitive(document, "explanation");
@@ -400,12 +399,6 @@ static cJSON *read_json(const char *path) {
     return json;
 }
 
-/* Replaces (or adds) the string member name of object. */
-static bool set_string(cJSON *object, const char *name, const char *text) {
-    cJSON_DeleteItemFromObjectCaseSensitive(object, name);
-    return cJSON_AddStringToObject(object, name, text) != NULL;
-}
-
 static bool lane_ok(const char *lane) {
     static const char *const lanes[] = {"harmony", "bass", "melody", "inner", "all"};
     for (size_t i = 0; lane && i < sizeof(lanes) / sizeof(lanes[0]); i++) {
@@ -545,7 +538,7 @@ static UrsatzStatus carry_request(const char *from_dir, const char *dir, UrsatzE
             char name[96];
             snprintf(name, sizeof(name), "theme-%s.plan.json", common_json_string(section, "id"));
             if (!common_path_join(path, sizeof(path), from_dir, name) || !common_path_join(copy, sizeof(copy), dir, name) ||
-                common_file_copy(path, copy, NULL) != URSATZ_OK || !set_string(fill, "plan", copy)) {
+                common_file_copy(path, copy, NULL) != URSATZ_OK || !common_json_set_string(fill, "plan", copy)) {
                 workshop_error_printf(error, "the plan of the theme in section %s could not be copied", common_json_string(section, "id"));
                 result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
             }
@@ -554,7 +547,7 @@ static UrsatzStatus carry_request(const char *from_dir, const char *dir, UrsatzE
     if (result == URSATZ_OK && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "style"))) {
         snprintf(path, sizeof(path), "%s/brief.style.json", from_dir);
         snprintf(copy, sizeof(copy), "%s/brief.style.json", dir);
-        if (common_file_copy(path, copy, NULL) != URSATZ_OK || !set_string(request, "style", copy)) {
+        if (common_file_copy(path, copy, NULL) != URSATZ_OK || !common_json_set_string(request, "style", copy)) {
             workshop_error_text(error, "the style file of the version could not be copied");
             result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
         }
@@ -904,9 +897,9 @@ static UrsatzStatus run_variations(const Source *source, const char *name, const
         composer_response_destroy(&exported);
         /* The document as printed: the plan of the version is its file, and the files are named. */
         if (result == URSATZ_OK) {
-            set_string(loop, "plan", paths[0]);
-            set_string(entry, "midi", paths[1]);
-            set_string(entry, "musicxml", paths[2]);
+            common_json_set_string(loop, "plan", paths[0]);
+            common_json_set_string(entry, "midi", paths[1]);
+            common_json_set_string(entry, "musicxml", paths[2]);
             cJSON_DeleteItemFromObjectCaseSensitive(entry, "loop_markers");
         }
     }

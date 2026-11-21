@@ -156,32 +156,6 @@ const char *const *workshop_command_names(size_t *count) {
 
 /* --- parameters ------------------------------------------------------------------------------------------------------------------ */
 
-const char *workshop_param_string(const cJSON *params, const char *name, bool *bad) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(params, name);
-    if (!item || cJSON_IsNull(item)) {
-        return NULL;
-    }
-    if (!cJSON_IsString(item)) {
-        if (bad) {
-            *bad = true;
-        }
-        return NULL;
-    }
-    return item->valuestring;
-}
-
-bool workshop_param_require_string(const cJSON *params, const char *name, const char **out, UrsatzError *error) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(params, name);
-    if (!cJSON_IsString(item)) {
-        char path[96];
-        snprintf(path, sizeof(path), "/params/%s", name);
-        workshop_call_fail(error, URSATZ_ERR_REQUEST, path, "%s is required and a string", name);
-        return false;
-    }
-    *out = item->valuestring;
-    return true;
-}
-
 bool workshop_parse_whole(const char *text, int max_digits, long long *out) {
     size_t length = text ? strlen(text) : 0;
     if (length == 0 || length > (size_t)max_digits) {

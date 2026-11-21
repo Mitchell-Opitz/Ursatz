@@ -21,6 +21,7 @@ add_library(ursatz_workshop_engine STATIC
     src/base/knowledge.c
     src/base/last_error.c
     src/base/names.c
+    src/base/params.c
     src/items/collections.c
     src/items/data_check.c
     src/items/formats.c
