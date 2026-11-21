@@ -6,11 +6,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "theory/tonality/roman_numeral_rules.h"
 #include "theory/tonality/triad_rules.h"
 
-/* vii\xC2\xB0 (diminished) carries the real degree symbol. */
-static const char *const TRIAD_LABELS[COMMON_PRACTICE_TRIAD_COUNT] = {
-    "I", "ii", "iii", "IV", "V", "vi", "vii\xC2\xB0", "augmented", "major", "minor", "diminished",
+/* The labels of the quality-named triads (the last four, after the seven diatonic ones). */
+static const char *const QUALITY_LABELS[COMMON_PRACTICE_TRIAD_COUNT - COMMON_PRACTICE_TRIAD_MAJOR_KEY_COUNT] = {
+    "augmented", "major", "minor", "diminished",
 };
 
 /* The quality of each triad; its intervals are the owner's (triad_rules.h). */
@@ -32,13 +33,26 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
     return standard_tonality_triad_quality_semitones(TRIAD_QUALITIES[triad], out);
 }
 
+/* The label of a triad: a diatonic one is its Roman numeral (the degree in the case of its third, then the triad symbol: I, ii,
+   vii with the degree sign), the others are named by quality. */
+static void triad_label(CommonPracticeTriad triad, char *out, size_t size) {
+    if (triad >= COMMON_PRACTICE_TRIAD_MAJOR_KEY_COUNT) {
+        snprintf(out, size, "%s", QUALITY_LABELS[triad - COMMON_PRACTICE_TRIAD_MAJOR_KEY_COUNT]);
+        return;
+    }
+    StandardTonalityTriadQuality quality = TRIAD_QUALITIES[triad];
+    snprintf(out, size, "%s%s",
+             standard_tonality_roman_numeral_degree(triad + 1, quality == STANDARD_TONALITY_TRIAD_MAJOR),
+             standard_tonality_roman_numeral_triad_symbol(quality));
+}
+
 bool common_practice_triad_candidate(CommonPracticeTriad triad, unsigned long confidence_numerator,
                                      unsigned long confidence_denominator, ChordCandidate *out) {
     if (!valid_triad(triad) || out == NULL || confidence_denominator == 0 ||
         rational_make((long long)confidence_numerator, (long long)confidence_denominator, &out->confidence) != RATIONAL_OK) {
         return false;
     }
-    snprintf(out->label, sizeof(out->label), "%s", TRIAD_LABELS[triad]);
+    triad_label(triad, out->label, sizeof(out->label));
     out->structure.root_pitch_class = -1;
     out->structure.bass_pitch_class = -1;
     out->structure.interval_count = 0;
