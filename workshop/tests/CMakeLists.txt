@@ -170,6 +170,10 @@ ursatz_test(workshop_text_generated SOURCES test_text_generated.c LIBS ursatz_wo
                 TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
                 TEXT_CORPUS="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
+# The smoke: the form binary, the loop request and Bach 114 (nine layers).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated_smoke)
+ursatz_test(workshop_text_generated_smoke TARGET test_workshop_text_generated ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated_smoke)
 
 # The commands as schemas (P65 B5): the table and the schemas agree, the check of a command's params at its path, the actor in the version envelope.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_schemas)

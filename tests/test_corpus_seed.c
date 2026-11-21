@@ -275,7 +275,8 @@ static int test_plan(void) {
     return 0;
 }
 
-static int test_progression(void) {
+/* The library calls: each searches the corpus for a progression (about 12 s each in a debug build). */
+static void check_progression_seeds(void) {
     CorpusSeed seed;
     CorpusPassages major = passages_from(COMPOSER_SONATINAS_CORPUS, NULL, "I IV V I");
     assert(corpus_seed_progression(test_knowledge(), major.items, major.count, 4, HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_OK);
@@ -294,8 +295,16 @@ static int test_progression(void) {
     assert(corpus_seed_progression(test_knowledge(), major.items, major.count, 0, HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_ARGUMENT);
     corpus_passages_destroy(&major);
     corpus_passages_destroy(&minor_passages);
+}
 
-    /* Placed at B in a rounded binary form, the plan fills completely for seeds 1 to 5. */
+/* The smoke (the fast set) skips the library calls, which take 26 s of the 38 s, and fills seed 1 only; the full run does both and
+   fills seeds 1 to 5. */
+static int test_progression(bool smoke) {
+    if (!smoke) {
+        check_progression_seeds();
+    }
+
+    /* Placed at B in a rounded binary form, the plan fills completely for seeds 1 to 5 (seed 1 in the smoke). */
     remove("seed_progression.json");
     assert(run("plan --form rounded-binary --key \"D major\" --meter 4/4 --from-corpus \"" COMPOSER_SONATINAS_CORPUS
                "\" --like-progression \"I IV V I\" --at B --seed 2 --out seed_progression.json") == 0);
@@ -307,7 +316,7 @@ static int test_progression(void) {
     char piece[PLAN_SOURCE_PIECE_MAX];
     assert(source_of(plan, &node, piece) && plan_node_kind(plan, node) == PLAN_NODE_SECTION);
     plan_destroy(plan);
-    for (int seed_number = 1; seed_number <= 5; seed_number++) {
+    for (int seed_number = 1; seed_number <= (smoke ? 1 : 5); seed_number++) {
         char arguments[256];
         snprintf(arguments, sizeof(arguments), "fill seed_progression.json --seed %d --out seed_filled.json", seed_number);
         remove("seed_filled.json");
@@ -317,7 +326,8 @@ static int test_progression(void) {
         }
         assert(test_file_exists("seed_filled.json"));
     }
-    printf("a seeded progression placed at B fills completely for seeds 1 to 5\n");
+    printf(smoke ? "a seeded progression placed at B fills completely for seed 1\n"
+                 : "a seeded progression placed at B fills completely for seeds 1 to 5\n");
     return 0;
 }
 
@@ -398,7 +408,10 @@ int main(int argc, char **argv) {
         return test_plan();
     }
     if (strcmp(argv[1], "progression") == 0) {
-        return test_progression();
+        return test_progression(false);
+    }
+    if (strcmp(argv[1], "progression-smoke") == 0) {
+        return test_progression(true);
     }
     if (strcmp(argv[1], "no-match") == 0) {
         return test_no_match();

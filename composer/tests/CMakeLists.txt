@@ -494,6 +494,8 @@ ursatz_test(test_variants_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
 add_dependencies(test_variants_cli ursatz)
+# Every test but test_distance (24.5 s of the 27 s).
+ursatz_test(test_variants_cli_smoke TARGET test_variants_cli ARGS smoke)
 
 ursatz_test(test_motive_random LIBS ursatz_composer_engine cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -610,6 +612,9 @@ ursatz_test(test_api_rondo TARGET test_api_form_families ARGS rondo LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 ursatz_test(test_api_sonata TARGET test_api_form_families ARGS sonata LABELS slow
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# The first rondo case alone (small-rondo-ababa in C major).
+ursatz_test(test_api_form_families_smoke TARGET test_api_form_families ARGS smoke
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 ursatz_test(test_api_plan_workflow LIBS ursatz_composer_engine composer_test_support cjson

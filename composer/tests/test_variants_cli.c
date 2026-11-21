@@ -397,7 +397,9 @@ static void test_liquidate_features_and_basic(void) {
     expect_failure(THEME " --basic", 1, "--basic needs a value");
 }
 
-int main(void) {
+/* With "smoke" every test but test_distance runs (the fast set: 1.9 s against 24.5 s for test_distance). */
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     test_list_ops();
     test_chain_file();
     test_seeds();
@@ -408,9 +410,11 @@ int main(void) {
     test_counter_line();
     test_function_filter();
     test_liquidate_features_and_basic();
-    test_distance();
+    if (!smoke) {
+        test_distance();
+    }
     test_each_op();
     test_each_op_labels();
-    printf("variants cli tests passed\n");
+    printf(smoke ? "variants cli smoke tests passed\n" : "variants cli tests passed\n");
     return 0;
 }
