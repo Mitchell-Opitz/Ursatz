@@ -31,3 +31,5 @@ ursatz_test(tonal_key_materials SOURCES test_tonal_key_materials.c LIBS ursatz_t
 
 ursatz_test(region_relation SOURCES test_region_relation.c LIBS ursatz_theory cjson VALGRIND)
 ursatz_test(spelled_key LIBS ursatz_theory VALGRIND)
+
+ursatz_test(standard_tonality_interval SOURCES test_interval.c LIBS ursatz_theory)
