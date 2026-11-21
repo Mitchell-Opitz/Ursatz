@@ -83,6 +83,17 @@ static void check_seventh(CommonPracticeSeventh seventh, const char *expected_la
     assert(strcmp(chord.label, expected_label) == 0);
 }
 
+static void check_symbol_suffixes(void) {
+    static const char *const PAIRS[9][2] = {{"major", ""},        {"minor", "m"},          {"dominant7", "7"},
+                                            {"major7", "maj7"},   {"minor7", "m7"},        {"diminished", "dim"},
+                                            {"diminished7", "dim7"}, {"half-diminished7", "m7b5"}, {"augmented", "aug"}};
+    for (int i = 0; i < 9; i++) {
+        assert(strcmp(common_practice_chord_symbol_suffix(PAIRS[i][0]), PAIRS[i][1]) == 0);
+    }
+    assert(strcmp(common_practice_chord_symbol_suffix("sus4"), "sus4") == 0);
+    assert(common_practice_chord_symbol_suffix(NULL) == NULL);
+}
+
 int main(void) {
     check_triad(COMMON_PRACTICE_TRIAD_I, "I");
     check_triad(COMMON_PRACTICE_TRIAD_II, "ii");
@@ -99,6 +110,7 @@ int main(void) {
     check_seventh(COMMON_PRACTICE_SEVENTH_DIMINISHED7, "diminished7");
     check_quality_set();
     check_confidence_and_refusals();
+    check_symbol_suffixes();
 
     printf("test_chord_vocabulary: ok\n");
     return 0;

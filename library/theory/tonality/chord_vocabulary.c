@@ -44,3 +44,21 @@ bool common_practice_triad_candidate(CommonPracticeTriad triad, unsigned long co
     out->structure.interval_count = 0;
     return true;
 }
+
+const char *common_practice_chord_symbol_suffix(const char *quality) {
+    static const struct {
+        const char *quality;
+        const char *suffix;
+    } SUFFIXES[] = {{"major", ""},          {"minor", "m"},   {"dominant7", "7"},
+                    {"major7", "maj7"},     {"minor7", "m7"}, {"diminished", "dim"},
+                    {"diminished7", "dim7"}, {"half-diminished7", "m7b5"}, {"augmented", "aug"}};
+    if (quality == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < sizeof(SUFFIXES) / sizeof(SUFFIXES[0]); i++) {
+        if (strcmp(quality, SUFFIXES[i].quality) == 0) {
+            return SUFFIXES[i].suffix;
+        }
+    }
+    return quality;
+}
