@@ -23,13 +23,19 @@ typedef struct {
     const cJSON *overrides; /* the request scope's overrides: [{rule, action, weight}]; NULL for none */
     const cJSON *off;       /* the request's switches: ["style", "taste", "project"]; NULL for none */
     const char *kind;       /* "theme" (default) or "motif": which groups an exploration may move */
+    bool explore;           /* move settings away from the resolved ones (R-673): explore_seed and explore_distance say how */
+    unsigned long long explore_seed;
+    int explore_distance;   /* 1 to 8, 0 for the resolved explore.distance */
 } WorkshopSettingsRequest;
 
 /*
  * Resolves request and answers {taste, off, values: [{key, value, from}], overrides: [{rule, action, weight, from}], document} in *out
  * (the caller's). values lists the settings whose source is not "default", or every setting with `all`; document holds them nested by
  * their dotted keys (the explore group left out), or null when there are none. The project of an item is the item's own when
- * project_id is NULL. NOT_FOUND for a style, project or item that is not there; REQUEST for a request member that is not valid.
+ * project_id is NULL. With request->explore the answer also holds explore: {seed, distance, moves: [{key, from, to}]}: the soft settings of the
+ * groups the kind reads (theme: melody, motif and development; motif: motif) that are booleans or integers from 0 to 20, sorted by key; a xorshift64
+ * generator seeded with the seed (0 is 1) picks `distance` distinct ones, and each moves from its resolved value (a boolean flips, an integer of 3 or
+ * more goes to 0, a smaller one to the lesser of its value plus 3 and 20). A moved setting comes from "explore". NOT_FOUND for a style, project or item that is not there; REQUEST for a request member that is not valid.
  */
 UrsatzStatus workshop_settings_resolve_request(const WorkshopSettingsRequest *request, bool all, cJSON **out, UrsatzError *error);
 

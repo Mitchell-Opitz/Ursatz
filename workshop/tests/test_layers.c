@@ -166,7 +166,7 @@ static void test_theme(const char *general) {
     cJSON *item = NULL;
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    CHECK(workshop_theme_compose(id, true, 1, false, NULL, &item, &error) == URSATZ_OK, "the theme composes");
+    CHECK(workshop_theme_compose(id, true, 1, false, NULL, NULL, &item, &error) == URSATZ_OK, "the theme composes");
     cJSON_Delete(item);
     cJSON *layers = NULL;
     CHECK(workshop_material_version_layers(id, 2, &layers) == URSATZ_OK && cJSON_IsObject(layers) &&

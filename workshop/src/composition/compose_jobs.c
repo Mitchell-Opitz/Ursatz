@@ -71,6 +71,10 @@ void workshop_compose_job_free(void *input) {
     free(job->section);
     free(job->lane);
     free(job->id);
+    free(job->taste);
+    cJSON_Delete(job->settings);
+    cJSON_Delete(job->overrides);
+    cJSON_Delete(job->off);
     free(job);
   }
 }
@@ -87,7 +91,10 @@ UrsatzStatus workshop_compose_job_run(void *input, const UrsatzJob *composer_job
     case WORKSHOP_COMPOSE_THEME:
       invalid_text = "invalid theme";
       failed_text = "the theme could not be composed";
-      result = workshop_theme_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, &error);
+    {
+      WorkshopComposeSettings settings = {job->settings, job->overrides, job->off, job->taste, job->explore, job->distance};
+      result = workshop_theme_compose(job->id, job->has_seed, job->seed, job->update_uses, &settings, composer_job, &item, &error);
+    }
       break;
     case WORKSHOP_COMPOSE_PIECE:
       result = workshop_piece_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, &error);

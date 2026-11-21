@@ -300,14 +300,14 @@ UrsatzStatus workshop_theme_validate(const cJSON *body, bool *complete, cJSON **
     return result;
 }
 
-UrsatzStatus workshop_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
+UrsatzStatus workshop_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses, const WorkshopComposeSettings *settings,
                                               const UrsatzJob *job, cJSON **out_item, UrsatzError *error) {
     if (out_item) {
         *out_item = NULL;
     }
     workshop_error_text(error, "");
     cJSON *item = NULL;
-    UrsatzStatus result = workshop_compose_item(&kThemeKind, id, has_seed, seed, update_uses, job, &item, error);
+    UrsatzStatus result = workshop_compose_item(&kThemeKind, id, has_seed, seed, update_uses, settings, job, &item, error);
     if (result == URSATZ_OK && out_item) {
         *out_item = item;
     } else {

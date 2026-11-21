@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <common/files.h>
@@ -17,7 +18,11 @@
 #include <common/status.h>
 
 #include "items/store.h"
+#include "items/formats.h"
+#include "items/layout.h"
 #include "request_resolve.h"
+#include "settings/settings_keys.h"
+#include "settings/settings_resolve.h"
 
 #define PATH_BYTES 800
 
@@ -214,9 +219,116 @@ static void dump_request(const WorkshopComposeKind *kind, const cJSON *body, con
     cJSON_Delete(record);
 }
 
+/* Merges src into dst: an object member merges into the object of the same name, any other member replaces. */
+static bool merge_document(cJSON *dst, const cJSON *src) {
+    const cJSON *member;
+    cJSON_ArrayForEach(member, src) {
+        cJSON *held = cJSON_GetObjectItemCaseSensitive(dst, member->string);
+        if (cJSON_IsObject(member) && cJSON_IsObject(held)) {
+            if (!merge_document(held, member)) {
+                return false;
+            }
+            continue;
+        }
+        cJSON *copy = cJSON_Duplicate(member, true);
+        if (!copy) {
+            return false;
+        }
+        if (held) {
+            cJSON_ReplaceItemInObjectCaseSensitive(dst, member->string, copy);
+        } else if (!cJSON_AddItemToObject(dst, member->string, copy)) {
+            cJSON_Delete(copy);
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * The settings of a theme's compose (R-671): resolved with the item's project, the item, the style its brief names alone, and the call's own
+ * scope, over the body request's own preferences. A document becomes the request's `preferences`; the snapshot is written to the stage when
+ * the resolution says anything beyond the defaults.
+ */
+static UrsatzStatus resolve_theme_settings(const cJSON *meta, const char *id, const cJSON *body, const WorkshopComposeSettings *settings, bool explore,
+                                           long long explore_seed, cJSON *request, const char *stage, UrsatzError *error) {
+    if (workshop_settings_key_count() == 0) {
+        return URSATZ_OK; /* a caller that never opened a workshop (a service test) has no settings to resolve */
+    }
+    cJSON *values = cJSON_CreateObject();
+    const cJSON *own = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "request"), "preferences");
+    if (!values || (cJSON_IsObject(own) && !merge_document(values, own)) ||
+        (settings && cJSON_IsObject(settings->settings) && !merge_document(values, settings->settings))) {
+        cJSON_Delete(values);
+        return workshop_fail(URSATZ_ERR_ALLOC, NULL);
+    }
+    const cJSON *styles = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "brief"), "style_ids");
+    WorkshopSettingsRequest resolve;
+    memset(&resolve, 0, sizeof(resolve));
+    resolve.project_id = common_json_string(meta, "project_id");
+    resolve.item_id = id;
+    resolve.style_id = cJSON_IsArray(styles) && cJSON_GetArraySize(styles) == 1 && cJSON_IsString(cJSON_GetArrayItem(styles, 0))
+                           ? cJSON_GetArrayItem(styles, 0)->valuestring
+                           : NULL;
+    resolve.taste = settings ? settings->taste : NULL;
+    resolve.values = cJSON_GetArraySize(values) > 0 ? values : NULL;
+    resolve.overrides = settings ? settings->overrides : NULL;
+    resolve.off = settings ? settings->off : NULL;
+    resolve.kind = "theme";
+    resolve.explore = explore;
+    resolve.explore_seed = (unsigned long long)explore_seed;
+    resolve.explore_distance = settings ? settings->distance : 0;
+    cJSON *answer = NULL;
+    UrsatzError failure = {{0}, {0}};
+    UrsatzStatus status = workshop_settings_resolve_request(&resolve, false, &answer, &failure);
+    cJSON_Delete(values);
+    if (status != URSATZ_OK) {
+        if (error) {
+            *error = failure;
+        }
+        return workshop_fail(status == URSATZ_ERR_ALLOC ? status : URSATZ_ERR_REQUEST, NULL);
+    }
+    const cJSON *document = cJSON_GetObjectItemCaseSensitive(answer, "document");
+    const cJSON *moves = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "explore"), "moves");
+    bool says_something = cJSON_IsObject(document) || cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "overrides")) > 0 ||
+                          cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "off")) > 0 || cJSON_GetArraySize(moves) > 0;
+    if (cJSON_IsObject(document)) {
+        cJSON *copy = cJSON_Duplicate(document, true);
+        cJSON_DeleteItemFromObjectCaseSensitive(request, "preferences");
+        if (!copy || !cJSON_AddItemToObject(request, "preferences", copy)) {
+            cJSON_Delete(copy);
+            cJSON_Delete(answer);
+            return workshop_fail(URSATZ_ERR_ALLOC, NULL);
+        }
+    }
+    if (says_something) {
+        /* the snapshot: what the compose resolved, without the values the defaults hold */
+        cJSON *snapshot = cJSON_CreateObject();
+        const char *profile = common_json_string(answer, "taste");
+        bool ok = snapshot && cJSON_AddStringToObject(snapshot, "taste", profile) &&
+                  cJSON_AddItemToObject(snapshot, "off", cJSON_DetachItemFromObjectCaseSensitive(answer, "off")) &&
+                  cJSON_AddItemToObject(snapshot, "values", cJSON_DetachItemFromObjectCaseSensitive(answer, "values")) &&
+                  cJSON_AddItemToObject(snapshot, "overrides", cJSON_DetachItemFromObjectCaseSensitive(answer, "overrides")) &&
+                  cJSON_AddItemToObject(snapshot, "explore",
+                                        cJSON_GetObjectItemCaseSensitive(answer, "explore") ? cJSON_DetachItemFromObjectCaseSensitive(answer, "explore") : cJSON_CreateNull()) &&
+                  cJSON_AddItemToObject(snapshot, "document", cJSON_IsObject(document) ? cJSON_DetachItemFromObjectCaseSensitive(answer, "document") : cJSON_CreateNull());
+        char path[PATH_BYTES + 64];
+        snprintf(path, sizeof(path), "%s/%s", stage, WORKSHOP_FILE_SETTINGS);
+        UrsatzError written = {{0}, {0}};
+        ok = ok && workshop_format_write(path, WORKSHOP_FORMAT_SETTINGS_SNAPSHOT, snapshot, &written) == URSATZ_OK;
+        cJSON_Delete(snapshot);
+        if (!ok) {
+            cJSON_Delete(answer);
+            workshop_error_text(error, "the settings could not be written");
+            return workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+        }
+    }
+    cJSON_Delete(answer);
+    return URSATZ_OK;
+}
+
 UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *id, bool has_seed,
-                                             long long seed, bool update_uses, const UrsatzJob *job,
-                                             cJSON **out_item, UrsatzError *error) {
+                                             long long seed, bool update_uses, const WorkshopComposeSettings *settings,
+                                             const UrsatzJob *job, cJSON **out_item, UrsatzError *error) {
     UrsatzStatus result = update_uses ? kind->update_sources(id, error)
                                               : URSATZ_OK;
     if (result != URSATZ_OK) {
@@ -262,6 +374,16 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
     }
     if (result == URSATZ_OK) {
         result = workshop_request_resolve(kind->member, body, stage.absolute, has_brief ? style_path : NULL, &request, error);
+        if (result == URSATZ_OK && strcmp(kind->member, "theme") == 0) {
+            /* the settings: resolved before the request is dumped and written, so request.json records them (R-671) */
+            const cJSON *body_seed_member = cJSON_GetObjectItemCaseSensitive(body, "seed");
+            if (settings && settings->explore && !has_seed && !cJSON_IsNumber(body_seed_member)) {
+                has_seed = true;
+                seed = (long long)((unsigned long)time(NULL) % 4294967296UL);
+            }
+            long long explore_seed = has_seed ? seed : cJSON_IsNumber(body_seed_member) ? (long long)body_seed_member->valuedouble : 0;
+            result = resolve_theme_settings(meta, id, body, settings, settings && settings->explore, explore_seed, request, stage.absolute, error);
+        }
         if (result == URSATZ_OK) {
             dump_request(kind, body, request, stage.absolute);
         }

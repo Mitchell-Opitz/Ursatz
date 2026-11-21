@@ -398,7 +398,7 @@ static void run_theme_compose(void) {
     cJSON *item = NULL;
     UrsatzError error;
     memset(&error, 0, sizeof(error));
-    UrsatzStatus status = workshop_theme_compose(g_base.theme, true, 1, false, NULL, &item, &error);
+    UrsatzStatus status = workshop_theme_compose(g_base.theme, true, 1, false, NULL, NULL, &item, &error);
     if (status != URSATZ_OK) {
         fprintf(stderr, "theme compose: status %d: %s\n", (int)status, error.message);
     }

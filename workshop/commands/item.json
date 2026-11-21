@@ -159,6 +159,32 @@
           "type": "boolean",
           "required": false,
           "help": "Move every updated use to its source's current version first."
+        },
+        {
+          "name": "settings",
+          "type": "object",
+          "required": false,
+          "help": "Settings for this compose only (the request scope): a preferences document, for a theme."
+        },
+        {
+          "name": "overrides",
+          "type": "array",
+          "required": false,
+          "help": "Overrides for this compose only: each {rule, action, weight}, for a theme.",
+          "items": "object"
+        },
+        {
+          "name": "off",
+          "type": "array",
+          "required": false,
+          "help": "Scopes this compose skips: style, taste or project, for a theme.",
+          "items": "string"
+        },
+        {
+          "name": "taste",
+          "type": "string",
+          "required": false,
+          "help": "The taste profile for this compose, for a theme."
         }
       ],
       "one_of": [],

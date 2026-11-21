@@ -10,6 +10,7 @@
 
 #include "ursatz_composer/composer_api.h"
 #include "base/last_error.h"
+#include "compose_common.h"
 
 /*
  * Theme service: composes a theme item into a new version with the Composer's theme command (R-166, R-167).
@@ -35,7 +36,7 @@
  * "composed seed <n>". job (may be NULL) reports progress and asks for cancel (ERR_CANCELLED). On any other result no version is written and no folder is left; message (when not NULL)
  * receives a one-line reason.
  */
-UrsatzStatus workshop_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
+UrsatzStatus workshop_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses, const WorkshopComposeSettings *settings,
                                               const UrsatzJob *job, cJSON **out_item, UrsatzError *error);
 
 /*
