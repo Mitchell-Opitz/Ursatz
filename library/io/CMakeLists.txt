@@ -12,6 +12,8 @@ add_library(ursatz_io
     movement_export.c
     musicxml_importer.c
     musicxml_score.c
+    musicxml_score_segments.c
+    musicxml_score_write.c
     score_clefs.c
     score_quantize.c
     score_staves.c
