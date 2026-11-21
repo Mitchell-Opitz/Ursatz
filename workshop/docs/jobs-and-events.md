@@ -38,6 +38,7 @@ An event is a name and a JSON object. Events about data are published after the 
 | Event | Data | When |
 |---|---|---|
 | `item-changed` | `item_id`, `version` | every item header a transaction wrote |
+| `settings-changed` | none | after a committed `settings.` command |
 | `item-removed` | `item_id` | `item.delete` |
 | `library-changed` | `piece_id` | a Library command |
 | `collection-changed` | `collection_id` | a collection command |

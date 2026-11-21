@@ -21,7 +21,11 @@ subjects/<sub>.json
 library/pieces/<id>/                               source.<ext>, piece.json, analysis.json, realization.json, readings/analyzer.json
 library/collections/<id>.json
 library/links/<lnk>/run.json
-settings/styles/<sty>/                             style-model.json, style.json
+settings/styles/<sty>/                             style-model.json, style.json, settings.json
+settings/taste/<name>.json                         a taste profile (format ursatz-settings)
+projects/<prj>/settings.json                       the project's settings, overrides and switches
+projects/<prj>/items/<id>/settings.json            the item's
+projects/<prj>/items/<id>/v<n>/settings.json       how the settings resolved for the compose that made the version (ursatz-settings-snapshot)
 cache/                                             motive-link-cache.json, renders/<item>/v<n>/, index/: rebuilt, never the source of truth
 ```
 

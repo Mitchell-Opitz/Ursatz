@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P66 B4: settings (2026-11)
+
+- **Settings.** The format `ursatz-settings` for a taste profile, a style, a project and an item, `ursatz-settings-snapshot` for a composed version; the resolver over its scopes with the source of each value; the queries `settings.resolve`, `settings.scope`, `settings.list` and `settings.keys`; the commands `settings.set`, `settings.unset`, `settings.import`, `settings.override`, `settings.switch` and `settings.use-taste` (55 commands); the param type `value`; the event `settings-changed`. `workshop_settings_resolve` is `workshop_config_resolve` (it resolves the app configuration, `ursatz.json`). See [settings](settings.md).
+
 ## P65 B8: restore a version (2026-11)
 
 - **`item.restore`.** The next version of an item is a copy of an older one: its files, its body with the paths of its result in the new folder, the same uses; the envelope's `lineage` gains `restored_from` ([data folder](data-folder.md)). The commands are 49 ([commands](command-reference.md)).
