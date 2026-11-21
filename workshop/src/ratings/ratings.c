@@ -40,12 +40,12 @@ static bool session_path(const char *id, char *path, size_t size) {
 }
 
 /* Writes the object as the file at path in one transaction; the object stays the caller's. */
-static UrsatzStatus save(const char *actor, const char *folder, const char *path, const char *format, cJSON *object, UrsatzError *error) {
+static UrsatzStatus save(const char *folder, const char *path, const char *format, cJSON *object, UrsatzError *error) {
     UrsatzStatus status = common_dir_make(folder, error);
     if (status != URSATZ_OK) {
         return status;
     }
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "ratings", actor, "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "ratings", "", 0);
     if (!txn) {
         return refuse(error, URSATZ_ERR_IO, "", "the journal cannot be read");
     }
@@ -59,12 +59,12 @@ static UrsatzStatus save(const char *actor, const char *folder, const char *path
     return status == URSATZ_OK ? URSATZ_OK : refuse(error, status, failure.path, "%s", failure.message[0] ? failure.message : "the ratings cannot be saved");
 }
 
-static UrsatzStatus save_session(const char *actor, const char *id, cJSON *session, UrsatzError *error) {
+static UrsatzStatus save_session(const char *id, cJSON *session, UrsatzError *error) {
     char path[256];
     if (!session_path(id, path, sizeof path)) {
         return refuse(error, URSATZ_ERR_REQUEST, "/params/session", "a session id is 1 to 64 letters, digits, hyphens and underscores");
     }
-    return save(actor, WORKSHOP_DIR_SESSIONS, path, WORKSHOP_FORMAT_LISTENING_SESSION, session, error);
+    return save(WORKSHOP_DIR_SESSIONS, path, WORKSHOP_FORMAT_LISTENING_SESSION, session, error);
 }
 
 UrsatzStatus workshop_ratings_session_read(const char *id, cJSON **out, UrsatzError *error) {
@@ -100,7 +100,7 @@ UrsatzStatus workshop_ratings_session_create(const char *what, const char *taste
               add_text(session, "what", what) && add_text(session, "taste", taste && taste[0] ? taste : "none") &&
               (style && style[0] ? add_text(session, "style", style) : cJSON_AddNullToObject(session, "style") != NULL) && add_text(session, "note", note) &&
               cJSON_AddArrayToObject(session, "batches") && cJSON_AddArrayToObject(session, "ratings") && cJSON_AddArrayToObject(session, "picks");
-    UrsatzStatus status = ok ? save_session(actor, id, session, error) : no_memory(error);
+    UrsatzStatus status = ok ? save_session(id, session, error) : no_memory(error);
     free(id);
     if (status != URSATZ_OK) {
         cJSON_Delete(session);
@@ -185,7 +185,7 @@ static bool batch_name_ok(const char *batch) {
     return true;
 }
 
-UrsatzStatus workshop_ratings_batch(const char *session_id, int round, const char *batch, const cJSON *samples, const char *actor, cJSON **out, UrsatzError *error) {
+UrsatzStatus workshop_ratings_batch(const char *session_id, int round, const char *batch, const cJSON *samples, cJSON **out, UrsatzError *error) {
     *out = NULL;
     if (!batch_name_ok(batch)) {
         return refuse(error, URSATZ_ERR_REQUEST, "/params/batch", "a batch is named with 1 to 8 letters and digits");
@@ -229,7 +229,7 @@ UrsatzStatus workshop_ratings_batch(const char *session_id, int round, const cha
         cJSON_Delete(session);
         return no_memory(error);
     }
-    status = save_session(actor, session_id, session, error);
+    status = save_session(session_id, session, error);
     if (status != URSATZ_OK) {
         cJSON_Delete(session);
         return status;
@@ -294,7 +294,7 @@ UrsatzStatus workshop_ratings_rate(const char *session_id, int round, const char
         cJSON_Delete(session);
         return no_memory(error);
     }
-    status = save_session(actor, session_id, session, error);
+    status = save_session(session_id, session, error);
     cJSON_Delete(session);
     if (status != URSATZ_OK) {
         free(id);
@@ -329,7 +329,7 @@ UrsatzStatus workshop_ratings_pick(const char *session_id, int round, long long 
         cJSON_Delete(session);
         return no_memory(error);
     }
-    status = save_session(actor, session_id, session, error);
+    status = save_session(session_id, session, error);
     cJSON_Delete(session);
     if (status != URSATZ_OK) {
         free(id);
@@ -393,7 +393,7 @@ UrsatzStatus workshop_ratings_rate_version(const char *item_id, int version, int
     }
     char path[256];
     workshop_layout_item_ratings_file(item_id, path, sizeof path);
-    status = save(actor, WORKSHOP_DIR_ITEM_RATINGS, path, WORKSHOP_FORMAT_ITEM_RATINGS, file, error);
+    status = save(WORKSHOP_DIR_ITEM_RATINGS, path, WORKSHOP_FORMAT_ITEM_RATINGS, file, error);
     cJSON_Delete(file);
     if (status != URSATZ_OK) {
         free(id);

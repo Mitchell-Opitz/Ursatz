@@ -24,7 +24,7 @@ void store_forget_item(WorkshopTxn *txn, const char *item_id) {
 }
 
 WorkshopTxn *store_txn_begin(const char *command, const char *target) {
-    return workshop_txn_begin(NULL, command, "michelle", target, 0);
+    return workshop_txn_begin(NULL, command, target, 0);
 }
 
 UrsatzStatus store_txn_end(WorkshopTxn *txn, UrsatzStatus result) {
@@ -237,7 +237,7 @@ static UrsatzStatus create_project_locked(WorkshopTxn *txn, const char *name, co
     return result;
 }
 
-bool workshop_material_service_init(void) {
+static bool service_init(void) {
     WorkshopTxn *txn = store_txn_begin("project.create", "");
     if (!txn) {
         return false;
@@ -266,6 +266,25 @@ bool workshop_material_service_init(void) {
     }
     UNLOCK();
     return store_txn_end(txn, ok ? URSATZ_OK : URSATZ_ERR_INTERNAL) == URSATZ_OK && ok;
+}
+
+bool workshop_material_service_init(void) {
+    /* The first project of an empty folder is written while the workshop starts, which no command runs: a startup context of its own gives the
+       record its actor (a write needs a command, items/txn.h), the one the journal always named. */
+    const WorkshopCommandContext *outer = workshop_command_context();
+    WorkshopCommandContext before;
+    bool had_outer = outer != NULL;
+    if (had_outer) {
+        before = *outer;
+    }
+    WorkshopCommandContext startup;
+    memset(&startup, 0, sizeof(startup));
+    snprintf(startup.actor, sizeof(startup.actor), "%s", "michelle");
+    startup.base_version = -1;
+    workshop_command_context_set(&startup);
+    bool ok = service_init();
+    workshop_command_context_set(had_outer ? &before : NULL);
+    return ok;
 }
 
 void workshop_material_service_shutdown(void) {

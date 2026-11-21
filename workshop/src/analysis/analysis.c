@@ -190,7 +190,7 @@ UrsatzStatus workshop_analysis_import_and_save(const char *pieces_dir, const uns
     }
     result = save_new_piece(stage, data, size, original_filename);
     if (result == URSATZ_OK) {
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", "michelle", id, 0);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", id, 0);
         if (!txn) {
             result = workshop_fail(URSATZ_ERR_IO, NULL);
         } else if (workshop_txn_adopt_folder(txn, stage, final_dir, NULL) != URSATZ_OK) {
@@ -759,7 +759,7 @@ UrsatzStatus workshop_analysis_get_document(const char *pieces_dir, const char *
 /* --- the Library's writers: each begins its transaction before any lock and commits it after (items/txn.h) ----------------------------------- */
 
 static WorkshopTxn *begin_library(const char *command, const char *id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, command, "michelle", id ? id : "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, command, id ? id : "", 0);
     workshop_library_set_txn(txn);
     return txn;
 }

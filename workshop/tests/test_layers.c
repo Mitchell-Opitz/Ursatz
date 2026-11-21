@@ -123,7 +123,7 @@ static void test_piece(void) {
     char *at = strstr(reading_text, "e8c0e66e5eeed3e1");
     assert(at);
     memcpy(at, "0000000000000000", 16);
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", "michelle", "piece-bad", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.import", "piece-bad", 0);
     const char *pending = NULL;
     char file[600];
     CHECK(txn && workshop_txn_stage_folder(txn, WORKSHOP_DIR_PIECES "/piece-bad", &pending) == URSATZ_OK, "a piece with a wrong reading is staged");
@@ -140,7 +140,7 @@ static void test_piece(void) {
           "a commit with a reading of another digest is refused, naming the reading");
     CHECK(!common_path_exists(WORKSHOP_DIR_PIECES "/piece-bad"), "and the piece is not there");
     /* a realization that does not read is refused too */
-    txn = workshop_txn_begin(NULL, "library.import", "michelle", "piece-worse", 0);
+    txn = workshop_txn_begin(NULL, "library.import", "piece-worse", 0);
     CHECK(txn && workshop_txn_stage_file(txn, WORKSHOP_DIR_PIECES "/piece-worse/realization.json", "{}", 2) == URSATZ_OK, "a broken realization is staged");
     memset(&error, 0, sizeof(error));
     CHECK(workshop_txn_commit(txn, &error) == URSATZ_ERR_FORMAT && strstr(error.message, "not a realization") != NULL, "and refused");

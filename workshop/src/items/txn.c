@@ -1,5 +1,6 @@
 #include "base/command_context.h"
 #include "base/events_hub.h"
+#include "base/last_error.h"
 #include "txn.h"
 
 #include <dirent.h>
@@ -98,7 +99,13 @@ static char *copy_text(const char *text) {
 
 /* --- begin -------------------------------------------------------------------------------------------------------------------------- */
 
-WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const char *actor, const char *target, long base_version) {
+WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const char *target, long base_version) {
+    /* A record names who gave the command it belongs to: a write that is not part of one has no one to name (R-692). */
+    const WorkshopCommandContext *context = workshop_command_context();
+    if (!context || context->actor[0] == '\0') {
+        workshop_fail(URSATZ_ERR_INTERNAL, "a write needs a command");
+        return NULL;
+    }
     WorkshopStore *use = store ? store : &g_store;
     pthread_mutex_lock(&use->lock);
     if (use->next_seq == 0) {
@@ -116,12 +123,9 @@ WorkshopTxn *workshop_txn_begin(WorkshopStore *store, const char *command, const
         workshop_journal_free(&journal);
     }
     /* A command in progress names its records, gives their actor and the version it was made against (base/command_context.h). */
-    const WorkshopCommandContext *context = workshop_command_context();
-    if (context) {
-        command = context->command[0] != '\0' ? context->command : command;
-        actor = context->actor[0] != '\0' ? context->actor : actor;
-        base_version = context->base_version >= 0 ? context->base_version : base_version;
-    }
+    const char *actor = context->actor;
+    command = context->command[0] != '\0' ? context->command : command;
+    base_version = context->base_version >= 0 ? context->base_version : base_version;
     WorkshopTxn *txn = calloc(1, sizeof(*txn));
     if (!txn) {
         pthread_mutex_unlock(&use->lock);

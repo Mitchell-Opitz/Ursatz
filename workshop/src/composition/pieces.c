@@ -972,7 +972,7 @@ static UrsatzStatus variations_locked(const char *id, int version, const char *s
     }
     if (result == URSATZ_OK) {
         /* the set becomes part of the version in one transaction: whole, or not there */
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "item.variations", "michelle", id, 0);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "item.variations", id, 0);
         UrsatzError commit_error;
         memset(&commit_error, 0, sizeof(commit_error));
         if (!txn || workshop_txn_adopt_folder(txn, out_dir, final_dir, NULL) != URSATZ_OK) {

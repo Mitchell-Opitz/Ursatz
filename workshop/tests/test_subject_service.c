@@ -248,7 +248,7 @@ static void forget_item_in_subjects(WorkshopTxn *txn, const char *item_id) {
 
 /* A piece's links are dropped in a transaction, as the Library's delete does. */
 static UrsatzStatus forget_piece(const char *piece_id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.delete", "michelle", piece_id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "library.delete", piece_id, 0);
     UrsatzStatus result = workshop_subject_forget_piece(txn, piece_id);
     UrsatzError error;
     memset(&error, 0, sizeof(error));
@@ -384,6 +384,12 @@ int main(void) {
         fputs("{}", meta);
         fclose(meta);
     }
+
+    /* A write needs a command: with no context the service refuses (items/txn.h). */
+    command_context_support_end();
+    cJSON *refused = NULL;
+    check_quiet(workshop_material_project_create("Nobody", "", &refused) == URSATZ_ERR_INTERNAL && refused == NULL, "a write outside a command is refused");
+    command_context_support_begin();
 
     cJSON *project = NULL;
     check_quiet(workshop_material_project_create("Subjects", "", &project) == URSATZ_OK, "project");

@@ -761,7 +761,7 @@ static UrsatzStatus end_txn(WorkshopTxn *txn, UrsatzStatus result) {
 }
 
 UrsatzStatus workshop_subject_create(const char *name, const char *kind, const char *note, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.create", "michelle", "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.create", "", 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -777,7 +777,7 @@ UrsatzStatus workshop_subject_create(const char *name, const char *kind, const c
 }
 
 UrsatzStatus workshop_subject_update(const char *id, const char *name, const char *kind, const char *note, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.update", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.update", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -793,7 +793,7 @@ UrsatzStatus workshop_subject_update(const char *id, const char *name, const cha
 }
 
 UrsatzStatus workshop_subject_delete(const char *id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.delete", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.delete", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -805,7 +805,7 @@ UrsatzStatus workshop_subject_delete(const char *id) {
 }
 
 UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, bool *out_already, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-item", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-item", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -821,7 +821,7 @@ UrsatzStatus workshop_subject_link_item(const char *id, const char *item_id, boo
 }
 
 UrsatzStatus workshop_subject_unlink_item(const char *id, const char *item_id, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-item", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-item", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -837,7 +837,7 @@ UrsatzStatus workshop_subject_unlink_item(const char *id, const char *item_id, c
 }
 
 UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, bool *out_already, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-piece", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.link-piece", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -853,7 +853,7 @@ UrsatzStatus workshop_subject_link_piece(const char *id, const char *piece_id, b
 }
 
 UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-piece", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unlink-piece", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -869,7 +869,7 @@ UrsatzStatus workshop_subject_unlink_piece(const char *id, const char *piece_id,
 }
 
 UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool *out_already, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.relate", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.relate", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }
@@ -885,7 +885,7 @@ UrsatzStatus workshop_subject_relate(const char *id, const char *other_id, bool 
 }
 
 UrsatzStatus workshop_subject_unrelate(const char *id, const char *other_id, cJSON **out_subject) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unrelate", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "subject.unrelate", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "subject store failure");
     }

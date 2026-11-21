@@ -608,7 +608,7 @@ static bool job_commit(Job *job, bool is_new) {
     if (!run_file_path(job->id, path, sizeof(path)) || !run_dir_path(job->id, dir, sizeof(dir))) {
         return false;
     }
-    WorkshopTxn *txn = workshop_txn_begin(NULL, is_new ? "links.start" : "links.finish", "michelle", job->id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, is_new ? "links.start" : "links.finish", job->id, 0);
     if (!txn) {
         return false;
     }
@@ -1040,7 +1040,7 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else {
         /* the lock of this file is taken first, as at the start of a run, so the order against the transaction is the same */
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "links.delete", "michelle", id, 0);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "links.delete", id, 0);
         UrsatzError error;
         memset(&error, 0, sizeof(error));
         if (!txn || workshop_txn_remove(txn, dir) != URSATZ_OK) {

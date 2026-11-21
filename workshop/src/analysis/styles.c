@@ -861,7 +861,7 @@ UrsatzStatus workshop_style_build(const char *name, const WorkshopStyleSource *s
     if (id_found) {
         /* The style is a folder written whole (the model and its meta) and put in place by one transaction: the transaction is the
          * outermost lock, then the styles lock (the pieces were read above, holding neither). */
-        WorkshopTxn *txn = workshop_txn_begin(NULL, "style.build", "michelle", id, 0);
+        WorkshopTxn *txn = workshop_txn_begin(NULL, "style.build", id, 0);
         LOCK();
         char now[32];
         const char *pending = NULL;
@@ -1487,7 +1487,7 @@ UrsatzStatus workshop_style_rebuild(const char *id, const UrsatzJob *job) {
             /* The style's folder is replaced whole: the old one is removed and the new one staged, in one transaction (the outermost
              * lock, then the styles lock). A style deleted meanwhile is not built again. */
             const char *pending = NULL;
-            WorkshopTxn *txn = workshop_txn_begin(NULL, "style.rebuild", "michelle", id, 0);
+            WorkshopTxn *txn = workshop_txn_begin(NULL, "style.rebuild", id, 0);
             LOCK();
             /* The style's settings (settings.json, R-671) are not made by the rebuild: they go into the new folder as they were. */
             char settings_path[512];
@@ -1530,7 +1530,7 @@ UrsatzStatus workshop_style_delete(const char *id) {
     if (!style_dir_path(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "style not found");
     }
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "style.delete", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "style.delete", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "style operation failed");
     }

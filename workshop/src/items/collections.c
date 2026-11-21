@@ -771,7 +771,7 @@ UrsatzStatus workshop_collection_remove_piece_everywhere(WorkshopTxn *txn, const
 }
 
 UrsatzStatus workshop_collection_create_with_id(const char *id, const char *name, const char *description) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.create", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.create", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
@@ -783,7 +783,7 @@ UrsatzStatus workshop_collection_create_with_id(const char *id, const char *name
 }
 
 UrsatzStatus workshop_collection_create(const char *name, const char *description, char **out_id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.create", "michelle", "", 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.create", "", 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
@@ -799,7 +799,7 @@ UrsatzStatus workshop_collection_create(const char *name, const char *descriptio
 }
 
 UrsatzStatus workshop_collection_update(const char *id, const char *name, const char *description) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.update", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.update", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
@@ -811,7 +811,7 @@ UrsatzStatus workshop_collection_update(const char *id, const char *name, const 
 }
 
 UrsatzStatus workshop_collection_delete(const char *id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.delete", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.delete", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
@@ -823,7 +823,7 @@ UrsatzStatus workshop_collection_delete(const char *id) {
 }
 
 UrsatzStatus workshop_collection_add_pieces(const char *id, const char *const *piece_ids, size_t count, size_t *added, size_t *already) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.add-pieces", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.add-pieces", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }
@@ -835,7 +835,7 @@ UrsatzStatus workshop_collection_add_pieces(const char *id, const char *const *p
 }
 
 UrsatzStatus workshop_collection_remove_piece(const char *id, const char *piece_id) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.remove-piece", "michelle", id, 0);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "collection.remove-piece", id, 0);
     if (!txn) {
         return workshop_fail(URSATZ_ERR_INTERNAL, "collection operation failed");
     }

@@ -151,8 +151,8 @@ static void put(cJSON *object, const char *name, cJSON *item) {
 }
 
 /* Stages the scope's file in one transaction and answers with its content. The file is consumed. */
-static UrsatzStatus save_scope(const WorkshopCall *call, WorkshopReply *reply, Scope *scope, UrsatzError *error) {
-    WorkshopTxn *txn = workshop_txn_begin(NULL, "settings", call->actor, "", 0);
+static UrsatzStatus save_scope(WorkshopReply *reply, Scope *scope, UrsatzError *error) {
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "settings", "", 0);
     if (!txn) {
         cJSON_Delete(scope->file);
         return workshop_call_fail(error, URSATZ_ERR_IO, "", "the journal cannot be read");
@@ -211,7 +211,7 @@ WORKSHOP_HANDLER(workshop_c_settings_set) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     put(values, key, copy);
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.unset: scope, key. */
@@ -228,7 +228,7 @@ WORKSHOP_HANDLER(workshop_c_settings_unset) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/key", "unknown setting '%s'", key);
     }
     cJSON_DeleteItemFromObjectCaseSensitive(values_of(scope.file), key);
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* The leaves of a nested document, each checked as settings.set checks a value and put into values at its dotted key. */
@@ -311,7 +311,7 @@ WORKSHOP_HANDLER(workshop_c_settings_import) {
     if (scope.kind == WORKSHOP_SCOPE_TASTE) {
         TAKE(workshop_settings_keep_record(scope.file, "*", NULL, NULL, note, call->actor, error));
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.override: scope, rule, action, weight, note. */
@@ -366,7 +366,7 @@ WORKSHOP_HANDLER(workshop_c_settings_override) {
     if (cJSON_GetArraySize(list) == 0) {
         cJSON_DeleteItemFromObjectCaseSensitive(scope.file, "overrides");
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.switch: scope, off. */
@@ -420,7 +420,7 @@ WORKSHOP_HANDLER(workshop_c_settings_switch) {
         cJSON_Delete(scope.file);
         return workshop_call_fail(error, status, "/params/off", "%s", failure.message);
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
 
 /* settings.use-taste: scope, taste (absent or null clears). */
@@ -445,5 +445,5 @@ WORKSHOP_HANDLER(workshop_c_settings_use_taste) {
             return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
         }
     }
-    return save_scope(call, reply, &scope, error);
+    return save_scope(reply, &scope, error);
 }
