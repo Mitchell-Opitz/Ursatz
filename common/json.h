@@ -64,8 +64,6 @@ char *common_json_indent(const char *printed);
 bool common_json_rational_read(const cJSON *value, unsigned forms, long long *num, long long *den);
 /* {"num": n, "den": d} as given: not reduced, so a score fraction keeps its written form. NULL on allocation failure. */
 cJSON *common_json_rational_object(long long num, long long den);
-/* "n/d" into out; false when it does not fit. */
-bool common_json_rational_text(long long num, long long den, char *out, size_t capacity);
 
 /* ------------------------------------------------------------------ reader */
 

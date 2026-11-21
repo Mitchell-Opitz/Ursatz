@@ -230,11 +230,6 @@ cJSON *common_json_rational_object(long long num, long long den) {
     return object;
 }
 
-bool common_json_rational_text(long long num, long long den, char *out, size_t capacity) {
-    int written = snprintf(out, capacity, "%lld/%lld", num, den);
-    return written >= 0 && (size_t)written < capacity;
-}
-
 /* ------------------------------------------------------------------ reader */
 
 void common_json_reader_init(CommonJsonReader *reader, char *path, size_t path_size, char *message, size_t message_size,

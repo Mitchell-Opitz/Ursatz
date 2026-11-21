@@ -32,7 +32,6 @@ library/model/core/entity.c entity_id  # no app reads an entity's id since P62 B
 library/model/structure/motif_occurrence.c motif_occurrence_id  # no app reads an occurrence's id since P62 B11 (the claims that named it are gone); its tests call it
 library/model/structure/structure.c structure_entity  # no app reads a shell's entity since P62 B11 (the claims that named it are gone); its tests call it
 library/analysis/harmony/key_regions.c common_practice_key_region_analysis_key  # no app calls it since P62 B12 (the form hearing reads the reading's region claims); its tests call it
-common/json.c common_json_rational_text  # no app writes an "n/d" text through it until P63 B15 (request bodies); its test calls it
 common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
 workshop/src/analysis/analysis.c workshop_analysis_delete_piece  # test hook: test_piece_lock deletes a piece without the cascades the route runs (workshop_library_delete)
 workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_queue limits a kind of its own (links and style start limited)

@@ -175,11 +175,7 @@ static void test_rational_writers(void) {
     free(printed);
     cJSON_Delete(object);
 
-    char text[16];
-    assert(common_json_rational_text(-3, 4, text, sizeof(text)) && strcmp(text, "-3/4") == 0);
-    char tight[8];
-    assert(!common_json_rational_text(123456789, 987654321, tight, sizeof(tight)));
-    cJSON *string = cJSON_CreateString(text);
+    cJSON *string = cJSON_CreateString("-3/4");
     assert(common_json_rational_read(string, COMMON_RATIONAL_TEXT, &n, &d) && n == -3 && d == 4);
     cJSON_Delete(string);
 }
