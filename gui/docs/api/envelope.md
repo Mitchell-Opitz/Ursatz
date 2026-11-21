@@ -15,7 +15,7 @@ Every route under `/api` answers JSON in one of two shapes:
 
 ## Statuses
 
-The HTTP status is the one real status of the failure (`ursatz_gui_http_status`, the only table; the workshop's own `workshop_http_status` serves job results):
+The HTTP status is the one real status of the failure (`ursatz_gui_http_status`, the only table; the workshop's own `workshop_http_status` serves job results and answers the same table, so a call path and a job never differ; `workshop_is_call_path` names the paths that point into the call):
 
 | Status of the workshop | HTTP |
 |---|---|

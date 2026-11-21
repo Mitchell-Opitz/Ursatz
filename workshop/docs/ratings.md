@@ -27,7 +27,7 @@ ratings.rate-version item:thm-1@v2 version 2 rating 5
 ratings.keep taste none key motif.features.dotted value 1 ratings [pck-1] note "B won"
 ```
 
-`ratings.session` answers `{session}`. `ratings.batch` (`samples`: up to 64 objects, each with `index`, `seed`, `status`, `files` and `settings`) refuses a batch already recorded ("batch B of round 1 is recorded"). `ratings.rate` needs the sample recorded in that batch with status `ok` (a seed not there, or a stuck one, is refused at `/params/seed`); a new rating of a sample replaces the earlier one; the answer is `{id}`. `ratings.pick` needs `better` to name a batch recorded for the round, or `same`. `ratings.rate-version` (target an item, `version` from 1 to its current version) answers `{id}`.
+`ratings.session` answers `{session}`. `ratings.batch` (`samples`: up to 64 objects, each with `index`, `seed`, `status`, `files` and `settings`) refuses a batch already recorded ("batch B of round 1 is recorded"). `ratings.rate` needs the sample recorded in that batch with status `ok` (a seed not there, or a stuck one, is refused at `/params/seed`); a new rating of a sample replaces the earlier one; the answer is `{id}`. `ratings.pick` needs `better` to name a batch recorded for the round, or `same`. `ratings.rate-version` (target an item, `version` from 1 to its current version) takes `base_version` and answers `{id}`; `ursatz rate` sends the version it rates.
 
 ## Keep as default
 
