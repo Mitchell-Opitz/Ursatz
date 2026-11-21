@@ -34,12 +34,18 @@ It holds no music logic: a query or command reads or changes files and asks the 
 | `base/` | what every service uses: the command context (name, actor, target, base version, per thread), the event hub, the HTTP-status table of job results, the knowledge snapshot, the last error |
 | `jobs/` | the job queue ([jobs](jobs-and-events.md)) |
 | `items/` | the store: layout and formats, the transaction, journal and recovery, projects and items with their versions, bodies and references, layers, subjects, collections, the Library piece store and metadata, the migration and the data check |
+| `settings/` | the setting keys and rules (installed at open from the Composer's vocabulary: `preference_keys`, `rules`), the scope files of a taste profile, a style, a project and an item, and the resolver with the source of each value ([settings](settings.md)) |
+| `ratings/` | listening sessions with their batches, ratings and picks, and the ratings of item versions ([ratings](ratings.md)); keep as default is a coordinator handler that cites them |
 | `analysis/` | the Analyzer's services: import and re-analysis (and their jobs), styles, motive links, the import cache |
 | `composition/` | the Composer's services: compose jobs, themes, pieces, motifs, the variant engine ([variants](variants.md)), the request resolver, the Composer client |
 | `rendering/` | the render cache, playback of versions and pieces, the export of a version's files |
-| `coordinator/` | the API: `workshop.c` (open, start, stop), `dispatch.c` (the two tables of names), `api_*.c` (one file per family of handlers), `events.c`, `config.c`, `data_lock.c` |
+| `coordinator/` | the API: `workshop.c` (open, start, stop), `dispatch.c` (the two tables of names), `api_*.c` (one file per family of handlers, `api_settings.c` and `api_commands_settings.c` for the settings, `api_ratings.c` and `api_commands_ratings.c` for the ratings), `events.c`, `config.c`, `data_lock.c` |
 
 Rules the layer table holds: `items/` does not reach up to `analysis/`, `composition/` or `rendering/`, so a function that needs the analysis layer to cascade (`workshop_library_piece_json`, `_patch`, `_delete`) lives in `analysis/analysis.c`; the Composer's vocabulary is not read by the store at all (R-649), only by the Composer client; the one cycle left between the store and the subjects is a registered callback (`workshop_store_set_forget_item`).
+
+## Settings and ratings
+
+`workshop_open` (and the tools workshop) installs the setting key table and the rule table once, from the Composer's vocabulary lists `preference_keys` and `rules` and the workshop's own `explore.share` and `explore.distance`; every reader of a setting finds a key with `workshop_settings_key_find`. The resolver (`settings/settings_resolve.c`) answers `settings.resolve` and is called by a theme's compose (`composition/compose_common.c`, which sends the document as the request's `preferences` and writes the version's `settings.json`) and by the random motifs query. The files are `settings/taste/<name>.json`, `settings/styles/<id>/settings.json`, `projects/<id>/settings.json`, `projects/<id>/items/<id>/settings.json` (format `ursatz-settings`), the snapshot `projects/<id>/items/<id>/v<n>/settings.json` (`ursatz-settings-snapshot`), `ratings/sessions/<ses-id>.json` (`ursatz-listening-session`) and `ratings/items/<item id>.json` (`ursatz-item-ratings`); each changes in one transaction, journaled under its command's name and actor.
 
 ## Commands as schemas
 
