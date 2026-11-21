@@ -27,12 +27,12 @@ the compose run's, and `GrowOutcome` is filled from its `ComposeOutcome`. The st
 | `key`, `meter` | The key and meter. The harmony operators write for 2/4, 3/4, 4/4 and 6/8 only. |
 | `bars` | 8 (basic idea 2 bars) or 4 (1 bar); else 3 to 16, with a `construction` given or chosen. |
 | `construction` | The bars of each idea (`PlanConstruction`, R-468); NULL for none. See [grow-construction.md](grow-construction.md). |
-| `pairing` | Any of the nine pairings of a beginning (presentation, antecedent, compound basic idea) and an ending (continuation, consequent, cadential). Presentation and continuation make a sentence, antecedent and consequent a period, the other seven a hybrid (`standard_form_pairing_form`). |
+| `pairing` | Any of the nine pairings of a beginning (presentation, antecedent, compound basic idea) and an ending (continuation, consequent, cadential). Presentation with continuation is a sentence, antecedent with consequent a period, the other seven a hybrid. |
 | `cadence` | PAC, IAC or HC: the cadence the theme ends in. |
 | `first_cadence` | The weak cadence an antecedent ends in, HC or IAC and weaker than `cadence` by `harmony_cadence_strength`. Zero (PAC) means the default, HC. Read only for an antecedent. |
 | `slot_motives` | The motives of the contrasting, continuation and cadential slots ([Slots](#slots)); NULL for none. |
 | `has_accompaniment`, `accompaniment` | An accompaniment under the melody and bass ([accompaniment.md](accompaniment.md)): a `PlanAccompaniment` with a pattern (`ANY` for any), a texture (`-1` for none) and a range (0 for the defaults 48 and 67). Without `has_accompaniment` the theme has no inner voice. The theme section carries it as an `accompaniment` constraint. |
-| `has_voicing`, `voicing` | A four-part voicing of the harmony and bass ([voicing.md](voicing.md)): a `PlanVoicing`, whose `write_soprano` has the voicing write the melody too, a note a chord (a chorale), instead of the melody stage. The alto and the tenor are the inner voices 1 and 2. The theme section carries it as a `voicing` constraint. Refused together with an accompaniment. |
+| `has_voicing`, `voicing` | A four-part voicing of the harmony and bass ([voicing.md](voicing.md)): a `PlanVoicing`, whose `write_soprano` has the voicing write the melody too, a note a chord instead of the melody stage. The alto and the tenor are the inner voices 1 and 2. The theme section carries it as a `voicing` constraint. Refused together with an accompaniment. |
 
 `GROW_ERR_BAD_REQUEST` is also the result for a meter the harmony operators do not support, bars no construction makes (not 4 or 8), a
 cadence other than those three, a motive of one note, a half of the theme too short for its cadence, and an antecedent
@@ -60,7 +60,7 @@ cadential slot in a period). A slot motive keeps no harmony, features or role (a
 
 ### Idea motives
 
-A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf` (its plan name and its standard-form name); each idea of each half is a `ThemeShapeIdea` row with its `GrowIdea`, name, `GrowPlace`, slot, whether it is the first of its slot, role and length in eighths of the theme; each slot is a `ThemeShapeSlot` (name, function, plan node name). `grow_idea_name`, `grow_idea_place`, `grow_idea_in_pairing`, `grow_place_units`, `grow_idea_slot`, `grow_slot_used`, the slot readers, `grow_idea_role`, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it, so a new idea or a new length is a row, not a `switch`. `GrowSlot`, `GrowIdea` and `GrowIdeaRole` are declared in `theme_shape.h`, which `grow.h` includes. `tests/test_theme_shape.c` checks the table against the values the old code gave for the nine pairings.
+A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf`; each idea of each half is a `ThemeShapeIdea` row (idea, name, place, slot, first of its slot, role, length in eighths); each slot is a `ThemeShapeSlot`. `grow_idea_name`, `grow_idea_place`, `grow_idea_slot`, `grow_idea_role` and the other readers, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it,.
 
 `GrowIdea` names the ideas of a theme as the plan does (`grow_idea_name`: `basic idea`, `repetition`, `contrasting idea`,
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,
@@ -232,6 +232,8 @@ These are the motive refs the structure plans; the motives stage writes the [mot
 - **Cadential ending.** Two ideas `liquidated` by segments or notes, the second at least as far as the first.
 
 A candidate is dropped when a motive it asks for cannot be made or does not fit its idea.
+
+One loop (`grow_generate_specs`, `src/grow/grow_generate.c`) draws the candidates of a theme, a coda, a liquidation and a free phrase: each kind gives a `GrowSpecKind` (size, draw, same, label), and the loop keeps up to `candidates` distinct specs (at most 16) in 6 draws each, a failed draw and a repeat both counting. The residues, drop, section reading, build setup and idea length rule are shared too.
 
 ### The checks
 
