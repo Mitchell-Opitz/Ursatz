@@ -79,7 +79,4 @@ int similarity_model_dimension_at(const SimilarityModel *model, size_t index, Si
 void similarity_model_total_weight(const SimilarityModel *model, unsigned long *out_numerator,
                                    unsigned long *out_denominator);
 
-/* A readable name for a dimension: "interval", "rhythm", "contour" (NULL if unknown). */
-const char *similarity_dimension_name(SimilarityDimension dimension);
-
 #endif
