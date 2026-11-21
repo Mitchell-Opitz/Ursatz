@@ -259,9 +259,9 @@ UrsatzStatus workshop_variants_recognize(const cJSON *request, cJSON **document_
                                  NULL) &&
                cJSON_AddStringToObject(recognize, "meter", meter) &&
                (!key || key[0] == '\0' || cJSON_AddStringToObject(recognize, "key", key)) &&
-               (!role || cJSON_AddStringToObject(recognize, "role", role)) &&
-               (!pickup || cJSON_AddStringToObject(recognize, "pickup", pickup)) &&
-               (!target_pickup || cJSON_AddStringToObject(recognize, "target_pickup", target_pickup));
+               common_json_add_string_if(recognize, "role", role) &&
+               common_json_add_string_if(recognize, "pickup", pickup) &&
+               common_json_add_string_if(recognize, "target_pickup", target_pickup);
   if (built) {
     built = cJSON_AddItemToObject(recognize, "source", source_request);
     source_request = built ? NULL : source_request;
