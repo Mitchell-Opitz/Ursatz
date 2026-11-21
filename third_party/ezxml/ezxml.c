@@ -356,6 +356,7 @@ void ezxml_free_attr(char **attr) {
 ezxml_t ezxml_parse_str(char *s, size_t len)
 {
     ezxml_root_t root = (ezxml_root_t)ezxml_new(NULL);
+    if (! root) return NULL; /* Ursatz: out of memory (the importer reports it) */
     char q, e, *d, **attr, **a = NULL; // initialize a to avoid compile warning
     int l, i, j;
 
@@ -723,12 +724,16 @@ ezxml_t ezxml_new(const char *name)
 {
     static char *ent[] = { "lt;", "&#60;", "gt;", "&#62;", "quot;", "&#34;",
                            "apos;", "&#39;", "amp;", "&#38;", NULL };
-    ezxml_root_t root = (ezxml_root_t)memset(malloc(sizeof(struct ezxml_root)), 
-                                             '\0', sizeof(struct ezxml_root));
+    /* Ursatz: both allocations are checked (CVE-2021-26221, CVE-2021-26222); a failure returns NULL. */
+    ezxml_root_t root = (ezxml_root_t)malloc(sizeof(struct ezxml_root));
+    if (! root) return NULL;
+    memset(root, '\0', sizeof(struct ezxml_root));
+    root->ent = malloc(sizeof(ent));
+    if (! root->ent) { free(root); return NULL; }
+    memcpy(root->ent, ent, sizeof(ent));
     root->xml.name = (char *)name;
     root->cur = &root->xml;
     strcpy(root->err, root->xml.txt = "");
-    root->ent = memcpy(malloc(sizeof(ent)), ent, sizeof(ent));
     root->attr = root->pi = (char ***)(root->xml.attr = EZXML_NIL);
     return &root->xml;
 }
