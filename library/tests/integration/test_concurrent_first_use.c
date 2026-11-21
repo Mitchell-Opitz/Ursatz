@@ -3,11 +3,10 @@
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "theory/rules/preference.h"
 #include "theory/framework/framework.h"
 
 /*
- * Eight threads make the very first call of every framework accessor and every preference accessor an app calls at the
+ * Eight threads make the very first call of every framework accessor an app calls at the
  * same moment, and must all get the same pointers. Run as its own process so nothing has been initialized yet. The framework
  * headers share file names (framework.h), so the accessors are declared here; enum arguments are passed as
  * int, which is how they are called.
@@ -28,24 +27,14 @@
     X(standard_tonality_framework)                                                                                     \
     X(standard_voicing_framework)
 
-/* The preference accessors the Composer calls (it counts the soft rules with them). */
-#define PREFERENCES(X)                                                                                                 \
-    X(standard_counterpoint_harmonic_preference)                                                                       \
-    X(standard_counterpoint_melodic_preference)                                                                        \
-    X(harmony_cadence_preference)                                                                                      \
-    X(harmony_phrase_preference)
-
 #define DECLARE_FRAMEWORK(name) const Framework *name(void);
-#define DECLARE_PREFERENCE(name) const Preference *name(int which);
 FRAMEWORKS(DECLARE_FRAMEWORK)
-PREFERENCES(DECLARE_PREFERENCE)
 
 #define COUNT_ONE(name) +1
-enum { FRAMEWORK_COUNT = 0 FRAMEWORKS(COUNT_ONE), PREFERENCE_COUNT = 0 PREFERENCES(COUNT_ONE) };
+enum { FRAMEWORK_COUNT = 0 FRAMEWORKS(COUNT_ONE) };
 
 typedef struct {
     const void *frameworks[FRAMEWORK_COUNT];
-    const void *preferences[PREFERENCE_COUNT];
 } Seen;
 
 static pthread_barrier_t g_start;
@@ -57,17 +46,6 @@ static void *worker(void *arg) {
     size_t i = 0;
 #define CALL_FRAMEWORK(name) seen->frameworks[i++] = name();
     FRAMEWORKS(CALL_FRAMEWORK)
-    i = 0;
-    /* a preference accessor answers NULL for a hard rule: the first rule that has a preference stands for the accessor */
-#define CALL_PREFERENCE(name)                                                                                          \
-    {                                                                                                                  \
-        const void *first = NULL;                                                                                      \
-        for (int which = 0; which < 32 && first == NULL; which++) {                                                    \
-            first = name(which);                                                                                       \
-        }                                                                                                              \
-        seen->preferences[i++] = first;                                                                                \
-    }
-    PREFERENCES(CALL_PREFERENCE)
     return NULL;
 }
 
@@ -88,13 +66,6 @@ int main(void) {
             assert(g_seen[t].frameworks[i] == g_seen[0].frameworks[i]);
         }
     }
-    for (int i = 0; i < PREFERENCE_COUNT; i++) {
-        assert(g_seen[0].preferences[i] != NULL);
-        for (int t = 1; t < THREAD_COUNT; t++) {
-            assert(g_seen[t].preferences[i] == g_seen[0].preferences[i]);
-        }
-    }
-    printf("concurrent first use: %d frameworks, %d preference accessors, %d threads\n", FRAMEWORK_COUNT, PREFERENCE_COUNT,
-           THREAD_COUNT);
+    printf("concurrent first use: %d frameworks, %d threads\n", FRAMEWORK_COUNT, THREAD_COUNT);
     return 0;
 }

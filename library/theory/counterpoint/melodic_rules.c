@@ -36,8 +36,8 @@ static bool valid_rule(StandardCounterpointMelodicRule which) {
     return rule_table_valid(&TABLE, (int)which);
 }
 
-const Preference *standard_counterpoint_melodic_preference(StandardCounterpointMelodicRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool standard_counterpoint_melodic_rule_soft(StandardCounterpointMelodicRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_melodic_rule_name(StandardCounterpointMelodicRule which) {

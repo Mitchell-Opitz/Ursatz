@@ -180,8 +180,6 @@ ursatz_public_headers(ursatz_theory
         theory/style/style_model.h
         theory/style/style_model_blend.h
         theory/style/style_model_build.h
-        theory/rules/context.h
-        theory/rules/preference.h
         theory/vocabulary/applied_chord_kind.h
         theory/vocabulary/beat_strength.h
         theory/vocabulary/cadence_type.h

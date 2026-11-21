@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/counterpoint_line.h"
-#include "theory/rules/preference.h"
 
 /*
  * Harmonic writing rules for standard-counterpoint-v1: the vertical
@@ -63,8 +62,8 @@ typedef enum {
 #define STANDARD_COUNTERPOINT_MAX_GAP 12
 #define STANDARD_COUNTERPOINT_USUAL_GAP 8
 
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_harmonic_preference(StandardCounterpointHarmonicRule which);
+/* True when the rule is soft (a preference, not a requirement); false for a hard rule and for an invalid rule. */
+bool standard_counterpoint_harmonic_rule_soft(StandardCounterpointHarmonicRule which);
 
 /* "first-interval" "last-interval" "max-gap" "mostly-within-octave"
    "no-crossing" "parallel-octaves" "parallel-fifths" "direct-perfects"

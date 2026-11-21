@@ -49,7 +49,7 @@ ursatz_test(framework_v1_thematic_returns SOURCES framework_v1_thematic_returns.
     URSATZ_DEVIATIONS_FILE="${URSATZ_FIXTURES_DIR}/framework-v1-corpus/expected_deviations.md"
     URSATZ_RETURNS_SUMMARY="${CMAKE_CURRENT_BINARY_DIR}/framework_v1_returns_summary.txt")
 
-# Eight threads make the first call of every framework accessor and every preference accessor an app calls together (core/once.h).
+# Eight threads make the first call of every framework accessor an app calls together (core/once.h).
 # Under helgrind where valgrind is installed (memcheck as well), else plain.
 ursatz_test(concurrent_first_use LIBS ursatz_analysis VALGRIND)
 # Helgrind over the same executable, nightly like the memcheck variants.

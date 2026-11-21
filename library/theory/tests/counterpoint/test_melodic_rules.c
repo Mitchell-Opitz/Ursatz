@@ -25,11 +25,11 @@ static bool is_hard(int rule) {
            rule == STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE;
 }
 
-static void test_soft_rules_have_preferences(void) {
+static void test_soft_rules_are_soft(void) {
     for (int i = 0; i < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; i++) {
-        const Preference *preference = standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)i);
-        assert((preference != NULL) == !is_hard(i));
+        assert(standard_counterpoint_melodic_rule_soft((StandardCounterpointMelodicRule)i) == !is_hard(i));
     }
+    assert(!standard_counterpoint_melodic_rule_soft(STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT));
 }
 
 static void test_names(void) {
@@ -211,7 +211,7 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_soft_rules_have_preferences();
+    test_soft_rules_are_soft();
     test_names();
     test_clausula_vera();
     test_repeated_notes();

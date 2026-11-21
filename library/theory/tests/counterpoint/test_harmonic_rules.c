@@ -31,11 +31,11 @@ static bool is_soft(int rule) {
     const PitchSpelling *name[] = {P(A, 0, 3), P(D, 0, 4), P(C, 0, 4), P(F, 0, 3), P(B, 0, 3), P(A, 0, 3), \
                                    P(C, 0, 4), P(B, 0, 3), P(A, 0, 3), P(C, 1, 4), P(D, 0, 4)}
 
-static void test_soft_rules_have_preferences(void) {
+static void test_soft_rules_are_soft(void) {
     for (int i = 0; i < STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT; i++) {
-        const Preference *preference = standard_counterpoint_harmonic_preference((StandardCounterpointHarmonicRule)i);
-        assert((preference != NULL) == is_soft(i));
+        assert(standard_counterpoint_harmonic_rule_soft((StandardCounterpointHarmonicRule)i) == is_soft(i));
     }
+    assert(!standard_counterpoint_harmonic_rule_soft(STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT));
 }
 
 static void test_names(void) {
@@ -207,7 +207,7 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_soft_rules_have_preferences();
+    test_soft_rules_are_soft();
     test_names();
     test_good_exercise_follows_every_rule();
     test_first_interval();

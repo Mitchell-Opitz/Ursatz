@@ -37,8 +37,8 @@ static bool valid_rule(StandardCounterpointHarmonicRule which) {
     return rule_table_valid(&TABLE, (int)which);
 }
 
-const Preference *standard_counterpoint_harmonic_preference(StandardCounterpointHarmonicRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool standard_counterpoint_harmonic_rule_soft(StandardCounterpointHarmonicRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_harmonic_rule_name(StandardCounterpointHarmonicRule which) {

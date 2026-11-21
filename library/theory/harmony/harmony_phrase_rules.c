@@ -21,8 +21,8 @@ static const RuleTable TABLE = {
     "phrase", NAMES, HARMONY_PHRASE_RULE_COUNT, table_is_hard, g_pairs, g_built,
                                        evaluate_candidate, score_candidate};
 
-const Preference *harmony_phrase_preference(HarmonyPhraseRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool harmony_phrase_rule_soft(HarmonyPhraseRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 bool harmony_phrase_valid(const HarmonyPhrase *phrase) {

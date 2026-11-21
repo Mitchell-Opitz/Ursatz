@@ -241,7 +241,7 @@ static PitchSpelling *spell_melody(const SpelledKey *key, int pitch) {
 static unsigned harmonic_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT; rule++) {
-        count += standard_counterpoint_harmonic_preference((StandardCounterpointHarmonicRule)rule) != NULL;
+        count += standard_counterpoint_harmonic_rule_soft((StandardCounterpointHarmonicRule)rule);
     }
     return count;
 }
@@ -308,7 +308,7 @@ static unsigned other_hard_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
         count += rule != STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA && !((LOCAL_RULES >> rule) & 1u) &&
-                 standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) == NULL;
+                 !standard_counterpoint_melodic_rule_soft((StandardCounterpointMelodicRule)rule);
     }
     return count;
 }

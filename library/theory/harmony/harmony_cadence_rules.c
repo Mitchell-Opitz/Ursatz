@@ -20,8 +20,8 @@ static const RuleTable TABLE = {
     "cadence", NAMES, HARMONY_CADENCE_RULE_COUNT, table_is_hard, g_pairs, g_built,
                                        evaluate_candidate, score_candidate};
 
-const Preference *harmony_cadence_preference(HarmonyCadenceRule which) {
-    return rule_table_preference(&TABLE, (int)which);
+bool harmony_cadence_rule_soft(HarmonyCadenceRule which) {
+    return rule_table_valid(&TABLE, (int)which) && !rule_table_is_hard(&TABLE, (int)which);
 }
 
 bool harmony_cadence_valid(const HarmonyCadence *cadence) {
