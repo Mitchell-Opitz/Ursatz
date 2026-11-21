@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variations.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/variations.request.schema.json",
   "title": "composer_api_variations and composer_api_harmonize request",
   "description": "Several distinct versions of a node (harmonize: of the harmony of a section whose melody is given).",
   "type": "object",

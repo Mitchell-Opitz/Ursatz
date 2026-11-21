@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/regenerate.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/regenerate.response.schema.json",
   "title": "composer_api_regenerate response",
   "description": "What `regenerate --format json` prints, without the files.",
   "type": "object",

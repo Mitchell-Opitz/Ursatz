@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/vocabulary.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/vocabulary.schema.json",
   "title": "composer_api_vocabulary response",
   "description": "The words an application offers and the requests accept (docs/api.md, \"Vocabularies\").",
   "type": "object",
@@ -467,7 +467,7 @@
       }
     },
     "preferences": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
       "description": "The default settings document."
     },
     "preference_keys": {

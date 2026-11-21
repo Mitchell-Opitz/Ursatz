@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/random_motive.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/random_motive.response.schema.json",
   "title": "composer_api_random_motive response",
   "description": "What `ursatz random-motive --format json` prints, and `drawn` when the mode or the meter was drawn from the seed.",
   "type": "object",
@@ -56,7 +56,7 @@
       }
     },
     "preferences": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
       "description": "The full settings document, present when the request had the member."
     }
   }

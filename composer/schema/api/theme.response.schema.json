@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/theme.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/theme.response.schema.json",
   "title": "composer_api_theme response",
   "description": "What `theme --format json` prints (without the files it wrote), and the plan and the explanation of each theme when asked.",
   "type": "object",
@@ -177,7 +177,7 @@
       }
     },
     "preferences": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
       "description": "The full settings document, present when the request had the member."
     },
     "construction": {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/motive.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/motive.request.schema.json",
   "title": "composer_api_motive, composer_api_motive_from_midi and composer_api_motive_render request",
   "description": "A motive and how to read it. composer_api_motive_from_midi takes the same members without input (the MIDI bytes are its argument); composer_api_motive_render adds render_key, tempo, midi and musicxml.",
   "type": "object",

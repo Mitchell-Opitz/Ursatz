@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/validate.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/validate.schema.json",
   "title": "composer_api_validate response",
   "description": "A request the Composer reads without composing, with its defaults filled (docs/api.md, \"Validation\"). A motive request with stored true is refused unless its key is C major or C minor.",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/grow.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/grow.response.schema.json",
   "title": "composer_api_grow response",
   "description": "What `grow --format json` prints, without the files.",
   "type": "object",

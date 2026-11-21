@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/plan.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/plan.response.schema.json",
   "title": "composer_api_plan response",
   "description": "What `plan --format json` prints, without the file, with the members the text output reads.",
   "type": "object",

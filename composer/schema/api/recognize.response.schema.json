@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/recognize.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/recognize.response.schema.json",
   "title": "composer_api_recognize response",
   "description": "What `ursatz recognize --format json` prints.",
   "type": "object",

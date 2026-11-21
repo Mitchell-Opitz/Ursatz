@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/export.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/export.schema.json",
   "title": "composer_api_export response",
-  "description": "The lane spans the render left out. The MIDI and MusicXML are in the ComposerResponse, not in the JSON.",
+  "description": "The lane spans the render left out. The MIDI, the MusicXML and, for a request with plan_file true, the plan file text (plan_json) are in the ComposerResponse, not in the JSON.",
   "type": "object",
   "required": ["skipped"],
   "additionalProperties": false,

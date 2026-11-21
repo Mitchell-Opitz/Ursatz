@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece_variations.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/piece_variations.request.schema.json",
   "title": "composer_api_piece_variations request",
   "description": "The piece request, the plan to vary, and the section, lanes and count of the variations.",
   "type": "object",

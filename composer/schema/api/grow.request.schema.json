@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/grow.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/grow.request.schema.json",
   "title": "composer_api_grow request",
   "description": "A theme grown from a motive (or a corpus passage): the motive request with the brief of the command.",
   "type": "object",
@@ -87,7 +87,7 @@
       "type": "string"
     },
     "corpus_passages": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/corpus-passages.schema.json"
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/corpus-passages.schema.json"
     },
     "into": {
       "enum": [

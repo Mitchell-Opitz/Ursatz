@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
   "title": "Composer preferences",
   "type": "object",
   "description": "The Composer's settings (docs/preferences.md); every member is optional and its default is the value the Composer used before the document existed. An unknown member is refused with its path.",

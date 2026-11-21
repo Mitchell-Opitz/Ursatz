@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/motive.response.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/motive.response.schema.json",
   "title": "composer_api_motive, composer_api_motive_from_midi and composer_api_motive_render response",
   "description": "What `ursatz motive --format json` prints: the motive, its analysis, and for composer_api_motive_render the motive as it sounds. The MIDI and MusicXML are in the ComposerResponse, not in the JSON.",
   "type": "object",

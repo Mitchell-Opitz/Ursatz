@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/forms.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/forms.schema.json",
   "title": "composer_api_forms response",
   "description": "The built-in forms: their sizes, sections, cadences, keys and theme slots, and the roles of a form whose sections the request gives (docs/api/vocabulary-and-validation.md, \"Forms\").",
   "type": "object",

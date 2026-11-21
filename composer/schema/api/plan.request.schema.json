@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/plan.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/plan.request.schema.json",
   "title": "composer_api_plan request",
   "description": "The plan of a whole short piece: form, key, meter, motive and given material.",
   "type": "object",
@@ -76,7 +76,7 @@
       "additionalProperties": false
     },
     "corpus_passages": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/corpus-passages.schema.json"
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/corpus-passages.schema.json"
     },
     "accompaniment": {
       "type": "string"
@@ -111,7 +111,7 @@
             "type": "string"
           },
           "corpus_passages": {
-            "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/corpus-passages.schema.json"
+            "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/corpus-passages.schema.json"
           },
           "motive": {
             "type": "object",

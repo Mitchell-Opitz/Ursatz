@@ -93,8 +93,8 @@ UrsatzStatus composer_api_versions(ComposerResponse *out);
 
 /*
  * Renders a plan once and exports it. Request: {"plan": <plan object>, "midi": bool, "musicxml": bool, "tempo": <quarter
- * notes per minute, 20 to 400, a whole number or a string like "195/2", or null>, "plain_midi": bool}; each flag defaults
- * to false. "loop": {"start": "2/1", "end": "14/1"} (times in whole notes from the start of the plan) puts the loopStart and
+ * notes per minute, 20 to 400, a whole number or a string like "195/2", or null>, "plain_midi": bool, "plan_file": bool}; each flag defaults
+ * to false; "plan_file" fills plan_json with the plan as the library writes plan files. "loop": {"start": "2/1", "end": "14/1"} (times in whole notes from the start of the plan) puts the loopStart and
  * loopEnd markers into the MIDI file. midi/midi_size and musicxml are filled for the formats asked for. json: {"skipped":
  * [{"span", "lane", "reason"}]}, the lane spans the render left out.
  */

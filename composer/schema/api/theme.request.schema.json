@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/theme.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/theme.request.schema.json",
   "title": "composer_api_theme request",
   "description": "The theme request v2 of docs/theme-request.md with its motives inline, and the options of the theme command as members.",
   "type": "object",
@@ -349,7 +349,7 @@
       ]
     },
     "preferences": {
-      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/preferences.schema.json",
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
       "description": "The settings; the melody group and the development group apply, the motif group shapes the rhythms and new material a theme draws, not its motives (they come from the request)."
     }
   },

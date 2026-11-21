@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/recognize.request.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/recognize.request.schema.json",
   "title": "composer_api_recognize request",
   "description": "The source and the target motive, read in the request's meter, key and role.",
   "type": "object",
