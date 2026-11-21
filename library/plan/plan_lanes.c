@@ -179,27 +179,6 @@ PlanNoteId plan_next_note_id(const Plan *plan) {
     return plan ? plan->next_note_id : 0;
 }
 
-const PlanNote *plan_note_by_id(const Plan *plan, PlanNoteId id, LaneSpanId *span_out) {
-    if (!plan || id == PLAN_NOTE_NONE) {
-        return NULL;
-    }
-    for (size_t i = 0; i < plan->lane_span_count; i++) {
-        const LaneSpan *span = &plan->lane_spans[i];
-        if (span->removed || !plan_is_note_lane(span->lane)) {
-            continue;
-        }
-        for (size_t n = 0; n < span->payload.notes.note_count; n++) {
-            if (span->payload.notes.notes[n].id == id) {
-                if (span_out) {
-                    *span_out = (LaneSpanId)(i + 1);
-                }
-                return &span->payload.notes.notes[n];
-            }
-        }
-    }
-    return NULL;
-}
-
 PlanResult plan_add_lane_span(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                               const PlanLanePayload *payload, LaneSpanId *out_id) {
     if (!plan || !payload || !out_id) {

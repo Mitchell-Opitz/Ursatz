@@ -4,7 +4,6 @@ analyzer/src/result/analysis_result.c analyzer_result_report  # no app reads the
 analyzer/src/result/analysis_result.c analyzer_result_run_chain  # no app reads the chain of a result since P61 B8 (the Composer hears through the library chain itself); the Analyzer's tests read it
 analyzer/src/corpus/chord_sequence.c analyzer_chord_sequence_from_document  # no app reads a chord sequence from a document text since P61 B7 (the Composer read documents through it; the Analyzer reads the tree); its tests call it
 analyzer/src/result/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
-library/plan/plan_lanes.c plan_note_by_id  # no app finds a note by id until P65 (commands edit notes by id); its tests call it
 workshop/src/analysis/import_cache.c workshop_import_cache_entries  # test hook: test_analyzer_route reads the import counter
 workshop/src/analysis/import_cache.c workshop_import_cache_imports  # test hook: test_analyzer_route reads the import counter
 workshop/src/analysis/import_cache.c workshop_import_cache_reset  # test hook: test_analyzer_route resets the import counter

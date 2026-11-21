@@ -9,6 +9,8 @@
 #include <ursatz_composer/composer.h>
 
 #include <common/json.h>
+#include <plan/plan_common.h>
+#include <plan/plan_lanes.h>
 
 #include "ursatz_test.h"
 
@@ -141,4 +143,26 @@ const PlanProducer *test_plan_producer(void) {
         made = true;
     }
     return &producer;
+}
+
+const PlanNote *test_plan_note_by_id(const Plan *plan, PlanNoteId id, LaneSpanId *span_out) {
+    if (!plan || id == PLAN_NOTE_NONE) {
+        return NULL;
+    }
+    for (size_t i = 1; i <= plan_lane_span_count(plan); i++) {
+        LaneSpanId span = (LaneSpanId)i;
+        if (!plan_has_lane_span(plan, span) || !plan_is_note_lane(plan_lane_span_lane(plan, span))) {
+            continue;
+        }
+        const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            if (notes->notes[n].id == id) {
+                if (span_out) {
+                    *span_out = span;
+                }
+                return &notes->notes[n];
+            }
+        }
+    }
+    return NULL;
 }

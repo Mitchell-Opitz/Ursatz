@@ -9,7 +9,7 @@ Path `library/plan/`, target `ursatz_plan`, on `model`, `theory` and cJSON (the 
 | Header | Provides |
 |---|---|
 | `plan.h` | `Plan` (`plan_create`, `plan_destroy`), `NodeId`, `PlanResult`, `PlanSpan`, `PlanNodeKind`, the nodes (`plan_add_node`, `plan_remove_subtree`, the `plan_node_*` readers), the analyzer version and the form record (`PlanFormRecord`) |
-| `plan_lanes.h` | `PlanLaneKind`, `PlanMeter`, `PlanHarmony`, `PlanNote` (with its id, source and operation), `PlanLanePayload`, `PlanKeyRelation`, the lane spans (`plan_add_lane_span`, `plan_lane_span_resize`, `plan_lane_find`, `plan_note_by_id`) |
+| `plan_lanes.h` | `PlanLaneKind`, `PlanMeter`, `PlanHarmony`, `PlanNote` (with its id, source and operation), `PlanLanePayload`, `PlanKeyRelation`, the lane spans (`plan_add_lane_span`, `plan_lane_span_resize`, `plan_lane_find`) |
 | `plan_constraint.h` | `PlanConstraint` and its kinds, `PlanMotiveRef`, the section description of a node (`plan_node_section`, `plan_node_set_section`) and the constraint lists of nodes and lane spans |
 | `plan_state.h` | `PlanState` (Constrained, Given, Realized), the transitions and `plan_lane_span_write` |
 | `plan_edit.h` | `plan_clone` and `plan_copy_into` (a plan as a JSON round trip gives it, without the text), `plan_lane_span_reopen` (the one way out of Given), `plan_node_remove_leaf`, `plan_lane_span_remove`, `plan_lane_span_remove_owned` |
