@@ -22,6 +22,7 @@
 #include "random_motive.h"
 #include "recognize.h"
 #include "items.h"
+#include "rate.h"
 #include "migrate.h"
 #include "regenerate.h"
 #include "theme.h"
@@ -56,6 +57,7 @@ static const char *const FLAGS_REGENERATE[] = {"--base", "--format", "--lane", "
 static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
+static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--round", "--seed", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
@@ -684,6 +686,17 @@ const CliCommand CLI_COMMANDS[] = {
     "Example:\n"
     "  ursatz --data ~/ursatz-data compose item:itm-3f2a --seed 7",
      FLAGS_COMPOSE, 1, 1, run_compose},
+    {"rate",
+    "rate <ses-id> --round <n> --seed <s> [--rating <batch>=<1-5>]... [--better <batch>|same] [--note <text>]\nrate item:<id>@v<n> --rating <1-5> [--note <text>]",
+     "Record the ratings of a listening round or of an item version",
+    "Records what you thought of the samples of a listening session (R-674): --rating <batch>=<1-5> rates the sample of that batch at --seed in round --round (repeat it for each batch), and --better <batch> or --better same says which batch of the round sounded better, as a pick. rate item:<id>@v<n> --rating <1-5> rates one version of an item. --note says why, on each rating and pick made. It prints one line for each id made: rat-<id> <batch> <rating>, pck-<id> better <batch> and, for an item version, rat-<id> v<n> <rating>. A new rating of a sample replaces the earlier one. A rating needs a sample the session recorded as made; a pick needs a batch the round recorded. The ids are what keep as default cites (ratings.keep). The data folder is named before the subcommand: ursatz --data <dir> rate <ses-id> ...\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or a rating or pick the workshop refuses (a sample that was not recorded, a rating outside 1 to 5, a batch the round does not have); 2 the folder cannot be opened or any other failure.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz --data ~/ursatz-data rate ses-3f2a --round 1 --seed 1 --rating A=3 --rating B=4 --better B --note \"B is brighter\"\n"
+    "  ursatz --data ~/ursatz-data rate item:thm-3f2a@v2 --rating 5",
+     FLAGS_RATE, 1, 1, run_rate},
     {"restore",
     "restore item:<id>@v<n> [--base <n>] [--note <text>]",
      "Make the next version of an item a copy of an older one",

@@ -22,6 +22,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--basic-pickup <beats>` | the basic motive's pickup, as --pickup | `variants`, `recognize` |
 | `--bass` | write a bass line (the default) | `progression` |
 | `--below` | the line is the melody and the counter-melody sings below it | `counterpoint` |
+| `--better <batch>` | rate: the batch of the round that sounded better, or same | `rate` |
 | `--blend <file>` | a second style model file, blended with --style | `grow`, `plan`, `fill`, `listen` |
 | `--blend-weight <n/d>` | the second style's share in every dimension, 0 to 1 | `grow`, `plan`, `fill`, `listen` |
 | `--blend-weights <list>` | the second style's share per dimension, as harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d> | `grow`, `plan`, `fill`, `listen` |
@@ -85,7 +86,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--no-bass` | write only the chords | `progression` |
 | `--no-wait` | do not wait for the job a command starts: print its id | `regenerate`, `compose` |
 | `--node <id>` | the node's id in the plan file | `lock`, `regenerate`, `variations` |
-| `--note <text>` | restore: the note of the new version (default: restore v<n>) | `restore` |
+| `--note <text>` | restore: the note of the new version (default: restore v<n>); rate: why the rating or the pick | `rate`, `restore` |
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
@@ -95,6 +96,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--port <n>` | global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand | every command (stands before it) |
 | `--position <where>` | fragment: leading, trailing or middle | `develop` |
 | `--print-settings` | print the default preferences document and exit | `listen` |
+| `--rating <r>` | rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable | `rate` |
 | `--ratio <n:m>` | augment or diminish: the ratio of the new durations to the old | `develop` |
 | `--record <file>` | write what the run did: seeds, candidates and the check | `fill` |
 | `--regenerate <id|none>` | write the section with that id again, the rest locked | `piece` |
@@ -102,9 +104,10 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--request <request.json>` | the request a loop plan was made from, with --from | `piece` |
 | `--resume` | skip the pieces unchanged since the last run | `corpus` |
 | `--role <role>` | melodic or accompaniment | `motive`, `variants`, `recognize`, `random-motive`, `grow` |
+| `--round <n>` | listen --session and rate: the round of the listening session, 1 to 10000 | `rate` |
 | `--schema <name>` | build the start of the phrase on a galant schema (see --list-schemas) | `progression` |
 | `--section <letter>` | the section with that form letter or id | `lock`, `regenerate`, `variations`, `harmonize` |
-| `--seed <n>` | a whole number from 0; the same seed gives the same output | `progression`, `develop`, `variants`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `regenerate`, `variations`, `harmonize`, `listen`, `compose` |
+| `--seed <n>` | a whole number from 0; the same seed gives the same output | `progression`, `develop`, `variants`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `regenerate`, `variations`, `harmonize`, `listen`, `compose`, `rate` |
 | `--sequence <name>` | build a continuation on a harmonic sequence (see --list-schemas) | `progression` |
 | `--settings <file>` | a preferences document | `listen` |
 | `--species <1-4>` | the species of counterpoint | `counterpoint` |
