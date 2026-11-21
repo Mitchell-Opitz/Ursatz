@@ -16,8 +16,11 @@ Workshop *ursatz_gui_workshop(void) {
 struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *listen_port, const char *frontend_dir) {
   char threads[16];
   snprintf(threads, sizeof(threads), "%d", workshop_http_threads(workshop));
+  /* Loopback only (R-684): the server has no login, so no other host may reach it. No [::1] entry: civetweb 1.16 fails mg_start on a host without IPv6 when one is listed. */
+  char listening[64];
+  snprintf(listening, sizeof(listening), "127.0.0.1:%s", listen_port);
   const char *options[] = {
-      "listening_ports", listen_port,
+      "listening_ports", listening,
       "document_root", frontend_dir,
       "num_threads", threads,
       NULL,
