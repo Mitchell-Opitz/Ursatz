@@ -87,6 +87,9 @@ bool return_copy_change_mode(ReturnCopy *copy, SpelledKey home, const PitchMater
 int return_map_pitch(int tonic, const PitchMaterial *to, int pitch);
 /* The pitch a source pitch (after the move) has in the result: mapped by the mode change of the payload, else as it is. */
 int return_mode_pitch(const ReturnPayload *payload, int pitch);
+/* Whether the notes of two spans are the same (count, pitches, onsets and durations): the second's pitches are the first's moved `shift`
+   semitones, then mapped as return_mode_pitch maps them when map_or_null is a payload (NULL: not mapped). */
+bool return_same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift, const ReturnPayload *map_or_null);
 /* Adds the copy to the plan under section: its nodes, then its lane spans. */
 /*
  * Writes the copy into the plan under `section`. operation says what the written notes are made from (R-601): with

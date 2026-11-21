@@ -995,15 +995,14 @@ static bool same_span(PlanSpan a, PlanSpan b) {
     return same_times(a.start, b.start) && same_times(a.length, b.length);
 }
 
-/* Whether the notes of two spans are the same, the second the first's pitches shift semitones away. */
-static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
+bool return_same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift, const ReturnPayload *map_or_null) {
     if (a->note_count != b->note_count) {
         return false;
     }
     for (size_t n = 0; n < a->note_count; n++) {
-        if (a->notes[n].midi + shift != b->notes[n].midi ||
-            !same_times(a->notes[n].offset, b->notes[n].offset) ||
-            !same_times(a->notes[n].duration, b->notes[n].duration)) {
+        int pitch = a->notes[n].midi + shift;
+        if ((map_or_null ? return_mode_pitch(map_or_null, pitch) : pitch) != b->notes[n].midi ||
+            !same_times(a->notes[n].offset, b->notes[n].offset) || !same_times(a->notes[n].duration, b->notes[n].duration)) {
             return false;
         }
     }
@@ -1045,7 +1044,7 @@ bool return_result_matches(const ReturnPayload *payload, const ReturnAllow *allo
                    a->state == b->state && a->constraint_count == b->constraint_count &&
                    strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0;
             if (same && !(allow && (allow->skip_notes & bit))) {
-                same = same_notes(a, b, allow && (allow->shifted & bit) ? allow->shift : 0);
+                same = return_same_notes(a, b, allow && (allow->shifted & bit) ? allow->shift : 0, NULL);
             }
         }
         same = same && i >= moved.span_count && j >= payload->result.span_count;
