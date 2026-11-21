@@ -100,7 +100,7 @@ uses plan model theory cjson common
 module text            library/text               prefix text/
 group text text
 uses text model theory realization plan reading cjson common
-only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
+only ezxml library/io/musicxml_importer.c library/io/musicxml_import_parts.c library/io/musicxml_import_maps.c library/io/musicxml_import_internal.h -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
 
 
