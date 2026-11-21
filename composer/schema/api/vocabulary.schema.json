@@ -6,6 +6,7 @@
   "type": "object",
   "required": [
     "meters",
+    "defaults",
     "materials",
     "piece_materials",
     "keys",
@@ -97,6 +98,32 @@
       "description": "The relations of the knowledge snapshot (K6) a section's region may name, from an anchor (R-610).",
       "items": {
         "$ref": "#/$defs/relation"
+      }
+    },
+    "defaults": {
+      "description": "The values a form starts with (Composer API 4.4): the meter, a new motif's form, notes and pickup, a new theme's into, bars, cadence and development.",
+      "type": "object",
+      "required": ["meter", "motif", "theme"],
+      "additionalProperties": false,
+      "properties": {
+        "meter": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+        "motif": {
+          "type": "object",
+          "required": ["form", "notes", "pickup"],
+          "additionalProperties": false,
+          "properties": { "form": { "type": "string" }, "notes": { "type": "string" }, "pickup": { "type": "string" } }
+        },
+        "theme": {
+          "type": "object",
+          "required": ["into", "bars", "cadence", "development"],
+          "additionalProperties": false,
+          "properties": {
+            "into": { "type": "string" },
+            "bars": { "type": "integer", "minimum": 1 },
+            "cadence": { "type": "string" },
+            "development": { "type": "string" }
+          }
+        }
       }
     },
     "meters": {
@@ -629,6 +656,7 @@
         "value",
         "label",
         "beats",
+        "beat_unit",
         "chord_onset_step"
       ],
       "properties": {
@@ -640,6 +668,10 @@
           "type": "string"
         },
         "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "beat_unit": {
           "type": "integer",
           "minimum": 1
         },
