@@ -222,3 +222,10 @@ ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS urs
     DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
     PROPERTIES FIXTURES_SETUP settings_commands_files)
+
+# Composing with settings (P66 B5): a theme with nothing set, with the taste switched off, with an item override and explored, the random motifs query and a piece that takes no
+# settings. Composes several themes: slow if it passes a minute.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
+ursatz_test(workshop_compose_settings SOURCES test_compose_settings.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
