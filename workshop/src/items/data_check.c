@@ -43,8 +43,9 @@ static bool key_is_off_c(const char *key) {
 /* True when items/<name>/item.json exists; *out_item gets its object (caller frees) when out_item is not NULL. */
 static bool read_item(const char *items_dir, const char *name, cJSON **out_item) {
     char path[PATH_BYTES];
-    if (name[0] == '.' || snprintf(path, sizeof(path), "%s/%s/item.json", items_dir, name) >= (int)sizeof(path) ||
-        !common_path_exists(path)) {
+    char folder[PATH_BYTES];
+    if (name[0] == '.' || !common_path_join(folder, sizeof(folder), items_dir, name) ||
+        !common_path_join(path, sizeof(path), folder, "item.json") || !common_path_exists(path)) {
         return false;
     }
     if (out_item) {
@@ -63,7 +64,10 @@ static bool motif_is_off_c(const char *items_dir, const char *name, const cJSON 
         return false;
     }
     char path[PATH_BYTES];
-    if (snprintf(path, sizeof(path), "%s/%s/v%d.json", items_dir, name, (int)current->valuedouble) >= (int)sizeof(path)) {
+    char folder[PATH_BYTES];
+    char leaf[32];
+    snprintf(leaf, sizeof(leaf), "v%d.json", (int)current->valuedouble);
+    if (!common_path_join(folder, sizeof(folder), items_dir, name) || !common_path_join(path, sizeof(path), folder, leaf)) {
         return false;
     }
     cJSON *body = NULL;
@@ -84,7 +88,7 @@ bool workshop_data_check(const char *data_dir, char *message, size_t size) {
         return false;
     }
     char path[PATH_BYTES];
-    if (snprintf(path, sizeof(path), "%s/%s", data_dir, kChecked) >= (int)sizeof(path)) {
+    if (!common_path_join(path, sizeof(path), data_dir, kChecked)) {
         snprintf(message, size, "the data folder path is too long");
         return false;
     }

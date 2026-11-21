@@ -187,7 +187,11 @@ static UrsatzStatus run_theme(const WorkshopComposeRun *run, cJSON **out_summary
     }
     for (size_t i = 0; result == URSATZ_OK && i < 3; i++) {
         char path[PATH_BYTES + 64];
-        snprintf(path, sizeof(path), "%s/%s", run->stage, kThemeFiles[i]);
+        if (!common_path_join(path, sizeof(path), run->stage, kThemeFiles[i])) {
+            workshop_error_text(error, "a file of the version could not be written");
+            result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+            break;
+        }
         const void *data = i == 0 ? (const void *)response.plan_json : i == 1 ? (const void *)response.midi : (const void *)response.musicxml;
         size_t size = i == 1 ? response.midi_size : strlen((const char *)data);
         if (!(common_file_write_atomic(path, data, size, NULL) == URSATZ_OK)) {

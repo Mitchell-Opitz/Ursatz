@@ -110,8 +110,7 @@ static double document_tempo(const cJSON *document) {
 
 static bool write_bytes(const char *dir, const char *name, const void *data, size_t size, UrsatzError *error) {
     char path[PATH_BYTES + 128];
-    snprintf(path, sizeof(path), "%s/%s", dir, name);
-    if (!(common_file_write_atomic(path, data, size, NULL) == URSATZ_OK)) {
+    if (!common_path_join(path, sizeof(path), dir, name) || !(common_file_write_atomic(path, data, size, NULL) == URSATZ_OK)) {
         workshop_error_text(error, "a file of the version could not be written");
         return false;
     }
@@ -204,8 +203,8 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
         }
         char file[96];
         snprintf(file, sizeof(file), written == 0 ? "plan.json" : "%s-plan.json", name);
-        snprintf(path, sizeof(path), "%s/%s", stage, file);
-        result = workshop_compose_write_plan(plan, path, error);
+        result = common_path_join(path, sizeof(path), stage, file) ? workshop_compose_write_plan(plan, path, error)
+                                                                    : workshop_fail(URSATZ_ERR_INTERNAL, NULL);
         snprintf(names[written], sizeof(names[written]), "%s", file);
         if (result == URSATZ_OK) {
             composer_response_destroy(&extra);
@@ -236,7 +235,10 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
         const cJSON *entry = NULL;
         int index = 0;
         cJSON_ArrayForEach(entry, versions) {
-            snprintf(path, sizeof(path), "%s/%s", named, names[index++]);
+            if (!common_path_join(path, sizeof(path), named, names[index++])) {
+                result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+                break;
+            }
             set_string((cJSON *)entry, "plan", path);
         }
         cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
@@ -246,12 +248,13 @@ static UrsatzStatus run_piece(const char *stage, const char *named, const cJSON 
         index = 0;
         cJSON_ArrayForEach(entry, versions) {
             char file[PATH_BYTES + 128];
-            snprintf(file, sizeof(file), "%s/%s", named, names[index++]);
-            bool added = files && cJSON_AddItemToArray(files, cJSON_CreateString(file));
-            snprintf(file, sizeof(file), "%s/%s.mid", named, entry->string);
-            added = added && cJSON_AddItemToArray(files, cJSON_CreateString(file));
-            snprintf(file, sizeof(file), "%s/%s.musicxml", named, entry->string);
-            added = added && cJSON_AddItemToArray(files, cJSON_CreateString(file));
+            char leaf[PATH_BYTES + 64];
+            bool added = files && common_path_join(file, sizeof(file), named, names[index++]) &&
+                         cJSON_AddItemToArray(files, cJSON_CreateString(file));
+            snprintf(leaf, sizeof(leaf), "%s.mid", entry->string);
+            added = added && common_path_join(file, sizeof(file), named, leaf) && cJSON_AddItemToArray(files, cJSON_CreateString(file));
+            snprintf(leaf, sizeof(leaf), "%s.musicxml", entry->string);
+            added = added && common_path_join(file, sizeof(file), named, leaf) && cJSON_AddItemToArray(files, cJSON_CreateString(file));
             if (!added) {
                 result = workshop_fail(URSATZ_ERR_ALLOC, NULL);
                 break;
@@ -551,9 +554,8 @@ static UrsatzStatus carry_request(const char *from_dir, const char *dir, UrsatzE
         if (result == URSATZ_OK && cJSON_IsObject(fill) && strcmp(common_json_string(fill, "kind"), "theme") == 0) {
             char name[96];
             snprintf(name, sizeof(name), "theme-%s.plan.json", common_json_string(section, "id"));
-            snprintf(path, sizeof(path), "%s/%s", from_dir, name);
-            snprintf(copy, sizeof(copy), "%s/%s", dir, name);
-            if (!copy_file(path, copy) || !set_string(fill, "plan", copy)) {
+            if (!common_path_join(path, sizeof(path), from_dir, name) || !common_path_join(copy, sizeof(copy), dir, name) ||
+                !copy_file(path, copy) || !set_string(fill, "plan", copy)) {
                 workshop_error_printf(error, "the plan of the theme in section %s could not be copied", common_json_string(section, "id"));
                 result = workshop_fail(URSATZ_ERR_INTERNAL, NULL);
             }
@@ -887,13 +889,14 @@ static UrsatzStatus run_variations(const Source *source, const char *name, const
         char names[3][64];
         char paths[3][PATH_BYTES + 128];
         static const char *const extensions[] = {"json", "mid", "musicxml"};
+        bool joined = true;
         for (int k = 0; k < 3; k++) {
             snprintf(names[k], sizeof(names[k]), "variation-%d.%s", i + 1, extensions[k]);
-            snprintf(paths[k], sizeof(paths[k]), "%s/%s", out_dir, names[k]);
+            joined = joined && common_path_join(paths[k], sizeof(paths[k]), out_dir, names[k]);
         }
         ComposerResponse exported;
         memset(&exported, 0, sizeof(exported));
-        result = cJSON_IsObject(plan) && cJSON_IsString(musicxml) ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, NULL);
+        result = joined && cJSON_IsObject(plan) && cJSON_IsString(musicxml) ? URSATZ_OK : workshop_fail(URSATZ_ERR_INTERNAL, NULL);
         if (result != URSATZ_OK) {
             workshop_error_text(error, "the variations could not be read");
             break;

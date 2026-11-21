@@ -115,7 +115,7 @@ UrsatzStatus workshop_layers_describe(const char *folder, cJSON **out) {
             char file[PATH_BYTES * 2];
             cJSON *reading = NULL;
             if (!has_suffix(names.items[i], ".json") || names.items[i][0] == '.' ||
-                snprintf(file, sizeof(file), "%s/%s", readings_dir, names.items[i]) >= (int)sizeof(file) ||
+                !common_path_join(file, sizeof(file), readings_dir, names.items[i]) ||
                 common_json_read_file(file, &reading, NULL) != URSATZ_OK) {
                 continue;
             }

@@ -282,7 +282,10 @@ UrsatzStatus workshop_library_piece_create(const char *pieces_dir, char **out_id
             return workshop_fail(URSATZ_ERR_ALLOC, NULL);
         }
         char dir_path[320];
-        snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
+        if (!common_path_join(dir_path, sizeof(dir_path), pieces_dir, id)) {
+            free(id);
+            return workshop_fail(URSATZ_ERR_IO, NULL);
+        }
         if (!common_path_exists(dir_path)) {
             *out_id = id;
             return URSATZ_OK;
@@ -326,8 +329,7 @@ UrsatzStatus workshop_library_list(const char *pieces_dir, WorkshopPieceSummary 
     bool failed = false;
     for (size_t i = 0; i < names.count && !failed; i++) {
         char dir_path[320];
-        snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, names.items[i]);
-        if (!common_path_is_dir(dir_path)) {
+        if (!common_path_join(dir_path, sizeof(dir_path), pieces_dir, names.items[i]) || !common_path_is_dir(dir_path)) {
             continue;
         }
         cJSON *meta = workshop_library_meta_read(dir_path);
@@ -390,7 +392,7 @@ bool workshop_library_piece_dir(const char *pieces_dir, const char *id, char *ou
     if (!is_valid_piece_id(id)) {
         return false;
     }
-    if (snprintf(out, out_size, "%s/%s", pieces_dir, id) >= (int)out_size) {
+    if (!common_path_join(out, out_size, pieces_dir, id)) {
         return false;
     }
     return common_path_is_dir(out);
@@ -400,8 +402,7 @@ bool workshop_library_piece_dir(const char *pieces_dir, const char *id, char *ou
 bool workshop_library_source_path(const char *dir_path, char *out, size_t out_size) {
     static const char *const kNames[] = {"source.mid", "source.musicxml", "source.xml", "source.mxl"};
     for (size_t i = 0; i < sizeof(kNames) / sizeof(kNames[0]); i++) {
-        snprintf(out, out_size, "%s/%s", dir_path, kNames[i]);
-        if (common_path_exists(out)) {
+        if (common_path_join(out, out_size, dir_path, kNames[i]) && common_path_exists(out)) {
             return true;
         }
     }

@@ -232,7 +232,7 @@ static void files_free(Files *f) {
 static char *read_if(const char *dir, const char *name) {
     char path[1100];
     char *data = NULL;
-    if (snprintf(path, sizeof path, "%s/%s", dir, name) >= (int)sizeof path || !common_path_exists(path)) {
+    if (!common_path_join(path, sizeof path, dir, name) || !common_path_exists(path)) {
         return NULL;
     }
     return common_file_read(path, &data, NULL, NULL) == URSATZ_OK ? data : NULL;

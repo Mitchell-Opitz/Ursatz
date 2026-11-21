@@ -662,7 +662,7 @@ static UrsatzStatus write_version_files_locked(const char *dir, const char *id, 
     cJSON *stored = cJSON_Duplicate(body, 1);
     UrsatzStatus result = stored ? URSATZ_OK : workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     if (result == URSATZ_OK) {
-        result = snprintf(path, sizeof(path), "%s/%s", dir, WORKSHOP_FILE_BODY) < (int)sizeof(path) &&
+        result = common_path_join(path, sizeof(path), dir, WORKSHOP_FILE_BODY) &&
                          workshop_format_write(path, body_format_of(type), stored, NULL) == URSATZ_OK
                      ? URSATZ_OK
                      : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
@@ -692,7 +692,7 @@ static UrsatzStatus write_version_files_locked(const char *dir, const char *id, 
         }
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-    result = snprintf(path, sizeof(path), "%s/%s", dir, WORKSHOP_FILE_ENVELOPE) < (int)sizeof(path) &&
+    result = common_path_join(path, sizeof(path), dir, WORKSHOP_FILE_ENVELOPE) &&
                      workshop_format_write(path, WORKSHOP_FORMAT_ITEM_VERSION, envelope, NULL) == URSATZ_OK
                  ? URSATZ_OK
                  : workshop_fail(URSATZ_ERR_INTERNAL, "material store failure");
@@ -986,8 +986,8 @@ static bool copy_folder(const char *from, const char *to) {
     for (size_t i = 0; ok && i < names.count; i++) {
         char source[PATH_BYTES * 2];
         char target[PATH_BYTES * 2];
-        if (snprintf(source, sizeof(source), "%s/%s", from, names.items[i]) >= (int)sizeof(source) ||
-            snprintf(target, sizeof(target), "%s/%s", to, names.items[i]) >= (int)sizeof(target)) {
+        if (!common_path_join(source, sizeof(source), from, names.items[i]) ||
+            !common_path_join(target, sizeof(target), to, names.items[i])) {
             ok = false;
         } else if (common_path_is_dir(source)) {
             ok = common_dir_make(target, NULL) == URSATZ_OK && copy_folder(source, target);
@@ -1201,8 +1201,9 @@ UrsatzStatus workshop_material_version_copy(const char *id, int number, const ch
     if (result == URSATZ_OK) {
         /* the envelope is the new version's own */
         char envelope[PATH_BYTES * 2];
-        snprintf(envelope, sizeof(envelope), "%s/%s", to_folder, WORKSHOP_FILE_ENVELOPE);
-        unlink(envelope);
+        if (common_path_join(envelope, sizeof(envelope), to_folder, WORKSHOP_FILE_ENVELOPE)) {
+            unlink(envelope);
+        }
     }
     cJSON_Delete(item);
     UNLOCK();

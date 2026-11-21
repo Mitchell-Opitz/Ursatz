@@ -26,7 +26,7 @@ typedef struct {
 } Scan;
 
 static bool under(const char *root, const char *relative, char *out, size_t size) {
-    return snprintf(out, size, "%s/%s", root, relative) < (int)size;
+    return common_path_join(out, size, root, relative);
 }
 
 /* Parses ".pending-<seq>-<rest>" or ".removed-<seq>-<rest>"; *rest points into name. */
@@ -72,7 +72,7 @@ static void scan(Scan *state, const char *folder) {
         char path[PATH_BYTES];
         long long seq = 0;
         const char *rest = NULL;
-        if (snprintf(path, sizeof(path), "%s/%s", folder, name) >= (int)sizeof(path)) {
+        if (!common_path_join(path, sizeof(path), folder, name)) {
             continue;
         }
         if (parse_aside(name, "pending", &seq, &rest)) {
@@ -82,7 +82,7 @@ static void scan(Scan *state, const char *folder) {
         } else if (parse_aside(name, "removed", &seq, &rest)) {
             if (seq > state->last_seq) {
                 char original[PATH_BYTES];
-                if (snprintf(original, sizeof(original), "%s/%s", folder, rest) < (int)sizeof(original) && !common_path_exists(original) &&
+                if (common_path_join(original, sizeof(original), folder, rest) && !common_path_exists(original) &&
                     rename(path, original) == 0) {
                     state->report->removed_restored++;
                 }

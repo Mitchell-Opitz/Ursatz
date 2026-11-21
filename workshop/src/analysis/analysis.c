@@ -128,8 +128,8 @@ static UrsatzStatus save_new_piece(const char *dir_path, const unsigned char *da
     }
 
     char source_path[400];
-    snprintf(source_path, sizeof(source_path), "%s/%s", dir_path, workshop_library_source_name(format, original_filename));
-    if (rename(upload_path, source_path) != 0) {
+    if (!common_path_join(source_path, sizeof(source_path), dir_path, workshop_library_source_name(format, original_filename)) ||
+        rename(upload_path, source_path) != 0) {
         common_dir_remove(dir_path, NULL);
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }
@@ -181,9 +181,10 @@ UrsatzStatus workshop_analysis_import_and_save(const char *pieces_dir, const uns
     static unsigned serial = 0;
     char stage[400];
     char final_dir[320];
-    snprintf(final_dir, sizeof(final_dir), "%s/%s", pieces_dir, id);
-    snprintf(stage, sizeof(stage), "%s/%s.stage-%d-%u", pieces_dir, id, (int)getpid(), __atomic_add_fetch(&serial, 1, __ATOMIC_RELAXED));
-    if (common_dir_create(stage, NULL) != URSATZ_OK) {
+    char stage_name[160];
+    snprintf(stage_name, sizeof(stage_name), "%s.stage-%d-%u", id, (int)getpid(), __atomic_add_fetch(&serial, 1, __ATOMIC_RELAXED));
+    if (!common_path_join(final_dir, sizeof(final_dir), pieces_dir, id) || !common_path_join(stage, sizeof(stage), pieces_dir, stage_name) ||
+        common_dir_create(stage, NULL) != URSATZ_OK) {
         free(id);
         return workshop_fail(URSATZ_ERR_IO, NULL);
     }

@@ -429,7 +429,9 @@ static bool folder_has_id(const char *folder, const char *id, bool sessions) {
             continue;
         }
         char path[320];
-        snprintf(path, sizeof path, "%s/%s", folder, names.items[i]);
+        if (!common_path_join(path, sizeof path, folder, names.items[i])) {
+            continue;
+        }
         cJSON *file = NULL;
         if (workshop_format_read(path, sessions ? WORKSHOP_FORMAT_LISTENING_SESSION : WORKSHOP_FORMAT_ITEM_RATINGS, true, &file, NULL) != URSATZ_OK) {
             continue;

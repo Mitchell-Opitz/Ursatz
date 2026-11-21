@@ -200,7 +200,7 @@ static bool render_cache_dir(const char *id, int number, char *out, size_t out_s
 }
 
 static bool render_cache_file(const char *dir, const char *name, char *out, size_t out_size) {
-  return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
+  return common_path_join(out, out_size, dir, name);
 }
 
 /* True when the string member name of meta equals value and value is not empty. */
@@ -287,7 +287,7 @@ static UrsatzStatus version_file_playback(const char *id, int number, const char
   }
   cJSON_Delete(version_body);
   FILE *exists = workshop_material_version_dir(id, number, dir, sizeof(dir)) &&
-                         snprintf(path, sizeof(path), "%s/%s", dir, name) < (int)sizeof(path)
+                         common_path_join(path, sizeof(path), dir, name)
                      ? fopen(path, "rb")
                      : NULL;
   if (!exists) {

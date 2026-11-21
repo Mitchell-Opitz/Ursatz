@@ -371,7 +371,7 @@ static bool realization_beside(const char *path, char *out, size_t size) {
         return false;
     }
     *slash = '\0';
-    return snprintf(out, size, "%s/%s", folder, WORKSHOP_FILE_REALIZATION) < (int)size;
+    return common_path_join(out, size, folder, WORKSHOP_FILE_REALIZATION);
 }
 
 /* Checks a layer file: a realization must read, a reading must read and name the realization beside it (the one this transaction staged, the one in the
@@ -431,8 +431,8 @@ static UrsatzStatus validate_entry(const WorkshopTxn *txn, const char *actual, c
     for (size_t i = 0; status == URSATZ_OK && i < names.count; i++) {
         char child[PATH_BYTES];
         char virtual_path[PATH_BYTES];
-        if (snprintf(child, sizeof(child), "%s/%s", actual, names.items[i]) >= (int)sizeof(child) ||
-            snprintf(virtual_path, sizeof(virtual_path), "%s/%s", final_path, names.items[i]) >= (int)sizeof(virtual_path)) {
+        if (!common_path_join(child, sizeof(child), actual, names.items[i]) ||
+            !common_path_join(virtual_path, sizeof(virtual_path), final_path, names.items[i])) {
             status = ursatz_error_set(error, URSATZ_ERR_IO, final_path, "a path under %s is too long", final_path);
         } else {
             status = validate_entry(txn, child, virtual_path, error);
