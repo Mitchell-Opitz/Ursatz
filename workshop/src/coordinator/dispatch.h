@@ -159,6 +159,18 @@ WORKSHOP_HANDLER(workshop_q_settings_scope);
 WORKSHOP_HANDLER(workshop_q_settings_list);
 WORKSHOP_HANDLER(workshop_q_settings_keys);
 
+/* ratings (api_ratings.c) */
+WORKSHOP_HANDLER(workshop_q_ratings_session);
+WORKSHOP_HANDLER(workshop_q_ratings_sessions);
+WORKSHOP_HANDLER(workshop_q_ratings_item);
+
+/* ratings commands (api_commands_ratings.c) */
+WORKSHOP_HANDLER(workshop_c_ratings_session);
+WORKSHOP_HANDLER(workshop_c_ratings_batch);
+WORKSHOP_HANDLER(workshop_c_ratings_rate);
+WORKSHOP_HANDLER(workshop_c_ratings_pick);
+WORKSHOP_HANDLER(workshop_c_ratings_rate_version);
+
 /* settings commands (api_commands_settings.c) */
 WORKSHOP_HANDLER(workshop_c_settings_set);
 WORKSHOP_HANDLER(workshop_c_settings_unset);

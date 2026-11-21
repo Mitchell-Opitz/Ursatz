@@ -46,6 +46,7 @@ add_library(ursatz_workshop_engine STATIC
     src/settings/settings_keys.c
     src/settings/settings_scopes.c
     src/settings/settings_resolve.c
+    src/ratings/ratings.c
     src/analysis/analysis.c
     src/analysis/analyze_tool.c
     src/analysis/corpus_tools.c
@@ -77,12 +78,14 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_commands_library.c
     src/coordinator/api_commands_sections.c
     src/coordinator/api_commands_settings.c
+    src/coordinator/api_commands_ratings.c
     src/coordinator/api_composer.c
     src/coordinator/api_items.c
     src/coordinator/api_jobs.c
     src/coordinator/api_journal.c
     src/coordinator/api_library.c
     src/coordinator/api_settings.c
+    src/coordinator/api_ratings.c
     src/coordinator/command_schemas.c
     src/coordinator/command_text.c
     src/coordinator/command_sheet.c

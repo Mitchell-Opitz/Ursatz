@@ -62,5 +62,7 @@ void workshop_events_after_commit(const char *command, const char *target, const
         event_with_id("links-changed", "run_id", target);
     } else if (strncmp(command, "settings.", 9) == 0) {
         workshop_event("settings-changed", cJSON_CreateObject());
+    } else if (strncmp(command, "ratings.", 8) == 0) {
+        workshop_event("ratings-changed", cJSON_CreateObject());
     }
 }

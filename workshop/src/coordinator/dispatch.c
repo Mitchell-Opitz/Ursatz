@@ -68,6 +68,9 @@ static const QueryEntry kQueries[] = {
     {"settings.scope", workshop_q_settings_scope},
     {"settings.list", workshop_q_settings_list},
     {"settings.keys", workshop_q_settings_keys},
+    {"ratings.session", workshop_q_ratings_session},
+    {"ratings.sessions", workshop_q_ratings_sessions},
+    {"ratings.item", workshop_q_ratings_item},
 };
 
 /* --- the table of commands ------------------------------------------------------------------------------------------------------- */
@@ -133,6 +136,11 @@ static const CommandEntry kCommands[] = {
     {"settings.override", workshop_c_settings_override},
     {"settings.switch", workshop_c_settings_switch},
     {"settings.use-taste", workshop_c_settings_use_taste},
+    {"ratings.session", workshop_c_ratings_session},
+    {"ratings.batch", workshop_c_ratings_batch},
+    {"ratings.rate", workshop_c_ratings_rate},
+    {"ratings.pick", workshop_c_ratings_pick},
+    {"ratings.rate-version", workshop_c_ratings_rate_version},
     {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };
 
