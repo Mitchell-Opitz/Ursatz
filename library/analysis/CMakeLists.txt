@@ -14,6 +14,8 @@ add_library(ursatz_analysis
     motive/motive_relation.c
     motive/motive_relation_pitch.c
     motive/motive_relation_rhythm.c
+    motive/motive_relation_interval.c
+    motive/motive_relation_harmony.c
     motive/motive_sketch.c
     motive/motive_tone_roles.c
     motive/motive_variant_recognition.c
