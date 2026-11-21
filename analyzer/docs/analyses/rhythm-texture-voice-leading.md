@@ -41,12 +41,12 @@ Measured on the reference pieces (MIDI):
 
 `test_rhythm` checks the structure of the section on Field 5 and its floors against Ursatz's hand annotation
 (`tests/fixtures/annotations/field5_rhythm.txt`, a draft reading of measures 1 to 30 of the 12/8 score): the annotated
-syncopation (measure 14, beat 2) is found, no hemiola is annotated (12/8 has none) and 7 of the 8 annotated hyperdownbeats
+syncopation (measure 14, beat 2) is found, no hemiola is annotated (12/8 has none) and 5 of the 8 annotated hyperdownbeats
 are the first measure of a hypermeasure, against the phrases the form adapter detects (Ursatz scores the annotated
 phrases). `test_rhythm_constructed` runs small pieces whose answer is known: eighth-note triplets in 4/4 (one run of six
-attacks, a borrowed division at the beat), a duplet in 6/8 and a hemiola in 3/4. `test_rhythm_field5_target` asserts
-Ursatz's target (80% of the syncopations and hyperdownbeats, every hemiola, every reinterpretation) and is marked
-`WILL_FAIL` (see [Known limits](../known-limits.md)).
+attacks, a borrowed division at the beat), a duplet in 6/8 and a hemiola in 3/4. `test_rhythm` asserts the floors measured at `243bd316` (the
+syncopation, the hemiolas, 5 of 8 hyperdownbeats) and prints Ursatz's target (80% of the hyperdownbeats, every
+reinterpretation) without gating on it (see [Known limits](../known-limits.md)).
 
 ## Texture
 

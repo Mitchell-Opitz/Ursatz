@@ -30,14 +30,15 @@ Where the Analyzer reads a piece differently from its annotation, and why. Back 
 - Melody: only the soprano is read (the bass line is not asked for), and the outer voice extraction keeps one soprano
   note per voice segment, which drops the quick notes some leaps arrive on, and adopts a left-hand note where the right
   hand rests (Bach 114 measure 4). Bach 114 gets none of the annotated ranges and 4 of the 11 annotated leaps with the
-  annotated status (36.4%, target 90%): `test_melody_bach_114_target` is `WILL_FAIL`. A MIDI file has no spellings, so the
+  annotated status (36.4%, target 90%): `test_melody` asserts those numbers as floors at `243bd316` and prints the target. A MIDI file has no spellings, so the
   library reads a leap's size from the scale degrees, and two notes a semitone apart whose degrees are a fifth apart read
   as a leap of a fifth (Bach 114, measures 13 and 19). A phrase is one line, so a leap at its end has nothing after it (not judged). The line
   tendencies treat a rest in the line as no gap.
 - Rhythm: the form adapter does not report elided cadences, so the hypermeter reads no phrase as elided and reports no
   hypermetric reinterpretation. Field 5's annotation has one (measure 9, where the phrase of measures 5 to 8 is elided with
-  the next): `test_rhythm_field5_target` is `WILL_FAIL`, with the syncopation, the hemiolas (none) and 7 of 8
-  hyperdownbeats (87.5%, target 80%; measure 18 is missed) meeting its target. The hypermeter reads the phrases as the
+  the next): `test_rhythm` prints that target (80% of the hyperdownbeats and every reinterpretation) and asserts the
+  syncopation, the hemiolas (none) and 5 of 8 hyperdownbeats (62.5%; measures 18, 20 and 22 are missed), the numbers at
+  `243bd316`. The hypermeter reads the phrases as the
   form adapter cuts them, so a phrase of one or three measures takes the better of the two lengths and ends in a short
   hypermeasure. Tuplets are read from times alone: only triplets, sextuplets and duplets are looked for, a MIDI file
   whose times are not on the grid of 96 to the whole note (an expressive performance) yields few or none, and a duplet
@@ -82,8 +83,9 @@ Where the Analyzer reads a piece differently from its annotation, and why. Back 
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
 - Progressions are the library's base numerals counted as they come: Bach 114's most common progression is
-  I > IV7 (6 occurrences, tied with ii > iii7), which ends on IV7, so `test_progressions_bach_114_top` (its top
-  progression ends on I) is `WILL_FAIL`. The 4/4 reading of Bach 114's 3/4 meter (see below) also shapes its
+  I > IV > vi (4 occurrences, tied with ii > I), and the first progression that ends on I is the second;
+  `test_progressions_bach_114_top` asserts those numbers at `243bd316` and prints the target (the top progression ends
+  on I). The 4/4 reading of Bach 114's 3/4 meter (see below) also shapes its
   measures and so its per-measure harmonic rhythm.
 - SMPTE-division MIDI files are rejected.
 - Compressed `.mxl` MusicXML is not read: the Ursatz importer takes uncompressed documents only.

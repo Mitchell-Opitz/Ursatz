@@ -30,8 +30,7 @@ Tests:
   valgrind).
 - `test_corpus_key_estimation`: the home key of six reference pieces.
 - `test_key_regions_clementi_36`, `test_key_regions_mozart_545`: the key regions and principal
-  modulations of Clementi Sonatina Op. 36 No. 1 and Mozart K. 545 against hand-read regions. Both are
-  marked `WILL_FAIL`: Ursatz's detection does not reach the target yet (see [known limits](known-limits.md)).
+  modulations of Clementi Sonatina Op. 36 No. 1 and Mozart K. 545 against hand-read regions.
 - `test_key_regions_constructed`: a piece with no modulation, one with an excursion whose cadence makes it a
   weak modulation, one with a modulation, and a notated key signature the music does not fit.
 - `test_cadences`: the cadence claims of the five reference pieces (locations, note ids, types, regions), the
@@ -41,7 +40,8 @@ Tests:
   cadential six-four in Mozart 545.
 - `test_progressions`: the progression finder on hand-built chord lists (held chords, key and unlabelled breaks,
   containment, the six-chord limit) and the progressions of Bach 114 and Mozart 545. `test_progressions_bach_114_top`
-  asserts that Bach 114's most common progression ends on I; it is marked `WILL_FAIL` (see [known limits](known-limits.md)).
+  asserts Bach 114's progressions at the numbers measured at `243bd316` and prints the target, that the most common
+  progression ends on I (see [known limits](known-limits.md)).
 - `test_themes`: a constructed sentence, period and compound period (`tests/musicxml`), field by field (form, part
   names, measures, cadences, halves), and on the five reference pieces the structure of the themes and expansions
   (order, parts inside the theme, cadences in their part, expansions inside their phrase).

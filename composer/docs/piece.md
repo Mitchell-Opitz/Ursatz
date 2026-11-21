@@ -101,7 +101,7 @@ Measured, seeds 1 to 10, C major 4/4, invented motive (`test_return_heard`):
 | variations (3) | 6 of 30 | The same: the theme and every variation are periods |
 
 The cause is the kernel's: the detection compares the exact contour and rhythm of the themes standard-form finds, and
-grow never hears a period (0 of 40, [grow.md](grow.md)). A section without a heard theme can neither return nor be
+grow's period is heard as a period in 32 of 40 runs of 8 bars ([grow-hearing.md](grow-hearing.md), the test's baseline at `243bd316`). A section without a heard theme can neither return nor be
 returned in what is heard, whatever the plan copied.
 
 ## Keys and cadences

@@ -151,5 +151,5 @@ Measured on the reference pieces (MIDI), summed over the phrases:
 with the notes), and its floors against Ursatz's hand annotation of the first eight measures
 (`tests/fixtures/annotations/bach114_melody.txt`, a draft reading with placeholder phrase spans): both climaxes are right,
 none of the ranges and 4 of the 11 annotated leaps have the annotated status, the same as Ursatz's own whole-chain run.
-`test_melody_bach_114_target` asserts the library test's target (every climax and range, at least 90% of the leaps) and is
-marked `WILL_FAIL` (see [Known limits](../known-limits.md)).
+`test_melody` asserts those numbers as floors and prints the library test's target (every climax and range, at least 90%
+of the leaps) without gating on it (see [Known limits](../known-limits.md)).

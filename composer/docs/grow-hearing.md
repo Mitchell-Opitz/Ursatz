@@ -10,9 +10,11 @@ the themes in `GrowOutcome.heard`. A theme heard as the form the section asks fo
 `heard_as_requested`, never rejected. A hybrid is heard as requested only with the beginning and the ending asked
 for (`requested_beginning`, `requested_ending`).
 
-Measured by `tests/test_grow_sentence_heard.c`, over four keys and meters and seeds 1 to 10 (`ctest` runs it as
-WILL_FAIL, since it asserts that every grown sentence is heard as a sentence). The theme is heard through the Analyzer; the figures measured with the adapter reading the planned chords (the motive-forms) were 28 of 40 (70%) at 8
-bars, 12 as a hybrid, none unheard:
+Measured by `tests/test_grow_sentence_heard.c`, over four keys and meters and seeds 1 to 10. The numbers below are the
+test's baselines at `243bd316` (R-698): it fails when the sentences heard fall below 16 at 8 bars or the runs with no theme
+rise above 7 (above 40 at 4 bars), and passes when a number holds or improves. The target, every grown sentence heard as
+a sentence, is printed and does not gate. The theme is heard through the Analyzer; the figures measured with the adapter
+reading the planned chords (the motive-forms) were 28 of 40 (70%) at 8 bars, 12 as a hybrid, none unheard:
 
 | Bars | Heard as a sentence | Heard as another form | No theme |
 | --- | --- | --- | --- |
@@ -41,24 +43,28 @@ phrase and theme stages, not tuned away:
 ### Periods and hybrids
 
 Measured by `tests/test_grow_period_heard.c`, one `ctest` test for each pairing but the sentence, over four keys and
-meters and seeds 1 to 10 (`ctest` runs each as WILL_FAIL, since each asserts that every theme of 8 bars is heard as the
-form it was grown as: a period for an antecedent and a consequent, a hybrid with the requested beginning and ending for
-the rest). The compound basic idea and a continuation was heard in every run with the motive-forms and is heard in 32 of
+meters and seeds 1 to 10. `test_grow_period` grows each theme once, writes the plan and what `grow_run` heard
+(`s<scenario>-<bars>-<seed>.plan.json`, `heard.txt`), and the heard test reads them and hears the plan again. Each test
+holds the shares to a baseline table in its source (the numbers below, measured at `243bd316`): it fails when the themes
+heard as requested fall below the floor or the runs with no theme rise above the ceiling, and passes when a number holds
+or improves. The target, every theme of 8 bars heard as the form it was grown as (a period for an antecedent and a
+consequent, a hybrid with the requested beginning and ending for the rest), is printed and does not gate. The compound basic idea and a continuation was heard in every run with the motive-forms and is heard in 32 of
 40 through the Analyzer (38 before P61 B6, 40 before P36's Analyzer hearing; B6 hears on harmonic spans). The "before" column is the figure measured with the adapter reading the planned chords:
 
-| Pairing | Before | 8 bars: heard as requested | Heard as another form or with other parts | No theme |
+| Pairing | 8 bars: heard as requested | A hybrid with other parts | Heard as another form | No theme |
 | --- | --- | --- | --- | --- |
-| Presentation + consequent | 9 of 40 (22%) | 5 of 40 (12%) | 33 (19 as another form, 14 as a hybrid with other parts) | 2 |
-| Presentation + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 39 (32 as another form, 7 as a hybrid with other parts) | 1 |
-| Antecedent + continuation | 30 of 40 (75%) | 14 of 40 (35%) | 2 (hybrids with other parts) | 24 |
-| Antecedent + consequent (period) | 0 of 40 (0%) | 32 of 40 (80%) (38 before P61 B6) | 3 (as another form) | 5 |
-| Antecedent + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 37 (hybrids with other parts) | 3 |
-| Compound basic idea + continuation | 40 of 40 (100%) | 32 of 40 (80%) (38 before P61 B6) | 0 | 8 |
-| Compound basic idea + consequent | 19 of 40 (47%) | 3 of 40 (7%) | 34 (hybrids with other parts) | 3 |
-| Compound basic idea + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 34 (hybrids with other parts) | 6 |
+| Presentation + consequent | 1 of 40 | 28 | 10 | 1 |
+| Presentation + cadential | 0 of 40 | 29 | 9 | 2 |
+| Antecedent + continuation | 0 of 40 | 2 | 35 | 3 |
+| Antecedent + consequent (period) | 32 of 40 (38 before P61 B6) | 0 | 3 | 5 |
+| Antecedent + cadential | 0 of 40 | 2 | 38 | 0 |
+| Compound basic idea + continuation | 32 of 40 (38 before P61 B6) | 0 | 0 | 8 |
+| Compound basic idea + consequent | 3 of 40 | 37 | 0 | 0 |
+| Compound basic idea + cadential | 0 of 40 | 37 | 0 | 3 |
 
 Every theme of 4 bars is the same as a sentence of 4 bars: 0 of 40 for every pairing, all no theme. Only the themes of 8
-bars are held to the assertion for that reason.
+bars are held to a floor for that reason; at 4 bars the ceiling is 40 no theme. Where an older figure differs from the
+table, this doc does not say why.
 
 The causes below were found with the adapter reading the planned chords; the Analyzer identifies the chords from the notes
 and hears every written lane, which moved the shares as above. They are not analysed again here:
