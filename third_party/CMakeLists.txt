@@ -8,6 +8,5 @@ target_compile_definitions(ursatz_ezxml PRIVATE EZXML_NOMMAP)
 target_compile_options(ursatz_ezxml PRIVATE -w)
 set_target_properties(ursatz_ezxml PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-if(URSATZ_GUI)
-    add_subdirectory(civetweb)
-endif()
+# The command line links civetweb (cli/CMakeLists.txt), so it is built whether or not the GUI is (R-670).
+add_subdirectory(civetweb)
