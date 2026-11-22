@@ -854,3 +854,6 @@ ursatz_test_executable(test_critic_line LIBS ursatz_composer_engine cjson compos
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ursatz_test(test_critic_line TARGET test_critic_line)
 ursatz_test(test_critic_evaluators LIBS ursatz_composer_engine cjson composer_test_support)
+ursatz_test_executable(test_critic_observe LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_critic_observe TARGET test_critic_observe)
