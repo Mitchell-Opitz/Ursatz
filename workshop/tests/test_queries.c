@@ -291,6 +291,46 @@ static void test_composer_queries(void) {
     workshop_reply_destroy(&reply);
     check(query("composer.recognize", "{\"source\":5}", &reply, &error) == URSATZ_ERR_REQUEST, "composer.recognize refuses a source that is not a reference");
     workshop_reply_destroy(&reply);
+
+    /* composer.recognize of the motif against a second motif answers the members the recognize route documents. */
+    char params[3000];
+    snprintf(params, sizeof(params),
+             "{\"type\":\"motif\",\"name\":\"Other\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
+             "\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}",
+             g_project);
+    check(command("item.create", NULL, params, -1, &reply, &error) == URSATZ_OK, "a second motif is made to recognize against");
+    char other[64];
+    snprintf(other, sizeof(other), "%s", str(member(reply.json, "item"), "id"));
+    workshop_reply_destroy(&reply);
+    snprintf(params, sizeof(params), "{\"source\":{\"item\":\"%s\",\"version\":1},\"target\":{\"item\":\"%s\",\"version\":1}}", g_motif, other);
+    static const char *const kRecognized[] = {"chain", "changed", "derivation", "distance", "found", "kept", "ok", "remoteness"};
+    check(ask("composer.recognize", params, &reply, &error), "composer.recognize answers for two motifs");
+    for (size_t i = 0; i < sizeof(kRecognized) / sizeof(kRecognized[0]); i++) {
+        check(member(reply.json, kRecognized[i]) != NULL, "composer.recognize answers each member the route documents");
+    }
+    workshop_reply_destroy(&reply);
+    check(command("item.delete", other, "{}", 1, &reply, &error) == URSATZ_OK, "the second motif is deleted again");
+    workshop_reply_destroy(&reply);
+
+    /* composer.import-motif reads the MIDI of one voice (hex as the materials route test sends it) into a motif's members. */
+    static const char kMidiHex[] = "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00";
+    uint8_t midi[sizeof(kMidiHex) / 2];
+    size_t midi_size = 0;
+    for (size_t i = 0; kMidiHex[i] && kMidiHex[i + 1]; i += 2) {
+        char pair[3] = {kMidiHex[i], kMidiHex[i + 1], 0};
+        midi[midi_size++] = (uint8_t)strtoul(pair, NULL, 16);
+    }
+    WorkshopBytes bytes = {midi, midi_size, "motif.mid"};
+    memset(&error, 0, sizeof(error));
+    cJSON *import_params = cJSON_Parse("{}");
+    UrsatzStatus imported = workshop_query(g_workshop, "composer.import-motif", import_params, &bytes, &reply, &error);
+    cJSON_Delete(import_params);
+    check(imported == URSATZ_OK, "composer.import-motif reads the MIDI bytes");
+    static const char *const kImported[] = {"notes_text", "meter", "key", "key_found", "moved_from", "pickup", "analysis"};
+    for (size_t i = 0; imported == URSATZ_OK && i < sizeof(kImported) / sizeof(kImported[0]); i++) {
+        check(member(reply.json, kImported[i]) != NULL, "composer.import-motif answers each member the import route documents");
+    }
+    workshop_reply_destroy(&reply);
 }
 
 static void test_item_and_subject_queries(void) {
