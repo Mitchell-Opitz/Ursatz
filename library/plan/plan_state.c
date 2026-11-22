@@ -5,7 +5,7 @@
 
 #include "plan/plan_internal.h"
 
-bool plan_state_transition_allowed(PlanState from, PlanState to) {
+static bool plan_state_transition_allowed(PlanState from, PlanState to) {
     return from == to || from != PLAN_STATE_GIVEN;
 }
 

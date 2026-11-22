@@ -22,8 +22,6 @@ typedef enum {
     PLAN_STATE_REALIZED
 } PlanState;
 
-bool plan_state_transition_allowed(PlanState from, PlanState to);
-
 /* Returns PLAN_STATE_CONSTRAINED for an unknown id. */
 PlanState plan_node_state(const Plan *plan, NodeId id);
 PlanState plan_lane_span_state(const Plan *plan, LaneSpanId id);

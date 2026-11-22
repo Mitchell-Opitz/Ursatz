@@ -31,8 +31,4 @@
 typedef AnalysisVoiceCell HarmonyVoiceCell;
 typedef AnalysisVoiceGrid HarmonyVoiceGrid;
 
-/* The semitone of a present cell, or false (*out untouched) for a cell with no usable pitch (no pitch and no spelling, or a
-   position that is not a whole semitone). */
-bool harmony_voice_cell_semitone(const HarmonyVoiceCell *cell, long *out);
-
 #endif
