@@ -36,7 +36,7 @@ The full table with every directory is in [structure.md](structure.md).
 
 ## Layers
 
-The Composer's sources are 17 modules, one folder each under `src/` (R-636). A module includes only the ones below it; `cmake/layer-table.txt` lists each module's `uses` row and the test `layer_table` fails on an include upward or between siblings that the row does not allow. Every module also uses the library (`model`, `theory`, `realization`, `plan`, `reading`, `analysis`, `chain`, `io`) and cJSON. The plan is the library's; the hearing gives readings (`check/hearing.c`: a reading for each heard span, over the performer notes of the rendered work, R-633).
+The Composer's sources are 18 modules, one folder each under `src/` (R-636). A module includes only the ones below it; `cmake/layer-table.txt` lists each module's `uses` row and the test `layer_table` fails on an include upward or between siblings that the row does not allow. Every module also uses the library (`model`, `theory`, `realization`, `plan`, `reading`, `analysis`, `chain`, `io`) and cJSON. The plan is the library's; the hearing gives readings (`check/hearing.c`: a reading for each heard span, over the performer notes of the rendered work, R-633).
 
 | Module | Holds | May use |
 |---|---|---|
@@ -52,7 +52,8 @@ The Composer's sources are 17 modules, one folder each under `src/` (R-636). A m
 | `counterpoint` | the counter-melody operator | `harmony`, `texture` and the five above |
 | `material` | the returns, variations and figures of a section, given material, connectives, the seam | `harmony`, `melody` and the five above |
 | `grow` | growing a theme from a motive | `harmony`, `motive`, `melody`, `material` and the five above |
-| `check` | hearing (readings), the critic (`analyzer_check`, form, key and return hearing), the style check and measure | `grow`, `harmony`, `melody`, `motive`, `texture` and the five above |
+| `check` | hearing (readings), the checks (`analyzer_check`, form, key and return hearing), the style check and measure | `grow`, `harmony`, `melody`, `motive`, `texture` and the five above |
+| `critic` | the critic ([critic.md](critic.md), R-719): the melody line of a candidate, eight evaluators of her listening notes and their score | `motive` and the five above |
 | `piece` | the compose run, the piece builders, performing, regenerating, the stages of `grow` | `check`, the operators, `grow` and the five above |
 | `candidates` | candidates and variations of a plan | `piece` and the five above |
 | `explain` | the explanation of a run | `piece`, `check`, `grow` and the five above |
