@@ -1,0 +1,38 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "michelle",
+  "entries": [
+    {
+      "id": "michelle.rule.rhythmic-monotony",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "rhythmic monotony",
+      "content": {
+        "code": "rhythmic_monotony",
+        "scope": "phrase",
+        "function": "critic_rhythmic_monotony",
+        "message": "bars {first} to {last} keep one rhythm",
+        "default_weight": 1,
+        "parameters": {
+          "run": "1/0"
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12",
+          "note": "a fixture entry"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "fixture"
+        }
+      ]
+    }
+  ]
+}
