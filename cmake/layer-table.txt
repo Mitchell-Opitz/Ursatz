@@ -101,6 +101,7 @@ group text text
 uses text model theory realization plan reading cjson common
 only ezxml library/io/musicxml_importer.c library/io/musicxml_import_parts.c library/io/musicxml_import_maps.c library/io/musicxml_import_internal.h -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
+only library/theory/knowledge/knowledge_internal.h library/theory/knowledge -- the loader files of the knowledge snapshot share its slot and readers; nothing else includes them
 
 
 
