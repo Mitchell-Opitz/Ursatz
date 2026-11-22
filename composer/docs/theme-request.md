@@ -140,6 +140,8 @@ What fails only while seeding (a theme no seed can write) is not found by valida
 
 ## In the API
 
+A theme whose ideas hold a contrast target (`development.functions.contrast`, API 4.5) has `contrasts` in its response: one row for each such idea with `idea`, `against` and the distance of its notes from that idea's in `rhythm`, `contour`, `register` and `density` (numbers, 0 for alike). The member is absent otherwise.
+
 [`composer_api_theme`](api/theme-and-piece.md#composer_api_themecontext-request_json-job-out) reads this request as a JSON text. The motives are inline:
 each motive object carries its content in `degrees`, and a motive that names a file (`path`, `file`) is refused with the path
 `/motives/<n>/path`. The `theme` command reads the same request from a file; the file holds the motives inline too, so a

@@ -91,6 +91,14 @@ Every L4 setting is off by default, so a settings file turns on only the ones a 
 
 All of them reach themes (`--what themes`); each is a setting of the `melody` or `development` group, described in [preferences.md](../../composer/docs/preferences.md).
 
+## A settings file for the contrast target
+
+`development.functions.contrast` draws each contrasting idea of a period as a distant contrast that is at least half unlike the basic idea in rhythm and in contour (R-710), or drops the structure. It reaches themes (`--what themes`) and is off by default, like every function setting:
+
+```json
+{"development": {"functions": {"contrast": true}}}
+```
+
 ## A settings file for the L3 settings
 
 Every L3 setting is off by default, so a settings file turns on only the ones a round compares (R-422). This file syncopates one cell in two with an off-beat note or an anticipation at the eighth level, allows at most two skips, gives the plan `ii V@1:3` (a ii chord, then V from bar 1 beat 3), and turns on the accelerating continuation and the basic idea as written for a theme:

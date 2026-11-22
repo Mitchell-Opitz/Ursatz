@@ -100,7 +100,7 @@ The distance of a candidate is the least, over the motives of the request's `avo
 
 ## The key and rule tables (R-672)
 
-`composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.skips_per_motif`: 122 rows. A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
+`composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.skips_per_motif`: 127 rows. A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
 
 A **hard** setting changes what a request may ask for or what a candidate may be: `melody.range.low`, `melody.range.high`, `melody.nct_types`, `melody.rhythm_repeat_bars`, `melody.waive`, `motif.leap.low`, `motif.leap.high`, `motif.leaps_per_motif`, `motif.skips_per_motif`, `motif.contrast_fidelity_min`, `motif.plan` and every `development.fidelity_minimum.*` (R-671). Every other setting is **soft**: a preference a listener can move.
 
@@ -125,6 +125,8 @@ The least fidelity an idea of a role may have under each development setting bef
 | `basic_as_written` | `false` | true or false | A motif as long as the basic idea, with chords of its own, is the basic idea as it is, over its own chords. Off by default; R-422. | new (R-466) |
 | `contrast.distance` | `similar` 1, `distant` 0 | weights 0 to 20 | A contrasting idea strays from the basic idea's rhythm as today (`similar`) or takes a rhythm drawn from the motif settings (`distant`). All 0 reads as `similar` 1; a name left out keeps its default. | new (R-475) |
 | `contrast.new_material` | 0 | 0 to 20 | The weight of a period's contrasting idea made of new material, a second motif from the motif settings, against the distance draw. Off by default; R-422. | new (R-477) |
+| `functions.harmony`, `functions.surface` | `false` | true or false | Themes whose ideas follow their formal function (P67 B6 and B7; read and echoed now, they act from those branches). Off by default. | new (R-711, R-712) |
+| `functions.contrast` | `false` | true or false | A contrasting idea of an antecedent, a compound basic idea or a consequent is drawn as a distant contrast that meets its function's contrast target (rhythm and contour by 1/2), or the structure is dropped; the idea node holds a `contrast` constraint and the theme response gives `contrasts` ([grow-contrast.md](grow-contrast.md#contrast-targets)). Off by default. | new (R-710) |
 
 | Role | `melody` | `balanced` | `theme` |
 | --- | --- | --- | --- |

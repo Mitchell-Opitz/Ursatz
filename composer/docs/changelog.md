@@ -4,6 +4,8 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 ## Unreleased (phase P67)
 
+API 4.5 (R-710, P67 B5): the development preferences take `functions` (`harmony`, `surface`, `contrast`, booleans, off by default; 127 keys, three more, all soft) and, with `functions.contrast`, a contrasting idea of an antecedent, a compound basic idea or a consequent is drawn as a distant contrast that meets its formal function's contrast target (rhythm and contour by 1/2) or the structure is dropped. The plan constraint `contrast` (`against`, `aspects`; plan format 6) holds the target and the theme response has `contrasts` (`idea`, `against`, `rhythm`, `contour`, `register`, `density`). `harmony` and `surface` are read and written and act from B6 and B7. `GrowFunctions`, `GrowContext.functions` and `.knowledge`. The development preferences moved to `preferences_development.c`. Off, every output is as it was.
+
 Sequence presentation (R-714, P67 B3; A20261115-81): a sequence repetition over a motif with chords holds the motif's chords a step up (I to ii, V to vi), as R-348 says; `build_presentation` read `spec->source`, which never carries chords, so the guard was always true and the chords were written whole (the tonic and the second degree). The guard reads the compose run's basic motive and no section motive. Default themes whose motif has chords change; the API, the plan format and the schemas are as they were.
 
 ## Unreleased (phase P66)
