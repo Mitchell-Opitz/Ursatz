@@ -41,7 +41,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
 endif()
 
 # Seeding from a corpus (composer/docs/style.md; R-619). The Analyzer finds the passages of a corpus like a passage or like numerals and the
-# Composer seeds from them given inline, so this test needs both apps. "sonatinas" is Clementi 36 from the root reference corpus and the
+# Composer seeds from them given inline, so the test (composer/tests/test_corpus_seed.c) needs both apps. "sonatinas" is Clementi 36 from the root reference corpus and the
 # Composer's own Mozart 545 (composer/tests/fixtures/corpus-sonatinas), copied into the build tree at configure time and analyzed by
 # ursatz corpus at build time; "empty" holds one file the Analyzer cannot import, so nothing in its output is analyzed.
 set(SEED_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
@@ -58,25 +58,3 @@ add_custom_command(
     VERBATIM)
 add_custom_target(seed_corpora DEPENDS ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json)
 
-ursatz_test_executable(test_corpus_seed LIBS ursatz_composer_internal ursatz_analyzer composer_test_support ursatz_test_support
-    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
-    COMPOSER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/composer/tests/fixtures"
-    COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
-    COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
-add_dependencies(test_corpus_seed ursatz seed_corpora)
-# Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
-# Slow: progression about 32 s at -j4 (2026-11-21); progression-smoke about 12 s and cli 10 s are kept in the fast set, same 2 s is fast.
-# progression searches the corpus twice and fills seeds 1 to 5 and is slow; progression-smoke places a progression and fills seed 1.
-foreach(mode motive same plan progression progression-smoke no-match cli)
-    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
-    set(labels)
-    if(mode STREQUAL "progression")
-        set(labels slow)
-    endif()
-    set(test_name test_corpus_seed_${mode})
-    if(mode STREQUAL "progression-smoke")
-        set(test_name test_corpus_seed_progression_smoke)
-    endif()
-    ursatz_test(${test_name} TARGET test_corpus_seed ARGS ${mode} LABELS ${labels}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
-endforeach()

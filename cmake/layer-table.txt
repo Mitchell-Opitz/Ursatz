@@ -375,7 +375,7 @@ like analyzer-tests analyzer-style
 like analyzer-tests analyzer-corpus
 like analyzer-tests analyzer-links
 like analyzer-tests analyzer-internal
-uses composer-tests test-support analysis io
+uses composer-tests test-support analysis io analyzer-api -- test_corpus_seed analyzes the seed corpora
 like composer-tests composer-request
 uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator workshop-items workshop-tests theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
 uses workshop-tests test-support composer-api analyzer-api workshop-jobs workshop-base workshop-settings workshop-analysis

@@ -795,3 +795,28 @@ ursatz_test(test_grow_fidelity_rank LIBS ursatz_composer_engine composer_test_su
 # Slow: about 520 s at -j4 (2026-11-21): composes 80 themes for each of the three settings and reads every idea's fidelity; the fast set has test_grow_fidelity_sentence and _period.
 ursatz_test(test_grow_fidelity_sweep LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+
+# Seeding from a corpus (R-619): the Analyzer analyzes the seed corpora (tests/CMakeLists.txt builds them, as the workshop test does), so
+# add_dependencies names the target defined there.
+ursatz_test_executable(test_corpus_seed LIBS ursatz_composer_internal ursatz_analyzer composer_test_support ursatz_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SONATINAS_CORPUS="${CMAKE_BINARY_DIR}/tests/corpora/sonatinas-analyzed"
+    COMPOSER_EMPTY_CORPUS="${CMAKE_BINARY_DIR}/tests/corpora/empty-analyzed")
+add_dependencies(test_corpus_seed ursatz seed_corpora)
+# Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
+# Slow: progression about 32 s at -j4 (2026-11-21); progression-smoke about 12 s and cli 10 s are kept in the fast set, same 2 s is fast.
+# progression searches the corpus twice and fills seeds 1 to 5 and is slow; progression-smoke places a progression and fills seed 1.
+foreach(mode motive same plan progression progression-smoke no-match cli)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
+    set(labels)
+    if(mode STREQUAL "progression")
+        set(labels slow)
+    endif()
+    set(test_name test_corpus_seed_${mode})
+    if(mode STREQUAL "progression-smoke")
+        set(test_name test_corpus_seed_progression_smoke)
+    endif()
+    ursatz_test(${test_name} TARGET test_corpus_seed ARGS ${mode} LABELS ${labels}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
+endforeach()
