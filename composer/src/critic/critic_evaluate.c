@@ -5,7 +5,7 @@
 #include <analysis/dimension/dimension.h>
 #include <theory/knowledge/rule_entry.h>
 
-#include <ursatz_composer/critic.h>
+#include "critic/critic_internal.h"
 
 /*
  * The eight evaluators (R-719). Each is a penalty from 0 to 1 over the melody line, an exact Rational. The code of each, the name of
@@ -205,8 +205,7 @@ static CriticResult rhythmic_monotony(const CriticLine *line, const KnowledgeSna
     return status;
 }
 
-/* How far the idea's notes are from the other's in the aspects, by the library's measure: false when either has no notes. */
-static CriticResult pair_contrast(const CriticLine *line, const CriticIdeaPair *pair, ContrastVector *vector, bool *measured) {
+CriticResult critic_pair_contrast(const CriticLine *line, const CriticIdeaPair *pair, ContrastVector *vector, bool *measured) {
     DimensionNote idea[MOTIVE_MAX_NOTES * 2];
     DimensionNote against[MOTIVE_MAX_NOTES * 2];
     DimensionSpan a;
@@ -258,7 +257,7 @@ static CriticResult contrast_distance(const CriticLine *line, const KnowledgeSna
         ContrastVector vector;
         bool measured = false;
         const CriticIdeaPair *pair = &line->pairs[i];
-        status = pair_contrast(line, pair, &vector, &measured);
+        status = critic_pair_contrast(line, pair, &vector, &measured);
         if (status != CRITIC_OK) {
             return status;
         }

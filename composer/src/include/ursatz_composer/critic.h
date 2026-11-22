@@ -175,4 +175,15 @@ size_t critic_message(const char *template, const CriticFinding *finding, const 
 CriticResult critic_judge(const CriticLine *line, const CriticLine *const *set, size_t set_count, const KnowledgeSnapshot *knowledge,
                           const CriticSettings *settings, CriticJudgment *out);
 
+typedef struct ComposerHearing ComposerHearing;
+
+/*
+ * Appends, to a judgment, the observations of the Composer's hearing of the theme node against its plan: cadence_heard for each planned
+ * cadence the Analyzer hears as another, theme_heard when it hears another form than the pairing asks for, contrast_heard for each
+ * contrast target the line's melody misses. None is scored. A theme the hearing cannot read adds none. The plan is the one the hearing
+ * was made from; the line is the one made from the hearing's render.
+ */
+CriticResult critic_observe(ComposerHearing *hearing, const Plan *plan, NodeId theme, const CriticLine *line, const KnowledgeSnapshot *knowledge,
+                            CriticJudgment *inout);
+
 #endif
