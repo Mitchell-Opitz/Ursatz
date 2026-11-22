@@ -65,7 +65,7 @@ ursatz_test_executable(test_corpus_seed LIBS ursatz_composer_internal ursatz_ana
     COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
 add_dependencies(test_corpus_seed ursatz seed_corpora)
 # Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
-# The same mode measured 36.2 s of CPU, over the 10 s fast-set limit.
+# Slow: progression about 32 s at -j4 (2026-11-21); progression-smoke about 12 s and cli 10 s are kept in the fast set, same 2 s is fast.
 # progression searches the corpus twice and fills seeds 1 to 5 and is slow; progression-smoke places a progression and fills seed 1.
 foreach(mode motive same plan progression progression-smoke no-match cli)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})

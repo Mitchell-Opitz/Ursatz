@@ -107,12 +107,12 @@ ursatz_test_executable(test_workshop_crash_points SOURCES test_crash_points.c LI
     DEFINITIONS URSATZ_WORKSHOP_TEST_HOOKS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
 ursatz_test(workshop_crash_points TARGET test_workshop_crash_points LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points)
-# Slow: about 35 s (a Library piece is analyzed and a theme composed at each stop). The smoke run (argument smoke) stops the item commands alone.
+# Slow: about 25 s at -j4 (2026-11-21) (a Library piece is analyzed and a theme composed at each stop). The smoke run (argument smoke) stops the item commands alone.
 ursatz_test(workshop_crash_points_smoke TARGET test_workshop_crash_points ARGS smoke
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points_smoke)
 
 # The layers a piece and a composed theme keep (P63 B9): Mozart 545's MIDI imported, a theme composed, a reading of another digest refused. The test makes
-# its own data folder in its working directory.
+# its own data folder in its working directory. Kept in the fast set: about 10 s at -j4 (2026-11-21).
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_layers)
 ursatz_test(workshop_layers SOURCES test_layers.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS URSATZ_WORKSHOP_TEST_MOZART="${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Mozart 545.mid"
@@ -163,7 +163,7 @@ ursatz_test(workshop_text SOURCES test_text.c LIBS ursatz_workshop_internal ursa
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
 
 # Ursatz Text over generated layers (P65 B3, slow): the layers of a composed piece of every form but the game loop and of five analyzed pieces
-# read with their codecs, printed and read back. Three minutes in a debug build.
+# read with their codecs, printed and read back. Slow: about 134 s at -j4 (2026-11-21); its smoke runs every PR.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
 ursatz_test(workshop_text_generated SOURCES test_text_generated.c LIBS ursatz_workshop_internal ursatz_test_support LABELS slow
     DEFINITIONS TEXT_FORMS="${CMAKE_SOURCE_DIR}/composer/forms"
