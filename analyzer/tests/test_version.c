@@ -13,7 +13,7 @@ int main(void) {
     CHECKF(strcmp(analyzer_version(), URSATZ_ANALYZER_VERSION) == 0, "version function equals the macro");
     CHECKF(strcmp(analyzer_producer_key(), URSATZ_ANALYZER_PRODUCER_KEY) == 0,
            "producer key function equals the macro");
-    CHECKF(strcmp(analyzer_version(), "0.7.0") == 0, "version is 0.7.0");
+    CHECKF(strcmp(analyzer_version(), URSATZ_EXPECTED_ANALYZER_VERSION) == 0, "version is the one project() sets (%s)", URSATZ_EXPECTED_ANALYZER_VERSION);
     const char *key = analyzer_producer_key();
     CHECKF(strlen(key) == 16, "producer key is 16 characters");
     for (size_t i = 0; key[i] != '\0'; i++) {

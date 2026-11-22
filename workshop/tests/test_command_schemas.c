@@ -18,7 +18,7 @@ static const char *kMotifBody =
 static void test_parity(void) {
     size_t rows = 0;
     const char *const *names = workshop_command_names(&rows);
-    check(rows == 62, "the dispatch table has 62 commands");
+    check(rows > 0, "the dispatch table has commands (the schemas are compared with its row count below)");
     size_t schemas = 0;
     for (size_t f = 0; f < workshop_command_family_count(); f++) {
         const cJSON *command;

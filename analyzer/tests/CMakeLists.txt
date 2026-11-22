@@ -366,7 +366,8 @@ if(URSATZ_VALGRIND)
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_staleness> LABELS slow valgrind)
 endif()
 
-ursatz_test(test_analyzer_version SOURCES test_version.c LIBS ursatz_test_support ursatz_analyzer_engine)
+ursatz_test(test_analyzer_version SOURCES test_version.c LIBS ursatz_test_support ursatz_analyzer_engine
+    DEFINITIONS URSATZ_EXPECTED_ANALYZER_VERSION="${PROJECT_VERSION}")
 
 # Consumer isolation (A20261104-31): a target linking only ursatz_analyzer_engine sees the chain's result header but cannot include a chain
 # internal header. The leak target must fail to compile, so it is left out of the default build and built by
