@@ -72,7 +72,8 @@ module analysis-texture      library/analysis/texture      prefix analysis/textu
 module analysis-counterpoint library/analysis/counterpoint prefix analysis/counterpoint/
 module analysis-galant       library/analysis/galant       prefix analysis/galant/
 module analysis-similarity   library/analysis/similarity   prefix analysis/similarity/
-group analysis analysis-notes analysis-motive analysis-voices analysis-harmony analysis-form analysis-meter analysis-texture analysis-counterpoint analysis-galant analysis-similarity
+module analysis-dimension    library/analysis/dimension    prefix analysis/dimension/
+group analysis analysis-notes analysis-motive analysis-voices analysis-harmony analysis-form analysis-meter analysis-texture analysis-counterpoint analysis-galant analysis-similarity analysis-dimension
 uses analysis-notes        model theory
 uses analysis-motive       model theory analysis-notes common
 uses analysis-voices       model analysis-notes analysis-meter
@@ -83,6 +84,7 @@ uses analysis-texture      model theory analysis-notes
 uses analysis-counterpoint model theory analysis-notes common
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
+uses analysis-dimension    model theory-vocabulary
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
 module realization     library/realization        prefix realization/
 group realization realization

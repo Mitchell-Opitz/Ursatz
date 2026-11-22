@@ -169,6 +169,7 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/framework_names.h
         theory/vocabulary/beat_strength.h
         theory/vocabulary/cadence_type.h
+        theory/vocabulary/contrast_aspect.h
         theory/vocabulary/key_change_extent.h
         theory/vocabulary/motive_occurrence_kind.h
         theory/vocabulary/motive_relation_step.h

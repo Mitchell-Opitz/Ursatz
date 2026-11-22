@@ -26,6 +26,12 @@ library/theory/meter/meter_class_rules.c standard_meter_category  # the six-cate
 
 analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it
 library/model/containers/section.c section_id  # no app reads a section's id since P62 B11 (the claims that named it are gone); its tests call it
+library/analysis/dimension/dimension.c check_span  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c from_rational  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c measure_density  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c measure_register  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c dimension_measure  # B5 reads it in grow and the theme response; B5 deletes this row; its tests call it
+library/analysis/dimension/dimension.c dimension_name  # B5 reads it in grow and the theme response; B5 deletes this row; its tests call it
 library/model/core/entity.c entity_id  # no app reads an entity's id since P62 B11 (the claims that named it are gone); its tests call it
 library/model/structure/motif_occurrence.c motif_occurrence_id  # no app reads an occurrence's id since P62 B11 (the claims that named it are gone); its tests call it
 common/strings.c common_text_set_realloc  # test hook: test_common_text simulates an allocation failure
