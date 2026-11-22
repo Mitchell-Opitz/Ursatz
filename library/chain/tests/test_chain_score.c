@@ -172,7 +172,59 @@ static void test_only_a_full_run_collects(void) {
     assert(analysis_chain_result(perception)->entry_count == 54 && analysis_chain_result(perception)->density_count == 8);
     assert(analysis_chain_result(perception)->progression_count == 0 && analysis_chain_result(perception)->section_count == 0);
     analysis_chain_destroy(perception);
+
+    /* Each result-only stage added to the chain stages collects what it reads, and only that: the form plan the one section; the
+       progressions as many as the all-stages run; the harmonic rhythm and the meter check their results; none of them without the stage. */
+    AnalysisChain *everything = NULL;
+    c.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    assert(analysis_chain_run_score(&bach, &c, &everything) == ANALYSIS_CHAIN_OK);
+    size_t all_progressions = analysis_chain_result(everything)->progression_count;
+    assert(all_progressions > 0);
+    analysis_chain_destroy(everything);
+    static const struct {
+        unsigned stage;
+        size_t sections, progressions, rhythm;
+        bool meter_check;
+    } ADDED[] = {{ANALYSIS_CHAIN_STAGE_FORM_PLAN, 1, 0, 0, false},
+                 {ANALYSIS_CHAIN_STAGE_PROGRESSIONS, 0, 0, 0, false},
+                 {ANALYSIS_CHAIN_STAGE_HARMONIC_RHYTHM, 0, 0, 1, false},
+                 {ANALYSIS_CHAIN_STAGE_METER_CHECK, 0, 0, 0, true}};
+    for (size_t i = 0; i < sizeof ADDED / sizeof ADDED[0]; i++) {
+        AnalysisChain *with = NULL;
+        c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION | ADDED[i].stage;
+        assert(analysis_chain_run_score(&bach, &c, &with) == ANALYSIS_CHAIN_OK);
+        const ChainResult *got = analysis_chain_result(with);
+        assert(got->section_count == ADDED[i].sections);
+        assert(ADDED[i].stage == ANALYSIS_CHAIN_STAGE_PROGRESSIONS ? got->progression_count == all_progressions : got->progression_count == 0);
+        assert(ADDED[i].rhythm ? got->harmonic_rhythm_count > 0 : got->harmonic_rhythm_count == 0);
+        assert(got->meter_check.present == ADDED[i].meter_check);
+        analysis_chain_destroy(with);
+        /* A stage that reads the chain's results does not run alone. */
+        AnalysisChain *alone = NULL;
+        c.stages = ADDED[i].stage;
+        assert(analysis_chain_run_score(&bach, &c, &alone) == ANALYSIS_CHAIN_ERR_BAD_CONFIG && alone == NULL);
+    }
     imported_score_destroy(&bach);
+
+    /* The markings: the two tempo markings and the four dynamics of a score that has them, none from the perception stages alone, and not
+       the stage alone. */
+    char path[512];
+    snprintf(path, sizeof(path), "%s/../scores/markings.musicxml", URSATZ_CORPUS_DIR);
+    ImportedScore marked;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &marked, NULL) == IMPORTED_SCORE_OK);
+    AnalysisChain *markings = NULL;
+    c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION | ANALYSIS_CHAIN_STAGE_MARKINGS;
+    assert(analysis_chain_run_score(&marked, &c, &markings) == ANALYSIS_CHAIN_OK);
+    assert(analysis_chain_result(markings)->tempo_marking_count == 2 && analysis_chain_result(markings)->dynamic_count == 4);
+    analysis_chain_destroy(markings);
+    c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION;
+    assert(analysis_chain_run_score(&marked, &c, &markings) == ANALYSIS_CHAIN_OK);
+    assert(analysis_chain_result(markings)->tempo_marking_count == 0 && analysis_chain_result(markings)->dynamic_count == 0);
+    analysis_chain_destroy(markings);
+    markings = NULL;
+    c.stages = ANALYSIS_CHAIN_STAGE_MARKINGS;
+    assert(analysis_chain_run_score(&marked, &c, &markings) == ANALYSIS_CHAIN_ERR_BAD_CONFIG && markings == NULL);
+    imported_score_destroy(&marked);
 
     /* No knowledge, no perception stage. */
     AnalysisChain *refused = NULL;
