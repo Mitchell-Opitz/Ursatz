@@ -84,7 +84,55 @@ static void test_the_histogram_is_capped(void) {
     piece_destroy(&piece);
 }
 
+/* The config is valid when the evidence count is 1 to 3 and both tolerances are at least twice the grid. */
+static void test_config_valid(void) {
+    StandardMeterConfig config = standard_meter_config_default();
+    assert(standard_meter_config_valid(&config));
+    assert(!standard_meter_config_valid(NULL));
+    config.hemiola_min_evidence = 0;
+    assert(!standard_meter_config_valid(&config));
+    config.hemiola_min_evidence = 4;
+    assert(!standard_meter_config_valid(&config));
+    config.hemiola_min_evidence = 3;
+    assert(standard_meter_config_valid(&config));
+    config = standard_meter_config_default();
+    config.onset_grid_denominator = 0;
+    assert(!standard_meter_config_valid(&config));
+    config = standard_meter_config_default();
+    config.onset_tolerance_denominator = 63; /* less than twice the grid of 32 */
+    assert(!standard_meter_config_valid(&config));
+    config = standard_meter_config_default();
+    config.release_tolerance_denominator = 63;
+    assert(!standard_meter_config_valid(&config));
+}
+
+/* A time near the grid snaps to it: an attack within 1/256 and a release within 1/64; an on-grid time is unchanged. */
+static void test_snap_time(void) {
+    const StandardMeterConfig config = standard_meter_config_default();
+    Rational time = rational_ratio(129, 512);
+    bool changed = false;
+    assert(standard_meter_snap_time(&config, &time, false, &changed) && changed);
+    assert(time.num == 1 && time.den == 4);
+
+    time = rational_ratio(132, 512); /* 1/128 off the grid: too far for an attack, near enough for a release */
+    assert(standard_meter_snap_time(&config, &time, false, &changed) && !changed);
+    assert(time.num == 33 && time.den == 128);
+    assert(standard_meter_snap_time(&config, &time, true, &changed) && changed);
+    assert(time.num == 1 && time.den == 4);
+
+    time = rational_ratio(3, 8); /* on the grid */
+    assert(standard_meter_snap_time(&config, &time, false, &changed) && !changed);
+    assert(time.num == 3 && time.den == 8);
+    assert(standard_meter_snap_time(&config, &time, false, NULL));
+
+    changed = true;
+    assert(!standard_meter_snap_time(NULL, &time, false, &changed) && !changed);
+    assert(!standard_meter_snap_time(&config, NULL, false, &changed));
+}
+
 int main(void) {
+    test_config_valid();
+    test_snap_time();
     test_a_known_rhythm();
     test_empty_phrases_and_bad_calls();
     test_the_histogram_is_capped();

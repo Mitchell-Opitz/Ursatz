@@ -186,6 +186,22 @@ static void test_spans_are_caller_supplied(void) {
 }
 
 static void test_bad_input_is_refused(void) {
+    /* The default config: the approximate penalty is 0.25 and a missing config is the default. */
+    assert(standard_counterpoint_melody_config_default().approximate_penalty == 0.25);
+    StandardCounterpointMelodyConfig config = standard_counterpoint_melody_config_default();
+    StandardCounterpointMelodicIntervals refused;
+    config.approximate_penalty = 1.5;
+    assert(standard_counterpoint_melody_intervals(&(StandardCounterpointMelodyLine){NULL, 0, 0}, &config, &refused) ==
+           STANDARD_COUNTERPOINT_MELODY_ERR_NULL_ARGUMENT);
+    config.approximate_penalty = -0.1;
+    assert(standard_counterpoint_melody_intervals(&(StandardCounterpointMelodyLine){NULL, 0, 0}, &config, &refused) ==
+           STANDARD_COUNTERPOINT_MELODY_ERR_NULL_ARGUMENT);
+    config.approximate_penalty = NAN;
+    assert(standard_counterpoint_melody_intervals(&(StandardCounterpointMelodyLine){NULL, 0, 0}, &config, &refused) ==
+           STANDARD_COUNTERPOINT_MELODY_ERR_NULL_ARGUMENT);
+    config = standard_counterpoint_melody_config_default();
+    assert(standard_counterpoint_melody_intervals(&(StandardCounterpointMelodyLine){NULL, 0, 0}, &config, &refused) ==
+           STANDARD_COUNTERPOINT_MELODY_OK);
     StandardCounterpointMelodyLine line;
     standard_counterpoint_melody_line_init(&line);
     StandardCounterpointMelodyNote note;

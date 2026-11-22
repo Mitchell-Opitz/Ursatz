@@ -112,6 +112,22 @@ int main(void) {
 
     motif_window_matching_destroy_occurrences(occurrences);
 
+    /* The partial comparison of an aligned stretch: the share of equal contour directions and of equal durations. */
+    MotifWindowSimilarity similarity;
+    assert(motif_window_matching_compare(&windows[0], 0, &windows[0], 0, 2, &similarity) == MOTIF_WINDOW_MATCHING_OK);
+    assert(similarity.contour_score == 1.0 && similarity.rhythm_score == 1.0);
+    assert(motif_window_matching_compare(&windows[0], 0, &windows[2], 0, 2, &similarity) == MOTIF_WINDOW_MATCHING_OK);
+    assert(similarity.contour_score == 1.0 && similarity.rhythm_score == 1.0); /* a transposition */
+    assert(motif_window_matching_compare(&windows[0], 0, &windows[4], 0, 2, &similarity) == MOTIF_WINDOW_MATCHING_OK);
+    assert(similarity.contour_score == 1.0 && similarity.rhythm_score == 0.5); /* quarter, quarter against quarter, half */
+    similarity.contour_score = -1.0;
+    assert(motif_window_matching_compare(&windows[0], 0, &windows[4], 0, 1, &similarity) == MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW);
+    assert(motif_window_matching_compare(&windows[0], 1, &windows[4], 0, 2, &similarity) == MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW);
+    assert(motif_window_matching_compare(&windows[0], 0, &windows[4], 1, 2, &similarity) == MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW);
+    assert(motif_window_matching_compare(&windows[0], 0, &windows[4], 0, 2, NULL) == MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW);
+    assert(motif_window_matching_compare(NULL, 0, &windows[4], 0, 2, &similarity) == MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW);
+    assert(similarity.contour_score == -1.0); /* untouched by a refusal */
+
     /* A window with no partner anywhere in the input yields no occurrence. */
     MotifWindow lone_window[1] = {{contour_4, rhythm_4, (const EntityID *const *)event_ids_4, 2}};
     MotifWindowOccurrence *lone_occurrences;

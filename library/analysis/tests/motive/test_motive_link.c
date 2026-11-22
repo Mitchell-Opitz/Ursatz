@@ -267,7 +267,33 @@ static void test_step_text(void) {
     assert(!motive_relation_step_text(&bad, text, sizeof(text)));
 }
 
+/* The sketches compared per dimension: itself keeps all four, a transposition and augmentation keeps rhythm, intervals and contour, and
+   one changed duration costs the rhythm alone. */
+static void test_variant_dimensions(void) {
+    MotiveSketch a = motive();
+    MotiveDimensions dimensions;
+    motive_variant_compare(&a, &a, &dimensions);
+    for (int d = 0; d < MOTIVE_DIMENSION_COUNT; d++) {
+        assert(dimensions.similarity[d] == 1.0 && dimensions.kept[d] && !dimensions.changed[d]);
+    }
+    assert(motive_variant_nearness(&dimensions) == 1.0);
+
+    MotiveSketch b = transposed_augmented(&a);
+    motive_variant_compare(&a, &b, &dimensions);
+    assert(dimensions.kept[MOTIVE_DIMENSION_RHYTHM] && dimensions.kept[MOTIVE_DIMENSION_INTERVALS] &&
+           dimensions.kept[MOTIVE_DIMENSION_CONTOUR]);
+    assert(motive_variant_nearness(&dimensions) == 1.0);
+
+    MotiveSketch c = a;
+    c.notes[1].duration = q(1, 4); /* the second note was an eighth */
+    motive_variant_compare(&a, &c, &dimensions);
+    assert(dimensions.similarity[MOTIVE_DIMENSION_RHYTHM] < 1.0 && dimensions.changed[MOTIVE_DIMENSION_RHYTHM]);
+    assert(dimensions.similarity[MOTIVE_DIMENSION_INTERVALS] == 1.0 && dimensions.similarity[MOTIVE_DIMENSION_CONTOUR] == 1.0);
+    assert(motive_variant_nearness(&dimensions) < 1.0 && motive_variant_nearness(&dimensions) > 0.5);
+}
+
 int main(void) {
+    test_variant_dimensions();
     test_linked_forward();
     test_linked_reversed();
     test_gated();

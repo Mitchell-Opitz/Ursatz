@@ -271,7 +271,43 @@ static void test_bad_calls_are_refused(void) {
     form_destroy(&empty);
 }
 
+/* A config is valid when every field is in range; a missing config is not. */
+static void test_config_valid(void) {
+    StandardFormConfig config = standard_form_config_default();
+    assert(standard_form_config_valid(&config));
+    assert(!standard_form_config_valid(NULL));
+    config.discontinuity_leap_semitones = 0;
+    assert(!standard_form_config_valid(&config));
+    config = standard_form_config_default();
+    config.similarity_min = 0.0;
+    assert(!standard_form_config_valid(&config));
+    config.similarity_min = 1.0;
+    assert(standard_form_config_valid(&config));
+    config.similarity_min = 1.5;
+    assert(!standard_form_config_valid(&config));
+    config.similarity_min = NAN;
+    assert(!standard_form_config_valid(&config));
+    config = standard_form_config_default();
+    config.no_signal_uncertainty = -0.1;
+    assert(!standard_form_config_valid(&config));
+    config.no_signal_uncertainty = 1.1;
+    assert(!standard_form_config_valid(&config));
+    config.no_signal_uncertainty = 1.0;
+    assert(standard_form_config_valid(&config));
+    config = standard_form_config_default();
+    config.motive_min_notes = 2;
+    assert(!standard_form_config_valid(&config));
+    config = standard_form_config_default();
+    config.motive_max_notes = 2;
+    assert(!standard_form_config_valid(&config));
+    config.motive_max_notes = 33;
+    assert(!standard_form_config_valid(&config));
+    config.motive_max_notes = 32;
+    assert(standard_form_config_valid(&config));
+}
+
 int main(void) {
+    test_config_valid();
     test_two_cadences_make_two_phrases();
     test_the_claim_carries_the_measures();
     test_a_post_cadential_plagal_is_absorbed();

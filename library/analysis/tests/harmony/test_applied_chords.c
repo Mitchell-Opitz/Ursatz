@@ -353,7 +353,63 @@ static void test_recheck_diatonic_switch(void) {
     standard_tonality_roman_results_destroy(results, 2);
 }
 
+/* The config is valid when its three numbers are finite and not negative. */
+static void test_applied_config_valid(void) {
+    StandardTonalityAppliedConfig config = standard_tonality_applied_config_default();
+    assert(standard_tonality_applied_config_valid(&config));
+    assert(!standard_tonality_applied_config_valid(NULL));
+    config.chromatic_min = 0.0;
+    config.missing_third_penalty = 0.0;
+    config.bass_chord_tone_bonus = 0.0;
+    assert(standard_tonality_applied_config_valid(&config));
+    config = standard_tonality_applied_config_default();
+    config.chromatic_min = -0.01;
+    assert(!standard_tonality_applied_config_valid(&config));
+    config = standard_tonality_applied_config_default();
+    config.missing_third_penalty = NAN;
+    assert(!standard_tonality_applied_config_valid(&config));
+    config = standard_tonality_applied_config_default();
+    config.bass_chord_tone_bonus = INFINITY;
+    assert(!standard_tonality_applied_config_valid(&config));
+}
+
+/* The resolution of an applied reading: the next distinct chord on the tonicized root, or on its submediant (deceptive). */
+static void test_applied_resolution(void) {
+    StandardTonalityChordInput inputs[3];
+    StandardTonalityRomanReading reading;
+    size_t resolution = 99;
+    bool deceptive = true;
+    inputs[0] = make_input("s1", 2, 2, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR); /* D major: V/V in C major */
+    inputs[1] = make_input("s2", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR); /* G: the tonicized root */
+    inputs[2] = make_input("s3", 0, 0, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR);
+    assert(standard_tonality_read_applied_chord(&inputs[0], &reading));
+    assert(standard_tonality_applied_resolution(inputs, 3, 0, &reading, &resolution, &deceptive));
+    assert(resolution == 1 && !deceptive);
+
+    inputs[1] = make_input("s2", 4, 4, ADAPTER_MINOR_TRIAD, 3, 0, C_MAJOR); /* E minor: the submediant of G */
+    assert(standard_tonality_applied_resolution(inputs, 3, 0, &reading, &resolution, &deceptive));
+    assert(resolution == 1 && deceptive);
+
+    inputs[1] = make_input("s2", 9, 9, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR); /* A: neither */
+    assert(!standard_tonality_applied_resolution(inputs, 3, 0, &reading, &resolution, &deceptive));
+    inputs[1] = make_input("s2", 7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR);
+    inputs[1].has_numeral = false; /* no numeral for the next chord */
+    assert(!standard_tonality_applied_resolution(inputs, 3, 0, &reading, &resolution, &deceptive));
+    inputs[1].has_numeral = true;
+
+    StandardTonalityRomanReading plain = reading;
+    plain.applied = false;
+    assert(!standard_tonality_applied_resolution(inputs, 3, 0, &plain, &resolution, &deceptive));
+    assert(!standard_tonality_applied_resolution(inputs, 3, 3, &reading, &resolution, &deceptive)); /* index out of range */
+    assert(!standard_tonality_applied_resolution(NULL, 3, 0, &reading, &resolution, &deceptive));
+    assert(!standard_tonality_applied_resolution(inputs, 3, 0, NULL, &resolution, &deceptive));
+    assert(!standard_tonality_applied_resolution(inputs, 3, 0, &reading, NULL, &deceptive));
+    assert(!standard_tonality_applied_resolution(inputs, 3, 0, &reading, &resolution, NULL));
+}
+
 int main(void) {
+    test_applied_config_valid();
+    test_applied_resolution();
     test_read_applied_chord_directly();
     test_identified_applied_chord_link_only_when_resolved();
     test_recheck_diatonic_switch();

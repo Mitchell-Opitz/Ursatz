@@ -106,7 +106,30 @@ static void test_the_fewest_intervals_of_a_fragment(void) {
            standard_form_motive_fragment_min_intervals(7) == 4);
 }
 
+/* A window is n notes from `first` that exist, hold no rest and have positive onset gaps. */
+static void test_the_window_of_notes(void) {
+    Notes n;
+    notes_init(&n);
+    const int pitches[5] = {60, 62, 64, 65, 67};
+    const double joined[5] = {0, 1, 2, 3, 4};
+    figure(&n, joined, pitches, 5); /* notes 0 to 4, each lasting to the next onset */
+    form_note(&n.f, 10, 0.5, 60);   /* notes 5 and 6: a rest between them (the first ends at 10.5, the next starts at 11) */
+    form_note(&n.f, 11, 1, 62);
+    form_note(&n.f, 12, 1, 64);     /* note 7, joined to note 6 */
+    n.count += 3;
+    notes_done(&n);
+    assert(standard_form_motive_window_ok(&n.line, 0, 5));
+    assert(standard_form_motive_window_ok(&n.line, 0, 2));
+    assert(standard_form_motive_window_ok(&n.line, 2, 3));
+    assert(!standard_form_motive_window_ok(&n.line, 0, 1));  /* fewer than two notes */
+    assert(!standard_form_motive_window_ok(&n.line, 3, 6));  /* past the last note */
+    assert(!standard_form_motive_window_ok(&n.line, 0, 33)); /* more than the most a window holds */
+    assert(!standard_form_motive_window_ok(&n.line, 4, 3));  /* a rest lies inside */
+    notes_destroy(&n);
+}
+
 int main(void) {
+    test_the_window_of_notes();
     test_a_varied_motive_changes_an_interval_or_the_rhythm();
     test_precedence_picks_the_strongest_kind();
     test_the_fewest_intervals_of_a_fragment();

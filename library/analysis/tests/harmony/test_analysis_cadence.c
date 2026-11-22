@@ -655,7 +655,41 @@ static void test_a_boundary_without_a_soprano_offers_an_unspecified_authentic_re
     fixture_destroy(&f);
 }
 
+/* The chord tests and the arrival rule the cadence adapter shares: V and I in root position, the arrival run of IV V I, and the weak
+   arrival that is switched off. */
+static void test_chord_tests_and_the_arrival_rule(void) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 2 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 3 (medium) */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 1, 3, 1);   /* I6, beat 4 */
+    HarmonySegment *segments = NULL;
+    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
+    assert(!harmony_cadence_is_dominant_root(&segments[0]) && harmony_cadence_is_dominant_root(&segments[1]));
+    assert(!harmony_cadence_is_dominant_root(&segments[2]) && !harmony_cadence_is_dominant_root(&segments[3]));
+    assert(!harmony_cadence_is_tonic_root(&segments[0]) && !harmony_cadence_is_tonic_root(&segments[1]));
+    assert(harmony_cadence_is_tonic_root(&segments[2]));
+    assert(!harmony_cadence_is_tonic_root(&segments[3])); /* inverted */
+    HarmonyCadenceConfig config = harmony_cadence_config_default();
+    assert(harmony_cadence_is_arrival(segments, 3, 1, 2, 2, &config)); /* the I of IV V I: a medium beat, the end of the piece */
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+
+    /* V on beat 1 and I on beat 2: a weak arrival, which is one unless it is switched off. */
+    fixture_init(&f);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
+    assert(harmony_cadence_is_arrival(segments, 2, 0, 1, 1, &config));
+    config.allow_weak_arrival = false;
+    assert(!harmony_cadence_is_arrival(segments, 2, 0, 1, 1, &config));
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
 int main(void) {
+    test_chord_tests_and_the_arrival_rule();
     test_authentic_v_to_i_on_a_strong_enough_beat();
     test_pac_iac_by_the_soprano();
     test_soprano_absent_is_authentic_unclassified_with_a_penalty();
