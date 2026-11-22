@@ -1,0 +1,27 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.vocabulary.homorhythm",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "homorhythm",
+      "content": {
+        "code": "homorhythm",
+        "category": "homophony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "note": "homorhythm is homophony with every part in the same rhythm"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}
