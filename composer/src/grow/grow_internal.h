@@ -402,6 +402,9 @@ PlanResult grow_add_contrast_constraint(GrowBuild *build, NodeId node, GrowPlace
 /* The harmony shape a progression type's code stands for (`prolongation`, `cadential`, `phrase_model`); false for a code with none (`sequence`). */
 bool grow_progression_shape(const char *code, PlanHarmonyShapeKind *kind);
 
+/* The formal function of the idea at a place under the pairing's theme type (the request's snapshot); NULL without a snapshot or a type. */
+const FormalFunction *grow_idea_function(const GrowThemeRequest *request, const SectionPairing *pairing, GrowPlace place);
+
 /*
  * Decides, at the draw, whether each half's harmony follows the formal functions of its ideas (R-711, functions.harmony): an
  * antecedent (the beginning) or a continuation or a consequent (the ending) with no construction, pedal, key change at its end or

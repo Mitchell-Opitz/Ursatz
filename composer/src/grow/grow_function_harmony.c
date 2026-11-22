@@ -74,6 +74,11 @@ static const ThemeTypeIdea *idea_at(const ThemeType *type, const SectionPairing 
     return NULL;
 }
 
+const FormalFunction *grow_idea_function(const GrowThemeRequest *request, const SectionPairing *pairing, GrowPlace place) {
+    const ThemeTypeIdea *idea = idea_at(type_of(request, pairing), pairing, place);
+    return idea ? idea->function : NULL;
+}
+
 /* The places of the half's ideas in time order. */
 static size_t half_places(const SectionPairing *pairing, bool beginning, GrowPlace places[3]) {
     if (beginning) {
