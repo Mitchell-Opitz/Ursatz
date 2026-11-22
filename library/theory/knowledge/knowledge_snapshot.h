@@ -14,8 +14,9 @@
  * own files, read once and then never changed. Whoever calls the library builds it and passes it on; the library keeps no copy, so
  * two snapshots built in one process are independent. The snapshot holds each entry's common fields and, for the pitch material,
  * chord type and relation kinds, what the entry says (every field the loader reads is checked, and a bad one refuses the build with
- * the file, the id and the field). The loaded kinds are the pitch material, the chord type, the relation and the instrument (its
- * two subtypes, instrument and ensemble). Entries of other kinds are kept by their common fields until their loaders exist.
+ * the file, the id and the field). The loaded kinds are the pitch material, the chord type, the relation, the instrument (its
+ * two subtypes, instrument and ensemble) and the vocabulary (its five subtypes). Entries of other kinds are kept by their common
+ * fields until their loaders exist.
  */
 
 typedef struct KnowledgeSnapshot KnowledgeSnapshot;
