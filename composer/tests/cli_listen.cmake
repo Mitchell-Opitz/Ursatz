@@ -1,7 +1,9 @@
 # The listen command, run as a process (cli/docs/cli-listen.md).
 # Run with: cmake -DCOMPOSER=<ursatz> -DANALYZER=<ursatz> -DWORK=<empty working directory>
 #           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] [-DCASE=overrides] -P cli_listen.cmake
-# CASE=overrides runs only the overrides of the melody stage (R-672); without it the script runs the rest.
+# CASE=overrides runs only the overrides of the melody stage (R-672); CASE=motifs the motifs and settings sections, CASE=themes the
+# themes from a generated motif, a motif file and triplets, and CASE=theme_settings the themes with settings, the style file and the
+# usage errors (each also runs --print-settings and the refusals); without a case the script runs the rest.
 
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}")
@@ -118,6 +120,7 @@ if(CASE STREQUAL "overrides")
     return()
 endif()
 
+if(NOT CASE STREQUAL "themes" AND NOT CASE STREQUAL "theme_settings")
 # --- motifs ------------------------------------------------------------------------------
 
 expect_status(0 listen --what motifs --count 3 --seed 5 --out-dir motifs-a)
@@ -229,7 +232,9 @@ string(FIND "${l3_status}" "refused: /preferences/motif/plan" l3_found)
 if(NOT l3_found EQUAL 0)
     message(FATAL_ERROR "a plan that does not fit 3/4 is not recorded as refused: ${first}")
 endif()
+endif()
 
+if(NOT CASE STREQUAL "motifs" AND NOT CASE STREQUAL "theme_settings")
 # --- themes ------------------------------------------------------------------------------
 
 # A generated motif for each sample.
@@ -259,6 +264,11 @@ foreach(line IN LISTS lines)
         message(FATAL_ERROR "a theme from the eighth-triplet motif is not ok: ${line}")
     endif()
 endforeach()
+
+endif()
+
+if(NOT CASE STREQUAL "motifs" AND NOT CASE STREQUAL "themes")
+# --- theme settings ----------------------------------------------------------------------
 
 # Every development setting on (R-453): the continuation and the basic idea as written reach the grow run (B4's fixture).
 file(WRITE "${WORK}/l3-development.json"
@@ -340,6 +350,7 @@ if(STYLE_FOLDER)
         message(FATAL_ERROR "the manifest does not name the style: ${first}")
     endif()
 endif()
+endif()
 
 # --- --print-settings and exit 1 -----------------------------------------------------------
 
@@ -353,10 +364,12 @@ endif()
 
 # The defaults document is a valid settings file and changes nothing.
 file(WRITE "${WORK}/defaults.json" "${OUT}")
-expect_status(0 listen --what motifs --count 3 --seed 5 --settings defaults.json --out-dir motifs-defaults)
-foreach(i 01 02 03)
-    compare_files(TRUE motifs-a/${i}.mid motifs-defaults/${i}.mid)
-endforeach()
+if(NOT CASE STREQUAL "themes" AND NOT CASE STREQUAL "theme_settings")
+    expect_status(0 listen --what motifs --count 3 --seed 5 --settings defaults.json --out-dir motifs-defaults)
+    foreach(i 01 02 03)
+        compare_files(TRUE motifs-a/${i}.mid motifs-defaults/${i}.mid)
+    endforeach()
+endif()
 
 file(WRITE "${WORK}/bad-settings.json" "{\"melody\": {\"keep\": 99}}")
 expect_status(1 listen --what motifs --settings bad-settings.json --out-dir bad-dir)

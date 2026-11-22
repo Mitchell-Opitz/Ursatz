@@ -411,9 +411,11 @@ endforeach()
 ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
 
-# The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
+# The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The motifs case runs the motifs and
+# settings sections, the themes case the themes from a generated motif, a motif file and triplets, the theme_settings case the themes with
+# settings and the style file. The slow case runs every section and also makes a style model
 # from the sonatina folder with the Analyzer (about 30 s in a Debug build).
-foreach(case smoke overrides style_folder)
+foreach(case motifs themes theme_settings overrides style_folder)
     set(folder OFF)
     set(labels)
     if(case STREQUAL "style_folder")
