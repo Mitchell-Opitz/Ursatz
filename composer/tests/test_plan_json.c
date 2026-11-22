@@ -173,6 +173,7 @@ static Plan *build_sentence_plan_with_tones(size_t tone_labels) {
     shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
     shape.params.harmony_shape.max_cells_per_chord = 2;
     shape.params.harmony_shape.split_at_bars = true;
+    shape.params.harmony_shape.free_motive = true;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_OK);
     shape.params.harmony_shape.max_cells_per_chord = -1;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_ERR_BAD_PAYLOAD);
@@ -273,7 +274,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.harmony_shape.ends_on == b->params.harmony_shape.ends_on &&
                a->params.harmony_shape.max_cells_per_chord == b->params.harmony_shape.max_cells_per_chord &&
                a->params.harmony_shape.split_at_bars == b->params.harmony_shape.split_at_bars &&
-               a->params.harmony_shape.pedal == b->params.harmony_shape.pedal;
+               a->params.harmony_shape.pedal == b->params.harmony_shape.pedal &&
+               a->params.harmony_shape.free_motive == b->params.harmony_shape.free_motive;
     case PLAN_CONSTRAINT_ACCOMPANIMENT:
         return a->params.accompaniment.pattern == b->params.accompaniment.pattern &&
                a->params.accompaniment.texture == b->params.accompaniment.texture &&

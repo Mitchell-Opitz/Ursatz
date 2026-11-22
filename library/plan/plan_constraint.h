@@ -103,7 +103,8 @@ typedef enum {
 
 /*
  * max_cells_per_chord 0 means no limit; split_at_bars lets no chord cross a barline. pedal: every chord's bass is the
- * start anchor's root; only with starts_on and ends_on DOMINANT on a prolongation (R-446).
+ * start anchor's root; only with starts_on and ends_on DOMINANT on a prolongation (R-446). free_motive: the harmony holds none of
+ * the chords the idea's motive wrote (a formal function with `motive_harmony` free, R-711); written only when true.
  */
 typedef struct {
     PlanHarmonyShapeKind kind;
@@ -112,6 +113,7 @@ typedef struct {
     int max_cells_per_chord;
     bool split_at_bars;
     bool pedal;
+    bool free_motive;
 } PlanHarmonyShape;
 
 /*

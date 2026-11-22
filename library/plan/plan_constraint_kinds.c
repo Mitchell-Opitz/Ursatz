@@ -483,6 +483,9 @@ static bool write_harmony_shape(cJSON *object, const Plan *plan, const PlanConst
     if (ok && shape->pedal) {
         ok = plan_json_add(object, "pedal", cJSON_CreateBool(true));
     }
+    if (ok && shape->free_motive) {
+        ok = plan_json_add(object, "free_motive", cJSON_CreateBool(true));
+    }
     return ok;
 }
 
@@ -513,7 +516,8 @@ static bool read_harmony_shape(JsonReader *reader, const cJSON *item, const char
     }
     return json_read_optional_int(reader, item, path, "max_cells_per_chord", 0, 64, &shape->max_cells_per_chord) &&
            json_read_optional_bool(reader, item, path, "split_at_bars", &shape->split_at_bars) &&
-           json_read_optional_bool(reader, item, path, "pedal", &shape->pedal);
+           json_read_optional_bool(reader, item, path, "pedal", &shape->pedal) &&
+           json_read_optional_bool(reader, item, path, "free_motive", &shape->free_motive);
 }
 
 static bool valid_accompaniment(const Plan *plan, const PlanConstraint *constraint) {

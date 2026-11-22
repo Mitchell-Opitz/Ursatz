@@ -102,7 +102,8 @@ void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     request->has_motive = false;
     memset(request->motive_fixed, 0, sizeof(request->motive_fixed));
-    if (request->cells > HARMONY_GIVEN_CELLS) {
+    /* A shape that frees the harmony from the motive's chords (a formal function with free motive harmony, R-711) holds none. */
+    if (request->cells > HARMONY_GIVEN_CELLS || (request->has_shape && request->shape.free_motive)) {
         return;
     }
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, request->span, ids, HARMONY_MAX_CHORDS);
