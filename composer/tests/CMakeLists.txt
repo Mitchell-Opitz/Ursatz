@@ -847,3 +847,10 @@ foreach(mode motive same plan progression progression-smoke no-match cli)
     ursatz_test(${test_name} TARGET test_corpus_seed ARGS ${mode} LABELS ${labels}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
 endforeach()
+
+# The critic (P68, R-719): the melody line of a motive and of a grown period, the eight evaluators over lines built by hand, and the
+# rule entries pinned to the tables (test_critic_rules).
+ursatz_test_executable(test_critic_line LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_critic_line TARGET test_critic_line)
+ursatz_test(test_critic_evaluators LIBS ursatz_composer_engine cjson composer_test_support)
