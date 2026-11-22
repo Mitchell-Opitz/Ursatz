@@ -142,6 +142,8 @@ cJSON *api_critic_json(const CriticJudgment *judgment, const CriticSettings *set
 UrsatzStatus composer_api_critique(const ComposerContext *context, const char *request_json, const UrsatzJob *job, ComposerResponse *out) {
     (void)job; /* a judgment of at most 16 candidates is quick: there is no step to cancel at */
     memset(out, 0, sizeof(*out));
+    Candidate candidates[MAX_CANDIDATES];
+    memset(candidates, 0, sizeof(candidates));
     UrsatzStatus status = api_require_knowledge(context, NULL, &out->error);
     cJSON *request = NULL;
     if (status == URSATZ_OK) {
@@ -167,8 +169,6 @@ UrsatzStatus composer_api_critique(const ComposerContext *context, const char *r
     if (status == URSATZ_OK && !api_read_preferences(request, &preferences, NULL, &out->error)) {
         status = URSATZ_ERR_REQUEST;
     }
-    Candidate candidates[MAX_CANDIDATES];
-    memset(candidates, 0, sizeof(candidates));
     for (int i = 0; status == URSATZ_OK && i < count; i++) {
         const cJSON *item = cJSON_GetArrayItem(list, i);
         bool has_plan = cJSON_IsObject(item) && cJSON_GetObjectItemCaseSensitive(item, "plan") != NULL;
@@ -218,7 +218,7 @@ UrsatzStatus composer_api_critique(const ComposerContext *context, const char *r
             status = api_fail_alloc(&out->error);
         }
     }
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < MAX_CANDIDATES; i++) {
         candidate_destroy(&candidates[i]);
     }
     cJSON_Delete(request);
