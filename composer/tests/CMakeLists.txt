@@ -505,6 +505,9 @@ ursatz_test(test_style_blend_harmony TARGET test_style_blend ARGS harmony LABELS
 ursatz_test(test_variant_registry LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/../library)
 
+# The small lookups of the headers: name tables, round trips of names, default parameters and pitch names.
+ursatz_test(test_composer_lookups LIBS ursatz_composer_engine composer_test_support)
+
 # Slow: about 26 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_variants_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"

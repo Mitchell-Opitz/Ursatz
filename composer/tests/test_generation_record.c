@@ -38,6 +38,7 @@ int main(void) {
     assert(generation_record_create(id, 42, "1.0.0", "common-practice-tonal-harmony-1.2", configuration,
                                      make_absent_provenance(), &record) == GENERATION_RECORD_OK);
 
+    assert(generation_record_id(record) == id);
     assert(generation_record_random_seed(record) == 42);
     assert(strcmp(generation_record_generator_version(record), "1.0.0") == 0);
 

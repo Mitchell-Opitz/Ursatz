@@ -202,6 +202,18 @@ static void check_result(const Piece *piece, const Cantus *cantus, int species, 
         assert(ok && result.hard_violations == 0);
         ok = standard_counterpoint_first_species_check(&input, &result);
         assert(ok && result.hard_violations == 0);
+        /* The report of the written line names species 1 and every group it was asked of, none with a hard rule broken. */
+        CounterpointReport report;
+        memset(&report, 0, sizeof(report));
+        assert(counterpoint_report(piece->plan, piece->target, &report));
+        assert(report.species == 1 && report.count > 0 && report.count <= COUNTERPOINT_REPORT_MAX_GROUPS && report.hard_ok_all);
+        for (size_t group = 0; group < report.count; group++) {
+            assert(report.name[group] != NULL && report.name[group][0] != '\0' && report.hard_ok[group]);
+        }
+        /* A span that carries no counterpoint has no report: the given line. */
+        LaneSpanId given[1];
+        assert(plan_lane_find(piece->plan, above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, piece->span, given, 1) >= 1);
+        assert(!counterpoint_report(piece->plan, given[0], &report));
     } else {
         StandardCounterpointSlotLine counter = {slots, total};
         if (species == 2) {

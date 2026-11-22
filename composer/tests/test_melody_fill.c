@@ -994,8 +994,26 @@ static void test_tone_roles(void) {
     plan_destroy(plain.plan);
 }
 
+/* melody_candidate_realized reads only a melody-fill payload: NULL, a payload of another kind and NULL arguments are refused. */
+static void test_candidate_realized_refusals(void) {
+    unsigned long other_payload[8] = {0x1234UL};
+    FillCandidate candidate;
+    LaneSpanId target = PLAN_LANE_SPAN_NONE;
+    PlanNote notes[4];
+    size_t count = 7;
+    memset(&candidate, 0, sizeof(candidate));
+    assert(!melody_candidate_realized(NULL, &target, notes, &count, 4));
+    assert(!melody_candidate_realized(&candidate, &target, notes, &count, 4));
+    candidate.payload = other_payload;
+    assert(!melody_candidate_realized(&candidate, &target, notes, &count, 4));
+    assert(!melody_candidate_realized(&candidate, NULL, notes, &count, 4) && !melody_candidate_realized(&candidate, &target, NULL, &count, 4) &&
+           !melody_candidate_realized(&candidate, &target, notes, NULL, 4));
+    assert(count == 7);
+}
+
 int main(int argc, char **argv) {
     smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    test_candidate_realized_refusals();
     test_ideas_in_order();
     test_sweep();
     test_chord_tones_only();

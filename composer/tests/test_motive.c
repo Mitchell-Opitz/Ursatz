@@ -6,6 +6,9 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_develop.h>
+#include <ursatz_composer/motive_render.h>
+#include <cJSON.h>
+
 #include <plan/plan_json.h>
 #include <plan/plan_state.h>
 
@@ -1367,6 +1370,152 @@ static void test_features_follow_the_notes(void) {
     assert(result.chord_count == 2 && time_is(result.chords[1].onset, 1, 2));
 }
 
+/* ------------------------------- a motive's source, key, own tone labels and rendering */
+
+static const PlanConstraint *constraint_of(const Plan *plan, NodeId node, PlanConstraintKind kind) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        if (plan_node_constraint_at(plan, node, i)->kind == kind) {
+            return plan_node_constraint_at(plan, node, i);
+        }
+    }
+    return NULL;
+}
+
+/* motive_attach_sourced: one SOURCE constraint with the piece it names, the node Given; no source is motive_attach. */
+static void test_attach_sourced(void) {
+    Motive motive = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
+    PlanSource source;
+    memset(&source, 0, sizeof(source));
+    snprintf(source.piece, sizeof(source.piece), "bach-001");
+    source.start_measure = 3;
+    source.end_measure = 4;
+    source.score_numerator = 1;
+    source.score_denominator = 2;
+    for (int with_source = 1; with_source >= 0; with_source--) {
+        Plan *plan = plan_create();
+        NodeId form, section, phrase, idea, node = PLAN_NODE_NONE;
+        PlanSpan four = {whole(0, 1), whole(4, 1)};
+        PlanSpan two = {whole(0, 1), whole(2, 1)};
+        PlanSpan one = {whole(0, 1), whole(1, 1)};
+        assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, four, "piece", &form) == PLAN_OK);
+        assert(plan_add_node(plan, form, PLAN_NODE_SECTION, four, "A", &section) == PLAN_OK);
+        assert(plan_add_node(plan, section, PLAN_NODE_PHRASE, two, NULL, &phrase) == PLAN_OK);
+        assert(plan_add_node(plan, phrase, PLAN_NODE_IDEA, one, "basic idea", &idea) == PLAN_OK);
+        assert(motive_attach_sourced(plan, idea, whole(0, 1), &motive, "motive", with_source ? &source : NULL, &node, NULL) == PLAN_OK);
+        assert(plan_node_state(plan, node) == PLAN_STATE_GIVEN);
+        const PlanConstraint *held = constraint_of(plan, node, PLAN_CONSTRAINT_SOURCE);
+        if (with_source) {
+            assert(held && strcmp(held->params.source.piece, "bach-001") == 0 && held->params.source.start_measure == 3 &&
+                   held->params.source.end_measure == 4 && held->params.source.score_numerator == 1 && held->params.source.score_denominator == 2);
+        } else {
+            assert(held == NULL);
+        }
+        plan_destroy(plan);
+    }
+}
+
+/* motive_key_of reads the key back as it was set; a rhythm motive with no key and NULL have none. */
+static void test_motive_key_of(void) {
+    Motive motive = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
+    SpelledKey key;
+    memset(&key, 0, sizeof(key));
+    assert(motive_key_of(&motive, &key) && spelled_key_tonic_pitch_class(&key) == 2 && spelled_key_equals(&key, &D_MINOR));
+    Motive rhythm = load_with(motive_from_rhythm_text, "x:q x:q x:h", &FOUR_FOUR, NULL);
+    assert(!motive_key_of(&rhythm, &key) && !motive_key_of(NULL, &key));
+}
+
+/* motive_analyze_with_tones: an override relabels its note and marks it overridden; one out of range, and any on a motive with no base harmony, are refused. */
+static void test_analysis_with_tone_overrides(void) {
+    Motive motive = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
+    MotiveAnalysis analysis;
+    MotiveToneOverride override;
+    memset(&override, 0, sizeof(override));
+    override.note = 2;
+    override.role = MOTIVE_TONE_NON_CHORD;
+    override.type = NON_CHORD_TONE_PASSING;
+    assert(motive_analyze_with_tones(&motive, &override, 1, &analysis));
+    assert(analysis.tones_known && analysis.tones[2].overridden && analysis.tones[2].role == MOTIVE_TONE_NON_CHORD &&
+           analysis.tones[2].type == NON_CHORD_TONE_PASSING);
+    assert(!analysis.tones[0].overridden && analysis.tones[0].role == MOTIVE_TONE_CHORD);
+    override.role = MOTIVE_TONE_CHORD;
+    assert(motive_analyze_with_tones(&motive, &override, 1, &analysis));
+    assert(analysis.tones[2].overridden && analysis.tones[2].role == MOTIVE_TONE_CHORD);
+    /* An override of a note the motive does not have, and a rhythm motive with no harmony to label against. */
+    override.note = 99;
+    assert(!motive_analyze_with_tones(&motive, &override, 1, &analysis));
+    override.note = 0;
+    Motive rhythm = load_with(motive_from_rhythm_text, "x:q x:q x:h", &FOUR_FOUR, NULL);
+    assert(!motive_analyze_with_tones(&rhythm, &override, 1, &analysis));
+}
+
+/* motive_analysis_to_json_rendered writes the motive as heard in another key; NULL without one. */
+static void test_rendered_analysis_json(void) {
+    Motive motive = load_with(motive_from_degrees_text, "1:q 3:e 5:e 1':h", &FOUR_FOUR, &C_MAJOR);
+    const SpelledKey g_major = test_key(7, "major");
+    Motive rendered;
+    assert(motive_in_key(&motive, &g_major, &rendered));
+    MotiveAnalysis analysis = analyze(&motive);
+    char *json = motive_analysis_to_json_rendered(&motive, &analysis, &rendered);
+    assert(json);
+    cJSON *root = cJSON_Parse(json);
+    assert(root);
+    const cJSON *render = cJSON_GetObjectItem(root, "rendered");
+    assert(cJSON_IsObject(render) && strcmp(cJSON_GetObjectItem(render, "key")->valuestring, "G major") == 0);
+    const cJSON *notes = cJSON_GetObjectItem(render, "notes");
+    assert(cJSON_GetArraySize(notes) == 4);
+    const cJSON *first = cJSON_GetArrayItem(notes, 0);
+    const cJSON *second = cJSON_GetArrayItem(notes, 1);
+    const cJSON *third = cJSON_GetArrayItem(notes, 2);
+    assert(cJSON_GetObjectItem(first, "midi_pitch")->valueint == 67);
+    assert(cJSON_GetObjectItem(cJSON_GetObjectItem(first, "offset"), "num")->valueint == 0);
+    assert(cJSON_GetObjectItem(cJSON_GetObjectItem(first, "duration"), "den")->valueint == 4);
+    assert(cJSON_GetObjectItem(cJSON_GetObjectItem(second, "offset"), "num")->valueint == 1 &&
+           cJSON_GetObjectItem(cJSON_GetObjectItem(second, "offset"), "den")->valueint == 4);
+    assert(cJSON_GetObjectItem(cJSON_GetObjectItem(third, "offset"), "num")->valueint == 3 &&
+           cJSON_GetObjectItem(cJSON_GetObjectItem(third, "offset"), "den")->valueint == 8);
+    cJSON_Delete(root);
+    free(json);
+    assert(motive_analysis_to_json_rendered(&motive, &analysis, NULL) == NULL);
+}
+
+static size_t spans_of(const Plan *plan, NodeId owner, PlanLaneKind lane, LaneSpanId *ids, size_t capacity) {
+    return plan_lane_find(plan, lane, 0, plan_node_span(plan, owner), ids, capacity);
+}
+
+/* motive_render_plan: a form with an idea under it, one Given meter span and one key span; a pickup is a short first meter span; a rhythm
+   motive has no key span; a motive with no notes has no plan. */
+static void test_render_plan(void) {
+    Motive motive = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
+    Plan *plan = motive_render_plan(&motive);
+    assert(plan);
+    NodeId form = plan_root(plan);
+    LaneSpanId ids[8];
+    assert(plan_node_kind(plan, form) == PLAN_NODE_FORM);
+    assert(spans_of(plan, form, PLAN_LANE_METER, ids, 8) == 1 && plan_lane_span_state(plan, ids[0]) == PLAN_STATE_GIVEN);
+    assert(plan_lane_span_payload(plan, ids[0])->meter.beats_per_bar == 4 && plan_lane_span_payload(plan, ids[0])->meter.beat_unit == 4);
+    assert(spans_of(plan, form, PLAN_LANE_REGION, ids, 8) == 1);
+    assert(spans_of(plan, form, PLAN_LANE_MELODY, ids, 8) == 1);
+    plan_destroy(plan);
+
+    /* A pickup of a quarter: the first meter span is a quarter long in 1/4. */
+    motive.pickup = (Rational){1, 4};
+    plan = motive_render_plan(&motive);
+    assert(plan);
+    assert(spans_of(plan, plan_root(plan), PLAN_LANE_METER, ids, 8) == 2);
+    PlanSpan first = plan_lane_span_span(plan, ids[0]);
+    assert(time_is(first.length, 1, 4) && plan_lane_span_payload(plan, ids[0])->meter.beats_per_bar == 1 &&
+           plan_lane_span_payload(plan, ids[0])->meter.beat_unit == 4);
+    plan_destroy(plan);
+
+    Motive rhythm = load_with(motive_from_rhythm_text, "x:q x:q x:h", &FOUR_FOUR, NULL);
+    plan = motive_render_plan(&rhythm);
+    assert(plan && spans_of(plan, plan_root(plan), PLAN_LANE_REGION, ids, 8) == 0);
+    plan_destroy(plan);
+
+    motive.note_count = 0;
+    assert(motive_render_plan(&motive) == NULL);
+}
+
 int main(void) {
     D_MINOR = test_key(2, "minor");
     C_MAJOR = test_key(0, "major");
@@ -1385,6 +1534,11 @@ int main(void) {
     test_json_errors();
     test_file_errors();
     test_attach_as_given();
+    test_attach_sourced();
+    test_motive_key_of();
+    test_analysis_with_tone_overrides();
+    test_rendered_analysis_json();
+    test_render_plan();
     test_degrees_reading();
     test_degrees_errors();
     test_rhythm_and_contour_reading();

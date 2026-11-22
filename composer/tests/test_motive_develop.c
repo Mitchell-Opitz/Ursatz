@@ -1110,7 +1110,39 @@ static void test_constraint_json(void) {
     plan_destroy(scene.plan);
 }
 
+/* motive_dev_label words each kind of step with its parameters. */
+static void expect_label(MotiveRelationKind kind, long v0, long v1, long v2, long den0, const char *expected) {
+    MotiveRelationStep step;
+    char label[96];
+    memset(&step, 0, sizeof(step));
+    step.kind = kind;
+    step.value[0] = v0;
+    step.value[1] = v1;
+    step.value[2] = v2;
+    step.den[0] = den0;
+    motive_dev_label(&step, label, sizeof(label));
+    if (strcmp(label, expected) != 0) {
+        fprintf(stderr, "label '%s', expected '%s'\n", label, expected);
+    }
+    assert(strcmp(label, expected) == 0);
+}
+
+static void test_labels(void) {
+    expect_label(MOTIVE_RELATION_EXACT, 0, 0, 0, 0, "restate exact");
+    expect_label(MOTIVE_RELATION_RETROGRADE, 0, 0, 0, 0, "retrograde");
+    expect_label(MOTIVE_RELATION_TRANSPOSE, 0, 3, 0, 0, "transpose +3 semitones");
+    expect_label(MOTIVE_RELATION_TRANSPOSE, 1, -2, 0, 0, "transpose -2 steps (tonal)");
+    expect_label(MOTIVE_RELATION_AUGMENT, 0, 0, 0, 0, "augment 2:1");
+    expect_label(MOTIVE_RELATION_AUGMENT, 3, 0, 0, 2, "augment 3:2");
+    expect_label(MOTIVE_RELATION_DIMINISH, 0, 0, 0, 0, "diminish 1:2");
+    expect_label(MOTIVE_RELATION_LIQUIDATE, 1, 0, 0, 0, "liquidate drop 1");
+    expect_label(MOTIVE_RELATION_LIQUIDATE, 2, 1, 0, 0, "liquidate drop 2 (keep rhythm)");
+    expect_label(MOTIVE_RELATION_INTERVAL_CHANGE, 0, 2, 0, 0, "interval change +2 on every interval");
+    expect_label(MOTIVE_RELATION_INTERVAL_CHANGE, 2, -1, 1, 0, "interval change -1 on interval 2 (keep contour)");
+}
+
 int main(void) {
+    test_labels();
     test_every_development_is_a_relative();
     test_explicit_parameters();
     test_degenerate_cases();

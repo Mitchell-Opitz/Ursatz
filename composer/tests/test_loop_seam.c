@@ -126,7 +126,31 @@ static SeamCase calm(const char *before, const char *after) {
     return c;
 }
 
+/* seam_hear_notes on the notes alone: the calm V to I seam holds all four rules; with no chords the progression does not hold. */
+static void test_hear_notes(void) {
+    SeamNotes notes;
+    SeamHeard heard;
+    memset(&notes, 0, sizeof(notes));
+    notes.key = test_key(0, "major");
+    notes.has_chords = true;
+    snprintf(notes.before_roman, sizeof(notes.before_roman), "V");
+    snprintf(notes.after_roman, sizeof(notes.after_roman), "I");
+    notes.bass_before = 43;
+    notes.bass_after = 48;
+    notes.melody_previous = 62;
+    notes.melody_before = 65;
+    notes.melody_after = 64;
+    notes.melody_next = 67;
+    memset(&heard, 0, sizeof(heard));
+    seam_hear_notes(&notes, &heard);
+    assert(heard.progression && heard.no_parallels && heard.step && heard.leading_tone && heard.held == SEAM_RULE_COUNT);
+    notes.has_chords = false;
+    seam_hear_notes(&notes, &heard);
+    assert(!heard.progression && heard.no_parallels && heard.step && heard.leading_tone && heard.held == SEAM_RULE_COUNT - 1);
+}
+
 static void test_rules(void) {
+    test_hear_notes();
     /* The progression: V to I and I to IV are held, IV to I is not; a repeated tonic is. */
     SeamCase c = calm("V", "I");
     SeamHeard heard = hear_case(&c);

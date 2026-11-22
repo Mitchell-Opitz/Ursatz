@@ -512,6 +512,16 @@ static void test_load_errors(void) {
     composer_style_destroy(style);
     assert(composer_style_load_without(SONATINAS, NULL, 0, &style) == COMPOSER_STYLE_OK && style && composer_style_pieces(style) == 2);
     composer_style_destroy(style);
+    /* A style from a model: NULL arguments are refused (the model stays the caller's), and the five results have their words. */
+    ComposerStyle *from_model = (ComposerStyle *)1;
+    assert(composer_style_from_model(NULL, 1, &from_model) == COMPOSER_STYLE_ERR_ARGUMENT);
+    assert(composer_style_from_model((StyleModel *)1, 1, NULL) == COMPOSER_STYLE_ERR_ARGUMENT);
+    assert(strcmp(composer_style_result_name(COMPOSER_STYLE_OK), "ok") == 0);
+    assert(strcmp(composer_style_result_name(COMPOSER_STYLE_ERR_ARGUMENT), "bad argument") == 0);
+    assert(strcmp(composer_style_result_name(COMPOSER_STYLE_ERR_IO), "file not readable") == 0);
+    assert(strcmp(composer_style_result_name(COMPOSER_STYLE_ERR_FORMAT), "not a style model file") == 0);
+    assert(strcmp(composer_style_result_name(COMPOSER_STYLE_ERR_ALLOC), "out of memory") == 0);
+    assert(strcmp(composer_style_result_name((ComposerStyleResult)99), "unknown") == 0);
     printf("the fixtures load and a file that is not a style is refused\n");
 }
 
