@@ -59,4 +59,7 @@ const char *dimension_name(Dimension dimension);
 /* The measure of the span in the dimension. *out is untouched on any result other than DIMENSION_OK. */
 DimensionResult dimension_measure(Dimension dimension, const DimensionSpan *span, Rational *out);
 
+/* How far the two spans contrast in each aspect. *out is untouched on any result other than DIMENSION_OK. */
+DimensionResult dimension_contrast(const DimensionSpan *a, const DimensionSpan *b, ContrastVector *out);
+
 #endif

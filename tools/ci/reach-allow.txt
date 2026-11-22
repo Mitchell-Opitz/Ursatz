@@ -30,6 +30,14 @@ library/analysis/dimension/dimension.c check_span  # static: only dimension_meas
 library/analysis/dimension/dimension.c from_rational  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
 library/analysis/dimension/dimension.c measure_density  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
 library/analysis/dimension/dimension.c measure_register  # static: only dimension_measure reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c difference  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c distance_of  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c rhythm_distance  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c direction_between  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c contour_distance  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c measure_difference  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c from_similarity  # static: only dimension_contrast reaches it, and nothing reaches that until B5; B5 deletes this row
+library/analysis/dimension/dimension.c dimension_contrast  # B5 reads it in grow and the theme response; B5 deletes this row
 library/analysis/dimension/dimension.c dimension_measure  # B5 reads it in grow and the theme response; B5 deletes this row; its tests call it
 library/analysis/dimension/dimension.c dimension_name  # B5 reads it in grow and the theme response; B5 deletes this row; its tests call it
 library/model/core/entity.c entity_id  # no app reads an entity's id since P62 B11 (the claims that named it are gone); its tests call it
