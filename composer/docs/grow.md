@@ -60,7 +60,7 @@ cadential slot in a period). A slot motive keeps no harmony, features or role (a
 
 ### Idea motives
 
-A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf`; each idea of each half is a `ThemeShapeIdea` row (idea, name, place, slot, first of its slot, role, length in eighths); each slot is a `ThemeShapeSlot`. `grow_idea_name`, `grow_idea_place`, `grow_idea_slot`, `grow_idea_role` and the other readers, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it,.
+A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf`; each idea of each half is a `ThemeShapeIdea` row (idea, name, place, slot, first of its slot, role, length in eighths); each slot is a `ThemeShapeSlot`. `grow_idea_name`, `grow_idea_place`, `grow_idea_slot`, `grow_idea_role` and the other readers, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it; the `omt.theme-type.*` entries are pinned to it (`test_theme_shape_entries`, R-708).
 
 `GrowIdea` names the ideas of a theme as the plan does (`grow_idea_name`: `basic idea`, `repetition`, `contrasting idea`,
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,

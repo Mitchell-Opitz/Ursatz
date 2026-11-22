@@ -6,7 +6,7 @@ Path `library/theory/knowledge/`. The knowledge snapshot: every entry of `knowle
 
 ## Provides
 
-`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
+`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7) and `ThemeType` (K8). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
 
 ## The instrument kind (K12, R-603)
 
@@ -48,3 +48,25 @@ const VocabularyEntry *tone = knowledge_snapshot_vocabulary(snapshot, "omt.vocab
 ```
 
 The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a code that is not lowercase words, a missing or bad field of the subtype, or a texture whose category is no texture entry's code refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The enums stay the identity at run time: the test `vocabulary_entries` pins each C table to its entries both ways, so the two cannot drift. Readers of the entries in grow (the progression types through the formal functions) come with P67 B6.
+
+## The formal function and theme type kinds (K7 and K8, R-708)
+
+`theory/knowledge/form_entry.h` holds what a theme is made of. A `FormalFunction` (kind `function`, subtype `formal-function`) says what an idea, a subphrase or a phrase does in a theme and what its harmony and surface follow from that:
+
+| Field | Meaning |
+|---|---|
+| `core`, `level` | initiating, medial, concluding and so on; `idea`, `subphrase` or `phrase` |
+| `harmony` | one to four progression-type entries, in order of preference |
+| `harmonic_rhythm`, `rhythmic_activity` | `any`, `faster` or `slower` against the idea before |
+| `keeps_motive_harmony` | `motive_harmony` is `keep` (the harmony holds the motive's chords) or `free` |
+| `cadence` | `none`, `weak`, `strong` or `any` (any when the entry says nothing) |
+| `contrast_against`, `aspects` | for a contrasting idea: the function it contrasts against and, per dimension of R-709 (rhythm, contour, register, density), the least distance |
+
+A `ThemeType` (kind `theme-type`) is a beginning and an ending (functions of subphrase or phrase level) and 2 to 6 ideas, each with its idea-level function, the slot its motive is drawn for, its half, its units (eighths of the theme) and its cadence (`none`, `first` on an antecedent's contrasting idea, `final` on the last idea). The entries are the nine pairings of the Composer's theme shape table: the sentence, the period and seven hybrids.
+
+```c
+const ThemeType *type = knowledge_snapshot_theme_type_of(snapshot, "presentation", "continuation"); /* the sentence */
+const FormalFunction *fragment = type->ideas[2].function;
+```
+
+A harmony id that is no progression-type entry, a contrast target that is no formal function, a beginning or ending of idea level or an idea of any other level refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. Grow does not read the entries until P67 B5 and B6; the test `test_theme_shape_entries` pins the Composer's table to them.
