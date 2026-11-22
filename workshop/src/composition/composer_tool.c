@@ -26,6 +26,7 @@ static const EntryRow kEntries[] = {
     {"recognize", composer_api_recognize, true},
     {"random_motive", composer_api_random_motive, true},
     {"theme", composer_api_theme, true},
+    {"critique", composer_api_critique, true},
     {"piece", composer_api_piece, true},
     {"piece_variations", composer_api_piece_variations, true},
     {"plan", composer_api_plan, true},

@@ -15,6 +15,7 @@ add_library(ursatz_composer_engine STATIC
     api/api_seed.c
     api/api_style.c
     api/api_theme.c
+    api/api_critique.c
     api/api_target.c
     api/api_workflow.c
     api/api_plan.c

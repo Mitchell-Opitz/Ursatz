@@ -32,46 +32,4 @@ workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_que
 analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives read a corpus through it
 analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
 analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_rule  # B2's critic reads its evaluators' parameters; B4 deletes this row, when the critique entry reaches the critic
-composer/src/critic/critic_line.c add_pair  # a helper of critic_line_from_render, reached with it (B4)
-composer/src/critic/critic_line.c critic_line_destroy  # the critic's line; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_line.c critic_line_from_motive  # the critic's line; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_line.c critic_line_from_render  # the critic's line; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_line.c find_pairs  # a helper of critic_line_from_render, reached with it (B4)
-composer/src/critic/critic_line.c idea_named  # a helper of critic_line_from_render, reached with it (B4)
-composer/src/critic/critic_line.c melody_part  # a helper of critic_line_from_render, reached with it (B4)
-composer/src/critic/critic_line.c note_run  # a helper of critic_line_from_render, reached with it (B4)
-composer/src/critic/critic_evaluate.c begin  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c clamp01  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c contrast_distance  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c critic_evaluate  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_evaluate.c critic_evaluator_function  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_evaluate.c critic_score  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_evaluate.c leap_load  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c line_bars  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c one_rhythm  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c open_ending  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c parameter  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c repeated_notes  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c rhythmic_monotony  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c same_rhythm  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c share  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c stray_syncopation  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c syncopated  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c whole  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_evaluate.c wide_range  # a helper of critic_evaluate, reached with it (B4)
-composer/src/critic/critic_observe.c critic_judge  # the critic's words; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_observe.c critic_message  # the critic's words; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_observe.c field_text  # a helper of critic_message, reached with it (B4)
-composer/src/critic/critic_observe.c put  # a helper of critic_message, reached with it (B4)
-composer/src/critic/critic_observe.c rational_text  # a helper of critic_message, reached with it (B4)
-composer/src/critic/critic_observe.c template_of  # a helper of critic_message, reached with it (B4)
-composer/src/critic/critic_evaluate.c critic_pair_contrast  # a helper of critic_evaluate and critic_observe, reached with them (B4)
-composer/src/critic/critic_observe.c add_observation  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c bar_number_at  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c blank_finding  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c observe_cadences  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c observe_contrasts  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c observe_theme  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c requested_form  # a helper of critic_observe, reached with it (B4)
-composer/src/critic/critic_observe.c critic_observe  # the critic's hearing of a theme; B4's critique entry reaches it, which deletes this row
+composer/src/critic/critic_evaluate.c critic_evaluator_function  # the function names of the evaluators: test_critic_rules pins the table to the entries' `function` both ways, no application reads it
