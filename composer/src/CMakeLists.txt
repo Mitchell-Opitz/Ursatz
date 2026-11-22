@@ -115,6 +115,7 @@ add_library(ursatz_composer_engine STATIC
     melody/melody_fill.c
     preferences/preferences.c
     preferences/preferences_development.c
+    preferences/preferences_critic.c
     check/form_hear.c
     structure/form_record.c
     structure/form_spec.c

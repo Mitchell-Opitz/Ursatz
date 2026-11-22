@@ -199,7 +199,7 @@ static UrsatzStatus apply_override(State *state, const cJSON *entry, const char 
     if (strcmp(action, "reweight") == 0 && !rule->hard) {
         status = set_weight(state, rule, cJSON_IsNumber(weight) ? weight->valueint : 0, from, error);
     } else if (strcmp(action, "reverse") == 0 && !rule->hard) {
-        status = list_add(state, "melody.reverse", rule->name, from, error);
+        status = list_add(state, strncmp(rule->key, "critic.", 7) == 0 ? "critic.reverse" : "melody.reverse", rule->name, from, error);
     } else if (strcmp(action, "off") == 0 || strcmp(action, "waive") == 0) {
         status = rule->hard ? list_add(state, "melody.waive", rule->name, from, error) : set_weight(state, rule, 0, from, error);
     }

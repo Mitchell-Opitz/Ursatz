@@ -45,11 +45,8 @@ composer/src/critic/critic_evaluate.c begin  # a helper of critic_evaluate, reac
 composer/src/critic/critic_evaluate.c clamp01  # a helper of critic_evaluate, reached with it (B4)
 composer/src/critic/critic_evaluate.c contrast_distance  # a helper of critic_evaluate, reached with it (B4)
 composer/src/critic/critic_evaluate.c critic_evaluate  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_evaluate.c critic_evaluator_code  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_evaluate.c critic_evaluator_from_code  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
 composer/src/critic/critic_evaluate.c critic_evaluator_function  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
 composer/src/critic/critic_evaluate.c critic_score  # the critic's evaluators; B4's critique entry reaches it, which deletes this row
-composer/src/critic/critic_evaluate.c critic_settings_default  # the preferences reach it with the critic group (B2 commit 3), which deletes this row
 composer/src/critic/critic_evaluate.c leap_load  # a helper of critic_evaluate, reached with it (B4)
 composer/src/critic/critic_evaluate.c line_bars  # a helper of critic_evaluate, reached with it (B4)
 composer/src/critic/critic_evaluate.c one_rhythm  # a helper of critic_evaluate, reached with it (B4)

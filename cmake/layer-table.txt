@@ -206,7 +206,7 @@ uses composer-critic model theory plan analysis composer-motive composer-core
 uses composer-piece model theory plan cjson composer-api composer-check composer-operators composer-grow composer-core
 uses composer-candidates model plan composer-piece composer-core common
 uses composer-explain theory plan composer-piece composer-check composer-core common
-uses composer-request model theory analysis realization plan reading chain cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
+uses composer-request model theory analysis realization plan reading chain cjson composer-api composer-core composer-operators composer-grow composer-check composer-critic composer-piece composer-candidates composer-explain common
 # The command line calls the workshop and nothing else (R-656, R-657).
 uses cli           workshop-api common cjson civetweb
 uses workshop-api common cjson
