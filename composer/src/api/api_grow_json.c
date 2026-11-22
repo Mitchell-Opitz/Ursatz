@@ -624,47 +624,53 @@ static cJSON *construction_json(const Plan *plan, NodeId node) {
 
 #define CONTRAST_NOTES 128
 
-/* The melody notes of an idea as a span the dimension measures read, in onset order; false when it has none or too many. */
+/*
+ * The notes of the motive an idea is made from as a span the dimension measures read, in onset order: the contrast target is held to
+ * the motives (grow_contrast_met), before the melody stage moves notes to the chords and holds the cadence, so the response measures
+ * what the draw held. The span's length is the motive's last note's end rounded up to whole bars. False when the idea has no motive.
+ */
 static bool idea_span(const Plan *plan, NodeId idea, const PlanMeter *meter, DimensionNote *notes, DimensionSpan *out) {
-    PlanSpan span = plan_node_span(plan, idea);
-    LaneSpanId lanes[16];
-    size_t found = plan_node_lane_spans(plan, idea, lanes, 16);
-    size_t count = 0;
-    for (size_t i = 0; i < found && i < 16; i++) {
-        if (plan_lane_span_lane(plan, lanes[i]) != PLAN_LANE_MELODY || plan_lane_span_voice(plan, lanes[i]) != 0) {
-            continue;
-        }
-        Rational start = plan_lane_span_span(plan, lanes[i]).start;
-        const PlanNotes *payload = &plan_lane_span_payload(plan, lanes[i])->notes;
-        for (size_t n = 0; n < payload->note_count; n++) {
-            Rational onset;
-            if (count >= CONTRAST_NOTES || rational_add(start, payload->notes[n].offset, &onset) != RATIONAL_OK ||
-                rational_sub(onset, span.start, &notes[count].onset) != RATIONAL_OK) {
-                return false;
-            }
-            notes[count].duration = payload->notes[n].duration;
-            notes[count].pitch = payload->notes[n].midi;
-            count++;
-        }
+    LaneSpanId melody;
+    LaneSpanId made;
+    if (!plan_melody_span_of(plan, idea, &melody)) {
+        return false;
     }
-    for (size_t i = 1; i < count; i++) {
-        for (size_t j = i; j > 0 && rational_cmp(notes[j - 1].onset, notes[j].onset) > 0; j--) {
-            DimensionNote swap = notes[j];
-            notes[j] = notes[j - 1];
-            notes[j - 1] = swap;
+    const PlanConstraint *ref = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
+    if (ref == NULL || !plan_has_node(plan, ref->params.motive.motive) || !plan_melody_span_of(plan, ref->params.motive.motive, &made)) {
+        return false;
+    }
+    const PlanNotes *payload = &plan_lane_span_payload(plan, made)->notes;
+    Rational bar;
+    Rational end = {0, 1};
+    if (payload->note_count == 0 || payload->note_count > CONTRAST_NOTES || plan_meter_bar_length(meter, &bar) != PLAN_OK) {
+        return false;
+    }
+    for (size_t n = 0; n < payload->note_count; n++) {
+        Rational note_end;
+        notes[n].onset = payload->notes[n].offset;
+        notes[n].duration = payload->notes[n].duration;
+        notes[n].pitch = payload->notes[n].midi;
+        if (rational_add(notes[n].onset, notes[n].duration, &note_end) != RATIONAL_OK) {
+            return false;
         }
+        end = rational_cmp(note_end, end) > 0 ? note_end : end;
+    }
+    Rational bars;
+    long long whole = 0;
+    if (rational_div(end, bar, &bars) != RATIONAL_OK || rational_ceil(bars, &whole) != RATIONAL_OK || whole < 1 ||
+        rational_mul_int(bar, whole, &out->length) != RATIONAL_OK) {
+        return false;
     }
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar >= 6 && meter->beats_per_bar % 3 == 0;
     out->notes = notes;
-    out->count = count;
-    out->length = span.length;
+    out->count = payload->note_count;
     out->beat = compound ? rational_ratio(3, 8) : rational_ratio(1, meter->beat_unit > 0 ? meter->beat_unit : 4);
-    return count > 0;
+    return true;
 }
 
 /*
  * One row for each idea of the theme that holds a contrast constraint: the idea, the idea it contrasts against and the distance
- * of its notes from that idea's in rhythm, contour, register and density. NULL for a theme with no such idea.
+ * of its motive from that idea's in rhythm, contour, register and density. NULL for a theme with no such idea.
  */
 static cJSON *contrasts_json(const Plan *plan, NodeId theme_node, const PlanMeter *meter) {
     PlanSpan span = plan_node_span(plan, theme_node);
