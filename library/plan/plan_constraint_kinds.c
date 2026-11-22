@@ -939,6 +939,91 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
     return read_motive_tones_members(reader, item, path, &out->params.motive_tones);
 }
 
+/* A contrast target (R-710): the idea it contrasts against and, per aspect, the least distance. */
+static bool valid_contrast(const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    const PlanContrast *contrast = &constraint->params.contrast;
+    size_t length = strnlen(contrast->against, PLAN_CONTRAST_AGAINST_MAX);
+    if (length == 0 || length >= PLAN_CONTRAST_AGAINST_MAX || contrast->aspect_count < 1 ||
+        contrast->aspect_count > PLAN_CONTRAST_ASPECTS_MAX) {
+        return false;
+    }
+    for (size_t i = 0; i < contrast->aspect_count; i++) {
+        const PlanContrastAspect *aspect = &contrast->aspects[i];
+        if (contrast_aspect_name(aspect->aspect) == NULL || aspect->amount.den <= 0 || aspect->amount.num < 0) {
+            return false;
+        }
+        for (size_t j = 0; j < i; j++) {
+            if (contrast->aspects[j].aspect == aspect->aspect) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool write_contrast(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    const PlanContrast *contrast = &constraint->params.contrast;
+    cJSON *aspects = cJSON_CreateArray();
+    bool ok = plan_json_add(object, "against", cJSON_CreateString(contrast->against)) && plan_json_add(object, "aspects", aspects);
+    for (size_t i = 0; ok && i < contrast->aspect_count; i++) {
+        char amount[64];
+        snprintf(amount, sizeof(amount), "%lld/%lld", contrast->aspects[i].amount.num, contrast->aspects[i].amount.den);
+        cJSON *item = cJSON_CreateObject();
+        ok = plan_json_append(aspects, item) &&
+             plan_json_add(item, "aspect", cJSON_CreateString(contrast_aspect_name(contrast->aspects[i].aspect))) &&
+             plan_json_add(item, "amount", cJSON_CreateString(amount));
+    }
+    return ok;
+}
+
+static bool read_contrast(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
+    PlanContrast *contrast = &out->params.contrast;
+    const cJSON *against = plan_json_member(reader, item, path, "against", true);
+    const cJSON *aspects = against ? plan_json_member(reader, item, path, "aspects", true) : NULL;
+    char at[PLAN_JSON_PATH_MAX];
+    if (!aspects) {
+        return false;
+    }
+    json_child_path(at, path, "against");
+    if (!cJSON_IsString(against) || against->valuestring[0] == '\0' || strlen(against->valuestring) >= PLAN_CONTRAST_AGAINST_MAX) {
+        return json_bad_format(reader, at, "expected the name of an idea of fewer than sixty-four characters");
+    }
+    snprintf(contrast->against, sizeof(contrast->against), "%s", against->valuestring);
+    json_child_path(at, path, "aspects");
+    if (!cJSON_IsArray(aspects) || cJSON_GetArraySize(aspects) < 1 || cJSON_GetArraySize(aspects) > PLAN_CONTRAST_ASPECTS_MAX) {
+        return json_bad_format(reader, at, "expected one to four aspects");
+    }
+    const cJSON *aspect;
+    cJSON_ArrayForEach(aspect, aspects) {
+        char aspect_path[PLAN_JSON_PATH_MAX];
+        json_index_path(aspect_path, at, contrast->aspect_count);
+        const cJSON *name = plan_json_member(reader, aspect, aspect_path, "aspect", true);
+        const cJSON *amount = name ? plan_json_member(reader, aspect, aspect_path, "amount", true) : NULL;
+        PlanContrastAspect *slot = &contrast->aspects[contrast->aspect_count];
+        char member_path[PLAN_JSON_PATH_MAX];
+        if (!amount) {
+            return false;
+        }
+        json_child_path(member_path, aspect_path, "aspect");
+        if (!cJSON_IsString(name) || !contrast_aspect_from_name(name->valuestring, &slot->aspect)) {
+            return json_bad_format(reader, member_path, "expected rhythm, contour, register or density");
+        }
+        for (size_t i = 0; i < contrast->aspect_count; i++) {
+            if (contrast->aspects[i].aspect == slot->aspect) {
+                return json_bad_format(reader, member_path, "an aspect is named twice");
+            }
+        }
+        json_child_path(member_path, aspect_path, "amount");
+        if (!read_fraction_text(amount, 0, &slot->amount)) {
+            return json_bad_format(reader, member_path, "expected an amount like \"1/2\"");
+        }
+        contrast->aspect_count++;
+    }
+    return true;
+}
+
 /* ------------------------------------------------------------------ the table */
 
 static const ConstraintKindRow ROWS[] = {
@@ -957,9 +1042,10 @@ static const ConstraintKindRow ROWS[] = {
     {PLAN_CONSTRAINT_SOURCE, "source", write_source, read_source, valid_source},
     {PLAN_CONSTRAINT_PICKUP, "pickup", write_pickup, read_pickup, valid_pickup},
     {PLAN_CONSTRAINT_MOTIVE_TONES, "motive_tones", write_motive_tones, read_motive_tones, valid_motive_tones},
+    {PLAN_CONSTRAINT_CONTRAST, "contrast", write_contrast, read_contrast, valid_contrast},
 };
 
-_Static_assert(sizeof(ROWS) / sizeof(ROWS[0]) == PLAN_CONSTRAINT_MOTIVE_TONES + 1, "a row for every constraint kind");
+_Static_assert(sizeof(ROWS) / sizeof(ROWS[0]) == PLAN_CONSTRAINT_CONTRAST + 1, "a row for every constraint kind");
 
 const ConstraintKindRow *constraint_kind_row(PlanConstraintKind kind) {
     return (int)kind >= 0 && (size_t)kind < COUNT_OF(ROWS) ? &ROWS[kind] : NULL;

@@ -7,6 +7,7 @@
 #include <theory/vocabulary/motive_relation_step.h>
 #include "plan/section.h"
 #include <theory/vocabulary/cadence_type.h>
+#include <theory/vocabulary/contrast_aspect.h>
 
 #include "plan/plan_lanes.h"
 #include "plan/plan.h"
@@ -34,7 +35,8 @@ typedef enum {
     PLAN_CONSTRAINT_STYLE,          /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
     PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
     PLAN_CONSTRAINT_PICKUP,         /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
-    PLAN_CONSTRAINT_MOTIVE_TONES    /* on a motive node: its base harmony and the tone role of each note (R-215) */
+    PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
+    PLAN_CONSTRAINT_CONTRAST        /* on an idea node: what it must contrast against another idea in, and by how much (R-710) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -250,6 +252,25 @@ typedef struct {
     size_t label_count;
 } PlanMotiveTones;
 
+/*
+ * A contrast target (R-710), on an idea node: the idea it contrasts against, by name ("basic idea"), and for each aspect (R-709:
+ * rhythm, contour, register, density) the least distance from that idea. The aspects are distinct, one to four, each with a
+ * non-negative amount. The plan holds the target and no measure: a theme response reports what the notes measured.
+ */
+#define PLAN_CONTRAST_AGAINST_MAX 64
+#define PLAN_CONTRAST_ASPECTS_MAX 4
+
+typedef struct {
+    ContrastAspect aspect;
+    Rational amount;
+} PlanContrastAspect;
+
+typedef struct {
+    char against[PLAN_CONTRAST_AGAINST_MAX];
+    size_t aspect_count;
+    PlanContrastAspect aspects[PLAN_CONTRAST_ASPECTS_MAX];
+} PlanContrast;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -267,6 +288,7 @@ typedef struct {
         PlanSource source;
         Rational pickup; /* the anacrusis: on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), shorter than two wholes */
         PlanMotiveTones motive_tones;
+        PlanContrast contrast;
     } params;
 } PlanConstraint;
 
