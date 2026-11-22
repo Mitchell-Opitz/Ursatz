@@ -1,0 +1,814 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.vocabulary.perfect-authentic",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "perfect authentic cadence",
+      "aliases": [
+        "PAC"
+      ],
+      "content": {
+        "code": "perfect-authentic",
+        "label": "perfect authentic",
+        "abbreviation": "PAC",
+        "core": "perfect-authentic",
+        "strength": 6,
+        "conclusive": true
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Authentic Cadences",
+          "note": "a perfect authentic cadence has V or V7 to I, both in root position, with the tonic in the soprano at the end"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.imperfect-authentic",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "imperfect authentic cadence",
+      "aliases": [
+        "IAC"
+      ],
+      "content": {
+        "code": "imperfect-authentic",
+        "label": "imperfect authentic",
+        "abbreviation": "IAC",
+        "core": "imperfect-authentic",
+        "strength": 5,
+        "conclusive": true
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Cadential Strength and the IAC",
+          "note": "an imperfect authentic cadence is authentic without the full set of conditions of a perfect one, so it closes less strongly"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.plagal",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "plagal cadence",
+      "aliases": [
+        "PC"
+      ],
+      "content": {
+        "code": "plagal",
+        "label": "plagal",
+        "abbreviation": "PC",
+        "core": "plagal",
+        "strength": 3,
+        "conclusive": true
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 10,
+          "note": "a plagal cadence moves from IV to I and closes without a leading tone"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.deceptive",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "deceptive cadence",
+      "aliases": [
+        "DC"
+      ],
+      "content": {
+        "code": "deceptive",
+        "label": "deceptive",
+        "abbreviation": "DC",
+        "core": "deceptive",
+        "strength": 2,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 11,
+          "note": "a deceptive cadence has V move to a chord other than I, most often vi, and so does not close"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.half",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "half cadence",
+      "aliases": [
+        "HC"
+      ],
+      "content": {
+        "code": "half",
+        "label": "half",
+        "abbreviation": "HC",
+        "core": "half",
+        "strength": 1,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Half Cadences",
+          "note": "a half cadence ends a phrase on V"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.subverted",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "subverted cadence",
+      "aliases": [
+        "EV"
+      ],
+      "content": {
+        "code": "subverted",
+        "label": "subverted",
+        "abbreviation": "EV",
+        "core": "subverted",
+        "strength": 0,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Cadential Strength and the IAC",
+          "note": "a subverted cadence leaves the expected cadence unmade, as the evaded cadence does"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.evaded",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "evaded cadence",
+      "aliases": [
+        "EV"
+      ],
+      "content": {
+        "code": "evaded",
+        "label": "evaded",
+        "abbreviation": "EV",
+        "core": "subverted",
+        "strength": 0,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 4,
+          "note": "an evaded cadence has the expected cadential arrival replaced, so the phrase goes on"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.abandoned",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "abandoned cadence",
+      "aliases": [
+        "AB"
+      ],
+      "content": {
+        "code": "abandoned",
+        "label": "abandoned",
+        "abbreviation": "AB",
+        "core": "unknown",
+        "strength": -1,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": "glossary",
+          "note": "a cadence the music breaks off before it arrives, so it has no core type and no strength"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.medial-caesura",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "medial caesura",
+      "aliases": [
+        "MC"
+      ],
+      "content": {
+        "code": "medial-caesura",
+        "label": "medial caesura",
+        "abbreviation": "MC",
+        "core": "half",
+        "strength": 1,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 8,
+          "note": "a medial caesura is a half cadence that ends a transition"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.passing",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "passing tone",
+      "content": {
+        "code": "passing",
+        "approach": "step",
+        "leave": "step",
+        "direction": "same",
+        "metric": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "a passing tone is approached and left by step in the same direction"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.neighbor",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "neighbor tone",
+      "content": {
+        "code": "neighbor",
+        "approach": "step",
+        "leave": "step",
+        "direction": "opposite",
+        "metric": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "a neighbor tone is approached by step and left by step in the opposite direction"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.appoggiatura",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "appoggiatura",
+      "content": {
+        "code": "appoggiatura",
+        "approach": "leap",
+        "leave": "step",
+        "direction": "opposite",
+        "metric": "strong"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "an appoggiatura is approached by leap, falls on a strong beat and resolves by step in the opposite direction"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.escape-tone",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "escape tone",
+      "content": {
+        "code": "escape-tone",
+        "approach": "step",
+        "leave": "leap",
+        "direction": "opposite",
+        "metric": "weak"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "an escape tone is approached by step on a weak beat and left by leap in the opposite direction"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.suspension",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "suspension",
+      "content": {
+        "code": "suspension",
+        "approach": "static",
+        "leave": "step",
+        "direction": "down",
+        "metric": "strong"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "a suspension is held from the chord before, on a strong beat, and resolves down by step"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.retardation",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "retardation",
+      "content": {
+        "code": "retardation",
+        "approach": "static",
+        "leave": "step",
+        "direction": "up",
+        "metric": "strong"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "a retardation is held from the chord before, on a strong beat, and resolves up by step"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.pedal",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "pedal tone",
+      "content": {
+        "code": "pedal",
+        "approach": "static",
+        "leave": "static",
+        "direction": "none",
+        "metric": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "section": "Summary",
+          "example": "13",
+          "note": "a pedal tone is held while the harmony changes above or below it"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.anticipation",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "anticipation",
+      "content": {
+        "code": "anticipation",
+        "approach": "none",
+        "leave": "static",
+        "direction": "none",
+        "metric": "weak"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 4,
+          "note": "an anticipation sounds the next chord's tone early on a weak beat and is held into that chord"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.double-neighbor",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "double neighbor",
+      "content": {
+        "code": "double-neighbor",
+        "approach": "step",
+        "leave": "step",
+        "direction": "opposite",
+        "metric": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "II",
+          "chapter": 4,
+          "section": "Third species",
+          "note": "a double neighbor goes to the neighbor above and the neighbor below, or the reverse, and returns"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.changing-tone",
+      "kind": "vocabulary",
+      "subtype": "embellishment",
+      "name": "changing tone",
+      "content": {
+        "code": "changing-tone",
+        "approach": "step",
+        "leave": "leap",
+        "direction": "none",
+        "metric": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "II",
+          "chapter": 4,
+          "section": "Third species",
+          "note": "a changing tone figure in third species steps away from the note and leaps past it to the other neighbor"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.monophony",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "monophony",
+      "content": {
+        "code": "monophony",
+        "category": "monophony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "section": "Monophony",
+          "note": "a single melodic line with no accompaniment"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.heterophony",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "heterophony",
+      "content": {
+        "code": "heterophony",
+        "category": "heterophony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "section": "Heterophony",
+          "note": "one melody sounding at once in several slightly different versions"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.homophony",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "homophony",
+      "content": {
+        "code": "homophony",
+        "category": "homophony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "section": "Homophony",
+          "note": "several parts that move together in a chordal texture"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.homorhythm",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "homorhythm",
+      "content": {
+        "code": "homorhythm",
+        "category": "homophony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "section": "Homorhythm",
+          "note": "homophony with every part in the same rhythm"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.melody-and-accompaniment",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "melody and accompaniment",
+      "content": {
+        "code": "melody and accompaniment",
+        "category": "homophony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "section": "Melody and Accompaniment",
+          "note": "one part leads over an accompaniment that supports it"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.polyphony",
+      "kind": "vocabulary",
+      "subtype": "texture",
+      "name": "polyphony",
+      "content": {
+        "code": "polyphony",
+        "category": "polyphony"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 21,
+          "section": "Polyphony",
+          "note": "several independent melodic lines sounding together"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.prolongational",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "prolongational progression",
+      "content": {
+        "code": "prolongation"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 6,
+          "note": "a prolongation keeps one harmony in force through the chords between its two statements"
+        },
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "More Detail: The Presentation",
+          "note": "the presentation prolongs the tonic"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "key": "C",
+          "chords": [
+            "I",
+            "V6",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.cadential",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "cadential progression",
+      "content": {
+        "code": "cadential"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "New: Cadential",
+          "note": "the cadential idea goes mi, fa, sol, do over I6, ii6 or IV, V and I"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "key": "C",
+          "chords": [
+            "I6",
+            "ii6",
+            "V",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.phrase-model",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "phrase model",
+      "content": {
+        "code": "phrase_model"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 7,
+          "note": "the phrase model goes from tonic through a predominant to the dominant and back to the tonic"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.sequential",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "sequential progression",
+      "content": {
+        "code": "sequence"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "More Detail: The Continuation",
+          "note": "the continuation uses sequences to move the harmony faster"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VIII",
+          "note": "a sequence repeats a harmonic pattern on another step"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.tonic",
+      "kind": "vocabulary",
+      "subtype": "function",
+      "name": "tonic function",
+      "content": {
+        "code": "tonic"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Introduction to Harmony",
+          "note": "the tonic function is one of the three functions harmony serves in a phrase"
+        },
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 7,
+          "note": "the phrase model orders the functions tonic, predominant, dominant, tonic"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.predominant",
+      "kind": "vocabulary",
+      "subtype": "function",
+      "name": "predominant function",
+      "content": {
+        "code": "predominant"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Introduction to Harmony",
+          "note": "the predominant function is one of the three functions harmony serves in a phrase"
+        },
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 7,
+          "note": "the phrase model orders the functions tonic, predominant, dominant, tonic"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.dominant",
+      "kind": "vocabulary",
+      "subtype": "function",
+      "name": "dominant function",
+      "content": {
+        "code": "dominant"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "section": "Introduction to Harmony",
+          "note": "the dominant function is one of the three functions harmony serves in a phrase"
+        },
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 7,
+          "note": "the phrase model orders the functions tonic, predominant, dominant, tonic"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}

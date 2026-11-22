@@ -49,11 +49,11 @@ static bool lower_hex16(const char *text) {
 
 static void test_embedded_modes(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    assert(knowledge_snapshot_entry_count(snapshot) == 38);
+    assert(knowledge_snapshot_entry_count(snapshot) == 70);
     /* in id order */
     assert(strcmp(knowledge_snapshot_entry_at(snapshot, 0)->id, "omt.chord-type.augmented-triad") == 0);
-    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 37)->id, "omt.relation.two-steps-darker") == 0);
-    assert(knowledge_snapshot_entry_at(snapshot, 38) == NULL);
+    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 69)->id, "omt.vocabulary.tonic") == 0);
+    assert(knowledge_snapshot_entry_at(snapshot, 70) == NULL);
 
     for (int mode = 0; mode < 4; mode++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry(snapshot, MODE_IDS[mode]);
@@ -93,10 +93,10 @@ static const int DIATONIC_STEPS[7][7] = {{0, 1, 3, 5, 6, 8, 10}, {0, 1, 3, 5, 7,
 
 static void test_embedded_counts(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    size_t materials = 0, relations = 0, chord_types = 0, instruments = 0, ensembles = 0, others = 0;
+    size_t materials = 0, relations = 0, chord_types = 0, instruments = 0, ensembles = 0, vocabulary = 0, others = 0;
     for (size_t i = 0; i < knowledge_snapshot_entry_count(snapshot); i++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry_at(snapshot, i);
-        assert(entry != NULL && entry->status == KNOWLEDGE_STATUS_ACTIVE);
+        assert(entry != NULL && (entry->status == KNOWLEDGE_STATUS_ACTIVE || strcmp(entry->kind, "vocabulary") == 0));
         if (strcmp(entry->kind, "material") == 0) {
             materials++;
         } else if (strcmp(entry->kind, "relation") == 0) {
@@ -107,11 +107,14 @@ static void test_embedded_counts(void) {
             instruments++;
         } else if (strcmp(entry->kind, "instrument") == 0 && strcmp(entry->subtype, "ensemble") == 0) {
             ensembles++;
+        } else if (strcmp(entry->kind, "vocabulary") == 0) {
+            vocabulary++;
         } else {
             others++;
         }
     }
-    assert(materials == 9 && relations == 18 && chord_types == 9 && instruments == 1 && ensembles == 1 && others == 0);
+    assert(materials == 9 && relations == 18 && chord_types == 9 && instruments == 1 && ensembles == 1 && vocabulary == 32 &&
+           others == 0);
     /* the seven diatonic modes, darkest to brightest: each a rotation of the major scale with its own steps */
     for (int mode = 0; mode < 7; mode++) {
         const PitchMaterial *material = knowledge_snapshot_material(snapshot, DIATONIC_IDS[mode]);
@@ -516,7 +519,7 @@ static void test_hash(void) {
     /* two snapshots in one process are independent: their entries are not shared */
     assert(knowledge_snapshot_entry(first, "omt.material.major") != knowledge_snapshot_entry(second, "omt.material.major"));
     knowledge_snapshot_destroy(first);
-    assert(knowledge_snapshot_entry_count(second) == 38);
+    assert(knowledge_snapshot_entry_count(second) == 70);
     knowledge_snapshot_destroy(second);
 }
 
@@ -524,7 +527,7 @@ static void test_user_file(void) {
     KnowledgeSnapshot *plain = build(NULL, 0);
     KnowledgeUserFile file = {"mine.json", USER_FILE};
     KnowledgeSnapshot *with_user = build(&file, 1);
-    assert(knowledge_snapshot_entry_count(with_user) == 40);
+    assert(knowledge_snapshot_entry_count(with_user) == 72);
     assert(strcmp(knowledge_snapshot_hash(plain), knowledge_snapshot_hash(with_user)) != 0);
     const PitchMaterial *test = knowledge_snapshot_material(with_user, "user.material.test");
     assert(test != NULL && test->step_count == 3 && test->steps[2] == 7 && test->descending_step_count == 0);
