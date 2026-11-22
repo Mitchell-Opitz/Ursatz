@@ -184,6 +184,11 @@ static bool draw_motif(const GrowThemeRequest *request, FillRng *rng, const Grow
         motive_random_preferences_default(&preferences);
     }
     bool two = rational_cmp(spec->layout.length[place], two_bars) >= 0;
+    /* A contrast target (R-710) draws a motive no longer than the material is sized for: a longer one would raise the bars every
+       motive of the theme takes, and a one-bar motif's material has none to spare. */
+    if (two && spec->contrast_function[place] && grow_derived_bars(spec, request->bar) < 2) {
+        two = false;
+    }
     preferences.bars[0] = two ? 0 : 1;
     preferences.bars[1] = two ? 1 : 0;
     preferences.pickup_one_in = 0;
