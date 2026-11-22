@@ -32,3 +32,4 @@ workshop/src/jobs/job_queue.c workshop_jobs_set_limit  # test hook: test_job_que
 analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives read a corpus through it
 analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
 analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_rule  # B2's critic reads its evaluators' parameters; B4 deletes this row, when the critique entry reaches the critic

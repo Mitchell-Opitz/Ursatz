@@ -8,6 +8,7 @@
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/knowledge_snapshot.h"
+#include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
 
 /*
@@ -32,6 +33,8 @@ typedef struct {
     bool has_ensemble;
     VocabularyEntry vocabulary;
     bool has_vocabulary;
+    RuleEntry rule;
+    bool has_rule;
     FormalFunction function;
     bool has_function;
     const char *harmony_targets[FORMAL_HARMONY_MAX]; /* the ids a formal function names, resolved once every entry is read */
@@ -115,5 +118,13 @@ KnowledgeStatus knowledge_form_link(const KnowledgeSnapshot *snapshot, Slot *slo
  */
 KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
                                           size_t message_size);
+
+/*
+ * knowledge_rule.c: reads the fields of a `rule` entry of this subtype into slot->rule (the caller sets its id and name first). An
+ * unknown or missing subtype, a bad code, scope, message, function, weight or parameter, or a message placeholder outside the list
+ * is refused with the field named.
+ */
+KnowledgeStatus knowledge_rule_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
+                                    size_t message_size);
 
 #endif
