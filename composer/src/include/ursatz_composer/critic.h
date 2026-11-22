@@ -30,6 +30,37 @@ typedef enum {
     CRITIC_ERR_OVERFLOW
 } CriticResult;
 
+typedef enum {
+    CRITIC_RHYTHMIC_MONOTONY,
+    CRITIC_CONTRAST_DISTANCE,
+    CRITIC_LEAP_LOAD,
+    CRITIC_OPEN_ENDING,
+    CRITIC_STRAY_SYNCOPATION,
+    CRITIC_ONE_RHYTHM,
+    CRITIC_REPEATED_NOTES,
+    CRITIC_WIDE_RANGE,
+    CRITIC_EVALUATOR_COUNT
+} CriticEvaluator;
+
+/* The evaluator's code ("rhythmic_monotony"): the settings key leaf and the code of its entry. NULL for an invalid value. */
+const char *critic_evaluator_code(CriticEvaluator evaluator);
+/* Reads a code back (exact). False, output untouched, for NULL or an unknown code. */
+bool critic_evaluator_from_code(const char *code, CriticEvaluator *out);
+/* The name of the function that computes the evaluator, as its entry's `function` holds it ("critic_rhythmic_monotony"). */
+const char *critic_evaluator_function(CriticEvaluator evaluator);
+
+/* The settings of the critic (the preferences' `critic` group): the weight of each evaluator, which count the other way, and ranking. */
+typedef struct {
+    int weights[CRITIC_EVALUATOR_COUNT]; /* 0 to 20 */
+    bool reversed[CRITIC_EVALUATOR_COUNT];
+    bool rank;         /* rank theme candidates by the critic (off by default) */
+    int candidates;    /* 2 to 8: how many candidates for each one kept */
+    int keep_rejected; /* 0 to 16: how many rejected candidates a run reports */
+} CriticSettings;
+
+/* Weights 1, nothing reversed, rank false, candidates 4, keep_rejected 8. */
+void critic_settings_default(CriticSettings *settings);
+
 /*
  * One note of the melody line. onset and duration are in whole notes from the start of the plan's render (a motive's own timeline
  * starts at 0); bar is the bar number the MusicXML export writes (a pickup is bar 0, the first full bar 1); position is the onset
@@ -72,5 +103,29 @@ CriticResult critic_line_from_motive(const Motive *motive, CriticLine *out);
 
 /* Frees the notes and zeroes the struct. Safe on a zeroed struct. */
 void critic_line_destroy(CriticLine *line);
+
+/* What one evaluator found: its penalty (0 to 1) and where and by how much. bar is -1 when the finding has no place. */
+typedef struct {
+    CriticEvaluator evaluator;
+    Rational penalty;
+    int bar;
+    Rational beat; /* 1-based, as a ratio when the place is between beats */
+    int first, last, count;
+    Rational value, limit;
+    char idea[CRITIC_NAME_MAX];
+    char against[CRITIC_NAME_MAX];
+    char aspect[16];
+} CriticFinding;
+
+/*
+ * Every evaluator over the line: out[i] is the finding of evaluator i. `set` holds the lines of the candidates judged together
+ * (the line itself among them, skipped by pointer); with none or one, one_rhythm is 0. The parameters of each evaluator are read
+ * from michelle.rule.<code> of the snapshot; a missing entry or parameter is CRITIC_ERR_KNOWLEDGE.
+ */
+CriticResult critic_evaluate(const CriticLine *line, const CriticLine *const *set, size_t set_count, const KnowledgeSnapshot *knowledge,
+                             CriticFinding out[CRITIC_EVALUATOR_COUNT]);
+
+/* Minus the sum of weight times penalty; an evaluator in settings->reversed counts plus. 0/1 on overflow. */
+Rational critic_score(const CriticFinding findings[CRITIC_EVALUATOR_COUNT], const CriticSettings *settings);
 
 #endif
