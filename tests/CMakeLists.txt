@@ -7,11 +7,13 @@ ursatz_test(layer_table COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/cmake/
 # No copy of a shared primitive (a gcd, a 128-bit integer, a rational type, the pitch and Roman numeral names, the scale steps) outside its owner
 # (tools/ci/check-primitives.sh, R-622); what stays is in tools/ci/primitive-allow.txt.
 ursatz_test(primitive_owners COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-primitives.sh)
-# The checks CI used to run as steps (tools/ci), run by every ctest: the docs of each part (README and doc sizes, links, anchors, index coverage),
+# The checks CI used to run as steps (tools/ci), run by every ctest: the docs of each part (README and doc sizes, links, anchors, index coverage)
+# and of the root folder alone,
 # the statics and hearing boundaries and the frontend theory. The reach scan builds its own tree, so it is slow (CI keeps its own step with ccache).
 foreach(part library analyzer composer gui workshop common cli knowledge tools tests)
     ursatz_test(docs_${part} COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-docs.sh ${part})
 endforeach()
+ursatz_test(docs_root COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-docs.sh .)
 ursatz_test(statics COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-statics.sh analyzer composer)
 ursatz_test(hearing_boundary COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-hearing.sh)
 ursatz_test(frontend_theory COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-frontend-theory.sh)
@@ -53,7 +55,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(knowledge_validate COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_SOURCE_DIR}/tools/ci/check-knowledge.py
         ${CMAKE_SOURCE_DIR}/knowledge LABELS schema)
 
-    # The check itself: one valid set of entries passes, and each of nine broken sets fails with its own message.
+    # The check itself: one valid set of entries passes, and each broken set fails with its own message.
     ursatz_test(knowledge_validate_fixtures COMMAND ${CMAKE_COMMAND}
         -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
         -DCHECK=${CMAKE_SOURCE_DIR}/tools/ci/check-knowledge.py
