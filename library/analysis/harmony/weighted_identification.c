@@ -107,13 +107,13 @@ typedef struct {
     CommonPracticeSeventh seventh;
     int form_rank;
     int applied_target; /* 0 for a diatonic chord; else the degree of the key an applied chord tonicizes */
-} VocabularyEntry;
+} WeightedVocabularyEntry;
 
 #define TRI(offset, degree, triad, rank) {offset, degree, false, triad, COMMON_PRACTICE_SEVENTH_DOMINANT7, rank}
 #define SEV(offset, degree, triad, seventh, rank) {offset, degree, true, triad, seventh, rank}
 
 /* The 14 diatonic chords of a major key, a triad then its seventh on each degree. */
-static const VocabularyEntry MAJOR_VOCABULARY[COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT] = {
+static const WeightedVocabularyEntry MAJOR_VOCABULARY[COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT] = {
     TRI(0, 1, COMMON_PRACTICE_TRIAD_I, 0),       SEV(0, 1, COMMON_PRACTICE_TRIAD_I, COMMON_PRACTICE_SEVENTH_MAJOR7, 0),
     TRI(2, 2, COMMON_PRACTICE_TRIAD_II, 0),      SEV(2, 2, COMMON_PRACTICE_TRIAD_II, COMMON_PRACTICE_SEVENTH_MINOR7, 0),
     TRI(4, 3, COMMON_PRACTICE_TRIAD_III, 0),     SEV(4, 3, COMMON_PRACTICE_TRIAD_III, COMMON_PRACTICE_SEVENTH_MINOR7, 0),
@@ -140,7 +140,7 @@ static const VocabularyEntry MAJOR_VOCABULARY[COMMON_PRACTICE_MAJOR_CANDIDATE_CO
  * form_rank of 0 is the form that wins a tie against the other form of the same root and quality family:
  * the raised V, V7, vii-dim and vii-dim-7, and the natural form of everything else.
  */
-static const VocabularyEntry MINOR_VOCABULARY[COMMON_PRACTICE_MINOR_CANDIDATE_COUNT] = {
+static const WeightedVocabularyEntry MINOR_VOCABULARY[COMMON_PRACTICE_MINOR_CANDIDATE_COUNT] = {
     TRI(0, 1, MIN, 0),  SEV(0, 1, MIN, MIN7, 0),
     TRI(2, 2, DIM, 0),  SEV(2, 2, DIM, HDIM7, 0),
     TRI(2, 2, MIN, 1),  SEV(2, 2, MIN, MIN7, 1),
@@ -166,7 +166,7 @@ static const VocabularyEntry MINOR_VOCABULARY[COMMON_PRACTICE_MINOR_CANDIDATE_CO
 #define APP_TRI(offset, degree, triad, target) {offset, degree, false, triad, DOM7, 0, target}
 #define APP_SEV(offset, degree, triad, seventh, target) {offset, degree, true, triad, seventh, 0, target}
 
-static const VocabularyEntry MAJOR_APPLIED[COMMON_PRACTICE_MAJOR_APPLIED_COUNT] = {
+static const WeightedVocabularyEntry MAJOR_APPLIED[COMMON_PRACTICE_MAJOR_APPLIED_COUNT] = {
     APP_TRI(9, 6, MAJ, 2),         /* V/ii  A  */
     APP_TRI(11, 7, MAJ, 3),        /* V/iii B  */
     APP_TRI(2, 2, MAJ, 5),         /* V/V   D  */
@@ -186,7 +186,7 @@ static const VocabularyEntry MAJOR_APPLIED[COMMON_PRACTICE_MAJOR_APPLIED_COUNT] 
     APP_SEV(8, 5, DIM, DIM7, 6),   /* vii-dim-7/vi G# */
 };
 
-static const VocabularyEntry MINOR_APPLIED[COMMON_PRACTICE_MINOR_APPLIED_COUNT] = {
+static const WeightedVocabularyEntry MINOR_APPLIED[COMMON_PRACTICE_MINOR_APPLIED_COUNT] = {
     APP_TRI(0, 1, MAJ, 4),         /* V/iv  C  */
     APP_TRI(2, 2, MAJ, 5),         /* V/V   D  */
     APP_SEV(0, 1, MAJ, DOM7, 4),   /* V7/iv C7 */
@@ -250,7 +250,7 @@ static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPractice
 }
 
 /* True when the chord of `entry`, rooted at pitch class `root`, has a tone on `pitch_class`. */
-static bool entry_holds(const VocabularyEntry *entry, int root, int pitch_class) {
+static bool entry_holds(const WeightedVocabularyEntry *entry, int root, int pitch_class) {
     CommonPracticeRankedChord chord;
     chord.is_seventh = entry->is_seventh;
     chord.triad = entry->triad;
@@ -277,7 +277,7 @@ static unsigned key_scale_mask(const CommonPracticeMaterials *materials, CommonP
 
 /* True when the entry, rooted at pitch class `root`, may be ranked on its own merits (the bass aside): its root sounds
    and, for an applied chord, a tone outside the key sounds too. */
-static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pitch_class, CommonPracticeKeyMode mode,
+static bool entry_eligible(const WeightedVocabularyEntry *entry, int root, int tonic_pitch_class, CommonPracticeKeyMode mode,
                            const CommonPracticeWeights *weights, const CommonPracticeMaterials *materials) {
     if (weights->pitch_class[root] <= 0.0) {
         return false; /* the root does not sound: not a reading the notes support */
@@ -322,10 +322,10 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         return COMMON_PRACTICE_WEIGHTED_ERR_BAD_TONIC;
     }
 
-    const VocabularyEntry *vocabulary = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_VOCABULARY : MINOR_VOCABULARY;
+    const WeightedVocabularyEntry *vocabulary = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_VOCABULARY : MINOR_VOCABULARY;
     size_t vocabulary_size = mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT
                                                                 : COMMON_PRACTICE_MINOR_CANDIDATE_COUNT;
-    const VocabularyEntry *applied = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_APPLIED : MINOR_APPLIED;
+    const WeightedVocabularyEntry *applied = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_APPLIED : MINOR_APPLIED;
     size_t applied_size = !config->applied_chords ? 0
                           : mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_APPLIED_COUNT
                                                               : COMMON_PRACTICE_MINOR_APPLIED_COUNT;
@@ -336,7 +336,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     bool bass_required = false;
     if (config->require_bass_chord_tone && weights->bass_pitch_class >= 0) {
         for (size_t k = 0; k < entry_count && !bass_required; k++) {
-            const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
+            const WeightedVocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
             int root = (tonic_pitch_class + entry->offset) % 12;
             bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials) &&
                             entry_holds(entry, root, weights->bass_pitch_class);
@@ -346,7 +346,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     size_t count = 0;
     for (size_t k = 0; k < entry_count; k++) {
-        const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
+        const WeightedVocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
         int root = (tonic_pitch_class + entry->offset) % 12;
         if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials)) {
             continue; /* the root does not sound (or no tone outside the key does, for an applied chord) */

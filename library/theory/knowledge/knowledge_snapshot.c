@@ -761,6 +761,11 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
     } else if (strcmp(kind, "instrument") == 0) {
         knowledge_fail(message, message_size, path, slot->entry.id, "subtype", "not instrument or ensemble");
         return KNOWLEDGE_ERR_FIELD;
+    } else if (strcmp(kind, "vocabulary") == 0) {
+        slot->vocabulary.id = slot->entry.id;
+        slot->vocabulary.name = slot->entry.name;
+        status = knowledge_vocabulary_read(slot, entry, subtype, path, message, message_size);
+        slot->has_vocabulary = status == KNOWLEDGE_OK;
     }
     return status;
 }
@@ -919,6 +924,17 @@ static const PitchMaterial *linked_material(const KnowledgeSnapshot *snapshot, c
     return &found->material;
 }
 
+/* True when a texture entry has this code. */
+static bool texture_code_found(const KnowledgeSnapshot *snapshot, const char *code) {
+    for (size_t i = 0; i < snapshot->count; i++) {
+        const Slot *slot = &snapshot->slots[i];
+        if (slot->has_vocabulary && slot->vocabulary.subtype == VOCABULARY_TEXTURE && strcmp(slot->vocabulary.code, code) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* Points each material's links and each relation's material at the entries they name, once every entry is read and sorted. */
 static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message, size_t message_size) {
     char problem[256];
@@ -944,6 +960,10 @@ static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message,
                 knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.material", problem);
                 return KNOWLEDGE_ERR_FIELD;
             }
+        }
+        if (slot->has_vocabulary && slot->vocabulary.subtype == VOCABULARY_TEXTURE && !texture_code_found(snapshot, slot->vocabulary.texture.category)) {
+            knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.category", "no texture entry has that code");
+            return KNOWLEDGE_ERR_FIELD;
         }
         for (size_t s = 0; slot->has_ensemble && s < slot->ensemble.slot_count; s++) {
             const Slot *found = find_slot(snapshot, slot->ensemble_slots[s].instrument);
@@ -1172,4 +1192,9 @@ const Instrument *knowledge_snapshot_instrument(const KnowledgeSnapshot *snapsho
 const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *snapshot, const char *id) {
     const Slot *slot = find_slot(snapshot, id);
     return slot != NULL && slot->has_ensemble ? &slot->ensemble : NULL;
+}
+
+const VocabularyEntry *knowledge_snapshot_vocabulary(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = find_slot(snapshot, id);
+    return slot != NULL && slot->has_vocabulary ? &slot->vocabulary : NULL;
 }

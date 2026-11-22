@@ -7,6 +7,7 @@
 
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/knowledge_snapshot.h"
+#include "theory/knowledge/vocabulary_entry.h"
 
 /*
  * What the loader files of the knowledge snapshot share: the slot an entry is read into, the snapshot's own layout and the readers
@@ -28,6 +29,8 @@ typedef struct {
     bool has_instrument;
     EnsembleTemplate ensemble;
     bool has_ensemble;
+    VocabularyEntry vocabulary;
+    bool has_vocabulary;
     EnsembleSlot *ensemble_slots; /* the ensemble's slots: the template points into it */
     const char **aliases; /* the entry's aliases, in file order */
     size_t alias_count;
@@ -67,5 +70,12 @@ const char *knowledge_string_of(const cJSON *item);
 
 /* True for an integer item from `low` to `high`. */
 bool knowledge_in_range(const cJSON *item, int low, int high);
+
+/*
+ * knowledge_vocabulary.c: reads the fields of a `vocabulary` entry of this subtype into slot->vocabulary (the caller sets its id and
+ * name first). An unknown or missing subtype, a bad code or a missing or bad field of the subtype is refused with the field named.
+ */
+KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
+                                          size_t message_size);
 
 #endif

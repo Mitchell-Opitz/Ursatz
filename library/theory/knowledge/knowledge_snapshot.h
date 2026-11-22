@@ -7,6 +7,7 @@
 #include "model/pitch/pitch_material.h"
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/relation.h"
+#include "theory/knowledge/vocabulary_entry.h"
 
 /*
  * The knowledge snapshot (target architecture 5): every entry of knowledge/ as the build embedded it, plus the entries of a user's
@@ -106,5 +107,8 @@ const Instrument *knowledge_snapshot_instrument(const KnowledgeSnapshot *snapsho
 
 /* The ensemble template (kind instrument, subtype ensemble) with this id, or NULL when there is none or it is another kind or subtype. */
 const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The vocabulary entry (kind vocabulary, any of its five subtypes) with this id, or NULL when there is none or the entry is another kind. */
+const VocabularyEntry *knowledge_snapshot_vocabulary(const KnowledgeSnapshot *snapshot, const char *id);
 
 #endif

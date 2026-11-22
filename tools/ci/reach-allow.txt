@@ -16,6 +16,7 @@ library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo m
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_vocabulary  # B6 reads the progression types through the formal functions; its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 
 analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it
