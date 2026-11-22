@@ -97,6 +97,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--port", NULL, CLI_FLAG_VALUE, "<n>", "global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand"},
     {"--position", NULL, CLI_FLAG_VALUE, "<where>", "fragment: leading, trailing or middle"},
     {"--print-settings", NULL, CLI_FLAG_SWITCH, NULL, "print the default preferences document and exit"},
+    {"--rated", NULL, CLI_FLAG_VALUE, "<file>", "critique: a rated set (ursatz-rated-set 1) to judge pair by pair against her ratings"},
     {"--rating", NULL, CLI_FLAG_REPEAT, "<r>", "rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable"},
     {"--ratio", NULL, CLI_FLAG_VALUE, "<n:m>", "augment or diminish: the ratio of the new durations to the old"},
     {"--record", NULL, CLI_FLAG_VALUE, "<file>", "write what the run did: seeds, candidates and the check"},
