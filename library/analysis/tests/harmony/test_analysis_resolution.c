@@ -13,7 +13,7 @@
 typedef struct {
     HarmonyVoiceCell cells[FIXTURE_MAX * VOICES];
     PitchNumericValue *values[FIXTURE_MAX * VOICES];
-    char ids[FIXTURE_MAX * VOICES][16];
+    char ids[FIXTURE_MAX * VOICES][32];
     HarmonyVoiceGrid grid;
     TuningSystem *tuning;
 } Voices;

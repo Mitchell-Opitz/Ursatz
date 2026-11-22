@@ -89,7 +89,7 @@ static void add_beat(CommonText *text, Rational beat) {
         long long scaled = beat.num * (scale / beat.den);
         long long whole = scaled / scale;
         long long fraction = scaled % scale;
-        char buffer[16];
+        char buffer[32];
         snprintf(buffer, sizeof(buffer), "%0*lld", (int)digits, (long long)fraction);
         size_t length = strlen(buffer);
         while (length > 0 && buffer[length - 1] == '0') {
