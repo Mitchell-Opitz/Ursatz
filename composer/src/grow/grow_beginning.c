@@ -208,7 +208,9 @@ static PlanResult build_presentation(GrowBuild *build) {
         basic_shape.pedal = true;
         repetition_shape = basic_shape;
     }
-    bool no_chords = whole ? !spec->basic_has_chords : spec->source.chord_count == 0;
+    /* The guard reads the compose run's basic motive (`spec->source` never carries chords: grow_read_motive, and motive_develop of
+       a section motive): with chords and no section motive a sequence holds them a step up (R-348, R-714). `whole` implies both. */
+    bool no_chords = !spec->basic_has_chords || spec->has_section_motive;
     if (spec->repetition == GROW_REPEAT_SEQUENCE && no_chords) {
         /* A motif with no harmony of its own: the chord moves with the melody, the basic idea's tonic and the repetition's
            chord a step up (I to ii, i to iio), written whole (R-348). */
