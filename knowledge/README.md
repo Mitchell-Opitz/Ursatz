@@ -26,11 +26,12 @@ The folder name, the `kind` field and the middle part of an id are the same keyw
 |---|---|---|
 | `material` | K1 pitch material | `unordered` (a collection above a center), `ordered` (a row) |
 | `chord-type` | K2 chord type | yes; `omt.json` holds the triads and seventh chords |
-| `voicing`, `schema`, `form`, `operation`, `pattern`, `rule`, `preset`, `term` | K3, K5 and K9 to K15 | none yet |
+| `voicing`, `schema`, `form`, `operation`, `pattern`, `preset`, `term` | K3, K5 and K9 to K15 | none yet |
 | `vocabulary` | K4 vocabulary | `cadence-kind`, `embellishment`, `texture`, `progression-type`, `function` (a harmonic function); `omt.json` holds 32 entries, each with the `code` the C table uses for the same thing |
 | `function` | K7 formal function | `formal-function` (core, level, the progression types its harmony may take, harmonic rhythm, rhythmic activity, motive harmony, cadence, contrast target); `omt.json` holds ten (basic idea, contrasting idea, fragment, cadential idea, presentation, continuation, cadential, antecedent, consequent, compound basic idea) |
 | `theme-type` | K8 theme type | yes, no subtype (a beginning, an ending and the ideas between them with their functions, slots and units); `omt.json` holds the sentence, the period and seven hybrids |
 | `instrument` | K12 instrument and ensemble | `instrument` (family, transposition, clefs, range, General MIDI program, sustain pedal), `ensemble` (named slots of instruments); `omt.json` holds the piano and a solo-piano ensemble |
+| `rule` | K13 rule | `constraint` (a declared limit with its stage, waive and setting), `evaluator` (a weighted judgment with its default weight and parameters), `observation` (a plain-word note, never scored); every one names its scope, message and the function that checks it |
 | `relation` | K6 relation | `tonal`, `modal`, `neo-riemannian`, `set`, `serial`; `omt.json` holds the tonal, modal and neo-Riemannian relations (no set or serial entries yet) |
 
 A kind with no schema file accepts no entry. A schema is added with the first entries of its kind.
@@ -40,7 +41,7 @@ A kind with no schema file accepts no entry. A schema is added with the first en
 `entry.schema.json` is the anatomy every kind shares:
 
 - `id`: `<source>.<kind>.<name>`, lowercase words joined by hyphens (`omt.material.natural-minor`). A user's own entries start with `user`. The id never changes.
-- `kind`, `subtype` (required for `material`, `vocabulary`, `relation`, `function` and `instrument`), `name`, optional `aliases`.
+- `kind`, `subtype` (required for `material`, `vocabulary`, `relation`, `function`, `instrument` and `rule`), `name`, optional `aliases`.
 - `content`: what the entry says, checked by the kind's schema.
 - `relations`: `{ "type": "variant-of", "target": "<id>" }`, every target an existing entry.
 - `citations`: at least one for a repository entry. `source` is an id of `sources.json`, with `part`, `chapter`, `section` and `example` as the book numbers them. `note` says in your own words what the entry takes from it. Never copy book text.
