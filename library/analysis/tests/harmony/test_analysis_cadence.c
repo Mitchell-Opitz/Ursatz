@@ -523,6 +523,7 @@ static void test_v_to_i6_on_a_downbeat_after_a_predominant_is_evaded(void) {
     const HarmonyCadenceResult *c = &found.items[0];
     assert(c->type == CADENCE_TYPE_SUBVERTED && c->arrival_first == 4);
     assert(c->alternative.arrival_first == 4 && c->alternative.arrival_last == 4);
+    /* A share is in parts of 1000: 800 is 80% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_PROLONGATION, 800);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -556,6 +557,7 @@ static void test_other_cadences_have_one_reading(void) {
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
     HarmonySegment *segments = NULL;
     HarmonyCadences found = find(&f, &segments, NULL);
+    /* A share is in parts of 1000: 1000 is 100% of the evidence for the reading. */
     assert(found.count == 1 && found.items[0].share == 1000 && !found.items[0].alternative.present);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -583,6 +585,7 @@ static void test_a_long_boundary_dominant_with_a_soprano_rest_is_a_half_cadence(
     assert(c->type == CADENCE_TYPE_HALF && c->arrival_first == 4 && c->arrival_last == 7);
     assert(c->alternative.type == CADENCE_TYPE_IMPERFECT_AUTHENTIC && c->alternative.arrival_first == 8 &&
            c->alternative.soprano_degree == 3);
+    /* A share is in parts of 1000: 800 is 80% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 800);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -606,6 +609,7 @@ static void test_a_short_boundary_dominant_into_a_pac_shape_is_authentic(void) {
     assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->arrival_first == 4 && c->dominant_first == 3);
     assert(c->alternative.type == CADENCE_TYPE_HALF && c->alternative.arrival_first == 3 &&
            c->alternative.arrival_last == 3);
+    /* A share is in parts of 1000: 750 is 75% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 750);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -627,6 +631,7 @@ static void test_a_tied_boundary_keeps_the_half_cadence_primary(void) {
     assert(found.count == 1);
     const HarmonyCadenceResult *c = &found.items[0];
     assert(c->type == CADENCE_TYPE_HALF && c->arrival_first == 2 && c->alternative.arrival_first == 4);
+    /* A share is in parts of 1000: 500 is 50% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 500);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
