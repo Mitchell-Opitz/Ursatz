@@ -112,6 +112,29 @@ if(CASE STREQUAL "plans")
     return()
 endif()
 
+if(CASE STREQUAL "theme_variety")
+    # Variety for themes (R-722): the generated motif of each theme is drawn away from the motifs of the themes before it, as for a
+    # batch of motifs (R-673). Variety 0 is today's batch. With variety 20 and a pool of 8 from seed 20 (measured when the case was written)
+    # the first two themes are the same and the third is another.
+    file(WRITE "${WORK}/zero.json" "{\"candidates\": {\"variety\": 0}}")
+    file(WRITE "${WORK}/varied.json" "{\"candidates\": {\"variety\": 20, \"pool\": 8}}")
+    expect_status(0 listen --what themes --count 3 --seed 20 --out-dir plain)
+    expect_status(0 listen --what themes --count 3 --seed 20 --settings zero.json --out-dir zero)
+    expect_status(0 listen --what themes --count 3 --seed 20 --settings varied.json --out-dir varied)
+    foreach(i 1 2 3)
+        compare_files(TRUE plain/0${i}.mid zero/0${i}.mid)
+        compare_files(TRUE plain/0${i}.musicxml zero/0${i}.musicxml)
+    endforeach()
+    compare_files(TRUE plain/01.mid varied/01.mid)
+    compare_files(TRUE plain/02.mid varied/02.mid)
+    compare_files(FALSE plain/03.mid varied/03.mid)
+    # a theme made from a motif the user gave has no generated motif to vary
+    expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77-chords.json" --out-dir fixed-plain)
+    expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77-chords.json" --settings varied.json --out-dir fixed-varied)
+    compare_files(TRUE fixed-plain/02.mid fixed-varied/02.mid)
+    return()
+endif()
+
 if(CASE STREQUAL "overrides")
     # Waiving the parallel fifths and octaves changes the themes of seeds 4 and 14 (measured on the prototype, R-672) and not
     # seed 1.
