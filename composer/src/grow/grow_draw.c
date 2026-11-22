@@ -363,6 +363,7 @@ bool grow_draw_spec(const Plan *plan, const GrowThemeRequest *request, const Gro
     draw_liquid_base(basics, spec);
     spec->segment_room = material_has_room(plan, request, spec);
     spec->basic_cells = spec->layout.basic_bars * request->cells_per_bar;
+    grow_function_harmony_decide(request, spec);
     return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) &&
            grow_extensions_draw(request, spec) && made_nodes_fit(plan, request, spec);
 }

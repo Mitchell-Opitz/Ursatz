@@ -240,6 +240,17 @@ bool grow_read_request(const Plan *plan, FillTarget target, GrowThemeRequest *ou
             request.given_first_half = request.given_first_half || plan_lane_span_state(plan, held[i]) == PLAN_STATE_GIVEN;
         }
     }
+    PlanSpan second_half = request.span;
+    if (rational_add(request.span.start, layout.beginning, &second_half.start) == RATIONAL_OK &&
+        rational_sub(request.span.length, layout.beginning, &second_half.length) == RATIONAL_OK && second_half.length.num > 0) {
+        for (size_t l = 0; l < sizeof(GIVEN_LANES) / sizeof(GIVEN_LANES[0]); l++) {
+            LaneSpanId held[GROW_MAX_GAPS];
+            size_t found = plan_lane_find(plan, GIVEN_LANES[l], 0, second_half, held, GROW_MAX_GAPS);
+            for (size_t i = 0; i < found && i < GROW_MAX_GAPS; i++) {
+                request.given_second_half = request.given_second_half || plan_lane_span_state(plan, held[i]) == PLAN_STATE_GIVEN;
+            }
+        }
+    }
     /* A pedal is kept only under a presentation that opens in the home key, with no Given material in its first half. */
     request.pedal = request.pedal && request.pairing.beginning == SECTION_BEGINNING_PRESENTATION &&
                     !request.has_start_change && !request.given_first_half && starts_in_home_key(plan, &request);
@@ -272,6 +283,8 @@ static bool grow_generate(const Plan *plan, FillTarget target, FillRng *rng, voi
         request.continuation = shared->continuation;
         request.basic_as_written = shared->basic_as_written;
         request.contrast = shared->contrast;
+        request.functions = shared->functions;
+        request.knowledge = shared->knowledge;
         request.motif = shared->motif;
     }
     if (request.transition) {

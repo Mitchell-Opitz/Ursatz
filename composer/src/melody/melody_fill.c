@@ -23,7 +23,7 @@
 #define MELODY_FILL_PARAMS_INIT                                                                                      \
     {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
      DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
-     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0, 0, 0}
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0, 0, 0, false}
 
 static const char *const HARD_RULE_NAMES[MELODY_RULE_COUNT] = {
     "forbidden-leap",   "forbidden-outline",       "no-crossing",          "parallel-octaves",

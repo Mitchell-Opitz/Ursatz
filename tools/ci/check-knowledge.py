@@ -4,7 +4,10 @@
 Validates every entry under the kind folders of the knowledge dir (target architecture 5): the files parse, the envelope and the
 entry anatomy follow entry.schema.json, the content and examples follow the kind's schema, ids are unique and carry their file's
 source and folder's kind, relations point at existing ids, citations name a source of sources.json, a material's examples
-spell its steps, an instrument's range holds its examples, and an ensemble's slots name instruments. One line per problem,
+spell its steps, an instrument's range holds its examples, an ensemble's slots name instruments, a vocabulary entry's code is its
+subtype's own, a texture's category is a texture's code, a progression type's example chords follow its type, a formal function's
+harmony ids are progression types and its contrast target a formal function, and a theme type's ideas, units and examples agree with
+its functions. One line per problem,
 "knowledge: <file>: <id>: <what>". Exit 0 clean, 1 with problems, 2 on a missing file.
 """
 import json
@@ -270,6 +273,125 @@ def check_ensemble(path, entry, instruments):
             problem(path, entry["id"], "example %d: performers do not equal the slot names in order" % number)
 
 
+PREDOMINANTS = {"ii", "ii6", "ii7", "ii65", "IV", "iv", "iv6"}
+NUMERAL = re.compile(r"^(b|#)?(I|II|III|IV|V|VI|VII|i|ii|iii|iv|v|vi|vii)(o|\+)?(6|64|7|65|43|42)?$")
+
+
+def numeral_base(chord):
+    """The numeral without its inversion figure: 'V6' -> 'V', 'ii65' -> 'ii'."""
+    return chord.rstrip("0123456789")
+
+
+def check_progression_example(path, entry, number, example):
+    chords = example.get("chords") if isinstance(example, dict) else None
+    if not isinstance(chords, list) or not chords or not all(isinstance(chord, str) for chord in chords):
+        return
+    for chord in chords:
+        if not NUMERAL.match(chord):
+            problem(path, entry["id"], "example %d: '%s' is not a Roman numeral" % (number, chord))
+            return
+    code = entry["content"].get("code")
+    if code == "prolongation" and numeral_base(chords[0]) != numeral_base(chords[-1]):
+        problem(path, entry["id"], "example %d: a prolongation starts and ends on the same numeral" % number)
+    if code == "cadential":
+        if numeral_base(chords[-1]) not in ("V", "I"):
+            problem(path, entry["id"], "example %d: a cadential progression ends on V or I" % number)
+        dominants = [i for i, chord in enumerate(chords) if numeral_base(chord) == "V"]
+        if not dominants or not any(chord in PREDOMINANTS for chord in chords[:dominants[-1]]):
+            problem(path, entry["id"], "example %d: a cadential progression needs a predominant before its V" % number)
+
+
+def check_vocabulary(vocabulary_entries):
+    """Codes are unique within a subtype, a texture's category is a texture's code, and progression examples follow their type."""
+    codes = {}
+    for path, entry in vocabulary_entries:
+        content = entry.get("content")
+        code = content.get("code") if isinstance(content, dict) else None
+        if not isinstance(code, str):
+            continue
+        key = (entry.get("subtype"), code)
+        if key in codes:
+            problem(path, entry["id"], "code '%s' is also the code of %s" % (code, codes[key]))
+        codes.setdefault(key, entry["id"])
+    for path, entry in vocabulary_entries:
+        content = entry.get("content")
+        if not isinstance(content, dict):
+            continue
+        if entry.get("subtype") == "texture" and isinstance(content.get("category"), str):
+            if ("texture", content["category"]) not in codes:
+                problem(path, entry["id"], "content.category: no texture entry has the code '%s'" % content["category"])
+        if entry.get("subtype") == "progression-type":
+            for number, example in enumerate(entry.get("examples", []), 1):
+                check_progression_example(path, entry, number, example)
+
+
+def level_of(functions, function_id):
+    entry = functions.get(function_id)
+    return entry[1].get("content", {}).get("level") if entry is not None else None
+
+
+def check_formal_function(path, entry, progression_ids, functions, theme_types):
+    """Harmony ids are progression-type entries, `against` is a formal function, and an example's theme type lists the idea."""
+    content = entry.get("content")
+    if not isinstance(content, dict):
+        return
+    for target in content.get("harmony", []) if isinstance(content.get("harmony"), list) else []:
+        if target not in progression_ids:
+            problem(path, entry["id"], "content.harmony: '%s' is not a progression-type vocabulary entry" % target)
+    contrast = content.get("contrast")
+    if isinstance(contrast, dict) and contrast.get("against") not in functions:
+        problem(path, entry["id"], "content.contrast.against: '%s' is not a formal-function entry" % contrast.get("against"))
+    for number, example in enumerate(entry.get("examples", []), 1):
+        if not isinstance(example, dict):
+            continue
+        theme_type = theme_types.get(example.get("theme_type"))
+        if theme_type is None:
+            problem(path, entry["id"], "example %d: '%s' is not a theme-type entry" % (number, example.get("theme_type")))
+            continue
+        ideas = theme_type[1].get("content", {}).get("ideas", [])
+        if not any(isinstance(idea, dict) and idea.get("name") == example.get("idea") and idea.get("function") == entry["id"]
+                   for idea in ideas):
+            problem(path, entry["id"], "example %d: the theme type does not list the idea '%s' with this function" % (
+                number, example.get("idea")))
+
+
+def check_theme_type(path, entry, functions):
+    """Beginning and ending are formal functions above idea level, each idea's function is of idea level, the units sum to 8 and
+    each example's ideas follow in order with bars = units x bars / 8."""
+    content = entry.get("content")
+    if not isinstance(content, dict) or not isinstance(content.get("ideas"), list):
+        return
+    for field in ("beginning", "ending"):
+        if level_of(functions, content.get(field)) not in ("subphrase", "phrase"):
+            problem(path, entry["id"], "content.%s: '%s' is not a formal function of subphrase or phrase level" % (
+                field, content.get(field)))
+    ideas = [idea for idea in content["ideas"] if isinstance(idea, dict)]
+    for idea in ideas:
+        if level_of(functions, idea.get("function")) != "idea":
+            problem(path, entry["id"], "content.ideas: the function '%s' of '%s' is not a formal function of idea level" % (
+                idea.get("function"), idea.get("name")))
+    units = [idea.get("units") for idea in ideas]
+    if all(isinstance(unit, int) for unit in units) and sum(units) != 8:
+        problem(path, entry["id"], "content.ideas: the units sum to %d, not 8" % sum(units))
+        return
+    for number, example in enumerate(entry.get("examples", []), 1):
+        if not isinstance(example, dict) or not isinstance(example.get("ideas"), list) or not isinstance(example.get("bars"), int):
+            continue
+        rows = example["ideas"]
+        if [row.get("name") if isinstance(row, dict) else None for row in rows] != [idea.get("name") for idea in ideas]:
+            problem(path, entry["id"], "example %d: the ideas are not the entry's ideas in order" % number)
+            continue
+        at = 0
+        for row, unit in zip(rows, units):
+            bars = unit * example["bars"] / 8
+            if not isinstance(row.get("start"), (int, float)) or not isinstance(row.get("end"), (int, float)) or \
+                    row["start"] != at or row["end"] - row["start"] != bars:
+                problem(path, entry["id"], "example %d: bars of '%s' disagree with its %d units of %d bars" % (
+                    number, row.get("name"), unit, example["bars"]))
+                break
+            at = row["end"]
+
+
 def main(argv):
     if len(argv) not in (2, 3):
         print("usage: check-knowledge.py <knowledge dir> [<schema dir>]")
@@ -300,6 +422,8 @@ def main(argv):
     relations = []
     materials, locations, relation_entries = {}, {}, []
     instrument_ids, ensemble_entries = set(), []
+    vocabulary_entries = []
+    function_entries, theme_type_entries = {}, {}
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
         if not os.path.isdir(folder_path) or folder == "schema":
@@ -380,11 +504,23 @@ def main(argv):
                     check_instrument(rel, entry)
                 if kind == "instrument" and subtype == "ensemble":
                     ensemble_entries.append((rel, entry))
+                if kind == "vocabulary" and isinstance(entry.get("content"), dict):
+                    vocabulary_entries.append((rel, entry))
+                if kind == "function" and subtype == "formal-function":
+                    function_entries[entry_id] = (rel, entry)
+                if kind == "theme-type":
+                    theme_type_entries[entry_id] = (rel, entry)
     for rel, entry_id, target in relations:
         if target not in ids:
             problem(rel, entry_id, "relation target '%s' is not an entry" % target)
     for rel, entry in ensemble_entries:
         check_ensemble(rel, entry, instrument_ids)
+    check_vocabulary(vocabulary_entries)
+    progression_ids = {entry["id"] for _, entry in vocabulary_entries if entry.get("subtype") == "progression-type"}
+    for rel, entry in function_entries.values():
+        check_formal_function(rel, entry, progression_ids, function_entries, theme_type_entries)
+    for rel, entry in theme_type_entries.values():
+        check_theme_type(rel, entry, function_entries)
     check_materials(materials, locations)
     words = material_words(materials)
     for rel, entry in relation_entries:

@@ -13,10 +13,13 @@ add_library(ursatz_theory
     style/style_model_build.c
     rules/rule_table.c
     knowledge/instrument.c
+    knowledge/knowledge_form.c
     knowledge/knowledge_snapshot.c
+    knowledge/knowledge_vocabulary.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
+    vocabulary/contrast_aspect.c
     vocabulary/key_change_extent.c
     vocabulary/motive_occurrence_kind.c
     vocabulary/motive_relation_step.c
@@ -166,6 +169,7 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/framework_names.h
         theory/vocabulary/beat_strength.h
         theory/vocabulary/cadence_type.h
+        theory/vocabulary/contrast_aspect.h
         theory/vocabulary/key_change_extent.h
         theory/vocabulary/motive_occurrence_kind.h
         theory/vocabulary/motive_relation_step.h
@@ -173,9 +177,11 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/subphrase_role.h
         theory/vocabulary/texture_rules.h
         theory/vocabulary/voice_part.h
+        theory/knowledge/form_entry.h
         theory/knowledge/instrument.h
         theory/knowledge/knowledge_snapshot.h
         theory/knowledge/relation.h
+        theory/knowledge/vocabulary_entry.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_materials.h

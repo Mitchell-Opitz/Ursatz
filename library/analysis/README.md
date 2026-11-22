@@ -21,6 +21,7 @@ each framework folder, with common-practice-minimal's perception and all of stan
 | `counterpoint/` | Melody and motion analysis, perfects, grid | standard-counterpoint |
 | `galant/` | Schema matching, sequence detection | galant-schemas, scale-harmonization |
 | `similarity/` | Similarity model and scoring over sequences | kernel `query` |
+| `dimension/` | The dimensions of a span of notes (register, density) by a name table, and the contrast vector of two spans (R-709) | none |
 
 Each former framework's README is in the area that holds most of its code, with its scope line naming both halves:
 common-practice-minimal's is [harmony/README.md](harmony/README.md), standard-texture's is

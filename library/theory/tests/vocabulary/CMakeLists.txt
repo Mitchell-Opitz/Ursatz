@@ -13,3 +13,5 @@ ursatz_test(applied_chord_kind LIBS ursatz_theory)
 ursatz_test(key_change_extent LIBS ursatz_theory)
 
 ursatz_test(framework_names LIBS ursatz_theory)
+
+ursatz_test(contrast_aspect LIBS ursatz_theory)

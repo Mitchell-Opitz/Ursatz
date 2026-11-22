@@ -32,3 +32,11 @@ const HarmonyCadenceKind *harmony_cadence_kind_find(const char *name) {
 const HarmonyCadenceKind *harmony_cadence_kind_of(CadenceType core) {
     return harmony_cadence_kind_find(cadence_type_name(core));
 }
+
+size_t harmony_cadence_kind_count(void) {
+    return KIND_COUNT;
+}
+
+const HarmonyCadenceKind *harmony_cadence_kind_at(size_t index) {
+    return index < KIND_COUNT ? &KINDS[index] : NULL;
+}

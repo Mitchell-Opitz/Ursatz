@@ -1,0 +1,1 @@
+no schema vocabulary.mood.schema.json for this kind and subtype

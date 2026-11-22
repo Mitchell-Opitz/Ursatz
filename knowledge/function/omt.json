@@ -1,0 +1,373 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.function.basic-idea",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "basic idea",
+      "content": {
+        "code": "basic-idea",
+        "core": "initiating",
+        "level": "idea",
+        "harmony": [
+          "omt.vocabulary.prolongational"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "keep"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 1,
+          "section": "The Idea Level",
+          "note": "the basic idea opens the theme and sets the motive the rest answers or develops"
+        },
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "More Detail: The Presentation",
+          "note": "the presentation states the basic idea, then repeats it"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "V",
+          "note": "the motive of the basic idea is stated and repeated"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "theme_type": "omt.theme-type.sentence",
+          "idea": "basic idea"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.function.contrasting-idea",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "contrasting idea",
+      "content": {
+        "code": "contrasting-idea",
+        "core": "concluding",
+        "level": "idea",
+        "harmony": [
+          "omt.vocabulary.cadential",
+          "omt.vocabulary.prolongational"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "free",
+        "contrast": {
+          "against": "omt.function.basic-idea",
+          "aspects": [
+            {
+              "aspect": "rhythm",
+              "amount": "1/2"
+            },
+            {
+              "aspect": "contour",
+              "amount": "1/2"
+            }
+          ]
+        }
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "Archetype 2: The Period",
+          "note": "the contrasting idea of a period answers the basic idea with other material and ends the half on a cadence"
+        },
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "More Detail: The Consequent",
+          "note": "the consequent's contrasting idea closes the theme"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VI",
+          "note": "the remoter motive-forms of the third and fourth bars differ in register, direction or contour, and have more or fewer small notes"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "theme_type": "omt.theme-type.period",
+          "idea": "contrasting idea"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.function.fragment",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "fragment",
+      "content": {
+        "code": "fragment",
+        "core": "medial",
+        "level": "idea",
+        "harmony": [
+          "omt.vocabulary.prolongational",
+          "omt.vocabulary.sequential"
+        ],
+        "harmonic_rhythm": "faster",
+        "rhythmic_activity": "faster",
+        "motive_harmony": "free"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "More Detail: The Continuation",
+          "note": "the continuation fragments the idea, uses faster durations, sequences and a faster harmonic rhythm"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VIII",
+          "note": "fragmentation reduces the idea to a piece, condenses it and sequences it"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "theme_type": "omt.theme-type.sentence",
+          "idea": "fragment 1"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.function.cadential-idea",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "cadential idea",
+      "content": {
+        "code": "cadential-idea",
+        "core": "concluding",
+        "level": "idea",
+        "harmony": [
+          "omt.vocabulary.cadential"
+        ],
+        "harmonic_rhythm": "faster",
+        "rhythmic_activity": "slower",
+        "motive_harmony": "free"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "New: Cadential",
+          "note": "the cadential idea goes mi, fa, sol, do over I6, ii6 or IV, V and I"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VIII",
+          "note": "liquidation brings the continuation into the cadence"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "theme_type": "omt.theme-type.sentence",
+          "idea": "cadential"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.function.presentation",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "presentation",
+      "content": {
+        "code": "presentation",
+        "core": "initiating",
+        "level": "subphrase",
+        "harmony": [
+          "omt.vocabulary.prolongational"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "keep",
+        "cadence": "none"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "note": "the presentation prolongs the tonic with the basic idea and its repetition"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.function.continuation",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "continuation",
+      "content": {
+        "code": "continuation",
+        "core": "medial",
+        "level": "subphrase",
+        "harmony": [
+          "omt.vocabulary.sequential",
+          "omt.vocabulary.phrase-model",
+          "omt.vocabulary.cadential"
+        ],
+        "harmonic_rhythm": "faster",
+        "rhythmic_activity": "faster",
+        "motive_harmony": "free",
+        "cadence": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "note": "the continuation has faster rhythm and harmony, fragmentation and sequence, and ends with a cadence"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.function.cadential",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "cadential",
+      "content": {
+        "code": "cadential",
+        "core": "concluding",
+        "level": "subphrase",
+        "harmony": [
+          "omt.vocabulary.cadential"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "free",
+        "cadence": "any"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "note": "the cadential subphrase ends the theme with a cadential progression"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.function.antecedent",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "antecedent",
+      "content": {
+        "code": "antecedent",
+        "core": "initiating",
+        "level": "phrase",
+        "harmony": [
+          "omt.vocabulary.phrase-model"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "keep",
+        "cadence": "weak"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "note": "an antecedent begins a period and ends with a weak cadence"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VI",
+          "note": "the antecedent phrase ends on a half cadence or another weak close"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.function.consequent",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "consequent",
+      "content": {
+        "code": "consequent",
+        "core": "concluding",
+        "level": "phrase",
+        "harmony": [
+          "omt.vocabulary.phrase-model"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "keep",
+        "cadence": "strong"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "note": "a consequent restates the antecedent's start and ends with a strong cadence"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VII",
+          "note": "the consequent answers the antecedent and closes the period"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.function.compound-basic-idea",
+      "kind": "function",
+      "subtype": "formal-function",
+      "name": "compound basic idea",
+      "content": {
+        "code": "compound-basic-idea",
+        "core": "initiating",
+        "level": "subphrase",
+        "harmony": [
+          "omt.vocabulary.prolongational"
+        ],
+        "harmonic_rhythm": "any",
+        "rhythmic_activity": "any",
+        "motive_harmony": "keep",
+        "cadence": "none"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "New: The Compound Basic Idea",
+          "note": "a compound basic idea joins a basic idea and a contrasting idea in the first subphrase"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}

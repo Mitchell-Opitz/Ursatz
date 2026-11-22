@@ -1,0 +1,36 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.vocabulary.cadential",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "cadential",
+      "content": {
+        "code": "cadential"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 3,
+          "note": "a cadential progression"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "key": "C",
+          "chords": [
+            "I",
+            "V",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

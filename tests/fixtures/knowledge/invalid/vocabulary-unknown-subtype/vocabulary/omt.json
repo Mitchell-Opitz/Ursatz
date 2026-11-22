@@ -1,0 +1,26 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.vocabulary.cheerful",
+      "kind": "vocabulary",
+      "subtype": "mood",
+      "name": "prolongational",
+      "content": {
+        "code": "cheerful"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 6,
+          "note": "a prolongation keeps the tonic through a passing chord"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}

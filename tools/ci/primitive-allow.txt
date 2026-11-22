@@ -8,4 +8,5 @@ composer/src/api/api_variants.c path-join  # a request member path, not a file p
 composer/src/api/api_theme.c path-join  # a request member path, not a file path, P66b R-691
 composer/src/api/api_motive_request.c path-join  # a request member path, not a file path, P66b R-691
 composer/src/preferences/preferences.c path-join  # a preference key path ("<group>/<key>"), not a file path, P66b R-691
+composer/src/preferences/preferences_development.c path-join  # a preference key path ("<group>/<key>"), not a file path, P66b R-691
 workshop/src/items/body_migrate.c strdup-copy  # a name cJSON owns is allocated with cJSON_malloc, P66b R-691

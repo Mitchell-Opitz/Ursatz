@@ -60,13 +60,17 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
                      : grow_shorten_source(spec, GROW_PLACE_CONTRAST) &&
                            grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST,
                                               grow_idea_source(spec, GROW_PLACE_CONTRAST), -1, NULL, &spec->contrast);
+    /* A contrast target (R-710): the function of the idea asks for a distant contrast that meets it, or the structure is dropped. */
+    bool targeted = drawn && !own && grow_contrast_target(request, spec, GROW_PLACE_CONTRAST);
     /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
     if (drawn && !own &&
-        (has_kind ? kind == GROW_CONTRAST_KIND_DISTANT
-                  : grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT) &&
+        (targeted || (has_kind ? kind == GROW_CONTRAST_KIND_DISTANT
+                               : grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT)) &&
         grow_make_distant(request, rng, spec, GROW_PLACE_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONTRAST),
                           &spec->contrast, -1)) {
         spec->contrast.kind = MOTIVE_RELATION_EXACT;
+    } else if (targeted) {
+        return false;
     }
     return drawn &&
            grow_idea_develop(spec, GROW_PLACE_CONTRAST, &spec->developed[GROW_PLACE_CONTRAST]) &&
@@ -208,7 +212,9 @@ static PlanResult build_presentation(GrowBuild *build) {
         basic_shape.pedal = true;
         repetition_shape = basic_shape;
     }
-    bool no_chords = whole ? !spec->basic_has_chords : spec->source.chord_count == 0;
+    /* The guard reads the compose run's basic motive (`spec->source` never carries chords: grow_read_motive, and motive_develop of
+       a section motive): with chords and no section motive a sequence holds them a step up (R-348, R-714). `whole` implies both. */
+    bool no_chords = !spec->basic_has_chords || spec->has_section_motive;
     if (spec->repetition == GROW_REPEAT_SEQUENCE && no_chords) {
         /* A motif with no harmony of its own: the chord moves with the melody, the basic idea's tonic and the repetition's
            chord a step up (I to ii, i to iio), written whole (R-348). */
@@ -275,6 +281,9 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_CONTRAST],
                                build->layout.length[GROW_PLACE_CONTRAST], "contrasting idea", &ideas[1]);
     }
+    if (result == PLAN_OK) {
+        result = grow_add_contrast_constraint(build, ideas[1], GROW_PLACE_CONTRAST);
+    }
     for (size_t k = 0; k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         repeats[k] = PLAN_NODE_NONE;
         if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == SECTION_EXTENSION_REPEAT &&
@@ -326,13 +335,16 @@ static PlanResult build_antecedent(GrowBuild *build) {
     shape.kind = spec->beginning_shape;
     shape.starts_on = build->request->has_start_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
     shape.split_at_bars = spec->beginning_split;
-    if (result == PLAN_OK) {
+    /* With functions.harmony the chords are the ideas' own, written once their nodes are there (R-711). */
+    bool by_function = spec->function_harmony[0];
+    if (result == PLAN_OK && !by_function) {
         result = grow_add_chord_targets(build, antecedent, &shape, &weak);
     }
     if (result == PLAN_OK && spec->part_whole) {
         return build_whole_part(build, antecedent, &weak, &ideas[0]);
     }
-    return result == PLAN_OK ? build_ideas(build, antecedent, &weak, ideas) : result;
+    result = result == PLAN_OK ? build_ideas(build, antecedent, &weak, ideas) : result;
+    return result == PLAN_OK && by_function ? grow_add_function_harmony(build, antecedent, ideas, true) : result;
 }
 
 /* A compound basic idea: a basic idea and a contrasting idea over one prolongation, no cadence. */

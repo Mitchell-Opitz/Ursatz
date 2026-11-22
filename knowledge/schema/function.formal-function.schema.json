@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K7 formal function: what an idea, subphrase or phrase does in a theme, and what its harmony and surface follow from it",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "core",
+        "level",
+        "harmony",
+        "harmonic_rhythm",
+        "rhythmic_activity",
+        "motive_harmony"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z]+(-[a-z]+)*$"
+        },
+        "core": {
+          "enum": [
+            "initiating",
+            "medial",
+            "concluding",
+            "before-the-beginning",
+            "after-the-end",
+            "connective"
+          ]
+        },
+        "level": {
+          "enum": [
+            "idea",
+            "subphrase",
+            "phrase"
+          ]
+        },
+        "harmony": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+          }
+        },
+        "harmonic_rhythm": {
+          "enum": [
+            "any",
+            "faster"
+          ]
+        },
+        "rhythmic_activity": {
+          "enum": [
+            "any",
+            "faster",
+            "slower"
+          ]
+        },
+        "motive_harmony": {
+          "enum": [
+            "keep",
+            "free"
+          ]
+        },
+        "cadence": {
+          "enum": [
+            "none",
+            "weak",
+            "strong",
+            "any"
+          ]
+        },
+        "contrast": {
+          "type": "object",
+          "required": [
+            "against",
+            "aspects"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "against": {
+              "type": "string",
+              "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+            },
+            "aspects": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "required": [
+                  "aspect",
+                  "amount"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "aspect": {
+                    "enum": [
+                      "rhythm",
+                      "contour",
+                      "register",
+                      "density"
+                    ]
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(/[1-9][0-9]*)?$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "theme_type",
+          "idea"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "theme_type": {
+            "type": "string",
+            "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "idea": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

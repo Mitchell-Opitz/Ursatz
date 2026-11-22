@@ -172,6 +172,10 @@
           "maximum": 20,
           "description": "How many times an idea's drift from the register of the span before it counts against it. 0 leaves it out."
         },
+        "cadence_long": {
+          "type": "boolean",
+          "description": "The idea that ends a cadence ends on one note held from its last downbeat to its end, on the cadence's tone (R-712). Off by default."
+        },
         "waive": {
           "type": "array",
           "uniqueItems": true,
@@ -870,6 +874,25 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 20
+            }
+          }
+        },
+        "functions": {
+          "type": "object",
+          "description": "Themes whose ideas follow their formal function (R-710 to R-712). Every member is off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "harmony": {
+              "type": "boolean",
+              "description": "Each idea of an antecedent and of an ending takes its harmony from its formal function."
+            },
+            "surface": {
+              "type": "boolean",
+              "description": "The fragments of a continuation are drawn from the busiest segment and another."
+            },
+            "contrast": {
+              "type": "boolean",
+              "description": "A contrasting idea is drawn to meet its function's contrast target in rhythm, contour, register and density."
             }
           }
         }

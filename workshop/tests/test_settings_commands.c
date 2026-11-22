@@ -201,8 +201,8 @@ static void test_queries(void) {
               strcmp(cJSON_GetArrayItem(member(reply.json, "items"), 0)->valuestring, g_item) == 0,
           "settings.list names the scope files present");
     workshop_reply_destroy(&reply);
-    check(query("settings.keys", NULL, &reply, &error) == URSATZ_OK && cJSON_GetArraySize(member(reply.json, "keys")) == 126 && cJSON_GetArraySize(member(reply.json, "rules")) == 20,
-          "settings.keys lists the keys (the Composer's 124 and the workshop's two) and the 20 rules");
+    check(query("settings.keys", NULL, &reply, &error) == URSATZ_OK && cJSON_GetArraySize(member(reply.json, "keys")) == 130 && cJSON_GetArraySize(member(reply.json, "rules")) == 20,
+          "settings.keys lists the keys (the Composer's 128 and the workshop's two) and the 20 rules");
     workshop_reply_destroy(&reply);
     cJSON *empty = scope_of("project:nothing");
     check(empty == NULL, "a scope of a project that is not there is not read");

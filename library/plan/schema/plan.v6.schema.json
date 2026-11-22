@@ -207,7 +207,7 @@
       "properties": {
         "kind": {
           "enum": ["length_bars", "cadence", "motive_ref", "region", "embellish", "schema", "harmony_shape", "accompaniment", "voicing",
-                   "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones"]
+                   "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones", "contrast"]
         }
       },
       "allOf": [
@@ -241,6 +241,29 @@
         {
           "if": { "properties": { "kind": { "const": "pickup" } } },
           "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "contrast" } } },
+          "then": {
+            "required": ["against", "aspects"],
+            "properties": {
+              "against": { "type": "string", "minLength": 1, "maxLength": 63 },
+              "aspects": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "type": "object",
+                  "required": ["aspect", "amount"],
+                  "properties": {
+                    "aspect": { "enum": ["rhythm", "contour", "register", "density"] },
+                    "amount": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$" }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
         }
       ]
     }

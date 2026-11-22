@@ -47,10 +47,11 @@
  * 4.3 adds waive and reverse to the melody group of the preferences, and preference_keys and rules to the vocabulary (R-672),
  * the candidates group of the preferences and the random motive's avoid (R-673).
  * 4.4 adds write_in_c to the MIDI motive, and meter beat units and defaults to the vocabulary (R-693).
+ * 4.5 adds the functions group of the development preferences (R-710 to R-712) and the theme response's contrasts (R-710).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 4
+#define COMPOSER_API_VERSION_MINOR 5
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

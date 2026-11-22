@@ -249,6 +249,20 @@ typedef struct {
     MotiveScore minimum[GROW_DEVELOP_COUNT][GROW_ROLE_CONTRAST + 1];
 } GrowFidelityTable;
 
+/*
+ * The settings of the formal functions (R-711, R-712, R-710), in the development group of the preferences as `functions`: each
+ * takes a theme's ideas from their formal function (the knowledge entries of K7 and K8). All false is today's theme, with no
+ * random number drawn for them.
+ * harmony: each idea of an antecedent and of an ending takes its harmony from its function (P67 B6).
+ * surface: the fragments are drawn from the busiest segment and another (P67 B7).
+ * contrast: a contrasting idea is drawn to meet its function's contrast target, in rhythm, contour, register and density.
+ */
+typedef struct {
+    bool harmony;
+    bool surface;
+    bool contrast;
+} GrowFunctions;
+
 typedef struct {
     size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
     GrowDevelopment development; /* the weights of the repetition, the fragments and the liquidation (grow_beginning.c, grow_ending.c) */
@@ -256,6 +270,8 @@ typedef struct {
     /* A motif as long as the basic idea that has chords of its own is the basic idea as it is, over its own chords (R-466). */
     bool basic_as_written;
     GrowContrast contrast; /* all zero: today's contrasting ideas; set by api_grow from the preferences */
+    GrowFunctions functions; /* all false: today's themes; set by api_grow from the preferences (R-710 to R-712) */
+    const KnowledgeSnapshot *knowledge; /* the compose run's snapshot, for the theme types and formal functions; NULL for none (functions then change nothing) */
     const MotiveRandomPreferences *motif; /* the motif vocabulary a drawn rhythm or new material uses; NULL for the defaults; not owned */
     /*
      * The basic motive the request was made from, for the features (segments) and pickup the plan does not keep. Set by

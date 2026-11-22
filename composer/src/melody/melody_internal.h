@@ -149,6 +149,9 @@ MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *par
 /* Reads the bars before the target that share one rhythm into repeat_run (phase L4, R-479). False only on a plan error. */
 bool melody_context_read_repeats(const Plan *plan, MelodyContext *context);
 
+/* The start of the target's last bar, counted from the target's start: the latest downbeat before its end (0 when there is none). */
+Rational melody_last_downbeat(const MelodyContext *context);
+
 /* How many times the closure rules count for the target (phase L4, R-478): 0 when it ends no cadence. */
 unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params);
 

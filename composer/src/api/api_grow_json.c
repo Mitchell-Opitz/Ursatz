@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <analysis/dimension/dimension.h>
 #include <theory/form/phrase_beginning.h>
 #include <theory/form/phrase_ending.h>
 #include <theory/form/phrase_level_form.h>
@@ -619,6 +620,94 @@ static cJSON *construction_json(const Plan *plan, NodeId node) {
     return api_grow_construction_json(&section->construction, &section->pairing, text);
 }
 
+/* --- the measured contrasts (R-710) ---------------------------------------------------------------------- */
+
+#define CONTRAST_NOTES 128
+
+/*
+ * The notes of the motive an idea is made from as a span the dimension measures read, in onset order: the contrast target is held to
+ * the motives (grow_contrast_met), before the melody stage moves notes to the chords and holds the cadence, so the response measures
+ * what the draw held. The span's length is the motive's last note's end rounded up to whole bars. False when the idea has no motive.
+ */
+static bool idea_span(const Plan *plan, NodeId idea, const PlanMeter *meter, DimensionNote *notes, DimensionSpan *out) {
+    LaneSpanId melody;
+    LaneSpanId made;
+    if (!plan_melody_span_of(plan, idea, &melody)) {
+        return false;
+    }
+    const PlanConstraint *ref = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
+    if (ref == NULL || !plan_has_node(plan, ref->params.motive.motive) || !plan_melody_span_of(plan, ref->params.motive.motive, &made)) {
+        return false;
+    }
+    const PlanNotes *payload = &plan_lane_span_payload(plan, made)->notes;
+    Rational bar;
+    Rational end = {0, 1};
+    if (payload->note_count == 0 || payload->note_count > CONTRAST_NOTES || plan_meter_bar_length(meter, &bar) != PLAN_OK) {
+        return false;
+    }
+    for (size_t n = 0; n < payload->note_count; n++) {
+        Rational note_end;
+        notes[n].onset = payload->notes[n].offset;
+        notes[n].duration = payload->notes[n].duration;
+        notes[n].pitch = payload->notes[n].midi;
+        if (rational_add(notes[n].onset, notes[n].duration, &note_end) != RATIONAL_OK) {
+            return false;
+        }
+        end = rational_cmp(note_end, end) > 0 ? note_end : end;
+    }
+    Rational bars;
+    long long whole = 0;
+    if (rational_div(end, bar, &bars) != RATIONAL_OK || rational_ceil(bars, &whole) != RATIONAL_OK || whole < 1 ||
+        rational_mul_int(bar, whole, &out->length) != RATIONAL_OK) {
+        return false;
+    }
+    bool compound = meter->beat_unit == 8 && meter->beats_per_bar >= 6 && meter->beats_per_bar % 3 == 0;
+    out->notes = notes;
+    out->count = payload->note_count;
+    out->beat = compound ? rational_ratio(3, 8) : rational_ratio(1, meter->beat_unit > 0 ? meter->beat_unit : 4);
+    return true;
+}
+
+/*
+ * One row for each idea of the theme that holds a contrast constraint: the idea, the idea it contrasts against and the distance
+ * of its motive from that idea's in rhythm, contour, register and density. NULL for a theme with no such idea.
+ */
+static cJSON *contrasts_json(const Plan *plan, NodeId theme_node, const PlanMeter *meter) {
+    PlanSpan span = plan_node_span(plan, theme_node);
+    cJSON *list = NULL;
+    DimensionNote idea_notes[CONTRAST_NOTES];
+    DimensionNote against_notes[CONTRAST_NOTES];
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const PlanConstraint *constraint = plan_node_kind(plan, id) == PLAN_NODE_IDEA && plan_span_contains(span, plan_node_span(plan, id))
+                                               ? plan_node_find_constraint(plan, id, PLAN_CONSTRAINT_CONTRAST)
+                                               : NULL;
+        if (constraint == NULL) {
+            continue;
+        }
+        NodeId against = api_find_node(plan, constraint->params.contrast.against);
+        DimensionSpan first;
+        DimensionSpan second;
+        ContrastVector vector;
+        if (against == PLAN_NODE_NONE || !idea_span(plan, id, meter, idea_notes, &second) ||
+            !idea_span(plan, against, meter, against_notes, &first) || dimension_contrast(&first, &second, &vector) != DIMENSION_OK) {
+            continue;
+        }
+        cJSON *item = cJSON_CreateObject();
+        bool ok = item && cJSON_AddStringToObject(item, "idea", plan_node_name(plan, id)) &&
+                  cJSON_AddStringToObject(item, "against", constraint->params.contrast.against);
+        for (int aspect = 0; ok && aspect < CONTRAST_ASPECT_COUNT; aspect++) {
+            ok = cJSON_AddItemToObject(item, contrast_aspect_name((ContrastAspect)aspect), api_ratio_number(&vector.distance[aspect]));
+        }
+        list = list ? list : cJSON_CreateArray();
+        if (!ok || !list || !cJSON_AddItemToArray(list, item)) {
+            cJSON_Delete(item);
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {
     const Plan *plan = theme->plan;
     NodeId node = api_find_node(plan, "theme");
@@ -649,6 +738,11 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
          cJSON_AddStringToObject(object, "heard_text", heard);
     if (ok && theme->outcome.style_measured) {
         ok = cJSON_AddItemToObject(object, "style_distance", api_style_distance_json(&theme->outcome.style_distance));
+    }
+    cJSON *contrasts = ok ? contrasts_json(plan, node, &setup->meter) : NULL;
+    if (contrasts && !cJSON_AddItemToObject(object, "contrasts", contrasts)) {
+        cJSON_Delete(contrasts);
+        ok = false;
     }
     if (!ok) {
         cJSON_Delete(score);

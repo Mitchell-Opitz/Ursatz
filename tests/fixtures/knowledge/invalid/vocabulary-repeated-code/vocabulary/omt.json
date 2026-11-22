@@ -1,0 +1,55 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.vocabulary.half",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "half cadence",
+      "content": {
+        "code": "half",
+        "label": "half",
+        "abbreviation": "HC",
+        "core": "half",
+        "strength": 1,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "note": "a half cadence ends on the dominant"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.half-again",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "half-again cadence",
+      "content": {
+        "code": "half",
+        "label": "half",
+        "abbreviation": "HC",
+        "core": "half",
+        "strength": 1,
+        "conclusive": false
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 1,
+          "note": "a half cadence ends on the dominant"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}

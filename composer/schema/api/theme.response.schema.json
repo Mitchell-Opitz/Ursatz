@@ -619,6 +619,47 @@
         "heard_text": {
           "type": "string"
         },
+        "contrasts": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Present only when an idea holds a contrast target (development.functions.contrast): how far its notes are from the idea it contrasts against, in each aspect (a number, 0 for alike).",
+          "items": {
+            "type": "object",
+            "required": [
+              "idea",
+              "against",
+              "rhythm",
+              "contour",
+              "register",
+              "density"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "idea": {
+                "type": "string"
+              },
+              "against": {
+                "type": "string"
+              },
+              "rhythm": {
+                "type": "number",
+                "minimum": 0
+              },
+              "contour": {
+                "type": "number",
+                "minimum": 0
+              },
+              "register": {
+                "type": "number",
+                "minimum": 0
+              },
+              "density": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
         "style_distance": {
           "type": "object",
           "properties": {

@@ -72,7 +72,8 @@ module analysis-texture      library/analysis/texture      prefix analysis/textu
 module analysis-counterpoint library/analysis/counterpoint prefix analysis/counterpoint/
 module analysis-galant       library/analysis/galant       prefix analysis/galant/
 module analysis-similarity   library/analysis/similarity   prefix analysis/similarity/
-group analysis analysis-notes analysis-motive analysis-voices analysis-harmony analysis-form analysis-meter analysis-texture analysis-counterpoint analysis-galant analysis-similarity
+module analysis-dimension    library/analysis/dimension    prefix analysis/dimension/
+group analysis analysis-notes analysis-motive analysis-voices analysis-harmony analysis-form analysis-meter analysis-texture analysis-counterpoint analysis-galant analysis-similarity analysis-dimension
 uses analysis-notes        model theory
 uses analysis-motive       model theory analysis-notes common
 uses analysis-voices       model analysis-notes analysis-meter
@@ -83,6 +84,7 @@ uses analysis-texture      model theory analysis-notes
 uses analysis-counterpoint model theory analysis-notes common
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
+uses analysis-dimension    model theory-vocabulary analysis-notes analysis-similarity
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
 module realization     library/realization        prefix realization/
 group realization realization
@@ -101,6 +103,7 @@ group text text
 uses text model theory realization plan reading cjson common
 only ezxml library/io/musicxml_importer.c library/io/musicxml_import_parts.c library/io/musicxml_import_maps.c library/io/musicxml_import_internal.h -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
+only library/theory/knowledge/knowledge_internal.h library/theory/knowledge -- the loader files of the knowledge snapshot share its slot and readers; nothing else includes them
 
 
 
@@ -196,12 +199,12 @@ uses composer-melody model theory plan analysis composer-harmony composer-motive
 uses composer-texture model theory plan analysis chain io composer-harmony composer-core
 uses composer-counterpoint model theory plan composer-harmony composer-core
 uses composer-material model theory plan composer-harmony composer-melody composer-core
-uses composer-grow model theory plan composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
+uses composer-grow model theory analysis plan composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
 uses composer-check model theory plan reading analysis chain io composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
 uses composer-piece model theory plan cjson composer-api composer-check composer-operators composer-grow composer-core
 uses composer-candidates model plan composer-piece composer-core common
 uses composer-explain theory plan composer-piece composer-check composer-core common
-uses composer-request model theory realization plan reading chain cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
+uses composer-request model theory analysis realization plan reading chain cjson composer-api composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain common
 # The command line calls the workshop and nothing else (R-656, R-657).
 uses cli           workshop-api common cjson civetweb
 uses workshop-api common cjson
@@ -307,7 +310,7 @@ uses tests-theory-form test-helpers
 uses tests-theory-meter test-helpers
 uses tests-theory-galant test-helpers
 uses tests-theory-markings test-helpers
-uses tests-theory-knowledge test-helpers theory-tonality
+uses tests-theory-knowledge test-helpers theory-tonality theory-vocabulary theory-harmony
 uses tests-theory-harmony theory-tonality -- Roman numeral grammar cases
 uses tests-theory-tonality theory-harmony cjson -- the region relation test compares degree relations with the closely related keys and reads the relation examples
 uses tests-theory-meter io tests-io -- metric position tests import MIDI
@@ -324,6 +327,7 @@ module tests-analysis-texture      library/analysis/tests/texture      root libr
 module tests-analysis-counterpoint library/analysis/tests/counterpoint root library/tests library/tests/support library
 module tests-analysis-galant       library/analysis/tests/galant       root library/tests library/tests/support library
 module tests-analysis-similarity   library/analysis/tests/similarity   root library/tests library/tests/support library
+module tests-analysis-dimension    library/analysis/tests/dimension    root library/tests library/tests/support library
 like tests-analysis-notes analysis-notes
 like tests-analysis-motive analysis-motive
 like tests-analysis-voices analysis-voices
@@ -334,6 +338,7 @@ like tests-analysis-texture analysis-texture
 like tests-analysis-counterpoint analysis-counterpoint
 like tests-analysis-galant analysis-galant
 like tests-analysis-similarity analysis-similarity
+like tests-analysis-dimension analysis-dimension
 uses tests-analysis-notes test-helpers
 uses tests-analysis-motive test-helpers
 uses tests-analysis-voices test-helpers
@@ -344,6 +349,7 @@ uses tests-analysis-texture test-helpers
 uses tests-analysis-counterpoint test-helpers
 uses tests-analysis-galant test-helpers
 uses tests-analysis-similarity test-helpers
+uses tests-analysis-dimension test-helpers
 uses tests-analysis-form chain -- form_test_util.h builds the chain's form input
 uses tests-analysis-meter io tests-io tests-theory-meter -- meter tests import MIDI and share the meter helpers
 uses tests-analysis-voices io tests-io tests-integration theory-meter -- the corpus voice separation imports MIDI and reads the beat grid

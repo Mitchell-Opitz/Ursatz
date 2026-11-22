@@ -154,6 +154,7 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `closure_final`, `closure_first` | 0, 0 | How many times the closure rules count for the target that ends the theme's last cadence, and for one that ends an earlier cadence (an antecedent's weak cadence); 0 leaves them out and draws no random number. Set from C only (R-478). |
 | `rhythm_repeat_bars` | 0 | The most bars in a row of 2 or more notes with one rhythm (onsets and durations within the bar); 0 sets no cap and changes nothing. Set from C only (R-479, R-483). |
 | `leap_weight`, `register_weight` | 0, 0 | How many times the leap rule and the register rules count in the score (R-481): see Leaps and register. Set from C only. |
+| `cadence_long` | false | A target that ends a cadence ends on one note held from its last downbeat to its end, on the cadence's tone (R-712): its layout settles to it, a motive's notes from that downbeat on are not kept, and a melody that does otherwise is refused by a check of its own (not a `waive` rule). No random number. |
 | `waive` | 0 | `MelodyHardRule` bits the checker does not hold (R-672). |
 | `reverse` | 0 | `MelodySoftGroup` bits scored by what they break (R-672). |
 
@@ -199,7 +200,7 @@ not, never a rejection, and is on for every caller of the checker (grow, fill, r
 
 With `closure_final` or `closure_first` above 0, a target that ends a cadence (the last of its section, or an earlier one) ranks an intentional ending by two more soft rules, counted by that weight: the last note is at least twice the phrase's mean note value, and no note of the last bar is shorter than the note before it. Half the layouts of such a target (one random number each, none at weight 0) are settled: the notes from the latest cell line that leaves twice the mean become one long last note, the bar before it merges a shorter note into the note before it, and a note of the motive is never merged. Why a layout draw: every candidate of a target had one rhythm, so `weights.ending_reduction` 20 could not move it (t7 s42). Both weights 0 change nothing.
 
-Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, both weights 20, set by a temporary hook): the final note over the theme's mean note value, batch means 1.06 to 2.05 for periods (1.06 to 1.89 at the defaults) with 275 of 370 longer than the mean (250), and 2.71 to 3.72 for sentences (1.52 to 3.07) with 363 of 365 (364). The same 33 to 56 of 60 compose per batch. On the Test Motif sentence the defaults already end on a note 2 or more times the mean in 8 of 8 seeds, so the rule shows only as 8 of 8 changed melodies (`test_melody_preferences`).
+Measured (735 themes, `--count 60 --seed 500`, both weights 20): the final note over the mean note value, batch means 1.06 to 2.05 for periods and 2.71 to 3.72 for sentences (defaults 1.06 to 1.89 and 1.52 to 3.07); 33 to 56 of 60 compose per batch.
 
 #### Rhythm repetition (phase L4, R-479, R-483)
 

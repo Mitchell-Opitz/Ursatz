@@ -54,12 +54,55 @@ static void clear_segment_fragments(GrowThemeSpec *spec) {
     spec->fragment_diminished[1] = false;
 }
 
+/* The segment of `fits` with the most notes per beat (notes over length: the beat cancels), the first of equals. */
+static size_t busiest_segment(const GrowThemeSpec *spec, const size_t *fits, size_t count) {
+    size_t best = fits[0];
+    Motive best_motive;
+    segment_fragment(spec, best, &best_motive);
+    for (size_t i = 1; i < count; i++) {
+        Motive motive;
+        Rational left;
+        Rational right;
+        if (!segment_fragment(spec, fits[i], &motive) ||
+            rational_mul_int(motive.length, (long long)best_motive.note_count, &left) != RATIONAL_OK ||
+            rational_mul_int(best_motive.length, (long long)motive.note_count, &right) != RATIONAL_OK) {
+            continue;
+        }
+        /* motive's notes / length beats best's notes / length: motive.notes * best.length > best.notes * motive.length */
+        if (rational_cmp(right, left) > 0) {
+            best = fits[i];
+            best_motive = motive;
+        }
+    }
+    return best;
+}
+
+/* The next segment after `from`, round to the first and not `from` itself, that is a fragment fitting `room`; SIZE_MAX when none is. */
+static size_t next_segment_after(const GrowThemeSpec *spec, size_t from, Rational room) {
+    for (size_t step = 1; step < spec->segment_count; step++) {
+        size_t s = (from + step) % spec->segment_count;
+        Motive motive;
+        if (segment_fragment(spec, s, &motive) && rational_cmp(motive.length, room) <= 0) {
+            return s;
+        }
+    }
+    return SIZE_MAX;
+}
+
 /*
  * The fragments of a continuation from the segments of m0 (ch. VIII): fragment 1 is a segment that fits its room, one
  * lettered other than `a` preferred, and fragment 2 is that segment in sequence one step down or the next segment. False,
  * with nothing set, when m0 has no segment that fits: the leading fragments of m0 are made as before.
+ *
+ * With functions.surface and a fragment function whose rhythmic activity is faster (R-712) the draw is the function's: fragment 1 is
+ * the fitting segment with the most notes per beat (the first of equals), and fragment 2 the next segment that fits, round to the
+ * first, other than fragment 1's, exact; with one fitting segment fragment 2 is fragment 1's in sequence one step down. No random number
+ * is drawn for the fragments.
  */
-static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, GrowThemeSpec *spec) {
+static bool draw_segment_fragments(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
+    GrowDevelopment development = request->development;
+    const FormalFunction *fragment_function = request->functions.surface ? grow_idea_function(request, &spec->pairing, GROW_PLACE_FRAGMENT_1) : NULL;
+    bool by_surface = fragment_function != NULL && fragment_function->rhythmic_activity == FORMAL_PACE_FASTER;
     const unsigned *segment_weights = FRAGMENT_SEGMENT_WEIGHTS[development];
     const unsigned *sequence_weights = FRAGMENT_2_WEIGHTS[development];
     Rational room1 = spec->layout.length[GROW_PLACE_FRAGMENT_1];
@@ -80,17 +123,23 @@ static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, Gr
     if (count == 0) {
         return false;
     }
-    uint64_t pick = fill_rng_below(rng, total);
     size_t chosen = fits[count - 1];
-    for (size_t i = 0; i < count; i++) {
-        unsigned weight = segment_weights[spec->segments[fits[i]].label[0] == 'a' ? 1 : 0];
-        if (pick < weight) {
-            chosen = fits[i];
-            break;
+    bool sequence;
+    if (by_surface) {
+        chosen = busiest_segment(spec, fits, count);
+        sequence = next_segment_after(spec, chosen, room2) == SIZE_MAX;
+    } else {
+        uint64_t pick = fill_rng_below(rng, total);
+        for (size_t i = 0; i < count; i++) {
+            unsigned weight = segment_weights[spec->segments[fits[i]].label[0] == 'a' ? 1 : 0];
+            if (pick < weight) {
+                chosen = fits[i];
+                break;
+            }
+            pick -= weight;
         }
-        pick -= weight;
+        sequence = fill_rng_below(rng, sequence_weights[0] + sequence_weights[1]) < sequence_weights[0];
     }
-    bool sequence = fill_rng_below(rng, sequence_weights[0] + sequence_weights[1]) < sequence_weights[0];
     segment_fragment(spec, chosen, &spec->fragment_motive[0]);
     spec->fragment_from_segment[0] = true;
     spec->fragment_segment[0] = chosen;
@@ -100,6 +149,12 @@ static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, Gr
         if (sequence) {
             spec->fragment_segment[1] = chosen;
             spec->fragment_motive[1] = spec->fragment_motive[0];
+        } else if (by_surface) {
+            size_t next = next_segment_after(spec, chosen, room2);
+            if (next == SIZE_MAX || !segment_fragment(spec, next, &spec->fragment_motive[1])) {
+                continue;
+            }
+            spec->fragment_segment[1] = next;
         } else if (chosen + 1 < spec->segment_count && segment_fragment(spec, chosen + 1, &spec->fragment_motive[1])) {
             spec->fragment_segment[1] = chosen + 1;
         } else {
@@ -741,7 +796,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
         return draw_accelerating_continuation(request, rng, spec, first, second);
     }
     /* Fragments are segments of m0 when it has them that fit, else its leading notes. */
-    if (!draw_segment_fragments(rng, request->development, spec) &&
+    if (!draw_segment_fragments(request, rng, spec) &&
         (fitting_fragment(spec, 0, first, spec->layout.length[GROW_PLACE_FRAGMENT_1]) == 0 ||
          fitting_fragment(spec, 1, second, spec->layout.length[GROW_PLACE_FRAGMENT_2]) == 0)) {
         return false;
@@ -772,11 +827,15 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
                              &spec->consequent_contrast)))) {
         return false;
     }
+    /* A contrast target (R-710): the function of the idea asks for a distant contrast that meets it, or the structure is dropped. */
+    bool targeted = !own_contrast && grow_contrast_target(request, spec, GROW_PLACE_CONSEQUENT_CONTRAST);
     /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
-    if (!own_contrast && grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT &&
+    if (!own_contrast && (targeted || grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT) &&
         grow_make_distant(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST,
                           grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), &spec->consequent_contrast, want)) {
         spec->consequent_contrast.kind = MOTIVE_RELATION_EXACT;
+    } else if (targeted) {
+        return false;
     }
     if (!keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
         return false;
@@ -985,6 +1044,9 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
         NodeId idea;
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[slot], build->layout.length[slot],
                                names[slot], &idea);
+        if (result == PLAN_OK) {
+            result = grow_add_contrast_constraint(build, idea, (GrowPlace)slot);
+        }
         parts[count].node = idea;
         parts[count].slot = slot;
         parts[count++].extension = SIZE_MAX;
@@ -1028,7 +1090,13 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
             asked[i].steps = 0;
         }
     }
-    if (result == PLAN_OK && faster_harmony(build, first_slot, last_slot)) {
+    NodeId idea_nodes[GROW_PLACE_COUNT];
+    for (size_t i = 0; i < count && i < GROW_PLACE_COUNT; i++) {
+        idea_nodes[i] = parts[i].node;
+    }
+    if (result == PLAN_OK && spec->function_harmony[1] && count == last_slot - first_slot + 1) {
+        result = grow_add_function_harmony(build, container, idea_nodes, false);
+    } else if (result == PLAN_OK && faster_harmony(build, first_slot, last_slot)) {
         result = add_faster_targets(build, parts, count, last_slot);
     } else if (result == PLAN_OK && evaded != SIZE_MAX) {
         result = add_evaded_targets(build, container, shape, parts[count - 1].node);

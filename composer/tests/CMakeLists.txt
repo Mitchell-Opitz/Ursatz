@@ -157,6 +157,7 @@ ursatz_test(test_grow_half_cadence LIBS ursatz_composer_engine)
 # the test holds it to the baseline table in its source and prints the target (R-698).
 ursatz_test(test_grow_sentence_heard LIBS ursatz_composer_engine composer_test_support)
 ursatz_test(test_theme_shape LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_theme_shape_entries LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test(test_grow_layout LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test_executable(test_grow_uneven LIBS ursatz_composer_engine composer_test_support)
 # The fast case: seed 1 of each construction, the refusals and the plan round trip. The slow case grows seeds 1 to 10.
@@ -619,9 +620,10 @@ ursatz_test(test_piece_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_piece_sections LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-# Kept in the fast set: the setup of the fixture api_responses_written, about 21 s at -j4 (2026-11-21); splitting what it writes from what it checks
-# is not in P66c (R-699).
-ursatz_test(test_api_piece LIBS ursatz_composer_engine composer_test_support cjson
+# Labeled slow (about 28 s alone, 51 s on the CI runner, 2026-11-22): the setup of the fixture api_responses_written, which the fast tests that
+# require it still run first (ctest adds a fixture's setup whatever the label filter). Splitting what it writes from what it checks is not in P66c
+# (R-699).
+ursatz_test(test_api_piece LIBS ursatz_composer_engine composer_test_support cjson LABELS slow
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_piece_files)
@@ -771,6 +773,20 @@ ursatz_test(test_sonata_forms_sonatina_smoke TARGET test_form_families ARGS sona
 ursatz_test(test_sonata_forms_sonatina-tonic-major_smoke TARGET test_form_families ARGS sonatina-tonic-major smoke)
 
 ursatz_test(test_grow_development LIBS ursatz_composer_engine cjson composer_test_support)
+
+# Themes whose ideas follow their formal function (P67): the contrast target (B5), the harmony and the surface (B6, B7).
+# Slow: about 280 s for seeds 1 to 8 (2026-11-22); test_theme_functions_smoke runs seed 1 of the surface, held cadence and off cases (about 7 s).
+ursatz_test_executable(test_theme_functions LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_theme_functions TARGET test_theme_functions LABELS slow)
+ursatz_test(test_theme_functions_smoke TARGET test_theme_functions ARGS fast)
+
+# The theme quality sweep (gate 2 of R-543, P67): the four harmony fixtures as sentences and periods with every setting on, seeds 1 to 10.
+# Slow: about 140 s for seeds 1 to 10 (2026-11-22); test_theme_functions_sweep_smoke runs seed 1 of every case (about 20 s).
+ursatz_test_executable(test_theme_functions_sweep LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_theme_functions_sweep TARGET test_theme_functions_sweep LABELS slow)
+ursatz_test(test_theme_functions_sweep_smoke TARGET test_theme_functions_sweep ARGS fast)
 
 ursatz_test_executable(test_grow_continuation LIBS ursatz_composer_engine composer_test_support cjson
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

@@ -76,6 +76,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [regenerate.md](regenerate.md): locking and regenerating nodes of a plan.
 - [form-hear.md](form-hear.md): hearing the phrase form of a plan.
 - [testing/span-hearing.md](testing/span-hearing.md): the Composer baselines heard on harmonic spans, for P41.
+- [testing/theme-quality.md](testing/theme-quality.md): the theme quality sweep and measure of the formal function settings, for P67.
 - [analyzer-check.md](analyzer-check.md): the Analyzer check of a composed section.
 - [explain.md](explain.md): why each candidate was chosen or rejected.
 

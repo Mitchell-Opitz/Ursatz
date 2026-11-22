@@ -131,6 +131,29 @@ static Plan *build_sentence_plan_with_tones(size_t tone_labels) {
     schema.params.schema.stage = 9;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &schema) == PLAN_ERR_BAD_PAYLOAD);
 
+    /* A contrast target (R-710): one to four distinct aspects with a non-negative amount, against a named idea. */
+    PlanConstraint contrast;
+    memset(&contrast, 0, sizeof(contrast));
+    contrast.kind = PLAN_CONSTRAINT_CONTRAST;
+    snprintf(contrast.params.contrast.against, sizeof(contrast.params.contrast.against), "basic idea");
+    contrast.params.contrast.aspect_count = 3;
+    contrast.params.contrast.aspects[0] = (PlanContrastAspect){CONTRAST_ASPECT_RHYTHM, rational_ratio(1, 2)};
+    contrast.params.contrast.aspects[1] = (PlanContrastAspect){CONTRAST_ASPECT_CONTOUR, rational_ratio(1, 2)};
+    contrast.params.contrast.aspects[2] = (PlanContrastAspect){CONTRAST_ASPECT_REGISTER, rational_ratio(7, 1)};
+    assert(plan_node_add_constraint(plan, fragment, &contrast) == PLAN_OK);
+    PlanConstraint refused = contrast;
+    refused.params.contrast.aspect_count = 0;
+    assert(plan_node_add_constraint(plan, fragment, &refused) == PLAN_ERR_BAD_PAYLOAD);
+    refused = contrast;
+    refused.params.contrast.aspects[1].aspect = CONTRAST_ASPECT_RHYTHM;
+    assert(plan_node_add_constraint(plan, fragment, &refused) == PLAN_ERR_BAD_PAYLOAD);
+    refused = contrast;
+    refused.params.contrast.aspects[0].amount = rational_ratio(-1, 2);
+    assert(plan_node_add_constraint(plan, fragment, &refused) == PLAN_ERR_BAD_PAYLOAD);
+    refused = contrast;
+    refused.params.contrast.against[0] = '\0';
+    assert(plan_node_add_constraint(plan, fragment, &refused) == PLAN_ERR_BAD_PAYLOAD);
+
     /* The constraints a grown theme carries. */
     SectionDescription described;
     section_description_init(&described);
@@ -150,6 +173,7 @@ static Plan *build_sentence_plan_with_tones(size_t tone_labels) {
     shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
     shape.params.harmony_shape.max_cells_per_chord = 2;
     shape.params.harmony_shape.split_at_bars = true;
+    shape.params.harmony_shape.free_motive = true;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_OK);
     shape.params.harmony_shape.max_cells_per_chord = -1;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_ERR_BAD_PAYLOAD);
@@ -250,7 +274,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.harmony_shape.ends_on == b->params.harmony_shape.ends_on &&
                a->params.harmony_shape.max_cells_per_chord == b->params.harmony_shape.max_cells_per_chord &&
                a->params.harmony_shape.split_at_bars == b->params.harmony_shape.split_at_bars &&
-               a->params.harmony_shape.pedal == b->params.harmony_shape.pedal;
+               a->params.harmony_shape.pedal == b->params.harmony_shape.pedal &&
+               a->params.harmony_shape.free_motive == b->params.harmony_shape.free_motive;
     case PLAN_CONSTRAINT_ACCOMPANIMENT:
         return a->params.accompaniment.pattern == b->params.accompaniment.pattern &&
                a->params.accompaniment.texture == b->params.accompaniment.texture &&
@@ -312,6 +337,19 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     }
     case PLAN_CONSTRAINT_PICKUP:
         return a->params.pickup.num == b->params.pickup.num && a->params.pickup.den == b->params.pickup.den;
+    case PLAN_CONSTRAINT_CONTRAST: {
+        const PlanContrast *x = &a->params.contrast;
+        const PlanContrast *y = &b->params.contrast;
+        if (strcmp(x->against, y->against) != 0 || x->aspect_count != y->aspect_count) {
+            return false;
+        }
+        for (size_t i = 0; i < x->aspect_count; i++) {
+            if (x->aspects[i].aspect != y->aspects[i].aspect || rational_cmp(x->aspects[i].amount, y->aspects[i].amount) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
     }
     return false;
 }

@@ -60,7 +60,7 @@ cadential slot in a period). A slot motive keeps no harmony, features or role (a
 
 ### Idea motives
 
-A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf`; each idea of each half is a `ThemeShapeIdea` row (idea, name, place, slot, first of its slot, role, length in eighths); each slot is a `ThemeShapeSlot`. `grow_idea_name`, `grow_idea_place`, `grow_idea_slot`, `grow_idea_role` and the other readers, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it,.
+A theme's shape is one table (R-416, `src/structure/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf`; each idea of each half is a `ThemeShapeIdea` row (idea, name, place, slot, first of its slot, role, length in eighths); each slot is a `ThemeShapeSlot`. `grow_idea_name`, `grow_idea_place`, `grow_idea_slot`, `grow_idea_role` and the other readers, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it; `omt.theme-type.*` is pinned to it (R-708).
 
 `GrowIdea` names the ideas of a theme as the plan does (`grow_idea_name`: `basic idea`, `repetition`, `contrasting idea`,
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,
@@ -210,8 +210,8 @@ The operator proposes `GrowContext.candidates` (default 4) candidates, drawn fro
   `src/grow/grow_beginning.c`; the balanced weights here): *exact* (2), `restated`, the harmony tonic to tonic in
   both ideas; *dominant form* (1), the `dominant-form` variant operation applied to the basic idea, the basic idea's
   harmony going tonic to dominant and the repetition's dominant to tonic; *sequence* (1), `sequence, 1 step up (tonal)`,
-  the basic idea moved one step up in the key with its chord moved with it: the basic idea is the tonic and the
-  repetition the chord a step up (I to ii, i to iio), each written whole. The dominant form and the sequence are not
+  the basic idea moved one step up in the key with its chord moved with it: a motif with no chords has the tonic
+  and the chord a step up (I to ii, i to iio), each written whole; one with chords holds them a step up (R-348). The dominant form and the sequence are not
   offered when the basic idea has one cell (a bar of 2/4 or 3/4 in 4 bars), and a sequence is not drawn when a Given melody,
   harmony or bass lies in the first half (its chords are written whole); a motif as long as the presentation draws no
   repetition. The motive of a sequence is the transposition by

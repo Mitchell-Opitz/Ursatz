@@ -142,6 +142,14 @@ typedef struct {
     /* A distant contrast made for the idea: its own source, restated exact (R-475). */
     Motive distant[GROW_PLACE_COUNT];
     bool has_distant[GROW_PLACE_COUNT];
+    /*
+     * The idea's formal function when its motive is drawn to meet a contrast target (R-710, functions.contrast), and the name
+     * of the idea it contrasts against ("basic idea"); NULL for an idea with no target.
+     */
+    const ThemeType *function_type;  /* the theme type whose functions give the half's harmony (R-711), when function_harmony says so */
+    bool function_harmony[2];        /* the beginning's and the ending's harmony follow the functions of their ideas */
+    const FormalFunction *contrast_function[GROW_PLACE_COUNT];
+    const char *contrast_against[GROW_PLACE_COUNT];
     /* The contrasting slot's source was made here, new material (R-477): slot_source[GROW_SLOT_CONTRASTING], not a given motif. */
     bool has_new_material;
     /*
@@ -191,8 +199,11 @@ typedef struct {
     GrowContinuation continuation; /* from the GrowContext: how the continuation accelerates; zero for today's */
     bool basic_as_written;   /* from the GrowContext: a motif as long as the basic idea is it as written */
     GrowContrast contrast;   /* from the GrowContext: how the contrasting ideas contrast; zero for today's */
+    GrowFunctions functions; /* from the GrowContext: the formal function settings; all false for today's */
+    const KnowledgeSnapshot *knowledge; /* from the GrowContext: for the theme types and formal functions; NULL for none */
     const MotiveRandomPreferences *motif; /* from the GrowContext: the motif vocabulary a drawn rhythm uses; NULL for the defaults */
     bool given_first_half;   /* Given melody, harmony or bass lies in the first half: its chords are not written whole */
+    bool given_second_half;  /* the same in the second half (R-711 writes the chords of an ending by its functions only without it) */
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
@@ -375,6 +386,35 @@ GrowContrastKind grow_draw_contrast_kind(const GrowThemeRequest *request, FillRn
 /* A distant contrast for the idea at `place` (R-475): the development `step` of source gives the pitches and a rhythm drawn
    from the motif generator the rhythm; the contour must differ from source's. want_pc is the pitch class its last note
    should land on (negative for any). True sets spec->distant[place] and has_distant[place]; false when none is made. */
+/*
+ * The contrast target of the idea at `place` (R-710): with functions.contrast on, a knowledge snapshot, no motive of the idea's own and
+ * a theme type for the pairing whose idea there has a formal function with a contrast, sets spec->contrast_function[place] and
+ * spec->contrast_against[place] and returns true. Draws no random number; false (and nothing set) otherwise.
+ */
+bool grow_contrast_target(const GrowThemeRequest *request, GrowThemeSpec *spec, GrowPlace place);
+
+/* Whether the motive contrasts with `against` (m0) by at least every amount of the function's contrast (dimension_contrast). */
+bool grow_contrast_met(const GrowThemeRequest *request, const Motive *against, const Motive *motive, const FormalFunction *function);
+
+/* Adds the idea's contrast constraint to its node when the spec has a target for the place; PLAN_OK with none. */
+PlanResult grow_add_contrast_constraint(GrowBuild *build, NodeId node, GrowPlace place);
+
+/* The harmony shape a progression type's code stands for (`prolongation`, `cadential`, `phrase_model`); false for a code with none (`sequence`). */
+bool grow_progression_shape(const char *code, PlanHarmonyShapeKind *kind);
+
+/* The formal function of the idea at a place under the pairing's theme type (the request's snapshot); NULL without a snapshot or a type. */
+const FormalFunction *grow_idea_function(const GrowThemeRequest *request, const SectionPairing *pairing, GrowPlace place);
+
+/*
+ * Decides, at the draw, whether each half's harmony follows the formal functions of its ideas (R-711, functions.harmony): an
+ * antecedent (the beginning) or a continuation or a consequent (the ending) with no construction, pedal, key change at its end or
+ * Given material in it, whose theme type has a progression shape for each idea. Sets spec->function_type and
+ * spec->function_harmony. grow_add_function_harmony then writes the chords of the half's ideas, nodes[i] the idea node of the i-th
+ * idea in time order, over the container; the caller adds no chord target of its own.
+ */
+void grow_function_harmony_decide(const GrowThemeRequest *request, GrowThemeSpec *spec);
+PlanResult grow_add_function_harmony(GrowBuild *build, NodeId container, const NodeId *nodes, bool beginning);
+
 bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
                        const Motive *source, const MotiveRelationStep *step, int want_pc);
 /* New material for the contrasting slot (R-477): a motive of the key and the meter from the motif generator, up to two bars,

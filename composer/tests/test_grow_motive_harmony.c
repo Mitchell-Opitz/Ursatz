@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive.h>
 #include <plan/plan_state.h>
 
+#include "api/api_grow.h"
 #include "support/test_support.h"
 #include "structure/plan_util.h"
 #include "support/test_composer.h"
@@ -26,7 +27,9 @@
  * is I (its last chord may be V when the repetition answers in the dominant), the repetition opens on I (exact), V (dominant
  * form) or the second degree (a sequence) by its ref, each fragment opens on the chord of its motive, and the cadence is a PAC.
  * The 2-bar 3/4 A minor motif as an 8-bar period: the antecedent's and the consequent's basic ideas open on the tonic. With
- * the chords of motif-realization.md given, the theme's chords are the given ones.
+ * the chords of motif-realization.md given, the theme's chords are the given ones. A sequence presentation over a motif with harmony
+ * holds the motif's chords a step up (R-348, R-714): s77-chords (I V@4 I@7, C major, 4/4) as 8-bar sentences through api_grow_run
+ * with development theme, seeds 1 to 10 (measured: every seed draws the sequence; before the fix none did); the chordless s77 repetition is ii whole.
  */
 
 #define SEEDS 10
@@ -190,7 +193,97 @@ static void check_sentence(const Plan *plan, size_t seen[3]) {
     assert(degree_of(plan_lane_span_payload(plan, all[total - 2])->harmony.roman_numeral) == 5);
 }
 
+/* The theme of the motive and seed through api_grow_run, development theme: the plan of the first theme made, or NULL. */
+static Plan *theme_of(const Motive *motive, unsigned long seed, GrowRun *run) {
+    GrowBriefText text;
+    GrowSetup setup;
+    UrsatzError error;
+    memset(&text, 0, sizeof(text));
+    text.key = "C major";
+    text.meter = "4/4";
+    text.cadence = "PAC";
+    text.into = "sentence";
+    memset(&setup, 0, sizeof(setup));
+    setup.knowledge = test_knowledge();
+    setup.text = &text;
+    setup.into = GROW_INTO_SENTENCE;
+    setup.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    setup.pairing.ending = SECTION_ENDING_CONTINUATION;
+    setup.key = motive_key(motive);
+    setup.meter = motive_meter(motive);
+    setup.bars = 8;
+    setup.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    setup.first_cadence = CADENCE_TYPE_HALF;
+    setup.development = GROW_DEVELOP_THEME;
+    setup.motive = motive;
+    setup.suggest = 1;
+    setup.seed = seed;
+    setup.tempo_from = "none";
+    memset(&error, 0, sizeof(error));
+    if (api_grow_run(&setup, run, &error) != URSATZ_OK || run->made != 1) {
+        api_grow_run_destroy(run);
+        return NULL;
+    }
+    return run->themes[0].plan;
+}
+
+/* The degrees of the chords that start inside the idea. */
+static size_t chord_degrees(const Plan *plan, NodeId idea, int degrees[8]) {
+    PlanSpan span = plan_node_span(plan, idea);
+    LaneSpanId ids[16];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, 16);
+    size_t count = 0;
+    for (size_t i = 0; i < found && count < 8; i++) {
+        Rational at = plan_lane_span_span(plan, ids[i]).start;
+        if (rational_cmp(at, span.start) >= 0) {
+            degrees[count++] = degree_of(plan_lane_span_payload(plan, ids[i])->harmony.roman_numeral);
+        }
+    }
+    return count;
+}
+
+/* The repetition of a sequence holds the basic idea's chords each a step up; without chords it is ii whole. */
+static void test_sequence_holds_motif_chords(void) {
+    Motive chords = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77-chords.json");
+    Motive plain = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77.json");
+    size_t sequences = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        GrowRun run;
+        Plan *plan = theme_of(&chords, seed, &run);
+        if (!plan) {
+            continue;
+        }
+        NodeId basic = test_find_node(plan, "basic idea");
+        NodeId repetition = test_find_node(plan, "repetition");
+        const PlanMotiveRef *ref = ref_of_node(plan, repetition, NULL);
+        if (ref && ref->has_step && ref->step.kind == MOTIVE_RELATION_TRANSPOSE && ref->step.value[0] != 0 && ref->step.value[1] == 1) {
+            int before[8];
+            int after[8];
+            size_t count = chord_degrees(plan, basic, before);
+            assert(count >= 1 && chord_degrees(plan, repetition, after) == count);
+            for (size_t i = 0; i < count; i++) {
+                assert(after[i] == before[i] % 7 + 1);
+            }
+            sequences++;
+        }
+        api_grow_run_destroy(&run);
+
+        /* The same notes with no chords: the sequence is written whole, I then ii. */
+        plan = theme_of(&plain, seed, &run);
+        if (plan) {
+            ref = ref_of_node(plan, test_find_node(plan, "repetition"), NULL);
+            if (ref && ref->has_step && ref->step.kind == MOTIVE_RELATION_TRANSPOSE && ref->step.value[0] != 0 && ref->step.value[1] == 1) {
+                int after[8];
+                assert(chord_degrees(plan, test_find_node(plan, "repetition"), after) == 1 && after[0] == 2);
+            }
+        }
+        api_grow_run_destroy(&run);
+    }
+    assert(sequences >= 1);
+}
+
 int main(void) {
+    test_sequence_holds_motif_chords();
     size_t seen[3] = {0, 0, 0}; /* exact, dominant form, sequence */
     size_t composed = 0;
     Motive test_motif = load_motive(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json");
