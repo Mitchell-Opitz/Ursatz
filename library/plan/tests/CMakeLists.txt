@@ -7,6 +7,9 @@ ursatz_test(plan_format SOURCES test_plan_format.c LIBS ursatz_plan VALGRIND
 # The helpers the plan's files share: meters, cadences, lanes, keys, spans.
 ursatz_test(plan_common SOURCES test_plan_common.c LIBS ursatz_plan VALGRIND)
 
+# Removing a lane span, the lane spans of an owner and a leaf node.
+ursatz_test(plan_edit SOURCES test_plan_edit.c LIBS ursatz_plan VALGRIND)
+
 # Resizing a lane span.
 ursatz_test(plan_lane_resize SOURCES test_plan_lane_resize.c LIBS ursatz_plan VALGRIND)
 
