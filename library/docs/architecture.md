@@ -68,6 +68,7 @@ The headers the apps include are the staged public headers (`build/library/publi
 | analysis/counterpoint | `analysis_grid.h`, `analysis_melody.h` and 5 more | adapters | Melody and motion analysis over species rules. | [melody analysis](modules/melody-analysis.md), [voice leading](modules/voice-leading-analysis.md) |
 | analysis/galant | `galant_analysis_input.h`, `galant_analysis_match.h` and 1 more | adapters | Schema matching and sequence detection. | [schema and sequence analysis](modules/schema-sequence-analysis.md) |
 | analysis/similarity | `similarity_model.h`, `similarity_scoring.h` | `similarity_model.h` | Similarity scoring over sequences. | [query](modules/query.md) |
+| analysis/dimension | `dimension.h` (staged with P67 B5) | none yet | Register and density of a span, and the contrast vector of two spans. | [dimension](modules/dimension.md) |
 | io | `midi_importer.h`, `midi_key_signature.h` and 5 more | `midi_importer_import_complete`, `MusicXMLImporter`, `musicxml_export_write_score` | Import of MIDI and MusicXML into notes, meter, tempo and keys; MusicXML and MIDI export. | [io](modules/io.md), [MIDI](modules/io-midi.md), [MusicXML](modules/io-musicxml.md), [export](modules/export.md) |
 | chain | `analysis_chain.h`, `chain_inputs.h` | `analysis_chain_run` | The production chain from notes to every analysis, with each chord also given as a reading of its sonority (`analysis_chain_chord_reading`). | [job owners](analytic-job-owners.md), [chain README](../chain/README.md) |
 

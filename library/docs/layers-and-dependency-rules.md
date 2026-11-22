@@ -12,7 +12,7 @@ The library is eight groups, each one folder under `library/` and one CMake targ
 | `theory/` | `ursatz_theory` | `style`, `rules` (the rule table), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
 | `realization/` | `ursatz_realization` | lines, performer parts, scoring assignments, movements and works, one folder, on `model` and `theory` |
 | `plan/` | `ursatz_plan` | the section description shared by forms, plans and piece requests, one folder, on `model` and `theory` (and cJSON for its codec) |
-| `analysis/` | `ursatz_analysis` | `notes` (the neutral analysis types and segmentation), `motive`, `voices`, `harmony`, `form`, `meter`, `texture`, `counterpoint`, `galant`, `similarity`: the analyses and the framework adapters |
+| `analysis/` | `ursatz_analysis` | `notes` (the neutral analysis types and segmentation), `motive`, `voices`, `harmony`, `form`, `meter`, `texture`, `counterpoint`, `galant`, `similarity`, `dimension`: the analyses and the framework adapters |
 | `io/` | `ursatz_io` | MIDI and MusicXML import (also as a realization: `imported_realization.h`), MIDI and MusicXML export |
 | `chain/` | `ursatz_chain` | the analysis chain, one folder |
 | `reading/` | `ursatz_reading` | what one reader says about one realization, as claims (regions, chords, cadences, groups, motive occurrences, meters, lines, voice faults), the builder from a chain run, the JSON codec and the conversion into a plan; above `chain` and `plan` |
