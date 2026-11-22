@@ -1,0 +1,107 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.instrument.piano",
+      "kind": "instrument",
+      "subtype": "instrument",
+      "name": "Piano",
+      "aliases": [
+        "pianoforte"
+      ],
+      "content": {
+        "family": "keyboard",
+        "transposition": 0,
+        "clefs": [
+          "treble",
+          "bass"
+        ],
+        "range": {
+          "lowest": 21,
+          "highest": 108
+        },
+        "general_midi_program": 0,
+        "pedals": [
+          "sustain"
+        ],
+        "comfortable_range": {
+          "lowest": 84,
+          "highest": 48
+        }
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 4,
+          "note": "pianists read the grand staff, a treble staff and a bass staff joined"
+        },
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 6,
+          "note": "the keyboard spans octaves 1 to 7 with the top of octave 0 and the bottom of octave 8, A0 to C8"
+        },
+        {
+          "source": "general-midi",
+          "chapter": "sound set",
+          "note": "program 1, Acoustic Grand Piano, numbered from 0 here"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "midi": 21,
+          "in_range": true
+        },
+        {
+          "midi": 20,
+          "in_range": false
+        },
+        {
+          "midi": 108,
+          "in_range": true
+        },
+        {
+          "midi": 109,
+          "in_range": false
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.instrument.solo-piano",
+      "kind": "instrument",
+      "subtype": "ensemble",
+      "name": "Solo piano",
+      "content": {
+        "slots": [
+          {
+            "instrument": "omt.instrument.piano",
+            "name": "Piano",
+            "players": 1
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "I",
+          "chapter": 4,
+          "note": "one pianist reading one grand staff"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "performers": [
+            "Piano"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

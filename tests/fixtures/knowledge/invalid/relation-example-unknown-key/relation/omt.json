@@ -1,0 +1,169 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.relation.dominant",
+      "kind": "relation",
+      "subtype": "tonal",
+      "name": "dominant",
+      "content": {
+        "root_semitones": 7,
+        "material": "same",
+        "anchor_default": "home",
+        "reached_by": [
+          "pivot",
+          "direct"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "H major",
+          "target": "G major"
+        }
+      ]
+    },
+    {
+      "id": "omt.relation.submediant",
+      "kind": "relation",
+      "subtype": "tonal",
+      "name": "submediant",
+      "aliases": [
+        "relative minor"
+      ],
+      "content": {
+        "degree": 6,
+        "material": "diatonic",
+        "anchor_default": "home",
+        "reached_by": [
+          "pivot",
+          "direct"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "A minor"
+        },
+        {
+          "anchor": "C minor",
+          "target": "Ab major"
+        }
+      ]
+    },
+    {
+      "id": "omt.relation.two-steps-brighter",
+      "kind": "relation",
+      "subtype": "modal",
+      "name": "two steps brighter",
+      "content": {
+        "center": "same",
+        "brightness_steps": 2
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C aeolian",
+          "target": "C mixolydian"
+        }
+      ]
+    },
+    {
+      "id": "omt.relation.parallel",
+      "kind": "relation",
+      "subtype": "neo-riemannian",
+      "name": "parallel",
+      "content": {
+        "moves": [
+          "P"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "C minor"
+        }
+      ]
+    },
+    {
+      "id": "omt.relation.transpose-five",
+      "kind": "relation",
+      "subtype": "set",
+      "name": "transpose five",
+      "content": {
+        "operation": "T",
+        "n": 5
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "F major"
+        }
+      ]
+    },
+    {
+      "id": "omt.relation.retrograde-inversion",
+      "kind": "relation",
+      "subtype": "serial",
+      "name": "retrograde inversion",
+      "content": {
+        "form": "RI",
+        "n": 0
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}
