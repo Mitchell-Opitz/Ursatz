@@ -9,6 +9,7 @@
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/critic.h>
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/export.h>
@@ -91,6 +92,7 @@ typedef struct {
     bool basic_as_written;                   /* a motif as long as the basic idea is it as written, over its own chords */
     const GrowContrast *contrast;            /* NULL for the defaults; not owned */
     const GrowFunctions *functions;          /* NULL for all off; not owned */
+    const CriticSettings *critic;            /* NULL for no ranking; with critic->rank the critic chooses the themes (R-722); not owned */
     const MotiveRandomPreferences *motif;    /* NULL for the defaults; not owned */
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
@@ -125,6 +127,8 @@ typedef struct {
     AnalyzerCheck check; /* with check, the Analyzer's check of the theme; empty otherwise */
     bool checked;
     size_t passed_before; /* how many of the seeds passed over came before this theme */
+    bool judged;          /* the run ranked: the critic's judgment of the theme and its observations */
+    CriticJudgment judgment;
 } GrowTheme;
 
 typedef struct {
@@ -135,6 +139,9 @@ typedef struct {
     long chord_bar;           /* the bar of the first target a stuck run left open when it holds given chords, else -1 */
     GrowRefusal refusal;      /* why the plan was refused before seeding, when it was */
     unsigned long last_seed;
+    CriticRejected rejected[GROW_MAX_SUGGESTIONS]; /* with critic ranking: the candidates not kept, at most keep_rejected, in rank order */
+    size_t rejected_count;
+    bool ranked;                                   /* the run chose among candidates by the critic */
 } GrowRun;
 
 /*

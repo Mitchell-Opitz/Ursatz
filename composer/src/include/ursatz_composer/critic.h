@@ -153,6 +153,13 @@ typedef struct {
     size_t observation_count;
 } CriticJudgment;
 
+/* A candidate the critic passed over when it chose among several (R-722): its seed, its score and what each evaluator found. */
+typedef struct {
+    unsigned long seed;
+    Rational score;
+    CriticFinding findings[CRITIC_EVALUATOR_COUNT];
+} CriticRejected;
+
 /* The values a message may name that a finding does not hold: {planned}, {heard} and {amount}. */
 typedef struct {
     char planned[32];

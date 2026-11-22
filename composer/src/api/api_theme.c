@@ -600,6 +600,7 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         setup->basic_as_written = state->preferences.basic_as_written;
         setup->contrast = &state->preferences.contrast;
         setup->functions = &state->preferences.functions;
+        setup->critic = &state->preferences.critic;
         setup->motif = &state->preferences.motif;
     }
 
