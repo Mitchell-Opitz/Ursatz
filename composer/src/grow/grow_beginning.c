@@ -335,13 +335,16 @@ static PlanResult build_antecedent(GrowBuild *build) {
     shape.kind = spec->beginning_shape;
     shape.starts_on = build->request->has_start_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
     shape.split_at_bars = spec->beginning_split;
-    if (result == PLAN_OK) {
+    /* With functions.harmony the chords are the ideas' own, written once their nodes are there (R-711). */
+    bool by_function = spec->function_harmony[0];
+    if (result == PLAN_OK && !by_function) {
         result = grow_add_chord_targets(build, antecedent, &shape, &weak);
     }
     if (result == PLAN_OK && spec->part_whole) {
         return build_whole_part(build, antecedent, &weak, &ideas[0]);
     }
-    return result == PLAN_OK ? build_ideas(build, antecedent, &weak, ideas) : result;
+    result = result == PLAN_OK ? build_ideas(build, antecedent, &weak, ideas) : result;
+    return result == PLAN_OK && by_function ? grow_add_function_harmony(build, antecedent, ideas, true) : result;
 }
 
 /* A compound basic idea: a basic idea and a contrasting idea over one prolongation, no cadence. */

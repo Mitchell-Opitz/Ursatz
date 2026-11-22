@@ -1035,7 +1035,13 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
             asked[i].steps = 0;
         }
     }
-    if (result == PLAN_OK && faster_harmony(build, first_slot, last_slot)) {
+    NodeId idea_nodes[GROW_PLACE_COUNT];
+    for (size_t i = 0; i < count && i < GROW_PLACE_COUNT; i++) {
+        idea_nodes[i] = parts[i].node;
+    }
+    if (result == PLAN_OK && spec->function_harmony[1] && count == last_slot - first_slot + 1) {
+        result = grow_add_function_harmony(build, container, idea_nodes, false);
+    } else if (result == PLAN_OK && faster_harmony(build, first_slot, last_slot)) {
         result = add_faster_targets(build, parts, count, last_slot);
     } else if (result == PLAN_OK && evaded != SIZE_MAX) {
         result = add_evaded_targets(build, container, shape, parts[count - 1].node);

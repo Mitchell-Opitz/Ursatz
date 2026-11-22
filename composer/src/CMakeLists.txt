@@ -132,6 +132,7 @@ add_library(ursatz_composer_engine STATIC
     grow/grow_segments.c
     grow/grow_beginning.c
     grow/grow_ending.c
+    grow/grow_function_harmony.c
     grow/grow_free.c
     grow/grow_liquidate.c
     grow/grow_coda.c
