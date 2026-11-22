@@ -1,3 +1,4 @@
+#include "ursatz_test.h"
 #include "io/midi_importer.h"
 #include "io/tests/io/midi_import_split.h"
 
@@ -11,6 +12,16 @@
 
 #include "model/events/note_event.h"
 #include "model/time/temporal_anchor.h"
+
+
+/* Tempos are microseconds per quarter note, 60,000,000 / bpm. */
+#define TEMPO_120_BPM 500000 /* 120 bpm */
+#define TEMPO_100_BPM 600000 /* 100 bpm */
+#define TEMPO_150_BPM 400000 /* 150 bpm */
+#define TEMPO_200_BPM 300000 /* 200 bpm */
+#define TEMPO_60_BPM 1000000 /* 60 bpm */
+#define TEMPO_75_BPM 800000 /* 75 bpm */
+#define TEMPO_80_BPM 750000 /* 80 bpm */
 
 /*
  * Tempo import fixtures: SMF files built in code with a constant tempo, a step series that speeds up
@@ -86,23 +97,14 @@ static void add_note(TrackBuilder *t, uint32_t at, uint32_t duration, unsigned c
 }
 
 static size_t build_smf(unsigned char *out, uint16_t format, const TrackBuilder *tracks, uint16_t track_count) {
-    size_t pos = 0;
-    const unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, (unsigned char)format,
-                                    (unsigned char)(track_count >> 8), (unsigned char)track_count,
-                                    (unsigned char)(DIVISION >> 8), (unsigned char)(DIVISION & 0xFF)};
-    memcpy(out + pos, header, sizeof(header));
-    pos += sizeof(header);
+    const unsigned char *bodies[16];
+    size_t sizes[16];
+    assert(track_count <= 16);
     for (uint16_t i = 0; i < track_count; i++) {
-        memcpy(out + pos, "MTrk", 4);
-        pos += 4;
-        out[pos++] = (unsigned char)(tracks[i].size >> 24);
-        out[pos++] = (unsigned char)(tracks[i].size >> 16);
-        out[pos++] = (unsigned char)(tracks[i].size >> 8);
-        out[pos++] = (unsigned char)tracks[i].size;
-        memcpy(out + pos, tracks[i].bytes, tracks[i].size);
-        pos += tracks[i].size;
+        bodies[i] = tracks[i].bytes;
+        sizes[i] = tracks[i].size;
     }
-    return pos;
+    return test_smf(out, format, DIVISION, bodies, sizes, track_count);
 }
 
 typedef struct {
@@ -138,7 +140,7 @@ static unsigned long region_tempo(const Imported *imported, size_t region) {
 
 static void test_constant_tempo(void) {
     TrackBuilder track = {{0}, 0, 0};
-    add_tempo(&track, 0, 500000);
+    add_tempo(&track, 0, TEMPO_120_BPM);
     for (uint32_t k = 0; k < 4; k++) {
         add_note(&track, k * WHOLE, DIVISION, 60);
     }
@@ -146,7 +148,7 @@ static void test_constant_tempo(void) {
 
     assert(!tempo_map_is_defaulted(imported.tempo.tempo_map));
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 1);
-    assert(region_tempo(&imported, 0) == 500000);
+    assert(region_tempo(&imported, 0) == TEMPO_120_BPM);
 
     release(&imported);
 }
@@ -154,22 +156,22 @@ static void test_constant_tempo(void) {
 static void test_step_series_that_speeds_up(void) {
     /* A whole note per step, each faster: 600,000, 500,000, 400,000, 300,000. */
     TrackBuilder track = {{0}, 0, 0};
-    add_tempo(&track, 0, 600000);
+    add_tempo(&track, 0, TEMPO_100_BPM);
     add_note(&track, 0, DIVISION, 60);
-    add_tempo(&track, 1 * WHOLE, 500000);
+    add_tempo(&track, 1 * WHOLE, TEMPO_120_BPM);
     add_note(&track, 1 * WHOLE, DIVISION, 62);
-    add_tempo(&track, 2 * WHOLE, 400000);
+    add_tempo(&track, 2 * WHOLE, TEMPO_150_BPM);
     add_note(&track, 2 * WHOLE, DIVISION, 64);
-    add_tempo(&track, 3 * WHOLE, 300000);
+    add_tempo(&track, 3 * WHOLE, TEMPO_200_BPM);
     add_note(&track, 3 * WHOLE, DIVISION, 65);
     add_note(&track, 4 * WHOLE, DIVISION, 67);
     Imported imported = import_tracks(0, &track, 1);
 
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 4);
-    assert(region_tempo(&imported, 0) == 600000);
-    assert(region_tempo(&imported, 1) == 500000);
-    assert(region_tempo(&imported, 2) == 400000);
-    assert(region_tempo(&imported, 3) == 300000);
+    assert(region_tempo(&imported, 0) == TEMPO_100_BPM);
+    assert(region_tempo(&imported, 1) == TEMPO_120_BPM);
+    assert(region_tempo(&imported, 2) == TEMPO_150_BPM);
+    assert(region_tempo(&imported, 3) == TEMPO_200_BPM);
 
     release(&imported);
 }
@@ -179,14 +181,14 @@ static void test_tempo_on_a_non_first_track(void) {
     add_note(&tracks[0], 0, DIVISION, 60);
     add_note(&tracks[0], WHOLE, DIVISION, 62);
     add_note(&tracks[0], 2 * WHOLE, DIVISION, 64);
-    add_tempo(&tracks[1], WHOLE, 1000000);
+    add_tempo(&tracks[1], WHOLE, TEMPO_60_BPM);
     Imported imported = import_tracks(1, tracks, 2);
 
     /* No tempo at tick 0, so the default covers the first whole note. */
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 2);
     assert(tempo_map_region_is_defaulted(tempo_map_region(imported.tempo.tempo_map, 0)));
-    assert(region_tempo(&imported, 0) == 500000);
-    assert(region_tempo(&imported, 1) == 1000000);
+    assert(region_tempo(&imported, 0) == TEMPO_120_BPM);
+    assert(region_tempo(&imported, 1) == TEMPO_60_BPM);
     assert(!tempo_map_is_defaulted(imported.tempo.tempo_map));
 
     release(&imported);
@@ -194,29 +196,29 @@ static void test_tempo_on_a_non_first_track(void) {
 
 static void test_duplicates_across_tracks_merge(void) {
     TrackBuilder tracks[2] = {{{0}, 0, 0}, {{0}, 0, 0}};
-    add_tempo(&tracks[0], 0, 500000);
+    add_tempo(&tracks[0], 0, TEMPO_120_BPM);
     add_note(&tracks[0], 0, DIVISION, 60);
-    add_tempo(&tracks[1], 0, 500000);
+    add_tempo(&tracks[1], 0, TEMPO_120_BPM);
     Imported imported = import_tracks(1, tracks, 2);
 
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 1);
     assert(imported.tempo.conflict_count == 0);
-    assert(region_tempo(&imported, 0) == 500000);
+    assert(region_tempo(&imported, 0) == TEMPO_120_BPM);
 
     release(&imported);
 }
 
 static void test_conflicting_tempos_across_tracks_last_track_wins(void) {
     TrackBuilder tracks[2] = {{{0}, 0, 0}, {{0}, 0, 0}};
-    add_tempo(&tracks[0], 0, 500000);
+    add_tempo(&tracks[0], 0, TEMPO_120_BPM);
     add_note(&tracks[0], 0, DIVISION, 60);
-    add_tempo(&tracks[1], 0, 800000);
+    add_tempo(&tracks[1], 0, TEMPO_75_BPM);
     Imported imported = import_tracks(1, tracks, 2);
 
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 1);
     assert(imported.tempo.conflict_count == 1);
     assert(imported.tempo.conflict_ticks[0] == 0);
-    assert(region_tempo(&imported, 0) == 800000);
+    assert(region_tempo(&imported, 0) == TEMPO_75_BPM);
 
     release(&imported);
 }
@@ -235,18 +237,18 @@ static void test_malformed_set_tempo_events_are_skipped(void) {
     /* Nothing valid was declared: the default applies, marked as such. */
     assert(tempo_map_is_defaulted(imported.tempo.tempo_map));
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 1);
-    assert(region_tempo(&imported, 0) == 500000);
+    assert(region_tempo(&imported, 0) == TEMPO_120_BPM);
     assert(imported.count == 1);
     release(&imported);
 
     /* A good event after the bad ones is read. */
     TrackBuilder mixed = {{0}, 0, 0};
     add_raw_tempo(&mixed, 0, zero, sizeof(zero));
-    add_tempo(&mixed, 0, 750000);
+    add_tempo(&mixed, 0, TEMPO_80_BPM);
     add_note(&mixed, 0, DIVISION, 60);
     imported = import_tracks(0, &mixed, 1);
     assert(!tempo_map_is_defaulted(imported.tempo.tempo_map));
-    assert(region_tempo(&imported, 0) == 750000);
+    assert(region_tempo(&imported, 0) == TEMPO_80_BPM);
     release(&imported);
 }
 

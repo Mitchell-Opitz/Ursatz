@@ -11,6 +11,9 @@
 #include "result/analysis_result_internal.h"
 
 #include <chain/analysis_chain.h>
+#include <io/imported_score.h>
+#include <realization/work.h>
+#include <reading/reading.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -164,6 +167,90 @@ static void check_options(const char *fixture) {
     imported_score_destroy(&notes);
 }
 
+/* The layers of a result (R-628, R-630) and the run of one file (R-656), on Bach 114 with all stages. */
+static void check_layers_and_file_runs(const char *fixture, const KnowledgeSnapshot *knowledge) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
+        CHECKF(false, "cannot import %s", path);
+        return;
+    }
+    AnalyzerOptions options = test_analyzer_options();
+    AnalyzerResult *result = NULL;
+    CHECKF(analyzer_analyze(&notes, &options, &result) == URSATZ_OK && result, "analyze for the layers");
+    if (result) {
+        /* The realization names its work "w1" with one movement; the reading is the Analyzer's, of that work and movement, over every stage. */
+        CHECKF(analyzer_result_realization(NULL) == NULL && analyzer_result_reading(NULL) == NULL, "layers of NULL");
+        const Work *work = analyzer_result_realization(result);
+        const Reading *reading = analyzer_result_reading(result);
+        CHECKF(work && reading, "no realization or reading");
+        if (work && reading) {
+            CHECKF(strcmp(work_id(work), "w1") == 0 && work_movement_count(work) == 1, "the work is %s with %zu movements", work_id(work),
+                   work_movement_count(work));
+            const ReadingTarget *target = reading_target(reading);
+            const ReadingSource *source = reading_source(reading);
+            CHECKF(strcmp(target->work, "w1") == 0 && strcmp(target->movement, "m1") == 0 && strlen(target->digest) == 16,
+                   "the reading's target is %s %s %s", target->work, target->movement, target->digest);
+            for (const char *digit = target->digest; *digit; digit++) {
+                CHECKF((*digit >= '0' && *digit <= '9') || (*digit >= 'a' && *digit <= 'f'), "digest digit %c", *digit);
+            }
+            CHECKF(source->kind == READING_SOURCE_ANALYZER && strcmp(source->name, "ursatz-analyzer") == 0 &&
+                       source->stages == ANALYSIS_CHAIN_STAGE_ALL,
+                   "the reading's source");
+        }
+    }
+    analyzer_result_destroy(result);
+    imported_score_destroy(&notes);
+
+    /* One file: imported, analyzed with all stages, the result over the caller's notes, and the document of it. */
+    ImportedScore run_notes;
+    AnalyzerResult *run_result = NULL;
+    ImportedScoreResult import_status = IMPORTED_SCORE_ERR_ARGUMENT;
+    ImportedReadingResult reading_status = IMPORTED_READING_OK;
+    UrsatzStatus analyze_status = URSATZ_OK;
+    UrsatzError error;
+    memset(&error, 0, sizeof(error));
+    CHECKF(analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &run_notes, &run_result, &import_status, &reading_status,
+                             &analyze_status, &error) == ANALYZER_RUN_FILE_OK && run_result,
+           "run file");
+    if (run_result) {
+        CHECKF(import_status == IMPORTED_SCORE_OK && run_notes.count > 0 && analyzer_result_report(run_result) != NULL, "the run's result");
+        AnalysisDocument *document = analyzer_run_file_document(path, &run_notes, run_result);
+        CHECKF(document != NULL, "the run's document");
+        if (document) {
+            char *json = analyzer_document_to_json(document);
+            CHECKF(json && strncmp(json, "{\n", 2) == 0 && strncmp(json + 2 + strspn(json + 2, " \t"), "\"schema_version\"", 16) == 0,
+                   "the document starts with its schema version");
+            free(json);
+            analyzer_document_destroy(document);
+        }
+    }
+
+    /* An import that fails: the importer's status, and its message with the file as its path (URSATZ_ERR_FORMAT). */
+    snprintf(path, sizeof(path), "%s/musicxml/malformed.musicxml", URSATZ_FIXTURES_DIR);
+    memset(&error, 0, sizeof(error));
+    CHECKF(analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &run_notes, &run_result, &import_status, &reading_status,
+                             &analyze_status, &error) == ANALYZER_RUN_FILE_ERR_IMPORT,
+           "a malformed file");
+    CHECKF(import_status != IMPORTED_SCORE_OK && error.message[0] != '\0' && strcmp(error.path, path) == 0, "the import's error");
+
+    /* A reading that does not hold (a scale of 3): the reading's status, and the notes are released. */
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
+    ImportedReading reading = imported_reading_none();
+    reading.scale = rational_ratio(3, 1);
+    CHECKF(analyzer_run_file(path, IMPORTED_FORMAT_AUTO, &reading, knowledge, &run_notes, &run_result, &import_status, &reading_status,
+                             &analyze_status, &error) == ANALYZER_RUN_FILE_ERR_READING,
+           "a reading that is invalid");
+    CHECKF(reading_status == IMPORTED_READING_ERR_INVALID, "the reading's status %d", (int)reading_status);
+
+    /* No knowledge: the analysis is refused as a bad request. */
+    CHECKF(analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, NULL, &run_notes, &run_result, &import_status, &reading_status,
+                             &analyze_status, &error) == ANALYZER_RUN_FILE_ERR_ANALYZE,
+           "no knowledge");
+    CHECKF(analyze_status == URSATZ_ERR_REQUEST, "the analysis status %d", (int)analyze_status);
+}
+
 int main(int argc, char **argv) {
     bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     size_t count = smoke ? 1 : sizeof(PIECES) / sizeof(PIECES[0]);
@@ -171,6 +258,7 @@ int main(int argc, char **argv) {
         check_piece(PIECES[i].fixture, PIECES[i].slug);
         if (i == 0) {
             check_options(PIECES[i].fixture);
+            check_layers_and_file_runs(PIECES[i].fixture, test_analyzer_options().knowledge);
         }
     }
     return test_finish("test_analysis_result");

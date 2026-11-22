@@ -492,8 +492,8 @@ static size_t overlapping(const Plan *plan, const FillTarget *list, size_t count
             PlanSpan other = plan_lane_span_span(plan, (LaneSpanId)list[i].id);
             Rational end;
             Rational other_end;
-            plan_span_end(span, &end);
-            plan_span_end(other, &other_end);
+            assert(plan_span_end(span, &end) == PLAN_OK);
+            assert(plan_span_end(other, &other_end) == PLAN_OK);
             found += rational_cmp(other.start, end) < 0 && rational_cmp(span.start, other_end) < 0;
         }
     }

@@ -47,9 +47,6 @@
 #define GROW_FUNCTION_CONTRAST 4u
 #define GROW_FUNCTION_CADENTIAL 8u
 
-/* The bit of the function a slot's ideas have (the slot's function in theme_shape.h). */
-unsigned grow_slot_function_bit(GrowSlot slot);
-
 /* A saved motive-form the motives stage may use (R-166). The strings are copies; the motive must outlive the run. */
 typedef struct GrowPoolForm {
     const Motive *motive;

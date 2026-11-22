@@ -14,7 +14,7 @@
 /*
  * The rows of the rondo and sonata forms in the piece document, one table and one test per family:
  *
- *   test_api_form_families rondo | sonata
+ *   test_api_form_families rondo | sonata | smoke (the first rondo case alone, small-rondo-ababa in C major: the fast set)
  *
  * rondo, the rows of a small rondo (P52 B7, R-521): A1 names its embellish variation and the notes it added, A2 names the new
  * setting of its accompaniment, B1 is in the tonic major (C major in C major, A major in A minor) and R1 is home.
@@ -144,6 +144,12 @@ static void check(const ApiFamily *family, const ApiCase *row) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "smoke") == 0) {
+        assert(strcmp(FAMILIES[0].name, "rondo") == 0);
+        check(&FAMILIES[0], &FAMILIES[0].cases[0]);
+        puts("test_api_form_families smoke: ok");
+        return 0;
+    }
     for (size_t i = 0; argc == 2 && i < FAMILY_COUNT; i++) {
         if (strcmp(argv[1], FAMILIES[i].name) == 0) {
             for (size_t c = 0; c < sizeof(FAMILIES[i].cases) / sizeof(FAMILIES[i].cases[0]); c++) {
@@ -153,6 +159,6 @@ int main(int argc, char **argv) {
             return 0;
         }
     }
-    fprintf(stderr, "usage: test_api_form_families rondo|sonata\n");
+    fprintf(stderr, "usage: test_api_form_families rondo|sonata|smoke\n");
     return 2;
 }

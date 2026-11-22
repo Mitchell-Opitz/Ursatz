@@ -9,7 +9,7 @@
 #include "plan/plan_json.h"
 #include "plan/plan_lanes.h"
 #include "plan/plan_state.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 #ifndef PLAN_FIXTURE_DIR
 #error "PLAN_FIXTURE_DIR is not defined"

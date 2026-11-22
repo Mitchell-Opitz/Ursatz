@@ -11,14 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -153,11 +148,7 @@ int main(int argc, char **argv) {
     g_port = "18779";
   }
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache data 2> nul");
-#else
   system("rm -rf library settings cache data");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 
@@ -391,7 +382,8 @@ int main(int argc, char **argv) {
 
     /* Rebuild resolves the brief again: the style it names changed. */
     answer = test_gui_send_finish(PORT, "style.rebuild", one_id, NULL, &status);
-    check(status == 200, "rebuilding the style a brief names answers 200");
+    check(status == 200 && ok_true(answer) && strcmp(string_of(style_of(answer), "id"), one_id) == 0,
+          "rebuilding the style a brief names answers 200 with that style");
     cJSON_Delete(answer);
     answer = test_gui_send_finish(PORT, "style.rebuild", with_style_id, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2 &&

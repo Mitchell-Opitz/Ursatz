@@ -652,7 +652,7 @@ MotiveResult motive_from_midi(const unsigned char *data, size_t size, const Moti
     return result;
 }
 
-MotiveResult motive_from_musicxml(const char *data, size_t size, const MotiveOptions *options, Motive *out,
+static MotiveResult motive_from_musicxml(const char *data, size_t size, const MotiveOptions *options, Motive *out,
                                   MotiveError *error) {
     if (!data || !out) {
         motive_set_error(error, "", "input or output is NULL");

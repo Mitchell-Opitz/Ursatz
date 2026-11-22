@@ -31,7 +31,7 @@
  *                      standard-harmony calls valid, every planned modulation is a modulation confirmed by an
  *                      authentic cadence heard inside the new key, and the last cadence is the strongest. The share
  *                      of seeds that complete is printed, each tried up to 16 times from the next seeds as the piece
- *                      entry does; below 100% the test fails (WILL_FAIL, docs/piece.md)
+ *                      entry does; below 100% the test fails (docs/piece.md)
  *   tonic-major        the stand-in form of R-517 (B1 returns B exact in the tonic major; 56 bars), A minor and C major 4/4,
  *                      seeds 1 to 10: the plan's key lane gives B1 A major in A minor and C major in C major, and the
  *                      sections after it home; at least 9 of 10 compose in each; B1's melody is B's moved by the semitones the

@@ -12,17 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define strcasecmp _stricmp
-#define MKDIR(path) _mkdir(path)
-#else
 #include <dirent.h>
 #include <strings.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 #include <ursatz_analyzer/analyzer_api.h>
@@ -39,24 +33,13 @@ static const char *g_port = "18766";
 #define PORT g_port
 
 static bool is_directory(const char *path) {
-#ifdef _WIN32
-  DWORD attributes = GetFileAttributesA(path);
-  return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
   struct stat st;
   return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
 }
 
 /* The name of the lexicographically first directory in dir_path that holds
  * a score.musicxml. */
 static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size) {
-#ifdef _WIN32
-  (void)dir_path;
-  (void)out;
-  (void)out_size;
-  return false;
-#else
   DIR *dir = opendir(dir_path);
   if (!dir) {
     return false;
@@ -81,7 +64,6 @@ static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size
   }
   closedir(dir);
   return found;
-#endif
 }
 
 static bool piece_file_exists(const char *id, const char *name) {
@@ -356,7 +338,7 @@ static void check_notated_score(const char *piano_id, const char *two_channel_id
   char path[256];
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", two_channel_id);
   char *xml = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-  check(test_http_status(xml) == 200, "the two-channel score is 200 OK");
+  check(test_http_status(xml) == 200 && strstr(test_http_body(xml), "<score-partwise") != NULL, "the two-channel score is 200 OK, a score-partwise document");
   check(count_occurrences(test_http_body(xml), "<score-part ") == 2, "a two-channel MIDI upload gives two parts");
   check(strstr(test_http_body(xml), "<midi-program>41</midi-program>") != NULL,
         "the second part carries its MIDI program");
@@ -367,7 +349,9 @@ static void check_notated_score(const char *piano_id, const char *two_channel_id
 
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", piano_id);
   xml = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-  check(test_http_status(xml) == 200, "the piano score is 200 OK");
+  check(test_http_status(xml) == 200 && strstr(test_http_body(xml), "<score-partwise") != NULL &&
+            count_occurrences(test_http_body(xml), "<score-part ") == 1,
+        "the piano score is 200 OK, a score-partwise document of one part");
   check(strstr(test_http_body(xml), "<staves>2</staves>") != NULL, "a piano upload has two staves");
   check(strstr(test_http_body(xml), "<type>") != NULL, "the score notes carry a <type>");
   check(strstr(test_http_body(xml), "<beam number=\"1\">begin</beam>") != NULL, "the score notes carry <beam>");
@@ -376,7 +360,8 @@ static void check_notated_score(const char *piano_id, const char *two_channel_id
   free(xml);
 
   char *response = patch_piece(piano_id, "{\"composer\":\"J. S. Bach\"}");
-  check(test_http_status(response) == 200, "PATCH sets the composer");
+  check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL && strstr(test_http_body(response), "J. S. Bach") != NULL,
+        "PATCH sets the composer: ok, and the piece answers with it");
   free(response);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", piano_id);
   xml = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
@@ -461,7 +446,8 @@ static void check_notation_override(const char *id) {
   cJSON_Delete(detail);
 
   char *response = patch_piece(id, "{\"notation\":{\"meter\":\"3/4\",\"value_scale\":\"2\",\"pickup\":\"\"}}");
-  check(test_http_status(response) == 200, "PATCH sets a notation override");
+  check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL && strstr(test_http_body(response), "notation") != NULL,
+        "PATCH sets a notation override: ok, and the piece answers with its notation");
   cJSON *answer = cJSON_Parse(test_http_body(response));
   const cJSON *piece = answer ? cJSON_GetObjectItemCaseSensitive(answer, "piece") : NULL;
   const cJSON *notation = piece ? cJSON_GetObjectItemCaseSensitive(piece, "notation") : NULL;
@@ -492,7 +478,7 @@ static void check_notation_override(const char *id) {
   cJSON_Delete(detail);
 
   response = patch_piece(id, "{\"notation\":null}");
-  check(test_http_status(response) == 200, "PATCH clears the notation override");
+  check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL, "PATCH clears the notation override");
   free(response);
   check(score_measure_count(id, "<beats>4</beats>") == measures_before, "clearing the override restores the measure count");
   document_meter_source(id, source, sizeof(source));
@@ -723,7 +709,7 @@ static void check_piece_export(const char *id, const char *expected_title) {
   char what[160];
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/export", id);
   char *whole = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-  check(test_http_status(whole) == 200, "export answers 200");
+  check(test_http_status(whole) == 200 && strlen(test_http_body(whole)) > 100, "export answers 200 with its text");
   check(whole && strstr(whole, "Content-Type: text/plain; charset=utf-8") != NULL, "export is text/plain; charset=utf-8");
   const char *body = test_http_body(whole);
   check(strncmp(body, "ursatz-text 1 view reading piece:", 33) == 0, "export starts with the view frame");
@@ -739,7 +725,7 @@ static void check_piece_export(const char *id, const char *expected_title) {
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/export?from=2&to=2", id);
   char *ranged = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   body = test_http_body(ranged);
-  check(test_http_status(ranged) == 200, "export of a range answers 200");
+  check(test_http_status(ranged) == 200 && strlen(test_http_body(ranged)) > 50, "export of a range answers 200 with its text");
   check(strstr(body, "--measures 2-2") != NULL, "the range is in the frame's expand line");
   check(strstr(body, "\nm2\n") != NULL && strstr(body, "\nm1 ") == NULL && strstr(body, "\nm3\n") == NULL,
         "a range lists only the measures in it");
@@ -848,13 +834,14 @@ static void check_import_cache(const char *id) {
   for (size_t i = 0; i < sizeof(tails) / sizeof(tails[0]); i++) {
     snprintf(path, sizeof(path), "/api/analyzer/pieces/%s%s", id, tails[i]);
     char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-    check(test_http_status(response) == 200, "a cached read answers 200");
+    check(test_http_status(response) == 200 && strlen(test_http_body(response)) > 0, "a cached read answers 200 with its body");
     free(response);
   }
   check(workshop_import_cache_imports() == 1, "detail, score, meta and playback of one piece import it once");
 
   char *patched = patch_piece(id, "{\"composer\":\"Cache Test\"}");
-  check(test_http_status(patched) == 200, "the PATCH answers 200");
+  check(test_http_status(patched) == 200 && strstr(test_http_body(patched), "\"ok\":true") != NULL && strstr(test_http_body(patched), "Cache Test") != NULL,
+        "the PATCH answers 200 with the composer it set");
   free(patched);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
   char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
@@ -867,7 +854,7 @@ static void check_import_cache(const char *id) {
   check(workshop_import_cache_imports() == 2, "the open after a PATCH imports once more");
 
   char *reanalyzed = command_response("library.reanalyze", id, NULL, true);
-  check(test_http_status(reanalyzed) == 200, "re-analyze answers 200");
+  check(test_http_status(reanalyzed) == 200 && strstr(test_http_body(reanalyzed), "\"ok\":true") != NULL, "re-analyze answers 200, ok");
   free(reanalyzed);
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
   response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
@@ -904,11 +891,7 @@ int main(int argc, char **argv) {
     g_port = "18778";
   }
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache 2> nul");
-#else
   system("rm -rf library settings cache");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 
@@ -1091,7 +1074,7 @@ int main(int argc, char **argv) {
   seed_piece_meta("seed-oldest", "oldest.mid", "2001-01-01T00:00:00Z");
   test_write_file("library/pieces/old-piece.db", "old", 3);
   char *list = test_http_exchange(PORT, "GET", "/api/analyzer/pieces", NULL, NULL, 0);
-  check(test_http_status(list) == 200, "the list is 200 OK");
+  check(test_http_status(list) == 200 && count_occurrences(test_http_body(list), "\"filename\":") >= 3, "the list is 200 OK and holds the pieces");
   const char *list_body = test_http_body(list);
   const char *newest = strstr(list_body, "\"id\":\"seed-newest\"");
   const char *oldest = strstr(list_body, "\"id\":\"seed-oldest\"");
@@ -1192,7 +1175,11 @@ int main(int argc, char **argv) {
     char dir[256];
     snprintf(dir, sizeof(dir), "library/pieces/%s", mozart_id);
     response = command_response("library.delete", mozart_id, NULL, false);
-    check(test_http_status(response) == 200, "DELETE removes a piece");
+    check(test_http_status(response) == 200 && strstr(test_http_body(response), "\"ok\":true") != NULL, "DELETE removes a piece");
+    free(response);
+    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", mozart_id);
+    response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
+    check(test_http_status(response) == 404, "a deleted piece is 404 when read again");
     free(response);
     check(subject_id && workshop_subject_get(subject_id, &subject) == URSATZ_OK &&
               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(subject, "pieces")) == 0,

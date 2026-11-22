@@ -28,7 +28,7 @@ Method: a scratch change set `options.analysis.harmonic_spans = true` in `hearin
 
 ## Failing tests on spans
 
-- `test_grow_period_heard_compound_basic_idea_continuation`: not every grown 8-bar theme is heard as the form it was grown as (30 of 40 heard as requested, 8 no theme, 2 another form).
+- `test_grow_period_heard_compound_basic_idea_continuation`: not every grown 8-bar theme is heard as the form it was grown as (30 of 40 heard as requested, 8 no theme, 2 another form; a recorded baseline since P66c: 32 of 40, 8 no theme).
 - `test_form_templates_layered_compose`: layered 30 of 60 runs complete (baseline 30), 88 sections heard (baseline 90).
 - `test_plan_cli`, `test_explain_choices`, `test_explain_same`, `test_explain_cli`: a theme or piece cannot be grown or composed (D minor period, "no theme could be grown"; `compose_run` not `PIECE_OK`).
 - `test_middle_out_melody`, `test_middle_out_bass`: sections heard below the baseline.
@@ -79,7 +79,7 @@ Measured 2026-11-18 at P61 B6. The hearing is the library chain run by `analysis
 | `test_middle_out` melody, sections heard / cadences (of 20) | 19 / 18 | 17 / 16 |
 | progression, sections heard / cadences (of 30) | 5 / 19 | 6 / 21 |
 | bass, sections heard / cadences (of 20) | 19 / 17 | 19 / 17 |
-| `test_grow_period_heard_compound_basic_idea_continuation`, 8 bars heard as requested | 40 of 40 | 32 of 40 (8 no theme); now WILL_FAIL |
+| `test_grow_period_heard_compound_basic_idea_continuation`, 8 bars heard as requested | 40 of 40 | 32 of 40 (8 no theme); a recorded baseline since P66c |
 | `test_grow_period_heard_antecedent_consequent`, 8 bars | 38 of 40 | 32 of 40 |
 | `test_grow_sentence_heard`, all runs heard as a sentence | 19 of 80 | 16 of 80 |
 

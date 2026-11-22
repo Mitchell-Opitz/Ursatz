@@ -11,14 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -93,11 +88,7 @@ static const cJSON *first_link(const cJSON *run) {
 
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache projects subjects data 2> nul");
-#else
   system("rm -rf library settings cache projects subjects data");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 
@@ -326,11 +317,7 @@ int main(void) {
     free(ids[i]);
   }
   test_gui_server_stop(ctx);
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache projects subjects data 2> nul");
-#else
   system("rm -rf library settings cache projects subjects data");
-#endif
 
   return test_finish("links_route");
 }

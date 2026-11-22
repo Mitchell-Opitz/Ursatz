@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +30,11 @@
  * weights.against_bass 20, which changes all 8.
  */
 
-#define SEEDS 8
+/* Seeds 1 to 8; the smoke (the fast set) runs seeds 1 and 2. */
+/* The smoke keeps every check of one seed and drops those that need the spread of seeds (a count over seeds that is at least 1). */
+static bool smoke_run;
+static int seeds_run = 8;
+#define SEEDS seeds_run
 #define MEASURED_CLOSING 8 /* of 8 seeds; the defaults' 6/8 sentence already ends on a note 2 or more times the mean */
 #define MEASURED_FIRST 4
 #define CHORDS 9
@@ -347,13 +352,18 @@ static int register_move(const Plan *plan) {
     return largest;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    if (smoke) {
+        smoke_run = true;
+        seeds_run = 2;
+    }
     Motive motive = load_motive();
     MelodyFillParams defaults = melody_fill_params_default();
     MelodyFillParams shaped = melody_fill_params_default();
     shaped.weights.against_bass = 20;
     int differing = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         size_t absent_notes;
         size_t default_notes;
         size_t shaped_notes;
@@ -395,7 +405,7 @@ int main(void) {
     int closing_differs = 0;
     double ratio_default = 0;
     double ratio_closing = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
         size_t closing_notes;
@@ -416,13 +426,13 @@ int main(void) {
     printf("test_melody_preferences: closure_final 20: a final note of 2 or more times the mean in %d of %d seeds "
            "(defaults %d), mean ratio %.2f (defaults %.2f), %d melodies differ\n",
            long_closing, SEEDS, long_default, ratio_closing / SEEDS, ratio_default / SEEDS, closing_differs);
-    assert(long_closing >= MEASURED_CLOSING && closing_differs >= 1);
+    assert(smoke_run || (long_closing >= MEASURED_CLOSING && closing_differs >= 1));
 
     /* Closure on an earlier cadence: the antecedent of a period ends on a longer note. */
     MelodyFillParams first_closing = melody_fill_params_default();
     first_closing.closure_first = 20;
     int antecedent_longer = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Plan *without = compose_period(seed, &defaults);
         Plan *with_closure = compose_period(seed, &first_closing);
         antecedent_longer += antecedent_last_note(with_closure) > antecedent_last_note(without) + 1e-9;
@@ -431,7 +441,7 @@ int main(void) {
     }
     printf("test_melody_preferences: closure_first 20: the antecedent's last note is longer in %d of %d seeds\n",
            antecedent_longer, SEEDS);
-    assert(antecedent_longer >= MEASURED_FIRST);
+    assert(smoke_run || (antecedent_longer >= MEASURED_FIRST));
 
     /* Rhythm repetition (R-479): with a cap of 3 no run of bars with one rhythm passes 3; a cap of 0 is the defaults. */
     MelodyFillParams capped = melody_fill_params_default();
@@ -440,7 +450,7 @@ int main(void) {
     cap_zero.rhythm_repeat_bars = 0;
     size_t longest_off = 0;
     size_t longest_on = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
         Plan *absent = compose(&motive, seed, NULL);
@@ -469,7 +479,7 @@ int main(void) {
     leap_off.leap_weight = 0;
     size_t leaps_default = 0;
     size_t leaps_weighted = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
         Plan *absent = compose(&motive, seed, NULL);
@@ -484,7 +494,7 @@ int main(void) {
     }
     printf("test_melody_preferences: leap_weight 20: %zu leaps over seeds 1 to 8 (defaults %zu)\n", leaps_weighted,
            leaps_default);
-    assert(leaps_weighted < leaps_default);
+    assert(smoke_run || (leaps_weighted < leaps_default));
 
     /* Register (R-481): register_weight 20 keeps each idea nearer the one before; 0 is the defaults. */
     MelodyFillParams register_on = melody_fill_params_default();
@@ -493,7 +503,7 @@ int main(void) {
     register_off.register_weight = 0;
     int moves_default = 0;
     int moves_weighted = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         size_t absent_notes;
         size_t zero_notes;
         Plan *absent = compose_period(seed, NULL);

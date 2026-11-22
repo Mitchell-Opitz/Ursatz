@@ -39,13 +39,9 @@ static bool write_motive_midi(const char *path) {
     static const unsigned char end[] = {0x00, 0xFF, 0x2F, 0x00};
     memcpy(track + n, end, sizeof end);
     n += sizeof end;
-    unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T', 'r', 'k', 0, 0, 0, (unsigned char)n};
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fwrite(header, 1, sizeof header, file) == sizeof header && fwrite(track, 1, n, file) == n;
-    return fclose(file) == 0 && ok;
+    unsigned char file[128];
+    size_t size = test_smf_type0(file, 480, track, n);
+    return test_write_file(path, (const char *)file, size);
 }
 
 /* Copies Bach 114 into a folder of its own and analyzes it into <name>_analyzed; the analyzed folder is the corpus. */
@@ -152,6 +148,11 @@ static void test_stale(const char *corpus) {
         cJSON_Delete(document);
         return;
     }
+    /* The documents of the corpus are the current version's: none is stale yet. */
+    char index_path[1300];
+    size_t stale_documents = 99;
+    snprintf(index_path, sizeof index_path, "%s/corpus-index.json", corpus);
+    CHECKF(analyzer_corpus_stale_count(index_path, &stale_documents) == URSATZ_OK && stale_documents == 0, "%zu stale documents before", stale_documents);
     cJSON_ReplaceItemInObjectCaseSensitive(metadata, "analyzer_version", cJSON_CreateString("0.0.0-another"));
     char *changed = cJSON_Print(document);
     CHECK(changed && test_write_file(path, changed, strlen(changed)));
@@ -165,6 +166,17 @@ static void test_stale(const char *corpus) {
         CHECKF(stale.passages[i].stale, "passage %zu of a stale document is not marked stale", i);
     }
     analyzer_corpus_passages_destroy(&stale);
+
+    /* The count sees the one document another version analyzed; a missing index is an I/O error, a file that is not an index a format error. */
+    CHECKF(analyzer_corpus_stale_count(index_path, &stale_documents) == URSATZ_OK && stale_documents == 1, "%zu stale documents after", stale_documents);
+    char missing[1300];
+    snprintf(missing, sizeof missing, "%s/no-such-index.json", corpus);
+    CHECKF(analyzer_corpus_stale_count(missing, &stale_documents) == URSATZ_ERR_IO && stale_documents == 0, "a missing index");
+    char not_index[1300];
+    snprintf(not_index, sizeof not_index, "%s/not-an-index.json", corpus);
+    CHECK(test_write_file(not_index, "{}", 2));
+    CHECKF(analyzer_corpus_stale_count(not_index, &stale_documents) == URSATZ_ERR_FORMAT && stale_documents == 0, "a file that is no index");
+    remove(not_index);
 }
 
 static void test_json(const char *corpus) {

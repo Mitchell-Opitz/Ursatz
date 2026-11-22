@@ -14,7 +14,7 @@
 
 /*
  * The five reference pieces (Ursatz framework-v1 corpus) are analyzed from
- * their MIDI files and from their MusicXML versions (tests/musicxml, see its
+ * their MIDI files and from their MusicXML versions (tests/fixtures/scores, see its
  * README for provenance), and the two analysis documents are compared.
  *
  * Exact agreement is required on the key regions (tonic, mode, measure

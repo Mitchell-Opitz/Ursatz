@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -219,17 +220,6 @@ static void put(Bytes *bytes, const void *data, size_t length) {
     bytes->size += length;
 }
 
-static void put_u32(Bytes *bytes, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                           (unsigned char)v};
-    put(bytes, b, 4);
-}
-
-static void put_u16(Bytes *bytes, uint16_t v) {
-    unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
-    put(bytes, b, 2);
-}
-
 /* One beat is 96 ticks. A chord is three notes sounding one beat. */
 static void put_chord(Bytes *track, int first, int second, int third) {
     unsigned char on[] = {0x00, 0x90, (unsigned char)first, 0x64, 0x00, 0x90, (unsigned char)second, 0x64,
@@ -271,15 +261,9 @@ static void write_piece(const char *path, const Stretch *stretches, size_t stret
     unsigned char end[] = {0x00, 0xFF, 0x2F, 0x00};
     put(&track, end, sizeof(end));
 
-    Bytes file = {NULL, 0, 0};
-    put(&file, "MThd", 4);
-    put_u32(&file, 6);
-    put_u16(&file, 0);
-    put_u16(&file, 1);
-    put_u16(&file, 96);
-    put(&file, "MTrk", 4);
-    put_u32(&file, (uint32_t)track.size);
-    put(&file, track.data, track.size);
+    Bytes file = {malloc(track.size + 32), 0, 0};
+    assert(file.data != NULL);
+    file.size = test_smf_type0(file.data, 96, track.data, track.size);
 
     FILE *out = fopen(path, "wb");
     if (!out || fwrite(file.data, 1, file.size, out) != file.size) {

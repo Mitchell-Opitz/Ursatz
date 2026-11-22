@@ -7,7 +7,7 @@
 #include "schema_util.h"
 #include "chain/chain_inputs.h"
 #include "../key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The default config with the snapshot's materials: the key regions estimate has none of its own. */
 static const CommonPracticeKeyRegionsConfig *default_config(void) {

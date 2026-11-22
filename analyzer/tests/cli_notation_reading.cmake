@@ -68,6 +68,8 @@ if(PYTHON)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "the document with a reading does not match the schema")
     endif()
+else()
+    message(STATUS "schema not checked: no python3 with jsonschema")
 endif()
 
 # A scale alone leaves the meter the score's and says so.

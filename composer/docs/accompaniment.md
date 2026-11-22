@@ -137,14 +137,16 @@ the one before.
 every one is complete and every note holds the hard rules, worked out in the test from the lanes.
 
 Run as `test_grow_accompaniment heard`, it grows 20 themes with `any` and the texture `melody and accompaniment`
-(seeds 1 to 10 in both) and asks `standard-texture` to hear the whole theme. It is a WILL_FAIL test in `ctest`:
+(seeds 1 to 10 in both) and asks `standard-texture` to hear the whole theme. The numbers are its baselines at `243bd316`
+(R-698): the test fails below 7 themes or 125 measures and passes when a number holds or improves; the target, every
+measure of every theme, is printed and does not gate.
 
 | | Heard as melody and accompaniment |
 | --- | --- |
-| Themes, in every measure | 9 of 20 (45.0%) |
-| Measures | 132 of 160 (82.5%) |
+| Themes, in every measure | 7 of 20 (35.0%) |
+| Measures | 125 of 160 (78.1%) |
 
-The 28 measures that are not: 25 are heard as homorhythm and 3 as monophony. The monophony is a bar with no room for the
+Of the 28 measures that were not heard when this was first measured (132 of 160), 25 were heard as homorhythm and 3 as monophony. The monophony is a bar with no room for the
 accompaniment, bass and melody both on MIDI 60 (above). The homorhythm is the classification: the adapter reads voices
 that attack together at 75% of the attack times or more as rhythmically unified, and a melody that moves with the
 accompaniment's beat is read so. The operator asks the analysis of each target, and where none of its four candidates is

@@ -100,7 +100,8 @@ static Slot slot_of(const char *name, GrowSlot *function_slot) {
     return SLOT_NONE;
 }
 
-unsigned grow_slot_function_bit(GrowSlot slot) {
+/* The bit of the function a slot's ideas have (the slot's function in theme_shape.h). */
+static unsigned grow_slot_function_bit(GrowSlot slot) {
     switch (slot) {
     case GROW_SLOT_BASIC:
         return GROW_FUNCTION_BEGINNING;

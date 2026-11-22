@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The common-practice materials resolved from a snapshot: the four ids, the refusals, the key mode a material is read as by its

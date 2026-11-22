@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/harmony/outer_scale_degrees.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 #include "theory/tonality/tonal_key.h"
 
 /*

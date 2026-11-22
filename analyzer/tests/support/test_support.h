@@ -11,9 +11,6 @@
 #include <io/imported_score.h>
 #include <ursatz_analyzer_internal/analysis_document.h>
 
-/* A format 0 MIDI file with one track into buf; returns its size. */
-size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
-
 /* The member of an object; asserts that it exists. */
 const cJSON *test_json_require(const cJSON *object, const char *key);
 
@@ -30,6 +27,11 @@ AnalysisDocument *test_build_document(const char *input_path, const ChainResult 
 /* test_build_document, then analyzer_document_to_json. Returns a heap string the caller frees, or NULL. `notes` is the one the report
    was made from (unused: the result holds it). */
 char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report);
+
+/* The committed analysis document of a reference piece (tests/snapshots/<slug>.analysis.json: bach-114, mozart-545, clementi-36,
+   field-1, field-5), parsed, the caller deletes it. It is the document analyzer_document_to_json prints with metadata.analyzer_version,
+   producer_key and input deleted. Aborts with the path when it cannot be read or parsed. */
+cJSON *test_reference_document(const char *slug);
 
 /* Imports a file (the format is detected), runs the pipeline and returns the parsed analysis document the
    caller deletes. Asserts on any failure. */

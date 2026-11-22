@@ -45,7 +45,7 @@ typedef struct {
     long on;  /* eighth notes */
     long off;
     int midi;
-    char id[16];
+    char id[32];
 } VlNote;
 
 typedef struct {

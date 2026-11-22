@@ -70,7 +70,9 @@ int main(void) {
 
     char *json = tool_text(workshop, "{\"format\":\"json\"}");
     cJSON *all = json ? cJSON_Parse(json) : NULL;
-    CHECK(cJSON_IsArray(all) && cJSON_GetArraySize(all) == 62);
+    size_t command_count = 0;
+    CHECK(workshop_command_names(&command_count) != NULL && command_count > 0);
+    CHECK(cJSON_IsArray(all) && (size_t)cJSON_GetArraySize(all) == command_count);
     const cJSON *command;
     int examples = 0;
     cJSON_ArrayForEach(command, all) {
@@ -98,7 +100,7 @@ int main(void) {
     }
     cJSON_Delete(all);
     free(json);
-    CHECKF(examples == 62, "%d examples parsed", examples);
+    CHECKF((size_t)examples == command_count, "%d examples parsed for %zu commands", examples, command_count);
 
     char *help = tool_text(workshop, "{\"format\":\"help\",\"name\":\"item.save\"}");
     CHECK(help && strncmp(help, "item.save item:<id>@v<n> body object [note string]\n", 50) == 0 && strstr(help, "Example:") != NULL && strstr(help, "Base:") != NULL);

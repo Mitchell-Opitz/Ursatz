@@ -186,6 +186,12 @@ export class FakeEl {
     return this.children.filter((child) => child.tag === "option");
   }
 
+  /* The option a select shows: the selected one, else the first (as the value reads it). */
+  get selectedOptions() {
+    const chosen = this.tag === "select" ? this.options.find((option) => option.selected) || this.options[0] : null;
+    return chosen ? [chosen] : [];
+  }
+
   get textContent() {
     return this.children.map((child) => child.textContent).join("");
   }

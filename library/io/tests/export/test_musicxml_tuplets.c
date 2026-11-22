@@ -51,7 +51,7 @@ static void assert_duration(const MusicXmlImport *import, long n, unsigned long 
 
 static void test_import_triplet(void) {
     MusicXmlImport import;
-    import_file(URSATZ_ANALYZER_MUSICXML_DIR, "triplet.musicxml", &import);
+    import_file(URSATZ_SCORES_DIR, "triplet.musicxml", &import);
     assert(import.count == 4);
     /* three quarter-note triplets (each 1/6 of a whole note) and a half note with no ratio */
     assert_hint(&import, 0, 1, true, 3, 2);
@@ -122,7 +122,7 @@ static char *round_trip_with_hints(const MusicXmlImport *first) {
 
 static void test_round_trip_triplet(void) {
     MusicXmlImport import;
-    import_file(URSATZ_ANALYZER_MUSICXML_DIR, "triplet.musicxml", &import);
+    import_file(URSATZ_SCORES_DIR, "triplet.musicxml", &import);
     char *xml = round_trip_with_hints(&import);
     assert(tu_count(xml, "<actual-notes>3</actual-notes>") == 3 && tu_count(xml, "<normal-notes>2</normal-notes>") == 3);
     assert(tu_count(xml, "<tuplet type=\"start\"/>") == 1 && tu_count(xml, "<tuplet type=\"stop\"/>") == 1);

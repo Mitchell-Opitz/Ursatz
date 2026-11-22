@@ -25,18 +25,18 @@
  *
  *   syncopations   the annotated one (measure 14, beat 2) is found
  *   hemiolas       12/8 has none in standard-meter, and none is annotated
- *   hyperdownbeats 3 of the 8 annotated are the first measure of a hypermeasure (7 of 8 on sonority segments: the
- *                  phrases are on harmonic spans, 2 of them, and P41 reads them)
+ *   hyperdownbeats 5 of the 8 annotated are the first measure of a hypermeasure (measures 18, 20 and 22 are missed;
+ *                  measured at 243bd316)
  *
- * Run as `field5-target` it asserts what Ursatz's test asserts: at least 80% of the syncopations, every hemiola, at
- * least 80% of the hyperdownbeats and every reinterpretation. It misses the reinterpretation of measure 9 (the phrase
- * ending there is elided in the annotation), so it is WILL_FAIL in CMake with the measured values.
+ * The target is what Ursatz's test asserts: at least 80% of the hyperdownbeats and every reinterpretation. It is
+ * printed and does not gate (R-698): the hyperdownbeats are 5 of 8, and the reinterpretation of measure 9 (the phrase
+ * ending there is elided in the annotation) is not reported.
  *
  * Run as `constructed` it checks small pieces built here, on which the right answer is known: eighth-note triplets in
  * 4/4 (one run of six attacks, a borrowed division at the beat), a duplet in 6/8, and a hemiola in 3/4.
  */
 
-#define TARGET_RATE 0.80
+#define FLOOR_HYPERDOWNBEATS 5
 #define BEAT_TOLERANCE 0.01
 
 /* --- the analysis of a file --- */
@@ -177,11 +177,7 @@ static bool load_annotation(const char *path, Annotation *annotation) {
     return annotation->syncopation_count > 0 && annotation->hyperdownbeat_count > 0;
 }
 
-static double rate(size_t hits, size_t total) {
-    return total == 0 ? 1.0 : (double)hits / (double)total;
-}
-
-static void check_field5(const Analysis *analysis, const Annotation *annotation, bool target) {
+static void check_field5(const Analysis *analysis, const Annotation *annotation) {
     const ChainResult *report = &analysis->report;
     size_t sync_hits = 0;
     for (size_t i = 0; i < annotation->syncopation_count; i++) {
@@ -218,23 +214,17 @@ static void check_field5(const Analysis *analysis, const Annotation *annotation,
             printf("  missed hyperdownbeat at measure %d\n", annotation->hyperdownbeats[i]);
         }
     }
-    /* the form adapter reports no elided cadence, so the library reports no reinterpretation */
-    size_t reinterpretation_hits = 0;
     printf("Field 5: %zu densities, %zu syncopations (annotated found %zu of %zu), %zu hemiolas (%zu of %zu annotated), "
-           "%zu hypermeters (hyperdownbeats found %zu of %zu), reinterpretations found %zu of %zu\n",
+           "%zu hypermeters (hyperdownbeats found %zu of %zu)\n",
            report->density_count, report->syncopation_count, sync_hits, annotation->syncopation_count,
            report->hemiola_count, hemiola_hits, annotation->hemiola_count, report->hypermeter_count, hyper_hits,
-           annotation->hyperdownbeat_count, reinterpretation_hits, annotation->reinterpretation_count);
-    if (target) {
-        CHECK(rate(sync_hits, annotation->syncopation_count) >= TARGET_RATE);
-        CHECK(hemiola_hits == annotation->hemiola_count);
-        CHECK(rate(hyper_hits, annotation->hyperdownbeat_count) >= TARGET_RATE);
-        CHECK(reinterpretation_hits == annotation->reinterpretation_count);
-    } else {
-        CHECK(sync_hits == annotation->syncopation_count);
-        CHECK(hemiola_hits == annotation->hemiola_count);
-        CHECK(hyper_hits >= 3);
-    }
+           annotation->hyperdownbeat_count);
+    printf("reinterpretations: %zu annotated, not reported (the chain has no reinterpretation member, chain_result.h)\n",
+           annotation->reinterpretation_count);
+    CHECK(sync_hits == annotation->syncopation_count);
+    CHECK(hemiola_hits == annotation->hemiola_count);
+    CHECK(hyper_hits >= FLOOR_HYPERDOWNBEATS);
+    puts("target: 80% of the hyperdownbeats and every reinterpretation (not gating)");
 }
 
 /* --- the constructed pieces --- */
@@ -287,16 +277,9 @@ static bool write_midi(const char *path, unsigned numerator, unsigned exponent, 
     const unsigned char end[] = {0x00, 0xFF, 0x2F, 0x00};
     memcpy(track + pos, end, sizeof(end));
     pos += sizeof(end);
-    unsigned char header[14] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, TICKS_PER_QUARTER >> 8, TICKS_PER_QUARTER & 0xff};
-    unsigned char chunk[8] = {'M', 'T', 'r', 'k', 0, 0, (unsigned char)(pos >> 8), (unsigned char)pos};
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fwrite(header, 1, sizeof(header), file) == sizeof(header) && fwrite(chunk, 1, sizeof(chunk), file) == sizeof(chunk) &&
-              fwrite(track, 1, pos, file) == pos;
-    fclose(file);
-    return ok;
+    unsigned char file_bytes[4096 + 64];
+    size_t file_size = test_smf_type0(file_bytes, TICKS_PER_QUARTER, track, pos);
+    return test_write_file(path, (const char *)file_bytes, file_size);
 }
 
 /* Four measures of 4/4: eighth-note triplets on the first two beats of the first, then quarter notes. */
@@ -402,7 +385,6 @@ static void check_hemiola(void) {
 }
 
 int main(int argc, char **argv) {
-    bool target = argc > 1 && strcmp(argv[1], "field5-target") == 0;
     bool constructed = argc > 1 && strcmp(argv[1], "constructed") == 0;
     if (constructed) {
         check_triplets();
@@ -423,10 +405,8 @@ int main(int argc, char **argv) {
             analysis_destroy(&analysis);
             return 1;
         }
-        if (!target) {
-            check_structure(&analysis);
-        }
-        check_field5(&analysis, &annotation, target);
+        check_structure(&analysis);
+        check_field5(&analysis, &annotation);
         analysis_destroy(&analysis);
     }
     return test_finish("test_rhythm");

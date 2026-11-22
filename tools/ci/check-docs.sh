@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Docs check of one part: tools/ci/check-docs.sh <part>. README size, doc size, relative links and anchors, docs index coverage.
-# Exit 0 with no output when clean.
+# The part "." checks only the .md files of the repository root, not those of a folder. Exit 0 with no output when clean.
 cd "$(dirname "$0")/../../${1:?usage: tools/ci/check-docs.sh <part>}" || exit 1
-exec python3 - <<'PY'
+exec python3 - "$1" <<'PY'
 import os, re, sys
 
 EXCL = {"tests", "external", "build", ".git", "node_modules", "_deps"}
@@ -11,7 +11,7 @@ errors = []
 
 files = []
 for root, dirs, names in os.walk("."):
-    dirs[:] = [d for d in dirs if d not in EXCL and not d.startswith("build")]
+    dirs[:] = [] if sys.argv[1:] == ["."] else [d for d in dirs if d not in EXCL and not d.startswith("build")]
     for n in names:
         if n.endswith(".md"):
             files.append(os.path.normpath(os.path.join(root, n)))

@@ -107,11 +107,13 @@ static void read_theme(const Plan *plan, const Motive *basic, GrowDevelopment de
         Motive source;
         PlanMotiveRef ref;
         bool from_segment = false;
-        assert(grow_idea_fidelity_source(plan, span, basic, &source, &ref, &from_segment));
-        if (!grow_idea_fidelity(plan, span, basic, &fidelity)) {
+        const bool has_source = grow_idea_fidelity_source(plan, span, basic, &source, &ref, &from_segment);
+        assert(has_source);
+        const bool measured = grow_idea_fidelity(plan, span, basic, &fidelity);
+        if (!measured) {
             fprintf(stderr, "idea \"%s\" has no source or no realized notes\n", plan_node_name(plan, idea));
         }
-        assert(grow_idea_fidelity(plan, span, basic, &fidelity));
+        assert(measured);
         /* An idea whose ref cuts the motive down is ranked but never refused (R-355). */
         add_idea(&stats[role], &fidelity,
                  grow_ref_departs(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum_in(NULL, development, role));

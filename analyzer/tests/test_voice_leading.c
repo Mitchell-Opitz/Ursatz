@@ -11,7 +11,7 @@
 #include "test_support.h"
 
 /*
- * The voice leading of the report, on a constructed four-part chorale (tests/musicxml/chorale-voice-leading.musicxml,
+ * The voice leading of the report, on a constructed four-part chorale (tests/fixtures/scores/chorale-voice-leading.musicxml,
  * C major, one whole-note chord per measure: I ii V I). It holds one fault of each kind the section flags and nothing
  * else: a parallel fifth between the tenor (voice 2) and the bass (voice 3) from measure 1 to 2, and the soprano's
  * leading tone (voice 0) falling instead of rising to the tonic from measure 3 to 4. Asserted: the four voices, both

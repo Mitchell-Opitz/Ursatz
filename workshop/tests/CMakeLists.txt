@@ -107,12 +107,12 @@ ursatz_test_executable(test_workshop_crash_points SOURCES test_crash_points.c LI
     DEFINITIONS URSATZ_WORKSHOP_TEST_HOOKS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
 ursatz_test(workshop_crash_points TARGET test_workshop_crash_points LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points)
-# Slow: about 35 s (a Library piece is analyzed and a theme composed at each stop). The smoke run (argument smoke) stops the item commands alone.
+# Slow: about 25 s at -j4 (2026-11-21) (a Library piece is analyzed and a theme composed at each stop). The smoke run (argument smoke) stops the item commands alone.
 ursatz_test(workshop_crash_points_smoke TARGET test_workshop_crash_points ARGS smoke
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_crash_points_smoke)
 
 # The layers a piece and a composed theme keep (P63 B9): Mozart 545's MIDI imported, a theme composed, a reading of another digest refused. The test makes
-# its own data folder in its working directory.
+# its own data folder in its working directory. Kept in the fast set: about 10 s at -j4 (2026-11-21).
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_layers)
 ursatz_test(workshop_layers SOURCES test_layers.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS URSATZ_WORKSHOP_TEST_MOZART="${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Mozart 545.mid"
@@ -163,13 +163,17 @@ ursatz_test(workshop_text SOURCES test_text.c LIBS ursatz_workshop_internal ursa
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text)
 
 # Ursatz Text over generated layers (P65 B3, slow): the layers of a composed piece of every form but the game loop and of five analyzed pieces
-# read with their codecs, printed and read back. Three minutes in a debug build.
+# read with their codecs, printed and read back. Slow: about 134 s at -j4 (2026-11-21); its smoke runs every PR.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
 ursatz_test(workshop_text_generated SOURCES test_text_generated.c LIBS ursatz_workshop_internal ursatz_test_support LABELS slow
     DEFINITIONS TEXT_FORMS="${CMAKE_SOURCE_DIR}/composer/forms"
                 TEXT_LOOP_REQUEST="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/piece/structure-only.json"
                 TEXT_CORPUS="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated)
+# The smoke: the form binary, the loop request and Bach 114 (nine layers).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated_smoke)
+ursatz_test(workshop_text_generated_smoke TARGET test_workshop_text_generated ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_text_generated_smoke)
 
 # The commands as schemas (P65 B5): the table and the schemas agree, the check of a command's params at its path, the actor in the version envelope.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_schemas)
@@ -219,7 +223,7 @@ ursatz_test(workshop_settings_resolve SOURCES test_settings_resolve.c LIBS ursat
 # one of workshop_formats' (the files the commands leave validate).
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands)
 ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS ursatz_workshop_internal ursatz_test_support
-    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    DEFINITIONS SETTINGS_TASTE_NONE="${URSATZ_FIXTURES_DIR}/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
     PROPERTIES FIXTURES_SETUP settings_commands_files)
 
@@ -227,7 +231,7 @@ ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS urs
 # settings. Composes several themes: slow if it passes a minute.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
 ursatz_test(workshop_compose_settings SOURCES test_compose_settings.c LIBS ursatz_workshop_internal ursatz_test_support
-    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    DEFINITIONS SETTINGS_TASTE_NONE="${URSATZ_FIXTURES_DIR}/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
 
 # Listening sessions and ratings (P66 B6): a session with two batches, ratings and a pick, keep as default citing them, the refusals, ratings of an item version.

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,8 +29,13 @@
  * presentation minimum is 1/1 (the themes made are counted in the comment of raised_minimum_is_shown).
  */
 
-#define SEEDS 16
-#define THEME_SEEDS 8
+/* Seeds 1 to 16 and theme seeds 1 to 8; the smoke (the fast set) runs 2 and 1. */
+/* The smoke keeps every check of one seed and drops those that need the spread of seeds (a count over seeds that is at least 1). */
+static bool smoke_run;
+static int seeds_run = 16;
+static int theme_seeds_run = 8;
+#define SEEDS seeds_run
+#define THEME_SEEDS theme_seeds_run
 
 static MotiveRandomOptions options_in(int beats, HarmonyMode mode, unsigned long seed, const MotiveRandomPreferences *preferences) {
     MotiveRandomOptions options;
@@ -87,7 +93,7 @@ static void defaults_change_nothing(void) {
     MotiveRandomPreferences defaults;
     motive_random_preferences_default(&defaults);
     for (int beats = 3; beats <= 4; beats++) {
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
             Motive with = make(beats, seed, &defaults);
             assert(same_motive(&without, &with));
@@ -141,7 +147,7 @@ static void defaults_change_nothing(void) {
     /* and no given chord plan (R-456) */
     explicit_defaults.plan_count = 0;
     for (int beats = 3; beats <= 4; beats++) {
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
             Motive with = make(beats, seed, &explicit_defaults);
             assert(same_motive(&without, &with));
@@ -159,7 +165,7 @@ static void defaults_change_nothing(void) {
     reweighted.plans_three[0] = 0;
     reweighted.plans_three[1] = 5;
     for (int beats = 3; beats <= 4; beats++) {
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive one = make(beats, seed, &given);
             Motive other = make(beats, seed, &reweighted);
             assert(same_motive(&one, &other));
@@ -183,7 +189,7 @@ static void two_bars_only(void) {
     motive_random_preferences_default(&preferences);
     preferences.bars[0] = 0;
     preferences.bars[1] = 1;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         assert(two_bars(&motive, 4));
     }
@@ -211,7 +217,7 @@ static void dotted_features_only(void) {
     preferences.features[1] = 0;
     preferences.features[2] = 0;
     for (int beats = 3; beats <= 4; beats++) {
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive motive = make(beats, seed, &preferences);
             assert(dotted_in_a(&motive));
         }
@@ -223,14 +229,14 @@ static void no_pickup(void) {
     motive_random_preferences_default(&preferences);
     preferences.pickup_one_in = 0;
     size_t pickups_by_default = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         assert(motive_pickup(&motive).num == 0);
         Motive drawn = make(4, seed, NULL);
         pickups_by_default += motive_pickup(&drawn).num != 0;
     }
     /* The default does draw pickups in these seeds, so the setting is what removed them. */
-    assert(pickups_by_default > 0);
+    assert(smoke_run || (pickups_by_default > 0));
 }
 
 /* The brief of the Test Motif sentence for a seed, under a fidelity table (NULL for the default). */
@@ -310,7 +316,7 @@ static void raised_minimum_is_shown(void) {
     }
     size_t made_default = 0;
     size_t made_raised = 0;
-    for (unsigned long seed = 1; seed <= THEME_SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)THEME_SEEDS; seed++) {
         double shown_default = 0;
         double shown_raised = 0;
         bool a = theme_made(&motive, NULL, seed, &shown_default);
@@ -355,7 +361,7 @@ static void accented_tones(void) {
     preferences.accented_one_in = 1;
     int with_accent = 0;
     int counts[2] = {0, 0}; /* [0] on-beat non-chord tones, [1] of them suspensions */
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         MotiveAnalysis analysis;
         assert(motive_analyze(&motive, &analysis) && analysis.tones_known);
@@ -377,7 +383,7 @@ static void accented_tones(void) {
     preferences.accented_types[1] = 0;
     preferences.accented_types[2] = 1;
     int suspensions = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         MotiveAnalysis analysis;
         assert(motive_analyze(&motive, &analysis) && analysis.tones_known);
@@ -399,7 +405,7 @@ static void no_repeated_notes(void) {
     preferences.features[2] = 0;
     int without = 0;
     int with = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         preferences.avoid_repeats = false;
         Motive plain = make(4, seed, &preferences);
         for (size_t k = 0; k + 1 < plain.note_count; k++) {
@@ -420,7 +426,7 @@ static void fewer_leaps(void) {
     motive_random_preferences_default(&preferences);
     preferences.leaps_per_motif = 1;
     int leaps = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         int count = 0;
         for (size_t k = 0; k + 1 < motive.note_count; k++) {
@@ -436,7 +442,7 @@ static void fewer_leaps(void) {
     for (int beats = 3; beats <= 4; beats++) {
         int skip_total = 0;
         int leap_total = 0;
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive motive = make(beats, seed, &preferences);
             int skip_count = 0;
             int leap_count = 0;
@@ -453,7 +459,7 @@ static void fewer_leaps(void) {
     }
     preferences.leaps_per_motif = 11;
     preferences.skips_per_motif = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         for (size_t k = 0; k + 1 < motive.note_count; k++) {
             int size = abs(interval(&motive, k));
@@ -466,7 +472,7 @@ static void fewer_leaps(void) {
 
     preferences.leap_recovery = true;
     int recovered = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         for (size_t k = 0; k + 2 < motive.note_count; k++) {
             int move = interval(&motive, k);
@@ -494,7 +500,7 @@ static void pickups_from_the_accent(void) {
     motive_random_preferences_default(&preferences);
     preferences.pickup_from_accent = true;
     preferences.pickup_one_in = 1;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         MotiveAnalysis analysis;
         assert(has_pickup(&motive) && motive_analyze(&motive, &analysis) && analysis.tones_known);
@@ -553,7 +559,7 @@ static void close_contrast(void) {
     for (int on = 0; on < 2; on++) {
         preferences.contrast_fidelity_min.num = on ? 1 : 0;
         preferences.contrast_fidelity_min.den = on ? 2 : 1;
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive motive = make(4, seed, &preferences);
             assert(motive.feature_count == 2);
             size_t a_first = motive.features[0].first + (has_pickup(&motive) ? 1 : 0); /* segment a's cell, not the pickup */
@@ -577,7 +583,7 @@ static int two_beat_notes_on_weak_beats(const MotiveRandomPreferences *preferenc
     Rational two_beats;
     assert(rational_make(1, 2, &two_beats) == RATIONAL_OK);
     int count = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, preferences);
         for (size_t i = has_pickup(&motive) ? 1 : 0; i < motive.note_count; i++) {
             long half_beats = half_beats_from_bar(&motive, i);
@@ -594,11 +600,11 @@ static void long_notes(void) {
     preferences.long_on_weak = 20;
     int favored = two_beat_notes_on_weak_beats(&preferences);
     printf("long_on_weak 20: %d two-beat notes on weak beats (%d with the defaults)\n", favored, plain);
-    assert(favored > plain);
+    assert(smoke_run || (favored > plain));
 
     preferences.long_on_weak = 0;
     preferences.final_long = true;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         size_t last = motive.note_count - 1;
         for (size_t i = motive.features[motive.feature_count - 1].first; i < last; i++) {
@@ -611,7 +617,7 @@ static void long_notes(void) {
 /* Each setting alone: how many of the seeds 1 to 16 still give a motive, in a meter of this many beats over this unit. */
 static int motives_made_in(int beats, int unit, const MotiveRandomPreferences *preferences) {
     int made = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         MotiveRandomOptions options = options_of(beats, seed, preferences);
         options.meter.beat_unit = unit;
         Motive motive;
@@ -650,7 +656,7 @@ static int motives_with_figure(size_t entry, const long *lengths, size_t notes, 
     motive_random_preferences_default(&preferences);
     preferences.durations[entry] = 4;
     int holding = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         bool found = false;
         for (size_t i = 0; i + notes <= motive.note_count; i++) {
@@ -687,7 +693,7 @@ static void rhythm_figures(void) {
     for (size_t f = 0; f < sizeof(figures) / sizeof(figures[0]); f++) {
         int holding = motives_with_figure(figures[f].entry, figures[f].lengths, figures[f].notes, figures[f].start_unit);
         printf("%s 4: %d of %d motives hold the figure\n", figures[f].name, holding, SEEDS);
-        assert(holding >= 1);
+        assert(smoke_run || (holding >= 1));
     }
 }
 
@@ -739,7 +745,7 @@ static void compound_beats(void) {
     dotted.features[1] = 0;
     dotted.features[2] = 0;
     int dotted_motives = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         MotiveRandomOptions options = options_of(6, seed, &dotted);
         options.meter.beat_unit = 8;
         Motive motive;
@@ -766,7 +772,7 @@ static void compound_beats(void) {
     printf("compound_beats off: %d notes cross a beat in 6/8, 9/8 and 12/8\n", crossing_off);
     assert(crossing_off > 0);
     /* in 4/4 it changes nothing */
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive without = make(4, seed, &off);
         Motive with = make(4, seed, &on);
         assert(same_motive(&without, &with));
@@ -803,7 +809,7 @@ static int level_of(long position) {
    note of the last segment, and starts on a beat of the highest level the segment offers. */
 static void closed_endings(void) {
     MotiveRandomPreferences preferences = only_ending(1);
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         size_t last = motive.note_count - 1;
         const MotiveSketchFeature *segment = &motive.features[motive.feature_count - 1];
@@ -834,7 +840,7 @@ static void closed_endings(void) {
 /* Open: the last note is degree 2, 5 or 7 of the key. */
 static void open_endings(void) {
     MotiveRandomPreferences preferences = only_ending(2);
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         int pc = pitch_class(motive.notes[motive.note_count - 1].pitch);
         assert(pc == MAJOR_SCALE[1] || pc == MAJOR_SCALE[4] || pc == MAJOR_SCALE[6]);
@@ -845,7 +851,7 @@ static void open_endings(void) {
 /* Lead-in: the last two notes are each at most a half beat and the last starts off the beat. */
 static void lead_in_endings(void) {
     MotiveRandomPreferences preferences = only_ending(3);
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, &preferences);
         size_t last = motive.note_count - 1;
         assert(grid_length(&motive, last) <= 6 && grid_length(&motive, last - 1) <= 6);
@@ -860,7 +866,7 @@ typedef void (*LongToneCheck)(const Motive *motive, size_t i, const MotiveToneLa
 
 static int long_tones(const MotiveRandomPreferences *preferences, LongToneCheck check) {
     int total = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         Motive motive = make(4, seed, preferences);
         MotiveAnalysis analysis;
         assert(motive_analyze(&motive, &analysis) && analysis.tones_known);
@@ -1064,7 +1070,7 @@ static void syncopation_figures(void) {
         MotiveRandomPreferences preferences = only_syncopation(figures[f].type, figures[f].level);
         for (int beats = 4; beats >= 3; beats--) {
             int holding = 0;
-            for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
                 Motive motive = make(beats, seed, &preferences);
                 last_note_plain(&motive);
                 holding += holds_figure_on_beat(&motive, figures[f].first, figures[f].first_notes) ||
@@ -1074,7 +1080,7 @@ static void syncopation_figures(void) {
             if (figures[f].type == 1 && figures[f].level == 1 && beats == 3) {
                 assert(holding == 0); /* four beats never fit a 3/4 cell */
             } else {
-                assert(holding >= 1);
+                assert(smoke_run || (holding >= 1));
             }
         }
     }
@@ -1103,7 +1109,7 @@ static void syncopation_boundaries(void) {
         long bar = 12 * beats;
         int tied = 0;
         int early = 0;
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive motive = make(beats, seed, &tie_bar);
             last_note_plain(&motive);
             bool held = false;
@@ -1160,7 +1166,7 @@ static void syncopation_changes_nothing_else(void) {
     compound_on.compound_beats = true;
     const int meters[] = {6, 12};
     for (size_t m = 0; m < 2; m++) {
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive without;
             Motive with;
             bool made = make_in_unit(meters[m], 8, seed, &compound_off, &without);
@@ -1184,7 +1190,7 @@ static void syncopation_changes_nothing_else(void) {
         no_levels.syncopation_levels[i] = 0;
     }
     for (int beats = 3; beats <= 4; beats++) {
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
             Motive without = make(beats, seed, &off);
             Motive types = make(beats, seed, &no_types);
             Motive levels = make(beats, seed, &no_levels);
@@ -1282,7 +1288,7 @@ static void given_plans(void) {
             }
             for (int m = 0; m < 2; m++) {
                 HarmonyMode mode = m == 0 ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR;
-                for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+                for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
                     MotiveRandomOptions options = options_in(beats, mode, seed, &preferences);
                     Motive motive;
                     size_t count = 0;
@@ -1319,13 +1325,13 @@ static void plans_that_do_not_fit(void) {
     preferences.bars[1] = 0;
     assert(refused(4, &preferences)); /* a chord in bar 2 of a one-bar motive */
     int made = 0;
-    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+    for (unsigned long seed = 1; seed <= (unsigned long)SEEDS; seed++) {
         MotiveRandomOptions options = options_of(3, seed, &preferences);
         Motive motive;
         size_t count = 0;
         made += motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK; /* 3/4 has no one-bar motive: bars are not read */
     }
-    assert(made >= 12);
+    assert(smoke_run || (made >= 12));
     const MotiveRandomPlanChord beat_four[] = {{2, 0, 0}, {5, 1, 4}};
     preferences = plan_of(2, beat_four);
     assert(refused(3, &preferences));
@@ -1429,11 +1435,16 @@ static void each_setting_still_gives_motives(void) {
     for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); i++) {
         int made = motives_made_in(settings[i].beats, settings[i].unit, settings[i].preferences);
         printf("%s alone: %d of %d seeds give a motive\n", settings[i].name, made, SEEDS);
-        assert(made >= 12);
+        assert(smoke_run || (made >= 12));
     }
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    if (argc > 1 && strcmp(argv[1], "smoke") == 0) {
+        smoke_run = true;
+        seeds_run = 2;
+        theme_seeds_run = 1;
+    }
     setvbuf(stdout, NULL, _IOLBF, 0);
     defaults_change_nothing();
     two_bars_only();

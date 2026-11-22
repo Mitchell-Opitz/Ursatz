@@ -10,7 +10,7 @@
 #include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "ursatz_test.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Every corpus chorale runs the whole analysis chain to the form stage. P41 B6 found chorale 16 failing there (its last note,

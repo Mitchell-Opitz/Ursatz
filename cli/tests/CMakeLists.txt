@@ -1,6 +1,6 @@
 # The tests of the cli part (P64 B5): the flag table and its parser, and the help printed from the tables.
 ursatz_test(cli_flags SOURCES test_flags.c LIBS ursatz_cli ursatz_workshop ursatz_common cjson)
-ursatz_test(cli_help COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_help.cmake)
+ursatz_test(cli_help COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DCOMMANDS_SOURCE=${CMAKE_SOURCE_DIR}/cli/src/commands.c -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_help.cmake)
 
 # Connect or run (P64 B7): the data folder opened by the command, held by another process, served by the GUI backend. Run in a working directory of
 # its own; the programs are run as processes.
@@ -32,5 +32,5 @@ ursatz_test(cli_text_apply COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursat
 
 # A listening round (P66 B7, R-674): the none profile imported, a session, two batches of listen --session, rate with a pick and keep as default citing it.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_listening_round)
-ursatz_test(cli_listening_round COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+ursatz_test(cli_listening_round COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DFIXTURES=${URSATZ_FIXTURES_DIR}/settings
     -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_listening_round/work -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listening_round.cmake TIMEOUT 300)

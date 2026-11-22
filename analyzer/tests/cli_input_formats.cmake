@@ -55,4 +55,4 @@ check_case("not a score" "${MUSICXML_DIR}/not-music.xml" piece.xml 1 FALSE "not 
 check_case("score-timewise" "${MUSICXML_DIR}/timewise.musicxml" piece.musicxml 1 FALSE "score-timewise is not supported")
 check_case("empty score" "${MUSICXML_DIR}/empty-score.musicxml" piece.musicxml 1 FALSE "the score contains no notes")
 check_case("compressed" "${MUSICXML_DIR}/pickup.mxl" piece.mxl 1 FALSE "compressed MusicXML")
-check_case("unknown format" "${MUSICXML_DIR}/README.md" piece.txt 1 FALSE "cannot tell the input format")
+check_case("unknown format" "${MUSICXML_DIR}/../README.md" piece.txt 1 FALSE "cannot tell the input format")

@@ -32,7 +32,6 @@ bool fill_target_equals(FillTarget a, FillTarget b);
 bool fill_target_exists(const Plan *plan, FillTarget target);
 /* The accessors below return PLAN_STATE_CONSTRAINED, 0 or an empty span for a target that does not exist. */
 PlanState fill_target_state(const Plan *plan, FillTarget target);
-size_t fill_target_constraint_count(const Plan *plan, FillTarget target);
 PlanSpan fill_target_span(const Plan *plan, FillTarget target);
 
 /*

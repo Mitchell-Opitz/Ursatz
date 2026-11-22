@@ -10,7 +10,7 @@
 #include "model/time/time_signature.h"
 #include "key_regions_test_access.h"
 #include "tests/key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Key regions, step 1: windowed key scoring. Segments are built straight from pitch-class weights (one whole
@@ -630,6 +630,7 @@ static void test_repeated_and_late_events_are_not_boundaries(void) {
     Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 16);
+    /* The last event is at measure 100, far past the run of 16 measures and the repeated events before it. */
     CommonPracticeKeySignatureEvent events[3] = {make_event(0, 1, 0), make_event(8, 1, 0),
                                                  make_event(100, 1, 1)};
     CommonPracticeKeyRegions regions = {0};

@@ -119,6 +119,20 @@ static void test_library(void) {
     workshop_reply_destroy(&reply);
     check(run_job("library.reanalyze", g_piece_a, NULL, -1, NULL, NULL) && journaled("library.reanalyze", g_piece_a),
           "library.reanalyze analyzes the stored source again (a job) and is journaled");
+
+    /* job.cancel on the job of a queued command answers OK whatever the job has reached (it may be done already: only the answer is asserted);
+       a job that does not exist is not found. */
+    WorkshopReply queued;
+    check(command_as("test", "library.reanalyze", g_piece_a, NULL, -1, NULL, &queued, &error) == URSATZ_OK, "a command is queued for its job to be cancelled");
+    char queued_job[64];
+    snprintf(queued_job, sizeof(queued_job), "%s", str(member(queued.json, "job"), "id"));
+    check(run("job.cancel", queued_job, NULL, -1, &reply), "job.cancel answers OK for a queued job");
+    workshop_reply_destroy(&reply);
+    cJSON *ended = finish_job(&queued);
+    cJSON_Delete(ended);
+    workshop_reply_destroy(&queued);
+    check(command("job.cancel", "no-such-job", NULL, -1, &reply, &error) == URSATZ_ERR_NOT_FOUND, "job.cancel refuses a job that does not exist");
+    workshop_reply_destroy(&reply);
 }
 
 static void test_collections_and_links(void) {
@@ -233,6 +247,31 @@ static void test_projects_and_items(void) {
     snprintf(g_promoted, sizeof(g_promoted), "%s", str(member(reply.json, "item"), "id"));
     workshop_reply_destroy(&reply);
 
+    /* The recognition of the motif in its promoted variant links the variant as a form of it: its next version has `derived`. */
+    snprintf(params, sizeof(params), "{\"source\":{\"item\":\"%s\",\"version\":%d},\"target\":{\"item\":\"%s\",\"version\":%d}}", g_motif,
+             version_of(g_motif), g_promoted, version_of(g_promoted));
+    WorkshopReply recognized;
+    check(query("composer.recognize", params, &recognized, &error) == URSATZ_OK && cJSON_IsTrue(member(recognized.json, "found")),
+          "composer.recognize finds the motif in its promoted variant");
+    cJSON *link = cJSON_CreateObject();
+    cJSON *reference = cJSON_AddObjectToObject(link, "source");
+    cJSON_AddStringToObject(reference, "item", g_motif);
+    cJSON_AddNumberToObject(reference, "version", version_of(g_motif));
+    cJSON_AddItemToObject(link, "recognition", cJSON_Duplicate(recognized.json, true));
+    char *link_text = cJSON_PrintUnformatted(link);
+    cJSON_Delete(link);
+    workshop_reply_destroy(&recognized);
+    int linked_from = version_of(g_promoted);
+    check(run("item.link-form", g_promoted, link_text, linked_from, &reply) && version_of(g_promoted) == linked_from + 1 && journaled("item.link-form", g_promoted),
+          "item.link-form writes the next version of the target");
+    workshop_reply_destroy(&reply);
+    free(link_text);
+    snprintf(params, sizeof(params), "{\"id\":\"%s\"}", g_promoted);
+    check(query("item.get", params, &reply, &error) == URSATZ_OK &&
+              member(member(member(reply.json, "body"), "motif"), "derived") != NULL &&
+              !cJSON_IsNull(member(member(member(reply.json, "body"), "motif"), "derived")),
+          "the linked version has a derived member");
+    workshop_reply_destroy(&reply);
     check(command("item.link-form", g_promoted, "{\"source\":5}", version_of(g_promoted), &reply, &error) == URSATZ_ERR_REQUEST,
           "item.link-form refuses a source that is not a reference");
     workshop_reply_destroy(&reply);
@@ -244,6 +283,15 @@ static void test_projects_and_items(void) {
     workshop_reply_destroy(&reply);
     check(command("item.choose", g_motif, "{\"version\":1,\"set\":1,\"index\":0}", version_of(g_motif), &reply, &error) == URSATZ_ERR_REQUEST,
           "item.choose refuses an index of 0");
+    workshop_reply_destroy(&reply);
+    /* Its success path needs a variation set of a composed piece (the piece route test runs it); a motif has none. */
+    /* It is a job, and it ends refused: the item is a motif, not a piece (its answer is the job's 400, not a not-found). */
+    check(command("item.choose", g_motif, "{\"version\":9,\"set\":1,\"index\":1}", version_of(g_motif), &reply, &error) == URSATZ_OK,
+          "item.choose queues its job");
+    cJSON *choice = finish_job(&reply);
+    check(choice && num(choice, "http_status") == 400 && strcmp(str(member(choice, "result"), "error"), "the item is not a piece") == 0,
+          "item.choose on a motif ends its job refused: the item is not a piece");
+    cJSON_Delete(choice);
     workshop_reply_destroy(&reply);
 
     /* A theme that uses the motif, composed after the motif got a new version. */
@@ -265,6 +313,21 @@ static void test_projects_and_items(void) {
     check(run("item.delete", g_motif, "{\"force\":true}", version_of(g_motif), &reply) && journaled("item.delete", g_motif), "item.delete with force removes it and its variants");
     workshop_reply_destroy(&reply);
     check(run("project.delete", g_project, NULL, -1, &reply) == false, "project.delete of a project that still has items is refused");
+    workshop_reply_destroy(&reply);
+    /* An empty project is deleted, journaled, and gone from the list. */
+    check(run("project.create", NULL, "{\"name\":\"Empty\"}", -1, &reply), "an empty project is made");
+    char empty[64];
+    snprintf(empty, sizeof(empty), "%s", str(member(reply.json, "project"), "id"));
+    workshop_reply_destroy(&reply);
+    check(run("project.delete", empty, NULL, -1, &reply) && journaled("project.delete", empty), "project.delete removes an empty project and is journaled");
+    workshop_reply_destroy(&reply);
+    bool listed = false;
+    check(query("project.list", "{}", &reply, &error) == URSATZ_OK && cJSON_IsArray(member(reply.json, "projects")), "the projects are listed");
+    const cJSON *project = NULL;
+    cJSON_ArrayForEach(project, member(reply.json, "projects")) {
+        listed = listed || strcmp(str(project, "id"), empty) == 0;
+    }
+    check(!listed, "the deleted project is gone from project.list");
     workshop_reply_destroy(&reply);
 }
 
@@ -306,7 +369,7 @@ static void test_every_command_is_journaled(void) {
         "library.import", "library.update", "library.delete", "library.reanalyze", "collection.create", "collection.update", "collection.delete",
         "collection.add-pieces", "collection.remove-piece", "style.build", "style.rebuild", "style.delete", "links.run", "links.delete", "project.create",
         "project.update", "item.create", "item.update", "item.delete", "item.save", "item.reanalyze", "item.compose", "item.set-op-checks",
-        "item.save-variant", "item.flag", "item.promote", "item.reroll", "item.update-use", "subject.create", "subject.update", "subject.delete",
+        "item.save-variant", "item.flag", "item.promote", "item.reroll", "item.update-use", "item.link-form", "project.delete", "subject.create", "subject.update", "subject.delete",
         "subject.link-item", "subject.unlink-item", "subject.link-piece", "subject.unlink-piece", "subject.relate", "subject.unrelate"};
     int missing = 0;
     for (size_t i = 0; i < sizeof(kJournaled) / sizeof(kJournaled[0]); i++) {

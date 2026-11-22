@@ -20,7 +20,7 @@
 #include "../../tests/key_index_test_util.h"
 #include "ursatz_test.h"
 #include "chain_test_access.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * analysis_chain_run on four reference pieces (Bach 114, Mozart 545, Clementi 36 and Field 1 from tests/fixtures) against fixed expected

@@ -78,6 +78,44 @@ static void test_vocabulary(void) {
     CHECK(section_lane_name((SectionLane)SECTION_LANE_COUNT) == NULL && SECTION_LAYERS_ALL == 63u);
     CHECK(SECTION_LAYER_BIT(SECTION_LANE_BASS) == 8u);
 
+    /* Every value of the six small tables names itself and is found by its name; a value out of range has no name. */
+    static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
+    static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
+    static const char *const EXTENSION_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
+    static const char *const REASON_NAMES[] = {"given", "motive", "length"};
+    static const char *const FUNCTION_NAMES[] = {"transition", "retransition", "subordinate", "coda"};
+    static const char *const CONNECTIVE_NAMES[] = {NULL, "sometimes", "always"};
+    for (int v = 0; v < 3; v++) {
+        CHECK(strcmp(section_beginning_name((SectionBeginning)v), BEGINNING_NAMES[v]) == 0 &&
+              section_beginning_find(section_beginning_name((SectionBeginning)v), &beginning) && beginning == (SectionBeginning)v);
+        CHECK(strcmp(section_ending_name((SectionEnding)v), ENDING_NAMES[v]) == 0 &&
+              section_ending_find(section_ending_name((SectionEnding)v), &ending) && ending == (SectionEnding)v);
+        CHECK(strcmp(section_construction_reason_name((SectionConstructionReason)v), REASON_NAMES[v]) == 0 &&
+              section_construction_reason_find(section_construction_reason_name((SectionConstructionReason)v), &reason) &&
+              reason == (SectionConstructionReason)v);
+        if (CONNECTIVE_NAMES[v] == NULL) {
+            CHECK(section_connective_name((SectionConnective)v) == NULL);
+        } else {
+            CHECK(strcmp(section_connective_name((SectionConnective)v), CONNECTIVE_NAMES[v]) == 0 &&
+                  section_connective_find(CONNECTIVE_NAMES[v], &connective) && connective == (SectionConnective)v);
+        }
+    }
+    for (int v = 0; v < 4; v++) {
+        CHECK(strcmp(section_extension_kind_name((SectionExtensionKind)v), EXTENSION_NAMES[v]) == 0 &&
+              section_extension_kind_find(section_extension_kind_name((SectionExtensionKind)v), &extension) &&
+              extension == (SectionExtensionKind)v);
+        CHECK(strcmp(section_function_kind_name((SectionFunctionKind)v), FUNCTION_NAMES[v]) == 0 &&
+              section_function_kind_find(section_function_kind_name((SectionFunctionKind)v), &function) &&
+              function == (SectionFunctionKind)v);
+    }
+    CHECK(section_beginning_name((SectionBeginning)3) == NULL && section_beginning_name((SectionBeginning)-1) == NULL);
+    CHECK(section_ending_name((SectionEnding)3) == NULL && section_ending_name((SectionEnding)-1) == NULL);
+    CHECK(section_extension_kind_name((SectionExtensionKind)4) == NULL && section_extension_kind_name((SectionExtensionKind)-1) == NULL);
+    CHECK(section_construction_reason_name((SectionConstructionReason)3) == NULL &&
+          section_construction_reason_name((SectionConstructionReason)-1) == NULL);
+    CHECK(section_function_kind_name((SectionFunctionKind)4) == NULL && section_function_kind_name((SectionFunctionKind)-1) == NULL);
+    CHECK(section_connective_name((SectionConnective)3) == NULL && section_connective_name((SectionConnective)-1) == NULL);
+
     SectionDescription d;
     memset(&d, 0xAB, sizeof(d));
     section_description_init(&d);

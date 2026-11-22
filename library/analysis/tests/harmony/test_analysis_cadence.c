@@ -523,6 +523,7 @@ static void test_v_to_i6_on_a_downbeat_after_a_predominant_is_evaded(void) {
     const HarmonyCadenceResult *c = &found.items[0];
     assert(c->type == CADENCE_TYPE_SUBVERTED && c->arrival_first == 4);
     assert(c->alternative.arrival_first == 4 && c->alternative.arrival_last == 4);
+    /* A share is in parts of 1000: 800 is 80% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_PROLONGATION, 800);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -556,6 +557,7 @@ static void test_other_cadences_have_one_reading(void) {
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
     HarmonySegment *segments = NULL;
     HarmonyCadences found = find(&f, &segments, NULL);
+    /* A share is in parts of 1000: 1000 is 100% of the evidence for the reading. */
     assert(found.count == 1 && found.items[0].share == 1000 && !found.items[0].alternative.present);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -583,6 +585,7 @@ static void test_a_long_boundary_dominant_with_a_soprano_rest_is_a_half_cadence(
     assert(c->type == CADENCE_TYPE_HALF && c->arrival_first == 4 && c->arrival_last == 7);
     assert(c->alternative.type == CADENCE_TYPE_IMPERFECT_AUTHENTIC && c->alternative.arrival_first == 8 &&
            c->alternative.soprano_degree == 3);
+    /* A share is in parts of 1000: 800 is 80% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 800);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -606,6 +609,7 @@ static void test_a_short_boundary_dominant_into_a_pac_shape_is_authentic(void) {
     assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->arrival_first == 4 && c->dominant_first == 3);
     assert(c->alternative.type == CADENCE_TYPE_HALF && c->alternative.arrival_first == 3 &&
            c->alternative.arrival_last == 3);
+    /* A share is in parts of 1000: 750 is 75% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 750);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -627,6 +631,7 @@ static void test_a_tied_boundary_keeps_the_half_cadence_primary(void) {
     assert(found.count == 1);
     const HarmonyCadenceResult *c = &found.items[0];
     assert(c->type == CADENCE_TYPE_HALF && c->arrival_first == 2 && c->alternative.arrival_first == 4);
+    /* A share is in parts of 1000: 500 is 50% of the evidence for the reading. */
     check_readings(c, HARMONY_CADENCE_READING_CADENCE, HARMONY_CADENCE_READING_CADENCE, 500);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
@@ -655,7 +660,41 @@ static void test_a_boundary_without_a_soprano_offers_an_unspecified_authentic_re
     fixture_destroy(&f);
 }
 
+/* The chord tests and the arrival rule the cadence adapter shares: V and I in root position, the arrival run of IV V I, and the weak
+   arrival that is switched off. */
+static void test_chord_tests_and_the_arrival_rule(void) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 2 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 3 (medium) */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 1, 3, 1);   /* I6, beat 4 */
+    HarmonySegment *segments = NULL;
+    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
+    assert(!harmony_cadence_is_dominant_root(&segments[0]) && harmony_cadence_is_dominant_root(&segments[1]));
+    assert(!harmony_cadence_is_dominant_root(&segments[2]) && !harmony_cadence_is_dominant_root(&segments[3]));
+    assert(!harmony_cadence_is_tonic_root(&segments[0]) && !harmony_cadence_is_tonic_root(&segments[1]));
+    assert(harmony_cadence_is_tonic_root(&segments[2]));
+    assert(!harmony_cadence_is_tonic_root(&segments[3])); /* inverted */
+    HarmonyCadenceConfig config = harmony_cadence_config_default();
+    assert(harmony_cadence_is_arrival(segments, 3, 1, 2, 2, &config)); /* the I of IV V I: a medium beat, the end of the piece */
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+
+    /* V on beat 1 and I on beat 2: a weak arrival, which is one unless it is switched off. */
+    fixture_init(&f);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
+    assert(harmony_cadence_is_arrival(segments, 2, 0, 1, 1, &config));
+    config.allow_weak_arrival = false;
+    assert(!harmony_cadence_is_arrival(segments, 2, 0, 1, 1, &config));
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
 int main(void) {
+    test_chord_tests_and_the_arrival_rule();
     test_authentic_v_to_i_on_a_strong_enough_beat();
     test_pac_iac_by_the_soprano();
     test_soprano_absent_is_authentic_unclassified_with_a_penalty();

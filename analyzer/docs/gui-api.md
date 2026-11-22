@@ -72,6 +72,6 @@ with no time signature); the GUI shows the meter as inferred then.
 
 ## Tests
 
-`test_playback` and `test_score_export` compare the five reference pieces (MIDI) and `tests/musicxml/pickup.musicxml`
+`test_playback` and `test_score_export` compare the five reference pieces (MIDI) and `tests/fixtures/scores/pickup.musicxml`
 and `field-5.musicxml` against `tests/snapshots/gui/<stem>.playback.json` and `.musicxml`
 (`cmake --build build --target update-goldens` rewrites them). Their `_smoke` runs (Bach 114 and pickup) and valgrind runs are quick.

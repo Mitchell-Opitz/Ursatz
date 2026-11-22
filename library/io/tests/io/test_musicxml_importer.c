@@ -21,6 +21,11 @@
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 
+
+/* Tempos are microseconds per quarter note, 60,000,000 / bpm. */
+#define TEMPO_120_BPM 500000 /* 120 bpm */
+#define TEMPO_60_BPM 1000000 /* 60 bpm */
+
 /*
  * MusicXMLImporter tests. Each mapping rule has a small hand-written fixture under tests/fixtures/musicxml/
  * (URSATZ_MUSICXML_DIR is passed in by CMake); small error cases are inline documents. Times are checked as exact
@@ -597,10 +602,12 @@ static void test_tempo_and_metronome(void) {
     const TempoMapRegion *second = tempo_map_region(import.tempo_map, 1);
     const TempoMapRegion *third = tempo_map_region(import.tempo_map, 2);
     assert_time_value(tempo_map_region_start(first), 0, 1);
+    /* 625000 microseconds per quarter is 96 bpm (60,000,000 / 96). */
     assert(tempo_map_region_microseconds_per_quarter(first) == 625000);
     assert_time_value(tempo_map_region_start(second), 1, 1);
-    assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
+    assert(tempo_map_region_microseconds_per_quarter(second) == TEMPO_60_BPM);
     assert_time_value(tempo_map_region_start(third), 3, 1);
+    /* 648649 is a dotted-quarter metronome of 61.67 (92.5 quarters a minute), 60,000,000 / 92.5 rounded. */
     assert(tempo_map_region_microseconds_per_quarter(third) == 648649);
     /* the markings: "Allegro" with its metronome in measure 1, and the dotted-quarter metronome alone in measure 3 */
     assert(import.tempo_marking_count == 2);
@@ -629,7 +636,7 @@ static void test_tempo_and_metronome(void) {
 static void test_no_tempo_is_a_defaulted_map(void) {
     MusicXmlImport import = import_fixture("chords_backup.musicxml");
     assert(tempo_map_is_defaulted(import.tempo_map) && tempo_map_region_count(import.tempo_map) == 1);
-    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == 500000);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == TEMPO_120_BPM);
     assert(import.tempo_marking_count == 0 && import.dynamics_count == 0);
     musicxml_import_destroy(&import);
 }
@@ -675,14 +682,14 @@ static void test_tempo_edge_cases(void) {
                        &import) == MUSICXML_IMPORT_OK);
     assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "disagree") != NULL);
     assert(tempo_map_region_count(import.tempo_map) == 1);
-    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == 500000);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == TEMPO_120_BPM);
     musicxml_import_destroy(&import);
     /* a tempo that starts after 0 leaves a defaulted region before it */
     assert(import_text(DOC(DIV4 NOTE("C", "4", "4", "") "<sound tempo=\"60\"/>" NOTE("D", "4", "4", "")), &import) ==
            MUSICXML_IMPORT_OK);
     assert(tempo_map_region_count(import.tempo_map) == 2);
-    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == 500000);
-    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 1)) == 1000000);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 0)) == TEMPO_120_BPM);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo_map, 1)) == TEMPO_60_BPM);
     musicxml_import_destroy(&import);
 }
 

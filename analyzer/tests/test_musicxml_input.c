@@ -17,7 +17,7 @@
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
  * scores, notated pitch spelling, and every error case. The scores are the
- * small hand-written fixtures in tests/musicxml.
+ * small hand-written fixtures in tests/fixtures/scores.
  */
 
 static char fixture_path[512];
@@ -237,7 +237,7 @@ static void test_errors(void) {
     expect_failure(musicxml("timewise.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_FORMAT);
     expect_failure(musicxml("empty-score.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_EMPTY_SCORE);
     expect_failure(musicxml("pickup.mxl"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_COMPRESSED);
-    expect_failure(musicxml("README.md"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_UNKNOWN_FORMAT);
+    expect_failure(musicxml("../README.md"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_UNKNOWN_FORMAT);
     expect_failure("/nowhere/missing.musicxml", IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_IO);
     expect_failure("/nowhere/missing.mid", IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_IO);
 

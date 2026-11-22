@@ -9,7 +9,7 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "io/tests/io/midi_import_split.h"
 #include "tests/key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The default config with the snapshot's materials: the key regions estimate has none of its own. */
 static const CommonPracticeKeyRegionsConfig *default_config(void) {

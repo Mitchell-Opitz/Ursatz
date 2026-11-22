@@ -124,7 +124,22 @@ static void test_no_prolongation_when_the_interior_is_not_explained(void) {
     fixture_destroy(&f);
 }
 
+/* The names of the five reasons are distinct words; a value that is not a reason has none. */
+static void test_reason_names(void) {
+    static const char *const NAMES[HARMONY_PROLONGATION_REASON_COUNT] = {"passing-six-four", "neighbor-six-four",
+                                                                          "arpeggiating-six-four", "tonic-line", "applied"};
+    for (int r = 0; r < HARMONY_PROLONGATION_REASON_COUNT; r++) {
+        assert(strcmp(harmony_prolongation_reason_name((HarmonyProlongationReason)r), NAMES[r]) == 0);
+        for (int other = r + 1; other < HARMONY_PROLONGATION_REASON_COUNT; other++) {
+            assert(strcmp(NAMES[r], NAMES[other]) != 0);
+        }
+    }
+    assert(harmony_prolongation_reason_name(HARMONY_PROLONGATION_REASON_COUNT) == NULL);
+    assert(harmony_prolongation_reason_name((HarmonyProlongationReason)-1) == NULL);
+}
+
 int main(void) {
+    test_reason_names();
     test_tonic_prolongation_through_a_passing_six_four();
     test_tonic_line();
     test_dominant_prolongation_through_a_neighbor_six_four();

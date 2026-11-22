@@ -12,7 +12,7 @@
 #include "theory/tonality/chord_vocabulary.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "model/time/musical_time.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* Builders for the chord candidates and keys the adapter reads. They stand in for a producer such as
    common-practice-minimal, which standard-tonality does not include. */

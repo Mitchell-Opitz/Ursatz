@@ -17,7 +17,9 @@ HarmonyResolutionConfig harmony_resolution_config_default(void) {
     return config;
 }
 
-bool harmony_voice_cell_semitone(const HarmonyVoiceCell *cell, long *out) {
+/* The semitone of a present cell, or false (*out untouched) for a cell with no usable pitch (no pitch and no spelling, or a
+   position that is not a whole semitone). */
+static bool harmony_voice_cell_semitone(const HarmonyVoiceCell *cell, long *out) {
     if (cell == NULL || out == NULL) {
         return false;
     }

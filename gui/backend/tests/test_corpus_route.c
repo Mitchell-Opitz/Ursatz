@@ -12,14 +12,9 @@
 #include <string.h>
 
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include "support/server_support.h"
 #include "ursatz_check.h"
@@ -80,11 +75,7 @@ static bool extract_id(const char *response, char *out, size_t out_size) {
 }
 
 static void reset_directories(void) {
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache 2> nul");
-#else
   system("rm -rf library settings cache");
-#endif
 }
 
 /* A piece the routes can see: pieces/<id>/meta.json. */

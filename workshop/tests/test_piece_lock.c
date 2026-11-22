@@ -12,21 +12,6 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <windows.h>
-typedef HANDLE thread_t;
-typedef DWORD thread_result_t;
-#define THREAD_CALL WINAPI
-#define THREAD_RETURN 0
-static bool thread_start(thread_t *thread, thread_result_t(THREAD_CALL *fn)(void *), void *arg) {
-  *thread = CreateThread(NULL, 0, fn, arg, 0, NULL);
-  return *thread != NULL;
-}
-static void thread_join(thread_t thread) {
-  WaitForSingleObject(thread, INFINITE);
-  CloseHandle(thread);
-}
-#else
 #include <pthread.h>
 typedef pthread_t thread_t;
 typedef void *thread_result_t;
@@ -38,7 +23,6 @@ static bool thread_start(thread_t *thread, thread_result_t (*fn)(void *), void *
 static void thread_join(thread_t thread) {
   pthread_join(thread, NULL);
 }
-#endif
 
 #include <cJSON.h>
 

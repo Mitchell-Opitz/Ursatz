@@ -130,6 +130,24 @@ static void test_a_held_note_is_one_note_id_and_a_spelling_wins(void) {
     test_grid_destroy(&g);
 }
 
+/* The cell of a segment and voice: NULL for a rest, out of range and a NULL grid. */
+static void test_grid_cell(void) {
+    const int r[][TEST_GRID_MAX_VOICES] = {{72, 60}, {74, 0}}; /* the lower voice rests in the second segment */
+    TestGrid g;
+    test_grid_init(&g, 2, 2, r);
+    StandardCounterpointPreparedGrid prepared;
+    assert(standard_counterpoint_grid_prepare(&g.grid, &prepared) == STANDARD_COUNTERPOINT_GRID_OK);
+    const StandardCounterpointVoiceCell *cell = standard_counterpoint_grid_cell(&prepared, 0, 0);
+    assert(cell != NULL && cell->present && strcmp(cell->note_id, "n0-0") == 0);
+    assert(standard_counterpoint_grid_cell(&prepared, 1, 0) != NULL);
+    assert(standard_counterpoint_grid_cell(&prepared, 1, 1) == NULL);  /* the rest */
+    assert(standard_counterpoint_grid_cell(&prepared, 2, 0) == NULL);  /* no such segment */
+    assert(standard_counterpoint_grid_cell(&prepared, 0, 2) == NULL);  /* no such voice */
+    assert(standard_counterpoint_grid_cell(NULL, 0, 0) == NULL);
+    standard_counterpoint_grid_destroy(&prepared);
+    test_grid_destroy(&g);
+}
+
 static void test_a_bad_grid_is_rejected(void) {
     StandardCounterpointPreparedGrid prepared;
     StandardCounterpointVoiceGrid empty = {0, 0, NULL, NULL};
@@ -142,6 +160,7 @@ int main(void) {
     test_every_pair_of_consecutive_segments_and_rests();
     test_motion_and_uncertainty();
     test_a_held_note_is_one_note_id_and_a_spelling_wins();
+    test_grid_cell();
     test_a_bad_grid_is_rejected();
     printf("standard-counterpoint analysis motion: all tests passed\n");
     return 0;

@@ -9,7 +9,7 @@
 #include "reading/reading_json.h"
 #include "realization/realization_json.h"
 #include "realization/work.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The reading builder (R-629): Bach 114 and Mozart 545 imported, realized (R-628) and run through the chain with every stage: the claim

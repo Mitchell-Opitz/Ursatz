@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "theory/tonality/roman_numeral_grammar.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 typedef StandardTonalityNumeralText Text;
 #define Q(name) STANDARD_TONALITY_NUMERAL_##name

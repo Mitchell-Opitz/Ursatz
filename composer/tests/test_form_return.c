@@ -20,7 +20,7 @@
  * invented motive, seeds 1 to 5. A section that returns an earlier one is given its material instead of being grown
  * afresh.
  *
- *   smoke        rounded binary 24 bars, seed 1: A' is A, shifted (quick)
+ *   smoke        rounded binary 24 bars, seed 1: A' is A, shifted (quick); the helpers the checks read (form_return_source and the numerals)
  *   exact        rounded binary (also with an accompaniment) and layered: every return has the nodes and the
  *                harmony, bass, melody and inner voices of the section it returns, shifted by the time between them
  *   ornament     variations (3): variations 1 and 3 keep every note of the theme, add only passing and neighbor tones
@@ -936,6 +936,14 @@ static void check_home(const Plan *plan, NodeId source, NodeId section, const Ho
     assert(back && back->section == source &&
            back->variation == SECTION_RETURN_REHARMONIZE && back->across_modes);
     assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
+    /* In the minor rows B is in a major key and its return is copied into the minor: a change of mode; in the major rows B and B1 are both major. */
+    const PitchMaterial *home_material = NULL;
+    bool changes = form_return_mode_change(plan, section, &home_material);
+    assert(changes == (row->mode == HARMONY_MODE_MINOR));
+    if (changes) {
+        /* the mode the copy goes to is the mode of the home keys */
+        assert(home_material && strcmp(home_material->name, test_material_mode(row->mode)->name) == 0);
+    }
     assert(keys_under(plan, source, &source_key, 1) == 1);
     size_t key_count = keys_under(plan, section, keys, 32);
     for (size_t i = 0; i < key_count; i++) {
@@ -1016,10 +1024,56 @@ static int test_home(void) {
     return failed;
 }
 
+/*
+ * The helpers the return checks read, on the rounded binary of 24 bars (A, B, A' returning A exactly): before composing A' names the section
+ * it returns and how, A names none; once composed the chords that end A' are the chords that end A, and the chords at the edges of A and
+ * A' are equal; and nothing is copied into another mode.
+ */
+static int test_helpers(void) {
+    PieceRequest request = request_of("rounded-binary", 24, 0, false);
+    Plan *plan = NULL;
+    ComposeConfig config;
+    ComposeOutcome outcome;
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    assert(piece_build_plan(&request, &plan) == PIECE_OK && plan);
+    size_t count = sections_of(plan, sections);
+    assert(count == 3);
+    NodeId source = PLAN_NODE_NONE;
+    SectionReturnVariation variation = SECTION_RETURN_REHARMONIZE;
+    assert(form_return_source(plan, sections[2], &source, &variation) && source == sections[0] && variation == SECTION_RETURN_EXACT);
+    assert(!form_return_source(plan, sections[0], &source, &variation));
+    memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
+    config.seed = 1;
+    assert(compose_run(plan, &config, &outcome) == PIECE_OK);
+    compose_outcome_destroy(&outcome);
+    /* The chords of the last quarter of A and of A' are the same, and not empty. */
+    char from[64] = "";
+    char to[64] = "";
+    assert(form_return_cadence_numerals(plan, sections[2], from, to, sizeof(from)));
+    assert(from[0] != '\0' && strcmp(from, to) == 0);
+    assert(!form_return_cadence_numerals(plan, sections[2], from, to, 1));
+    assert(!form_return_cadence_numerals(plan, sections[0], from, to, sizeof(from)));
+    /* The first and the last chord of A and of A' are the same; a buffer below a numeral's size is refused. */
+    char first[PLAN_ROMAN_NUMERAL_MAX] = "";
+    char last[PLAN_ROMAN_NUMERAL_MAX] = "";
+    char again_first[PLAN_ROMAN_NUMERAL_MAX] = "";
+    char again_last[PLAN_ROMAN_NUMERAL_MAX] = "";
+    assert(form_return_edge_numerals(plan, sections[0], first, last, sizeof(first)));
+    assert(form_return_edge_numerals(plan, sections[2], again_first, again_last, sizeof(again_first)));
+    assert(first[0] != '\0' && last[0] != '\0' && strcmp(first, again_first) == 0 && strcmp(last, again_last) == 0);
+    assert(!form_return_edge_numerals(plan, sections[0], first, last, PLAN_ROMAN_NUMERAL_MAX - 1));
+    /* An exact return stays in A's keys. */
+    const PitchMaterial *material = NULL;
+    assert(!form_return_mode_change(plan, sections[2], &material));
+    plan_destroy(plan);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     const char *mode = argc > 1 ? argv[1] : "";
     if (strcmp(mode, "smoke") == 0) {
-        return test_exact(true);
+        return test_exact(true) | test_helpers();
     }
     if (strcmp(mode, "exact") == 0) {
         return test_exact(false);

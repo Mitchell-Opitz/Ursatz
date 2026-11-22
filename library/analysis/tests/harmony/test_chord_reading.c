@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/harmony/chord_reading.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Chord readings (chord_reading.h): a sonority read on a root gives the snapshot's chord type for the nine embedded types, the members by

@@ -79,7 +79,22 @@ static void test_commonality(void) {
     assert(c == STANDARD_FORM_COMMONALITY_COUNT);
 }
 
+/* The inverse of the names: every commonality is found by its name; anything else is not, and leaves the output alone. */
+static void test_commonality_from_name(void) {
+    for (int i = 0; i < STANDARD_FORM_COMMONALITY_COUNT; i++) {
+        StandardFormCommonality found = STANDARD_FORM_COMMONALITY_COUNT;
+        assert(standard_form_commonality_from_name(standard_form_commonality_name((StandardFormCommonality)i), &found));
+        assert(found == (StandardFormCommonality)i);
+    }
+    StandardFormCommonality untouched = STANDARD_FORM_COMMONALITY_OCCASIONAL;
+    assert(!standard_form_commonality_from_name("common", &untouched) && untouched == STANDARD_FORM_COMMONALITY_OCCASIONAL);
+    assert(!standard_form_commonality_from_name("", &untouched) && !standard_form_commonality_from_name(NULL, &untouched));
+    assert(!standard_form_commonality_from_name("rare", NULL));
+    assert(untouched == STANDARD_FORM_COMMONALITY_OCCASIONAL);
+}
+
 int main(void) {
+    test_commonality_from_name();
     test_commonality_names();
     test_pairing_form();
     test_commonality();

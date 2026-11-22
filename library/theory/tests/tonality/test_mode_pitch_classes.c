@@ -3,7 +3,7 @@
 
 #include "theory/tonality/tonal_key.h"
 
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The four tonal materials by index: major, natural minor, harmonic minor, melodic minor; NULL for another index. */
 enum { TEST_MODE_MAJOR, TEST_MODE_NATURAL_MINOR, TEST_MODE_HARMONIC_MINOR, TEST_MODE_MELODIC_MINOR };

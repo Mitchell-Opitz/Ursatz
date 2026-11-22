@@ -4,7 +4,7 @@
 
 #include "analysis/motive/motive_relation.h"
 #include "theory/vocabulary/non_chord_tone.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Motive relation parameter metadata: every kind and index, names equal motive_relation_param_name, ranges and

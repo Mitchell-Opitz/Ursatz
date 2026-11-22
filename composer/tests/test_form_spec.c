@@ -224,11 +224,15 @@ static const FormRow FORMS[] = {
 static void test_builtin_forms(void) {
     /* The forms that come in sizes, then the game loop, whose sections the request gives (P44 B5). */
     assert(form_spec_builtin_count() == FORM_COUNT + 1 && strcmp(form_spec_builtin_name(FORM_COUNT), "game-loop") == 0);
+    /* The game loop's plan is named "structure"; past the last form there is no name. */
+    assert(strcmp(form_spec_builtin_plan_name(FORM_COUNT), "structure") == 0 && form_spec_builtin_plan_name(FORM_COUNT + 1) == NULL);
     for (size_t f = 0; f < FORM_COUNT; f++) {
         const FormRow *row = &FORMS[f];
         /* Registry order, and a document that is its file's name. */
         assert(strcmp(form_spec_builtin_name(f), row->name) == 0);
         assert(form_spec_builtin_document(f) != NULL);
+        /* The plan's name of a form is its own, before it is parsed. */
+        assert(strcmp(form_spec_builtin_plan_name(f), row->name) == 0);
         FormSpec *form = builtin(row->name);
         assert(strcmp(form->name, row->name) == 0 && strcmp(form->plan_name, row->name) == 0 && form->label[0] != '\0');
         assert(form->closing == row->closing && form->accompaniment_required == row->accompaniment_required);

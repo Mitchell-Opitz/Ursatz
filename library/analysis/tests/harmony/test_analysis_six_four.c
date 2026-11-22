@@ -28,6 +28,12 @@ static void test_cadential(void) {
     assert(segments[2].chord.cadential);
     expect(&results[2], SIX_FOUR_TYPE_CADENTIAL);
     assert(!results[3].is_six_four);
+    /* Marking again changes nothing (idempotent), and a cleared flag is set again by the call alone. */
+    harmony_analysis_mark_cadential(segments, f.count);
+    assert(segments[2].chord.cadential && !segments[0].chord.cadential && !segments[3].chord.cadential);
+    segments[2].chord.cadential = false;
+    harmony_analysis_mark_cadential(segments, f.count);
+    assert(segments[2].chord.cadential);
     harmony_six_four_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -43,6 +49,8 @@ static void test_i64_on_a_weaker_beat_than_the_v_is_not_cadential(void) {
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 2);  /* V on beat 1 of the next measure (strong) */
     HarmonySegment *segments = NULL;
     HarmonySixFourResult *results = classify(&f, &segments);
+    assert(!segments[3].chord.cadential);
+    harmony_analysis_mark_cadential(segments, f.count); /* a weaker beat than the V: still not marked */
     assert(!segments[3].chord.cadential);
     assert(results[3].is_six_four && !results[3].classified);
     harmony_six_four_results_destroy(results, f.count);

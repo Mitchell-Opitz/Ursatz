@@ -32,7 +32,18 @@ static void test_generic_size_of_semitones(void) {
     assert(standard_tonality_generic_size_of_semitones(24) == 15);
 }
 
+/* A step is a second; a leap is a third or larger, compound included; a unison is neither. */
+static void test_step_and_leap(void) {
+    for (int size = 1; size <= 15; size++) {
+        const StandardTonalityInterval interval = standard_tonality_interval_of_size(size);
+        assert(standard_tonality_interval_is_step(&interval) == (size == 2));
+        assert(standard_tonality_interval_is_leap(&interval) == (size >= 3));
+    }
+    assert(!standard_tonality_interval_is_step(NULL) && !standard_tonality_interval_is_leap(NULL));
+}
+
 int main(void) {
+    test_step_and_leap();
     test_interval_of_size();
     test_generic_size_of_semitones();
     printf("test_interval: ok\n");

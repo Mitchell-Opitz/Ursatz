@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive/motive_link.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * motive_link_candidates (the nearest few in other pieces, gated, as unordered pairs) and motive_link_groups

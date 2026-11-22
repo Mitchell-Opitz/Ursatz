@@ -1,6 +1,9 @@
 # The tests are white-box: they see the internal headers and the libraries the sources use.
 link_libraries(ursatz_composer_internal)
 
+# The shared knowledge helper the tests' own support header includes (tests/support/ursatz_test_knowledge.h).
+include_directories(${CMAKE_SOURCE_DIR}/tests/support)
+
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Helpers the tests share (tests/support).
@@ -69,6 +72,8 @@ ursatz_test(test_render_plan LIBS ursatz_composer_engine composer_test_support D
 add_dependencies(test_render_plan ursatz)
 
 ursatz_test(test_fill_loop LIBS ursatz_composer_engine composer_test_support)
+# The registrations and the checkers of the operators the stages hand the fill loop.
+ursatz_test(test_operator_hooks LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test(test_candidate LIBS ursatz_composer_engine)
 
@@ -93,6 +98,9 @@ add_dependencies(test_progression_cli ursatz)
 
 ursatz_test(test_motive LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# The motive tones: the base harmony, the tones constraint, the bar limit, the tone names and the chord numerals.
+ursatz_test(test_motive_tones LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_motive_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
@@ -110,12 +118,14 @@ ursatz_test(test_develop_cli LIBS ursatz_composer_engine composer_test_support
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_develop_cli ursatz)
 
-ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support)
+ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support LABELS slow)
+ursatz_test(test_melody_fill_smoke TARGET test_melody_fill ARGS smoke)
 
 ursatz_test(test_preferences LIBS ursatz_composer_engine cjson composer_test_support)
 
 ursatz_test(test_melody_preferences LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_melody_preferences_smoke TARGET test_melody_preferences ARGS smoke)
 
 ursatz_test(test_motif_variety LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
@@ -123,7 +133,8 @@ ursatz_test(test_melody_overrides LIBS ursatz_composer_engine composer_test_supp
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_motif_preferences LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_motif_preferences_smoke TARGET test_motif_preferences ARGS smoke)
 
 ursatz_test(test_form_hear LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -134,7 +145,7 @@ ursatz_test(test_hearing_reading LIBS ursatz_composer_engine composer_test_suppo
 
 ursatz_test(test_harmony_prolong LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-# Measured 12.0 s of CPU, over the 10 s fast-set limit.
+# Slow: about 12 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_grow_sentence LIBS ursatz_composer_engine composer_test_support LABELS slow)
 # Seed 1 alone, in every scenario and size, with every check of one seed (B11 of P56).
 ursatz_test(test_grow_sentence_smoke TARGET test_grow_sentence ARGS smoke)
@@ -143,8 +154,8 @@ ursatz_test(test_grow_sentence_smoke TARGET test_grow_sentence ARGS smoke)
 ursatz_test(test_grow_half_cadence LIBS ursatz_composer_engine)
 
 # The share of grown sentences standard-form hears as a sentence is below 100% (measured, with the cause, in docs/grow.md):
-# the test asserts all of them are, so it fails, and the failure is expected. Not tuned away, not skipped.
-ursatz_test(test_grow_sentence_heard LIBS ursatz_composer_engine composer_test_support PROPERTIES WILL_FAIL TRUE)
+# the test holds it to the baseline table in its source and prints the target (R-698).
+ursatz_test(test_grow_sentence_heard LIBS ursatz_composer_engine composer_test_support)
 ursatz_test(test_theme_shape LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test(test_grow_layout LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test_executable(test_grow_uneven LIBS ursatz_composer_engine composer_test_support)
@@ -165,8 +176,12 @@ foreach(beginning RANGE 2)
     foreach(ending RANGE 2)
         list(GET GROW_BEGINNINGS ${beginning} beginning_name)
         list(GET GROW_ENDINGS ${ending} ending_name)
+        # Each pairing writes its plans and heard.txt in its own folder; test_grow_period_heard reads them.
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/grow_period_${beginning_name}_${ending_name})
         ursatz_test(test_grow_period_${beginning_name}_${ending_name} TARGET test_grow_period
-            ARGS ${beginning} ${ending})
+            ARGS ${beginning} ${ending}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/grow_period_${beginning_name}_${ending_name}
+            PROPERTIES FIXTURES_SETUP grow_period_${beginning_name}_${ending_name})
     endforeach()
 endforeach()
 ursatz_test_executable(test_grow_period_heard LIBS ursatz_composer_engine composer_test_support)
@@ -176,20 +191,17 @@ foreach(beginning RANGE 2)
         list(GET GROW_ENDINGS ${ending} ending_name)
         # A presentation and a continuation is the sentence, heard by test_grow_sentence_heard.
         if(NOT (beginning EQUAL 0 AND ending EQUAL 0))
-            # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
-            # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
-            # The compound basic idea and a continuation was heard in every run (the motive-forms) until the Analyzer heard
-            # the plan: 38 of 40, and again 40 of 40 since P36 B1 (every idea is the step its ref names), so its test passed
-            # until P61 B6, which hears on harmonic spans (R-618): 32 of 40, so its test fails too (the antecedent and a
-            # consequent, the period, went from 38 to 32 of 40).
-            set(expected_failure WILL_FAIL TRUE)
+            # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test holds the
+            # shares to the baseline table in its source and prints the target (R-698).
             ursatz_test(test_grow_period_heard_${beginning_name}_${ending_name} TARGET test_grow_period_heard
-                ARGS ${beginning} ${ending} PROPERTIES ${expected_failure})
+                ARGS ${beginning} ${ending}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/grow_period_${beginning_name}_${ending_name}
+                PROPERTIES FIXTURES_REQUIRED grow_period_${beginning_name}_${ending_name})
         endif()
     endforeach()
 endforeach()
 
-# Measured 11.6 s of CPU, over the 10 s fast-set limit.
+# Slow: about 17 s at -j4 (2026-11-21).
 ursatz_test(test_grow_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
@@ -200,28 +212,27 @@ ursatz_test(test_accompaniment LIBS ursatz_composer_engine composer_test_support
 
 ursatz_test_executable(test_grow_accompaniment LIBS ursatz_composer_engine composer_test_support
     INCLUDES ${PROJECT_SOURCE_DIR}/src)
-# Measured 13.5 s of CPU, over the 10 s fast-set limit.
+# Slow: about 9 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_grow_accompaniment TARGET test_grow_accompaniment LABELS slow)
 # Seed 1 alone, with every check of one theme (B11 of P56).
 ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS smoke)
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
-# in docs/accompaniment.md): the test asserts that it does, so it fails, and the failure is expected. Not tuned away, not
-# skipped.
-ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard PROPERTIES WILL_FAIL TRUE)
+# in docs/accompaniment.md): the test holds the share to the baseline in its source and prints the target (R-698).
+ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard)
 
 ursatz_test(test_voicing LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test_executable(test_voicing_heard LIBS ursatz_composer_engine composer_test_support)
 ursatz_test(test_voicing_heard_chorale TARGET test_voicing_heard ARGS chorale)
-# The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md):
-# the voicing test asserts that it is, so it fails, and the failure is expected. Not tuned away, not skipped. The chorale
-# test heard all 30 themes clean once the shaping preferences (P16 B4) changed the chords chosen, so it passes.
-ursatz_test(test_voicing_heard_voicing TARGET test_voicing_heard ARGS voicing PROPERTIES WILL_FAIL TRUE)
+# The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md): the
+# voicing test holds the counts to the baseline in its source and prints the target (R-698). The chorale test heard all 30
+# themes clean once the shaping preferences (P16 B4) changed the chords chosen, and keeps its rule.
+ursatz_test(test_voicing_heard_voicing TARGET test_voicing_heard ARGS voicing)
 
 ursatz_test_executable(test_counterpoint LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 foreach(species 1 2 3 4)
     set(labels)
-    # Species 3 measured 26.9 s of CPU, over the 10 s fast-set limit.
+    # Species 3 is slow: about 19 s at -j4 (2026-11-21).
     if(species EQUAL 3)
         set(labels slow)
     endif()
@@ -289,7 +300,7 @@ ursatz_test_executable(test_piece_keys LIBS ursatz_composer_engine composer_test
 # The plans and a quick compose run, and for each template the compose sweep (seeds 1 to 10, C major and A minor).
 ursatz_test(test_piece_keys_plan TARGET test_piece_keys ARGS plan)
 ursatz_test(test_piece_keys_smoke TARGET test_piece_keys ARGS smoke)
-# The tonic major case composes 20 pieces of 56 bars in 16 s of CPU, over the 10 s fast-set limit.
+# Slow: about 15 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_piece_keys_tonic_major TARGET test_piece_keys ARGS tonic-major LABELS slow)
 # Seed 1 alone in A minor and C major (B11 of P56).
 ursatz_test(test_piece_keys_tonic_major_smoke TARGET test_piece_keys ARGS tonic-major smoke)
@@ -329,8 +340,8 @@ endforeach()
 ursatz_test_executable(test_form_return LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Returning sections (form_return.h): the smoke test is quick; the others compose a few pieces each.
-# Reregister measured 14.6 s of CPU, embellish 16 s (20 pieces composed) and setting 41 s (85 pieces), over the 10 s fast-set limit.
-# Home (R-524) composes four rows of 10 seeds, tried again from the next seeds, in about 1 s a try.
+# Slow at -j4 (2026-11-21): reregister about 10 s, embellish 14 s, setting 36 s and home 35 s (R-524: four rows of 10 seeds, tried again from the next
+# seeds, in about 1 s a try); the smoke runs every PR.
 set(SLOW_RETURN_MODES embellish setting reregister home)
 foreach(mode smoke exact ornament reharmonize varied embellish setting reregister home)
     set(labels)
@@ -343,7 +354,7 @@ endforeach()
 ursatz_test_executable(test_form_figure LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # The figurate return (form_figure.h): the smoke test is quick; the sweep composes 50 pieces.
-# The sweep composed 50 pieces in 22 s of CPU and the parallel case 40 in 13 s, over the 10 s fast-set limit.
+# Slow at -j4 (2026-11-21): the sweep about 11 s and the parallel case 8 s; the smoke runs every PR.
 foreach(mode smoke sweep parallel)
     set(labels)
     if(NOT mode STREQUAL "smoke")
@@ -355,10 +366,10 @@ endforeach()
 ursatz_test_executable(test_return_heard LIBS ursatz_composer_engine composer_test_support)
 # The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
 ursatz_test(test_return_heard_smoke TARGET test_return_heard ARGS smoke)
-# Measured 20.8 s of CPU, over the 10 s fast-set limit.
+# The heard run is slow: about 8 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_return_heard_heard TARGET test_return_heard ARGS heard LABELS slow)
 
-# Measured 24.6 s of CPU, over the 10 s fast-set limit.
+# Slow: about 12 s at -j4 (2026-11-21).
 ursatz_test(test_plan_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
@@ -366,6 +377,8 @@ add_dependencies(test_plan_cli ursatz)
 
 # Chords given at exact onsets (given.h plan_give_chords).
 ursatz_test(test_given_chords LIBS ursatz_composer_engine)
+# The regions and the given harmony of piece.h, and its name tables and basic idea.
+ursatz_test(test_piece_regions LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test_executable(test_middle_out LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Given material (given.h): the placing calls and a quick run are quick; the sweeps (seeds 1 to 10) fail when a share
@@ -408,9 +421,12 @@ endforeach()
 ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
 
-# The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
-# from the sonatina folder with the Analyzer (about 30 s in a Debug build).
-foreach(case smoke overrides style_folder)
+# The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The motifs case runs the motifs and
+# settings sections, the themes case the themes from a generated motif, a motif file and triplets, the theme_settings case the themes with
+# settings and the style file. The slow case runs every section and also makes a style model
+# from the sonatina folder with the Analyzer (about 53 s at -j1 in a Debug build, 2026-11-21). The fast cases: motifs 0.2 s, themes 8 s, theme_settings 13 s
+# and overrides 12 s (kept in the fast set with their times).
+foreach(case motifs themes theme_settings overrides style_folder)
     set(folder OFF)
     set(labels)
     if(case STREQUAL "style_folder")
@@ -489,11 +505,16 @@ ursatz_test(test_style_blend_harmony TARGET test_style_blend ARGS harmony LABELS
 ursatz_test(test_variant_registry LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/../library)
 
-# Measured 43.9 s of CPU, over the 10 s fast-set limit.
+# The small lookups of the headers: name tables, round trips of names, default parameters and pitch names.
+ursatz_test(test_composer_lookups LIBS ursatz_composer_engine composer_test_support)
+
+# Slow: about 26 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_variants_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
 add_dependencies(test_variants_cli ursatz)
+# Every test but test_distance (24.5 s of the 27 s).
+ursatz_test(test_variants_cli_smoke TARGET test_variants_cli ARGS smoke)
 
 ursatz_test(test_motive_random LIBS ursatz_composer_engine cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -525,7 +546,7 @@ ursatz_test(test_shaping LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_D
 # The theme command (cli/docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
 # in a directory of its own, so it can run beside the other command tests.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
-# Measured 11.6 s of CPU, over the 10 s fast-set limit.
+# Slow: about 16 s at -j4 (2026-11-21).
 ursatz_test(test_theme_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow
@@ -564,7 +585,9 @@ find_package(Threads REQUIRED)
 ursatz_test_executable(test_api_theme LIBS ursatz_composer_engine composer_test_support cjson Threads::Threads
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Two tests of one executable (each theme measures its ideas' fidelity, about 1 s, R-332; together 12 s, over the 10 s rule).
+# Two tests of one executable (each theme measures its ideas' fidelity, about 1 s, R-332). Kept in the fast set: test_api_theme is the setup
+# of the fixture api_responses_written, which a fast test requires; about 10 s at -j4 (2026-11-21). Splitting what it writes from what it
+# checks is not in P66c (R-699).
 ursatz_test(test_api_theme TARGET test_api_theme ARGS responses WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -596,6 +619,8 @@ ursatz_test(test_piece_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_piece_sections LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+# Kept in the fast set: the setup of the fixture api_responses_written, about 21 s at -j4 (2026-11-21); splitting what it writes from what it checks
+# is not in P66c (R-699).
 ursatz_test(test_api_piece LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -605,11 +630,15 @@ ursatz_test(test_api_parts LIBS ursatz_composer_engine composer_test_support cjs
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_parts_files)
 
 ursatz_test_executable(test_api_form_families LIBS ursatz_composer_engine composer_test_support cjson)
-# The rows of the rondo and sonata forms in the piece document: one test per family, both slow.
+# The rows of the rondo and sonata forms in the piece document: one test per family, both slow: rondo about 11 s and sonata about 22 s at -j4
+# (2026-11-21); the smoke is the first rondo case.
 ursatz_test(test_api_rondo TARGET test_api_form_families ARGS rondo LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 ursatz_test(test_api_sonata TARGET test_api_form_families ARGS sonata LABELS slow
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# The first rondo case alone (small-rondo-ababa in C major).
+ursatz_test(test_api_form_families_smoke TARGET test_api_form_families ARGS smoke
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 ursatz_test(test_api_plan_workflow LIBS ursatz_composer_engine composer_test_support cjson
@@ -670,7 +699,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
 endif()
 
 # A project that adds cJSON, Ursatz and the Analyzer first and the Composer after them, with its command off, builds and runs.
-# consumer_build measured 42.6 s of CPU on a warm tree and 169 s of wall time on a cold one, over the 10 s fast-set limit.
+# consumer_build is slow: about 26 s at -j4 on a warm tree (2026-11-21), 169 s of wall time on a cold one.
 # consumer_rejects_internals needs its build tree, so it is slow with it.
 ursatz_test(consumer_build COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test ${CMAKE_CURRENT_SOURCE_DIR}/consumer ${CMAKE_CURRENT_BINARY_DIR}/consumer
                  --build-generator "${CMAKE_GENERATOR}" --build-target consumer
@@ -695,7 +724,7 @@ ursatz_test(test_grow_whole_motif LIBS ursatz_composer_engine composer_test_supp
 
 ursatz_test_executable(test_grow_triplets LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# The sweep (3 motives, a sentence and a period, seeds 1 to 8) takes about 90 s: labeled slow; the smoke test is seed 1 of a sentence.
+# Slow: about 102 s at -j4 (2026-11-21) (3 motives, a sentence and a period, seeds 1 to 8); the smoke test is seed 1 of a sentence.
 ursatz_test(test_grow_triplets TARGET test_grow_triplets LABELS slow)
 ursatz_test(test_grow_triplets_smoke TARGET test_grow_triplets ARGS quick)
 
@@ -737,6 +766,7 @@ foreach(form sonatina sonatina-tonic-major)
 endforeach()
 # The first row (C major 4/4), seed 1 (B11 of P56); sonatina is stuck at seeds 1 and 2 there, so its smoke starts at seed 3,
 # the first seed that composes (the full test accepts a stuck seed and counts it).
+# Kept in the fast set: about 11 s at -j4 (2026-11-21).
 ursatz_test(test_sonata_forms_sonatina_smoke TARGET test_form_families ARGS sonatina smoke 3)
 ursatz_test(test_sonata_forms_sonatina-tonic-major_smoke TARGET test_form_families ARGS sonatina-tonic-major smoke)
 
@@ -744,20 +774,20 @@ ursatz_test(test_grow_development LIBS ursatz_composer_engine cjson composer_tes
 
 ursatz_test_executable(test_grow_continuation LIBS ursatz_composer_engine composer_test_support cjson
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Measured 51 s of CPU for the cases and 41 s for the compose rates, over the 10 s fast-set limit; test_grow_continuation_smoke (7.5 s) runs seed 1 of every case and rate.
+# Slow: about 41 s for the cases and 32 s for the compose rates at -j4 (2026-11-21); test_grow_continuation_smoke runs seed 1 of every case and rate.
 ursatz_test(test_grow_continuation TARGET test_grow_continuation LABELS slow)
 ursatz_test(test_grow_continuation_rates TARGET test_grow_continuation ARGS rates LABELS slow)
 ursatz_test(test_grow_continuation_smoke TARGET test_grow_continuation ARGS fast)
 
 ursatz_test_executable(test_grow_contrast LIBS ursatz_composer_engine composer_test_support cjson
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Measured 58 s of CPU, over the 10 s fast-set limit; test_grow_contrast_smoke runs seed 1 of every case.
+# Slow: about 67 s at -j4 (2026-11-21); test_grow_contrast_smoke runs seed 1 of every case.
 ursatz_test(test_grow_contrast TARGET test_grow_contrast LABELS slow)
 ursatz_test(test_grow_contrast_smoke TARGET test_grow_contrast ARGS fast)
 
 ursatz_test_executable(test_grow_compose_rates LIBS ursatz_composer_engine composer_test_support
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Measured 13.7 s of CPU for one setting (three now), over the 10 s fast-set limit; test_grow_compose_rates_fast (5.5 s) runs seed 1 of every case and setting.
+# Slow: about 34 s at -j4 (2026-11-21); test_grow_compose_rates_fast runs seed 1 of every case and setting.
 ursatz_test(test_grow_compose_rates TARGET test_grow_compose_rates LABELS slow)
 ursatz_test(test_grow_compose_rates_fast TARGET test_grow_compose_rates ARGS fast)
 
@@ -772,6 +802,31 @@ ursatz_test(test_grow_fidelity_period TARGET test_grow_fidelity ARGS period)
 ursatz_test(test_grow_fidelity_rank LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-# Composes 80 themes for each of the three settings and reads every idea's fidelity: minutes, so slow; the fast set has test_grow_fidelity_sentence and _period.
+# Slow: about 520 s at -j4 (2026-11-21): composes 80 themes for each of the three settings and reads every idea's fidelity; the fast set has test_grow_fidelity_sentence and _period.
 ursatz_test(test_grow_fidelity_sweep LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+
+# Seeding from a corpus (R-619): the Analyzer analyzes the seed corpora (tests/CMakeLists.txt builds them, as the workshop test does), so
+# add_dependencies names the target defined there.
+ursatz_test_executable(test_corpus_seed LIBS ursatz_composer_internal ursatz_analyzer composer_test_support ursatz_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SONATINAS_CORPUS="${CMAKE_BINARY_DIR}/tests/corpora/sonatinas-analyzed"
+    COMPOSER_EMPTY_CORPUS="${CMAKE_BINARY_DIR}/tests/corpora/empty-analyzed")
+add_dependencies(test_corpus_seed ursatz seed_corpora)
+# Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
+# Slow: progression about 32 s at -j4 (2026-11-21); progression-smoke about 12 s and cli 10 s are kept in the fast set, same 2 s is fast.
+# progression searches the corpus twice and fills seeds 1 to 5 and is slow; progression-smoke places a progression and fills seed 1.
+foreach(mode motive same plan progression progression-smoke no-match cli)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
+    set(labels)
+    if(mode STREQUAL "progression")
+        set(labels slow)
+    endif()
+    set(test_name test_corpus_seed_${mode})
+    if(mode STREQUAL "progression-smoke")
+        set(test_name test_corpus_seed_progression_smoke)
+    endif()
+    ursatz_test(${test_name} TARGET test_corpus_seed ARGS ${mode} LABELS ${labels}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
+endforeach()

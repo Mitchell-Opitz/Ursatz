@@ -523,6 +523,26 @@ static char *records_text(const GrowOutcome *outcome) {
     return all;
 }
 
+/*
+ * Round 0 hands the plan to test_grow_period_heard: the plan as JSON in s<scenario>-<bars>-<seed>.plan.json and one line
+ * in heard.txt (the same key, the sections heard, the form requested, whether it was heard as requested), both in the
+ * working directory. The heard test reads them instead of growing every theme again.
+ */
+static void write_for_heard(size_t scenario, size_t bars, unsigned long seed, const char *plan_json,
+                            const GrowOutcome *outcome) {
+    char name[64];
+    snprintf(name, sizeof(name), "s%zu-%zu-%lu.plan.json", scenario, bars, seed);
+    FILE *plan_file = fopen(name, "wb");
+    assert(plan_file);
+    assert(fputs(plan_json, plan_file) >= 0);
+    assert(fclose(plan_file) == 0);
+    FILE *heard_file = fopen("heard.txt", "ab");
+    assert(heard_file);
+    fprintf(heard_file, "s%zu-%zu-%lu %zu %d %d\n", scenario, bars, seed, outcome->heard.count,
+            (int)outcome->requested_form, outcome->heard_as_requested ? 1 : 0);
+    assert(fclose(heard_file) == 0);
+}
+
 static void run_scenario(const Scenario *scenario, size_t bars, unsigned long seed, SectionBeginning beginning,
                          SectionEnding ending) {
     Motive motive = make_motive(scenario);
@@ -552,10 +572,14 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
             assert(outcome.score.denominator >= 1 && outcome.score.numerator <= outcome.score.denominator);
             assert(outcome.requested_beginning == (int)beginning_of(beginning));
             assert(outcome.requested_ending == (int)ending_of(ending));
+            assert(outcome.heard_result == FORM_HEAR_OK);
         }
         plans[round] = plan_to_json(plan, test_plan_producer(), NULL);
         records[round] = records_text(&outcome);
         assert(plans[round]);
+        if (round == 0) {
+            write_for_heard((size_t)(scenario - SCENARIOS), bars, seed, plans[0], &outcome);
+        }
         grow_outcome_destroy(&outcome);
         plan_destroy(plan);
     }
@@ -570,6 +594,9 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
 }
 
 static void test_pairing(SectionBeginning beginning, SectionEnding ending) {
+    FILE *heard_file = fopen("heard.txt", "wb"); /* truncated: run_scenario appends one line per run */
+    assert(heard_file);
+    assert(fclose(heard_file) == 0);
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         for (size_t bars = 8; bars >= 4; bars -= 4) {
             for (unsigned long seed = 1; seed <= 10; seed++) {

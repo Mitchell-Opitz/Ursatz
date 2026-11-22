@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/harmony/outer_scale_degrees.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Scale degree label tests: the label of a pitch class under a tonic and a mode (outer_scale_degrees.h), in a major and a

@@ -1,3 +1,4 @@
+#include "ursatz_test.h"
 #include "io/midi_importer.h"
 #include "io/tests/io/midi_import_split.h"
 
@@ -72,19 +73,9 @@ static void add_note(TrackBuilder *t, uint32_t at, uint32_t duration, unsigned c
 }
 
 static size_t build_smf(unsigned char *out, const TrackBuilder *t) {
-    size_t pos = 0;
-    const unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1,
-                                    (unsigned char)(DIVISION >> 8), (unsigned char)(DIVISION & 0xFF)};
-    memcpy(out + pos, header, sizeof(header));
-    pos += sizeof(header);
-    memcpy(out + pos, "MTrk", 4);
-    pos += 4;
-    out[pos++] = (unsigned char)(t->size >> 24);
-    out[pos++] = (unsigned char)(t->size >> 16);
-    out[pos++] = (unsigned char)(t->size >> 8);
-    out[pos++] = (unsigned char)t->size;
-    memcpy(out + pos, t->bytes, t->size);
-    return pos + t->size;
+    const unsigned char *tracks[1] = {t->bytes};
+    const size_t sizes[1] = {t->size};
+    return test_smf(out, 0, DIVISION, tracks, sizes, 1);
 }
 
 typedef struct {

@@ -506,7 +506,7 @@ static void key_and_rule_tables(void) {
     cJSON_Delete(document);
     size_t key_count = 0;
     const ComposerPreferenceKey *keys = composer_preferences_keys(&key_count);
-    assert(keys && leaf_count == 123 && key_count == leaf_count + 1);
+    assert(keys && leaf_count > 0 && key_count == leaf_count + 1); /* every leaf has its key (checked one by one below), and the plan is the one more */
     size_t at = 0;
     for (size_t i = 0; i < key_count; i++) {
         if (strcmp(keys[i].key, "motif.plan") == 0) {

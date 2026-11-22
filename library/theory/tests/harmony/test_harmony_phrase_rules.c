@@ -178,7 +178,18 @@ static void test_invalid_phrase(void) {
     assert(!holds(PHRASE(RULE_COUNT), HARMONY_MODE_MAJOR, ok, COUNT_OF(ok)));
 }
 
+/* No backward motion and the weak predominant leading on are preferences; the other two rules are required. */
+static void test_rule_softness(void) {
+    assert(!harmony_phrase_rule_soft(HARMONY_PHRASE_TONIC_THEN_DOMINANT));
+    assert(harmony_phrase_rule_soft(HARMONY_PHRASE_NO_BACKWARD_MOTION));
+    assert(harmony_phrase_rule_soft(HARMONY_PHRASE_WEAK_PREDOMINANT_LEADS_ON));
+    assert(!harmony_phrase_rule_soft(HARMONY_PHRASE_IV_BEFORE_II));
+    assert(!harmony_phrase_rule_soft(HARMONY_PHRASE_RULE_COUNT));
+    assert(!harmony_phrase_rule_soft((HarmonyPhraseRule)-1));
+}
+
 int main(void) {
+    test_rule_softness();
     test_phrase_model_layouts_hold();
     test_tonic_then_dominant();
     test_no_backward_motion();

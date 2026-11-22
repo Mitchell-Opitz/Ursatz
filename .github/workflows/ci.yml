@@ -18,12 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Check docs
-        run: |
-          for part in library analyzer composer gui workshop common cli; do
-            bash tools/ci/check-docs.sh "$part"
-          done
-
       - name: ccache
         uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
         with:
@@ -41,15 +35,8 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
-      # Boundary checks, run from the repository root against the build.
-      - name: Check file scope state
-        run: bash tools/ci/check-statics.sh analyzer composer
-      - name: Check that music is heard through the library chain
-        run: bash tools/ci/check-hearing.sh
-      - name: Check shared primitives have one owner
-        run: bash tools/ci/check-primitives.sh
-      - name: Check frontend theory
-        run: bash tools/ci/check-frontend-theory.sh
+      # The docs, statics, hearing, primitives and frontend theory checks run as tests in the fast set (tests/CMakeLists.txt); the reach scan is
+      # slow there, so CI runs it here with ccache.
       - name: Reach scan (every function reached by an application)
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache

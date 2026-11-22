@@ -3,7 +3,7 @@
 #include "framework_v1_chain.h"
 #include "framework_v1_deviations.h"
 #include "key_regions_test_access.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Framework v1 verification: the full chain over the five reference pieces (Bach BWV Anh. 114, Clementi Op. 36 No. 1, Field Nocturne No. 1,

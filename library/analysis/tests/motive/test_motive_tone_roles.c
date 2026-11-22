@@ -4,7 +4,7 @@
 
 #include "analysis/motive/motive_chord_internal.h"
 #include "analysis/motive/motive_tone_roles.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Analysis-regression tests for the motive tone roles: each non-chord tone type on a small sketch in C major,

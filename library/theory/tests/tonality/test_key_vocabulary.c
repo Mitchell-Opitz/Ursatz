@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "theory/tonality/key_vocabulary.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Construction tests: one major key and one minor key, confirming each gives the tonic's pitch class and the material of its mode, and

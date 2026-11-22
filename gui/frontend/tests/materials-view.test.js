@@ -44,8 +44,11 @@ page.setShell({ activeToolId: () => "motifs", openItem() {} });
 await renderMaterialsView("motif");
 await page.settle();
 page.content.querySelector("input").value = "Hook";
+const createsBefore = page.commands("item.create").length;
 byText(page.content, "button", "New")[0].click();
 await page.settle();
-check(page.content.textContent.includes("New motif") || page.content.querySelector(".materials-editor") !== null, "New for a motif opens the new motif page");
+check(page.content.querySelector("h1.view-title").textContent === "New motif", "New for a motif opens the page titled New motif");
+check(page.content.querySelector(".materials-editor") !== null, "the new motif page holds the motif editor");
+check(page.commands("item.create").length === createsBefore, "New for a motif sends no item.create: the item is made when its page is saved");
 
 finish();

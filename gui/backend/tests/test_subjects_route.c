@@ -11,14 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -158,8 +153,14 @@ static void test_relations(const char *anna) {
         "a place subject is in the place group");
   cJSON_Delete(answer);
 
-  cJSON_Delete(cmd("subject.delete", tower, NULL, &status));
-  check(status == 200, "a subject is deleted");
+  answer = cmd("subject.delete", tower, NULL, &status);
+  check(status == 200 && ok_true(answer), "a subject is deleted");
+  cJSON_Delete(answer);
+  char gone[128];
+  snprintf(gone, sizeof(gone), "/api/subjects/%s", tower);
+  answer = test_http_json(PORT, "GET", gone, NULL, &status);
+  check(status == 404, "and is gone: reading it is 404");
+  cJSON_Delete(answer);
   free(tower);
 }
 
@@ -214,8 +215,13 @@ static void test_links(const char *anna, const char *piece) {
   check(status == 400 && strcmp(string_of(answer, "error"), "variants have no subjects; save it as a new motif first") == 0,
         "linking a variant to a subject is refused with 400");
   cJSON_Delete(answer);
-  cJSON_Delete(cmd("item.delete", variant, NULL, &status));
-  check(status == 200, "the variant is deleted again");
+  answer = cmd("item.delete", variant, NULL, &status);
+  check(status == 200 && ok_true(answer), "the variant is deleted again");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s", variant);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
+  check(status == 404, "and reading it is 404");
+  cJSON_Delete(answer);
 
   snprintf(path, sizeof(path), "/api/materials/items/%s", item);
   answer = test_http_json(PORT, "GET", path, NULL, &status);
@@ -266,11 +272,7 @@ static void test_links(const char *anna, const char *piece) {
 
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache projects subjects data 2> nul");
-#else
   system("rm -rf library settings cache projects subjects data");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 

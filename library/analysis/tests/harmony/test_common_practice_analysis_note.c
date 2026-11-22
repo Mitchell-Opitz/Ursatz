@@ -10,7 +10,7 @@
 #include "model/time/time_span.h"
 #include "analysis/harmony/weighted_identification.h"
 #include "tests/key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 static TimeSpan make_span(long start, long end, unsigned long den) {
     MusicalTime from;

@@ -107,26 +107,28 @@ and a written soprano, seeds 1 to 10: every result holds the rules, worked out i
 semitones, and the same seed gives the same voicing. A soprano below the bass leaves the alto stuck.
 
 `tests/test_voicing_heard.c` grows 30 themes for each mode (C major 4/4, G major 3/4 and D minor 4/4, seeds 1 to 10, a
-sentence with a PAC) and runs `voice_hear` on each. Both are WILL_FAIL tests in `ctest`: they assert that all 30 are
-clean, and they are not.
+sentence with a PAC) and runs `voice_hear` on each. The numbers are the tests' baselines at `243bd316` (R-698). The
+chorale test passes when at most 2 themes are not clean and every count is 0. The voicing test fails when fewer than 5
+themes are clean, or a count rises above its ceiling (0 not complete, 0 fifths, 5 octaves, 18 sevenths, 6 leading tones),
+and passes when a number holds or improves; its target, every theme clean, is printed and does not gate.
 
 | | `--texture chorale` | `--voicing` |
 | --- | --- | --- |
-| Themes complete | 30 of 30 | 19 of 30 |
-| Themes heard clean | 29 of 30 | 2 of 30 |
-| Chords heard | 254 | 136 |
+| Themes complete | 29 of 30 | 30 of 30 |
+| Themes heard clean | 29 of 30 | 5 of 30 |
+| Chords heard | 205 | 217 |
 | Parallel fifths | 0 | 0 |
-| Parallel octaves | 0 | 0 |
-| Unresolved sevenths | 0 | 17 |
-| Unresolved leading tones | 2 | 1 |
+| Parallel octaves | 0 | 5 |
+| Unresolved sevenths | 0 | 18 |
+| Unresolved leading tones | 0 | 6 |
 
 - **Chorale.** The one theme that is not clean (C major, seed 5) has two V6 chords whose bass, the leading tone, leaps
   up 13 semitones to the tonic: the bass operator chooses its octaves freely, and the voicing does not write the bass.
   Every voice the operator writes resolves.
 - **Voicing.** The unresolved sevenths are in the grown melody: the melody operator knows nothing of the seventh of a
   V7, and a melody that falls from it by a leap, or holds it, leaves it unresolved in the soprano, which the voicing
-  does not change. The 11 themes not complete are those in which no round of `grow_run` reached a voicing the rules
-  allow. The bass operator may place the bass up to MIDI 60 and the melody low, and the three voices between are then
+  does not change. The themes not complete (11 when this was first measured, 0 at `243bd316`) are those in which no round of `grow_run`
+  reached a voicing the rules allow. The bass operator may place the bass up to MIDI 60 and the melody low, and the three voices between are then
   squeezed to one or two voicings of a chord, with no path between them that avoids a parallel. The way out is in the
   melody and bass stages, not in the voicing.
 

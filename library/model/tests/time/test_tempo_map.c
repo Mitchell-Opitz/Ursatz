@@ -1,9 +1,17 @@
 #include "model/time/tempo_map.h"
 
+
+
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/* Tempos are microseconds per quarter note, 60,000,000 / bpm. */
+#define TEMPO_120_BPM 500000 /* 120 bpm */
+#define TEMPO_240_BPM 250000 /* 240 bpm */
+#define TEMPO_60_BPM 1000000 /* 60 bpm */
+#define TEMPO_100_BPM 600000 /* 100 bpm */
 
 /*
  * TempoMap tests: a single tempo, several changes, the region a time falls in, the defaulted case,
@@ -42,7 +50,7 @@ static TempoMap *build(const Change *changes, size_t count) {
 
 /* 500,000 from 0, 1,000,000 from one whole note, 250,000 from two. */
 static TempoMap *three_tempos(void) {
-    Change changes[] = {{0, 1, 500000}, {1, 1, 1000000}, {2, 1, 250000}};
+    Change changes[] = {{0, 1, TEMPO_120_BPM}, {1, 1, TEMPO_60_BPM}, {2, 1, TEMPO_240_BPM}};
     return build(changes, 3);
 }
 
@@ -62,13 +70,13 @@ static unsigned long tempo_at(const TempoMap *map, long n, unsigned long d) {
 }
 
 static void test_single_tempo(void) {
-    Change changes[] = {{0, 1, 500000}};
+    Change changes[] = {{0, 1, TEMPO_120_BPM}};
     TempoMap *map = build(changes, 1);
 
     assert(!tempo_map_is_defaulted(map));
     assert(tempo_map_region_count(map) == 1);
-    assert(tempo_at(map, 0, 1) == 500000);
-    assert(tempo_at(map, 7, 3) == 500000);
+    assert(tempo_at(map, 0, 1) == TEMPO_120_BPM);
+    assert(tempo_at(map, 7, 3) == TEMPO_120_BPM);
 
     tempo_map_destroy(map);
 }
@@ -78,11 +86,11 @@ static void test_several_changes_and_change_points(void) {
     assert(tempo_map_region_count(map) == 3);
 
     /* A change point belongs to the new region. */
-    assert(tempo_at(map, 7, 8) == 500000);
-    assert(tempo_at(map, 1, 1) == 1000000);
-    assert(tempo_at(map, 15, 8) == 1000000);
-    assert(tempo_at(map, 2, 1) == 250000);
-    assert(tempo_at(map, 100, 1) == 250000);
+    assert(tempo_at(map, 7, 8) == TEMPO_120_BPM);
+    assert(tempo_at(map, 1, 1) == TEMPO_60_BPM);
+    assert(tempo_at(map, 15, 8) == TEMPO_60_BPM);
+    assert(tempo_at(map, 2, 1) == TEMPO_240_BPM);
+    assert(tempo_at(map, 100, 1) == TEMPO_240_BPM);
     tempo_map_destroy(map);
 }
 
@@ -94,27 +102,27 @@ static void test_defaulted_tempo(void) {
     assert(tempo_map_region_count(map) == 1);
     assert(tempo_map_region_is_defaulted(tempo_map_region(map, 0)));
     assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(map, 0)) == TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER);
-    assert(tempo_at(map, 5, 1) == 500000);
+    assert(tempo_at(map, 5, 1) == TEMPO_120_BPM);
 
     tempo_map_destroy(map);
 }
 
 static void test_first_tempo_after_zero_gets_a_defaulted_lead_in(void) {
-    Change changes[] = {{1, 1, 1000000}};
+    Change changes[] = {{1, 1, TEMPO_60_BPM}};
     TempoMap *map = build(changes, 1);
 
     assert(!tempo_map_is_defaulted(map));
     assert(tempo_map_region_count(map) == 2);
     assert(tempo_map_region_is_defaulted(tempo_map_region(map, 0)));
     assert(!tempo_map_region_is_defaulted(tempo_map_region(map, 1)));
-    assert(tempo_at(map, 1, 2) == 500000);
-    assert(tempo_at(map, 1, 1) == 1000000);
+    assert(tempo_at(map, 1, 2) == TEMPO_120_BPM);
+    assert(tempo_at(map, 1, 1) == TEMPO_60_BPM);
 
     tempo_map_destroy(map);
 }
 
 static void test_a_repeated_tempo_is_its_own_region(void) {
-    Change changes[] = {{0, 1, 500000}, {1, 1, 500000}};
+    Change changes[] = {{0, 1, TEMPO_120_BPM}, {1, 1, TEMPO_120_BPM}};
     TempoMap *map = build(changes, 2);
     assert(tempo_map_region_count(map) == 2);
     tempo_map_destroy(map);
@@ -123,7 +131,7 @@ static void test_a_repeated_tempo_is_its_own_region(void) {
 static void test_region_accessors(void) {
     TempoMap *map = three_tempos();
     const TempoMapRegion *second = tempo_map_region(map, 1);
-    assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
+    assert(tempo_map_region_microseconds_per_quarter(second) == TEMPO_60_BPM);
     assert(musical_time_same(tempo_map_region_start(second), at(1, 1)));
     assert(tempo_map_region(map, 3) == NULL);
     tempo_map_destroy(map);
@@ -139,11 +147,11 @@ static void test_rejects_bad_input(void) {
 
     TempoMapChangePoint zero_tempo = {zero, 0};
     assert(tempo_map_create(id("tempo"), &zero_tempo, 1, &map) == TEMPO_MAP_ERR_ZERO_TEMPO);
-    TempoMapChangePoint below = {negative, 500000};
+    TempoMapChangePoint below = {negative, TEMPO_120_BPM};
     assert(tempo_map_create(id("tempo"), &below, 1, &map) == TEMPO_MAP_ERR_NEGATIVE_START);
-    TempoMapChangePoint descending[2] = {{one, 500000}, {zero, 500000}};
+    TempoMapChangePoint descending[2] = {{one, TEMPO_120_BPM}, {zero, TEMPO_120_BPM}};
     assert(tempo_map_create(id("tempo"), descending, 2, &map) == TEMPO_MAP_ERR_NOT_ASCENDING);
-    TempoMapChangePoint same[2] = {{one, 500000}, {one, 600000}};
+    TempoMapChangePoint same[2] = {{one, TEMPO_120_BPM}, {one, TEMPO_100_BPM}};
     assert(tempo_map_create(id("tempo"), same, 2, &map) == TEMPO_MAP_ERR_NOT_ASCENDING);
     assert(map == NULL);
 }

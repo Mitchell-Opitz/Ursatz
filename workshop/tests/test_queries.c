@@ -183,10 +183,10 @@ static void test_library_queries(void) {
     check(ask("library.musicxml", params, &reply, &error) && reply.bytes && strncmp(reply.content_type, "application/xml", 15) == 0 && strstr((char *)reply.bytes, "<score-partwise") != NULL,
           "library.musicxml is the score (application/xml)");
     workshop_reply_destroy(&reply);
-    check(ask("library.meter-defaulted", params, &reply, &error) && cJSON_IsBool(member(reply.json, "meter_defaulted")), "library.meter-defaulted says whether the meter was defaulted");
+    check(ask("library.meter-defaulted", params, &reply, &error) && cJSON_IsFalse(member(reply.json, "meter_defaulted")), "library.meter-defaulted says the meter of the file was not defaulted");
     workshop_reply_destroy(&reply);
-    check(ask("library.playback", params, &reply, &error) && cJSON_IsArray(member(reply.json, "notes")) && cJSON_GetArraySize(member(reply.json, "notes")) > 0,
-          "library.playback is the notes a browser plays");
+    check(ask("library.playback", params, &reply, &error) && cJSON_IsArray(member(reply.json, "notes")) && cJSON_GetArraySize(member(reply.json, "notes")) == 18,
+          "library.playback is the 18 notes a browser plays");
     workshop_reply_destroy(&reply);
 }
 
@@ -225,11 +225,13 @@ static void test_collection_style_link_queries(void) {
     check(ask("links.get", params, &reply, &error) && strcmp(str(member(reply.json, "run"), "id"), g_run) == 0, "links.get is the run");
     workshop_reply_destroy(&reply);
     ids(params, sizeof(params), g_piece);
-    check(ask("links.piece", params, &reply, &error) && cJSON_IsArray(member(reply.json, "links")), "links.piece is the links of a piece");
+    check(ask("links.piece", params, &reply, &error) && cJSON_IsArray(member(reply.json, "links")) && cJSON_GetArraySize(member(reply.json, "links")) == 0,
+          "links.piece is the links of a piece: the run found none in one piece");
     workshop_reply_destroy(&reply);
     check(query("job.get", "{\"id\":\"job-0000000000000000\"}", &reply, &error) == URSATZ_ERR_NOT_FOUND && strcmp(error.message, "job not found") == 0, "job.get of a job that is not there is not found");
     workshop_reply_destroy(&reply);
-    check(ask("job.list", NULL, &reply, &error) && cJSON_IsArray(member(reply.json, "jobs")), "job.list lists the jobs that are queued or running");
+    check(ask("job.list", NULL, &reply, &error) && cJSON_IsArray(member(reply.json, "jobs")) && cJSON_GetArraySize(member(reply.json, "jobs")) == 0,
+          "job.list lists the jobs that are queued or running: none, every job has finished");
     workshop_reply_destroy(&reply);
 
     /* the journal: newest first, filtered by target, limited */
@@ -271,15 +273,30 @@ static void test_composer_queries(void) {
               str(reply.json, "producer_key")[0] && str(reply.json, "analyzer_version")[0],
           "composer.status holds the versions this build was made with");
     workshop_reply_destroy(&reply);
-    check(ask("composer.vocabulary", NULL, &reply, &error) && cJSON_IsObject(reply.json) && member(reply.json, "limits") != NULL, "composer.vocabulary is the words the Composer reads");
+    check(ask("composer.vocabulary", NULL, &reply, &error) && cJSON_IsObject(member(reply.json, "limits")) && cJSON_IsArray(member(reply.json, "meters")) &&
+              cJSON_GetArraySize(member(reply.json, "meters")) > 0,
+          "composer.vocabulary is the words the Composer reads: its limits and its meters");
     workshop_reply_destroy(&reply);
-    check(ask("composer.forms", NULL, &reply, &error) && cJSON_IsObject(reply.json), "composer.forms is the forms it builds");
+    bool has_rounded_binary = false;
+    bool has_game_loop = false;
+    const cJSON *built_form = NULL;
+    bool formed = ask("composer.forms", NULL, &reply, &error);
+    const cJSON *form_list = formed ? member(reply.json, "forms") : NULL;
+    cJSON_ArrayForEach(built_form, form_list) {
+        has_rounded_binary = has_rounded_binary || strcmp(str(built_form, "name"), "rounded-binary") == 0;
+        has_game_loop = has_game_loop || strcmp(str(built_form, "name"), "game-loop") == 0;
+    }
+    check(formed && has_rounded_binary && has_game_loop, "composer.forms is the forms it builds: the rounded binary and the game loop among them");
     workshop_reply_destroy(&reply);
-    check(ask("composer.variant-operations", NULL, &reply, &error) && cJSON_IsObject(reply.json), "composer.variant-operations lists the operations");
+    check(ask("composer.variant-operations", NULL, &reply, &error) && cJSON_IsArray(member(reply.json, "operations")) && cJSON_GetArraySize(member(reply.json, "operations")) > 0,
+          "composer.variant-operations lists the operations");
     workshop_reply_destroy(&reply);
-    check(ask("composer.render", "{\"form\":\"full\",\"degrees\":\"1 2 3 4\",\"meter\":\"4/4\"}", &reply, &error) ||
-              query("composer.render", "{\"form\":\"full\",\"degrees\":\"1 2 3 4\",\"meter\":\"4/4\"}", &reply, &error) == URSATZ_ERR_REQUEST,
-          "composer.render renders a motif or refuses the request at its member");
+    check(ask("composer.render", "{\"degrees\":\"1:e b3:e 5:e b3:e 1:e b3:e 5:e 1':e\",\"form\":\"full\",\"key\":\"C minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"C minor\",\"role\":\"melodic\"}", &reply, &error) &&
+              strstr(str(reply.json, "musicxml"), "<score-partwise") != NULL,
+          "composer.render renders the motif's own form, notes, meter and key to MusicXML");
+    workshop_reply_destroy(&reply);
+    check(query("composer.render", "{}", &reply, &error) == URSATZ_ERR_REQUEST && strcmp(error.message, "form is needed") == 0,
+          "composer.render of nothing is refused: the form is needed");
     workshop_reply_destroy(&reply);
     check(query("composer.render", "{\"form\":\"nonsense\"}", &reply, &error) == URSATZ_ERR_REQUEST, "composer.render refuses a form that is none");
     workshop_reply_destroy(&reply);
@@ -290,6 +307,52 @@ static void test_composer_queries(void) {
     check(query("composer.import-motif", NULL, &reply, &error) == URSATZ_ERR_REQUEST && strcmp(error.path, "/bytes") == 0, "composer.import-motif needs a MIDI file");
     workshop_reply_destroy(&reply);
     check(query("composer.recognize", "{\"source\":5}", &reply, &error) == URSATZ_ERR_REQUEST, "composer.recognize refuses a source that is not a reference");
+    workshop_reply_destroy(&reply);
+}
+
+/* composer.recognize and composer.import-motif answer the members their routes document. The second motif is made with a command, so this is
+   after the check that no query changed a file. */
+static void test_recognize_and_import(void) {
+    WorkshopReply reply;
+    UrsatzError error;
+    /* composer.recognize of the motif against a second motif answers the members the recognize route documents. */
+    char params[3000];
+    snprintf(params, sizeof(params),
+             "{\"type\":\"motif\",\"name\":\"Other\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
+             "\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}",
+             g_project);
+    check(command("item.create", NULL, params, -1, &reply, &error) == URSATZ_OK, "a second motif is made to recognize against");
+    char other[64];
+    snprintf(other, sizeof(other), "%s", str(member(reply.json, "item"), "id"));
+    workshop_reply_destroy(&reply);
+    snprintf(params, sizeof(params), "{\"source\":{\"item\":\"%s\",\"version\":1},\"target\":{\"item\":\"%s\",\"version\":1}}", g_motif, other);
+    static const char *const kRecognized[] = {"chain", "changed", "derivation", "distance", "found", "kept", "ok", "remoteness"};
+    check(ask("composer.recognize", params, &reply, &error), "composer.recognize answers for two motifs");
+    for (size_t i = 0; i < sizeof(kRecognized) / sizeof(kRecognized[0]); i++) {
+        check(member(reply.json, kRecognized[i]) != NULL, "composer.recognize answers each member the route documents");
+    }
+    workshop_reply_destroy(&reply);
+    check(command("item.delete", other, "{}", 1, &reply, &error) == URSATZ_OK, "the second motif is deleted again");
+    workshop_reply_destroy(&reply);
+
+    /* composer.import-motif reads the MIDI of one voice (hex as the materials route test sends it) into a motif's members. */
+    static const char kMidiHex[] = "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00";
+    uint8_t midi[sizeof(kMidiHex) / 2];
+    size_t midi_size = 0;
+    for (size_t i = 0; kMidiHex[i] && kMidiHex[i + 1]; i += 2) {
+        char pair[3] = {kMidiHex[i], kMidiHex[i + 1], 0};
+        midi[midi_size++] = (uint8_t)strtoul(pair, NULL, 16);
+    }
+    WorkshopBytes bytes = {midi, midi_size, "motif.mid"};
+    memset(&error, 0, sizeof(error));
+    cJSON *import_params = cJSON_Parse("{}");
+    UrsatzStatus imported = workshop_query(g_workshop, "composer.import-motif", import_params, &bytes, &reply, &error);
+    cJSON_Delete(import_params);
+    check(imported == URSATZ_OK, "composer.import-motif reads the MIDI bytes");
+    static const char *const kImported[] = {"notes_text", "meter", "key", "key_found", "moved_from", "pickup", "analysis"};
+    for (size_t i = 0; imported == URSATZ_OK && i < sizeof(kImported) / sizeof(kImported[0]); i++) {
+        check(member(reply.json, kImported[i]) != NULL, "composer.import-motif answers each member the import route documents");
+    }
     workshop_reply_destroy(&reply);
 }
 
@@ -346,7 +409,8 @@ static void test_item_and_subject_queries(void) {
           "the files of a variations set that is not there are not found");
     workshop_reply_destroy(&reply);
     ids(params, sizeof(params), g_motif);
-    check(ask("item.op-checks", params, &reply, &error) && member(reply.json, "checks") != NULL, "item.op-checks holds the marks");
+    check(ask("item.op-checks", params, &reply, &error) && cJSON_IsObject(member(reply.json, "checks")) && cJSON_GetArraySize(member(reply.json, "checks")) == 0,
+          "item.op-checks holds the marks: none on a new motif");
     workshop_reply_destroy(&reply);
     check(ask("item.variant-tree", params, &reply, &error) && strcmp(str(member(reply.json, "tree"), "id"), g_motif) == 0, "item.variant-tree is the item and the motifs derived from it");
     workshop_reply_destroy(&reply);
@@ -394,6 +458,7 @@ int main(void) {
         test_composer_queries();
         test_item_and_subject_queries();
         check(fingerprint(".") == before, "no query changed a file outside cache/");
+        test_recognize_and_import();
     }
     harness_close();
     return test_finish("workshop_queries");

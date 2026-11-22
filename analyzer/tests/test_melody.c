@@ -28,18 +28,17 @@
  *
  * Then the results Ursatz's tests/integration/test_melody_bach114.c asserts, against the same hand annotation
  * (tests/fixtures/annotations/bach114_melody.txt, a DRAFT reading of measures 1 to 8 of the 3/4 score; its phrase spans
- * are placeholders), run as `bach-114-target`: every annotated climax and range is found among the soprano notes
- * of the annotated span, and at least 90% of the annotated leaps have the annotated recovery status. It misses today, so it
- * is WILL_FAIL in CMake with the measured values: the climaxes are right, the ranges are not (the extractor adopts a
- * left-hand note where the right hand rests), and 4 of 11 leaps have the right status. The default run asserts the floors
- * of what is measured. The Analyzer reads the file's 4/4 meter and takes its own phrases, so times are compared as whole
- * notes (a measure of the 3/4 score is 3/4 of a whole note), not by measure number.
+ * are placeholders): every annotated climax and range is found among the soprano notes of the annotated span, and at
+ * least 90% of the annotated leaps have the annotated recovery status. That is the target, printed and not gating
+ * (R-698). It is not met today: the climaxes are right (2 of 2), the ranges are not (0 of 2: the extractor adopts a
+ * left-hand note where the right hand rests), and 4 of 11 leaps have the right status. The run asserts those floors
+ * of what is measured at 243bd316. The Analyzer reads the file's 4/4 meter and takes its own phrases, so times are
+ * compared as whole notes (a measure of the 3/4 score is 3/4 of a whole note), not by measure number.
  */
 
-#define TARGET_LEAPS 0.90
-/* The floors of the default run: what the extracted soprano measured (Ursatz's whole-chain run measures the same: both
+/* The floors: what the extracted soprano measured (Ursatz's whole-chain run measures the same: both
    climaxes, no range, 4 of 11 leaps), not above. The extractor adopts a left-hand note where the right hand rests, and keeps
-   one soprano note per segment, which drops the quick notes the other leaps arrive on. */
+   one soprano note per segment, which drops the quick notes the other leaps arrive on. The ranges are recorded at 0 of 2. */
 #define FLOOR_CLIMAXES 2
 #define FLOOR_LEAPS 4
 #define TICKS_PER_WHOLE 1536.0
@@ -345,9 +344,8 @@ static size_t check_leaps(const ImportedScore *notes, const ChainResult *report,
     return right;
 }
 
-/* The annotation against the report: the floors in the default run, the target when target is set. */
-static void check_annotation(const ImportedScore *notes, const ChainResult *report, const char *annotation_path,
-                             bool target) {
+/* The annotation against the report: the floors are asserted, the target is printed. */
+static void check_annotation(const ImportedScore *notes, const ChainResult *report, const char *annotation_path) {
     Annotation annotation;
     CHECK(load_annotation(annotation_path, &annotation));
     CHECK(annotation.span_count == 2 && annotation.leap_count > 0);
@@ -360,17 +358,12 @@ static void check_annotation(const ImportedScore *notes, const ChainResult *repo
            "%zu (%.1f%%)\n",
            climaxes_right, annotation.span_count, ranges_right, annotation.span_count, leaps_right,
            annotation.leap_count, 100.0 * rate);
-    if (target) {
-        CHECK(climaxes_right == annotation.span_count && ranges_right == annotation.span_count);
-        CHECK(rate >= TARGET_LEAPS);
-    } else {
-        CHECK(climaxes_right >= FLOOR_CLIMAXES);
-        CHECK(leaps_right >= FLOOR_LEAPS);
-    }
+    CHECK(climaxes_right >= FLOOR_CLIMAXES);
+    CHECK(leaps_right >= FLOOR_LEAPS);
+    puts("target: both ranges and 90% of the leaps (not gating)");
 }
 
-int main(int argc, char **argv) {
-    bool target = argc > 1 && strcmp(argv[1], "bach-114-target") == 0;
+int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     ImportedScore notes;
@@ -384,12 +377,12 @@ int main(int argc, char **argv) {
     free(json);
     CHECK(document != NULL);
     printf("Bach 114: %zu phrases with melody\n", report.melody_count);
-    if (document && !target) {
+    if (document) {
         check_melody(&notes, &report, document);
     }
     if (document) {
         snprintf(path, sizeof(path), "%s/annotations/bach114_melody.txt", URSATZ_FIXTURES_DIR);
-        check_annotation(&notes, &report, path, target);
+        check_annotation(&notes, &report, path);
     }
     cJSON_Delete(document);
     test_release_report(&report);

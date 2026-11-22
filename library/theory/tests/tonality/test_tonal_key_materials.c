@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The material-based tonal functions (tonal_key.h) on the four tonal materials (what the retired mode rows and the test of the

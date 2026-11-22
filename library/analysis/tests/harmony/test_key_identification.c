@@ -5,7 +5,7 @@
 #include "model/identity/entity_id.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "analysis/harmony/key_identification.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Identification tests: major and natural-minor pitch-class collections

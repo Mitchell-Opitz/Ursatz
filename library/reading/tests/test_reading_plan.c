@@ -14,7 +14,7 @@
 #include "reading/reading_plan.h"
 #include "realization/realization_json.h"
 #include "realization/work.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 #include "ursatz_test.h"
 
 /*

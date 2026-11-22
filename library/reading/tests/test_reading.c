@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "reading/reading.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The reading's own checks (R-629): a claim is kept with copies of what it is given, ids are unique among all the kinds of claim, a

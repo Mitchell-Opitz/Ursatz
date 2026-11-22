@@ -1,6 +1,7 @@
 #include "test_support.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -8,36 +9,24 @@
 #include <ursatz_analyzer_internal/analysis_result.h>
 #include <ursatz_analyzer_internal/input_pipeline.h>
 #include "test_knowledge.h"
+#include "ursatz_test.h"
 #include "result/analysis_result_internal.h"
 
-static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
-    memcpy(buf + *pos, bytes, len);
-    *pos += len;
-}
-
-static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                          (unsigned char)v};
-    append_bytes(buf, pos, b, 4);
-}
-
-static void append_u16(unsigned char *buf, size_t *pos, uint16_t v) {
-    unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
-    append_bytes(buf, pos, b, 2);
-}
-
-size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body,
-                      size_t track_body_size) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 0);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, division);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track_body_size);
-    append_bytes(buf, &pos, track_body, track_body_size);
-    return pos;
+cJSON *test_reference_document(const char *slug) {
+    char path[512];
+    snprintf(path, sizeof(path), URSATZ_SNAPSHOT_DIR "/%s.analysis.json", slug);
+    char *text = test_read_file(path, NULL);
+    if (!text) {
+        fprintf(stderr, "cannot read %s\n", path);
+        abort();
+    }
+    cJSON *document = cJSON_Parse(text);
+    free(text);
+    if (!document) {
+        fprintf(stderr, "cannot parse %s\n", path);
+        abort();
+    }
+    return document;
 }
 
 const cJSON *test_json_require(const cJSON *object, const char *key) {

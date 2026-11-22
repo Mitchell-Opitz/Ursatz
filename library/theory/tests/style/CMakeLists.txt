@@ -13,6 +13,8 @@ ursatz_test(theory_style_profile SOURCES test_style_profile.c LIBS ursatz_theory
 
 ursatz_test(theory_style_compare SOURCES test_style_compare.c LIBS ursatz_theory ursatz_test_support)
 
+ursatz_test(theory_style_reference SOURCES test_style_reference.c LIBS ursatz_theory ursatz_test_support)
+
 ursatz_test(theory_style_model_file SOURCES test_style_model_file.c LIBS ursatz_theory ursatz_test_support
     DEFINITIONS URSATZ_STYLE_MODEL_FILE_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/style_model_file_work"
     PROPERTIES RESOURCE_LOCK style_model_file_work)

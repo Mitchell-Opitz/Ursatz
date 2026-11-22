@@ -191,7 +191,8 @@ int main(void) {
     cJSON_Delete(result);
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/files/theme.mid", theme_id);
     char *file = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-    check(test_http_status(file) == 200, "the new version has its MIDI file");
+    check(test_http_status(file) == 200 && strstr(file, "audio/midi") != NULL && strlen(test_http_body(file)) > 0 && strncmp(test_http_body(file), "MThd", 4) == 0,
+          "the new version has its MIDI file, served as audio/midi");
     free(file);
   }
 
@@ -222,10 +223,19 @@ int main(void) {
     made = test_gui_send(PORT, "item.set-op-checks", item_id,
                           "{\"checks\":{\"transpose\":{\"verdict\":\"works\",\"comment\":\"fine\",\"seed\":1,\"notes_text\":\"C4\",\"date\":\"2026-11-01\"}}}",
                           &status);
-    check(status == 200, "its operation marks are saved");
+    check(status == 200 && cJSON_IsTrue(member(made, "ok")), "its operation marks are saved");
     cJSON_Delete(made);
+    char marks_path[256];
+    snprintf(marks_path, sizeof(marks_path), "/api/materials/items/%s/op-checks", item_id);
+    cJSON *marks = get_ok(marks_path);
+    const cJSON *transpose = member(member(marks, "checks"), "transpose");
+    check(marks && strcmp(string_of(transpose, "verdict"), "works") == 0 && strcmp(string_of(transpose, "comment"), "fine") == 0,
+          "the marks read back as they were saved");
+    cJSON_Delete(marks);
     made = test_gui_send(PORT, "subject.create", "", "{\"name\":\"After\",\"kind\":\"idea\"}", &status);
-    check(status == 200, "a subject is written");
+    check(status == 200 && cJSON_IsTrue(member(made, "ok")) && strcmp(string_of(member(made, "subject"), "name"), "After") == 0 &&
+              strcmp(string_of(member(made, "subject"), "kind"), "idea") == 0,
+          "a subject is written, with its name and kind");
     cJSON_Delete(made);
   }
 

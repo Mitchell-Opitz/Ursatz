@@ -24,23 +24,19 @@
  * so a note held across segments counts in each, and the total is the
  * sounding time of every note in every segment.
  *
- * John Field, Nocturne No. 1 in E-flat major must be above 87% (it was 90% on sonority segments; a harmonic span reads
- * the union of its notes, and the segments that match no chord are fewer but longer: 84 of 90 spans, 87.6%, until P40
- * reads the chords of a span). The other
- * four reference pieces must still produce chords. The files are Ursatz's
- * framework-v1 corpus (URSATZ_FIXTURES_DIR/framework-v1-corpus). With the argument "smoke" only Bach 114 runs.
+ * Every reference piece must be above 87% (measured at 243bd316: Field 1 91.6%, Bach 114 95.6%, Clementi 36 99.4%,
+ * Field 5 89.8%, Mozart 545 94.9%) and must produce chords. The files are Ursatz's framework-v1 corpus
+ * (URSATZ_FIXTURES_DIR/framework-v1-corpus). With the argument "smoke" only Bach 114 runs.
  */
 
 #define COVERAGE_TARGET 0.87
 
 typedef struct {
     const char *file;
-    bool coverage_asserted;
 } Piece;
 
 static const Piece PIECES[] = {
-    {"Field 1.mid", true}, {"Bach 114.mid", false}, {"Clementi 36.mid", false},
-    {"Field 5.mid", false}, {"Mozart 545.mid", false},
+    {"Field 1.mid"}, {"Bach 114.mid"}, {"Clementi 36.mid"}, {"Field 5.mid"}, {"Mozart 545.mid"},
 };
 
 static double as_double(long numerator, unsigned long denominator) {
@@ -111,13 +107,10 @@ int main(int argc, char **argv) {
                report.entry_count, fraction * 100.0);
 
         assert(matched_chords > 0);
-        if (PIECES[i].coverage_asserted) {
-            if (!(fraction > COVERAGE_TARGET)) {
-                /* A plain exit, not an abort, so the test can be marked WILL_FAIL. */
-                fprintf(stderr, "%s: chord coverage %.1f%% is not above %.0f%%\n", PIECES[i].file,
-                        fraction * 100.0, COVERAGE_TARGET * 100.0);
-                return 1;
-            }
+        if (!(fraction > COVERAGE_TARGET)) {
+            fprintf(stderr, "%s: chord coverage %.1f%% is not above %.0f%%\n", PIECES[i].file, fraction * 100.0,
+                    COVERAGE_TARGET * 100.0);
+            return 1;
         }
 
         test_release_report(&report);

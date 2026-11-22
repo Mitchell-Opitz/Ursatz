@@ -257,8 +257,6 @@ MotiveResult motive_from_json(const char *text, const MotiveOptions *options, Mo
 /* A Standard MIDI File (type 0 or 1) or an uncompressed score-partwise MusicXML document. */
 MotiveResult motive_from_midi(const unsigned char *data, size_t size, const MotiveOptions *options, Motive *out,
                               MotiveError *error);
-MotiveResult motive_from_musicxml(const char *data, size_t size, const MotiveOptions *options, Motive *out,
-                                  MotiveError *error);
 
 /* Any of the formats; MOTIVE_FORMAT_AUTO uses motive_detect_format. */
 MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, const MotiveOptions *options, Motive *out,

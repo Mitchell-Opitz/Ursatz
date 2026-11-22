@@ -127,6 +127,18 @@ int main(void) {
     workshop_events_unsubscribe(events);
     workshop_events_unsubscribe(sleeper);
     workshop_events_close(g_workshop);
+
+    /* Stopped, the workshop has no bus: nothing subscribes; a second stop does nothing; started again it publishes to a new subscriber;
+       stopping NULL is safe. */
+    workshop_stop(g_workshop);
+    check(workshop_events_subscribe(g_workshop) == NULL, "a stopped workshop gives no subscription");
+    workshop_stop(g_workshop);
+    check(workshop_events_subscribe(g_workshop) == NULL, "a second stop changes nothing");
+    check(workshop_start(g_workshop, &error) == URSATZ_OK, "a stopped workshop starts again");
+    WorkshopEvents *again = workshop_events_subscribe(g_workshop);
+    check(again != NULL, "a restarted workshop gives subscriptions");
+    workshop_events_unsubscribe(again);
+    workshop_stop(NULL);
     harness_close();
     return test_finish("workshop_events");
 }

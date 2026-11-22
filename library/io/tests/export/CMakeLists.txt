@@ -11,7 +11,7 @@ ursatz_test(musicxml_score_fixtures LIBS ursatz_io
     DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/musicxml" VALGRIND)
 ursatz_test(musicxml_tuplets LIBS ursatz_io
     DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/musicxml"
-    URSATZ_ANALYZER_MUSICXML_DIR="${CMAKE_SOURCE_DIR}/analyzer/tests/musicxml")
+    URSATZ_SCORES_DIR="${URSATZ_FIXTURES_DIR}/scores")
 ursatz_test(score_quantize LIBS ursatz_io)
 ursatz_test(score_staves LIBS ursatz_io)
 ursatz_test(score_clefs LIBS ursatz_io VALGRIND)

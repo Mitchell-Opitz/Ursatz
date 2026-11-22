@@ -22,7 +22,19 @@ static void test_names(void) {
     assert(phrase_level_form_name(PHRASE_LEVEL_FORM_COUNT) == NULL);
 }
 
+static void test_from_name(void) {
+    for (int i = 0; i < PHRASE_LEVEL_FORM_COUNT; i++) {
+        PhraseLevelForm found = PHRASE_LEVEL_FORM_COUNT;
+        assert(phrase_level_form_from_name(phrase_level_form_name((PhraseLevelForm)i), &found) && found == (PhraseLevelForm)i);
+    }
+    PhraseLevelForm untouched = PHRASE_LEVEL_FORM_PERIOD;
+    assert(!phrase_level_form_from_name("sonata", &untouched) && untouched == PHRASE_LEVEL_FORM_PERIOD);
+    assert(!phrase_level_form_from_name("", &untouched) && !phrase_level_form_from_name(NULL, &untouched));
+    assert(untouched == PHRASE_LEVEL_FORM_PERIOD);
+}
+
 int main(void) {
+    test_from_name();
     test_validity();
     test_names();
     printf("test_phrase_level_form: ok\n");

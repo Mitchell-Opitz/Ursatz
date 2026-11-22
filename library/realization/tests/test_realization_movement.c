@@ -4,7 +4,7 @@
 
 #include "realization/piano_reduction.h"
 #include "realization/work.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Movements own and free their maps; key signatures, markers, played spans and compound parts are kept in order with their refusals;
@@ -192,6 +192,27 @@ static void test_containers(void) {
     movement_destroy(m);
 }
 
+/* A part's pedal markings: none to begin with, kept in start order, an overlap refused, an index out of range has none. */
+static void test_part_pedals(void) {
+    PerformerPart *part = NULL;
+    assert(performer_part_create("piano", "omt.instrument.piano", "Piano", 1, 1, 2, 0, &part) == REALIZATION_OK);
+    assert(performer_part_pedal_count(part) == 0 && performer_part_pedal_at(part, 0) == NULL);
+    assert(performer_part_pedal_count(NULL) == 0 && performer_part_pedal_at(NULL, 0) == NULL);
+
+    PedalMarking later = {PEDAL_SUSTAIN, span(4, 6)};
+    PedalMarking earlier = {PEDAL_SUSTAIN, span(0, 2)};
+    assert(performer_part_add_pedal(part, &later) == REALIZATION_OK);
+    assert(performer_part_add_pedal(part, &earlier) == REALIZATION_OK); /* added out of order */
+    assert(performer_part_pedal_count(part) == 2);
+    assert(rational_equals(performer_part_pedal_at(part, 0)->span.start.value, at(0).value));
+    assert(rational_equals(performer_part_pedal_at(part, 1)->span.start.value, at(4).value));
+    PedalMarking overlapping = {PEDAL_SUSTAIN, span(1, 5)};
+    assert(performer_part_add_pedal(part, &overlapping) == REALIZATION_ERR_BAD_VALUE);
+    assert(performer_part_pedal_count(part) == 2);
+    assert(performer_part_pedal_at(part, 2) == NULL);
+    performer_part_destroy(part);
+}
+
 static void test_work_defaults(void) {
     Work *work = NULL;
     assert(work_create("w1", "Sonata", "Anon", &work) == REALIZATION_OK);
@@ -314,6 +335,7 @@ int main(void) {
     test_maps_are_owned();
     test_ordered_lists();
     test_containers();
+    test_part_pedals();
     test_work_defaults();
     test_piano_reduction();
     puts("realization_movement: all tests passed");

@@ -163,9 +163,6 @@ bool motive_analyze(const Motive *motive, MotiveAnalysis *out);
 bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *overrides, size_t override_count,
                                MotiveAnalysis *out);
 
-/* "arch", "ascending" and so on. */
-const char *motive_shape_name(MotiveShape shape);
-
 /* A pitch as a note list writes it, a black key with a sharp as the spelling is not known: "D4", "A#3". */
 void motive_pitch_name(int midi, char *out, size_t size);
 

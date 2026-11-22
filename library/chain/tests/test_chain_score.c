@@ -5,12 +5,17 @@
 
 #include "analysis/notes/analysis_note_build.h"
 #include "chain/analysis_chain.h"
+#include "chain/chain_result.h"
+#include "chain/chain_style.h"
 #include "io/imported_score.h"
 #include "io/midi_renderer.h"
 #include "io/tests/io/midi_render_test_util.h"
+#include "model/identity/entity_id.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
-#include "test_knowledge.h"
+#include "theory/style/style_model_build.h"
+#include "theory/style/style_profile.h"
+#include "ursatz_test_knowledge.h"
 #include "ursatz_test.h"
 
 /*
@@ -72,6 +77,60 @@ static void test_counts_equal_the_analyzers(void) {
     }
 }
 
+/* The chain's own destructors: a zeroed value is safe to destroy twice, and NULL is a no-op. */
+static void test_destroying_zeroed_values(void) {
+    AnalysisChordReading reading;
+    memset(&reading, 0, sizeof(reading));
+    analysis_chord_reading_destroy(&reading);
+    analysis_chord_reading_destroy(&reading);
+    analysis_chord_reading_destroy(NULL);
+    AnalysisMotiveFeatures features;
+    memset(&features, 0, sizeof(features));
+    chain_motive_features_destroy(&features);
+    chain_motive_features_destroy(&features);
+    chain_motive_features_destroy(NULL);
+}
+
+/* The distance of a piece from a reference: refused without a chain or a reference, and zero from a reference built from its own statistics. */
+static void test_style_distance(void) {
+    StyleComparison comparison;
+    assert(chain_style_distance(NULL, NULL, &comparison) == STYLE_REFERENCE_ERR_ARGUMENT);
+
+    ImportedScore score;
+    import("Bach 114.mid", &score);
+    AnalysisChainConfig c = config();
+    AnalysisChain *chain = NULL;
+    assert(analysis_chain_run_score(&score, &c, &chain) == ANALYSIS_CHAIN_OK);
+    assert(chain_style_distance(chain, NULL, &comparison) == STYLE_REFERENCE_ERR_ARGUMENT);
+
+    StylePiece piece = {0};
+    StyleProfile *profile = style_profile_create();
+    StyleStatistic *statistics = NULL;
+    size_t count = 0;
+    assert(profile != NULL && chain_style_piece(chain, &piece));
+    assert(style_profile_add_piece(profile, &piece) == STYLE_PROFILE_OK);
+    assert(style_profile_statistics(profile, &statistics, &count) == STYLE_PROFILE_OK && count > 0);
+    EntityID *id = NULL;
+    StyleModel *model = NULL;
+    assert(entity_id_create("bach-114-style", &id) == ENTITY_ID_OK);
+    assert(style_model_from_statistics(id, "bach", "test", "test", statistics, count, &model) == STYLE_MODEL_BUILD_OK);
+    StyleReference *reference = NULL;
+    assert(style_reference_create(model, NULL, 0, "test", &reference) == STYLE_REFERENCE_OK);
+
+    assert(chain_style_distance(chain, reference, NULL) == STYLE_REFERENCE_ERR_ARGUMENT);
+    assert(chain_style_distance(chain, reference, &comparison) == STYLE_REFERENCE_OK);
+    assert(comparison.overall_present && comparison.overall == 0.0);
+    style_comparison_destroy(&comparison);
+
+    style_reference_destroy(reference);
+    style_model_destroy(model);
+    free(statistics);
+    style_piece_destroy(&piece);
+    style_profile_destroy(profile);
+    analysis_chain_destroy(chain);
+    imported_score_destroy(&score);
+}
+
 /* analysis_chain_run collects nothing and keeps no score; a run of fewer than every chain stage collects nothing. */
 static void test_only_a_full_run_collects(void) {
     ImportedScore score;
@@ -113,7 +172,59 @@ static void test_only_a_full_run_collects(void) {
     assert(analysis_chain_result(perception)->entry_count == 54 && analysis_chain_result(perception)->density_count == 8);
     assert(analysis_chain_result(perception)->progression_count == 0 && analysis_chain_result(perception)->section_count == 0);
     analysis_chain_destroy(perception);
+
+    /* Each result-only stage added to the chain stages collects what it reads, and only that: the form plan the one section; the
+       progressions as many as the all-stages run; the harmonic rhythm and the meter check their results; none of them without the stage. */
+    AnalysisChain *everything = NULL;
+    c.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    assert(analysis_chain_run_score(&bach, &c, &everything) == ANALYSIS_CHAIN_OK);
+    size_t all_progressions = analysis_chain_result(everything)->progression_count;
+    assert(all_progressions > 0);
+    analysis_chain_destroy(everything);
+    static const struct {
+        unsigned stage;
+        size_t sections, progressions, rhythm;
+        bool meter_check;
+    } ADDED[] = {{ANALYSIS_CHAIN_STAGE_FORM_PLAN, 1, 0, 0, false},
+                 {ANALYSIS_CHAIN_STAGE_PROGRESSIONS, 0, 0, 0, false},
+                 {ANALYSIS_CHAIN_STAGE_HARMONIC_RHYTHM, 0, 0, 1, false},
+                 {ANALYSIS_CHAIN_STAGE_METER_CHECK, 0, 0, 0, true}};
+    for (size_t i = 0; i < sizeof ADDED / sizeof ADDED[0]; i++) {
+        AnalysisChain *with = NULL;
+        c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION | ADDED[i].stage;
+        assert(analysis_chain_run_score(&bach, &c, &with) == ANALYSIS_CHAIN_OK);
+        const ChainResult *got = analysis_chain_result(with);
+        assert(got->section_count == ADDED[i].sections);
+        assert(ADDED[i].stage == ANALYSIS_CHAIN_STAGE_PROGRESSIONS ? got->progression_count == all_progressions : got->progression_count == 0);
+        assert(ADDED[i].rhythm ? got->harmonic_rhythm_count > 0 : got->harmonic_rhythm_count == 0);
+        assert(got->meter_check.present == ADDED[i].meter_check);
+        analysis_chain_destroy(with);
+        /* A stage that reads the chain's results does not run alone. */
+        AnalysisChain *alone = NULL;
+        c.stages = ADDED[i].stage;
+        assert(analysis_chain_run_score(&bach, &c, &alone) == ANALYSIS_CHAIN_ERR_BAD_CONFIG && alone == NULL);
+    }
     imported_score_destroy(&bach);
+
+    /* The markings: the two tempo markings and the four dynamics of a score that has them, none from the perception stages alone, and not
+       the stage alone. */
+    char path[512];
+    snprintf(path, sizeof(path), "%s/../scores/markings.musicxml", URSATZ_CORPUS_DIR);
+    ImportedScore marked;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &marked, NULL) == IMPORTED_SCORE_OK);
+    AnalysisChain *markings = NULL;
+    c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION | ANALYSIS_CHAIN_STAGE_MARKINGS;
+    assert(analysis_chain_run_score(&marked, &c, &markings) == ANALYSIS_CHAIN_OK);
+    assert(analysis_chain_result(markings)->tempo_marking_count == 2 && analysis_chain_result(markings)->dynamic_count == 4);
+    analysis_chain_destroy(markings);
+    c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION;
+    assert(analysis_chain_run_score(&marked, &c, &markings) == ANALYSIS_CHAIN_OK);
+    assert(analysis_chain_result(markings)->tempo_marking_count == 0 && analysis_chain_result(markings)->dynamic_count == 0);
+    analysis_chain_destroy(markings);
+    markings = NULL;
+    c.stages = ANALYSIS_CHAIN_STAGE_MARKINGS;
+    assert(analysis_chain_run_score(&marked, &c, &markings) == ANALYSIS_CHAIN_ERR_BAD_CONFIG && markings == NULL);
+    imported_score_destroy(&marked);
 
     /* No knowledge, no perception stage. */
     AnalysisChain *refused = NULL;
@@ -335,6 +446,8 @@ static void test_voice_faults(void) {
 }
 
 int main(void) {
+    test_destroying_zeroed_values();
+    test_style_distance();
     test_counts_equal_the_analyzers();
     test_only_a_full_run_collects();
     test_a_score_with_no_notes();

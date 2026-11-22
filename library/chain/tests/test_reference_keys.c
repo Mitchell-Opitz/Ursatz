@@ -10,7 +10,7 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
 #include "ursatz_test.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The chain's keys against Michelle's readings of the Clementi and Mozart reference pieces (R-401): the keys are placed on the phrases of the

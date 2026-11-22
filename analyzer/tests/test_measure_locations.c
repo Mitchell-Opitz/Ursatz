@@ -16,7 +16,7 @@
 
 /*
  * Meter and measure/beat location test. The five reference pieces
- * (Ursatz framework-v1 corpus) and two constructed files are imported,
+ * (Ursatz framework-v1 corpus) and two constructed files are read or imported,
  * and the meter section and the location of the chords covering chosen
  * positions (a chord segment may start before the position) are compared
  * with expectations worked out by hand from the files' MIDI ticks:
@@ -33,7 +33,8 @@
  *           chord, D and C on beats 1-3 of measure 1.
  *   no_meter: no time signature event; five quarter notes.
  *
- * With the argument "smoke" only the Bach 114 entry runs (the fast set).
+ * The five reference pieces read the committed analysis documents (tests/snapshots/<slug>.analysis.json, the golden of
+ * test_document_snapshots), which hold every member this test reads; the two constructed files are analyzed here.
  */
 
 typedef struct {
@@ -62,6 +63,7 @@ typedef struct {
     size_t chord_expectation_count;
     const ChangeExpectation *changes;
     size_t change_count;
+    const char *slug; /* the reference piece's committed snapshot, or NULL for a built file */
 } Expectation;
 
 static const ChordExpectation BACH_CHORDS[] = {
@@ -80,11 +82,11 @@ static const ChordExpectation NO_METER_CHORDS[] = {
 
 /* Chord counts are harmonic spans (one chord a span), not sonority segments. */
 static const Expectation PIECES[] = {
-    {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 54, BACH_CHORDS, 5, NULL, 0},
-    {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 46, CLEMENTI_CHORDS, 5, NULL, 0},
-    {"Field 1.mid", "file", 12, 8, 67, 67, -1, 107, FIELD_1_CHORDS, 4, NULL, 0},
-    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 82, FIELD_5_CHORDS, 5, NULL, 0},
-    {"Mozart 545.mid", "file", 4, 4, 146, 146, -1, 210, MOZART_CHORDS, 4, NULL, 0},
+    {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 54, BACH_CHORDS, 5, NULL, 0, "bach-114"},
+    {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 46, CLEMENTI_CHORDS, 5, NULL, 0, "clementi-36"},
+    {"Field 1.mid", "file", 12, 8, 67, 67, -1, 107, FIELD_1_CHORDS, 4, NULL, 0, "field-1"},
+    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 82, FIELD_5_CHORDS, 5, NULL, 0, "field-5"},
+    {"Mozart 545.mid", "file", 4, 4, 146, 146, -1, 210, MOZART_CHORDS, 4, NULL, 0, "mozart-545"},
 };
 
 static const Expectation PICKUP = {"pickup", "file", 4, 4, 2, 1, 1, 2, PICKUP_CHORDS, 4, NULL, 0};
@@ -154,22 +156,7 @@ static double position_key_of(const cJSON *position) {
                         number(test_json_require(position, "subdivision"), "den"));
 }
 
-static void check_piece(const char *path, const char *display_name, const Expectation *expected) {
-    ImportedScore notes;
-    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
-    ChainResult report;
-    assert(test_analyze_report(&notes, &report));
-    AnalysisDocument *built = test_build_document(display_name, &report);
-    assert(built != NULL);
-    char *json = analyzer_document_to_json(built);
-    assert(json != NULL);
-    analyzer_document_destroy(built);
-    test_release_report(&report);
-    imported_score_destroy(&notes);
-
-    cJSON *document = cJSON_Parse(json);
-    assert(document != NULL);
-
+static void check_document(const cJSON *document, const Expectation *expected) {
     const cJSON *meter = test_json_require(document, "meter");
     assert(strcmp(test_json_require(meter, "source")->valuestring, expected->source) == 0);
     assert(number(test_json_require(meter, "time_signature"), "numerator") == expected->numerator);
@@ -228,24 +215,34 @@ static void check_piece(const char *path, const char *display_name, const Expect
         assert(cJSON_IsObject(test_json_require(test_json_require(key, "location"), "start")));
     }
 
+}
+
+/* A built file: imported, analyzed and rendered here. */
+static void check_piece(const char *path, const char *display_name, const Expectation *expected) {
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
+    ChainResult report;
+    assert(test_analyze_report(&notes, &report));
+    AnalysisDocument *built = test_build_document(display_name, &report);
+    assert(built != NULL);
+    char *json = analyzer_document_to_json(built);
+    assert(json != NULL);
+    analyzer_document_destroy(built);
+    test_release_report(&report);
+    imported_score_destroy(&notes);
+
+    cJSON *document = cJSON_Parse(json);
+    assert(document != NULL);
+    check_document(document, expected);
     cJSON_Delete(document);
     free(json);
 }
 
-int main(int argc, char **argv) {
-    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+int main(void) {
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
-        if (smoke && strcmp(PIECES[i].name, "Bach 114.mid") != 0) {
-            continue;
-        }
-        char path[512];
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[i].name);
-        check_piece(path, PIECES[i].name, &PIECES[i]);
-    }
-
-    if (smoke) {
-        puts("test_measure_locations smoke: ok");
-        return 0;
+        cJSON *document = test_reference_document(PIECES[i].slug);
+        check_document(document, &PIECES[i]);
+        cJSON_Delete(document);
     }
 
     char *pickup_path = test_temp_path("pickup_fixture.mid");

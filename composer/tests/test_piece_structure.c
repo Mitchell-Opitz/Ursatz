@@ -8,7 +8,11 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/form_spec.h>
+#include <ursatz_composer/locks.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/piece_reopen.h>
+#include <plan/plan_edit.h>
+#include <plan/plan_state.h>
 #include "structure/plan_util.h"
 
 #include "support/test_composer.h"
@@ -20,7 +24,8 @@
  *
  *   checks    no body, parts out of order, a duplicate id, a bad pickup, too many sections, a short length;
  *             the default cadences and the default ending
- *   plan      the sections start where the beats say, with their parts, cadences and pickups
+ *   plan      the sections start where the beats say, with their parts, cadences and pickups; the section lookups and reopening of
+ *             piece_reopen.h and plan_section_of
  *   compose   intro 2 bars, body 8 bars (a motif sentence) and 6 beats (empty), turnaround 1 bar: every section is
  *             written and the cadences are heard as planned in at least 8 of the 10 seeds
  *   pickup    a body section with a quarter-note pickup composes and keeps its pickup
@@ -210,6 +215,85 @@ static void test_default_cadences(void) {
     assert(fixture.request.section_count == 5);
 }
 
+/* The lookups regenerating a piece reads (piece_reopen.h) on the plan of test_plan: sections intro, a, b and t, t held for the seam. */
+static void test_reopen(Plan *plan, const NodeId *sections, size_t count) {
+    static const char *const IDS[4] = {"intro", "a", "b", "t"};
+    assert(count == 4);
+    for (size_t i = 0; i < count; i++) {
+        assert(piece_section_find(plan, IDS[i]) == sections[i]);
+    }
+    assert(piece_section_find(plan, "zz") == PLAN_NODE_NONE && piece_section_find(plan, "") == PLAN_NODE_NONE);
+    /* The turnaround is the one section the loop's end holds back; a count with no room still counts, and a section that leads in is held. */
+    NodeId held[4];
+    assert(piece_held_sections(plan, held, 4) == 1 && held[0] == sections[3]);
+    assert(piece_held_sections(plan, NULL, 0) == 1);
+    SectionDescription lead = *plan_node_section(plan, sections[1]);
+    lead.leads_in = true;
+    assert(plan_node_set_section(plan, sections[1], &lead) == PLAN_OK);
+    assert(piece_held_sections(plan, held, 4) == 2 && held[0] == sections[1] && held[1] == sections[3]);
+    assert(piece_held_sections(plan, held, 1) == 2 && held[0] == sections[1]);
+    lead.leads_in = false;
+    assert(plan_node_set_section(plan, sections[1], &lead) == PLAN_OK);
+    /* Only the first body section starts where the body does. */
+    for (size_t i = 0; i < count; i++) {
+        assert(piece_section_holds_body_start(plan, sections[i]) == (i == 1));
+    }
+    /* The seam follows the loop's end, as test_plan finds it. */
+    NodeId seam = plan_node_child_at(plan, plan_root(plan), count);
+    assert(plan_section_has_role(plan, seam, SECTION_ROLE_SEAM));
+    assert(!piece_section_holds_body_start(plan, seam) && !piece_section_holds_body_start(plan, PLAN_NODE_NONE));
+    /* The seam's copy is removed, even when Given; a plan with no seam is left as it is. */
+    PlanNote note = plan_note(60, (Rational){0, 1}, (Rational){1, 4});
+    PlanLanePayload payload;
+    memset(&payload, 0, sizeof(payload));
+    payload.notes.notes = &note;
+    payload.notes.note_count = 1;
+    LaneSpanId copy;
+    PlanSpan seam_span = plan_node_span(plan, seam);
+    seam_span.length = (Rational){1, 4};
+    assert(plan_add_lane_span(plan, seam, PLAN_LANE_MELODY, 0, seam_span, &payload, &copy) == PLAN_OK);
+    assert(plan_lane_span_set_state(plan, copy, PLAN_STATE_GIVEN) == PLAN_OK);
+    LaneSpanId found[4];
+    assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, seam), found, 4) == 1);
+    assert(piece_seam_reset(plan) == PIECE_OK);
+    assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, seam), found, 4) == 0);
+    Plan *bare = plan_create();
+    assert(bare && piece_seam_reset(bare) == PIECE_OK);
+    plan_destroy(bare);
+    /* Harmony given to a section is reopened span by span; no melody was given there. */
+    PlanMeter meter = {4, 4, 0};
+    SpelledKey key = test_key(0, "major");
+    SectionHarmony harmony;
+    char message[128];
+    memset(&harmony, 0, sizeof(harmony));
+    harmony.kind = SECTION_HARMONY_PROGRESSION;
+    snprintf(harmony.numerals, sizeof(harmony.numerals), "I V I V");
+    assert(piece_give_harmony(plan, sections[1], &harmony, &meter, &key, message, sizeof(message)) == PIECE_OK);
+    LaneSpanId spans[16];
+    PlanSpan range = plan_node_span(plan, sections[1]);
+    size_t given = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, spans, 16);
+    assert(given == 4);
+    for (size_t i = 0; i < given; i++) {
+        assert(plan_lane_span_state(plan, spans[i]) == PLAN_STATE_GIVEN);
+    }
+    assert(piece_reopen_lane(plan, sections[1], PLAN_LANE_MELODY) == 0);
+    assert(piece_reopen_lane(plan, sections[1], PLAN_LANE_HARMONY) == 4);
+    given = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, spans, 16);
+    for (size_t i = 0; i < given; i++) {
+        assert(plan_lane_span_state(plan, spans[i]) != PLAN_STATE_GIVEN);
+    }
+    /* The section a node is in: a section is its own, a node under it has it, the form has none. */
+    NodeId phrase;
+    NodeId idea;
+    PlanSpan first_bar = plan_node_span(plan, sections[1]);
+    first_bar.length = (Rational){1, 1};
+    assert(plan_add_node(plan, sections[1], PLAN_NODE_PHRASE, plan_node_span(plan, sections[1]), "phrase", &phrase) == PLAN_OK);
+    assert(plan_add_node(plan, phrase, PLAN_NODE_IDEA, first_bar, "idea", &idea) == PLAN_OK);
+    assert(plan_section_of(plan, sections[1]) == sections[1]);
+    assert(plan_section_of(plan, idea) == sections[1]);
+    assert(plan_section_of(plan, plan_root(plan)) == PLAN_NODE_NONE);
+}
+
 static void test_plan(void) {
     Fixture fixture;
     standard_structure(&fixture);
@@ -265,6 +349,7 @@ static void test_plan(void) {
     Rational barline;
     assert(rational_make(56, 4, &barline) == RATIONAL_OK);
     assert(rational_cmp(plan_node_span(plan, material).start, barline) == 0);
+    test_reopen(plan, sections, count);
     plan_destroy(plan);
 
     /* The ending is not laid out. */

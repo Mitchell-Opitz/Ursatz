@@ -22,7 +22,8 @@ static long floor_div(long a, long b) {
 
 static const char *const SHAPE_NAMES[] = {"single note", "level", "ascending", "descending", "arch", "valley", "wave"};
 
-const char *motive_shape_name(MotiveShape shape) {
+/* "arch", "ascending" and so on. */
+static const char *motive_shape_name(MotiveShape shape) {
     return (size_t)shape < sizeof(SHAPE_NAMES) / sizeof(SHAPE_NAMES[0]) ? SHAPE_NAMES[shape] : "unknown";
 }
 

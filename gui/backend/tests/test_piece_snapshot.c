@@ -10,14 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -133,11 +128,7 @@ static void snapshot_piece(const char *name, const char *source_path, const char
 }
 
 int main(void) {
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache 2> nul");
-#else
   system("rm -rf library settings cache");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
   capture = test_update_goldens();

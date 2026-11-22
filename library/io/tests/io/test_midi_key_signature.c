@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "ursatz_test.h"
 #include "model/pitch/key_signature.h"
 #include "model/time/musical_time.h"
 
@@ -16,35 +17,6 @@
  * (test_midi_import_key_signatures) in a sharp key, a flat key, a minor key, a file with no such event and a file with
  * a truncated meta-event payload, then every key change with its position, and the KeySignature each sf byte builds.
  */
-
-static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
-    memcpy(buf + *pos, bytes, len);
-    *pos += len;
-}
-
-static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                           (unsigned char)v};
-    append_bytes(buf, pos, b, 4);
-}
-
-static void append_u16(unsigned char *buf, size_t *pos, uint16_t v) {
-    unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
-    append_bytes(buf, pos, b, 2);
-}
-
-static size_t build_smf_type0(unsigned char *buf, const unsigned char *track_body, size_t track_body_size) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 0);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, 96);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track_body_size);
-    append_bytes(buf, &pos, track_body, track_body_size);
-    return pos;
-}
 
 static void test_finds_sharp_major_key_signature(void) {
     /* G major: 1 sharp, major. Preceded by an unrelated note-on/note-off
@@ -56,7 +28,7 @@ static void test_finds_sharp_major_key_signature(void) {
         0x00, 0xFF, 0x2F, 0x00 /* end of track */
     };
     unsigned char file[128];
-    size_t file_size = build_smf_type0(file, track, sizeof(track));
+    size_t file_size = test_smf_type0(file, 96, track, sizeof(track));
 
     MidiKeySignatureEvents keys = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &keys) == MIDI_IMPORT_OK);
@@ -73,7 +45,7 @@ static void test_finds_flat_key_signature(void) {
         0x00, 0xFF, 0x2F, 0x00
     };
     unsigned char file[64];
-    size_t file_size = build_smf_type0(file, track, sizeof(track));
+    size_t file_size = test_smf_type0(file, 96, track, sizeof(track));
 
     MidiKeySignatureEvents keys = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &keys) == MIDI_IMPORT_OK);
@@ -90,7 +62,7 @@ static void test_finds_minor_key_signature(void) {
         0x00, 0xFF, 0x2F, 0x00
     };
     unsigned char file[64];
-    size_t file_size = build_smf_type0(file, track, sizeof(track));
+    size_t file_size = test_smf_type0(file, 96, track, sizeof(track));
 
     MidiKeySignatureEvents keys = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &keys) == MIDI_IMPORT_OK);
@@ -107,7 +79,7 @@ static void test_no_key_signature_present(void) {
         0x00, 0xFF, 0x2F, 0x00
     };
     unsigned char file[64];
-    size_t file_size = build_smf_type0(file, track, sizeof(track));
+    size_t file_size = test_smf_type0(file, 96, track, sizeof(track));
 
     MidiKeySignatureEvents keys = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &keys) == MIDI_IMPORT_OK);
@@ -119,7 +91,7 @@ static void test_truncated_key_signature_meta_event_fails_cleanly(void) {
        buffer ends. */
     unsigned char track[] = {0x00, 0xFF, 0x59, 0x02, 0x01};
     unsigned char file[64];
-    size_t file_size = build_smf_type0(file, track, sizeof(track));
+    size_t file_size = test_smf_type0(file, 96, track, sizeof(track));
 
     MidiKeySignatureEvents untouched = {(MidiKeySignatureEvent *)0x1, 99};
     assert(test_midi_import_key_signatures(file, file_size, &untouched) == MIDI_IMPORT_ERR_BAD_TRACK);
@@ -127,22 +99,6 @@ static void test_truncated_key_signature_meta_event_fails_cleanly(void) {
 }
 
 /* ---- midi_key_signature_build and the key signatures of a complete import ---- */
-
-static size_t build_smf(unsigned char *buf, uint16_t format, uint16_t division, const unsigned char *const *tracks,
-                        const size_t *track_sizes, size_t track_count) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, format);
-    append_u16(buf, &pos, (uint16_t)track_count);
-    append_u16(buf, &pos, division);
-    for (size_t t = 0; t < track_count; t++) {
-        append_bytes(buf, &pos, "MTrk", 4);
-        append_u32(buf, &pos, (uint32_t)track_sizes[t]);
-        append_bytes(buf, &pos, tracks[t], track_sizes[t]);
-    }
-    return pos;
-}
 
 static char letter_char(PitchLetter letter) {
     switch (letter) {
@@ -206,7 +162,7 @@ static void test_import_single_key_signature(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -234,7 +190,7 @@ static void test_import_key_changes_with_positions(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -263,7 +219,7 @@ static void test_import_fractional_position(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -289,7 +245,7 @@ static void test_import_merges_tracks_in_time_order(void) {
     const unsigned char *tracks[2] = {track0, track1};
     size_t sizes[2] = {sizeof(track0), sizeof(track1)};
     unsigned char file[256];
-    size_t file_size = build_smf(file, 1, 96, tracks, sizes, 2);
+    size_t file_size = test_smf(file, 1, 96, tracks, sizes, 2);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -308,7 +264,7 @@ static void test_import_same_tick_orders_by_track(void) {
     const unsigned char *tracks[2] = {track0, track1};
     size_t sizes[2] = {sizeof(track0), sizeof(track1)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 1, 96, tracks, sizes, 2);
+    size_t file_size = test_smf(file, 1, 96, tracks, sizes, 2);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -330,7 +286,7 @@ static void test_import_duplicates_and_conflicts_on_one_track(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -350,7 +306,7 @@ static void test_import_no_key_signature(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {(MidiKeySignatureEvent *)0x1, 99};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -370,7 +326,7 @@ static void test_import_skips_malformed_events(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -389,7 +345,7 @@ static void test_import_mode_hints(void) {
     const unsigned char *tracks[1] = {track};
     size_t sizes[1] = {sizeof(track)};
     unsigned char file[128];
-    size_t file_size = build_smf(file, 0, 96, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 96, tracks, sizes, 1);
 
     MidiKeySignatureEvents events = {NULL, 0};
     assert(test_midi_import_key_signatures(file, file_size, &events) == MIDI_IMPORT_OK);
@@ -413,20 +369,20 @@ static void test_import_structural_errors(void) {
     unsigned char file[128];
 
     /* SMPTE division, and a division of zero, are rejected. */
-    size_t file_size = build_smf(file, 0, 0xE728, tracks, sizes, 1);
+    size_t file_size = test_smf(file, 0, 0xE728, tracks, sizes, 1);
     assert(test_midi_import_key_signatures(file, file_size, &untouched) == MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION);
-    file_size = build_smf(file, 0, 0, tracks, sizes, 1);
+    file_size = test_smf(file, 0, 0, tracks, sizes, 1);
     assert(test_midi_import_key_signatures(file, file_size, &untouched) == MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION);
 
     /* Format 2 is unsupported. */
-    file_size = build_smf(file, 2, 96, tracks, sizes, 1);
+    file_size = test_smf(file, 2, 96, tracks, sizes, 1);
     assert(test_midi_import_key_signatures(file, file_size, &untouched) == MIDI_IMPORT_ERR_UNSUPPORTED_FORMAT);
 
     /* A truncated meta-event is a bad track. */
     unsigned char truncated[] = {0x00, 0xFF, 0x59, 0x02, 0x01};
     const unsigned char *bad_tracks[1] = {truncated};
     size_t bad_sizes[1] = {sizeof(truncated)};
-    file_size = build_smf(file, 0, 96, bad_tracks, bad_sizes, 1);
+    file_size = test_smf(file, 0, 96, bad_tracks, bad_sizes, 1);
     assert(test_midi_import_key_signatures(file, file_size, &untouched) == MIDI_IMPORT_ERR_BAD_TRACK);
     assert(untouched.count == 99);
 }
@@ -464,7 +420,68 @@ static void test_corpus_key_signatures_in_time_order(void) {
     check_corpus_file("Field 5.mid");
 }
 
+/* ---- the collector the one track walk feeds ---- */
+
+static void test_collector(void) {
+    MidiKeySignatureEvents out = {NULL, 0};
+    midi_key_signature_collector_destroy(NULL); /* a no-op */
+
+    /* an empty collector finishes with no events */
+    MidiKeySignatureCollector *empty = midi_key_signature_collector_create();
+    assert(empty != NULL);
+    assert(midi_key_signature_collector_finish(empty, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 0 && out.events == NULL);
+    midi_key_signature_collector_destroy(empty);
+
+    /* a well-formed key signature is kept; another meta type, a bad length and an sf outside -7..7 are ignored */
+    MidiKeySignatureCollector *collector = midi_key_signature_collector_create();
+    assert(collector != NULL);
+    const unsigned char two_sharps[2] = {0x02, 0x00};
+    const unsigned char time_signature[3] = {4, 2, 24};
+    const unsigned char eight_sharps[2] = {0x08, 0x00};
+    const unsigned char eight_flats[2] = {0xF8, 0x00};
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, two_sharps, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x58, time_signature, 3) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, time_signature, 3) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, eight_sharps, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, eight_flats, 2) == 0);
+    assert(midi_key_signature_collector_finish(collector, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 1 && out.events[0].sharps_flats == 2 && out.events[0].mode_hint == MIDI_MODE_HINT_MAJOR);
+    assert(out.events[0].tick == 0 && out.events[0].key_signature != NULL);
+    midi_key_signature_events_destroy(&out);
+    assert(out.count == 0 && out.events == NULL);
+    midi_key_signature_collector_destroy(collector);
+
+    /* one flat, minor, at tick 480 of 480 to the quarter lands at 1/4 of a whole note */
+    collector = midi_key_signature_collector_create();
+    assert(collector != NULL);
+    const unsigned char f_minor[2] = {0xFF, 0x01};
+    assert(midi_key_signature_collector_meta(collector, 0, 480, 0x59, f_minor, 2) == 0);
+    assert(midi_key_signature_collector_finish(collector, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 1 && out.events[0].sharps_flats == -1 && out.events[0].mode_hint == MIDI_MODE_HINT_MINOR);
+    assert(out.events[0].position.value.num == 1 && out.events[0].position.value.den == 4);
+    midi_key_signature_events_destroy(&out);
+    midi_key_signature_collector_destroy(collector);
+
+    /* two identical events at one tick keep one; a later tick fed first still comes out second */
+    collector = midi_key_signature_collector_create();
+    assert(collector != NULL);
+    assert(midi_key_signature_collector_meta(collector, 0, 960, 0x59, f_minor, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, two_sharps, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, two_sharps, 2) == 0);
+    assert(midi_key_signature_collector_finish(collector, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 2 && out.events[0].tick == 0 && out.events[1].tick == 960);
+    midi_key_signature_events_destroy(&out);
+
+    /* a division of 0 and a missing collector or output are refused */
+    assert(midi_key_signature_collector_finish(collector, 0, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_UNSUPPORTED_DIVISION);
+    assert(midi_key_signature_collector_finish(NULL, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_NULL_BUFFER);
+    assert(midi_key_signature_collector_finish(collector, 480, NULL) == MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_NULL_BUFFER);
+    midi_key_signature_collector_destroy(collector);
+}
+
 int main(void) {
+    test_collector();
     test_finds_sharp_major_key_signature();
     test_finds_flat_key_signature();
     test_finds_minor_key_signature();
