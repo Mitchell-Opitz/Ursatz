@@ -88,8 +88,17 @@ static void test_create_rejects_null_provenance(void) {
 }
 
 static void test_create_accepts_valid(void) {
-    Entity *entity = make_entity("work-1", 1, "Work");
+    EntityID *id = NULL;
+    SchemaVersion *version = NULL;
+    ProvenanceReference *provenance = NULL;
+    Entity *entity = NULL;
+    assert(entity_id_create("work-1", &id) == ENTITY_ID_OK);
+    assert(schema_version_create(1, &version) == SCHEMA_VERSION_OK);
+    assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
+    assert(entity_create(id, "Work", version, NULL, provenance, &entity) == ENTITY_OK);
     assert(entity != NULL);
+    /* entity.h reads back the id only (the type and the schema version have no accessor in it): the id is the one given. */
+    assert(strcmp(entity_id_value(entity_id(entity)), "work-1") == 0);
     entity_destroy(entity);
 }
 
