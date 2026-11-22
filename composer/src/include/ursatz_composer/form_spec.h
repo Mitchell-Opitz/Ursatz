@@ -199,8 +199,6 @@ bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter);
 /* Whether a piece of the form is performed: its composed plan is not what it renders (R-485): the form has repeats or parts. */
 bool form_spec_performed(const FormSpec *form);
 
-/* The index of the region with that name, or -1. */
-int form_spec_region_find(const FormSpec *form, const char *name);
 /* FORM_SPEC_HOME, or the index of the region a section's key region names (a region that is none or home is home). */
 int form_spec_region_of(const FormSpec *form, const SectionRegion *region);
 /* The index in the size of the section with that name ("" or an unknown name: FORM_SPEC_NO_RETURN). */

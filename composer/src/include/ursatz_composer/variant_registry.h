@@ -40,9 +40,6 @@ typedef enum {
     VARIANT_PARAM_POSITION  /* a fragment position: 1 leading, 2 trailing, 3 middle */
 } VariantParamKind;
 
-/* "int", "bool", "ratio", "pitch" or "position". */
-const char *variant_param_kind_name(VariantParamKind kind);
-
 /*
  * A parameter of an operation, as variant_operation_param gives it: the name, kind and description are the library
  * relation's (motive_relation_param_info); min, max and the flags are the registry's own (VariantDrawn), what a chain draws

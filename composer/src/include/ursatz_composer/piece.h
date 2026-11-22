@@ -175,9 +175,6 @@ typedef struct {
     PlanVoicing voicing;
 } PieceRequest;
 
-/* The material bars a piece of section_count sections holds, for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
-size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
-
 /*
  * The theme size the request's motive has to fit: the bars of the shortest theme section (4 or 8) and the bars of the basic
  * idea in it (1 of 4, 2 of 8); for a form whose sections the request gives, the shortest of the request's sections (4, or 8

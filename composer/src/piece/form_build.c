@@ -19,7 +19,8 @@
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
 
-size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
+/* The material bars a piece of section_count sections holds, for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
+static size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
     return motive_bars + MATERIAL_BARS_PER_SECTION * motive_bars * section_count;
 }
 

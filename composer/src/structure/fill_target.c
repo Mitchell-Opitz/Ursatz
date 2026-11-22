@@ -14,7 +14,7 @@ PlanState fill_target_state(const Plan *plan, FillTarget target) {
                                            : plan_lane_span_state(plan, (LaneSpanId)target.id);
 }
 
-size_t fill_target_constraint_count(const Plan *plan, FillTarget target) {
+static size_t fill_target_constraint_count(const Plan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
         return plan_lane_span_constraint_count(plan, (LaneSpanId)target.id);
     }

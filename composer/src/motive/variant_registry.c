@@ -26,7 +26,8 @@ const char *variant_category_name(VariantCategory category) {
     return (size_t)category < sizeof(NAMES) / sizeof(NAMES[0]) ? NAMES[category] : "unknown";
 }
 
-const char *variant_param_kind_name(VariantParamKind kind) {
+/* "int", "bool", "ratio", "pitch" or "position". */
+static const char *variant_param_kind_name(VariantParamKind kind) {
     static const char *const NAMES[] = {"int", "bool", "ratio", "pitch", "position"};
     return (size_t)kind < sizeof(NAMES) / sizeof(NAMES[0]) ? NAMES[kind] : "unknown";
 }

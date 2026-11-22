@@ -264,7 +264,8 @@ static bool read_regions(Reader *reader, const cJSON *root, FormSpec *form) {
     return true;
 }
 
-int form_spec_region_find(const FormSpec *form, const char *name) {
+/* The index of the region with that name, or -1. */
+static int form_spec_region_find(const FormSpec *form, const char *name) {
     for (size_t i = 0; form && name && i < form->region_count; i++) {
         if (strcmp(form->regions[i].name, name) == 0) {
             return (int)i;
