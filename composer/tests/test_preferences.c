@@ -45,7 +45,8 @@ static const char *DEFAULT_DEVELOPMENT =
     "\"theme\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"1/5\"}},"
     "\"continuation\":{\"every_segment\":false,\"fragment_lengths\":{\"segment\":1,\"half_bar\":0,\"beat\":0},"
     "\"diminish\":false,\"liquidate\":false,\"faster_harmony\":false},\"basic_as_written\":false,"
-    "\"contrast\":{\"distance\":{\"similar\":1,\"distant\":0},\"new_material\":0}}";
+    "\"contrast\":{\"distance\":{\"similar\":1,\"distant\":0},\"new_material\":0},"
+    "\"functions\":{\"harmony\":false,\"surface\":false,\"contrast\":false}}";
 
 static const char *DEFAULT_CANDIDATES = "{\"variety\":0,\"pool\":4}";
 
