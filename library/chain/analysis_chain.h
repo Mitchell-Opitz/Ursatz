@@ -180,6 +180,13 @@ AnalysisChainConfig analysis_chain_config_default(void);
    Composer's versions record it as `ursatz_commit`. */
 const char *analysis_chain_producer_key(void);
 
+/*
+ * What a run answers. The first four errors are the ones a caller meets: a NULL argument, a config the run refuses, notes it cannot read and a
+ * config with no knowledge. The codes from ERR_SEGMENTS to ERR_SCHEMAS are one for each stage bit (STAGE_ERROR(bit) in analysis_chain.c, the
+ * stage's code is ERR_SEGMENTS plus its bit, as test_stage_table.c pins it): a stage answers its own code when it fails, which it does only
+ * on an allocation or an invariant failure that no test injects. ANALYSIS_CHAIN_ERR_METER is never returned: the meter stage has no pass of
+ * its own that can fail (its row of the table has none), and the code keeps its place so the others keep their values.
+ */
 typedef enum {
     ANALYSIS_CHAIN_OK = 0,
     ANALYSIS_CHAIN_ERR_NULL_ARGUMENT,
