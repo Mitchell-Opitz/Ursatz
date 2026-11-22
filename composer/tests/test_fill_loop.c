@@ -363,10 +363,26 @@ static void test_pick(void) {
     add_constraint(plan, node_b, 2);
     assert(fill_pick_open_target(plan, NULL, 0, &picked) && fill_target_equals(picked, node_b));
 
+    /* The target accessors: what exists, its state and its span; a missing target is Constrained with no length. */
+    FillTarget missing_node = {FILL_TARGET_NODE, 999};
+    FillTarget missing_span = {FILL_TARGET_LANE_SPAN, 999};
+    assert(fill_target_exists(plan, node_a) && fill_target_exists(plan, node_b) && fill_target_exists(plan, span_target));
+    assert(!fill_target_exists(plan, missing_node) && !fill_target_exists(plan, missing_span));
+    assert(fill_target_state(plan, node_a) == PLAN_STATE_CONSTRAINED && fill_target_state(plan, node_b) == PLAN_STATE_CONSTRAINED);
+    assert(fill_target_state(plan, span_target) == PLAN_STATE_CONSTRAINED);
+    PlanSpan b_span = fill_target_span(plan, node_b);
+    assert(rational_cmp(b_span.start, fraction(4, 1)) == 0 && rational_cmp(b_span.length, fraction(4, 1)) == 0);
+    PlanSpan melody_span = fill_target_span(plan, span_target);
+    assert(rational_cmp(melody_span.start, fraction(0, 1)) == 0 && rational_cmp(melody_span.length, fraction(4, 1)) == 0);
+    assert(fill_target_state(plan, missing_node) == PLAN_STATE_CONSTRAINED && fill_target_state(plan, missing_span) == PLAN_STATE_CONSTRAINED);
+    assert(fill_target_span(plan, missing_node).length.num == 0 && fill_target_span(plan, missing_span).length.num == 0);
+
     /* Given and Realized are not open; with nothing open, nothing is picked. */
     assert(plan_node_set_state(plan, a, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(plan_node_set_state(plan, b, PLAN_STATE_REALIZED) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, span, PLAN_STATE_REALIZED) == PLAN_OK);
+    assert(fill_target_state(plan, node_a) == PLAN_STATE_GIVEN && fill_target_state(plan, node_b) == PLAN_STATE_REALIZED);
+    assert(fill_target_state(plan, span_target) == PLAN_STATE_REALIZED);
     assert(!fill_pick_open_target(plan, NULL, 0, &picked));
     plan_destroy(plan);
 
@@ -378,6 +394,52 @@ static void test_pick(void) {
     add_node(plan, form, PLAN_NODE_SECTION, bars(0, 4));
     assert(fill_pick_open_target(plan, NULL, 0, &picked) && picked.id == first);
     plan_destroy(plan);
+}
+
+/* ------------------------------------------------------- the default checker and the random numbers */
+
+static void test_rng_and_default_checker(void) {
+    /* The default checker passes everything: a score of 0 out of 1, no violation, no reason. */
+    Plan *plan = plan_create();
+    FillTarget target = {FILL_TARGET_NODE, 1};
+    FillOperator operator_ = make_operator("any", FILL_OPERATOR_FILL);
+    FillCandidate candidate;
+    FillCheck check;
+    memset(&candidate, 0, sizeof(candidate));
+    memset(&check, 0xff, sizeof(check));
+    assert(fill_default_checker(plan, target, &operator_, &candidate, NULL, &check));
+    assert(!check.hard_violation && check.score_numerator == 0 && check.score_denominator == 1 && check.reason[0] == '\0');
+    plan_destroy(plan);
+
+    /* SplitMix64 from seed 0 gives its published first two values; equal seeds give equal streams, other seeds other ones. */
+    FillRng rng;
+    FillRng same;
+    FillRng other;
+    fill_rng_seed(&rng, 0);
+    assert(fill_rng_next(&rng) == 0xE220A8397B1DCDAFULL);
+    assert(fill_rng_next(&rng) == 0x6E789E6AA1B965F4ULL);
+    fill_rng_seed(&rng, 42);
+    fill_rng_seed(&same, 42);
+    fill_rng_seed(&other, 43);
+    uint64_t first = fill_rng_next(&rng);
+    assert(fill_rng_next(&same) == first && fill_rng_next(&other) != first);
+    for (int i = 0; i < 20; i++) {
+        assert(fill_rng_next(&rng) == fill_rng_next(&same));
+    }
+    /* Below 0 and 1 is 0 and leaves the state alone; below 6 reaches every value of 0 to 5. */
+    fill_rng_seed(&rng, 7);
+    fill_rng_seed(&same, 7);
+    assert(fill_rng_below(&rng, 0) == 0 && fill_rng_below(&rng, 1) == 0);
+    assert(rng.state == same.state);
+    bool seen[6] = {false};
+    for (int i = 0; i < 600; i++) {
+        uint64_t draw = fill_rng_below(&rng, 6);
+        assert(draw < 6);
+        seen[draw] = true;
+    }
+    for (int i = 0; i < 6; i++) {
+        assert(seen[i]);
+    }
 }
 
 /* ---------------------------------------------------------------- registry */
@@ -700,6 +762,7 @@ static void test_suggestions(void) {
 
 int main(void) {
     test_pick();
+    test_rng_and_default_checker();
     test_registry_validation();
     test_top_down_fill();
     test_reproducible_from_seed();

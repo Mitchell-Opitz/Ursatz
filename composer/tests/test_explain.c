@@ -255,7 +255,79 @@ static int test_choices(void) {
 
 /* --------------------------------------------------------------- rejections */
 
+/* The section of the plan a rejection names: the first child of the form. */
+static NodeId first_section(const Plan *plan) {
+    return plan_node_child_at(plan, plan_root(plan), 0);
+}
+
+/*
+ * explain_analyzer_rejection, explain_build_grow and compose_rejections_free on their own: one item of three disagreeing is the one
+ * rejection item, naming the section; all three agreeing is a rejection with no item; a grow with one extra rejection explains one
+ * section (the theme) and that rejection.
+ */
+static void test_rejection_helpers(void) {
+    Motive motive;
+    Plan *plan = period_g_major(&motive);
+    NodeId section = first_section(plan);
+    const char *name = plan_node_name(plan, section);
+    AnalyzerCheckItem items[3];
+    memset(items, 0, sizeof(items));
+    for (size_t i = 0; i < 3; i++) {
+        items[i].kind = ANALYZER_CHECK_CADENCE;
+        items[i].bar = i * 4;
+        snprintf(items[i].planned, sizeof(items[i].planned), "perfect-authentic");
+        snprintf(items[i].heard, sizeof(items[i].heard), "perfect-authentic");
+        items[i].agreed = true;
+    }
+    items[1].agreed = false;
+    snprintf(items[1].heard, sizeof(items[1].heard), "half");
+    AnalyzerCheck check = {true, 3, 2, items, 3};
+    ComposeRejection rejection;
+    assert(name && explain_analyzer_rejection(plan, section, &check, 2, 77, &rejection) == EXPLAIN_OK);
+    assert(rejection.round == 2 && rejection.seed == 77 && strcmp(rejection.stage, "check") == 0 && strcmp(rejection.reason, "analyzer") == 0);
+    assert(rejection.item_count == 1 && strcmp(rejection.items[0].section, name) == 0);
+    assert(rejection.items[0].item.bar == 4 && !rejection.items[0].item.agreed && strcmp(rejection.items[0].item.heard, "half") == 0);
+    /* Freed with the array that holds it; NULL is safe. */
+    ComposeRejection *held = calloc(1, sizeof(*held));
+    assert(held);
+    *held = rejection;
+    compose_rejections_free(held, 1);
+    compose_rejections_free(NULL, 0);
+    /* All three agreeing: a rejection of the check with nothing to show. */
+    items[1].agreed = true;
+    assert(explain_analyzer_rejection(plan, section, &check, 0, 5, &rejection) == EXPLAIN_OK);
+    assert(rejection.item_count == 0 && rejection.items == NULL && strcmp(rejection.reason, "analyzer") == 0);
+    assert(explain_analyzer_rejection(NULL, section, &check, 0, 5, &rejection) == EXPLAIN_ERR_NULL);
+    assert(explain_analyzer_rejection(plan, section, NULL, 0, 5, &rejection) == EXPLAIN_ERR_NULL);
+    assert(explain_analyzer_rejection(plan, section, &check, 0, 5, NULL) == EXPLAIN_ERR_NULL);
+
+    /* A grow that kept no record, with one rejection of its own to add. */
+    GrowOutcome outcome;
+    ComposeRejection extra;
+    Explanation explanation;
+    memset(&outcome, 0, sizeof(outcome));
+    memset(&extra, 0, sizeof(extra));
+    extra.round = 2;
+    extra.seed = 9;
+    snprintf(extra.stage, sizeof(extra.stage), "harmony");
+    snprintf(extra.reason, sizeof(extra.reason), "stuck");
+    assert(explain_build_grow(plan, section, &outcome, NULL, &extra, 1, &explanation) == EXPLAIN_OK);
+    assert(explanation.section_count == 1 && explanation.sections[0].section == section && !explanation.sections[0].checked);
+    assert(explanation.rejection_count == 1 && explanation.rejections[0].round == 2 && strcmp(explanation.rejections[0].reason, "stuck") == 0);
+    explain_destroy(&explanation);
+    /* No theme node: no section. */
+    assert(explain_build_grow(plan, PLAN_NODE_NONE, &outcome, NULL, NULL, 0, &explanation) == EXPLAIN_OK);
+    assert(explanation.section_count == 0 && explanation.rejection_count == 0);
+    explain_destroy(&explanation);
+    /* NULL arguments, and an extra count with no extra. */
+    assert(explain_build_grow(plan, section, NULL, NULL, NULL, 0, &explanation) == EXPLAIN_ERR_NULL);
+    assert(explain_build_grow(plan, section, &outcome, NULL, NULL, 1, &explanation) == EXPLAIN_ERR_NULL);
+    assert(explain_build_grow(plan, section, &outcome, NULL, NULL, 0, NULL) == EXPLAIN_ERR_NULL);
+    plan_destroy(plan);
+}
+
 static int test_rejections(void) {
+    test_rejection_helpers();
     bool found = false;
     for (unsigned long seed = 1; seed <= 10 && !found; seed++) {
         Motive motive;
