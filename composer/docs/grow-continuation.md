@@ -51,3 +51,7 @@ A fragment by notes departs from its source whether the source is m0 or a segmen
 | each alone and all together | 16 of 16 start seeds compose through `api_grow_run` on both motifs |
 
 The prototype of R-463 measured the same on the two listening motifs s77 and u51: every setting composed 16 of 16, `every_segment` used segment b in 16 of 16 (9 and 10 without), and `diminish` took s77's continuation from 4.67 to 8.00 notes a bar. On `listen --what themes --count 60 --seed 500` with every setting on, the taste profile `none` batch in C minor 4/4 composed 47 of 60 against 54 at the defaults and every other batch was equal (R-467): recorded, not asserted.
+
+## Fragments by function (R-712)
+
+With `development.functions.surface` on, a continuation with no setting above on and no slot or idea motive for its fragments is drawn by the formal function of the fragments (`omt.function.fragment`, rhythmic activity faster; `knowledge_snapshot_theme_type_of`): fragment 1 is the segment of m0 that fits its room with the most notes per beat (the first of equals), and fragment 2 the next segment that fits, round to the first, other than fragment 1's, exact; when only one segment fits, fragment 2 is fragment 1's in sequence one step down. No random number is drawn for them, and `fragment_fits` judges the result as it does today. Off, the draw is the development's weights, as before.

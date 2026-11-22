@@ -99,6 +99,14 @@ All of them reach themes (`--what themes`); each is a setting of the `melody` or
 {"development": {"functions": {"contrast": true}}}
 ```
 
+## A settings file for the surface and the cadence
+
+`development.functions.surface` draws a sentence's fragments from the densest segment of the motif and another, and `melody.cadence_long` holds the last note of every idea that ends a cadence from its last downbeat to its end (R-712). Both reach themes and are off by default; with `development.functions.harmony` and `.contrast` they are the settings of a theme quality round:
+
+```json
+{"development": {"functions": {"surface": true}}, "melody": {"cadence_long": true}}
+```
+
 ## A settings file for the L3 settings
 
 Every L3 setting is off by default, so a settings file turns on only the ones a round compares (R-422). This file syncopates one cell in two with an off-beat note or an anticipation at the eighth level, allows at most two skips, gives the plan `ii V@1:3` (a ii chord, then V from bar 1 beat 3), and turns on the accelerating continuation and the basic idea as written for a theme:
