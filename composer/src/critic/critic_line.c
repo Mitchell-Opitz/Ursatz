@@ -154,7 +154,7 @@ CriticResult critic_line_from_render(const Plan *plan, const RenderedPlan *rende
     return CRITIC_OK;
 }
 
-/* A motive's own timeline: 0 is the start of its pickup, if it has one, and its first barline is at the pickup's length (motive.h). */
+/* A motive's own timeline (a rhythm motive sounds on its tonic, as its render does): 0 is the start of its pickup, if it has one, and its first barline is at the pickup's length (motive.h). */
 CriticResult critic_line_from_motive(const Motive *motive, CriticLine *out) {
     PlanMeter meter;
     if (motive == NULL || out == NULL) {
@@ -176,10 +176,6 @@ CriticResult critic_line_from_motive(const Motive *motive, CriticLine *out) {
         note->onset = motive->notes[i].onset;
         note->duration = motive->notes[i].duration;
         note->pitch = motive_pitch(motive, i);
-        if (note->pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) { /* a rhythm motive has no melody to judge */
-            critic_line_destroy(out);
-            return CRITIC_ERR_EMPTY;
-        }
         if (rational_cmp(note->onset, pickup) < 0) {
             note->bar = 0;
             note->position = note->onset;
