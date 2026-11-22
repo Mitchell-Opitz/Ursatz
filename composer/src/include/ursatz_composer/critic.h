@@ -128,4 +128,51 @@ CriticResult critic_evaluate(const CriticLine *line, const CriticLine *const *se
 /* Minus the sum of weight times penalty; an evaluator in settings->reversed counts plus. 0/1 on overflow. */
 Rational critic_score(const CriticFinding findings[CRITIC_EVALUATOR_COUNT], const CriticSettings *settings);
 
+
+/*
+ * The critic's words (R-720). An observation is a plain-word note from the entry's message template: a scored one is an evaluator's
+ * finding with a penalty above 0; the others say what the hearing of a theme found against its plan (a planned cadence heard as another,
+ * a planned form heard as another, a contrast target the melody misses) and are never scored.
+ */
+#define CRITIC_OBSERVATION_MAX 32
+#define CRITIC_MESSAGE_MAX 200
+
+typedef struct {
+    char rule[32];  /* the code of the entry michelle.rule.<code> */
+    bool scored;    /* true for an evaluator's */
+    int bar;        /* -1 when there is no place */
+    Rational beat;  /* 1-based */
+    Rational penalty; /* the evaluator's, 0 for an observation that is not scored */
+    char message[CRITIC_MESSAGE_MAX];
+} CriticObservation;
+
+typedef struct {
+    Rational score;
+    CriticFinding findings[CRITIC_EVALUATOR_COUNT];
+    CriticObservation observations[CRITIC_OBSERVATION_MAX];
+    size_t observation_count;
+} CriticJudgment;
+
+/* The values a message may name that a finding does not hold: {planned}, {heard} and {amount}. */
+typedef struct {
+    char planned[32];
+    char heard[32];
+    Rational amount;
+    bool has_amount;
+} CriticFields;
+
+/*
+ * Writes `template` into `out` (size bytes, always ended when size is above 0) with each {name} replaced by the value of that field of
+ * the finding or of `fields` (either may be NULL): a Rational as an integer or n/d, a beat 1-based, a bar or text as it is. A name with
+ * no value stays as written, as does an unknown one. Returns the length written.
+ */
+size_t critic_message(const char *template, const CriticFinding *finding, const CriticFields *fields, char *out, size_t size);
+
+/*
+ * critic_evaluate and critic_score over the line, and one scored observation for each finding with a penalty above 0, in evaluator
+ * order, its message from the entry michelle.rule.<code>.
+ */
+CriticResult critic_judge(const CriticLine *line, const CriticLine *const *set, size_t set_count, const KnowledgeSnapshot *knowledge,
+                          const CriticSettings *settings, CriticJudgment *out);
+
 #endif

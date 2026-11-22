@@ -61,3 +61,9 @@ composer/src/critic/critic_evaluate.c stray_syncopation  # a helper of critic_ev
 composer/src/critic/critic_evaluate.c syncopated  # a helper of critic_evaluate, reached with it (B4)
 composer/src/critic/critic_evaluate.c whole  # a helper of critic_evaluate, reached with it (B4)
 composer/src/critic/critic_evaluate.c wide_range  # a helper of critic_evaluate, reached with it (B4)
+composer/src/critic/critic_observe.c critic_judge  # the critic's words; B4's critique entry reaches it, which deletes this row
+composer/src/critic/critic_observe.c critic_message  # the critic's words; B4's critique entry reaches it, which deletes this row
+composer/src/critic/critic_observe.c field_text  # a helper of critic_message, reached with it (B4)
+composer/src/critic/critic_observe.c put  # a helper of critic_message, reached with it (B4)
+composer/src/critic/critic_observe.c rational_text  # a helper of critic_message, reached with it (B4)
+composer/src/critic/critic_observe.c template_of  # a helper of critic_message, reached with it (B4)
