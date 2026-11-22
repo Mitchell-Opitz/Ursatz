@@ -428,7 +428,7 @@ ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FIL
 # settings and the style file. The slow case runs every section and also makes a style model
 # from the sonatina folder with the Analyzer (about 53 s at -j1 in a Debug build, 2026-11-21). The fast cases: motifs 0.2 s, themes 8 s, theme_settings 13 s
 # and overrides 12 s (kept in the fast set with their times).
-foreach(case motifs themes theme_settings overrides style_folder)
+foreach(case motifs themes theme_settings overrides plans style_folder)
     set(folder OFF)
     set(labels)
     if(case STREQUAL "style_folder")

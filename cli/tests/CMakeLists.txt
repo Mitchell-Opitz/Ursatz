@@ -17,6 +17,11 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_data_commands)
 ursatz_test(cli_data_commands COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DDATA_V0=${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0
     -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_data_commands/work -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_data_commands.cmake)
 
+# ursatz critique and listen --plans (P68 B4, R-721): candidate files judged as one set, in text and JSON, and a rated set judged pair by pair.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_critique)
+ursatz_test(cli_critique COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_critique/work
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_critique.cmake TIMEOUT 300)
+
 # Ursatz Text on the command line (P65 B6): show with its views and refusals, apply with text commands, the generated help; and the flag reference page.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_text)
 ursatz_test(cli_text COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DDATA_V0=${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0
