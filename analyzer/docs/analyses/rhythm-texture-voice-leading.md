@@ -109,7 +109,7 @@ Measured on the reference pieces (MIDI):
 | Field 5 | 4 | 169 | 531 | 0 | 0 | 2 | 24 | 2 | 127 | 39 of 83 |
 
 The counts follow the voice separation: a piece whose voices rest often has fewer motions than segments. `test_voice_leading`
-runs a constructed chorale (`tests/musicxml/chorale-voice-leading.musicxml`) with one parallel fifth and one unresolved
+runs a constructed chorale (`tests/fixtures/scores/chorale-voice-leading.musicxml`) with one parallel fifth and one unresolved
 leading tone and asserts that both are found at their measures and nothing else.
 
 ## Schemas and sequences

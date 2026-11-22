@@ -34,7 +34,7 @@ detects expansions and contractions (`standard_form_detect_expansions`), both wi
 `themes` has a claim per theme with the form, the names of its two parts, their measures and cadences, the commonality
 of the pairing and the traits of its continuation; each phrase claim lists the expansions and contractions that concern
 it. A constructed sentence,
-period and compound period (`tests/musicxml/sentence.musicxml`, `period.musicxml`, `compound-period.musicxml`) are
+period and compound period (`tests/fixtures/scores/sentence.musicxml`, `period.musicxml`, `compound-period.musicxml`) are
 heard as such by `test_themes`.
 
 Measured on the reference pieces (MIDI; `test_themes` asserts structure, not these counts):

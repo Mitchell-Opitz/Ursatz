@@ -17,7 +17,7 @@ changes neither `analysis.json`, its schema nor the score MusicXML.
 ## Format v2
 
 `ANALYZER_TEXT_EXPORT_VERSION` is 2 and is the `v2` of the first line. Version 2 adds the `clefs:` header line and the clef changes on a measure line (version 1 had neither). This is the start of an export of
-`tests/musicxml/pickup.musicxml`:
+`tests/fixtures/scores/pickup.musicxml`:
 
 ```
 # Ursatz export v2: piece

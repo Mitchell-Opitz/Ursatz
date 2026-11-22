@@ -42,7 +42,7 @@ Tests:
   containment, the six-chord limit) and the progressions of Bach 114 and Mozart 545. `test_progressions_bach_114_top`
   asserts Bach 114's progressions at the numbers measured at `243bd316` and prints the target, that the most common
   progression ends on I (see [known limits](known-limits.md)).
-- `test_themes`: a constructed sentence, period and compound period (`tests/musicxml`), field by field (form, part
+- `test_themes`: a constructed sentence, period and compound period (`tests/fixtures/scores`), field by field (form, part
   names, measures, cadences, halves), and on the five reference pieces the structure of the themes and expansions
   (order, parts inside the theme, cadences in their part, expansions inside their phrase).
 - `test_form_plan`: the form tree of the five reference pieces and the three constructed ones: every phrase in
@@ -70,7 +70,7 @@ Tests:
   vocabulary".
 - `test_cli_output_flags`: which files each output flag of `ursatz analyze` writes.
 - `test_musicxml_midi_agreement`: the five reference pieces from their MusicXML versions
-  (`tests/musicxml`) and from their MIDI files: key regions, measure count and meter must agree
+  (`tests/fixtures/scores`) and from their MIDI files: key regions, measure count and meter must agree
   exactly, chords and outer-voice scale degrees to the tolerance stated in the test, and the
   measured agreement is printed.
 - `test_musicxml_input`: format choice, notated key and meter, a pickup, a multi-part score, notated
