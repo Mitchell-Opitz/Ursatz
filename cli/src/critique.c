@@ -6,9 +6,12 @@
 
 #include <cJSON.h>
 
+#include "address.h"
 #include "cli_options.h"
 #include "cli_params.h"
 #include "cli_tools.h"
+#include "session.h"
+#include "workflow.h"
 
 /*
  * ursatz critique (R-721): candidate files judged by the critic. A file is a listen sample (its motive member, or the plan of its first
@@ -397,6 +400,139 @@ static int run_rated(const char *rated_path, const cJSON *settings, bool json) {
     return status;
 }
 
+/* ------------------------------------------------------------------------------------------------ the data folder (R-723) */
+
+/* The exit status of a failed workshop call, after printing it: 1 for a request that was refused, 2 otherwise (as apply does). */
+static int fail_call(UrsatzStatus status, const UrsatzError *error) {
+    return cli_fail(status == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE, "%s%s%s", error->message, error->path[0] ? " at " : "", error->path);
+}
+
+/* The item's current version (item.get); 0 or the exit status. */
+static int current_version(CliSession *session, const char *id, long *version) {
+    cJSON *params = cJSON_CreateObject();
+    if (!params || !cJSON_AddStringToObject(params, "id", id)) {
+        cJSON_Delete(params);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    WorkshopReply reply;
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    UrsatzStatus status = cli_session_query(session, "item.get", params, &reply, &error);
+    cJSON_Delete(params);
+    if (status != URSATZ_OK) {
+        return fail_call(status, &error);
+    }
+    *version = (long)cli_json_number(cJSON_GetObjectItemCaseSensitive(reply.json, "item"), "current_version");
+    workshop_reply_destroy(&reply);
+    return 0;
+}
+
+/* Sends one command (params taken) to the item as of base_version; *reply is the answer, to destroy when 0 is returned. */
+static int send(CliSession *session, const char *name, const char *item, long base_version, cJSON *params, WorkshopReply *reply) {
+    cJSON *command = cJSON_CreateObject();
+    if (!command || !cJSON_AddStringToObject(command, "command", name) || !cJSON_AddStringToObject(command, "target", item) ||
+        (base_version >= 0 && !cJSON_AddNumberToObject(command, "base_version", (double)base_version)) || !cJSON_AddItemToObject(command, "params", params)) {
+        cJSON_Delete(command);
+        cJSON_Delete(params);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    UrsatzError error;
+    memset(&error, 0, sizeof error);
+    UrsatzStatus status = cli_session_command(session, command, NULL, reply, &error);
+    cJSON_Delete(command);
+    if (status != URSATZ_OK) {
+        int exit_status = fail_call(status, &error);
+        workshop_reply_destroy(reply);
+        return exit_status;
+    }
+    return 0;
+}
+
+/* critique item:<id>[@v<n>] [--settings <file>] [--note <text>]: the critic's judgment of the version, kept; prints its id and observations. */
+static int run_item(const CliArgs *args, const CliAddress *address, const cJSON *settings, bool json) {
+    CliSession *session = NULL;
+    int status = cli_session_open(cli_global(), &session);
+    if (status != 0) {
+        return status;
+    }
+    long version = address->version;
+    if (version < 1) {
+        status = current_version(session, address->id, &version);
+    }
+    cJSON *params = status == 0 ? cJSON_CreateObject() : NULL;
+    const char *note = cli_value(args, "--note");
+    if (status == 0 && (!params || !cJSON_AddNumberToObject(params, "version", (double)version) || (note && !cJSON_AddStringToObject(params, "note", note)) ||
+                        (settings && !cJSON_AddItemToObject(params, "settings", cJSON_Duplicate(settings, true))))) {
+        cJSON_Delete(params);
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        params = NULL;
+    }
+    WorkshopReply reply;
+    memset(&reply, 0, sizeof reply);
+    if (status == 0) {
+        status = send(session, "ratings.critique", address->id, version, params, &reply);
+    }
+    if (status == 0) {
+        if (json) {
+            char *text = cJSON_Print(reply.json);
+            printf("%s\n", text ? text : "");
+            cJSON_free(text);
+        } else {
+            printf("%s score ", cli_json_string(reply.json, "id"));
+            print_ratio(cJSON_GetObjectItemCaseSensitive(reply.json, "score"));
+            printf("\n");
+            const cJSON *observation;
+            cJSON_ArrayForEach(observation, cJSON_GetObjectItemCaseSensitive(reply.json, "observations")) {
+                const cJSON *bar = cJSON_GetObjectItemCaseSensitive(observation, "bar");
+                printf("%s  bar ", cli_json_string(observation, "id"));
+                if (cJSON_IsNumber(bar)) {
+                    printf("%.0f", bar->valuedouble);
+                } else {
+                    printf("-");
+                }
+                printf("  %s  %s\n", cli_json_string(observation, "rule"), cli_json_string(observation, "message"));
+            }
+        }
+        workshop_reply_destroy(&reply);
+    }
+    cli_session_close(session);
+    return status;
+}
+
+/* critique --verdict <obs-id> agree|disagree item:<id> [--note <text>]: her verdict on one observation of the item's critiques. */
+static int run_verdict(const CliArgs *args, const char *observation) {
+    if (args->input_count != 2 || !cli_is_address(args->inputs[1]) ||
+        (strcmp(args->inputs[0], "agree") != 0 && strcmp(args->inputs[0], "disagree") != 0)) {
+        return cli_fail(CLI_EXIT_USAGE, "a verdict is critique --verdict <observation id> agree|disagree item:<id>\n%s", cli_usage_of("critique"));
+    }
+    CliAddress address;
+    if (!cli_address_parse(args->inputs[1], &address) || address.kind != CLI_ADDRESS_ITEM || address.version > 0) {
+        return cli_fail(CLI_EXIT_USAGE, "'%s' is not an item address: write item:<id>", args->inputs[1]);
+    }
+    CliSession *session = NULL;
+    int status = cli_session_open(cli_global(), &session);
+    if (status != 0) {
+        return status;
+    }
+    cJSON *params = cJSON_CreateObject();
+    const char *note = cli_value(args, "--note");
+    if (!params || !cJSON_AddStringToObject(params, "observation", observation) || !cJSON_AddStringToObject(params, "verdict", args->inputs[0]) ||
+        (note && !cJSON_AddStringToObject(params, "note", note))) {
+        cJSON_Delete(params);
+        cli_session_close(session);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    WorkshopReply reply;
+    memset(&reply, 0, sizeof reply);
+    status = send(session, "ratings.verdict", address.id, -1, params, &reply);
+    if (status == 0) {
+        printf("%s\n", cli_json_string(reply.json, "id"));
+        workshop_reply_destroy(&reply);
+    }
+    cli_session_close(session);
+    return status;
+}
+
 /* ------------------------------------------------------------------------------------------------ the command */
 
 int run_critique(const CliArgs *args) {
@@ -410,6 +546,10 @@ int run_critique(const CliArgs *args) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", format);
         }
     }
+    const char *verdict = cli_value(args, "--verdict");
+    if (verdict) {
+        return rated || cli_value(args, "--settings") ? cli_fail(CLI_EXIT_USAGE, "--verdict goes with an observation id and an item only") : run_verdict(args, verdict);
+    }
     cJSON *settings = NULL;
     if (settings_path) {
         int status = read_json(settings_path, "settings file", &settings);
@@ -418,8 +558,13 @@ int run_critique(const CliArgs *args) {
         }
     }
     int status;
+    CliAddress address;
     if (rated) {
         status = args->input_count == 0 ? run_rated(rated, settings, json) : cli_fail(CLI_EXIT_USAGE, "critique --rated takes no candidate files");
+    } else if (args->input_count == 1 && cli_is_address(args->inputs[0])) {
+        status = cli_address_parse(args->inputs[0], &address) && address.kind == CLI_ADDRESS_ITEM
+                     ? run_item(args, &address, settings, json)
+                     : cli_fail(CLI_EXIT_USAGE, "'%s' is not an item address: write item:<id> or item:<id>@v<n>", args->inputs[0]);
     } else {
         status = run_files(args, settings, json);
     }

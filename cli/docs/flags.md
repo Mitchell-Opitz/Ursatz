@@ -87,7 +87,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--no-bass` | write only the chords | `progression` |
 | `--no-wait` | do not wait for the job a command starts: print its id | `regenerate`, `compose`, `explore` |
 | `--node <id>` | the node's id in the plan file | `lock`, `regenerate`, `variations` |
-| `--note <text>` | restore: the note of the new version (default: restore v<n>); rate: why the rating or the pick | `rate`, `restore` |
+| `--note <text>` | restore: the note of the new version (default: restore v<n>); rate: why the rating or the pick; critique: why | `critique`, `rate`, `restore` |
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
@@ -134,6 +134,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--update-uses` | compose: move every updated use to its source's current version first | `compose` |
 | `--value-scale <n or n/d>` | read the note values of the file scaled by this factor (a notation reading) | `analyze` |
 | `--variations <id>` | make --count different versions of the section with that id | `piece` |
+| `--verdict <obs-id>` | critique: record your verdict, agree or disagree, on this observation of an item's critiques | `critique` |
 | `--version <n>` | regenerate of an item: the version of the piece the section is written again from (default: the current one) | `regenerate` |
 | `--view <view>` | a view of the result: reading is the measure-addressed text export of analyze, framed as a view; show takes summary, structure, harmony, line:<name>, part:<name>, reading, full or json | `analyze`, `show` |
 | `--voicing` | keep the grown melody as the soprano and add an alto and a tenor under it | `grow` |

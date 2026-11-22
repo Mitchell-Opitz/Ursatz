@@ -59,7 +59,7 @@ static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
 static const char *const FLAGS_EXPLORE[] = {"--base", "--distance", "--no-wait", "--seed", "--taste", NULL};
-static const char *const FLAGS_CRITIQUE[] = {"--format", "--rated", "--settings", NULL};
+static const char *const FLAGS_CRITIQUE[] = {"--format", "--note", "--rated", "--settings", "--verdict", NULL};
 static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--round", "--seed", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
@@ -526,7 +526,9 @@ const CliCommand CLI_COMMANDS[] = {
      FLAGS_RENDER, 1, 1, run_render},
     {"critique",
     "critique <file>... [--settings <file>] [--format text|json]\n"
-    "critique --rated <file> [--settings <file>] [--format text|json]",
+    "critique --rated <file> [--settings <file>] [--format text|json]\n"
+    "critique item:<id>[@v<n>] [--settings <file>] [--note <text>] [--format text|json]\n"
+    "critique --verdict <obs-id> agree|disagree item:<id> [--note <text>]",
      "Judge candidates with the critic, in her words",
     "Judges candidate files with the critic (docs/critic.md): eight evaluators of what she has said about a melody give each candidate a\n"
     "score (minus the weighted sum of their penalties), and the Composer's hearing of a theme against its plan gives observations in plain\n"
@@ -536,6 +538,9 @@ const CliCommand CLI_COMMANDS[] = {
     "--rated reads a rated set (ursatz-rated-set 1: pairs of files with her ratings and the set each belongs to, paths relative to the file),\n"
     "judges each set together and prints, for each pair, her ratings, the critic's scores and whether the critic and today's ranking (a\n"
     "theme's own score) chose the one she rated higher: match, miss or tie, then the totals. Pairs with equal ratings are not counted.\n"
+    "With an item address (a motif or a theme of the data folder) the critic judges that version, as @v<n> or the current one, and the\n"
+    "critique is kept with an id for each observation (crt-... and obs-...). --verdict records whether you agree with the critic about one\n"
+    "observation (vrd-...). The critic's settings are the item's resolved settings unless --settings is given.\n"
     "Notes on options:\n"
     "  --settings is a preferences document (docs/preferences.md); its critic group sets the weights and the evaluators that count the other\n"
     "  way. --format is text (the default) or json (the Composer's response; with --rated the text is always printed).\n"
@@ -545,7 +550,9 @@ const CliCommand CLI_COMMANDS[] = {
     "\n"
     "Example:\n"
     "  ursatz critique 01.json 02.json 03.json\n"
-    "  ursatz critique --rated rated.json",
+    "  ursatz critique --rated rated.json\n"
+    "  ursatz critique item:itm-3f2a@v2\n"
+    "  ursatz critique --verdict obs-1c9e agree item:itm-3f2a",
      FLAGS_CRITIQUE, 0, 16, run_critique},
     {"listen",
     "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--plans] [--motif <file>] [--theme-request <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
