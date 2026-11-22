@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/corpus-index.v2.schema.json",
-  "title": "Ursatz-Analyzer corpus index",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/analyzer/schema/corpus-index.v2.schema.json",
+  "title": "Ursatz Analyzer corpus index",
   "description": "The pieces of one corpus run, in path order, with the analysis document written for each.",
   "type": "object",
   "required": [

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/motive-links.v1.schema.json",
-  "title": "Ursatz-Analyzer motive links",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/analyzer/schema/motive-links.v1.schema.json",
+  "title": "Ursatz Analyzer motive links",
   "description": "The motive families of a set of pieces that are variants of one another: each link names a chain of relations from one family's prototype to the other's, and the groups join linked families.",
   "type": "object",
   "required": ["schema", "schema_version", "pieces", "pairs", "compared", "cached", "cache_reset", "links", "groups"],
