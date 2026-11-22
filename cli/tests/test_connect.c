@@ -45,6 +45,40 @@ static char *run(const char *arguments, int *status) {
     return text;
 }
 
+/* Runs "<ursatz-gui-backend> <arguments> 2>&1": the output (a buffer the caller frees) and the exit status. */
+static char *run_backend(const char *arguments, int *status) {
+    char command[2048];
+    snprintf(command, sizeof(command), "\"%s\" %s 2>&1", URSATZ_BACKEND, arguments);
+    FILE *pipe = popen(command, "r");
+    assert(pipe);
+    char *text = calloc(1, 4096);
+    size_t used = 0;
+    size_t got;
+    while ((got = fread(text + used, 1, 4096 - used - 1, pipe)) > 0) {
+        used += got;
+    }
+    int raw = pclose(pipe);
+    *status = WIFEXITED(raw) ? WEXITSTATUS(raw) : 99;
+    return text;
+}
+
+/* The backend's flags: anything else is a usage error, a port is a whole number from 1 to 65535, a flag needs its value; nothing is served. */
+static void test_the_backend_flags(void) {
+    int status = 0;
+    char *out = run_backend("--bogus", &status);
+    assert(status == 2 && strstr(out, "usage: ursatz-gui-backend [--data <dir>] [--port <n>]"));
+    free(out);
+    static const char *const BAD_PORTS[] = {"--port 0", "--port 99999", "--port x"};
+    for (size_t i = 0; i < sizeof(BAD_PORTS) / sizeof(BAD_PORTS[0]); i++) {
+        out = run_backend(BAD_PORTS[i], &status);
+        assert(status == 2 && strstr(out, "--port takes a whole number from 1 to 65535"));
+        free(out);
+    }
+    out = run_backend("--data", &status);
+    assert(status == 2);
+    free(out);
+}
+
 static Workshop *open_on(const char *data) {
     WorkshopConfig flags = {data, NULL, 0, 0, 0};
     WorkshopConfig resolved;
@@ -134,6 +168,13 @@ static void test_the_backend_serves_the_folder(void) {
         }
     }
     assert(answered);
+    /* the static root is the frontend: the page at / and no file where there is none */
+    char *page = test_http_exchange(PORT, "GET", "/", NULL, NULL, 0);
+    assert(page && test_http_status(page) == 200 && strstr(test_http_body(page), "<title>Ursatz</title>"));
+    free(page);
+    page = test_http_exchange(PORT, "GET", "/no-such.js", NULL, NULL, 0);
+    assert(page && test_http_status(page) == 404);
+    free(page);
     /* the backend writes its port into the lock file just after it starts serving */
     int announced = 0;
     for (int attempt = 0; attempt < 200 && !announced; attempt++) {
@@ -184,12 +225,15 @@ static void test_the_backend_serves_the_folder(void) {
     kill(child, SIGTERM);
     int wait_status = 0;
     assert(waitpid(child, &wait_status, 0) == child);
+    /* it stops on SIGTERM and says so by exiting 0 */
+    assert(WIFEXITED(wait_status) && WEXITSTATUS(wait_status) == 0);
 }
 
 int main(void) {
     snprintf(g_root, sizeof(g_root), "cli-connect-%ld", (long)getpid());
     assert(common_dir_make(g_root, NULL) == URSATZ_OK);
     test_no_folder_named();
+    test_the_backend_flags();
     test_a_free_folder_is_opened_here();
     test_a_folder_held_without_a_port();
     test_the_backend_serves_the_folder();

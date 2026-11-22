@@ -132,6 +132,15 @@ ursatz(--data "${DATA}" apply "${WORK}/actor.jsonl")
 expect_status(1 "apply with an actor")
 expect_text("the actor comes from --actor" "apply with an actor")
 
+# Explore saves a new version of the item, so it comes after the commands that read a base version.
+# Explore: variations of the theme at a distance from it (it saves them as items, as compose does).
+ursatz(--data "${DATA}" explore "item:${theme}" --distance 2 --seed 1)
+expect_status(0 "explore")
+expect_text("item ${theme} version [0-9]+" "explore")
+ursatz(--data "${DATA}" explore "item:${theme}" --distance 9 --seed 1)
+expect_status(1 "explore --distance 9")
+expect_text("--distance must be a whole number from 1 to 8" "explore --distance 9")
+
 # Restore: the next version is a copy of an older one.
 ursatz(--data "${DATA}" restore "item:${theme}@v1")
 expect_status(0 "restore")
