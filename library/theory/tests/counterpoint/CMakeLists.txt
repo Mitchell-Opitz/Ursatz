@@ -101,3 +101,5 @@ ursatz_test(standard_counterpoint_motion_type SOURCES test_motion_type.c LIBS ur
 ursatz_test(standard_counterpoint_melodic_semitones SOURCES test_melodic_semitones.c LIBS ursatz_theory)
 
 ursatz_test(standard_counterpoint_imperfect_run SOURCES test_imperfect_run.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_line SOURCES test_counterpoint_line.c LIBS ursatz_theory)

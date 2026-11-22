@@ -71,6 +71,18 @@ static void test_files(void) {
     CHECK(files == round_tripped + skipped);
 }
 
+/* Every kind round-trips through its name; an unknown or missing name is no kind and leaves the output alone. */
+static void test_kinds(void) {
+    for (int k = TEXT_KIND_JSON; k <= TEXT_KIND_VIEW; k++) {
+        TextKind found = TEXT_KIND_JSON;
+        CHECKF(text_kind_find(text_kind_name((TextKind)k), &found) && found == (TextKind)k, "kind %d round-trips through its name", k);
+    }
+    TextKind untouched = TEXT_KIND_PLAN;
+    CHECK(!text_kind_find("no-such-kind", &untouched) && untouched == TEXT_KIND_PLAN);
+    CHECK(!text_kind_find("", &untouched) && !text_kind_find(NULL, &untouched) && untouched == TEXT_KIND_PLAN);
+    CHECK(text_kind_find("plan", NULL)); /* a NULL output is accepted */
+}
+
 static void test_scalars(void) {
     char *text = case_text("{\"a\":\"12\",\"b\":\"1/2\",\"c\":\"1/2..3/4\",\"d\":\"null\",\"e\":\"true\",\"f\":\"a..b\",\"g\":\"plain\","
                            "\"h\":\"with space\",\"i\":\"say \\\"hi\\\"\",\"j\":\"\",\"k\":\"x\\ny\",\"l\":\"é\"}",
@@ -244,6 +256,7 @@ static void test_lines_and_units(void) {
 
 int main(void) {
     test_files();
+    test_kinds();
     test_scalars();
     test_shapes();
     test_scalar_print();

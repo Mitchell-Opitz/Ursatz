@@ -95,6 +95,22 @@ static void test_label_buffers_and_invalid_input(void) {
     assert(!harmony_applied_label(MAJ, &chord, out, 8));
 }
 
+/* The label with an inversion: the figure goes between the chord and its target. */
+static void test_inverted_labels(void) {
+    char out[16];
+    HarmonyAppliedChord seventh = applied(SD, HARMONY_APPLIED_DOMINANT_SEVENTH, 5);
+    HarmonyAppliedChord triad_chord = applied(SLT, HARMONY_APPLIED_DIMINISHED_TRIAD, 2);
+    assert(harmony_applied_label_inverted(MAJ, &seventh, 0, out, sizeof(out)) && strcmp(out, "V7/V") == 0);
+    assert(harmony_applied_label_inverted(MAJ, &seventh, 1, out, sizeof(out)) && strcmp(out, "V6/5/V") == 0);
+    assert(harmony_applied_label_inverted(MAJ, &triad_chord, 1, out, sizeof(out)) && strcmp(out, "viio6/ii") == 0);
+    assert(!harmony_applied_label_inverted(MAJ, &triad_chord, 2, out, sizeof(out)));  /* a triad has no second inversion here */
+    assert(!harmony_applied_label_inverted(MAJ, &seventh, 4, out, sizeof(out)));      /* a seventh has four inversions at most */
+    assert(!harmony_applied_label_inverted(MAJ, &seventh, -1, out, sizeof(out)));
+    assert(!harmony_applied_label_inverted(MAJ, &seventh, 1, NULL, sizeof(out)));
+    assert(!harmony_applied_label_inverted(MAJ, &seventh, 1, out, 4)); /* "V6/5/V" needs 7 */
+    assert(!harmony_applied_label_inverted(MAJ, NULL, 1, out, sizeof(out)));
+}
+
 static void test_the_scale_semitones(void) {
     const int major[] = {0, 2, 4, 5, 7, 9, 11};
     const int minor[] = {0, 2, 3, 5, 7, 8, 10};
@@ -133,6 +149,7 @@ int main(void) {
     test_a_valid_applied_chord();
     test_labels();
     test_label_buffers_and_invalid_input();
+    test_inverted_labels();
     test_the_scale_semitones();
     test_the_spelling_of_an_applied_chord();
     printf("test_harmony_applied: all tests passed\n");

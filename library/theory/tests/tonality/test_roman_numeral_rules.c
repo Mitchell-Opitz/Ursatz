@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "theory/tonality/roman_numeral_analysis_rules.h"
 #include "theory/tonality/roman_numeral_rules.h"
 #include "theory/tonality/seventh_in_key_rules.h"
 #include "theory/tonality/triad_in_key_rules.h"
@@ -206,7 +207,38 @@ static void test_degree_of_letters(void) {
     assert(standard_tonality_roman_numeral_degree_of(NULL, 1) == 0);
 }
 
+static bool fits_triad(StandardTonalityRomanKeyMode mode, int degree, TriadQuality quality, bool raised) {
+    Numeral numeral;
+    assert(standard_tonality_roman_numeral_triad(degree, quality, &numeral));
+    return standard_tonality_roman_numeral_fits_key(mode, degree, raised, &numeral);
+}
+
+/* A numeral fits a key when the key gives its degree that quality; the raised leading tone changes the seventh degree of a minor key. */
+static void test_fits_key(void) {
+    const StandardTonalityRomanKeyMode major = STANDARD_TONALITY_ROMAN_KEY_MAJOR;
+    const StandardTonalityRomanKeyMode minor = STANDARD_TONALITY_ROMAN_KEY_MINOR;
+    Numeral numeral;
+    assert(fits_triad(major, 5, MAJOR, false) && fits_triad(major, 2, MINOR, false) && fits_triad(major, 7, DIMINISHED, false));
+    assert(!fits_triad(major, 2, MAJOR, false)); /* II is not in the major key */
+    assert(standard_tonality_roman_numeral_seventh_chord(5, MAMI, &numeral));
+    assert(standard_tonality_roman_numeral_fits_key(major, 5, false, &numeral)); /* V7 */
+
+    assert(fits_triad(minor, 5, MAJOR, false)); /* V, from the raised leading tone below the seventh */
+    assert(fits_triad(minor, 7, MAJOR, false)); /* VII, the natural minor's */
+    assert(!fits_triad(minor, 7, DIMINISHED, false));
+    assert(fits_triad(minor, 7, DIMINISHED, true)); /* vii-diminished only on the raised leading tone */
+
+    /* an invalid mode, no numeral and a degree that is not the numeral's */
+    assert(standard_tonality_roman_numeral_triad(5, MAJOR, &numeral));
+    assert(!standard_tonality_roman_numeral_fits_key((StandardTonalityRomanKeyMode)5, 5, false, &numeral));
+    assert(!standard_tonality_roman_numeral_fits_key(major, 5, false, NULL));
+    assert(!standard_tonality_roman_numeral_fits_key(major, 4, false, &numeral));
+    assert(!standard_tonality_roman_numeral_fits_key(major, 0, false, &numeral));
+    assert(!standard_tonality_roman_numeral_fits_key(major, 8, false, &numeral));
+}
+
 int main(void) {
+    test_fits_key();
     test_degrees();
     test_degree_of_letters();
     test_symbols();

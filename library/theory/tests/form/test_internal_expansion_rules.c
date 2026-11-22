@@ -23,7 +23,17 @@ static void test_repetition(void) {
     assert(!standard_form_repetition_creates_expansion(false, true));
 }
 
+/* ONE_MORE_TIME needs all three steps: a cadence tried, evaded and retried. */
+static void test_one_more_time(void) {
+    assert(standard_form_is_one_more_time(true, true, true));
+    assert(!standard_form_is_one_more_time(false, true, true));
+    assert(!standard_form_is_one_more_time(true, false, true));
+    assert(!standard_form_is_one_more_time(true, true, false));
+    assert(!standard_form_is_one_more_time(false, false, false));
+}
+
 int main(void) {
+    test_one_more_time();
     test_combination();
     test_repetition();
     printf("test_internal_expansion_rules (standard-form): ok\n");

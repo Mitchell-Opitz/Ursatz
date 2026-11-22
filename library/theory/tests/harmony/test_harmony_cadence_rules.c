@@ -173,7 +173,16 @@ static void test_invalid_cadence(void) {
     assert(!harmony_cadence_classify(&ok, NULL));
 }
 
+/* The cadence rule that asks for a seventh on a half cadence is a preference; the cadential progression is required. */
+static void test_rule_softness(void) {
+    assert(!harmony_cadence_rule_soft(HARMONY_CADENCE_CADENTIAL_PROGRESSION));
+    assert(harmony_cadence_rule_soft(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH));
+    assert(!harmony_cadence_rule_soft(HARMONY_CADENCE_RULE_COUNT));
+    assert(!harmony_cadence_rule_soft((HarmonyCadenceRule)-1));
+}
+
 int main(void) {
+    test_rule_softness();
     test_perfect_authentic();
     test_imperfect_authentic();
     test_half();
