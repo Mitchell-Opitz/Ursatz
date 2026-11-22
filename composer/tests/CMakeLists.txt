@@ -620,9 +620,10 @@ ursatz_test(test_piece_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_piece_sections LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-# Kept in the fast set: the setup of the fixture api_responses_written, about 21 s at -j4 (2026-11-21); splitting what it writes from what it checks
-# is not in P66c (R-699).
-ursatz_test(test_api_piece LIBS ursatz_composer_engine composer_test_support cjson
+# Labeled slow (about 28 s alone, 51 s on the CI runner, 2026-11-22): the setup of the fixture api_responses_written, which the fast tests that
+# require it still run first (ctest adds a fixture's setup whatever the label filter). Splitting what it writes from what it checks is not in P66c
+# (R-699).
+ursatz_test(test_api_piece LIBS ursatz_composer_engine composer_test_support cjson LABELS slow
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_piece_files)
@@ -774,7 +775,7 @@ ursatz_test(test_sonata_forms_sonatina-tonic-major_smoke TARGET test_form_famili
 ursatz_test(test_grow_development LIBS ursatz_composer_engine cjson composer_test_support)
 
 # Themes whose ideas follow their formal function (P67): the contrast target (B5), the harmony and the surface (B6, B7).
-# Slow: about 280 s for seeds 1 to 8 (2026-11-22); test_theme_functions_smoke runs seed 1 of every case (about 35 s).
+# Slow: about 280 s for seeds 1 to 8 (2026-11-22); test_theme_functions_smoke runs seed 1 of the surface, held cadence and off cases (about 7 s).
 ursatz_test_executable(test_theme_functions LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ursatz_test(test_theme_functions TARGET test_theme_functions LABELS slow)

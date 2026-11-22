@@ -47,6 +47,16 @@ static unsigned long last_seed(void) {
     return fast_run ? 1 : SEEDS;
 }
 
+/* The shapes a case runs: sentence and period, or in the smoke the period alone. */
+static int first_shape(void) {
+    return fast_run ? 1 : 0;
+}
+
+/* The fixtures a case runs: all of them, or in the smoke the first alone (the smoke has to stay well under the CI's 30 s, about twice the time here). */
+static size_t fixtures_run(size_t all) {
+    return fast_run ? 1 : all;
+}
+
 static Motive MOTIVE_OF[FIXTURES];
 static const char *KEY_OF[FIXTURES] = {"C major", "C minor", "A minor"};
 static const char *METER_OF[FIXTURES] = {"4/4", "4/4", "3/4"};
@@ -119,7 +129,7 @@ static double number_of(const cJSON *row, const char *name) {
 static void test_contrast_target(void) {
     GrowFunctions on = {.contrast = true};
     size_t composed = 0;
-    for (size_t which = 0; which < MOTIVES; which++) {
+    for (size_t which = 0; which < fixtures_run(MOTIVES); which++) {
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
             GrowBriefText text;
             GrowSetup setup;
@@ -164,15 +174,15 @@ static void test_contrast_target(void) {
             api_grow_run_destroy(&run);
         }
     }
-    assert(composed >= MOTIVES * last_seed() / 2);
-    printf("test_theme_functions: contrast target, %zu of %lu periods composed\n", composed, MOTIVES * last_seed());
+    assert(composed >= fixtures_run(MOTIVES) * last_seed() / 2);
+    printf("test_theme_functions: contrast target, %zu of %lu periods composed\n", composed, fixtures_run(MOTIVES) * last_seed());
 }
 
 /* With every setting off the plan is the plan with `functions` absent, and the response has no `contrasts`. */
 static void test_off_changes_nothing(void) {
     GrowFunctions off = {0};
-    for (size_t which = 0; which < MOTIVES; which++) {
-        for (int period = 0; period < 2; period++) {
+    for (size_t which = 0; which < fixtures_run(MOTIVES); which++) {
+        for (int period = first_shape(); period < 2; period++) {
             for (unsigned long seed = 1; seed <= last_seed(); seed++) {
                 GrowBriefText text_a;
                 GrowBriefText text_b;
@@ -258,8 +268,8 @@ static size_t chords_in(const Plan *plan, NodeId node, size_t *free_count) {
 
 static void test_harmony_by_function(void) {
     GrowFunctions on = {.harmony = true};
-    for (size_t which = 0; which < FIXTURES; which++) {
-        for (int period = 0; period < 2; period++) {
+    for (size_t which = 0; which < fixtures_run(FIXTURES); which++) {
+        for (int period = first_shape(); period < 2; period++) {
             size_t composed = 0;
             for (unsigned long seed = 1; seed <= last_seed(); seed++) {
                 GrowBriefText text;
@@ -357,7 +367,7 @@ static void densest_segment(const Motive *motive, char *label, size_t size, size
 static void test_surface_by_function(void) {
     GrowFunctions on = {.surface = true};
     size_t composed = 0;
-    for (size_t which = 0; which < MOTIVES; which++) {
+    for (size_t which = 0; which < fixtures_run(MOTIVES); which++) {
         char densest[16];
         size_t fitting;
         densest_segment(&MOTIVE_OF[which], densest, sizeof(densest), &fitting);
@@ -379,8 +389,8 @@ static void test_surface_by_function(void) {
             api_grow_run_destroy(&run);
         }
     }
-    assert(composed >= MOTIVES * last_seed() / 2);
-    printf("test_theme_functions: surface, %zu of %lu sentences composed\n", composed, MOTIVES * last_seed());
+    assert(composed >= fixtures_run(MOTIVES) * last_seed() / 2);
+    printf("test_theme_functions: surface, %zu of %lu sentences composed\n", composed, fixtures_run(MOTIVES) * last_seed());
 }
 
 /* The last melody note of the node: its onset and end. */
@@ -410,8 +420,8 @@ static void test_cadence_held(void) {
     MelodyFillParams held = melody_fill_params_default();
     held.cadence_long = true;
     size_t composed = 0;
-    for (size_t which = 0; which < MOTIVES; which++) {
-        for (int period = 0; period < 2; period++) {
+    for (size_t which = 0; which < fixtures_run(MOTIVES); which++) {
+        for (int period = first_shape(); period < 2; period++) {
             for (unsigned long seed = 1; seed <= last_seed(); seed++) {
                 GrowBriefText text;
                 GrowSetup setup;
@@ -453,10 +463,15 @@ int main(int argc, char **argv) {
     MOTIVE_OF[0] = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77-chords.json");
     MOTIVE_OF[1] = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51-chords.json");
     MOTIVE_OF[2] = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
-    test_harmony_by_function();
+    /* The smoke leaves the harmony and contrast cases to test_theme_functions_sweep_smoke, which asserts both with every setting on. */
+    if (!fast_run) {
+        test_harmony_by_function();
+    }
     test_surface_by_function();
     test_cadence_held();
-    test_contrast_target();
+    if (!fast_run) {
+        test_contrast_target();
+    }
     test_off_changes_nothing();
     return 0;
 }
