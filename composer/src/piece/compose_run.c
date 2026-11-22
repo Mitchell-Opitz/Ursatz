@@ -698,6 +698,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         /* The structure stage reads the basic motive's features (the segments of a theme); the context outlives the registry. */
         GrowContext grow = config->context;
         grow.basic = run->motives.basic;
+        grow.knowledge = config->knowledge;
         FillResult registered = register_stage(registry, stage, &grow, &run->motives, &melody, &run->accompaniment,
                                                &run->voicing);
         FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;

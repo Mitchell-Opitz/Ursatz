@@ -272,6 +272,8 @@ static bool grow_generate(const Plan *plan, FillTarget target, FillRng *rng, voi
         request.continuation = shared->continuation;
         request.basic_as_written = shared->basic_as_written;
         request.contrast = shared->contrast;
+        request.functions = shared->functions;
+        request.knowledge = shared->knowledge;
         request.motif = shared->motif;
     }
     if (request.transition) {

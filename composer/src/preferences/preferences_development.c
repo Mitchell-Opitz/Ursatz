@@ -183,6 +183,30 @@ static bool read_contrast(const cJSON *group, GrowContrast *contrast, const Refu
     return true;
 }
 
+/* The functions settings (R-710 to R-712): harmony, surface and contrast, each true or false. */
+static bool read_functions(const cJSON *group, GrowFunctions *functions, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(group)) {
+        return preferences_refuse_in(refusal, "development", "functions", "must be an object with harmony, surface and contrast");
+    }
+    cJSON_ArrayForEach(item, group) {
+        bool *flag = strcmp(item->string, "harmony") == 0   ? &functions->harmony
+                     : strcmp(item->string, "surface") == 0 ? &functions->surface
+                     : strcmp(item->string, "contrast") == 0 ? &functions->contrast
+                                                             : NULL;
+        char key[COMPOSER_PREFERENCES_PATH_MAX];
+        snprintf(key, sizeof(key), "functions/%s", item->string);
+        if (flag == NULL) {
+            return preferences_refuse_in(refusal, "development", key, "unknown member");
+        }
+        if (!cJSON_IsBool(item)) {
+            return preferences_refuse_in(refusal, "development", key, "must be true or false");
+        }
+        *flag = cJSON_IsTrue(item);
+    }
+    return true;
+}
+
 bool preferences_read_development(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal) {
     GrowFidelityTable *table = &preferences->development;
     const cJSON *item;
@@ -206,6 +230,12 @@ bool preferences_read_development(const cJSON *group, ComposerPreferences *prefe
         }
         if (strcmp(item->string, "contrast") == 0) {
             if (!read_contrast(item, &preferences->contrast, refusal)) {
+                return false;
+            }
+            continue;
+        }
+        if (strcmp(item->string, "functions") == 0) {
+            if (!read_functions(item, &preferences->functions, refusal)) {
                 return false;
             }
             continue;
@@ -277,6 +307,10 @@ cJSON *preferences_write_development(const ComposerPreferences *preferences) {
     ok = ok && distance && preferences_add_number(distance, "similar", preferences->contrast.distance[GROW_CONTRAST_SIMILAR]) &&
          preferences_add_number(distance, "distant", preferences->contrast.distance[GROW_CONTRAST_DISTANT]) &&
          preferences_add_number(contrast, "new_material", preferences->contrast.new_material);
+    cJSON *functions = ok ? cJSON_AddObjectToObject(group, "functions") : NULL;
+    ok = ok && functions != NULL && cJSON_AddBoolToObject(functions, "harmony", preferences->functions.harmony) != NULL &&
+         cJSON_AddBoolToObject(functions, "surface", preferences->functions.surface) != NULL &&
+         cJSON_AddBoolToObject(functions, "contrast", preferences->functions.contrast) != NULL;
     if (!ok) {
         cJSON_Delete(group);
         return NULL;

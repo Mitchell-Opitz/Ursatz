@@ -191,6 +191,8 @@ typedef struct {
     GrowContinuation continuation; /* from the GrowContext: how the continuation accelerates; zero for today's */
     bool basic_as_written;   /* from the GrowContext: a motif as long as the basic idea is it as written */
     GrowContrast contrast;   /* from the GrowContext: how the contrasting ideas contrast; zero for today's */
+    GrowFunctions functions; /* from the GrowContext: the formal function settings; all false for today's */
+    const KnowledgeSnapshot *knowledge; /* from the GrowContext: for the theme types and formal functions; NULL for none */
     const MotiveRandomPreferences *motif; /* from the GrowContext: the motif vocabulary a drawn rhythm uses; NULL for the defaults */
     bool given_first_half;   /* Given melody, harmony or bass lies in the first half: its chords are not written whole */
 } GrowThemeRequest;

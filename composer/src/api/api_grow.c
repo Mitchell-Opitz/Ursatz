@@ -274,6 +274,9 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     if (setup->contrast) {
         config.context.contrast = *setup->contrast;
     }
+    if (setup->functions) {
+        config.context.functions = *setup->functions;
+    }
     config.context.motif = setup->motif;
     config.fidelity = setup->fidelity;
     config.melody = setup->melody;

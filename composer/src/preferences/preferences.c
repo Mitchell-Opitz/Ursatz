@@ -1117,6 +1117,9 @@ static const ComposerPreferenceKey KEYS[] = {
     {"development.contrast.distance.similar", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"development.contrast.distance.distant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"development.contrast.new_material", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"development.functions.harmony", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.functions.surface", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"development.functions.contrast", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
     {"candidates.variety", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"candidates.pool", COMPOSER_KEY_INTEGER, POOL_MIN, POOL_MAX, false, NULL}};
 

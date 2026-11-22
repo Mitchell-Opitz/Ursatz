@@ -90,6 +90,7 @@ typedef struct {
     const GrowContinuation *continuation;    /* NULL for the defaults; not owned */
     bool basic_as_written;                   /* a motif as long as the basic idea is it as written, over its own chords */
     const GrowContrast *contrast;            /* NULL for the defaults; not owned */
+    const GrowFunctions *functions;          /* NULL for all off; not owned */
     const MotiveRandomPreferences *motif;    /* NULL for the defaults; not owned */
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
