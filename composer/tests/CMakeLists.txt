@@ -122,6 +122,7 @@ ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support L
 ursatz_test(test_melody_fill_smoke TARGET test_melody_fill ARGS smoke)
 
 ursatz_test(test_preferences LIBS ursatz_composer_engine cjson composer_test_support)
+ursatz_test(test_critic_rules LIBS ursatz_composer_engine cjson composer_test_support)
 
 ursatz_test(test_melody_preferences LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
