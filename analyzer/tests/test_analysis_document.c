@@ -123,6 +123,16 @@ int main(void) {
     assert(strcmp(document_path, expected_document_path) == 0);
     free(document_path);
 
+    /* The path rule: the last dot of the file name (not of a folder) becomes ".analysis.json"; either separator ends the folder; no dot appends it. */
+    static const char *const PATHS[][2] = {{"a/b.c/file", "a/b.c/file.analysis.json"}, {"x.tar.mid", "x.tar.analysis.json"},
+                                           {".hidden", ".analysis.json"},               {"dir/", "dir/.analysis.json"},
+                                           {"a\\b.mid", "a\\b.analysis.json"},           {"", ".analysis.json"}};
+    for (size_t i = 0; i < sizeof(PATHS) / sizeof(PATHS[0]); i++) {
+        char *derived = analyzer_document_path_for(PATHS[i][0]);
+        assert(derived && strcmp(derived, PATHS[i][1]) == 0);
+        free(derived);
+    }
+
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == ANALYZER_DOCUMENT_SCHEMA_VERSION);
