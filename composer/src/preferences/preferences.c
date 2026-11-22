@@ -1,13 +1,13 @@
 #include <ursatz_composer/preferences.h>
 
 #include "grow/grow_internal.h"
+#include "preferences/preferences_internal.h"
 
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <theory/tonality/roman_numeral_rules.h>
 
-#define WEIGHT_MAX COMPOSER_PREFERENCES_WEIGHT_MAX
 #define SCALE_MAX COMPOSER_PREFERENCES_SCALE_MAX
 #define RATIO_DENOMINATOR_MAX COMPOSER_PREFERENCES_RATIO_DENOMINATOR_MAX
 #define ATTEMPTS_MAX COMPOSER_PREFERENCES_ATTEMPTS_MAX
@@ -28,7 +28,6 @@
 #define PLAN_BEAT_MAX COMPOSER_PREFERENCES_PLAN_BEAT_MAX
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
-#define FIDELITY_DENOMINATOR_MAX COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX
 #define RHYTHM_REPEAT_BARS_MAX COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX
 #define POOL_MIN COMPOSER_PREFERENCES_POOL_MIN
 #define POOL_MAX COMPOSER_PREFERENCES_POOL_MAX
@@ -70,16 +69,8 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->candidates.pool = 4;
 }
 
-/* Where a refusal goes: the path and the message of the caller, which may both be absent. */
-typedef struct {
-    char *path;
-    size_t path_size;
-    char *message;
-    size_t message_size;
-} Refusal;
-
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
-static bool refuse(const Refusal *refusal, const char *where, const char *limit) {
+bool preferences_refuse(const Refusal *refusal, const char *where, const char *limit) {
     if (refusal->path && refusal->path_size > 0) {
         snprintf(refusal->path, refusal->path_size, "%s%s", where[0] ? "/" : "", where);
     }
@@ -90,17 +81,17 @@ static bool refuse(const Refusal *refusal, const char *where, const char *limit)
 }
 
 /* The key's path under a group: "keep" under "melody" for /melody/keep, "leap/high" under "motif" for /motif/leap/high. */
-static bool refuse_in(const Refusal *refusal, const char *group, const char *key, const char *limit) {
+bool preferences_refuse_in(const Refusal *refusal, const char *group, const char *key, const char *limit) {
     char path[COMPOSER_PREFERENCES_PATH_MAX];
     snprintf(path, sizeof(path), "%s/%s", group, key);
-    return refuse(refusal, path, limit);
+    return preferences_refuse(refusal, path, limit);
 }
 
 static bool refuse_melody(const Refusal *refusal, const char *key, const char *limit) {
-    return refuse_in(refusal, "melody", key, limit);
+    return preferences_refuse_in(refusal, "melody", key, limit);
 }
 
-static bool whole_number(const cJSON *item, double low, double high, double *out) {
+bool preferences_whole_number(const cJSON *item, double low, double high, double *out) {
     if (!cJSON_IsNumber(item) || item->valuedouble < low || item->valuedouble > high ||
         item->valuedouble != (double)(long long)item->valuedouble) {
         return false;
@@ -110,25 +101,25 @@ static bool whole_number(const cJSON *item, double low, double high, double *out
 }
 
 /* An unsigned setting from a whole number low to high; says which limit it broke when it is refused. */
-static bool read_unsigned_in(const cJSON *item, const char *group, const char *key, unsigned low, unsigned high,
+bool preferences_read_unsigned_in(const cJSON *item, const char *group, const char *key, unsigned low, unsigned high,
                              unsigned *out, const Refusal *refusal) {
     double value;
     char limit[COMPOSER_PREFERENCES_MESSAGE_MAX];
-    if (whole_number(item, low, high, &value)) {
+    if (preferences_whole_number(item, low, high, &value)) {
         *out = (unsigned)value;
         return true;
     }
     snprintf(limit, sizeof(limit), "must be a whole number from %u to %u", low, high);
-    return refuse_in(refusal, group, key, limit);
+    return preferences_refuse_in(refusal, group, key, limit);
 }
 
 static bool read_unsigned(const cJSON *item, const char *key, unsigned low, unsigned high, unsigned *out,
                           const Refusal *refusal) {
-    return read_unsigned_in(item, "melody", key, low, high, out, refusal);
+    return preferences_read_unsigned_in(item, "melody", key, low, high, out, refusal);
 }
 
 /* "n/d" with 0 <= n <= d and 1 <= d <= denominator_max, digits only. */
-static bool parse_ratio(const char *text, unsigned long denominator_max, Rational *out) {
+bool preferences_parse_ratio(const char *text, unsigned long denominator_max, Rational *out) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
     size_t i = 0;
@@ -210,7 +201,7 @@ static bool read_nct_types(const cJSON *list, MelodyFillParams *melody, const Re
 }
 
 static bool read_ratio(const cJSON *item, const char *key, Rational *out, const Refusal *refusal) {
-    if (!cJSON_IsString(item) || !parse_ratio(item->valuestring, RATIO_DENOMINATOR_MAX, out)) {
+    if (!cJSON_IsString(item) || !preferences_parse_ratio(item->valuestring, RATIO_DENOMINATOR_MAX, out)) {
         return refuse_melody(refusal, key, "must be a ratio n/d with 0 <= n <= d and 1 <= d <= 16");
     }
     return true;
@@ -325,7 +316,7 @@ static bool read_rule_list(const cJSON *list, bool groups, unsigned *bits, const
 static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
-        return refuse(refusal, "melody", "must be an object");
+        return preferences_refuse(refusal, "melody", "must be an object");
     }
     cJSON_ArrayForEach(item, group) {
         const char *key = item->string;
@@ -485,7 +476,7 @@ static PlanChordResult parse_plan_chord(const char *text, MotiveRandomPlanChord 
 static bool refuse_plan_chord(const Refusal *refusal, size_t index, const char *limit) {
     char key[COMPOSER_PREFERENCES_PATH_MAX];
     snprintf(key, sizeof(key), "plan/%zu", index);
-    return refuse_in(refusal, "motif", key, limit);
+    return preferences_refuse_in(refusal, "motif", key, limit);
 }
 
 /*
@@ -499,7 +490,7 @@ static bool read_plan(const cJSON *item, MotiveRandomPreferences *motif, const R
     size_t placed = 0;
     const cJSON *entry;
     if (!cJSON_IsArray(item) || cJSON_GetArraySize(item) < 1 || cJSON_GetArraySize(item) > PLAN_MAX) {
-        return refuse_in(refusal, "motif", "plan", "must be a list of 1 to 4 chords");
+        return preferences_refuse_in(refusal, "motif", "plan", "must be a list of 1 to 4 chords");
     }
     cJSON_ArrayForEach(entry, item) {
         PlanChordResult result = cJSON_IsString(entry) ? parse_plan_chord(entry->valuestring, &plan[count]) : PLAN_CHORD_SYNTAX;
@@ -534,7 +525,7 @@ static bool read_plan(const cJSON *item, MotiveRandomPreferences *motif, const R
             }
         }
     } else if (count > 3) {
-        return refuse_in(refusal, "motif", "plan", "at most 3 chords without places (one per segment)");
+        return preferences_refuse_in(refusal, "motif", "plan", "at most 3 chords without places (one per segment)");
     }
     motif->plan_count = count;
     memcpy(motif->plan, plan, count * sizeof(plan[0]));
@@ -556,7 +547,7 @@ static bool read_weighted_list(const cJSON *item, const WeightedList *list, Moti
     char key[COMPOSER_PREFERENCES_PATH_MAX];
     const cJSON *entry;
     if (!cJSON_IsObject(item)) {
-        return refuse_in(refusal, "motif", list->key, "must be an object of whole numbers 0 to 20");
+        return preferences_refuse_in(refusal, "motif", list->key, "must be an object of whole numbers 0 to 20");
     }
     cJSON_ArrayForEach(entry, item) {
         bool known = false;
@@ -564,7 +555,7 @@ static bool read_weighted_list(const cJSON *item, const WeightedList *list, Moti
             if (strcmp(entry->string, list->names[i]) == 0) {
                 unsigned value;
                 snprintf(key, sizeof(key), "%s/%s", list->key, entry->string);
-                if (!read_unsigned_in(entry, "motif", key, 0, WEIGHT_MAX, &value, refusal)) {
+                if (!preferences_read_unsigned_in(entry, "motif", key, 0, WEIGHT_MAX, &value, refusal)) {
                     return false;
                 }
                 values[i] = value;
@@ -573,7 +564,7 @@ static bool read_weighted_list(const cJSON *item, const WeightedList *list, Moti
         }
         if (!known) {
             snprintf(key, sizeof(key), "%s/%s", list->key, entry->string);
-            return refuse_in(refusal, "motif", key, "unknown member");
+            return preferences_refuse_in(refusal, "motif", key, "unknown member");
         }
     }
     unsigned long sum = 0;
@@ -581,7 +572,7 @@ static bool read_weighted_list(const cJSON *item, const WeightedList *list, Moti
         sum += values[i];
     }
     if (sum == 0) {
-        return refuse_in(refusal, "motif", list->key, "the weights must sum to more than 0");
+        return preferences_refuse_in(refusal, "motif", list->key, "the weights must sum to more than 0");
     }
     return true;
 }
@@ -591,28 +582,28 @@ static bool read_leap(const cJSON *item, MotiveRandomPreferences *motif, const R
     int high = motif->leap_high;
     const cJSON *entry;
     if (!cJSON_IsObject(item)) {
-        return refuse_in(refusal, "motif", "leap", "must be an object with low and high");
+        return preferences_refuse_in(refusal, "motif", "leap", "must be an object with low and high");
     }
     cJSON_ArrayForEach(entry, item) {
         unsigned value;
         if (strcmp(entry->string, "low") == 0) {
-            if (!read_unsigned_in(entry, "motif", "leap/low", LEAP_MIN, LEAP_MAX, &value, refusal)) {
+            if (!preferences_read_unsigned_in(entry, "motif", "leap/low", LEAP_MIN, LEAP_MAX, &value, refusal)) {
                 return false;
             }
             low = (int)value;
         } else if (strcmp(entry->string, "high") == 0) {
-            if (!read_unsigned_in(entry, "motif", "leap/high", LEAP_MIN, LEAP_MAX, &value, refusal)) {
+            if (!preferences_read_unsigned_in(entry, "motif", "leap/high", LEAP_MIN, LEAP_MAX, &value, refusal)) {
                 return false;
             }
             high = (int)value;
         } else {
             char key[COMPOSER_PREFERENCES_PATH_MAX];
             snprintf(key, sizeof(key), "leap/%s", entry->string);
-            return refuse_in(refusal, "motif", key, "unknown member");
+            return preferences_refuse_in(refusal, "motif", key, "unknown member");
         }
     }
     if (high < low) {
-        return refuse_in(refusal, "motif", "leap/high", "must be at least leap.low");
+        return preferences_refuse_in(refusal, "motif", "leap/high", "must be at least leap.low");
     }
     motif->leap_low = low;
     motif->leap_high = high;
@@ -621,7 +612,7 @@ static bool read_leap(const cJSON *item, MotiveRandomPreferences *motif, const R
 
 static bool read_motif_bool(const cJSON *item, const char *key, bool *out, const Refusal *refusal) {
     if (!cJSON_IsBool(item)) {
-        return refuse_in(refusal, "motif", key, "must be true or false");
+        return preferences_refuse_in(refusal, "motif", key, "must be true or false");
     }
     *out = cJSON_IsTrue(item);
     return true;
@@ -629,8 +620,8 @@ static bool read_motif_bool(const cJSON *item, const char *key, bool *out, const
 
 static bool read_contrast_fidelity_min(const cJSON *item, MotiveRandomPreferences *motif, const Refusal *refusal) {
     Rational ratio;
-    if (!cJSON_IsString(item) || !parse_ratio(item->valuestring, FIDELITY_DENOMINATOR_MAX, &ratio)) {
-        return refuse_in(refusal, "motif", "contrast_fidelity_min", "must be a ratio n/d from 0 to 1 with 1 <= d <= 1000");
+    if (!cJSON_IsString(item) || !preferences_parse_ratio(item->valuestring, FIDELITY_DENOMINATOR_MAX, &ratio)) {
+        return preferences_refuse_in(refusal, "motif", "contrast_fidelity_min", "must be a ratio n/d from 0 to 1 with 1 <= d <= 1000");
     }
     motif->contrast_fidelity_min = ratio;
     return true;
@@ -639,7 +630,7 @@ static bool read_contrast_fidelity_min(const cJSON *item, MotiveRandomPreference
 static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
-        return refuse(refusal, "motif", "must be an object");
+        return preferences_refuse(refusal, "motif", "must be an object");
     }
     cJSON_ArrayForEach(item, group) {
         const char *key = item->string;
@@ -672,7 +663,7 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
             continue;
         }
         if (strcmp(key, "pickup_one_in") == 0) {
-            if (!read_unsigned_in(item, "motif", key, 0, PICKUP_ONE_IN_MAX, &motif->pickup_one_in, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, PICKUP_ONE_IN_MAX, &motif->pickup_one_in, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "leap") == 0) {
@@ -680,16 +671,16 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
                 return false;
             }
         } else if (strcmp(key, "accented_one_in") == 0) {
-            if (!read_unsigned_in(item, "motif", key, 0, ACCENTED_ONE_IN_MAX, &motif->accented_one_in, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, ACCENTED_ONE_IN_MAX, &motif->accented_one_in, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "leaps_per_motif") == 0) {
-            if (!read_unsigned_in(item, "motif", key, 0, LEAPS_PER_MOTIF_MAX, &motif->leaps_per_motif, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, LEAPS_PER_MOTIF_MAX, &motif->leaps_per_motif, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "long_on_weak") == 0) {
             unsigned value;
-            if (!read_unsigned_in(item, "motif", key, 0, WEIGHT_MAX, &value, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, WEIGHT_MAX, &value, refusal)) {
                 return false;
             }
             motif->long_on_weak = value;
@@ -714,15 +705,15 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
                 return false;
             }
         } else if (strcmp(key, "long_nct_one_in") == 0) {
-            if (!read_unsigned_in(item, "motif", key, 0, LONG_NCT_ONE_IN_MAX, &motif->long_nct_one_in, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, LONG_NCT_ONE_IN_MAX, &motif->long_nct_one_in, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "syncopation_one_in") == 0) {
-            if (!read_unsigned_in(item, "motif", key, 0, SYNCOPATION_ONE_IN_MAX, &motif->syncopation_one_in, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, SYNCOPATION_ONE_IN_MAX, &motif->syncopation_one_in, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "skips_per_motif") == 0) {
-            if (!read_unsigned_in(item, "motif", key, 0, SKIPS_PER_MOTIF_MAX, &motif->skips_per_motif, refusal)) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, SKIPS_PER_MOTIF_MAX, &motif->skips_per_motif, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "plan") == 0) {
@@ -734,239 +725,7 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
                 return false;
             }
         } else {
-            return refuse_in(refusal, "motif", key, "unknown member");
-        }
-    }
-    return true;
-}
-
-/* ------------------------------------------------------- the development group */
-
-/* The settings of the fidelity table, in the order the document writes them, and the enum each stands for. */
-static const struct {
-    const char *name;
-    GrowDevelopment development;
-} DEVELOPMENT_KEYS[] = {{"melody", GROW_DEVELOP_MELODY}, {"balanced", GROW_DEVELOP_BALANCED}, {"theme", GROW_DEVELOP_THEME}};
-#define DEVELOPMENT_COUNT (sizeof(DEVELOPMENT_KEYS) / sizeof(DEVELOPMENT_KEYS[0]))
-
-/* The roles with a minimum; none and contrast are 0 and are not settings. */
-static const struct {
-    const char *name;
-    GrowIdeaRole role;
-} ROLE_KEYS[] = {{"presentation", GROW_ROLE_PRESENTATION},
-                 {"continuation", GROW_ROLE_CONTINUATION},
-                 {"cadential", GROW_ROLE_CADENTIAL}};
-#define ROLE_COUNT (sizeof(ROLE_KEYS) / sizeof(ROLE_KEYS[0]))
-
-static bool read_fidelity_setting(const cJSON *setting, const char *name, GrowDevelopment development,
-                                  GrowFidelityTable *table, const Refusal *refusal) {
-    const cJSON *entry;
-    char path[COMPOSER_PREFERENCES_PATH_MAX];
-    if (!cJSON_IsObject(setting)) {
-        snprintf(path, sizeof(path), "development/fidelity_minimum/%s", name);
-        return refuse(refusal, path, "must be an object with presentation, continuation and cadential");
-    }
-    cJSON_ArrayForEach(entry, setting) {
-        bool known = false;
-        for (size_t i = 0; i < ROLE_COUNT && !known; i++) {
-            if (strcmp(entry->string, ROLE_KEYS[i].name) == 0) {
-                Rational ratio;
-                known = true;
-                if (!cJSON_IsString(entry) || !parse_ratio(entry->valuestring, FIDELITY_DENOMINATOR_MAX, &ratio) ||
-                    ratio.den < 1) {
-                    snprintf(path, sizeof(path), "development/fidelity_minimum/%s/%s", name, entry->string);
-                    return refuse(refusal, path, "must be a ratio n/d from 0 to 1 with 1 <= d <= 1000");
-                }
-                table->minimum[development][ROLE_KEYS[i].role].numerator = ratio.num;
-                table->minimum[development][ROLE_KEYS[i].role].denominator = ratio.den;
-            }
-        }
-        if (!known) {
-            snprintf(path, sizeof(path), "development/fidelity_minimum/%s/%s", name, entry->string);
-            return refuse(refusal, path, "unknown member");
-        }
-    }
-    return true;
-}
-
-/* The weights of the continuation's fragment lengths, in the order the document writes them. */
-static const char *const FRAGMENT_LENGTH_NAMES[GROW_FRAGMENT_LENGTH_COUNT] = {"segment", "half_bar", "beat"};
-
-static bool read_fragment_lengths(const cJSON *item, GrowContinuation *continuation, const Refusal *refusal) {
-    const char *where = "development/continuation/fragment_lengths";
-    char path[COMPOSER_PREFERENCES_PATH_MAX];
-    const cJSON *entry;
-    unsigned sum = 0;
-    double value;
-    if (!cJSON_IsObject(item)) {
-        return refuse(refusal, where, "must be an object of whole numbers 0 to 20");
-    }
-    cJSON_ArrayForEach(entry, item) {
-        bool known = false;
-        for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT && !known; i++) {
-            if (strcmp(entry->string, FRAGMENT_LENGTH_NAMES[i]) == 0) {
-                known = true;
-                snprintf(path, sizeof(path), "%s/%s", where, entry->string);
-                if (!whole_number(entry, 0, WEIGHT_MAX, &value)) {
-                    return refuse(refusal, path, "must be a whole number from 0 to 20");
-                }
-                continuation->fragment_lengths[i] = (unsigned)entry->valuedouble;
-            }
-        }
-        if (!known) {
-            snprintf(path, sizeof(path), "%s/%s", where, entry->string);
-            return refuse(refusal, path, "unknown name");
-        }
-    }
-    for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
-        sum += continuation->fragment_lengths[i];
-    }
-    if (sum == 0) {
-        return refuse(refusal, where, "the weights must sum to more than 0");
-    }
-    return true;
-}
-
-static bool read_continuation(const cJSON *group, GrowContinuation *continuation, const Refusal *refusal) {
-    const cJSON *item;
-    if (!cJSON_IsObject(group)) {
-        return refuse(refusal, "development/continuation", "must be an object");
-    }
-    cJSON_ArrayForEach(item, group) {
-        bool *flag = NULL;
-        char path[COMPOSER_PREFERENCES_PATH_MAX];
-        if (strcmp(item->string, "fragment_lengths") == 0) {
-            if (!read_fragment_lengths(item, continuation, refusal)) {
-                return false;
-            }
-            continue;
-        }
-        if (strcmp(item->string, "every_segment") == 0) {
-            flag = &continuation->every_segment;
-        } else if (strcmp(item->string, "diminish") == 0) {
-            flag = &continuation->diminish;
-        } else if (strcmp(item->string, "liquidate") == 0) {
-            flag = &continuation->liquidate;
-        } else if (strcmp(item->string, "faster_harmony") == 0) {
-            flag = &continuation->faster_harmony;
-        }
-        snprintf(path, sizeof(path), "development/continuation/%s", item->string);
-        if (flag == NULL) {
-            return refuse(refusal, path, "unknown member");
-        }
-        if (!cJSON_IsBool(item)) {
-            return refuse(refusal, path, "must be true or false");
-        }
-        *flag = cJSON_IsTrue(item);
-    }
-    return true;
-}
-
-/* The distance weights, similar and distant, each 0 to 20; a name left out keeps its value, all 0 reads as similar 1. */
-static bool read_contrast_distance(const cJSON *distance, GrowContrast *contrast, const Refusal *refusal) {
-    static const char *const NAMES[GROW_CONTRAST_DISTANCE_COUNT] = {"similar", "distant"};
-    const cJSON *item;
-    if (!cJSON_IsObject(distance)) {
-        return refuse_in(refusal, "development", "contrast/distance", "must be an object with similar and distant, whole numbers 0 to 20");
-    }
-    cJSON_ArrayForEach(item, distance) {
-        bool known = false;
-        for (size_t i = 0; i < GROW_CONTRAST_DISTANCE_COUNT && !known; i++) {
-            if (strcmp(item->string, NAMES[i]) == 0) {
-                char key[COMPOSER_PREFERENCES_PATH_MAX];
-                snprintf(key, sizeof(key), "contrast/distance/%s", NAMES[i]);
-                if (!read_unsigned_in(item, "development", key, 0, WEIGHT_MAX, &contrast->distance[i], refusal)) {
-                    return false;
-                }
-                known = true;
-            }
-        }
-        if (!known) {
-            char key[COMPOSER_PREFERENCES_PATH_MAX];
-            snprintf(key, sizeof(key), "contrast/distance/%s", item->string);
-            return refuse_in(refusal, "development", key, "unknown member");
-        }
-    }
-    if (contrast->distance[GROW_CONTRAST_SIMILAR] == 0 && contrast->distance[GROW_CONTRAST_DISTANT] == 0) {
-        contrast->distance[GROW_CONTRAST_SIMILAR] = 1;
-    }
-    return true;
-}
-
-/* The contrast settings (phase L4): distance {similar, distant} and new_material. */
-static bool read_contrast(const cJSON *group, GrowContrast *contrast, const Refusal *refusal) {
-    const cJSON *item;
-    if (!cJSON_IsObject(group)) {
-        return refuse_in(refusal, "development", "contrast", "must be an object with distance and new_material");
-    }
-    cJSON_ArrayForEach(item, group) {
-        if (strcmp(item->string, "distance") == 0) {
-            if (!read_contrast_distance(item, contrast, refusal)) {
-                return false;
-            }
-        } else if (strcmp(item->string, "new_material") == 0) {
-            if (!read_unsigned_in(item, "development", "contrast/new_material", 0, WEIGHT_MAX, &contrast->new_material,
-                                  refusal)) {
-                return false;
-            }
-        } else {
-            char key[COMPOSER_PREFERENCES_PATH_MAX];
-            snprintf(key, sizeof(key), "contrast/%s", item->string);
-            return refuse_in(refusal, "development", key, "unknown member");
-        }
-    }
-    return true;
-}
-
-static bool read_development(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal) {
-    GrowFidelityTable *table = &preferences->development;
-    const cJSON *item;
-    if (!cJSON_IsObject(group)) {
-        return refuse(refusal, "development", "must be an object");
-    }
-    cJSON_ArrayForEach(item, group) {
-        const cJSON *setting;
-        if (strcmp(item->string, "continuation") == 0) {
-            if (!read_continuation(item, &preferences->continuation, refusal)) {
-                return false;
-            }
-            continue;
-        }
-        if (strcmp(item->string, "basic_as_written") == 0) {
-            if (!cJSON_IsBool(item)) {
-                return refuse_in(refusal, "development", "basic_as_written", "must be true or false");
-            }
-            preferences->basic_as_written = cJSON_IsTrue(item);
-            continue;
-        }
-        if (strcmp(item->string, "contrast") == 0) {
-            if (!read_contrast(item, &preferences->contrast, refusal)) {
-                return false;
-            }
-            continue;
-        }
-        if (strcmp(item->string, "fidelity_minimum") != 0) {
-            return refuse_in(refusal, "development", item->string, "unknown member");
-        }
-        if (!cJSON_IsObject(item)) {
-            return refuse_in(refusal, "development", "fidelity_minimum", "must be an object of melody, balanced and theme");
-        }
-        cJSON_ArrayForEach(setting, item) {
-            bool known = false;
-            for (size_t i = 0; i < DEVELOPMENT_COUNT && !known; i++) {
-                if (strcmp(setting->string, DEVELOPMENT_KEYS[i].name) == 0) {
-                    known = true;
-                    if (!read_fidelity_setting(setting, DEVELOPMENT_KEYS[i].name, DEVELOPMENT_KEYS[i].development, table,
-                                               refusal)) {
-                        return false;
-                    }
-                }
-            }
-            if (!known) {
-                char key[COMPOSER_PREFERENCES_PATH_MAX];
-                snprintf(key, sizeof(key), "fidelity_minimum/%s", setting->string);
-                return refuse_in(refusal, "development", key, "unknown member");
-            }
+            return preferences_refuse_in(refusal, "motif", key, "unknown member");
         }
     }
     return true;
@@ -977,19 +736,19 @@ static bool read_development(const cJSON *group, ComposerPreferences *preference
 static bool read_candidates(const cJSON *group, CandidatePreferences *candidates, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
-        return refuse(refusal, "candidates", "must be an object");
+        return preferences_refuse(refusal, "candidates", "must be an object");
     }
     cJSON_ArrayForEach(item, group) {
         if (strcmp(item->string, "variety") == 0) {
-            if (!read_unsigned_in(item, "candidates", "variety", 0, WEIGHT_MAX, &candidates->variety, refusal)) {
+            if (!preferences_read_unsigned_in(item, "candidates", "variety", 0, WEIGHT_MAX, &candidates->variety, refusal)) {
                 return false;
             }
         } else if (strcmp(item->string, "pool") == 0) {
-            if (!read_unsigned_in(item, "candidates", "pool", POOL_MIN, POOL_MAX, &candidates->pool, refusal)) {
+            if (!preferences_read_unsigned_in(item, "candidates", "pool", POOL_MIN, POOL_MAX, &candidates->pool, refusal)) {
                 return false;
             }
         } else {
-            return refuse_in(refusal, "candidates", item->string, "unknown member");
+            return preferences_refuse_in(refusal, "candidates", item->string, "unknown member");
         }
     }
     return true;
@@ -1007,7 +766,7 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
         message[0] = '\0';
     }
     if (!cJSON_IsObject(object)) {
-        return refuse(&refusal, "", "preferences must be an object");
+        return preferences_refuse(&refusal, "", "preferences must be an object");
     }
     cJSON_ArrayForEach(item, object) {
         if (strcmp(item->string, "melody") == 0) {
@@ -1019,7 +778,7 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
                 return false;
             }
         } else if (strcmp(item->string, "development") == 0) {
-            if (!read_development(item, out, &refusal)) {
+            if (!preferences_read_development(item, out, &refusal)) {
                 return false;
             }
         } else if (strcmp(item->string, "candidates") == 0) {
@@ -1027,13 +786,13 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
                 return false;
             }
         } else {
-            return refuse(&refusal, item->string, "unknown member");
+            return preferences_refuse(&refusal, item->string, "unknown member");
         }
     }
     return true;
 }
 
-static bool add_number(cJSON *object, const char *name, double value) {
+bool preferences_add_number(cJSON *object, const char *name, double value) {
     return cJSON_AddNumberToObject(object, name, value) != NULL;
 }
 
@@ -1047,7 +806,7 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
     cJSON *group = cJSON_CreateObject();
     cJSON *range = group ? cJSON_AddObjectToObject(group, "range") : NULL;
     cJSON *types = group ? cJSON_CreateArray() : NULL;
-    bool ok = range && types && add_number(range, "low", melody->range_low) && add_number(range, "high", melody->range_high);
+    bool ok = range && types && preferences_add_number(range, "low", melody->range_low) && preferences_add_number(range, "high", melody->range_high);
     for (size_t i = 0; ok && i < NCT_COUNT; i++) {
         if (melody->nct_types & NCT_NAMES[i].bit) {
             cJSON *name = cJSON_CreateString(NCT_NAMES[i].name);
@@ -1063,21 +822,21 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
         ok = cJSON_AddItemToObject(group, "nct_types", types);
         types = ok ? NULL : types;
     }
-    ok = ok && add_number(group, "density", melody->density) && add_number(group, "climax_position", melody->climax_position) &&
-         add_number(group, "climax_rise", melody->climax_rise) && add_number(group, "climax_slack", melody->climax_slack) &&
+    ok = ok && preferences_add_number(group, "density", melody->density) && preferences_add_number(group, "climax_position", melody->climax_position) &&
+         preferences_add_number(group, "climax_rise", melody->climax_rise) && preferences_add_number(group, "climax_slack", melody->climax_slack) &&
          add_ratio(group, "second_nearest_chord_tone", melody->second_nearest) &&
-         add_number(group, "attempts", melody->attempts) && add_number(group, "keep", melody->keep) &&
+         preferences_add_number(group, "attempts", melody->attempts) && preferences_add_number(group, "keep", melody->keep) &&
          cJSON_AddBoolToObject(group, "plain_shaping", melody->plain_shaping) != NULL;
     cJSON *weights = ok ? cJSON_AddObjectToObject(group, "weights") : NULL;
     for (size_t i = 0; weights && i < WEIGHT_COUNT; i++) {
         const unsigned *value = (const unsigned *)(const void *)((const char *)&melody->weights + WEIGHT_KEYS[i].offset);
-        ok = ok && add_number(weights, WEIGHT_KEYS[i].name, *value);
+        ok = ok && preferences_add_number(weights, WEIGHT_KEYS[i].name, *value);
     }
     cJSON *closure = ok && weights ? cJSON_AddObjectToObject(group, "closure") : NULL;
-    ok = ok && closure && add_number(closure, "final", melody->closure_final) &&
-         add_number(closure, "first", melody->closure_first) &&
-         add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
-         add_number(group, "leaps", melody->leap_weight) && add_number(group, "register", melody->register_weight);
+    ok = ok && closure && preferences_add_number(closure, "final", melody->closure_final) &&
+         preferences_add_number(closure, "first", melody->closure_first) &&
+         preferences_add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
+         preferences_add_number(group, "leaps", melody->leap_weight) && preferences_add_number(group, "register", melody->register_weight);
     cJSON *waive = ok ? cJSON_AddArrayToObject(group, "waive") : NULL;
     for (unsigned i = 0; waive && i < MELODY_RULE_COUNT; i++) {
         if (melody->waive & (1u << i)) {
@@ -1112,7 +871,7 @@ static bool add_weighted_list(cJSON *group, const WeightedList *list, const Moti
     cJSON *object = cJSON_AddObjectToObject(group, list->key);
     const unsigned long *values = list_values_const(motif, list);
     for (size_t i = 0; object && i < list->count; i++) {
-        if (!add_number(object, list->names[i], (double)values[i])) {
+        if (!preferences_add_number(object, list->names[i], (double)values[i])) {
             return false;
         }
     }
@@ -1152,86 +911,40 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
      * accented_one_in before accented_types (the last list), the other settings after it. */
     for (size_t i = 0; ok && i < MOTIF_LIST_COUNT; i++) {
         if (i == 1) {
-            ok = add_number(group, "pickup_one_in", motif->pickup_one_in);
+            ok = preferences_add_number(group, "pickup_one_in", motif->pickup_one_in);
         }
         if (ok && i == MOTIF_LIST_COUNT - 1) {
-            ok = add_number(group, "accented_one_in", motif->accented_one_in);
+            ok = preferences_add_number(group, "accented_one_in", motif->accented_one_in);
         }
         if (ok && i == 6) {
             leap = cJSON_AddObjectToObject(group, "leap");
-            ok = leap && add_number(leap, "low", motif->leap_low) && add_number(leap, "high", motif->leap_high);
+            ok = leap && preferences_add_number(leap, "low", motif->leap_low) && preferences_add_number(leap, "high", motif->leap_high);
         }
         ok = ok && add_weighted_list(group, &MOTIF_LISTS[i], motif);
     }
     snprintf(ratio, sizeof(ratio), "%lld/%lld", motif->contrast_fidelity_min.num,
              motif->contrast_fidelity_min.den);
     ok = ok && cJSON_AddBoolToObject(group, "avoid_repeats", motif->avoid_repeats) != NULL &&
-         add_number(group, "leaps_per_motif", motif->leaps_per_motif) &&
+         preferences_add_number(group, "leaps_per_motif", motif->leaps_per_motif) &&
          cJSON_AddBoolToObject(group, "leap_recovery", motif->leap_recovery) != NULL &&
          cJSON_AddBoolToObject(group, "pickup_from_accent", motif->pickup_from_accent) != NULL &&
          cJSON_AddStringToObject(group, "contrast_fidelity_min", ratio) != NULL &&
-         add_number(group, "long_on_weak", (double)motif->long_on_weak) &&
+         preferences_add_number(group, "long_on_weak", (double)motif->long_on_weak) &&
          cJSON_AddBoolToObject(group, "final_long", motif->final_long) != NULL &&
          cJSON_AddBoolToObject(group, "compound_beats", motif->compound_beats) != NULL;
     /* endings, long_nct_one_in, then the four long_nct lists: the order of the document. */
     for (size_t i = 0; ok && i < MOTIF_LIST_L2_COUNT; i++) {
         if (i == 1) {
-            ok = add_number(group, "long_nct_one_in", motif->long_nct_one_in);
+            ok = preferences_add_number(group, "long_nct_one_in", motif->long_nct_one_in);
         }
         ok = ok && add_weighted_list(group, &MOTIF_LISTS_L2[i], motif);
     }
     /* Phase L3: syncopation_one_in, its two lists, skips_per_motif, and the plan when one is given. */
-    ok = ok && add_number(group, "syncopation_one_in", motif->syncopation_one_in);
+    ok = ok && preferences_add_number(group, "syncopation_one_in", motif->syncopation_one_in);
     for (size_t i = 0; ok && i < MOTIF_LIST_L3_COUNT; i++) {
         ok = add_weighted_list(group, &MOTIF_LISTS_L3[i], motif);
     }
-    ok = ok && add_number(group, "skips_per_motif", motif->skips_per_motif) && write_plan(group, motif);
-    if (!ok) {
-        cJSON_Delete(group);
-        return NULL;
-    }
-    return group;
-}
-
-static bool write_continuation(cJSON *group, const GrowContinuation *continuation) {
-    cJSON *object = cJSON_AddObjectToObject(group, "continuation");
-    cJSON *lengths = object ? cJSON_CreateObject() : NULL;
-    bool ok = lengths != NULL && cJSON_AddBoolToObject(object, "every_segment", continuation->every_segment) != NULL;
-    if (ok) {
-        ok = cJSON_AddItemToObject(object, "fragment_lengths", lengths);
-    } else {
-        cJSON_Delete(lengths);
-    }
-    for (size_t i = 0; ok && i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
-        ok = add_number(lengths, FRAGMENT_LENGTH_NAMES[i], continuation->fragment_lengths[i]);
-    }
-    return ok && cJSON_AddBoolToObject(object, "diminish", continuation->diminish) != NULL &&
-           cJSON_AddBoolToObject(object, "liquidate", continuation->liquidate) != NULL &&
-           cJSON_AddBoolToObject(object, "faster_harmony", continuation->faster_harmony) != NULL;
-}
-
-static cJSON *write_development(const ComposerPreferences *preferences) {
-    const GrowFidelityTable *table = &preferences->development;
-    cJSON *group = cJSON_CreateObject();
-    cJSON *minimum = group ? cJSON_AddObjectToObject(group, "fidelity_minimum") : NULL;
-    bool ok = minimum != NULL;
-    for (size_t d = 0; ok && d < DEVELOPMENT_COUNT; d++) {
-        cJSON *setting = cJSON_AddObjectToObject(minimum, DEVELOPMENT_KEYS[d].name);
-        ok = setting != NULL;
-        for (size_t r = 0; ok && r < ROLE_COUNT; r++) {
-            const MotiveScore *score = &table->minimum[DEVELOPMENT_KEYS[d].development][ROLE_KEYS[r].role];
-            char text[32];
-            snprintf(text, sizeof(text), "%lu/%lu", score->numerator, score->denominator);
-            ok = cJSON_AddStringToObject(setting, ROLE_KEYS[r].name, text) != NULL;
-        }
-    }
-    ok = ok && write_continuation(group, &preferences->continuation) &&
-         cJSON_AddBoolToObject(group, "basic_as_written", preferences->basic_as_written) != NULL;
-    cJSON *contrast = ok ? cJSON_AddObjectToObject(group, "contrast") : NULL;
-    cJSON *distance = contrast ? cJSON_AddObjectToObject(contrast, "distance") : NULL;
-    ok = ok && distance && add_number(distance, "similar", preferences->contrast.distance[GROW_CONTRAST_SIMILAR]) &&
-         add_number(distance, "distant", preferences->contrast.distance[GROW_CONTRAST_DISTANT]) &&
-         add_number(contrast, "new_material", preferences->contrast.new_material);
+    ok = ok && preferences_add_number(group, "skips_per_motif", motif->skips_per_motif) && write_plan(group, motif);
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -1253,15 +966,15 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
-    cJSON *development = write_development(preferences);
+    cJSON *development = preferences_write_development(preferences);
     if (!development || !cJSON_AddItemToObject(document, "development", development)) {
         cJSON_Delete(development);
         cJSON_Delete(document);
         return NULL;
     }
     cJSON *candidates = cJSON_AddObjectToObject(document, "candidates");
-    if (!candidates || !add_number(candidates, "variety", preferences->candidates.variety) ||
-        !add_number(candidates, "pool", preferences->candidates.pool)) {
+    if (!candidates || !preferences_add_number(candidates, "variety", preferences->candidates.variety) ||
+        !preferences_add_number(candidates, "pool", preferences->candidates.pool)) {
         cJSON_Delete(document);
         return NULL;
     }
