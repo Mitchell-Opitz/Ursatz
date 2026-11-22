@@ -31,3 +31,21 @@ Each gives a `CriticFinding`: its penalty from 0 to 1, and where and by how much
 ## The score
 
 `critic_score(findings, settings)` is minus the sum of weight x penalty, each weight 0 to 20 (default 1); an evaluator in `CriticSettings.reversed` counts plus, so a listener can ask for what she usually avoids. The settings are the preferences' `critic` group ([preferences.md](preferences.md#the-critic-group-r-722)): `critic_settings_default` gives weights 1, nothing reversed, `rank` false, `candidates` 4 and `keep_rejected` 8. `critic_evaluate(line, set, set_count, knowledge, findings)` takes the lines of the candidates judged together as `set` (the line itself among them, skipped by pointer); an empty line is `CRITIC_ERR_EMPTY`.
+
+## Observations (R-720)
+
+An observation is a note in plain words from the message template of an entry. `critic_message` fills the template: `{bar}`, `{beat}` (1-based), `{first}`, `{last}`, `{count}`, `{value}` and `{limit}` come from a `CriticFinding`, `{idea}`, `{against}` and `{aspect}` from its names, `{planned}`, `{heard}` and `{amount}` from the `CriticFields` the caller gives. A name with no value (a bar of -1, a field left empty) and an unknown name stay as written.
+
+`critic_judge(line, set, set_count, knowledge, settings, &judgment)` runs the evaluators, scores them and writes one **scored** observation for each finding with a penalty above 0, in evaluator order, from the entry `michelle.rule.<code>`: "bars 2 to 4 keep one rhythm", "the line spans 19 semitones, more than 16". `CriticJudgment` holds the score, the eight findings and at most 32 observations.
+
+`critic_observe(hearing, plan, theme, line, knowledge, &judgment)` appends the observations of the Composer's hearing of the theme node against its plan (the hearing of [form-hear.md](form-hear.md) and [analyzer-check.md](analyzer-check.md), over the hearing's render, so nothing is analyzed twice):
+
+| Rule | When | Message |
+| --- | --- | --- |
+| `cadence_heard` | A planned cadence of the theme (`analyzer_check_section_in`) that the Analyzer does not hear as planned. The bar is the theme's first bar number plus the item's 0-based bar. | the perfect-authentic cadence planned in bar 8 is heard as half |
+| `theme_heard` | The form the Analyzer hears over the theme (`form_hear_in`) is not the form the section's pairing asks for, decided as `compose_run` decides `heard_as_requested` (a hybrid also needs the beginning and the ending asked for); "no theme" when it hears none. | planned as a sentence, heard as a hybrid |
+| `contrast_heard` | A contrast constraint of an idea of the theme whose aspect the line's melody measures under its amount (`dimension_contrast` over the two ideas' notes). | the contrasting idea's melody is 0 from the basic idea in rhythm; the plan asks for 1/2 |
+
+A theme the hearing cannot read (a lane left open, no meter) adds none: it is not held against the plan. The tests measure 12 themes composed from two fixtures at seeds 1 to 6 with the contrast target on: 5 heard as another form than asked, 1 with a planned cadence heard otherwise, none missing its contrast target.
+
+None of them is scored. They say what was heard, in the words of the plan; whether they should count waits for her verdicts on them (R-720, B6 stores them), and the observation `voice_fault_heard` of the whole-piece check is listed by the check, never here.
