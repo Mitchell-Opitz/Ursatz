@@ -71,6 +71,7 @@ static const QueryEntry kQueries[] = {
     {"ratings.session", workshop_q_ratings_session},
     {"ratings.sessions", workshop_q_ratings_sessions},
     {"ratings.item", workshop_q_ratings_item},
+    {"ratings.critiques", workshop_q_ratings_critiques},
 };
 
 /* --- the table of commands ------------------------------------------------------------------------------------------------------- */
@@ -141,6 +142,8 @@ static const CommandEntry kCommands[] = {
     {"ratings.rate", workshop_c_ratings_rate},
     {"ratings.pick", workshop_c_ratings_pick},
     {"ratings.rate-version", workshop_c_ratings_rate_version},
+    {"ratings.critique", workshop_c_ratings_critique},
+    {"ratings.verdict", workshop_c_ratings_verdict},
     {"ratings.keep", workshop_c_ratings_keep},
     {"job.cancel", workshop_c_job_cancel}, /* a runtime control: it changes no file and writes no record */
 };

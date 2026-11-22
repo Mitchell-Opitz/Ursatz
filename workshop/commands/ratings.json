@@ -2,7 +2,7 @@
   "schema": "ursatz-commands",
   "schema_version": 1,
   "family": "ratings",
-  "summary": "Ratings: listening sessions with batches, ratings and picks, ratings of item versions, and keep as default.",
+  "summary": "Ratings: listening sessions, ratings and picks, item ratings, critiques and verdicts, and keep as default.",
   "commands": [
     {
       "name": "ratings.session",
@@ -232,6 +232,78 @@
       "reply": "The id of the rating.",
       "job": null,
       "example": "ratings.rate-version item:thm-1@v2 version 2 rating 5"
+    },
+    {
+      "name": "ratings.critique",
+      "summary": "Judge a version of a motif or a theme with the critic",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The version judged.",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        {
+          "name": "settings",
+          "type": "object",
+          "required": false,
+          "help": "A preferences document whose critic group sets the weights; absent: the item's resolved settings."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The critique: its id, score and observations with their ids.",
+      "job": null,
+      "example": "ratings.critique item:thm-1@v2 version 2"
+    },
+    {
+      "name": "ratings.verdict",
+      "summary": "Give a verdict on an observation of the critic",
+      "target": "item",
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "observation",
+          "type": "string",
+          "required": true,
+          "help": "The observation's id (obs-...), from one of the item's critiques."
+        },
+        {
+          "name": "verdict",
+          "type": "enum",
+          "required": true,
+          "help": "Whether she hears what the critic says.",
+          "values": [
+            "agree",
+            "disagree"
+          ]
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "Why.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The id of the verdict.",
+      "job": null,
+      "example": "ratings.verdict item:thm-1 observation obs-1 verdict agree"
     },
     {
       "name": "ratings.keep",
