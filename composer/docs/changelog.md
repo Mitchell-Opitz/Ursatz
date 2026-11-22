@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P67)
+
+Sequence presentation (R-714, P67 B3; A20261115-81): a sequence repetition over a motif with chords holds the motif's chords a step up (I to ii, V to vi), as R-348 says; `build_presentation` read `spec->source`, which never carries chords, so the guard was always true and the chords were written whole (the tonic and the second degree). The guard reads the compose run's basic motive and no section motive. Default themes whose motif has chords change; the API, the plan format and the schemas are as they were.
+
 ## Unreleased (phase P66)
 
 API 4.4 (R-693, P66b B9): `composer_api_validate` of a motive with `"stored": true` refuses a key but C major or C minor at `/params/body` (a stored motif is written with C as the tonic); the motive request of `composer_api_motive_from_midi` takes `write_in_c`, and its analysis then has `key_text` and `notes_text_in_c`; the vocabulary gives `beat_unit` in each meter, `defaults` and `theme_form_members`; the schema ids name this repository.
