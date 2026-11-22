@@ -268,8 +268,8 @@ static void test_projects_and_items(void) {
     free(link_text);
     snprintf(params, sizeof(params), "{\"id\":\"%s\"}", g_promoted);
     check(query("item.get", params, &reply, &error) == URSATZ_OK &&
-              member(member(member(member(reply.json, "item"), "body"), "motif"), "derived") != NULL &&
-              !cJSON_IsNull(member(member(member(member(reply.json, "item"), "body"), "motif"), "derived")),
+              member(member(member(reply.json, "body"), "motif"), "derived") != NULL &&
+              !cJSON_IsNull(member(member(member(reply.json, "body"), "motif"), "derived")),
           "the linked version has a derived member");
     workshop_reply_destroy(&reply);
     check(command("item.link-form", g_promoted, "{\"source\":5}", version_of(g_promoted), &reply, &error) == URSATZ_ERR_REQUEST,
@@ -285,8 +285,13 @@ static void test_projects_and_items(void) {
           "item.choose refuses an index of 0");
     workshop_reply_destroy(&reply);
     /* Its success path needs a variation set of a composed piece (the piece route test runs it); a motif has none. */
-    check(command("item.choose", g_motif, "{\"version\":9,\"set\":1,\"index\":1}", version_of(g_motif), &reply, &error) == URSATZ_ERR_NOT_FOUND,
-          "item.choose on a motif has no variation set to choose from");
+    /* It is a job, and it ends refused: the item is a motif, not a piece (its answer is the job's 400, not a not-found). */
+    check(command("item.choose", g_motif, "{\"version\":9,\"set\":1,\"index\":1}", version_of(g_motif), &reply, &error) == URSATZ_OK,
+          "item.choose queues its job");
+    cJSON *choice = finish_job(&reply);
+    check(choice && num(choice, "http_status") == 400 && strcmp(str(member(choice, "result"), "error"), "the item is not a piece") == 0,
+          "item.choose on a motif ends its job refused: the item is not a piece");
+    cJSON_Delete(choice);
     workshop_reply_destroy(&reply);
 
     /* A theme that uses the motif, composed after the motif got a new version. */

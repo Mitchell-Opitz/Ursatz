@@ -291,7 +291,13 @@ static void test_composer_queries(void) {
     workshop_reply_destroy(&reply);
     check(query("composer.recognize", "{\"source\":5}", &reply, &error) == URSATZ_ERR_REQUEST, "composer.recognize refuses a source that is not a reference");
     workshop_reply_destroy(&reply);
+}
 
+/* composer.recognize and composer.import-motif answer the members their routes document. The second motif is made with a command, so this is
+   after the check that no query changed a file. */
+static void test_recognize_and_import(void) {
+    WorkshopReply reply;
+    UrsatzError error;
     /* composer.recognize of the motif against a second motif answers the members the recognize route documents. */
     char params[3000];
     snprintf(params, sizeof(params),
@@ -434,6 +440,7 @@ int main(void) {
         test_composer_queries();
         test_item_and_subject_queries();
         check(fingerprint(".") == before, "no query changed a file outside cache/");
+        test_recognize_and_import();
     }
     harness_close();
     return test_finish("workshop_queries");
