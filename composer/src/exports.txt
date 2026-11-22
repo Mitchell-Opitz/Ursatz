@@ -1,4 +1,5 @@
 composer_api_counterpoint
+composer_api_critique
 composer_api_develop
 composer_api_export
 composer_api_fill

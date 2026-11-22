@@ -1,0 +1,38 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "fux",
+  "entries": [
+    {
+      "id": "fux.rule.forbidden-leap",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "forbidden-leap",
+      "content": {
+        "code": "forbidden-leap",
+        "scope": "phrase",
+        "function": "standard_counterpoint_melodic_check",
+        "message": "a forbidden leap of {value} in bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "a fixture entry"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "fixture"
+        }
+      ]
+    }
+  ]
+}

@@ -19,6 +19,7 @@
 #include <ursatz_composer/theme_shape.h>
 
 #include "api_internal.h"
+#include "check/hearing.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
 #include "structure/plan_util.h"
@@ -333,13 +334,102 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     return ran;
 }
 
+/*
+ * With critic ranking (R-722): the critic judges every theme made, each with the lines of all of them as the set, and observes it against
+ * the hearing of its plan; the `suggest` themes of highest score are kept, in that order (a stable sort: ties keep the order drawn), and the
+ * rest are reported in `rejected`, at most `keep_rejected` of them, and destroyed. A theme the hearing cannot read ranks after the others.
+ */
+static UrsatzStatus rank_by_critic(const GrowSetup *setup, GrowRun *run, UrsatzError *error) {
+    size_t made = run->made;
+    ComposerHearing *hearings[GROW_MAX_SUGGESTIONS];
+    CriticLine lines[GROW_MAX_SUGGESTIONS];
+    const CriticLine *set[GROW_MAX_SUGGESTIONS];
+    size_t order[GROW_MAX_SUGGESTIONS];
+    size_t judged = 0;
+    UrsatzStatus status = URSATZ_OK;
+    memset(hearings, 0, sizeof(hearings));
+    memset(lines, 0, sizeof(lines));
+    for (size_t i = 0; i < made; i++) {
+        GrowTheme *theme = &run->themes[i];
+        theme->judged = hearing_create(theme->plan, setup->knowledge, &hearings[i]) == HEARING_OK &&
+                        critic_line_from_render(theme->plan, hearing_rendered(hearings[i]), &lines[i]) == CRITIC_OK;
+        if (theme->judged) {
+            set[judged++] = &lines[i];
+        }
+    }
+    for (size_t i = 0; i < made && status == URSATZ_OK; i++) {
+        GrowTheme *theme = &run->themes[i];
+        NodeId node = theme->judged ? api_find_node(theme->plan, "theme") : PLAN_NODE_NONE;
+        if (!theme->judged) {
+            continue;
+        }
+        CriticResult result = critic_judge(&lines[i], set, judged, setup->knowledge, setup->critic, &theme->judgment);
+        if (result == CRITIC_OK && node != PLAN_NODE_NONE) {
+            result = critic_observe(hearings[i], theme->plan, node, &lines[i], setup->knowledge, &theme->judgment);
+        }
+        if (result == CRITIC_ERR_ALLOC) {
+            status = api_fail_alloc(error);
+        } else if (result != CRITIC_OK) {
+            theme->judged = false; /* not held against the theme: it ranks last */
+        }
+    }
+    /* The rank: judged themes by score, highest first, ties in the order drawn, then the others in the order drawn. */
+    for (size_t i = 0; i < made; i++) {
+        size_t at = i;
+        while (at > 0) {
+            const GrowTheme *before = &run->themes[order[at - 1]];
+            const GrowTheme *mine = &run->themes[i];
+            bool better = mine->judged && (!before->judged || rational_cmp(mine->judgment.score, before->judgment.score) > 0);
+            if (!better) {
+                break;
+            }
+            order[at] = order[at - 1];
+            at--;
+        }
+        order[at] = i;
+    }
+    if (status == URSATZ_OK) {
+        GrowTheme sorted[GROW_MAX_SUGGESTIONS];
+        size_t keep = setup->suggest < made ? setup->suggest : made;
+        for (size_t i = 0; i < made; i++) {
+            sorted[i] = run->themes[order[i]];
+        }
+        for (size_t i = keep; i < made; i++) {
+            if (sorted[i].judged && run->rejected_count < (size_t)setup->critic->keep_rejected) {
+                CriticRejected *rejected = &run->rejected[run->rejected_count++];
+                rejected->seed = sorted[i].seed;
+                rejected->score = sorted[i].judgment.score;
+                memcpy(rejected->findings, sorted[i].judgment.findings, sizeof(rejected->findings));
+            }
+            theme_destroy(&sorted[i]);
+        }
+        memset(run->themes, 0, sizeof(run->themes));
+        memcpy(run->themes, sorted, keep * sizeof(GrowTheme));
+        run->made = keep;
+        run->ranked = true;
+    }
+    for (size_t i = 0; i < made; i++) {
+        critic_line_destroy(&lines[i]);
+        hearing_destroy(hearings[i]);
+    }
+    return status;
+}
+
 UrsatzStatus api_grow_run(const GrowSetup *setup, GrowRun *run, UrsatzError *error) {
     memset(run, 0, sizeof(*run));
     run->chord_bar = -1;
     run->last_seed = setup->seed;
     const GrowBriefText *text = setup->text;
-    unsigned long tries = (unsigned long)GROW_MAX_SEED_TRIES * setup->suggest;
-    for (unsigned long attempt = 0; attempt < tries && run->made < setup->suggest; attempt++) {
+    /* With critic ranking the run collects `candidates` themes for each one kept, to the most it can hold. */
+    bool ranking = setup->critic != NULL && setup->critic->rank;
+    unsigned long want = setup->suggest;
+    if (ranking) {
+        want = setup->suggest * (unsigned long)setup->critic->candidates;
+        want = want > GROW_MAX_SUGGESTIONS ? GROW_MAX_SUGGESTIONS : want;
+        want = want < setup->suggest ? setup->suggest : want;
+    }
+    unsigned long tries = (unsigned long)GROW_MAX_SEED_TRIES * want;
+    for (unsigned long attempt = 0; attempt < tries && run->made < want; attempt++) {
         if (job_step(setup->job, "grow", (unsigned)attempt, (unsigned)tries)) {
             return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
         }
@@ -380,6 +470,6 @@ UrsatzStatus api_grow_run(const GrowSetup *setup, GrowRun *run, UrsatzError *err
                         "no theme could be grown for %s, %s, %zu bars, %s from seeds %lu to %lu", text->key, text->meter,
                         setup->bars, text->into, setup->seed, run->last_seed);
     }
-    return URSATZ_OK;
+    return ranking ? rank_by_critic(setup, run, error) : URSATZ_OK;
 }
 

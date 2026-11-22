@@ -67,6 +67,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->continuation.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
     out->contrast.distance[GROW_CONTRAST_SIMILAR] = 1;
     out->candidates.pool = 4;
+    critic_settings_default(&out->critic);
 }
 
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
@@ -788,6 +789,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             if (!read_candidates(item, &out->candidates, &refusal)) {
                 return false;
             }
+        } else if (strcmp(item->string, "critic") == 0) {
+            if (!preferences_read_critic(item, out, &refusal)) {
+                return false;
+            }
         } else {
             return preferences_refuse(&refusal, item->string, "unknown member");
         }
@@ -982,6 +987,12 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *critic = preferences_write_critic(preferences);
+    if (!critic || !cJSON_AddItemToObject(document, "critic", critic)) {
+        cJSON_Delete(critic);
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -990,6 +1001,8 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
 static const char *const WORDS_NCT[] = {"passing", "neighbor", "appoggiatura", "suspension", "anticipation", NULL};
 static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-outline",      "no-crossing", "parallel-octaves",
                                           "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
+static const char *const WORDS_CRITIC_REVERSE[] = {"rhythmic_monotony", "contrast_distance", "leap_load",      "open_ending",
+                                                   "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", NULL};
 static const char *const WORDS_REVERSE[] = {"melodic",  "against_bass", "tendency", "climax",   "contour", "ending_reduction", "waves",
                                             "central_range", "monotony", "seam",    "closure", "leaps",   "register", NULL};
 
@@ -1126,7 +1139,19 @@ static const ComposerPreferenceKey KEYS[] = {
     {"development.functions.surface", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
     {"development.functions.contrast", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
     {"candidates.variety", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
-    {"candidates.pool", COMPOSER_KEY_INTEGER, POOL_MIN, POOL_MAX, false, NULL}};
+    {"candidates.pool", COMPOSER_KEY_INTEGER, POOL_MIN, POOL_MAX, false, NULL},
+    {"critic.rank", COMPOSER_KEY_BOOLEAN, 0, 0, false, NULL},
+    {"critic.candidates", COMPOSER_KEY_INTEGER, POOL_MIN, POOL_MAX, false, NULL},
+    {"critic.keep_rejected", COMPOSER_KEY_INTEGER, 0, COMPOSER_PREFERENCES_KEEP_REJECTED_MAX, false, NULL},
+    {"critic.reverse", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_CRITIC_REVERSE},
+    {"critic.weights.rhythmic_monotony", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.contrast_distance", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.leap_load", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.open_ending", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.stray_syncopation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.one_rhythm", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.repeated_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {
@@ -1156,7 +1181,15 @@ static const ComposerRule RULES[] = {
     {"parallel-octaves", true, "melody.waive"},
     {"parallel-fifths", true, "melody.waive"},
     {"dissonance-against-bass", true, "melody.waive"},
-    {"strong-beat-chord-tone", true, "melody.waive"}};
+    {"strong-beat-chord-tone", true, "melody.waive"},
+    {"rhythmic_monotony", false, "critic.weights.rhythmic_monotony"},
+    {"contrast_distance", false, "critic.weights.contrast_distance"},
+    {"leap_load", false, "critic.weights.leap_load"},
+    {"open_ending", false, "critic.weights.open_ending"},
+    {"stray_syncopation", false, "critic.weights.stray_syncopation"},
+    {"one_rhythm", false, "critic.weights.one_rhythm"},
+    {"repeated_notes", false, "critic.weights.repeated_notes"},
+    {"wide_range", false, "critic.weights.wide_range"}};
 
 const ComposerRule *composer_preferences_rules(size_t *count) {
     if (count) {

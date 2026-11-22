@@ -2,6 +2,12 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P68)
+
+Ranking by the critic (R-722, P68 B5): with `critic.rank` on, a theme request makes `critic.candidates` themes for each one it keeps, judges them together and keeps the best; the response gains `critic` in each theme and `rejected` in the document (`theme.response.schema.json`, `grow.response.schema.json`). `GrowSetup.critic`, `GrowTheme.judged` and `.judgment`, `GrowRun.rejected`, `.ranked`. `ursatz listen` varies the generated motifs of a theme batch when `candidates.variety` is above 0. With rank off every output is as it was.
+
+API 4.6 (R-721, P68 B4): `composer_api_critique(context, request_json, job, out)` judges one to 16 candidates (a plan or a motive document each) with the critic and answers a score, each evaluator's penalty, weight and reversal, and the observations in plain words ([critic.md](critic.md#the-critique-entry); schemas `critique.request.schema.json` and `critique.response.schema.json`). The critic (B2, B3) has the `critic` group of the preferences (12 keys, 8 rules) and nothing composes with it yet. With the group's `rank` off every output is as it was.
+
 ## Unreleased (phase P67)
 
 Theme quality sweep (R-543, P67 B8): `test_theme_functions_sweep` grows the four harmony fixtures as sentences and periods with every function setting and `melody.cadence_long` on, seeds 1 to 10 (10 of 10 compose in each case), and checks the predominant before the final dominant, the held last note, the contrasts and two chords in a 4/4 sentence's fragment bars. The measure is in [testing/theme-quality.md](testing/theme-quality.md). A contrast target's motive is drawn no longer than the material is sized for, and the response's `contrasts` read the ideas' motives, not the melody. No output changes with the settings off.

@@ -50,7 +50,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--feature <l:a-b>` | a labelled run of notes by 0-based index, as a:0-2; repeatable | `motive`, `variants`, `recognize`, `grow` |
 | `--first-cadence <type>` | the weaker cadence an antecedent ends in: HC or IAC | `grow` |
 | `--form <name>` | the form: for a motive full, rhythm or contour; for a plan binary, ternary, loop and the like | `motive`, `variants`, `recognize`, `random-motive`, `plan` |
-| `--format <text|json>` | how to print the result on stdout, text (the default) or json | `progression`, `motive`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `variations`, `harmonize`, `status`, `query`, `history`, `apply` |
+| `--format <text|json>` | how to print the result on stdout, text (the default) or json | `progression`, `motive`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `variations`, `harmonize`, `critique`, `status`, `query`, `history`, `apply` |
 | `--from <loop-plan.json>` | work on a loop plan the command wrote, with --request | `piece` |
 | `--from-corpus <dir>` | start from material in a corpus output folder, with --like | `grow`, `plan` |
 | `--function <name>` | keep only variants that suit a function: beginning, continuation, contrast or cadential | `variants` |
@@ -87,16 +87,18 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--no-bass` | write only the chords | `progression` |
 | `--no-wait` | do not wait for the job a command starts: print its id | `regenerate`, `compose`, `explore` |
 | `--node <id>` | the node's id in the plan file | `lock`, `regenerate`, `variations` |
-| `--note <text>` | restore: the note of the new version (default: restore v<n>); rate: why the rating or the pick | `rate`, `restore` |
+| `--note <text>` | restore: the note of the new version (default: restore v<n>); rate: why the rating or the pick; critique: why | `critique`, `rate`, `restore` |
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
 | `--params <file>` | a JSON file with the params object, or - for standard input | `query` |
 | `--pickup <beats>` | the beats before the first barline, as 1 or 1/2 | `motive`, `variants`, `recognize`, `analyze` |
 | `--plain-midi` | MIDI: no track names and no section markers | `progression`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `variations`, `harmonize`, `render` |
+| `--plans` | listen: put each theme's plan in its JSON, for critique | `listen` |
 | `--port <n>` | global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand | every command (stands before it) |
 | `--position <where>` | fragment: leading, trailing or middle | `develop` |
 | `--print-settings` | print the default preferences document and exit | `listen` |
+| `--rated <file>` | critique: a rated set (ursatz-rated-set 1) to judge pair by pair against her ratings | `critique` |
 | `--rating <r>` | rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable | `rate` |
 | `--ratio <n:m>` | augment or diminish: the ratio of the new durations to the old | `develop` |
 | `--record <file>` | write what the run did: seeds, candidates and the check | `fill` |
@@ -111,7 +113,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--seed <n>` | a whole number from 0; the same seed gives the same output | `progression`, `develop`, `variants`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `regenerate`, `variations`, `harmonize`, `listen`, `compose`, `rate`, `explore` |
 | `--sequence <name>` | build a continuation on a harmonic sequence (see --list-schemas) | `progression` |
 | `--session <id>` | listen: record the batch in this listening session (needs --round and --batch) | `listen` |
-| `--settings <file>` | a preferences document | `listen` |
+| `--settings <file>` | a preferences document | `critique`, `listen` |
 | `--species <1-4>` | the species of counterpoint | `counterpoint` |
 | `--strategy <name>` | how motifs are made: segments or drawn | `random-motive`, `listen` |
 | `--style <file>` | a style model file from the Ursatz Analyzer; prefer the harmony and melody closest to it | `random-motive`, `grow`, `plan`, `fill`, `listen` |
@@ -132,6 +134,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--update-uses` | compose: move every updated use to its source's current version first | `compose` |
 | `--value-scale <n or n/d>` | read the note values of the file scaled by this factor (a notation reading) | `analyze` |
 | `--variations <id>` | make --count different versions of the section with that id | `piece` |
+| `--verdict <obs-id>` | critique: record your verdict, agree or disagree, on this observation of an item's critiques | `critique` |
 | `--version <n>` | regenerate of an item: the version of the piece the section is written again from (default: the current one) | `regenerate` |
 | `--view <view>` | a view of the result: reading is the measure-addressed text export of analyze, framed as a view; show takes summary, structure, harmony, line:<name>, part:<name>, reading, full or json | `analyze`, `show` |
 | `--voicing` | keep the grown melody as the soprano and add an alto and a tenor under it | `grow` |

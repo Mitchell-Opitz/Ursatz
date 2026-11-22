@@ -42,7 +42,8 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 
 - [fill-loop.md](fill-loop.md): the engine that fills a plan with seeded, recorded operators.
 - [melody-fill.md](melody-fill.md): the melody operator.
-- [preferences.md](preferences.md): the settings document (R-411): the melody and development groups, and how it is read and written.
+- [preferences.md](preferences.md): the settings document (R-411): the melody, development, candidates and critic groups, and how it is read and written.
+- [critic.md](critic.md): the critic: the melody line of a candidate, the eight evaluators of her listening notes and the score (R-719).
 - [preferences-motif.md](preferences-motif.md): the motif group of the settings document: every setting of the segments motive generator.
 - [accompaniment.md](accompaniment.md): the accompaniment operator.
 - [voicing.md](voicing.md): the four-part voicing operator.

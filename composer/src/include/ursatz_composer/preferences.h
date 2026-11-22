@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <cJSON.h>
+#include <ursatz_composer/critic.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive_random.h>
@@ -21,6 +22,7 @@
  * generator (MotiveRandomPreferences): the bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and
  * durations it draws from. The development group is the fidelity minimum table of the theme's development
  * (GrowFidelityTable), the continuation settings (GrowContinuation), basic_as_written, the contrast settings (GrowContrast) and the functions settings (GrowFunctions).
+ * The critic group is the critic's settings (CriticSettings, R-722): rank, candidates, keep_rejected, reverse and the weight of each evaluator.
  */
 /*
  * The candidates group (R-673): how a set of random motives is chosen. variety 0 to 20 (default 0) is how much a motive
@@ -41,6 +43,7 @@ typedef struct {
     GrowContrast contrast;         /* the development group's contrast settings (phase L4, R-475: similar 1, the rest 0) */
     GrowFunctions functions;       /* the development group's functions settings (P67, R-710 to R-712: all off) */
     CandidatePreferences candidates; /* the candidates group (R-673, variety 0 and pool 4 by default) */
+    CriticSettings critic;           /* the critic group (R-722): weights 1, nothing reversed, rank off */
 } ComposerPreferences;
 
 /*
@@ -79,6 +82,7 @@ typedef struct {
 #define COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX 16
 #define COMPOSER_PREFERENCES_POOL_MIN 2
 #define COMPOSER_PREFERENCES_POOL_MAX 8
+#define COMPOSER_PREFERENCES_KEEP_REJECTED_MAX 16
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
 #define COMPOSER_PREFERENCES_MESSAGE_MAX 256
@@ -126,7 +130,8 @@ const ComposerPreferenceKey *composer_preferences_keys(size_t *count);
 
 /*
  * The rules a setting can override (R-672): the 13 soft groups of the melody stage, then its 7 hard rules, in enum
- * order. key is the setting that holds the rule: the weight of a soft group, melody.waive for a hard rule.
+ * order, then the 8 evaluators of the critic. key is the setting that holds the rule: the weight of a soft group or of an
+ * evaluator (critic.weights.<code>), melody.waive for a hard rule.
  */
 typedef struct {
     const char *name;

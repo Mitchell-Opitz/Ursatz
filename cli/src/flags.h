@@ -36,7 +36,7 @@ const CliFlag *cli_flag_find(const char *name);
 bool cli_flag_global(const char *name);
 
 #define CLI_MAX_REPEATS 64 /* repeated values of all the flags of one command line */
-#define CLI_MAX_INPUTS 4
+#define CLI_MAX_INPUTS 16
 #define CLI_FLAG_CAPACITY 160 /* at least CLI_FLAG_COUNT */
 
 typedef struct {

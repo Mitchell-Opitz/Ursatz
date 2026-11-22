@@ -158,6 +158,7 @@ WORKSHOP_HANDLER(workshop_q_settings_keys);
 WORKSHOP_HANDLER(workshop_q_ratings_session);
 WORKSHOP_HANDLER(workshop_q_ratings_sessions);
 WORKSHOP_HANDLER(workshop_q_ratings_item);
+WORKSHOP_HANDLER(workshop_q_ratings_critiques);
 
 /* ratings commands (api_commands_ratings.c) */
 WORKSHOP_HANDLER(workshop_c_ratings_session);
@@ -165,6 +166,8 @@ WORKSHOP_HANDLER(workshop_c_ratings_batch);
 WORKSHOP_HANDLER(workshop_c_ratings_rate);
 WORKSHOP_HANDLER(workshop_c_ratings_pick);
 WORKSHOP_HANDLER(workshop_c_ratings_rate_version);
+WORKSHOP_HANDLER(workshop_c_ratings_critique);
+WORKSHOP_HANDLER(workshop_c_ratings_verdict);
 WORKSHOP_HANDLER(workshop_c_ratings_keep);
 
 /* settings commands (api_commands_settings.c) */

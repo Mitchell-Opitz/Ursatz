@@ -1,0 +1,35 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "michelle",
+  "entries": [
+    {
+      "id": "michelle.rule.repeated-notes",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "repeated notes",
+      "content": {
+        "code": "repeated_notes",
+        "scope": "phrase",
+        "function": "critic_repeated_notes",
+        "message": "{colour} repeated notes",
+        "default_weight": 1
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12",
+          "note": "a fixture entry"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "fixture"
+        }
+      ]
+    }
+  ]
+}

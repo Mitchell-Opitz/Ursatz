@@ -91,8 +91,9 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(workshop_formats COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/validate_formats.py
                      ${PROJECT_SOURCE_DIR}/workshop/schema ${CMAKE_BINARY_DIR}/gui/backend/tests/migrated_routes
                      ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands ${CMAKE_CURRENT_BINARY_DIR}/workshop_ratings
+                     ${CMAKE_CURRENT_BINARY_DIR}/workshop_critiques
         LABELS schema
-        PROPERTIES FIXTURES_REQUIRED "migrated_routes_files;settings_commands_files;ratings_files")
+        PROPERTIES FIXTURES_REQUIRED "migrated_routes_files;settings_commands_files;ratings_files;critiques_files")
 endif()
 
 # Recovery after a stop in the middle of a change (P63 B8): hand-made leftovers of every kind, recovered by workshop_open from the journal.
@@ -233,6 +234,13 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
 ursatz_test(workshop_compose_settings SOURCES test_compose_settings.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS SETTINGS_TASTE_NONE="${URSATZ_FIXTURES_DIR}/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
+
+# The critic's judgments in the data folder (P68 B6, R-723): a composed theme critiqued, a verdict, the refusals, the settings param and a theme
+# composed with critic.rank on. Its folder is one of workshop_formats' (the file the commands leave validates).
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_critiques)
+ursatz_test(workshop_critiques SOURCES test_critiques.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_critiques
+    PROPERTIES FIXTURES_SETUP critiques_files)
 
 # Listening sessions and ratings (P66 B6): a session with two batches, ratings and a pick, keep as default citing them, the refusals, ratings of an item version.
 # Its folder is one of workshop_formats' (the files the commands leave validate).

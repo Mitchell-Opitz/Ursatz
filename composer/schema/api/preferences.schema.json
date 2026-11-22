@@ -721,7 +721,7 @@
           "description": "A given chord plan: Roman numerals I to VII in any case, an optional o or degree sign, an optional place @bar or @bar:beat (bar 1 or 2, beat 1 to 12). Either no chord has a place (at most 3 chords) or every chord after the first has one, rising. Absent by default: the plan is drawn.",
           "items": {
             "type": "string",
-            "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|°)?(@[12](:([1-9]|1[0-2]))?)?$"
+            "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|\u00b0)?(@[12](:([1-9]|1[0-2]))?)?$"
           }
         }
       }
@@ -914,6 +914,101 @@
           "minimum": 2,
           "maximum": 8,
           "description": "How many candidates are drawn for each motive that is chosen among. Default 4."
+        }
+      }
+    },
+    "critic": {
+      "type": "object",
+      "description": "The critic (R-722): how a candidate is judged in her words, and whether a theme is chosen among candidates by it. Off by default.",
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "type": "boolean",
+          "description": "Choose the theme among several candidates by the critic's score. Default false."
+        },
+        "candidates": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "description": "How many candidates are made for each theme kept. Default 4."
+        },
+        "keep_rejected": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "description": "How many rejected candidates a run reports. Default 8."
+        },
+        "reverse": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "rhythmic_monotony",
+              "contrast_distance",
+              "leap_load",
+              "open_ending",
+              "stray_syncopation",
+              "one_rhythm",
+              "repeated_notes",
+              "wide_range"
+            ]
+          },
+          "description": "Evaluators whose penalty counts for a candidate instead of against it."
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The weight of each evaluator, 0 to 20.",
+          "properties": {
+            "rhythmic_monotony": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "Bars that keep one rhythm, run after run. Weight 0 to 20; default 1."
+            },
+            "contrast_distance": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A contrasting idea too close to the basic idea in rhythm and contour, or too far in register. Weight 0 to 20; default 1."
+            },
+            "leap_load": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "Skips and leaps, a third counting half a leap. Weight 0 to 20; default 1."
+            },
+            "open_ending": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A last note no longer than the line's mean note. Weight 0 to 20; default 1."
+            },
+            "stray_syncopation": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A syncopation that never comes back. Weight 0 to 20; default 1."
+            },
+            "one_rhythm": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "Candidates of one set that open with one rhythm. Weight 0 to 20; default 1."
+            },
+            "repeated_notes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "Repeated notes. Weight 0 to 20; default 1."
+            },
+            "wide_range": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A range wider than a tenth. Weight 0 to 20; default 1."
+            }
+          }
         }
       }
     }

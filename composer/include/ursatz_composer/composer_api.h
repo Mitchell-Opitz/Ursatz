@@ -48,10 +48,11 @@
  * the candidates group of the preferences and the random motive's avoid (R-673).
  * 4.4 adds write_in_c to the MIDI motive, and meter beat units and defaults to the vocabulary (R-693).
  * 4.5 adds the functions group of the development preferences (R-710 to R-712) and the theme response's contrasts (R-710).
+ * 4.6 adds the critique entry and the critic group of the preferences (R-721, R-722).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 5
+#define COMPOSER_API_VERSION_MINOR 6
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -199,6 +200,18 @@ UrsatzStatus composer_api_random_motive(const ComposerContext *context, const ch
  */
 UrsatzStatus composer_api_theme(const ComposerContext *context, const char *request_json,
                                   const UrsatzJob *job, ComposerResponse *out);
+
+/*
+ * Judges candidates with the critic (R-721, docs/critic.md). The request is {"schema": "ursatz-critique-request", "schema_version": 1,
+ * "candidates": [...], "preferences": {...}}: 1 to 16 candidates, each {"plan": <plan document>} or {"motive": <motive document>},
+ * and the optional preferences, of which the critic group counts. Every candidate is judged with the lines of all of them as the set
+ * (one_rhythm compares them), and a plan with a node named "theme" is also observed against the Composer's hearing of it. The response
+ * {"schema": "ursatz-critique", "schema_version": 1, "candidates": [{"index", "score", "evaluators", "observations"}]} has the
+ * score and the penalty of each evaluator as {"numerator", "denominator"} and, for each observation, its rule, whether it is scored,
+ * its bar and beat (null with no place) and its message. A candidate that is neither, an unreadable plan or motive and more than 16
+ * are refused with a path under /candidates/<i>. job may be NULL.
+ */
+UrsatzStatus composer_api_critique(const ComposerContext *context, const char *request_json, const UrsatzJob *job, ComposerResponse *out);
 
 /*
  * Composes a piece (docs/piece-request.md): the loop version and the ending version built from it, or the loop plan of an

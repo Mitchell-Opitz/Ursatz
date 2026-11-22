@@ -38,6 +38,7 @@ static const Format kFormats[] = {
     {WORKSHOP_FORMAT_SETTINGS_SNAPSHOT, {"off", "values", "overrides"}, "aaa", 1},
     {WORKSHOP_FORMAT_LISTENING_SESSION, {"id", "created_at", "actor", "what", "taste", "note", "batches", "ratings", "picks"}, "ssssssaaa", 1},
     {WORKSHOP_FORMAT_ITEM_RATINGS, {"item_id", "ratings"}, "sa", 1},
+    {WORKSHOP_FORMAT_ITEM_CRITIQUES, {"item_id", "critiques", "verdicts"}, "saa", 1},
 };
 
 /* The row of format for a file of version (0: the newest), or NULL for a name that is not a format. */
@@ -259,6 +260,9 @@ const char *workshop_format_of_path(const char *path) {
     }
     if (starts_with(path, "ratings/items/") && ends_with(path, ".json")) {
         return WORKSHOP_FORMAT_ITEM_RATINGS;
+    }
+    if (starts_with(path, "ratings/critiques/") && ends_with(path, ".json")) {
+        return WORKSHOP_FORMAT_ITEM_CRITIQUES;
     }
     if (starts_with(path, "cache/renders/") && ends_with_segment(path, "render.json")) {
         return WORKSHOP_FORMAT_RENDER;

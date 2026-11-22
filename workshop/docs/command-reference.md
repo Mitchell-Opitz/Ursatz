@@ -90,7 +90,7 @@ Projects: the folders that hold items.
 
 ## Ratings
 
-Ratings: listening sessions with batches, ratings and picks, ratings of item versions, and keep as default.
+Ratings: listening sessions, ratings and picks, item ratings, critiques and verdicts, and keep as default.
 
 | Command | Target | Params | Does |
 |---|---|---|---|
@@ -99,6 +99,8 @@ Ratings: listening sessions with batches, ratings and picks, ratings of item ver
 | `ratings.rate` | none | `session string round int batch string seed int rating int [note string]` | Rate a sample of a batch from 1 to 5 |
 | `ratings.pick` | none | `session string round int seed int better string [note string]` | Say which batch of a round sounded better |
 | `ratings.rate-version` | `item:<id>@v<n>` | `version int rating int [note string]` | Rate a version of an item from 1 to 5 |
+| `ratings.critique` | `item:<id>@v<n>` | `version int [settings object] [note string]` | Judge a version of a motif or a theme with the critic |
+| `ratings.verdict` | `item:<id>` | `observation string verdict agree\|disagree [note string]` | Give a verdict on an observation of the critic |
 | `ratings.keep` | none | `taste string key string ratings list [value value] [note string]` | Keep a setting as the default of a taste profile, citing the ratings behind it |
 
 ## Section

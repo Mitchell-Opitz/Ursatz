@@ -1,0 +1,224 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "fux",
+  "entries": [
+    {
+      "id": "fux.rule.forbidden-leap",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "forbidden leap",
+      "content": {
+        "code": "forbidden-leap",
+        "scope": "line",
+        "function": "standard_counterpoint_melodic_check",
+        "message": "a forbidden leap of {value} in bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "a melodic line avoids the tritone and the major sixth as leaps"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "a forbidden leap of 6 in bar 3"
+        }
+      ]
+    },
+    {
+      "id": "fux.rule.forbidden-outline",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "forbidden outline",
+      "content": {
+        "code": "forbidden-outline",
+        "scope": "line",
+        "function": "standard_counterpoint_melodic_check",
+        "message": "the line outlines a {value} by bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "a line does not outline a tritone or a seventh within one direction"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the line outlines a 6 by bar 4"
+        }
+      ]
+    },
+    {
+      "id": "fux.rule.no-crossing",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "no crossing",
+      "content": {
+        "code": "no-crossing",
+        "scope": "line-pair",
+        "function": "standard_counterpoint_harmonic_check",
+        "message": "the voices cross in bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "an upper voice does not go below the voice under it"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the voices cross in bar 5"
+        }
+      ]
+    },
+    {
+      "id": "fux.rule.parallel-octaves",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "parallel octaves",
+      "content": {
+        "code": "parallel-octaves",
+        "scope": "line-pair",
+        "function": "standard_counterpoint_harmonic_check",
+        "message": "parallel octaves into bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "two voices do not move in parallel octaves"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "parallel octaves into bar 2"
+        }
+      ]
+    },
+    {
+      "id": "fux.rule.parallel-fifths",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "parallel fifths",
+      "content": {
+        "code": "parallel-fifths",
+        "scope": "line-pair",
+        "function": "standard_counterpoint_harmonic_check",
+        "message": "parallel fifths into bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "two voices do not move in parallel fifths"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "parallel fifths into bar 6"
+        }
+      ]
+    },
+    {
+      "id": "fux.rule.dissonance-against-bass",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "dissonance against bass",
+      "content": {
+        "code": "dissonance-against-bass",
+        "scope": "line-pair",
+        "function": "melody_check",
+        "message": "a dissonance against the bass in bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "only consonances are set note against note"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "a dissonance against the bass in bar 4"
+        }
+      ]
+    },
+    {
+      "id": "fux.rule.strong-beat-chord-tone",
+      "kind": "rule",
+      "subtype": "constraint",
+      "name": "strong beat chord tone",
+      "content": {
+        "code": "strong-beat-chord-tone",
+        "scope": "note",
+        "function": "melody_check",
+        "message": "a non-chord tone on the strong beat of bar {bar}",
+        "stage": "melody",
+        "waivable": true,
+        "setting": "melody.waive"
+      },
+      "citations": [
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 2,
+          "section": "Second Species",
+          "note": "the note on the downbeat is a consonance"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "a non-chord tone on the strong beat of bar 2"
+        }
+      ]
+    }
+  ]
+}

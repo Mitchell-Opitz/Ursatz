@@ -27,7 +27,7 @@ Format `ursatz-settings` 1: `scope`, `values` (dotted key to value), and the opt
 
 `from` is `default`, `style:<id>`, `taste:all`, `taste:<name>`, `project:<id>`, `item:<id>` or `request`. `values` lists the keys not at their default (every key with `all`); `document` holds them nested by their dots, the `explore.*` keys left out, or is null when there are none. A request with no settings anywhere resolves to a null document, and sends the Composer nothing.
 
-An override maps through the rule table: `reweight` sets the group's weight (`closure` both of its weights), `off` or `waive` on a soft group sets its weight to 0, on a hard rule adds its name to `melody.waive`, `reverse` adds the group to `melody.reverse`.
+An override maps through the rule table: `reweight` sets the group's weight (`closure` both of its weights), `off` or `waive` on a soft group sets its weight to 0, on a hard rule adds its name to `melody.waive`, `reverse` adds the group to `melody.reverse`, or, for an evaluator of the critic (a rule whose key starts with `critic.`), to `critic.reverse`.
 
 ## Composing with settings and exploring
 

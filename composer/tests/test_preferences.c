@@ -49,6 +49,9 @@ static const char *DEFAULT_DEVELOPMENT =
     "\"functions\":{\"harmony\":false,\"surface\":false,\"contrast\":false}}";
 
 static const char *DEFAULT_CANDIDATES = "{\"variety\":0,\"pool\":4}";
+static const char *DEFAULT_CRITIC =
+    "{\"rank\":false,\"candidates\":4,\"keep_rejected\":8,\"reverse\":[],\"weights\":{\"rhythmic_monotony\":1,\"contrast_distance\":1,"
+    "\"leap_load\":1,\"open_ending\":1,\"stray_syncopation\":1,\"one_rhythm\":1,\"repeated_notes\":1,\"wide_range\":1}}";
 
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
@@ -142,11 +145,14 @@ static void defaults_round_trip(void) {
     text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "candidates"));
     assert(text && strcmp(text, DEFAULT_CANDIDATES) == 0);
     cJSON_free(text);
-    /* The whole document is the four groups, in this order. */
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "critic"));
+    assert(text && strcmp(text, DEFAULT_CRITIC) == 0);
+    cJSON_free(text);
+    /* The whole document is the five groups, in this order. */
     text = cJSON_PrintUnformatted(document);
     char whole[8192];
-    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s}", DEFAULT_MELODY,
-             DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES);
+    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s}", DEFAULT_MELODY,
+             DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC);
     assert(text && strcmp(text, whole) == 0);
     cJSON_free(text);
 
@@ -541,13 +547,19 @@ static void key_and_rule_tables(void) {
     }
     size_t rule_count = 0;
     const ComposerRule *rules = composer_preferences_rules(&rule_count);
-    assert(rules && rule_count == MELODY_GROUP_COUNT + MELODY_RULE_COUNT);
+    assert(rules && rule_count == MELODY_GROUP_COUNT + MELODY_RULE_COUNT + CRITIC_EVALUATOR_COUNT);
     for (unsigned group = 0; group < MELODY_GROUP_COUNT; group++) {
         assert(!rules[group].hard && strcmp(rules[group].name, melody_soft_group_name((MelodySoftGroup)group)) == 0);
     }
     for (unsigned rule = 0; rule < MELODY_RULE_COUNT; rule++) {
         const ComposerRule *row = &rules[MELODY_GROUP_COUNT + rule];
         assert(row->hard && strcmp(row->name, melody_hard_rule_name((MelodyHardRule)rule)) == 0 && strcmp(row->key, "melody.waive") == 0);
+    }
+    for (int evaluator = 0; evaluator < CRITIC_EVALUATOR_COUNT; evaluator++) {
+        const ComposerRule *row = &rules[MELODY_GROUP_COUNT + MELODY_RULE_COUNT + evaluator];
+        char key[64];
+        snprintf(key, sizeof(key), "critic.weights.%s", critic_evaluator_code((CriticEvaluator)evaluator));
+        assert(!row->hard && strcmp(row->name, critic_evaluator_code((CriticEvaluator)evaluator)) == 0 && strcmp(row->key, key) == 0);
     }
     /* Every rule's key is a row of the key table, or the group of rows under it. */
     for (size_t i = 0; i < rule_count; i++) {
@@ -621,6 +633,44 @@ static void candidates_group(void) {
     refused("{\"candidates\":3}", "/candidates");
 }
 
+/* The critic group (R-722): read over the defaults, written back as read, a change from the defaults, and refused with a path. */
+static void critic_group(void) {
+    ComposerPreferences read;
+    ComposerPreferences again;
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    assert(read_text("{\"critic\":{\"rank\":true,\"candidates\":6,\"keep_rejected\":2,\"reverse\":[\"wide_range\",\"leap_load\"],"
+                     "\"weights\":{\"leap_load\":3,\"open_ending\":0}}}",
+                     &read, path, message));
+    assert(read.critic.rank && read.critic.candidates == 6 && read.critic.keep_rejected == 2);
+    assert(read.critic.weights[CRITIC_LEAP_LOAD] == 3 && read.critic.weights[CRITIC_OPEN_ENDING] == 0 &&
+           read.critic.weights[CRITIC_WIDE_RANGE] == 1);
+    assert(read.critic.reversed[CRITIC_LEAP_LOAD] && read.critic.reversed[CRITIC_WIDE_RANGE] && !read.critic.reversed[CRITIC_OPEN_ENDING]);
+    assert(!test_preferences_are_default(&read));
+    cJSON *document = composer_preferences_write(&read);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(memcmp(&again.critic, &read.critic, sizeof(read.critic)) == 0);
+    /* Written in the order of the evaluators, whatever order they were read in. */
+    char *text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "critic"));
+    assert(text && strstr(text, "\"reverse\":[\"leap_load\",\"wide_range\"]"));
+    cJSON_free(text);
+    cJSON_Delete(document);
+    assert(read_text("{\"critic\":{\"reverse\":[],\"weights\":{\"leap_load\":1}}}", &read, path, message) && test_preferences_are_default(&read));
+
+    refused("{\"critic\":{\"rank\":1}}", "/critic/rank");
+    refused("{\"critic\":{\"candidates\":1}}", "/critic/candidates");
+    refused("{\"critic\":{\"candidates\":9}}", "/critic/candidates");
+    refused("{\"critic\":{\"keep_rejected\":17}}", "/critic/keep_rejected");
+    refused("{\"critic\":{\"reverse\":[\"nothing\"]}}", "/critic/reverse/0");
+    refused("{\"critic\":{\"reverse\":[\"leap_load\",\"leap_load\"]}}", "/critic/reverse/1");
+    refused("{\"critic\":{\"reverse\":\"leap_load\"}}", "/critic/reverse");
+    refused("{\"critic\":{\"weights\":{\"colour\":1}}}", "/critic/weights/colour");
+    refused("{\"critic\":{\"weights\":{\"leap_load\":21}}}", "/critic/weights/leap_load");
+    refused("{\"critic\":{\"weights\":[]}}", "/critic/weights");
+    refused("{\"critic\":{\"colour\":1}}", "/critic/colour");
+    refused("{\"critic\":[]}", "/critic");
+}
+
 int main(void) {
     defaults_round_trip();
     l4_members_round_trip();
@@ -629,6 +679,7 @@ int main(void) {
     key_and_rule_tables();
     waive_and_reverse();
     candidates_group();
+    critic_group();
     printf("test_preferences: ok\n");
     return 0;
 }

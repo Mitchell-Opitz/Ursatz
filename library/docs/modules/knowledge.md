@@ -6,7 +6,7 @@ Path `library/theory/knowledge/`. The knowledge snapshot: every entry of `knowle
 
 ## Provides
 
-`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7) and `ThemeType` (K8). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
+`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
 
 ## The instrument kind (K12, R-603)
 
@@ -70,3 +70,20 @@ const FormalFunction *fragment = type->ideas[2].function;
 ```
 
 A harmony id that is no progression-type entry, a contrast target that is no formal function, a beginning or ending of idea level or an idea of any other level refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. Grow does not read the entries until P67 B5 and B6; the test `test_theme_shape_entries` pins the Composer's table to them.
+
+## The rule kind (K13, R-717)
+
+`theory/knowledge/rule_entry.h` holds a `RuleEntry`: a judgment of a candidate, or a limit on it, as an entry a person can read, cite and change. The kind has three subtypes:
+
+- `constraint`: a declared limit (R-539). It has a `stage` (motive, harmony, melody, texture or counterpoint), `waivable` and the `setting` that waives it. The repository holds the seven melody rules of Fux (`knowledge/rule/fux.json`, setting `melody.waive`).
+- `evaluator`: a weighted judgment in her words (`knowledge/rule/michelle.json`, source `michelle`). It has a `default_weight` from 0 to 20 and up to four `parameters`, each a `Rational` (an integer, or a string `n/d` with a positive denominator).
+- `observation`: a plain-word note on what was heard. It is never scored and never refuses.
+
+Every rule has a `code`, a `scope` (note, line, line-pair, sonority, progression, phrase, section, movement, performer-part or set), a `message` and a `function`. The message is a template: a placeholder is `{name}` with a name from `bar`, `beat`, `first`, `last`, `count`, `value`, `limit`, `planned`, `heard`, `idea`, `against`, `aspect` and `amount`. The function is the name of the C function that checks the rule. It is data here and a table in the application that owns the function, and a test of that application pins the two together both ways (the Composer's `test_critic_rules`).
+
+```c
+const RuleEntry *rule = knowledge_snapshot_rule(snapshot, "michelle.rule.rhythmic-monotony");
+/* rule->subtype == RULE_EVALUATOR, rule->default_weight == 1, parameter "run" == 3 */
+```
+
+The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a bad code, scope or function, a message longer than 200 characters or with a placeholder outside the list, a weight outside 0 to 20, a parameter that is neither an integer nor `n/d`, or a constraint without its stage, `waivable` or setting refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The test `rule_entries` pins the 19 entries and the refusals; `tools/ci/check-knowledge.py` repeats the code, placeholder and parameter rules over the files.

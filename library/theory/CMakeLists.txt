@@ -14,6 +14,7 @@ add_library(ursatz_theory
     rules/rule_table.c
     knowledge/instrument.c
     knowledge/knowledge_form.c
+    knowledge/knowledge_rule.c
     knowledge/knowledge_snapshot.c
     knowledge/knowledge_vocabulary.c
     vocabulary/applied_chord_kind.c
@@ -181,6 +182,7 @@ ursatz_public_headers(ursatz_theory
         theory/knowledge/instrument.h
         theory/knowledge/knowledge_snapshot.h
         theory/knowledge/relation.h
+        theory/knowledge/rule_entry.h
         theory/knowledge/vocabulary_entry.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h

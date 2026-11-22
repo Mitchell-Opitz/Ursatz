@@ -8,6 +8,7 @@
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/relation.h"
+#include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
 
 /*
@@ -112,6 +113,9 @@ const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *sna
 
 /* The vocabulary entry (kind vocabulary, any of its five subtypes) with this id, or NULL when there is none or the entry is another kind. */
 const VocabularyEntry *knowledge_snapshot_vocabulary(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The rule (kind rule, any of its three subtypes) with this id, or NULL when there is none or the entry is another kind. */
+const RuleEntry *knowledge_snapshot_rule(const KnowledgeSnapshot *snapshot, const char *id);
 
 /*
  * The theme type (kind theme-type) whose beginning and ending are the formal functions with these codes ("presentation" and

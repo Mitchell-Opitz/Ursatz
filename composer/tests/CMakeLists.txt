@@ -122,6 +122,7 @@ ursatz_test(test_melody_fill LIBS ursatz_composer_engine composer_test_support L
 ursatz_test(test_melody_fill_smoke TARGET test_melody_fill ARGS smoke)
 
 ursatz_test(test_preferences LIBS ursatz_composer_engine cjson composer_test_support)
+ursatz_test(test_critic_rules LIBS ursatz_composer_engine cjson composer_test_support)
 
 ursatz_test(test_melody_preferences LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
@@ -427,7 +428,7 @@ ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FIL
 # settings and the style file. The slow case runs every section and also makes a style model
 # from the sonatina folder with the Analyzer (about 53 s at -j1 in a Debug build, 2026-11-21). The fast cases: motifs 0.2 s, themes 8 s, theme_settings 13 s
 # and overrides 12 s (kept in the fast set with their times).
-foreach(case motifs themes theme_settings overrides style_folder)
+foreach(case motifs themes theme_settings overrides plans theme_variety style_folder)
     set(folder OFF)
     set(labels)
     if(case STREQUAL "style_folder")
@@ -685,10 +686,10 @@ endif()
 # schema/api/<kind>.schema.json (needs python3 with jsonschema).
 if(URSATZ_JSONSCHEMA_PYTHON)
     set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
-        api_plan_workflow_files api_material_files api_vocabulary_files)
+        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files)
     ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
+                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate,critique
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json
@@ -846,3 +847,33 @@ foreach(mode motive same plan progression progression-smoke no-match cli)
     ursatz_test(${test_name} TARGET test_corpus_seed ARGS ${mode} LABELS ${labels}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
 endforeach()
+
+# The critique entry (R-721): a motive and a period critiqued together, the period alone and twice, the critic group, and the refusals. It
+# writes its requests and responses for test_api_schema.
+ursatz_test(test_api_critique LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_critique_files)
+
+# The critic (P68, R-719): the melody line of a motive and of a grown period, the eight evaluators over lines built by hand, and the
+# rule entries pinned to the tables (test_critic_rules).
+ursatz_test_executable(test_critic_line LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_critic_line TARGET test_critic_line)
+ursatz_test(test_critic_evaluators LIBS ursatz_composer_engine cjson composer_test_support)
+ursatz_test_executable(test_critic_observe LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_critic_observe TARGET test_critic_observe)
+# The critic choosing among theme candidates (P68 B5, R-722): rank off changes nothing, rank on keeps the best of four and reports the rest.
+# It writes a theme request and response with the critic for test_api_schema (api_theme_files).
+ursatz_test(test_critic_rank LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+
+# The critic's ranking over the theme quality sweep (P68 gate 2, R-722): the eight cases with every P67 setting, seeds 1 to 5, rank on against rank off.
+# Slow: seeds 1 to 5 of every case; the smoke runs seed 1 of the eight cases.
+ursatz_test_executable(test_critic_rank_sweep LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_critic_rank_sweep TARGET test_critic_rank_sweep LABELS slow)
+ursatz_test(test_critic_rank_sweep_smoke TARGET test_critic_rank_sweep ARGS fast)

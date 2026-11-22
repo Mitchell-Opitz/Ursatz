@@ -812,6 +812,9 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
         slot->vocabulary.name = slot->entry.name;
         status = knowledge_vocabulary_read(slot, entry, subtype, path, message, message_size);
         slot->has_vocabulary = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "rule") == 0) {
+        status = knowledge_rule_read(slot, entry, subtype, path, message, message_size);
+        slot->has_rule = status == KNOWLEDGE_OK;
     }
     return status;
 }
@@ -1246,6 +1249,11 @@ const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *sna
 const VocabularyEntry *knowledge_snapshot_vocabulary(const KnowledgeSnapshot *snapshot, const char *id) {
     const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_vocabulary ? &slot->vocabulary : NULL;
+}
+
+const RuleEntry *knowledge_snapshot_rule(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = knowledge_find_slot(snapshot, id);
+    return slot != NULL && slot->has_rule ? &slot->rule : NULL;
 }
 
 const ThemeType *knowledge_snapshot_theme_type_of(const KnowledgeSnapshot *snapshot, const char *beginning_code, const char *ending_code) {

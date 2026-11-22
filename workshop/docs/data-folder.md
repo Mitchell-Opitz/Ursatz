@@ -25,6 +25,7 @@ settings/styles/<sty>/                             style-model.json, style.json,
 settings/taste/<name>.json                         a taste profile (format ursatz-settings)
 ratings/sessions/<ses-id>.json                     a listening session: batches, ratings, picks (ursatz-listening-session)
 ratings/items/<item id>.json                       the ratings of the versions of an item (ursatz-item-ratings)
+ratings/critiques/<item id>.json                   the critic's judgments of the versions of an item and her verdicts (ursatz-item-critiques)
 projects/<prj>/settings.json                       the project's settings, overrides and switches
 projects/<prj>/items/<id>/settings.json            the item's
 projects/<prj>/items/<id>/v<n>/settings.json       how the settings resolved for the compose that made the version (ursatz-settings-snapshot)

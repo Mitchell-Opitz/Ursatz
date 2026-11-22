@@ -11,6 +11,7 @@
 #include "analyze.h"
 #include "corpus.h"
 #include "counterpoint.h"
+#include "critique.h"
 #include "develop.h"
 #include "fill.h"
 #include "grow.h"
@@ -58,11 +59,12 @@ static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
 static const char *const FLAGS_EXPLORE[] = {"--base", "--distance", "--no-wait", "--seed", "--taste", NULL};
+static const char *const FLAGS_CRITIQUE[] = {"--format", "--note", "--rated", "--settings", "--verdict", NULL};
 static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--round", "--seed", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
-static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
+static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--plans", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
     {"progression",
@@ -522,8 +524,38 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz render piece.json --midi piece.mid --musicxml piece.xml --tempo 96\n"
     "  ursatz --data ~/ursatz-data render item:itm-3f2a@v2 --midi piece.mid",
      FLAGS_RENDER, 1, 1, run_render},
+    {"critique",
+    "critique <file>... [--settings <file>] [--format text|json]\n"
+    "critique --rated <file> [--settings <file>] [--format text|json]\n"
+    "critique item:<id>[@v<n>] [--settings <file>] [--note <text>] [--format text|json]\n"
+    "critique --verdict <obs-id> agree|disagree item:<id> [--note <text>]",
+     "Judge candidates with the critic, in her words",
+    "Judges candidate files with the critic (docs/critic.md): eight evaluators of what she has said about a melody give each candidate a\n"
+    "score (minus the weighted sum of their penalties), and the Composer's hearing of a theme against its plan gives observations in plain\n"
+    "words. A file is a listen sample (its motive, or the plan of its first theme: make themes with listen --plans), a plan or a motive\n"
+    "document. The files of one call are one set, which the critic compares (one_rhythm). See cli/docs/cli-critique.md.\n"
+    "\n"
+    "--rated reads a rated set (ursatz-rated-set 1: pairs of files with her ratings and the set each belongs to, paths relative to the file),\n"
+    "judges each set together and prints, for each pair, her ratings, the critic's scores and whether the critic and today's ranking (a\n"
+    "theme's own score) chose the one she rated higher: match, miss or tie, then the totals. Pairs with equal ratings are not counted.\n"
+    "With an item address (a motif or a theme of the data folder) the critic judges that version, as @v<n> or the current one, and the\n"
+    "critique is kept with an id for each observation (crt-... and obs-...). --verdict records whether you agree with the critic about one\n"
+    "observation (vrd-...). The critic's settings are the item's resolved settings unless --settings is given.\n"
+    "Notes on options:\n"
+    "  --settings is a preferences document (docs/preferences.md); its critic group sets the weights and the evaluators that count the other\n"
+    "  way. --format is text (the default) or json (the Composer's response; with --rated the text is always printed).\n"
+    "\n"
+    "Text: for each candidate '<file>  score <n/d>', then each observation '  bar <b> beat <x>  <rule>  <message>' ('-' for no place).\n"
+    "Exit status: 0 it ran; 1 usage, an invalid option or an unreadable file; 2 the Composer refused a candidate.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz critique 01.json 02.json 03.json\n"
+    "  ursatz critique --rated rated.json\n"
+    "  ursatz critique item:itm-3f2a@v2\n"
+    "  ursatz critique --verdict obs-1c9e agree item:itm-3f2a",
+     FLAGS_CRITIQUE, 0, 16, run_critique},
     {"listen",
-    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
+    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--plans] [--motif <file>] [--theme-request <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
     "listen --print-settings",
      "Make batches of motifs or themes from fixed seeds for listening",
     "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n"
@@ -548,6 +580,7 @@ const CliCommand CLI_COMMANDS[] = {
     "  --bars is 4 or 8 (default 8); --check passes over a seed whose analysis contradicts the plan; --motif is the\n"
     "  motif of every theme, anything the motive command reads (default: a generated motif for each sample);\n"
     "  --theme-request is a theme request (docs/theme-request.md) with the sample's seed, instead of a motif.\n"
+    "  --plans puts each theme's plan in its JSON (themes[0].plan), for ursatz critique; the files' notes stay the same.\n"
     "\n"
     "Exit status: 0 at least one sample was written; 1 usage, an invalid option or an unreadable file; 2 none could\n"
     "be composed; 3 an output file could not be written.\n"

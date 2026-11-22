@@ -30,6 +30,7 @@ PLACES = [
     (re.compile(r"^settings/taste/[^/]+\.json$"), "ursatz-settings"),
     (re.compile(r"^ratings/sessions/[^/]+\.json$"), "ursatz-listening-session"),
     (re.compile(r"^ratings/items/[^/]+\.json$"), "ursatz-item-ratings"),
+    (re.compile(r"^ratings/critiques/[^/]+\.json$"), "ursatz-item-critiques"),
     (re.compile(r"^projects/[^/]+/settings\.json$"), "ursatz-settings"),
     (re.compile(r"^projects/[^/]+/items/[^/]+/settings\.json$"), "ursatz-settings"),
     (re.compile(r"^projects/[^/]+/items/[^/]+/v\d+/settings\.json$"), "ursatz-settings-snapshot"),

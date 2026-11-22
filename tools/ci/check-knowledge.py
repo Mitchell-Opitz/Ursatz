@@ -5,7 +5,7 @@ Validates every entry under the kind folders of the knowledge dir (target archit
 entry anatomy follow entry.schema.json, the content and examples follow the kind's schema, ids are unique and carry their file's
 source and folder's kind, relations point at existing ids, citations name a source of sources.json, a material's examples
 spell its steps, an instrument's range holds its examples, an ensemble's slots name instruments, a vocabulary entry's code is its
-subtype's own, a texture's category is a texture's code, a progression type's example chords follow its type, a formal function's
+subtype's own, a rule's code is unique in its subtype with its message placeholders and parameters in the allowed form, a texture's category is a texture's code, a progression type's example chords follow its type, a formal function's
 harmony ids are progression types and its contrast target a formal function, and a theme type's ideas, units and examples agree with
 its functions. One line per problem,
 "knowledge: <file>: <id>: <what>". Exit 0 clean, 1 with problems, 2 on a missing file.
@@ -325,6 +325,40 @@ def check_vocabulary(vocabulary_entries):
                 check_progression_example(path, entry, number, example)
 
 
+RULE_PLACEHOLDERS = {
+    "bar", "beat", "first", "last", "count", "value", "limit", "planned", "heard", "idea", "against", "aspect", "amount",
+}
+RATIO = re.compile(r"^-?[0-9]+/[1-9][0-9]*$")
+
+
+def check_rule(rule_entries):
+    """Codes are unique within a subtype, a message names only the placeholders of the list, an evaluator has at most four parameters
+    and each is an integer or n/d with a positive denominator."""
+    codes = {}
+    for path, entry in rule_entries:
+        content = entry.get("content")
+        if not isinstance(content, dict):
+            continue
+        code = content.get("code")
+        if isinstance(code, str):
+            key = (entry.get("subtype"), code)
+            if key in codes:
+                problem(path, entry["id"], "code '%s' is also the code of %s" % (code, codes[key]))
+            codes.setdefault(key, entry["id"])
+        message = content.get("message")
+        for name in re.findall(r"\{([^}]*)\}", message) if isinstance(message, str) else []:
+            if name not in RULE_PLACEHOLDERS:
+                problem(path, entry["id"], "content.message: unknown placeholder {%s}" % name)
+        parameters = content.get("parameters")
+        if entry.get("subtype") == "evaluator" and isinstance(parameters, dict):
+            if len(parameters) > 4:
+                problem(path, entry["id"], "content.parameters: %d parameters, at most 4" % len(parameters))
+            for name, value in parameters.items():
+                whole = isinstance(value, int) and not isinstance(value, bool)
+                if not whole and not (isinstance(value, str) and RATIO.match(value)):
+                    problem(path, entry["id"], "content.parameters.%s: '%s' is not an integer or n/d with a positive denominator" % (name, value))
+
+
 def level_of(functions, function_id):
     entry = functions.get(function_id)
     return entry[1].get("content", {}).get("level") if entry is not None else None
@@ -423,6 +457,7 @@ def main(argv):
     materials, locations, relation_entries = {}, {}, []
     instrument_ids, ensemble_entries = set(), []
     vocabulary_entries = []
+    rule_entries = []
     function_entries, theme_type_entries = {}, {}
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
@@ -506,6 +541,8 @@ def main(argv):
                     ensemble_entries.append((rel, entry))
                 if kind == "vocabulary" and isinstance(entry.get("content"), dict):
                     vocabulary_entries.append((rel, entry))
+                if kind == "rule" and isinstance(entry.get("content"), dict):
+                    rule_entries.append((rel, entry))
                 if kind == "function" and subtype == "formal-function":
                     function_entries[entry_id] = (rel, entry)
                 if kind == "theme-type":
@@ -516,6 +553,7 @@ def main(argv):
     for rel, entry in ensemble_entries:
         check_ensemble(rel, entry, instrument_ids)
     check_vocabulary(vocabulary_entries)
+    check_rule(rule_entries)
     progression_ids = {entry["id"] for _, entry in vocabulary_entries if entry.get("subtype") == "progression-type"}
     for rel, entry in function_entries.values():
         check_formal_function(rel, entry, progression_ids, function_entries, theme_type_entries)

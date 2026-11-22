@@ -15,6 +15,7 @@ add_library(ursatz_composer_engine STATIC
     api/api_seed.c
     api/api_style.c
     api/api_theme.c
+    api/api_critique.c
     api/api_target.c
     api/api_workflow.c
     api/api_plan.c
@@ -48,6 +49,9 @@ add_library(ursatz_composer_engine STATIC
     check/analyzer_check.c
     check/hearing.c
     check/key_hear.c
+    critic/critic_line.c
+    critic/critic_evaluate.c
+    critic/critic_observe.c
     explain/explain.c
     render/render.c
     render/movement_build.c
@@ -113,6 +117,7 @@ add_library(ursatz_composer_engine STATIC
     melody/melody_fill.c
     preferences/preferences.c
     preferences/preferences_development.c
+    preferences/preferences_critic.c
     check/form_hear.c
     structure/form_record.c
     structure/form_spec.c

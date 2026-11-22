@@ -29,6 +29,7 @@ ursatz --version
 | `variations`, `harmonize` | several versions of one node of a plan | [cli-variations.md](cli-variations.md) |
 | `render` | renders a plan to MIDI or MusicXML | [export.md](../../composer/docs/export.md) |
 | `listen` | batches of motifs or themes from fixed seeds for listening | [cli-listen.md](cli-listen.md) |
+| `critique` | judges candidate files with the critic: a score and observations for each, or a rated set pair by pair | [cli-critique.md](cli-critique.md) |
 | `analyze` | the analysis document of a MIDI or MusicXML file, or its text export | [analyze.md](analyze.md) |
 | `corpus`, `style-profile` | analyzes a folder of pieces; counts its style | [corpus.md](corpus.md) |
 | `status`, `query`, `show` (in text views), `history`, `apply` (text commands), `restore`, `migrate`, `rate`, `explore`; `compose`, `regenerate` and `render` of an item | the data folder | [data-folder.md](data-folder.md) |

@@ -47,6 +47,7 @@ typedef struct Workshop Workshop;
 #define WORKSHOP_FORMAT_SETTINGS_SNAPSHOT "ursatz-settings-snapshot" /* how a composed version's settings resolved */
 #define WORKSHOP_FORMAT_LISTENING_SESSION "ursatz-listening-session" /* a listening session with its batches, ratings and picks (R-674) */
 #define WORKSHOP_FORMAT_ITEM_RATINGS "ursatz-item-ratings"           /* the ratings of the versions of an item */
+#define WORKSHOP_FORMAT_ITEM_CRITIQUES "ursatz-item-critiques"       /* the critic's judgments of the versions of an item and her verdicts on them (R-723) */
 #define WORKSHOP_FORMAT_JOURNAL "ursatz-journal" /* the first line of journal/journal.jsonl; the file is lines, not one document */
 
 /*

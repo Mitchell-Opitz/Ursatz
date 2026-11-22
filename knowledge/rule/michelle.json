@@ -1,0 +1,373 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "michelle",
+  "entries": [
+    {
+      "id": "michelle.rule.rhythmic-monotony",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "rhythmic monotony",
+      "content": {
+        "code": "rhythmic_monotony",
+        "scope": "phrase",
+        "function": "critic_rhythmic_monotony",
+        "message": "bars {first} to {last} keep one rhythm",
+        "default_weight": 1,
+        "parameters": {
+          "run": 3
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12 t3 and t4; 2026-11-22 t8 and u12",
+          "note": "she hears a theme whose bars all repeat one rhythm as dull"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "bars 3 to 6 keep one rhythm"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.contrast-distance",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "contrast too close or too far",
+      "content": {
+        "code": "contrast_distance",
+        "scope": "phrase",
+        "function": "critic_contrast_distance",
+        "message": "the {idea} is {value} from the {against} in {aspect}, wanted {limit}",
+        "default_weight": 1,
+        "parameters": {
+          "least": "1/2",
+          "register": 7,
+          "register_span": 5
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12 t5 to t7; 2026-11-10 round 6",
+          "note": "a contrasting idea that keeps the basic idea's rhythm and contour sounds the same, and one a tenth or more away sounds unrelated"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VI",
+          "note": "the second idea of an antecedent contrasts with the first and still belongs to it"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the contrasting idea is 0 from the basic idea in rhythm, wanted 1/2"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.leap-load",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "leaps with thirds counted",
+      "content": {
+        "code": "leap_load",
+        "scope": "line",
+        "function": "critic_leap_load",
+        "message": "skips and leaps make {value} of the moves, more than {limit}",
+        "default_weight": 1,
+        "parameters": {
+          "allowance": "1/2"
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-11 rounds 9 to 11",
+          "note": "a line that skips and leaps too often sounds angular; a third counts as half a leap"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "skips and leaps make 3/4 of the moves, more than 1/2"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.open-ending",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "a cadence that does not end",
+      "content": {
+        "code": "open_ending",
+        "scope": "phrase",
+        "function": "critic_open_ending",
+        "message": "the last note (bar {bar}) is no longer than the line's mean note",
+        "default_weight": 1
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12 t6 and t7",
+          "note": "a last note as short as the others does not close the phrase"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the last note (bar 8) is no longer than the line's mean note"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.stray-syncopation",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "syncopation that is not a figure",
+      "content": {
+        "code": "stray_syncopation",
+        "scope": "line",
+        "function": "critic_stray_syncopation",
+        "message": "the syncopation in bar {bar} at beat {beat} does not return",
+        "default_weight": 1
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-11 rounds 14 and 15",
+          "note": "a syncopation heard once and never again is an accident, not a figure"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the syncopation in bar 3 at beat 2 does not return"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.one-rhythm",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "one rhythm across the set",
+      "content": {
+        "code": "one_rhythm",
+        "scope": "set",
+        "function": "critic_one_rhythm",
+        "message": "{count} other candidates of the set open with the same rhythm",
+        "default_weight": 1
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12 round 16; 2026-11-10 u8 and u9",
+          "note": "candidates of one set that all open with one rhythm give her nothing to choose between"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "2 other candidates of the set open with the same rhythm"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.repeated-notes",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "repeated notes",
+      "content": {
+        "code": "repeated_notes",
+        "scope": "line",
+        "function": "critic_repeated_notes",
+        "message": "{count} repeated notes, {value} of the moves",
+        "default_weight": 1
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-10 u2 and u3; 2026-11-22 t8",
+          "note": "a line that repeats a pitch again and again sounds stuck"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "2 repeated notes, 1/4 of the moves"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.wide-range",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "a range wider than a tenth",
+      "content": {
+        "code": "wide_range",
+        "scope": "line",
+        "function": "critic_wide_range",
+        "message": "the line spans {value} semitones, more than {limit}",
+        "default_weight": 1,
+        "parameters": {
+          "limit": 16,
+          "span": 8
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-22 t8 and u12",
+          "note": "a melodic line that spans more than a tenth sounds scattered"
+        },
+        {
+          "source": "omt",
+          "part": "II",
+          "chapter": 1,
+          "section": "Composing a Cantus Firmus",
+          "note": "a cantus firmus keeps a range of no more than a tenth, usually less than an octave"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the line spans 19 semitones, more than 16"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.cadence-heard",
+      "kind": "rule",
+      "subtype": "observation",
+      "name": "a planned cadence heard otherwise",
+      "content": {
+        "code": "cadence_heard",
+        "scope": "section",
+        "function": "critic_cadence_heard",
+        "message": "the {planned} cadence planned in bar {bar} is heard as {heard}"
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-22 t8",
+          "note": "a cadence the plan names that she hears as another kind is a fault of the composing, not of taste"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the perfect authentic cadence planned in bar 8 is heard as half"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.theme-heard",
+      "kind": "rule",
+      "subtype": "observation",
+      "name": "a planned theme heard as another",
+      "content": {
+        "code": "theme_heard",
+        "scope": "section",
+        "function": "critic_theme_heard",
+        "message": "planned as a {planned}, heard as a {heard}"
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-22 t8",
+          "note": "a theme planned as a sentence that she hears as a hybrid is told so in plain words"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "planned as a sentence, heard as a hybrid"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.contrast-heard",
+      "kind": "rule",
+      "subtype": "observation",
+      "name": "a contrast target the melody misses",
+      "content": {
+        "code": "contrast_heard",
+        "scope": "phrase",
+        "function": "critic_contrast_heard",
+        "message": "the {idea}'s melody is {value} from the {against} in {aspect}; the plan asks for {amount}"
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-12 t5 to t7",
+          "note": "the plan asks a second idea to contrast and the melody does not carry it out"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the contrasting idea's melody is 0 from the basic idea in rhythm; the plan asks for 1/2"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.voice-fault-heard",
+      "kind": "rule",
+      "subtype": "observation",
+      "name": "a voice-leading fault heard in a piece",
+      "content": {
+        "code": "voice_fault_heard",
+        "scope": "line-pair",
+        "function": "analyzer_check_piece_in",
+        "message": "{heard} heard in bar {bar}"
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-22 t8",
+          "note": "a voice-leading fault is reported where it is heard and never refuses a piece"
+        },
+        {
+          "source": "fux",
+          "part": "I",
+          "chapter": 1,
+          "section": "Note against Note",
+          "note": "perfect consonances are reached by contrary or oblique motion"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "parallel fifths heard in bar 3"
+        }
+      ]
+    }
+  ]
+}

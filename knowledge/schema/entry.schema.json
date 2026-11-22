@@ -188,7 +188,8 @@
               "vocabulary",
               "relation",
               "function",
-              "instrument"
+              "instrument",
+              "rule"
             ]
           }
         }

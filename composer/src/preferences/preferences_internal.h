@@ -45,4 +45,8 @@ bool preferences_add_number(cJSON *object, const char *name, double value);
 bool preferences_read_development(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal);
 cJSON *preferences_write_development(const ComposerPreferences *preferences);
 
+/* The critic group: reads the object into preferences (refusing with the path under "critic"), and writes the group. */
+bool preferences_read_critic(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal);
+cJSON *preferences_write_critic(const ComposerPreferences *preferences);
+
 #endif

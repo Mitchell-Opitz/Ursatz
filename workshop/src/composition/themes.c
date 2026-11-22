@@ -246,6 +246,19 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
             ok = cJSON_AddItemToArray(files, cJSON_CreateString(names[i]));
         }
     }
+    /* A theme the critic chose (critic.rank, R-722) keeps its judgment and the rejected candidates in result.critic (R-723). */
+    const cJSON *first_theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(summary, "themes"), 0);
+    const cJSON *judgment = cJSON_GetObjectItemCaseSensitive(first_theme, "critic");
+    if (ok && cJSON_IsObject(judgment)) {
+        const cJSON *rejected = cJSON_GetObjectItemCaseSensitive(summary, "rejected");
+        cJSON *kept = cJSON_CreateObject();
+        ok = kept && cJSON_AddItemToObject(kept, "critic", cJSON_Duplicate(judgment, true)) &&
+             cJSON_AddItemToObject(kept, "rejected", cJSON_IsArray(rejected) ? cJSON_Duplicate(rejected, true) : cJSON_CreateArray()) &&
+             cJSON_AddItemToObject(result, "critic", kept);
+        if (!ok) {
+            cJSON_Delete(kept);
+        }
+    }
     ok = ok && cJSON_AddItemToObject(result, "summary", summary);
     if (ok) {
         summary = NULL;
