@@ -129,7 +129,7 @@ cJSON *api_critic_json(const CriticJudgment *judgment, const CriticSettings *set
         ok = item && cJSON_AddItemToArray(observations, item) && cJSON_AddStringToObject(item, "rule", observation->rule) &&
              cJSON_AddBoolToObject(item, "scored", observation->scored) &&
              api_add(item, "bar", observation->bar >= 0 ? cJSON_CreateNumber(observation->bar) : cJSON_CreateNull()) &&
-             api_add(item, "beat", observation->bar >= 0 ? ratio_json(observation->beat) : cJSON_CreateNull()) &&
+             api_add(item, "beat", observation->bar >= 0 && observation->beat.num > 0 ? ratio_json(observation->beat) : cJSON_CreateNull()) &&
              cJSON_AddStringToObject(item, "message", observation->message);
     }
     if (!ok) {

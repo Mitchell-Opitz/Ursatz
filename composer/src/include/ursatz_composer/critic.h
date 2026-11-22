@@ -109,7 +109,7 @@ typedef struct {
     CriticEvaluator evaluator;
     Rational penalty;
     int bar;
-    Rational beat; /* 1-based, as a ratio when the place is between beats */
+    Rational beat; /* 1-based, as a ratio when the place is between beats; 0 when the finding has no beat */
     int first, last, count;
     Rational value, limit;
     char idea[CRITIC_NAME_MAX];
@@ -141,7 +141,7 @@ typedef struct {
     char rule[32];  /* the code of the entry michelle.rule.<code> */
     bool scored;    /* true for an evaluator's */
     int bar;        /* -1 when there is no place */
-    Rational beat;  /* 1-based */
+    Rational beat;  /* 1-based; 0 for no beat */
     Rational penalty; /* the evaluator's, 0 for an observation that is not scored */
     char message[CRITIC_MESSAGE_MAX];
 } CriticObservation;

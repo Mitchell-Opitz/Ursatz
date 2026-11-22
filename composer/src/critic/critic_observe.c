@@ -40,9 +40,8 @@ static bool field_text(const char *name, const CriticFinding *finding, const Cri
             snprintf(text, size, "%d", finding->bar);
             return true;
         }
-        if (strcmp(name, "beat") == 0 && finding->bar >= 0) {
-            Rational beat = finding->beat.den > 0 ? finding->beat : rational_ratio(1, 1);
-            rational_text(beat, text, size);
+        if (strcmp(name, "beat") == 0 && finding->bar >= 0 && finding->beat.num > 0 && finding->beat.den > 0) {
+            rational_text(finding->beat, text, size);
             return true;
         }
         if (strcmp(name, "first") == 0 || strcmp(name, "last") == 0 || strcmp(name, "count") == 0) {
@@ -151,7 +150,7 @@ static CriticResult add_observation(const KnowledgeSnapshot *knowledge, const ch
     memset(observation, 0, sizeof(*observation));
     snprintf(observation->rule, sizeof(observation->rule), "%s", code);
     observation->bar = bar;
-    observation->beat = rational_ratio(1, 1);
+    observation->beat = finding->beat;
     observation->penalty = rational_ratio(0, 1);
     critic_message(template, finding, fields, observation->message, sizeof(observation->message));
     return CRITIC_OK;
@@ -161,7 +160,7 @@ static CriticResult add_observation(const KnowledgeSnapshot *knowledge, const ch
 static void blank_finding(CriticFinding *finding, int bar) {
     memset(finding, 0, sizeof(*finding));
     finding->bar = bar;
-    finding->beat = rational_ratio(1, 1);
+    finding->beat = rational_ratio(0, 1); /* beats count from 1: 0 is no beat */
     finding->penalty = rational_ratio(0, 1);
     finding->value = rational_ratio(0, 1);
     finding->limit = rational_ratio(0, 1);
