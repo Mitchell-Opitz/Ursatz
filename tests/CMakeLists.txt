@@ -7,6 +7,15 @@ ursatz_test(layer_table COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/cmake/
 # No copy of a shared primitive (a gcd, a 128-bit integer, a rational type, the pitch and Roman numeral names, the scale steps) outside its owner
 # (tools/ci/check-primitives.sh, R-622); what stays is in tools/ci/primitive-allow.txt.
 ursatz_test(primitive_owners COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-primitives.sh)
+# The checks CI used to run as steps (tools/ci), run by every ctest: the docs of each part (README and doc sizes, links, anchors, index coverage),
+# the statics and hearing boundaries and the frontend theory. The reach scan builds its own tree, so it is slow (CI keeps its own step with ccache).
+foreach(part library analyzer composer gui workshop common cli knowledge tools tests)
+    ursatz_test(docs_${part} COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-docs.sh ${part})
+endforeach()
+ursatz_test(statics COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-statics.sh analyzer composer)
+ursatz_test(hearing_boundary COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-hearing.sh)
+ursatz_test(frontend_theory COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-frontend-theory.sh)
+ursatz_test(reach COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-reach.sh ${CMAKE_BINARY_DIR}/reach-scan LABELS slow)
 # Each application library exports only the names of its export file (R-640).
 if(URSATZ_NM AND URSATZ_LOCALIZE_EXPORTS)
     ursatz_test(app_exports COMMAND ${CMAKE_COMMAND} -DNM=${URSATZ_NM}
