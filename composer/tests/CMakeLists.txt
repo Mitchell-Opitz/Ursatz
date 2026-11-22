@@ -780,6 +780,13 @@ ursatz_test_executable(test_theme_functions LIBS ursatz_composer_engine cjson co
 ursatz_test(test_theme_functions TARGET test_theme_functions LABELS slow)
 ursatz_test(test_theme_functions_smoke TARGET test_theme_functions ARGS fast)
 
+# The theme quality sweep (gate 2 of R-543, P67): the four harmony fixtures as sentences and periods with every setting on, seeds 1 to 10.
+# Slow: about 140 s for seeds 1 to 10 (2026-11-22); test_theme_functions_sweep_smoke runs seed 1 of every case (about 20 s).
+ursatz_test_executable(test_theme_functions_sweep LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_theme_functions_sweep TARGET test_theme_functions_sweep LABELS slow)
+ursatz_test(test_theme_functions_sweep_smoke TARGET test_theme_functions_sweep ARGS fast)
+
 ursatz_test_executable(test_grow_continuation LIBS ursatz_composer_engine composer_test_support cjson
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Slow: about 41 s for the cases and 32 s for the compose rates at -j4 (2026-11-21); test_grow_continuation_smoke runs seed 1 of every case and rate.
