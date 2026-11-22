@@ -49,3 +49,17 @@ An observation is a note in plain words from the message template of an entry. `
 A theme the hearing cannot read (a lane left open, no meter) adds none: it is not held against the plan. The tests measure 12 themes composed from two fixtures at seeds 1 to 6 with the contrast target on: 5 heard as another form than asked, 1 with a planned cadence heard otherwise, none missing its contrast target.
 
 None of them is scored. They say what was heard, in the words of the plan; whether they should count waits for her verdicts on them (R-720, B6 stores them), and the observation `voice_fault_heard` of the whole-piece check is listed by the check, never here.
+
+## The critique entry
+
+`composer_api_critique(context, request_json, job, out)` (API 4.6, R-721) judges candidates together. The request is `ursatz-critique-request` version 1 ([schema](../schema/api/critique.request.schema.json)):
+
+```json
+{"schema": "ursatz-critique-request", "schema_version": 1,
+ "candidates": [{"motive": {"meter": ..., "notes": [...]}}, {"plan": {...}}],
+ "preferences": {"critic": {"weights": {"leap_load": 0}, "reverse": ["wide_range"]}}}
+```
+
+`candidates` holds 1 to 16 objects, each with a `plan` (the plan document of a theme or a piece) or a `motive` (a motive document, as the `motive` member of a listen sample), not both. `preferences` is optional and read as everywhere else (its `critic` group counts). Each plan is heard once (`hearing_create`) and its melody line read from that render; each motive is read with `critic_line_from_motive`. Every candidate is judged with the lines of all of them as the set, and a plan with a node named `theme` is also observed against the hearing.
+
+The response is `ursatz-critique` version 1 ([schema](../schema/api/critique.response.schema.json)): `candidates` has, in the order given, `index`, `score`, `evaluators` (each `rule`, `penalty`, `weight`, `reversed`) and `observations` (each `rule`, `scored`, `bar`, `beat`, `message`, with `bar` and `beat` null when there is no place). A rational is `{"numerator", "denominator"}`. Refusals: a candidate that is neither, an unreadable plan or motive and a request of more than 16 are `URSATZ_ERR_REQUEST` at `/candidates` or `/candidates/<i>` (`/plan`, `/motive`); a bad preference is refused at `/preferences/critic/...`.

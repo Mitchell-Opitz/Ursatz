@@ -31,6 +31,7 @@ ursatz listen --print-settings
 | `--check` | Themes: pass over a seed whose analysis contradicts the plan. |
 | `--motif <file>` | Themes: the motif of every sample, anything the [`motive`](cli-motive.md) command reads (a note list, MusicXML, MIDI, a motive document). It is read in key C and the mode. Absent: a generated motif for each sample, made with the sample's seed, the mode, meter, strategy, style and settings. |
 | `--theme-request <file>` | Themes: a [theme request](../../composer/docs/theme-request.md), for example a GUI composed theme's `request.json`, with its `seed`, `suggest`, `midi`, `musicxml` and, when `--settings` is given, `preferences` replaced. `--style`, `--blend`, `--tempo` and `--check` replace theirs when given. |
+| `--plans` | Themes: put each theme's plan in its JSON (`themes[0].plan`), so `ursatz critique` can read the theme ([cli-critique.md](cli-critique.md)). The notes, the MIDI file and the MusicXML are the same bytes as without it. Refused with `--what motifs`. |
 
 `--motif` and `--theme-request` together exit 1. A theme built from a motif is a request of schema `ursatz-theme-request` version 2: key C, the mode, the meter, `--into`, `--bars`, `--development`, one motive `M1` (the motif's degrees, pickup, harmony and features, `form` full, role melodic) in the `basic` slot.
 
