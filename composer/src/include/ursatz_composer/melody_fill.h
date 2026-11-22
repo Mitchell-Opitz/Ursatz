@@ -187,13 +187,19 @@ typedef struct {
      * place of what it holds, so a setting can ask for the opposite of a preference. 0 (the default) reverses none.
      */
     unsigned reverse;
+    /*
+     * Cadence held (P67, R-712): a target that ends a cadence ends on one note, held from its last downbeat to its end, on the
+     * cadence's tone; a melody whose last note does anything else is refused (a check of its own, not one of the hard rules
+     * `waive` names). false (the default) changes nothing and draws no random number.
+     */
+    bool cadence_long;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
  * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final, closure_first, rhythm_repeat_bars,
- * leap_weight, register_weight, waive and reverse 0.
+ * leap_weight, register_weight, waive and reverse 0, and cadence_long false.
  */
 MelodyFillParams melody_fill_params_default(void);
 

@@ -172,6 +172,10 @@
           "maximum": 20,
           "description": "How many times an idea's drift from the register of the span before it counts against it. 0 leaves it out."
         },
+        "cadence_long": {
+          "type": "boolean",
+          "description": "The idea that ends a cadence ends on one note held from its last downbeat to its end, on the cadence's tone (R-712). Off by default."
+        },
         "waive": {
           "type": "array",
           "uniqueItems": true,

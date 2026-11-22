@@ -490,6 +490,49 @@ static void settle_ending(const MelodyContext *context, MelodyCandidate *out) {
 }
 
 /*
+ * A held cadence note (P67, R-712, cadence_long): the notes from the target's last downbeat on become one note held to the target's
+ * end, a restated motive's too; a note sounding over the downbeat ends there. The last downbeat is the latest start of a bar, counted
+ * from the cell line before the target, that is before its end. The note is a note of the phrase (it carries no motive note), so the
+ * assignment gives it the cadence's tone.
+ */
+Rational melody_last_downbeat(const MelodyContext *context) {
+    Rational bar = context->metre.bar_length;
+    if (!position_is_positive(bar) || !position_is_positive(context->cell)) {
+        return POSITION_ZERO;
+    }
+    Rational span = position_sub(position_add(context->length, context->phase), context->cell);
+    Rational at = position_sub(position_mul(bar, position_floor_units(span, bar)), context->phase);
+    return rational_cmp(at, POSITION_ZERO) < 0 ? POSITION_ZERO : at;
+}
+
+static void hold_cadence(const MelodyContext *context, MelodyCandidate *out) {
+    if (out->count == 0 || !position_is_positive(context->metre.bar_length)) {
+        return;
+    }
+    Rational at = melody_last_downbeat(context);
+    size_t first = 0;
+    while (first < out->count && rational_cmp(out->notes[first].onset, at) < 0) {
+        first++;
+    }
+    if (first == out->count && first >= MELODY_MAX_NOTES) {
+        return;
+    }
+    if (first > 0 && rational_cmp(position_add(out->notes[first - 1].onset, out->notes[first - 1].duration), at) > 0) {
+        out->notes[first - 1].duration = position_sub(at, out->notes[first - 1].onset);
+    }
+    MelodyNote held = out->notes[first < out->count ? first : out->count - 1];
+    held.onset = at;
+    held.duration = position_sub(context->length, at);
+    held.motive_index = -1;
+    out->notes[first] = held;
+    out->count = first + 1;
+    for (size_t i = 0; i < out->count; i++) {
+        out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
+        out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
+    }
+}
+
+/*
  * Rhythm repetition (phase L4, R-479): a bar of 2 or more notes with the rhythm of the bar before adds 1 to the run of
  * bars with one rhythm, carried in from the bars before the target; a bar that would pass the cap merges its last two
  * notes (the earlier takes the later's time) and the run starts again at 1. A merge never takes a note of the motive,
@@ -602,8 +645,37 @@ static void limit_rhythm_repeats(const MelodyContext *context, const MelodyFillP
     }
 }
 
-bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
+/*
+ * A held cadence over a motive (R-712): the motive's notes from the target's last downbeat on are not kept, so the last bar holds one
+ * note of the phrase; a motive note sounding over the downbeat ends there. A motive with no note before the downbeat is left alone.
+ */
+static void trim_motive_for_cadence(MelodyContext *context) {
+    Rational at = melody_last_downbeat(context);
+    size_t kept = 0;
+    while (kept < context->motive_count && rational_cmp(context->motive_onset[kept], at) < 0) {
+        kept++;
+    }
+    if (kept == 0) {
+        return;
+    }
+    context->motive_count = kept;
+    Rational end = position_add(context->motive_onset[kept - 1], context->motive_duration[kept - 1]);
+    if (rational_cmp(end, at) > 0) {
+        context->motive_duration[kept - 1] = position_sub(at, context->motive_onset[kept - 1]);
+        end = at;
+    }
+    context->motive_length = end;
+}
+
+bool melody_build(const MelodyContext *original, const MelodyFillParams *params, int shift, bool keep_figures,
                   bool relaxed, FillRng *rng, MelodyCandidate *out) {
+    MelodyContext held_context;
+    const MelodyContext *context = original;
+    if (params->cadence_long && original->has_cadence) {
+        held_context = *original;
+        trim_motive_for_cadence(&held_context);
+        context = &held_context;
+    }
     MelodyFillParams arch = arch_params(context, params);
     memset(out, 0, sizeof(*out));
     out->magic = MELODY_PAYLOAD_MAGIC;
@@ -616,6 +688,10 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     /* Closure: half the layouts of a target that ends a cadence settle into a long last note; no draw at weight 0. */
     if (laid && melody_closure_weight(context, params) > 0 && fill_rng_below(rng, 2) == 0) {
         settle_ending(context, out);
+    }
+    /* The cadence held to one last note from the last downbeat, when it is on (R-712); it draws no random number. */
+    if (laid && params->cadence_long && context->has_cadence) {
+        hold_cadence(context, out);
     }
     /* The rhythm repetition cap, when it is on (R-479); it draws no random number. */
     if (laid && params->rhythm_repeat_bars > 0) {

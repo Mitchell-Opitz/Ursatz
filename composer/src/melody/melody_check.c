@@ -118,6 +118,13 @@ static bool melody_rule_waived(const MelodyCandidate *melody, MelodyHardRule rul
 }
 
 /* Range, and a chord tone on every strong beat (but for the figures that put a non-chord tone there). */
+/* Whether the last note starts on the target's last downbeat and lasts to its end (a held cadence, R-712). */
+static bool last_note_held(const MelodyCandidate *melody) {
+    const MelodyNote *last = &melody->notes[melody->count - 1];
+    return rational_cmp(last->onset, melody_last_downbeat(&melody->context)) == 0 &&
+           rational_cmp(position_add(last->onset, last->duration), melody->context.length) == 0;
+}
+
 static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
     unsigned strong_figures = MELODY_STRONG_FIGURES;
@@ -970,6 +977,10 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         } else if (top <= melody->context.phrase_top) {
             verdict->hard = "climax not above the phrase before it";
         }
+    }
+    /* A held cadence (cadence_long, R-712): the last note starts on the target's last downbeat and lasts to its end. */
+    if (ok && !verdict->hard && melody->params.cadence_long && melody->context.has_cadence && !last_note_held(melody)) {
+        verdict->hard = "cadence note not held from the last downbeat";
     }
     /* The cadence arrives on its stable tone: the tonic for a PAC, the third for an IAC. */
     if (ok && !verdict->hard &&

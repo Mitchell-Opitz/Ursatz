@@ -352,6 +352,9 @@ static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refu
             ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->leap_weight, refusal);
         } else if (strcmp(key, "register") == 0) {
             ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->register_weight, refusal);
+        } else if (strcmp(key, "cadence_long") == 0) {
+            ok = cJSON_IsBool(item) ? (melody->cadence_long = cJSON_IsTrue(item), true)
+                                    : refuse_melody(refusal, key, "must be true or false");
         } else if (strcmp(key, "waive") == 0) {
             ok = read_rule_list(item, false, &melody->waive, refusal);
         } else if (strcmp(key, "reverse") == 0) {
@@ -836,7 +839,8 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
     ok = ok && closure && preferences_add_number(closure, "final", melody->closure_final) &&
          preferences_add_number(closure, "first", melody->closure_first) &&
          preferences_add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
-         preferences_add_number(group, "leaps", melody->leap_weight) && preferences_add_number(group, "register", melody->register_weight);
+         preferences_add_number(group, "leaps", melody->leap_weight) && preferences_add_number(group, "register", melody->register_weight) &&
+         cJSON_AddBoolToObject(group, "cadence_long", melody->cadence_long) != NULL;
     cJSON *waive = ok ? cJSON_AddArrayToObject(group, "waive") : NULL;
     for (unsigned i = 0; waive && i < MELODY_RULE_COUNT; i++) {
         if (melody->waive & (1u << i)) {
@@ -1021,6 +1025,7 @@ static const ComposerPreferenceKey KEYS[] = {
     {"melody.rhythm_repeat_bars", COMPOSER_KEY_INTEGER, 0, RHYTHM_REPEAT_BARS_MAX, true, NULL},
     {"melody.leaps", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"melody.register", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"melody.cadence_long", COMPOSER_KEY_BOOLEAN, 0, 0, true, NULL},
     {"melody.waive", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_WAIVE},
     {"melody.reverse", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_REVERSE},
     {"motif.bars.one", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},

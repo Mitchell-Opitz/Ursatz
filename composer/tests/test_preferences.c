@@ -16,7 +16,7 @@ static const char *DEFAULT_MELODY =
     "\"climax_rise\":4,\"climax_slack\":150,\"second_nearest_chord_tone\":\"1/3\",\"attempts\":48,\"keep\":6,"
     "\"plain_shaping\":false,\"weights\":{\"melodic\":1,\"against_bass\":1,\"tendency\":1,\"climax\":1,\"contour\":1,"
     "\"ending_reduction\":1,\"waves\":1,\"central_range\":1,\"monotony\":1,\"seam\":1},"
-    "\"closure\":{\"final\":0,\"first\":0},\"rhythm_repeat_bars\":0,\"leaps\":0,\"register\":0,\"waive\":[],\"reverse\":[]}";
+    "\"closure\":{\"final\":0,\"first\":0},\"rhythm_repeat_bars\":0,\"leaps\":0,\"register\":0,\"cadence_long\":false,\"waive\":[],\"reverse\":[]}";
 
 static const char *DEFAULT_MOTIF =
     "{\"bars\":{\"one\":1,\"two\":1},\"pickup_one_in\":4,\"shapes_one_bar\":{\"repeat\":3,\"contrast\":2},"
@@ -525,7 +525,7 @@ static void key_and_rule_tables(void) {
     for (size_t i = 0; i < key_count; i++) {
         hard += keys[i].hard;
     }
-    assert(hard == 11 + 9);
+    assert(hard == 11 + 9 + 1);
     for (size_t i = 0; i < key_count; i++) {
         if (strcmp(keys[i].key, "melody.waive") == 0) {
             for (unsigned rule = 0; rule < MELODY_RULE_COUNT; rule++) {
