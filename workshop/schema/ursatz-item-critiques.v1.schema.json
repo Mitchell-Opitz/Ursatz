@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-item-critiques.v1.schema.json",
+  "title": "Item critiques, format version 1",
+  "description": "ratings/critiques/<item id>.json: the critic's judgments of the versions of one item and her verdicts on their observations (R-723).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "item_id",
+    "critiques",
+    "verdicts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-item-critiques"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "item_id": {
+      "type": "string"
+    },
+    "critiques": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "at",
+          "actor",
+          "note",
+          "score",
+          "evaluators",
+          "observations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^crt-"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "at": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "score": {
+            "type": "object",
+            "required": [
+              "numerator",
+              "denominator"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "numerator": {
+                "type": "integer"
+              },
+              "denominator": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "evaluators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "rule",
+                "penalty",
+                "weight",
+                "reversed"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "rule": {
+                  "enum": [
+                    "rhythmic_monotony",
+                    "contrast_distance",
+                    "leap_load",
+                    "open_ending",
+                    "stray_syncopation",
+                    "one_rhythm",
+                    "repeated_notes",
+                    "wide_range"
+                  ]
+                },
+                "penalty": {
+                  "type": "object",
+                  "required": [
+                    "numerator",
+                    "denominator"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "numerator": {
+                      "type": "integer"
+                    },
+                    "denominator": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "reversed": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "rule",
+                "scored",
+                "bar",
+                "beat",
+                "message"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^obs-"
+                },
+                "rule": {
+                  "type": "string"
+                },
+                "scored": {
+                  "type": "boolean"
+                },
+                "bar": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "beat": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "numerator",
+                        "denominator"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "numerator": {
+                          "type": "integer"
+                        },
+                        "denominator": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "observation",
+          "verdict",
+          "note",
+          "actor",
+          "at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^vrd-"
+          },
+          "observation": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "agree",
+              "disagree"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

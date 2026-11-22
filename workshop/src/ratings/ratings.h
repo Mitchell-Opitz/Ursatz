@@ -46,6 +46,24 @@ UrsatzStatus workshop_ratings_rate_version(const char *item_id, int version, int
 /* The ratings of an item as {item_id, ratings: [...]}; an item with none gives an empty list. */
 UrsatzStatus workshop_ratings_item(const char *item_id, cJSON **out, UrsatzError *error);
 
+/*
+ * The critic's judgments of an item and her verdicts (R-723, ratings/critiques/<item id>.json, format ursatz-item-critiques): {item_id, critiques,
+ * verdicts}; an item with none gives empty lists. Each write is one transaction whose target is the item, so the item's history lists it.
+ */
+UrsatzStatus workshop_ratings_critiques(const char *item_id, cJSON **out, UrsatzError *error);
+
+/*
+ * Records one candidate of a critique response ({score, evaluators, observations}) as a critique of version `version` of the item, minting
+ * the ids of the critique (crt-) and of each observation (obs-). *out is the record written, the caller's.
+ */
+UrsatzStatus workshop_ratings_critique_add(const char *item_id, int version, const cJSON *candidate, const char *note, const char *actor, cJSON **out,
+                                           UrsatzError *error);
+
+/* Records her verdict (agree or disagree) on an observation of the item's critiques; an observation id the file does not hold is refused (NOT_FOUND
+ * at /params/observation). *out_id is the verdict's id (vrd-), to free. */
+UrsatzStatus workshop_ratings_verdict(const char *item_id, const char *observation, const char *verdict, const char *note, const char *actor, char **out_id,
+                                      UrsatzError *error);
+
 /* Whether id is the id of a recorded rating or pick (of a session or of an item). */
 bool workshop_ratings_id_recorded(const char *id);
 

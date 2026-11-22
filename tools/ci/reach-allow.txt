@@ -33,3 +33,13 @@ analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261
 analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
 analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
 composer/src/critic/critic_evaluate.c critic_evaluator_function  # the function names of the evaluators: test_critic_rules pins the table to the entries' `function` both ways, no application reads it
+workshop/src/items/layout.c workshop_layout_item_critiques_file  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c add_text  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c holds_observation  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c no_memory  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c record_of  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c refuse  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c save  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c workshop_ratings_critique_add  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c workshop_ratings_critiques  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row
+workshop/src/ratings/critiques.c workshop_ratings_verdict  # the item critiques service (R-723); the critique and verdict commands reach it in B6's second commit, which deletes this row

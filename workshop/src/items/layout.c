@@ -82,6 +82,10 @@ bool workshop_layout_item_ratings_file(const char *item, char *out, size_t size)
     return workshop_layout_id_ok(item) && fits(snprintf(out, size, WORKSHOP_DIR_ITEM_RATINGS "/%s.json", item), size);
 }
 
+bool workshop_layout_item_critiques_file(const char *item, char *out, size_t size) {
+    return workshop_layout_id_ok(item) && fits(snprintf(out, size, WORKSHOP_DIR_ITEM_CRITIQUES "/%s.json", item), size);
+}
+
 bool workshop_layout_taste_file(const char *name, char *out, size_t size) {
     return workshop_layout_id_ok(name) && fits(snprintf(out, size, WORKSHOP_DIR_TASTE "/%s.json", name), size);
 }

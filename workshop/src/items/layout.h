@@ -21,6 +21,7 @@
  *   settings/taste/<name>.json                         a taste profile (R-671)
  *   ratings/sessions/<ses-id>.json                     a listening session: batches, ratings, picks (R-674)
  *   ratings/items/<item id>.json                       the ratings of the versions of an item
+ *   ratings/critiques/<item id>.json                   the critic's judgments of the versions of an item and her verdicts on their observations (R-723)
  *   projects/<prj>/settings.json                       the project's settings, overrides and switches
  *   projects/<prj>/items/<id>/settings.json            the item's
  *   projects/<prj>/items/<id>/v<n>/settings.json       how the settings resolved for the compose that made the version
@@ -43,6 +44,7 @@
 #define WORKSHOP_DIR_TASTE "settings/taste"
 #define WORKSHOP_DIR_SESSIONS "ratings/sessions"
 #define WORKSHOP_DIR_ITEM_RATINGS "ratings/items"
+#define WORKSHOP_DIR_ITEM_CRITIQUES "ratings/critiques"
 #define WORKSHOP_DIR_CACHE "cache"
 #define WORKSHOP_DIR_RENDERS "cache/renders"
 #define WORKSHOP_DIR_INDEX "cache/index"
@@ -80,6 +82,7 @@ bool workshop_layout_link_file(const char *run, char *out, size_t size);
 bool workshop_layout_style_dir(const char *style, char *out, size_t size);
 bool workshop_layout_session_file(const char *session, char *out, size_t size);
 bool workshop_layout_item_ratings_file(const char *item, char *out, size_t size);
+bool workshop_layout_item_critiques_file(const char *item, char *out, size_t size);
 bool workshop_layout_taste_file(const char *name, char *out, size_t size);
 bool workshop_layout_style_settings_file(const char *style, char *out, size_t size);
 bool workshop_layout_project_settings_file(const char *project, char *out, size_t size);

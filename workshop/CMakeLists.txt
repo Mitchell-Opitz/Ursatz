@@ -48,6 +48,7 @@ add_library(ursatz_workshop_engine STATIC
     src/settings/settings_scopes.c
     src/settings/settings_resolve.c
     src/ratings/ratings.c
+    src/ratings/critiques.c
     src/analysis/analysis.c
     src/analysis/analyze_tool.c
     src/analysis/corpus_tools.c
