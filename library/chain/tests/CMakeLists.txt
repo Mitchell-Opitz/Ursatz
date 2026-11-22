@@ -7,6 +7,9 @@ ursatz_test(chain_stage_table SOURCES test_stage_table.c LIBS ursatz_chain ursat
 
 ursatz_test(chain_inputs LIBS ursatz_chain ursatz_io VALGRIND)
 
+# The key helpers of the chain's result: the tonic of a key signature and whether a key is signed in flats.
+ursatz_test(chain_result_spelling SOURCES test_result_spelling.c LIBS ursatz_chain VALGRIND)
+
 ursatz_test(chain_score LIBS ursatz_chain ursatz_io ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" VALGRIND)
 

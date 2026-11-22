@@ -114,6 +114,50 @@ static void test_segments_and_members(TestPiece *piece) {
     free(no_event);
 }
 
+/* The span cells (one per segment, borrowing it) and the merge of every segment into one span; a span that does not cover the segments is
+   refused and leaves the segments as they were. */
+static void test_span_cells_and_merge(TestPiece *piece) {
+    AdaptiveSegmentationConfig beats = adaptive_segmentation_config_default();
+    beats.merge_unchanged_harmony = false;
+    ChainSegments segments;
+    memset(&segments, 0, sizeof(segments));
+    assert(chain_build_segments(&piece->set, &beats, &segments) == CHAIN_INPUT_OK);
+    HarmonicSpanCell *cells = NULL;
+    assert(chain_build_span_cells(&piece->set, &segments, &cells) == CHAIN_INPUT_ERR_BAD_NOTES); /* no members yet */
+    assert(cells == NULL);
+    assert(chain_build_members(&piece->set, &segments) == CHAIN_INPUT_OK);
+    assert(chain_build_span_cells(NULL, &segments, &cells) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_span_cells(&piece->set, NULL, &cells) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_span_cells(&piece->set, &segments, NULL) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_span_cells(&piece->set, &segments, &cells) == CHAIN_INPUT_OK && cells != NULL);
+    for (size_t i = 0; i < segments.count; i++) {
+        assert(cells[i].segment == &segments.segments[i]);
+        assert(rational_equals(cells[i].start, segments.starts[i]) && rational_equals(cells[i].end, segments.ends[i]));
+    }
+    assert(cells[0].measure == cells[1].measure && cells[0].level == HARMONIC_SPAN_LEVEL_BAR);
+    chain_span_cells_destroy(cells);
+    chain_span_cells_destroy(NULL);
+
+    const size_t count = segments.count;
+    const Rational first_start = segments.starts[0];
+    const Rational last_end = segments.ends[count - 1];
+    size_t first[1] = {0};
+    size_t last[1] = {count - 2}; /* leaves the last segment out */
+    int bass[1] = {-1};
+    HarmonicSpans spans = {1, first, last, bass};
+    assert(chain_merge_segments(&piece->set, &segments, &spans) == CHAIN_INPUT_ERR_BAD_NOTES);
+    assert(segments.count == count && strcmp(segments.ids[count - 1], "seg-13") == 0);
+    assert(chain_merge_segments(NULL, &segments, &spans) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_merge_segments(&piece->set, NULL, &spans) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_merge_segments(&piece->set, &segments, NULL) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+
+    last[0] = count - 1; /* one span over every segment */
+    assert(chain_merge_segments(&piece->set, &segments, &spans) == CHAIN_INPUT_OK);
+    assert(segments.count == 1 && strcmp(segments.ids[0], "seg-0") == 0);
+    assert(rational_equals(segments.starts[0], first_start) && rational_equals(segments.ends[0], last_end));
+    chain_segments_destroy(&segments);
+}
+
 static void test_attack_strength(TestPiece *piece) {
     const MeterMap *map = piece->import.meter_map;
     MusicalTime beat_one = time_at(0, 1);
@@ -305,6 +349,22 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &cadences, &form) == CHAIN_INPUT_OK);
     assert(form.input.note_count == 16 && form.input.degrees[0] == 3 && form.input.degrees[1] == 2 &&
            form.input.degrees[2] == 1);
+    chain_form_input_destroy(&form);
+
+    /* the grid input: the same soprano as the motive input, and the cadences found as "grid-cadence-<n>" */
+    assert(chain_build_grid_input(NULL, segments, 1, 4, &cadences, NULL, &form) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_grid_input(&piece->set, NULL, 1, 4, &cadences, NULL, &form) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_grid_input(&piece->set, segments, 1, 4, &cadences, NULL, NULL) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    AnalysisNoteSet no_notes = {NULL, 0, piece->import.meter_map};
+    assert(chain_build_grid_input(&no_notes, segments, 1, 4, &cadences, NULL, &form) == CHAIN_INPUT_ERR_BAD_NOTES);
+    assert(chain_build_grid_input(&piece->set, segments, 1, 4, &cadences, NULL, &form) == CHAIN_INPUT_OK);
+    assert(form.input.finished && form.input.note_count == 16);
+    assert(form.input.cadence_count >= cadences.count);
+    for (size_t c = 0; c < form.input.cadence_count; c++) {
+        assert(strncmp(form.input.cadences[c].id, "grid-cadence-", 13) == 0);
+    }
+    chain_form_input_destroy(&form);
+    assert(chain_build_grid_input(&piece->set, segments, 1, 4, NULL, NULL, &form) == CHAIN_INPUT_OK && form.input.cadence_count == 0);
     chain_form_input_destroy(&form);
 
     /* the meter input: every note of the measures, a chord change where the label changes */
@@ -511,6 +571,7 @@ int main(void) {
     TestPiece piece;
     test_piece_init(&piece);
     test_segments_and_members(&piece);
+    test_span_cells_and_merge(&piece);
     test_attack_strength(&piece);
     test_keys(&piece);
     test_pitches(&piece);
