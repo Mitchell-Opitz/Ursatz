@@ -11,7 +11,7 @@
 
 /*
  * The MusicXML export of an import (score_export.h): the score the GUI wrote from the library's import.
- *   - the five reference pieces (MIDI) and tests/musicxml/pickup.musicxml, field-5.musicxml give the text of
+ *   - the five reference pieces (MIDI) and tests/fixtures/scores/pickup.musicxml, field-5.musicxml give the text of
  *     tests/snapshots/gui/<stem>.musicxml byte for byte; with URSATZ_UPDATE_GOLDENS=1 the
  *     files are rewritten (and the run exits 2),
  *   - the export imports again with the same number of notes,

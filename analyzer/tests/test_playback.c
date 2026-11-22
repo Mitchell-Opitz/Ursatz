@@ -13,7 +13,7 @@
 
 /*
  * The playback timing of an import (playback.h): the tempo regions and notes the GUI asked the library for.
- *   - the five reference pieces (MIDI) and tests/musicxml/pickup.musicxml, field-5.musicxml (score tempo) give the
+ *   - the five reference pieces (MIDI) and tests/fixtures/scores/pickup.musicxml, field-5.musicxml (score tempo) give the
  *     JSON of tests/snapshots/gui/<stem>.playback.json byte for byte; with
  *     URSATZ_UPDATE_GOLDENS=1 the files are rewritten (and the run exits 2),
  *   - the numbers behind the JSON hold: tempo from 0 in time order, MIDI numbers 0 to 127, the end the latest note end,

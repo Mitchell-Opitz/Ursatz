@@ -17,7 +17,7 @@
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
  * scores, notated pitch spelling, and every error case. The scores are the
- * small hand-written fixtures in tests/musicxml.
+ * small hand-written fixtures in tests/fixtures/scores.
  */
 
 static char fixture_path[512];

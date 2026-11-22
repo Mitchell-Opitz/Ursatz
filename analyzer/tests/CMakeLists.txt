@@ -80,7 +80,7 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_playback LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_playback TARGET test_playback LABELS golden)
 ursatz_test(test_playback_smoke TARGET test_playback ARGS smoke LABELS golden)
@@ -90,7 +90,7 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_score_export LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_score_export TARGET test_score_export LABELS golden PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
 ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke LABELS golden
@@ -152,13 +152,13 @@ ursatz_test(test_phrases_smoke TARGET test_phrases ARGS smoke)
 ursatz_test(test_phrases TARGET test_phrases LABELS slow)
 
 ursatz_test_executable(test_themes LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 ursatz_test(test_themes_smoke TARGET test_themes ARGS smoke)
 # Slow: about 5 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_themes TARGET test_themes LABELS slow)
 
 ursatz_test_executable(test_form_plan LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 ursatz_test(test_form_plan_smoke TARGET test_form_plan ARGS smoke)
 # Slow: about 4 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_form_plan TARGET test_form_plan LABELS slow)
@@ -188,10 +188,10 @@ ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
 ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer_engine analyzer_test_support)
 
 ursatz_test(test_voice_leading LIBS ursatz_test_support ursatz_analyzer_engine analyzer_test_support
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 
 ursatz_test(test_markings LIBS ursatz_test_support ursatz_analyzer_engine analyzer_test_support
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 
 ursatz_test_executable(test_schemas LIBS ursatz_test_support ursatz_analyzer_engine analyzer_test_support m
     DEFINITIONS URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
@@ -200,18 +200,18 @@ ursatz_test(test_schemas_smoke TARGET test_schemas ARGS smoke)
 ursatz_test(test_schemas TARGET test_schemas LABELS slow)
 
 ursatz_test_executable(test_musicxml_midi_agreement LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 ursatz_test(test_musicxml_midi_agreement_smoke TARGET test_musicxml_midi_agreement ARGS smoke)
 # Slow: about 10 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_musicxml_midi_agreement TARGET test_musicxml_midi_agreement LABELS slow)
 
 ursatz_test(test_musicxml_input LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 
 ursatz_test(test_midi_parts LIBS ursatz_analyzer_engine analyzer_test_support)
 
 ursatz_test(test_tempo_map_import LIBS ursatz_analyzer_engine analyzer_test_support cjson
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores"
     PROPERTIES RESOURCE_LOCK analyzer_tempo_map_file)
 if(URSATZ_VALGRIND)
     ursatz_test(test_tempo_map_import_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
@@ -220,11 +220,11 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test(test_notation_reading LIBS ursatz_analyzer_engine
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 
 ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz>
-                 -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
+                 -DFIXTURE=${URSATZ_FIXTURES_DIR}/scores/bach-114.musicxml
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.schema.json
@@ -234,7 +234,7 @@ ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
 ursatz_test(test_cli_input_formats COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz>
                  -DMIDI_FIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
-                 -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
+                 -DMUSICXML_DIR=${URSATZ_FIXTURES_DIR}/scores
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
 
@@ -246,7 +246,7 @@ file(REMOVE_RECURSE ${URSATZ_CORPORA_DIR})
 file(GLOB reference_pieces ${URSATZ_REFERENCE_FIXTURES}/*.mid)
 file(COPY ${reference_pieces} DESTINATION ${URSATZ_CORPORA_DIR}/reference)
 file(COPY "${URSATZ_REFERENCE_FIXTURES}/Bach 114.mid" DESTINATION ${URSATZ_CORPORA_DIR}/mixed)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/musicxml/field-1.musicxml DESTINATION ${URSATZ_CORPORA_DIR}/mixed/sub)
+file(COPY ${URSATZ_FIXTURES_DIR}/scores/field-1.musicxml DESTINATION ${URSATZ_CORPORA_DIR}/mixed/sub)
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/notes.txt "not a piece\n")
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/broken.mid "not a midi file\n")
 # "chorales" is the ten accuracy-corpus chorales (private use, R-016), one MusicXML file each;
@@ -345,7 +345,7 @@ ursatz_test(test_similar_material_smoke TARGET test_similar_material ARGS smoke 
 ursatz_test(test_similar_material TARGET test_similar_material LABELS golden slow PROPERTIES RESOURCE_LOCK similar_work)
 
 ursatz_test_executable(test_meter_check LIBS ursatz_analyzer_engine analyzer_test_support cjson m
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 ursatz_test(test_meter_check_smoke TARGET test_meter_check ARGS smoke)
 # Slow: about 6 s at -j4 (2026-11-21); its smoke runs every PR.
 ursatz_test(test_meter_check TARGET test_meter_check LABELS slow)
@@ -379,7 +379,7 @@ ursatz_test(test_consumer_isolation COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
 
 ursatz_test(test_text_export LIBS ursatz_test_support ursatz_analyzer_engine
-    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores")
 
 ursatz_test_executable(test_text_export_snapshots LIBS ursatz_analyzer_engine analyzer_test_support
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
@@ -389,7 +389,7 @@ ursatz_test(test_text_export_snapshots TARGET test_text_export_snapshots LABELS 
 
 ursatz_test(test_material_export LIBS ursatz_analyzer_engine analyzer_test_support
     DEFINITIONS URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/scores"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden)
 
 # The layers of Mozart 545 (R-630): the CLI's --layers folder and Michelle's reading beside the Analyzer's (the full test runs the CLI and

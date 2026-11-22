@@ -11,7 +11,7 @@
 #include "test_support.h"
 
 /*
- * The tempo and dynamics markings of the report, on a constructed score (tests/musicxml/markings.musicxml, four
+ * The tempo and dynamics markings of the report, on a constructed score (tests/fixtures/scores/markings.musicxml, four
  * measures in 4/4): "Allegro" with quarter = 120 and p in measure 1, the text "cresc." in measure 2, f in measure 3,
  * "rit." and mp in measure 4. Asserted: each marking at its measure, the library's group, rank and change for each, the
  * comparison against the previous level marking, and that a file with no markings (the
