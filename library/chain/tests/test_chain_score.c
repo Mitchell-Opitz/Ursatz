@@ -10,7 +10,7 @@
 #include "io/tests/io/midi_render_test_util.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 #include "ursatz_test.h"
 
 /*

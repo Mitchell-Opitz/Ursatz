@@ -7,7 +7,7 @@
 #include "model/pitch/tuning_system.h"
 #include "model/time/meter_map.h"
 #include "reference_pieces.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Melody analysis of Bach 114 (Minuet in G, BWV Anh. 114), measures 1-8: the soprano the outer-voice extractor produces from

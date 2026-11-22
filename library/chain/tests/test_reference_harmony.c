@@ -9,7 +9,7 @@
 #include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "tests/key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The chain's harmony against Michelle's hand harmony of the Clementi and Mozart reference pieces

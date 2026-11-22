@@ -4,7 +4,7 @@
 
 #include "analysis/motive/motive_relation.h"
 #include "analysis/motive/motive_tone_roles.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Analysis-regression tests for the motive relations. Each relation has a case that checks its result, the

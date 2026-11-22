@@ -10,7 +10,7 @@
 #include "model/time/time_signature.h"
 #include "key_regions_test_access.h"
 #include "tests/key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Key regions, step 1: windowed key scoring. Segments are built straight from pitch-class weights (one whole

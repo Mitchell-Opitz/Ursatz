@@ -6,7 +6,7 @@
 
 #include "member_test_util.h"
 #include "analysis/harmony/weighted_chord_identification.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Weighted chord identification result tests: the best and runner-up chord, both scores, the uncertainty

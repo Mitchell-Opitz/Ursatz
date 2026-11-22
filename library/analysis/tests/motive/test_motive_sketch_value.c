@@ -6,7 +6,7 @@
 #include "analysis/motive/motive_sketch.h"
 #include "analysis/motive/motive_tone_roles.h"
 #include "model/pitch/pitch_spelling.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * MotiveSketch as the one motive value: validate, equal and fingerprint over the form, key source, tonic spelling and

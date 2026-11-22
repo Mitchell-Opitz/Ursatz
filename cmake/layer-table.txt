@@ -221,7 +221,7 @@ uses gui           cjson civetweb common workshop-api
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
 # Tests: a test folder may include its module and what that module may include, plus the rows below.
-module test-support          tests/support prefix ursatz_test.h ursatz_check.h test_http.h style_model_file_io.h
+module test-support          tests/support prefix ursatz_test.h ursatz_check.h ursatz_test_knowledge.h test_http.h style_model_file_io.h
 module root-tests            tests
 module library-tests         library/tests          root library/tests library/tests/support
 module library-test-support  library/tests/support

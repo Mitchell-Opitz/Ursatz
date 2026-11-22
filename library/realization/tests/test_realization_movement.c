@@ -4,7 +4,7 @@
 
 #include "realization/piano_reduction.h"
 #include "realization/work.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Movements own and free their maps; key signatures, markers, played spans and compound parts are kept in order with their refusals;

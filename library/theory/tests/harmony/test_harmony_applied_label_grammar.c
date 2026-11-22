@@ -4,7 +4,7 @@
 
 #include "theory/harmony/harmony_applied.h"
 #include "theory/tonality/roman_numeral_grammar.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * harmony_applied_label keeps its own formatter (standard-harmony does not depend on standard-tonality). This

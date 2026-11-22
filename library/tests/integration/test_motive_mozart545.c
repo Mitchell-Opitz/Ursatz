@@ -4,7 +4,7 @@
 #include "chain/kernel_owners.h"
 #include "hand_cadences.h"
 #include "chain/tests/weighted_pipeline.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The motive families of Mozart 545, the exposition (measures 1-28), against tests/fixtures/annotations/mozart545_motives.txt: a DRAFT hand

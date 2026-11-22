@@ -11,7 +11,7 @@
 #include "model/time/meter_map.h"
 #include "realization/movement.h"
 #include "realization/realization_json.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The realization of an imported score (R-628): Bach 114 (MIDI) gives a part for each part of the import with a note for each event,

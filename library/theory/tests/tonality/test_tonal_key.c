@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "model/pitch/pitch_arithmetic.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 #define KEY_COUNT 15
 

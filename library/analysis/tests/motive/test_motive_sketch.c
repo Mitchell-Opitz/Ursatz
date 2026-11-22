@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive/motive_sketch.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Analysis-regression tests for MotiveSketch: validation (ordering, overlap, pickup, chords, features), equality,

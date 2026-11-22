@@ -8,7 +8,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The two-voice check of the harmonic span rules (R-379, R-382, R-384), with the values phrases first gives (P41, R-391). The Composer's

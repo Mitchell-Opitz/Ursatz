@@ -5,7 +5,7 @@
 
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/time/musical_time.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 #define MAJOR (test_materials()->major)
 #define MINOR (test_materials()->natural_minor)

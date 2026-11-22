@@ -13,7 +13,7 @@
 #include "analysis/harmony/roman_numeral_adapter.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "analysis/voices/outer_voice.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The default config with the snapshot's materials: the key regions estimate has none of its own. */
 static const CommonPracticeKeyRegionsConfig *default_config(void) {

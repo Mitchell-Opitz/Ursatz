@@ -19,7 +19,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "../key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Cadences from real music for the five reference pieces (Bach 114, Mozart 545, Clementi 36, Field 1, Field 5), against

@@ -4,7 +4,7 @@
 
 #include "analysis/motive/motive_variant_recognition.h"
 #include "model/pitch/pitch_spelling.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The three depth two variants the Composer's variant round trip did not recover. The notes are the

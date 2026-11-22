@@ -10,7 +10,7 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
 #include "ursatz_test.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The repeats and returns the chain finds (R-400). The chain is analysis_chain_run to the form stage,

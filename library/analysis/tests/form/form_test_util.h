@@ -18,7 +18,7 @@
 #include "model/time/note_value.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_signature.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * A form-analysis input built by hand: a MeterMap of `top`/4 (with a pickup of `pickup_quarters` quarter notes when it is

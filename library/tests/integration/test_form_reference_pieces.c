@@ -37,7 +37,7 @@
 #include "analysis/form/analysis_input.h"
 #include "theory/harmony/harmony_cadence_rules.h"
 #include "theory/form/phrase_level_form.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The default config with the snapshot's materials: the key regions estimate has none of its own. */
 static const CommonPracticeKeyRegionsConfig *default_config(void) {

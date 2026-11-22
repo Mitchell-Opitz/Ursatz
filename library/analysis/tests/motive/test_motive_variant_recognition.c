@@ -4,7 +4,7 @@
 
 #include "analysis/motive/motive_variant_recognition.h"
 #include "theory/vocabulary/non_chord_tone.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Analysis-regression tests for the variant recognizer. Each relation is applied to a fixture, the

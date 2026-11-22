@@ -5,7 +5,7 @@
 
 #include "reading/reading.h"
 #include "reading/reading_json.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The reading codec (R-629): a reading with a claim of each kind (a chord reading of a C major triad from the snapshot among them)

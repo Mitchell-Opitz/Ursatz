@@ -1,6 +1,9 @@
 # The tests are white-box: they see the internal headers and the libraries the sources use.
 link_libraries(ursatz_composer_internal)
 
+# The shared knowledge helper the tests' own support header includes (tests/support/ursatz_test_knowledge.h).
+include_directories(${CMAKE_SOURCE_DIR}/tests/support)
+
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Helpers the tests share (tests/support).

@@ -3,7 +3,7 @@
 #include "analysis/tests/harmony/adapter_test_util.h"
 #include "analysis/harmony/applied_chords.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* Applied chords: the diatonic reading is re-checked against V/x, V7/x, vii-diminished/x and the fully
    diminished seventh, and relabelled only when the chromatic evidence and the resolution are there. */

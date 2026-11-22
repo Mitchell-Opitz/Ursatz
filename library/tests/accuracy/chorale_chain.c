@@ -25,7 +25,7 @@
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "../rational_test_util.h"
 #include "../key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The analysis (segments, key regions in two passes, chords, Roman numerals) is analysis_chain_run on the imported notes. What stays here
    is the harness's own: the phrase ends it finds between the passes (cadence ends, on outer degrees read from the segment members), the

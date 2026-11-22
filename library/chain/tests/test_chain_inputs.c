@@ -7,7 +7,7 @@
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "chain/analysis_chain.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* The default config with the snapshot's materials: the key regions estimate has none of its own. */
 static const CommonPracticeKeyRegionsConfig *default_config(void) {

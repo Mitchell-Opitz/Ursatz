@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "model/pitch/region.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 #include "theory/harmony/harmony_related_key.h"
 #include "theory/knowledge/knowledge_embedded.h"
 #include "theory/tonality/brightness.h"

@@ -12,7 +12,7 @@
 #include "chain/analysis_chain.h"
 #include "analysis/form/analysis_motive_match.h"
 #include "chain/kernel_owners.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The chain's kernel-owner callbacks: the tone classifier gives motive_tone_roles_line's labels; the relation matcher recognizes an

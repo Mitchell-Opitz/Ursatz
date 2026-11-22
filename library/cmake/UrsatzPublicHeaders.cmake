@@ -47,12 +47,13 @@ function(ursatz_public_headers target)
 endfunction()
 
 # A test sees the internals of the code it tests: library/ (every header by its path from there), the test access
-# headers (tests/support), and the folder it sits beside. An app does not.
+# headers (library/tests/support), the shared test support (tests/support) and the folder it sits beside. An app does not.
 # Call it first in a tests/CMakeLists.txt.
 macro(ursatz_test_includes)
     include_directories(
         ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/tests/support
+        ${CMAKE_SOURCE_DIR}/tests/support
         ${CMAKE_CURRENT_SOURCE_DIR}/..)
 endmacro()
 

@@ -3,7 +3,7 @@
 #include "analysis/tests/harmony/adapter_test_util.h"
 #include "analysis/harmony/applied_chords.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* Roman numeral Interpretations per chord segment, in the segment's local key. */
 

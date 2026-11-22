@@ -21,7 +21,7 @@
 #include "io/midi_importer.h"
 #include "chain/analysis_chain.h"
 #include "../key_index_test_util.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /* --- the expected values --- */
 

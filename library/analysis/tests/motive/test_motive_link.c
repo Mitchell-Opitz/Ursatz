@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive/motive_link.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Analysis-regression tests for motive links: the gate, both directions, replaying a found chain,

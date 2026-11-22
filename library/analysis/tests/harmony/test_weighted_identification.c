@@ -5,7 +5,7 @@
 
 #include "member_test_util.h"
 #include "analysis/harmony/weighted_identification.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Weighted chord identification tests. Step 1, the weights: duration sounding in the segment times the

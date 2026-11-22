@@ -3,7 +3,7 @@
 #include "chain/chain_inputs.h"
 
 #include "analysis/form/thematic_return_detection.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Framework v1 verification, thematic returns (Mozart K. 545 and Clementi Op. 36 No. 1), and the Bach regression for PR #37.

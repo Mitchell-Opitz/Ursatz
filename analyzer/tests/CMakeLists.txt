@@ -1,5 +1,7 @@
 # Every test may include the snapshot helper (support/test_knowledge.h).
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/support)
+# ... and the shared knowledge helper it includes (tests/support/ursatz_test_knowledge.h).
+include_directories(${CMAKE_SOURCE_DIR}/tests/support)
 
 ursatz_test_library(analyzer_test_support SOURCES support/test_support.c LIBS ursatz_analyzer_engine ursatz_test_support cjson
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/support ${PROJECT_SOURCE_DIR}/src)

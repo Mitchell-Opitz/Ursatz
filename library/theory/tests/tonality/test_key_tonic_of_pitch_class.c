@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "theory/tonality/tonal_key.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * Key tonic spelling: all 24 keys, the tonic with the fewer accidentals in its signature, sharps on a tie

@@ -6,7 +6,7 @@
 #include "model/identity/entity_id.h"
 #include "model/time/note_value.h"
 #include "realization/realization_json.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The realization codec (R-627): a work with two movements' worth of what the group holds (lines with relations, a doubling and a span

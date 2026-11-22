@@ -5,7 +5,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/analysis_chain_internal.h"
 #include "chain_test_access.h"
-#include "test_knowledge.h"
+#include "ursatz_test_knowledge.h"
 
 /*
  * The chain's stage table: each stage bit is in one row, every row needs only earlier rows, a row's error status is its bit's place
