@@ -6,6 +6,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <plan/plan_constraint.h>
+#include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/form_figure.h>
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/form_spec.h>
@@ -26,7 +27,7 @@
  * variations: neighbor tones in eighths; a scale in sixteenths over a reharmonized copy with the root changed at bar 3;
  * a broken chord in sixteenths, the climax), invented motive, seeds 1 to 10.
  *
- *   smoke  C major 2/4, seeds 1 and 2 (quick)
+ *   smoke  C major 2/4, seeds 1 and 2 (quick); the skeleton of a composed variation and form_figure_write on it
  *   parallel  tests/fixtures/forms/parallel-form.json (a theme, V1 in the parallel mode, V2 in the home key): C major 2/4,
  *          A minor 2/4, C major 6/8 and A minor 3/4: at least 9 of 10 seeds compose in each row; V1's key is the home
  *          tonic in the other mode, V1 is copied, its figure keeps to its kind, its melody fits its chords and holds
@@ -283,6 +284,102 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
     return counts.composed > 0 ? 0 : 1;
 }
 
+/* The sections of a composed figure plan: the theme and its three variations (not the material). */
+static size_t figure_sections(const Plan *plan, NodeId *sections) {
+    NodeId root = plan_root(plan);
+    size_t count = 0;
+    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+        NodeId child = plan_node_child_at(plan, root, i);
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) && count < MAX_SECTIONS) {
+            sections[count++] = child;
+        }
+    }
+    return count;
+}
+
+/* The melody note that starts at `onset` from the start of the section, or NULL. */
+static const PlanNote *note_at(const Plan *plan, NodeId section, Rational onset) {
+    PlanSpan span = plan_node_span(plan, section);
+    LaneSpanId ids[64];
+    size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 64);
+    Rational at;
+    assert(rational_add(span.start, onset, &at) == RATIONAL_OK);
+    for (size_t s = 0; s < spans; s++) {
+        PlanSpan lane_span = plan_lane_span_span(plan, ids[s]);
+        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            Rational start;
+            if (rational_add(lane_span.start, notes->notes[n].offset, &start) == RATIONAL_OK && rational_cmp(start, at) == 0) {
+                return &notes->notes[n];
+            }
+        }
+    }
+    return NULL;
+}
+
+/*
+ * form_figure_skeleton and form_figure_write on a composed figure plan (C major 2/4, 8 bars a section): 16 cells at quarters, the cells of
+ * bar 4 and bar 8 kept, a principal tone in each of the others that the melody holds and that fits its chord; written again with another
+ * seed the section keeps to its figure; the theme has no skeleton and nothing is written for it.
+ */
+static void check_skeleton_and_write(const FormSpec *form) {
+    for (unsigned long seed = 1; seed <= 2; seed++) {
+        PieceRequest request;
+        Plan *plan = NULL;
+        ComposeOutcome outcome;
+        ComposeConfig config;
+        memset(&request, 0, sizeof(request));
+        request.form = form->name;
+        request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+        request.knowledge = test_knowledge();
+        request.meter.beats_per_bar = 2;
+        request.meter.beat_unit = 4;
+        assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+        memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
+        config.seed = seed;
+        config.form = form;
+        if (compose_run(plan, &config, &outcome) != PIECE_OK) {
+            compose_outcome_destroy(&outcome);
+            plan_destroy(plan);
+            continue;
+        }
+        compose_outcome_destroy(&outcome);
+        NodeId sections[MAX_SECTIONS];
+        assert(figure_sections(plan, sections) == 4);
+        FormSkeleton skeleton;
+        for (size_t v = 1; v < 4; v++) {
+            memset(&skeleton, 0, sizeof(skeleton));
+            assert(form_figure_skeleton(plan, sections[v], &skeleton));
+            assert(skeleton.count == 16);
+            for (size_t cell = 0; cell < skeleton.count; cell++) {
+                assert(equal(skeleton.onset[cell], (Rational){(long)cell, 4}));
+                assert(skeleton.kept[cell] == (cell == 6 || cell == 7 || cell == 14 || cell == 15));
+                if (!skeleton.kept[cell]) {
+                    /* the first note of a cell that is not kept is its principal tone, and it is a tone of the chord under it */
+                    const PlanNote *note = note_at(plan, sections[v], skeleton.onset[cell]);
+                    assert(note && note->midi % 12 == skeleton.pitch[cell] % 12);
+                }
+            }
+            assert(form_return_melody_fits(plan, sections[v]));
+        }
+        /* The theme returns nothing, and NULL has no room. */
+        assert(!form_figure_skeleton(plan, sections[0], &skeleton));
+        assert(!form_figure_skeleton(plan, sections[1], NULL));
+        /* Written again with another seed: the section still keeps to its figure; the theme and a missing rng are refused. */
+        FillRng rng;
+        char reason[256] = "";
+        fill_rng_seed(&rng, 99);
+        assert(form_figure_write(plan, sections[1], NULL, &rng));
+        assert(form_figure_check(plan, sections[1], reason, sizeof(reason)));
+        assert(!form_figure_write(plan, sections[0], NULL, &rng));
+        assert(!form_figure_write(plan, sections[1], NULL, NULL));
+        plan_destroy(plan);
+        return;
+    }
+    assert(false); /* neither seed composed */
+}
+
 int main(int argc, char **argv) {
     static const Row ROWS[] = {
         {"C major 2/4", 0, HARMONY_MODE_MAJOR, 2, 4}, {"A minor 2/4", 9, HARMONY_MODE_MINOR, 2, 4},
@@ -294,6 +391,7 @@ int main(int argc, char **argv) {
     int failed = 0;
     if (strcmp(mode, "smoke") == 0) {
         failed = run_row(form, &ROWS[0], 2, false);
+        check_skeleton_and_write(form);
     } else if (strcmp(mode, "sweep") == 0) {
         for (size_t r = 0; r < sizeof(ROWS) / sizeof(ROWS[0]); r++) {
             failed |= run_row(form, &ROWS[r], SEEDS, false);
