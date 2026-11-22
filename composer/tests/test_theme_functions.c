@@ -8,6 +8,7 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_analysis.h>
 
 #include "api/api_grow.h"
 #include "grow/grow_internal.h"
@@ -21,7 +22,11 @@
 #endif
 
 /*
- * Themes whose ideas follow their formal function (P67, R-710 to R-712). B6: harmony by function. With functions.harmony, sentences and
+ * Themes whose ideas follow their formal function (P67, R-710 to R-712). B7: surface by function and the held cadence note. With
+ * functions.surface, sentences over s77-chords and u51-chords, seeds 1 to 8: fragment 1 is the densest fitting segment of the motif
+ * and fragment 2 another one (or the same, in sequence, when only one fits); with melody.cadence_long, sentences and periods: the last
+ * melody note of the theme starts on its last downbeat and ends at its end, and an antecedent's contrasting idea ends the same way;
+ * with both off every plan equals the plan with the settings absent. B6: harmony by function. With functions.harmony, sentences and
  * periods over s77-chords (C major), u51-chords (C minor) and the 3/4 motif of rates/two-bar-3-4 (A minor), seeds 1 to 8: every composed
  * theme has a predominant between the last tonic before its final dominant and that dominant (the response's chords), in 4/4 each
  * fragment bar has two chords, the fragments' chords are a `free_motive` target, and at least 6 of 8 seeds compose in each case (measured:
@@ -60,6 +65,9 @@ static Motive load_motive(const char *path) {
     return motive;
 }
 
+/* The melody settings of the runs of theme_of (NULL for the defaults): the cases of cadence_long set them. */
+static const MelodyFillParams *MELODY_OF_RUN = NULL;
+
 /* The 8-bar period of the motive and seed through api_grow_run with the functions settings (NULL for absent); false when no theme is made. */
 static bool theme_of(size_t which, bool period, unsigned long seed, const GrowFunctions *functions, GrowBriefText *text,
                      GrowSetup *setup, GrowRun *run) {
@@ -81,6 +89,7 @@ static bool theme_of(size_t which, bool period, unsigned long seed, const GrowFu
     setup->first_cadence = CADENCE_TYPE_HALF;
     setup->motive = &MOTIVE_OF[which];
     setup->functions = functions;
+    setup->melody = MELODY_OF_RUN;
     setup->suggest = 1;
     setup->seed = seed;
     setup->tempo_from = "none";
@@ -172,7 +181,10 @@ static void test_off_changes_nothing(void) {
                 GrowRun run_a;
                 GrowRun run_b;
                 bool a = theme_of(which, period, seed, NULL, &text_a, &setup_a, &run_a);
+                MelodyFillParams plain = melody_fill_params_default(); /* cadence_long false */
+                MELODY_OF_RUN = &plain;
                 bool b = theme_of(which, period, seed, &off, &text_b, &setup_b, &run_b);
+                MELODY_OF_RUN = NULL;
                 assert(a == b);
                 if (!a) {
                     continue;
@@ -298,12 +310,152 @@ static void test_harmony_by_function(void) {
     assert(active == 2);
 }
 
+/* --- surface by function and the held cadence (B7) ------------------------------------------------------ */
+
+/* The segment label the motive of the idea was made from ("" for none): the motive_ref of its motive node. */
+static const char *segment_of(const Plan *plan, const char *idea) {
+    NodeId node = test_find_node(plan, idea);
+    LaneSpanId span;
+    assert(node != PLAN_NODE_NONE && plan_melody_span_of(plan, node, &span));
+    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, span); i++) {
+        const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, i);
+        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
+            const PlanConstraint *made = plan_node_find_constraint(plan, constraint->params.motive.motive, PLAN_CONSTRAINT_MOTIVE_REF);
+            return made ? made->params.motive.segment : "";
+        }
+    }
+    return "";
+}
+
+/* The label of the fitting segment of the motive with the most notes per beat (the first of equals), "" when none fits one bar. */
+static void densest_segment(const Motive *motive, char *label, size_t size, size_t *fitting) {
+    MotiveAnalysis analysis;
+    Rational bar;
+    assert(motive_analyze(motive, &analysis));
+    assert(plan_meter_bar_length(&(PlanMeter){motive_meter(motive).beats_per_bar, motive_meter(motive).beat_unit, 0}, &bar) == PLAN_OK);
+    label[0] = '\0';
+    *fitting = 0;
+    Motive best;
+    for (size_t i = 0; i < analysis.segment_count; i++) {
+        Motive part;
+        if (!grow_segment_motive(motive, &analysis.segments[i], &part) || part.note_count >= motive->note_count ||
+            rational_cmp(part.length, motive->length) >= 0 || rational_cmp(part.length, bar) > 0) {
+            continue;
+        }
+        (*fitting)++;
+        Rational left;
+        Rational right;
+        if (label[0] == '\0' ||
+            (rational_mul_int(part.length, (long long)best.note_count, &left) == RATIONAL_OK &&
+             rational_mul_int(best.length, (long long)part.note_count, &right) == RATIONAL_OK && rational_cmp(right, left) > 0)) {
+            snprintf(label, size, "%s", analysis.segments[i].label);
+            best = part;
+        }
+    }
+}
+
+static void test_surface_by_function(void) {
+    GrowFunctions on = {.surface = true};
+    size_t composed = 0;
+    for (size_t which = 0; which < MOTIVES; which++) {
+        char densest[16];
+        size_t fitting;
+        densest_segment(&MOTIVE_OF[which], densest, sizeof(densest), &fitting);
+        assert(fitting >= 1);
+        for (unsigned long seed = 1; seed <= last_seed(); seed++) {
+            GrowBriefText text;
+            GrowSetup setup;
+            GrowRun run;
+            if (!theme_of(which, false, seed, &on, &text, &setup, &run)) {
+                continue;
+            }
+            composed++;
+            const Plan *plan = run.themes[0].plan;
+            /* Fragment 1 is the densest fitting segment; fragment 2 another one, or the same in sequence when only one fits. */
+            if (strcmp(segment_of(plan, "fragment 1"), "") != 0) {
+                assert(strcmp(segment_of(plan, "fragment 1"), densest) == 0);
+                assert(fitting == 1 || strcmp(segment_of(plan, "fragment 2"), densest) != 0);
+            }
+            api_grow_run_destroy(&run);
+        }
+    }
+    assert(composed >= MOTIVES * last_seed() / 2);
+    printf("test_theme_functions: surface, %zu of %lu sentences composed\n", composed, MOTIVES * last_seed());
+}
+
+/* The last melody note of the node: its onset and end. */
+static void last_note(const Plan *plan, NodeId node, Rational *onset, Rational *end) {
+    PlanSpan span = plan_node_span(plan, node);
+    LaneSpanId ids[16];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 16);
+    bool any = false;
+    for (size_t i = 0; i < found && i < 16; i++) {
+        Rational start = plan_lane_span_span(plan, ids[i]).start;
+        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            Rational at;
+            assert(rational_add(start, notes->notes[n].offset, &at) == RATIONAL_OK);
+            if (!any || rational_cmp(at, *onset) > 0) {
+                *onset = at;
+                assert(rational_add(at, notes->notes[n].duration, end) == RATIONAL_OK);
+                any = true;
+            }
+        }
+    }
+    assert(any);
+}
+
+/* With cadence_long the last note of a cadence starts on its last downbeat and lasts to its end: the theme's, and an antecedent's. */
+static void test_cadence_held(void) {
+    MelodyFillParams held = melody_fill_params_default();
+    held.cadence_long = true;
+    size_t composed = 0;
+    for (size_t which = 0; which < MOTIVES; which++) {
+        for (int period = 0; period < 2; period++) {
+            for (unsigned long seed = 1; seed <= last_seed(); seed++) {
+                GrowBriefText text;
+                GrowSetup setup;
+                GrowRun run;
+                MELODY_OF_RUN = &held;
+                bool made = theme_of(which, period, seed, NULL, &text, &setup, &run);
+                MELODY_OF_RUN = NULL;
+                if (!made) {
+                    continue;
+                }
+                composed++;
+                const Plan *plan = run.themes[0].plan;
+                Rational bar;
+                assert(plan_meter_bar_length(&setup.meter, &bar) == PLAN_OK);
+                static const char *const ENDS[2] = {"theme", "contrasting idea"};
+                for (int i = 0; i < (period ? 2 : 1); i++) {
+                    NodeId node = test_find_node(plan, ENDS[i]);
+                    assert(node != PLAN_NODE_NONE);
+                    PlanSpan span = plan_node_span(plan, node);
+                    Rational onset;
+                    Rational end;
+                    Rational node_end;
+                    Rational downbeat;
+                    last_note(plan, node, &onset, &end);
+                    assert(rational_add(span.start, span.length, &node_end) == RATIONAL_OK);
+                    assert(rational_sub(node_end, bar, &downbeat) == RATIONAL_OK);
+                    assert(rational_cmp(onset, downbeat) == 0 && rational_cmp(end, node_end) == 0);
+                }
+                api_grow_run_destroy(&run);
+            }
+        }
+    }
+    assert(composed >= 1);
+    printf("test_theme_functions: held cadence, %zu themes composed\n", composed);
+}
+
 int main(int argc, char **argv) {
     fast_run = argc > 1 && strcmp(argv[1], "fast") == 0;
     MOTIVE_OF[0] = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77-chords.json");
     MOTIVE_OF[1] = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51-chords.json");
     MOTIVE_OF[2] = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
     test_harmony_by_function();
+    test_surface_by_function();
+    test_cadence_held();
     test_contrast_target();
     test_off_changes_nothing();
     return 0;
