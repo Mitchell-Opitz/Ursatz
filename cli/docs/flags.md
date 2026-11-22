@@ -94,6 +94,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--params <file>` | a JSON file with the params object, or - for standard input | `query` |
 | `--pickup <beats>` | the beats before the first barline, as 1 or 1/2 | `motive`, `variants`, `recognize`, `analyze` |
 | `--plain-midi` | MIDI: no track names and no section markers | `progression`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `variations`, `harmonize`, `render` |
+| `--plans` | listen: put each theme's plan in its JSON, for critique | `listen` |
 | `--port <n>` | global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand | every command (stands before it) |
 | `--position <where>` | fragment: leading, trailing or middle | `develop` |
 | `--print-settings` | print the default preferences document and exit | `listen` |

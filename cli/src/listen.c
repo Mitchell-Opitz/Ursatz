@@ -52,6 +52,7 @@ typedef struct {
     const char *batch_text;
     const char *taste_text;
     bool check;
+    bool plans; /* --plans: each theme sample's JSON holds its plan */
     bool themes;
     bool meter_given;
     unsigned long count;
@@ -70,6 +71,7 @@ typedef struct {
 static const CliOptionRow ROWS[] = {
     {"--print-settings", offsetof(Options, print_settings), true},
     {"--check", offsetof(Options, check), true},
+    {"--plans", offsetof(Options, plans), true},
     {"--what", offsetof(Options, what_text), false},
     {"--count", offsetof(Options, count_text), false},
     {"--seed", offsetof(Options, seed_text), false},
@@ -113,8 +115,8 @@ static int check_options(Options *options) {
     }
     if (!options->themes && (options->into_text || options->development_text || options->bars_text || options->motif_path ||
                              options->theme_request_path || options->blend_path || options->blend_weight_text ||
-                             options->blend_weights_text || options->check)) {
-        return cli_fail(CLI_EXIT_USAGE, "--into, --development, --bars, --check, --motif, --theme-request and the --blend options need --what themes");
+                             options->blend_weights_text || options->check || options->plans)) {
+        return cli_fail(CLI_EXIT_USAGE, "--into, --development, --bars, --check, --plans, --motif, --theme-request and the --blend options need --what themes");
     }
     if (options->motif_path && options->theme_request_path) {
         return cli_fail(CLI_EXIT_USAGE, "--motif and --theme-request cannot be given together");
@@ -414,7 +416,7 @@ static bool set_member(cJSON *object, const char *name, cJSON *item) {
     return cJSON_AddItemToObject(object, name, item);
 }
 
-/* The style, blend and tempo members of the options, and check, on a theme request. */
+/* The style, blend and tempo members of the options, and check and plans, on a theme request. */
 static bool add_brief(cJSON *request, const Options *options) {
     bool ok = true;
     const struct {
@@ -428,7 +430,8 @@ static bool add_brief(cJSON *request, const Options *options) {
     for (size_t i = 0; ok && i < sizeof texts / sizeof texts[0]; i++) {
         ok = !texts[i].text || set_member(request, texts[i].name, cJSON_CreateString(texts[i].text));
     }
-    return ok && (!options->check || set_member(request, "check", cJSON_CreateTrue()));
+    return ok && (!options->check || set_member(request, "check", cJSON_CreateTrue())) &&
+           (!options->plans || set_member(request, "plans", cJSON_CreateTrue()));
 }
 
 /* The members every theme request takes from the sample: the seed, one theme, both files, the settings. */
