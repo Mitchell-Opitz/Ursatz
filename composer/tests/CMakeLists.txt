@@ -774,7 +774,7 @@ ursatz_test(test_sonata_forms_sonatina-tonic-major_smoke TARGET test_form_famili
 ursatz_test(test_grow_development LIBS ursatz_composer_engine cjson composer_test_support)
 
 # Themes whose ideas follow their formal function (P67): the contrast target (B5), the harmony and the surface (B6, B7).
-# Slow: about 150 s for seeds 1 to 8 (2026-11-22); test_theme_functions_smoke runs seed 1 of every case.
+# Slow: about 280 s for seeds 1 to 8 (2026-11-22); test_theme_functions_smoke runs seed 1 of every case (about 35 s).
 ursatz_test_executable(test_theme_functions LIBS ursatz_composer_engine cjson composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ursatz_test(test_theme_functions TARGET test_theme_functions LABELS slow)

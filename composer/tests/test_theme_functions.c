@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive.h>
 
 #include "api/api_grow.h"
+#include "grow/grow_internal.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"
@@ -20,14 +21,19 @@
 #endif
 
 /*
- * Themes whose ideas follow their formal function (P67, R-710 to R-712). B5: the contrast target. Periods over s77-chords (C major) and
+ * Themes whose ideas follow their formal function (P67, R-710 to R-712). B6: harmony by function. With functions.harmony, sentences and
+ * periods over s77-chords (C major), u51-chords (C minor) and the 3/4 motif of rates/two-bar-3-4 (A minor), seeds 1 to 8: every composed
+ * theme has a predominant between the last tonic before its final dominant and that dominant (the response's chords), in 4/4 each
+ * fragment bar has two chords, the fragments' chords are a `free_motive` target, and at least 6 of 8 seeds compose in each case (measured:
+ * 8 of 8, 2026-11-22); every active progression type has a harmony shape. B5: the contrast target. Periods over s77-chords (C major) and
  * u51-chords (C minor), seeds 1 to 8 through api_grow_run: with functions.contrast every composed theme's contrasting ideas carry the
  * `contrast` constraint and the response's `contrasts` read rhythm and contour distances of at least 1/2; without it the plan equals the
  * plan with `functions` absent and the response has no `contrasts`; a plan with the constraint writes and reads back the same.
  */
 
 #define SEEDS 8
-#define MOTIVES 2
+#define MOTIVES 2 /* the fixtures of the contrast cases: s77-chords and u51-chords */
+#define FIXTURES 3 /* and the 3/4 motif of the harmony cases */
 
 /* "fast" runs seed 1 of every case (test_theme_functions_smoke); no argument runs seeds 1 to 8 (slow). */
 static bool fast_run = false;
@@ -36,8 +42,9 @@ static unsigned long last_seed(void) {
     return fast_run ? 1 : SEEDS;
 }
 
-static Motive MOTIVE_OF[MOTIVES];
-static const char *KEY_OF[MOTIVES] = {"C major", "C minor"};
+static Motive MOTIVE_OF[FIXTURES];
+static const char *KEY_OF[FIXTURES] = {"C major", "C minor", "A minor"};
+static const char *METER_OF[FIXTURES] = {"4/4", "4/4", "3/4"};
 
 static Motive load_motive(const char *path) {
     char *text = test_must_read_file(path, NULL);
@@ -58,7 +65,7 @@ static bool theme_of(size_t which, bool period, unsigned long seed, const GrowFu
                      GrowSetup *setup, GrowRun *run) {
     memset(text, 0, sizeof(*text));
     text->key = KEY_OF[which];
-    text->meter = "4/4";
+    text->meter = METER_OF[which];
     text->cadence = "PAC";
     text->into = period ? "period" : "sentence";
     memset(setup, 0, sizeof(*setup));
@@ -187,10 +194,116 @@ static void test_off_changes_nothing(void) {
     }
 }
 
+/* --- harmony by function (B6) -------------------------------------------------------------------------------- */
+
+/* The chords of the theme as the response gives them: the function of each, in time order. */
+static size_t chord_functions(const cJSON *theme, const char *names[64]) {
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(theme, "chords");
+    size_t count = 0;
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, chords) {
+        if (count < 64) {
+            names[count++] = cJSON_GetObjectItemCaseSensitive(chord, "function")->valuestring;
+        }
+    }
+    return count;
+}
+
+/* A predominant stands between the last tonic before the final dominant and that dominant. */
+static bool predominant_before_final_dominant(const char *const *names, size_t count) {
+    size_t dominant = count;
+    for (size_t i = count; i-- > 0 && dominant == count;) {
+        if (strcmp(names[i], "dominant") == 0) {
+            dominant = i;
+        }
+    }
+    for (size_t i = dominant; dominant < count && i-- > 0 && strcmp(names[i], "tonic") != 0;) {
+        if (strcmp(names[i], "predominant") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The harmony spans that start inside the node, and whether each holds a harmony shape with free_motive. */
+static size_t chords_in(const Plan *plan, NodeId node, size_t *free_count) {
+    PlanSpan span = plan_node_span(plan, node);
+    LaneSpanId ids[16];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, 16);
+    size_t count = 0;
+    for (size_t i = 0; i < found && i < 16; i++) {
+        if (rational_cmp(plan_lane_span_span(plan, ids[i]).start, span.start) < 0) {
+            continue;
+        }
+        count++;
+        const PlanConstraint *shape = plan_lane_span_find_constraint(plan, ids[i], PLAN_CONSTRAINT_HARMONY_SHAPE);
+        if (shape && shape->params.harmony_shape.free_motive && free_count) {
+            (*free_count)++;
+        }
+    }
+    return count;
+}
+
+static void test_harmony_by_function(void) {
+    GrowFunctions on = {.harmony = true};
+    for (size_t which = 0; which < FIXTURES; which++) {
+        for (int period = 0; period < 2; period++) {
+            size_t composed = 0;
+            for (unsigned long seed = 1; seed <= last_seed(); seed++) {
+                GrowBriefText text;
+                GrowSetup setup;
+                GrowRun run;
+                if (!theme_of(which, period, seed, &on, &text, &setup, &run)) {
+                    continue;
+                }
+                composed++;
+                const Plan *plan = run.themes[0].plan;
+                cJSON *document = api_grow_result_json(&setup, &run, NULL);
+                assert(document);
+                const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
+                const char *names[64];
+                size_t count = chord_functions(theme, names);
+                assert(predominant_before_final_dominant(names, count));
+                for (int fragment = 1; fragment <= 2; fragment++) {
+                    char name[16];
+                    snprintf(name, sizeof(name), "fragment %d", fragment);
+                    NodeId node = test_find_node(plan, name);
+                    if (node == PLAN_NODE_NONE) {
+                        continue;
+                    }
+                    size_t freed = 0;
+                    size_t chords = chords_in(plan, node, &freed);
+                    assert(freed >= 1 && (which == 2 || chords == 2));
+                }
+                cJSON_Delete(document);
+                api_grow_run_destroy(&run);
+            }
+            printf("test_theme_functions: harmony, %s %s: %zu of %lu composed\n", KEY_OF[which], period ? "period" : "sentence", composed,
+                   last_seed());
+            assert(composed >= (fast_run ? 1u : 6u));
+        }
+    }
+    /* Every active progression type has a shape. */
+    const KnowledgeSnapshot *snapshot = test_knowledge();
+    size_t active = 0;
+    for (size_t i = 0; i < knowledge_snapshot_entry_count(snapshot); i++) {
+        const VocabularyEntry *entry = knowledge_snapshot_vocabulary(snapshot, knowledge_snapshot_entry_at(snapshot, i)->id);
+        PlanHarmonyShapeKind kind;
+        if (entry && entry->subtype == VOCABULARY_PROGRESSION_TYPE &&
+            knowledge_snapshot_entry_at(snapshot, i)->status == KNOWLEDGE_STATUS_ACTIVE) {
+            assert(grow_progression_shape(entry->code, &kind));
+            active++;
+        }
+    }
+    assert(active == 2);
+}
+
 int main(int argc, char **argv) {
     fast_run = argc > 1 && strcmp(argv[1], "fast") == 0;
     MOTIVE_OF[0] = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77-chords.json");
     MOTIVE_OF[1] = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51-chords.json");
+    MOTIVE_OF[2] = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
+    test_harmony_by_function();
     test_contrast_target();
     test_off_changes_nothing();
     return 0;
