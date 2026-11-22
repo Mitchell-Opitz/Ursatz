@@ -43,4 +43,8 @@ const HarmonyCadenceKind *harmony_cadence_kind_find(const char *name);
    an invalid value. */
 const HarmonyCadenceKind *harmony_cadence_kind_of(CadenceType core);
 
+/* The table's rows in order: how many, and the row at `index` (NULL past the end). */
+size_t harmony_cadence_kind_count(void);
+const HarmonyCadenceKind *harmony_cadence_kind_at(size_t index);
+
 #endif
