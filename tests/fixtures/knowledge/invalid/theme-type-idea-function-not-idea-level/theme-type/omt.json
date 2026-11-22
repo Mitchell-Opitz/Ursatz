@@ -1,0 +1,102 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.theme-type.sentence",
+      "kind": "theme-type",
+      "name": "sentence",
+      "content": {
+        "code": "sentence",
+        "beginning": "omt.function.presentation",
+        "ending": "omt.function.continuation",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.presentation",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "repetition",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 1",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 2",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "Archetype 1",
+          "note": "the sentence is a presentation followed by a continuation"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "repetition",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "fragment 1",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "fragment 2",
+              "start": 5,
+              "end": 6
+            },
+            {
+              "name": "cadential",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

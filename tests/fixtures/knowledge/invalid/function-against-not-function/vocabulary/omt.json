@@ -1,0 +1,104 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.vocabulary.prolongational",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "prolongational",
+      "content": {
+        "code": "prolongation"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 6,
+          "note": "a prolongation keeps the tonic through a passing chord"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "key": "C",
+          "chords": [
+            "I",
+            "V6",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.cadential",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "cadential",
+      "content": {
+        "code": "cadential"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 3,
+          "note": "a cadential progression goes from a predominant to the dominant and the tonic"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "key": "C",
+          "chords": [
+            "I6",
+            "ii6",
+            "V",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.phrase-model",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "phrase model",
+      "content": {
+        "code": "phrase_model"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 7,
+          "note": "the phrase model is tonic, predominant, dominant, tonic"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.vocabulary.sequential",
+      "kind": "vocabulary",
+      "subtype": "progression-type",
+      "name": "sequential",
+      "content": {
+        "code": "sequence"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "IV",
+          "chapter": 8,
+          "note": "a sequence repeats a harmonic pattern on another step"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}
