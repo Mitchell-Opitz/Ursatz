@@ -519,12 +519,20 @@ static void test_bodies(const Motifs *m) {
   }
   snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":%s}}",
            basic);
-  free(create_item("theme", "x", body, &status));
-  check(status == 200, "a form meter outside the four is saved (the Composer refuses it when composing)");
+  char *five_four = create_item("theme", "x", body, &status);
+  check(status == 200 && five_four, "a form meter outside the four is saved (the Composer refuses it when composing)");
+  cJSON *stored = five_four ? get_item(five_four, &status) : NULL;
+  check(stored && strcmp(string_of(member(theme_of(stored), "request"), "meter"), "5/4") == 0, "and the meter 5/4 is what is stored");
+  cJSON_Delete(stored);
+  free(five_four);
   snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":%s}}",
            basic);
-  free(create_item("theme", "x", body, &status));
-  check(status == 200, "a hybrid pairing that is not one is saved (the Composer refuses it when composing)");
+  char *fugue = create_item("theme", "x", body, &status);
+  check(status == 200 && fugue, "a hybrid pairing that is not one is saved (the Composer refuses it when composing)");
+  stored = fugue ? get_item(fugue, &status) : NULL;
+  check(stored && strcmp(string_of(member(theme_of(stored), "request"), "hybrid"), "fugue") == 0, "and the hybrid fugue is what is stored");
+  cJSON_Delete(stored);
+  free(fugue);
 }
 
 /* The request the compose route writes, the version it makes and its files. */
@@ -615,8 +623,9 @@ static void test_compose(const Motifs *m) {
   theme_body(basic, more, body, sizeof(body));
   char *repeated = create_item("theme", "Repeated", body, &status);
   check(status == 200 && repeated, "a theme with a repeated motif, ideas and chords is saved");
-  free(compose(repeated, "{}", &status));
-  check(status == 200, "a theme with ideas and chords is composed");
+  cJSON *composed = compose(repeated, "{}", &status);
+  check(status == 200 && ok_true(composed) && number_of(member(composed, "item"), "current_version") == 2, "a theme with ideas and chords is composed (version 2)");
+  cJSON_Delete(composed);
   request = last_request();
   const cJSON *repeated_slots = member(request, "slots");
   check(cJSON_GetArraySize(member(request, "motives")) == 2, "the request has one motive for each distinct motif");
@@ -662,7 +671,7 @@ static void test_compose(const Motifs *m) {
   cJSON_Delete(answer);
   snprintf(wrapped, sizeof(wrapped), "{\"note\":\"Added ideas\",\"body\":%s}", body);
   answer = test_gui_send(PORT, "item.save", theme, wrapped, &status);
-  check(status == 200, "a theme version with a note is saved");
+  check(status == 200 && ok_true(answer) && number_of(member(answer, "item"), "current_version") == current_version(theme), "a theme version with a note is saved: the item is at the new version");
   cJSON_Delete(answer);
 
   /* An accompaniment motive and a pattern. */
@@ -694,7 +703,7 @@ static void test_compose(const Motifs *m) {
   theme_body(basic, ",\"seed\":33", body, sizeof(body));
   char *seeded = create_item("theme", "Seeded", body, &status);
   answer = compose(seeded, "{}", &status);
-  check(status == 200, "a theme with a seed in its body is composed");
+  check(status == 200 && ok_true(answer), "a theme with a seed in its body is composed");
   cJSON_Delete(answer);
   answer = get_item(seeded, &status);
   check(number_of(member(theme_of(answer), "result"), "seed") == 33, "the body's seed is used");
@@ -791,6 +800,10 @@ static void test_files(const Motifs *m) {
   cJSON *answer = compose(theme, "{\"seed\":4}", &status);
   cJSON_Delete(answer);
   check(status == 200, "the theme for the files is composed");
+  answer = get_item(theme, &status);
+  check(number_of(member(theme_of(answer), "result"), "seed") == 4 && cJSON_GetArraySize(member(member(theme_of(answer), "result"), "files")) == 4,
+        "its result keeps the seed 4 and names the four files");
+  cJSON_Delete(answer);
 
   static const char *const names[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
   static const char *const types[] = {"application/json", "application/json", "audio/midi", "application/xml"};

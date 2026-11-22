@@ -723,8 +723,14 @@ static void test_compose(const Items *m) {
   cJSON_Delete(request);
 
   /* The body's seed is used when the call has none; the call's wins. */
-  free(compose(piece, "{}", &status));
-  check(status == 200, "a compose with no seed runs");
+  answer = compose(piece, "{}", &status);
+  check(status == 200 && ok_true(answer), "a compose with no seed runs");
+  cJSON_Delete(answer);
+  answer = get_item(piece, &status);
+  const cJSON *unseeded = member(piece_of_answer(answer), "result");
+  check(cJSON_IsNumber(member(unseeded, "seed")) && cJSON_IsObject(member(unseeded, "summary")) && cJSON_GetArraySize(member(unseeded, "files")) == 8,
+        "its result has a seed, a summary and the eight files");
+  cJSON_Delete(answer);
   free(piece);
 
   snprintf(more, sizeof(more), ",\"seed\":41");
@@ -845,6 +851,10 @@ static void test_files(const Items *m) {
   cJSON *answer = compose(piece, "{\"seed\":4}", &status);
   cJSON_Delete(answer);
   check(status == 200, "the piece for the files is composed");
+  answer = get_item(piece, &status);
+  check(number_of(member(piece_of_answer(answer), "result"), "seed") == 4 && cJSON_GetArraySize(member(member(piece_of_answer(answer), "result"), "files")) == 8,
+        "its result keeps the seed 4 and names the eight files");
+  cJSON_Delete(answer);
 
   static const char *const names[] = {"request.json",  "plan.json",  "ending-plan.json", "loop.mid",
                                       "loop.musicxml", "ending.mid", "ending.musicxml",  "theme-s2.plan.json"};
@@ -894,7 +904,10 @@ static void test_files(const Items *m) {
   /* A theme version's own files still work beside a piece's. */
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/theme.mid", m->theme);
   response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
-  check(test_http_status(response) == 200, "a theme version's files are still served");
+  char theme_type[128];
+  content_type_of(response, theme_type, sizeof(theme_type));
+  check(test_http_status(response) == 200 && strcmp(theme_type, "audio/midi") == 0 && strncmp(test_http_body(response), "MThd", 4) == 0,
+        "a theme version's files are still served, a MIDI file as audio/midi");
   free(response);
 
   /* Deleting the item removes its version folders. */

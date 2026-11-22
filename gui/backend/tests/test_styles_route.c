@@ -382,7 +382,8 @@ int main(int argc, char **argv) {
 
     /* Rebuild resolves the brief again: the style it names changed. */
     answer = test_gui_send_finish(PORT, "style.rebuild", one_id, NULL, &status);
-    check(status == 200, "rebuilding the style a brief names answers 200");
+    check(status == 200 && ok_true(answer) && strcmp(string_of(style_of(answer), "id"), one_id) == 0,
+          "rebuilding the style a brief names answers 200 with that style");
     cJSON_Delete(answer);
     answer = test_gui_send_finish(PORT, "style.rebuild", with_style_id, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2 &&

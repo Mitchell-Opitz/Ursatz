@@ -90,7 +90,8 @@ int main(void) {
         "project.list through the query route");
   cJSON_Delete(json);
   json = test_http_json(PORT, "POST", "/api/workshop/query/project.list", NULL, &status);
-  check(status == 200, "an empty body is {}");
+  check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "ok")) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(json, "projects")),
+        "an empty body is {}: the same answer, ok with a projects array");
   cJSON_Delete(json);
 
   /* a command by its name, as the actor it names */
