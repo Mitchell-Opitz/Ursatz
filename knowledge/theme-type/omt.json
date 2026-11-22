@@ -1,0 +1,804 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.theme-type.sentence",
+      "kind": "theme-type",
+      "name": "sentence",
+      "content": {
+        "code": "sentence",
+        "beginning": "omt.function.presentation",
+        "ending": "omt.function.continuation",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "repetition",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 1",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 2",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "Archetype 1",
+          "note": "the sentence is a presentation and a continuation"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "V",
+          "note": "the sentence states a motive twice, then fragments it"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VIII",
+          "note": "the continuation develops the motive toward the cadence"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "repetition",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "fragment 1",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "fragment 2",
+              "start": 5,
+              "end": 6
+            },
+            {
+              "name": "cadential",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.period",
+      "kind": "theme-type",
+      "name": "period",
+      "content": {
+        "code": "period",
+        "beginning": "omt.function.antecedent",
+        "ending": "omt.function.consequent",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "first"
+          },
+          {
+            "name": "consequent basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "ending",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "consequent contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "section": "Archetype 2: The Period",
+          "note": "the period is an antecedent and a consequent"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VI",
+          "note": "the period joins an antecedent and a consequent phrase"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VII",
+          "note": "the consequent returns to the antecedent's start and closes"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "contrasting idea",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "consequent basic idea",
+              "start": 4,
+              "end": 6
+            },
+            {
+              "name": "consequent contrasting idea",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.antecedent-continuation",
+      "kind": "theme-type",
+      "name": "hybrid: antecedent and continuation",
+      "content": {
+        "code": "antecedent-continuation",
+        "beginning": "omt.function.antecedent",
+        "ending": "omt.function.continuation",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "first"
+          },
+          {
+            "name": "fragment 1",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 2",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "an antecedent can be followed by a continuation"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "contrasting idea",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "fragment 1",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "fragment 2",
+              "start": 5,
+              "end": 6
+            },
+            {
+              "name": "cadential",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.antecedent-cadential",
+      "kind": "theme-type",
+      "name": "hybrid: antecedent and cadential",
+      "content": {
+        "code": "antecedent-cadential",
+        "beginning": "omt.function.antecedent",
+        "ending": "omt.function.cadential",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "first"
+          },
+          {
+            "name": "cadential 1",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential 2",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "an antecedent can be followed by a cadential subphrase"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "contrasting idea",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "cadential 1",
+              "start": 4,
+              "end": 6
+            },
+            {
+              "name": "cadential 2",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.compound-basic-idea-continuation",
+      "kind": "theme-type",
+      "name": "hybrid: compound basic idea and continuation",
+      "content": {
+        "code": "compound-basic-idea-continuation",
+        "beginning": "omt.function.compound-basic-idea",
+        "ending": "omt.function.continuation",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 1",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "fragment 2",
+            "function": "omt.function.fragment",
+            "slot": "continuation",
+            "half": "ending",
+            "units": 1,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "a compound basic idea can be followed by a continuation"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "contrasting idea",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "fragment 1",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "fragment 2",
+              "start": 5,
+              "end": 6
+            },
+            {
+              "name": "cadential",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.compound-basic-idea-consequent",
+      "kind": "theme-type",
+      "name": "hybrid: compound basic idea and consequent",
+      "content": {
+        "code": "compound-basic-idea-consequent",
+        "beginning": "omt.function.compound-basic-idea",
+        "ending": "omt.function.consequent",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "consequent basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "ending",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "consequent contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "a compound basic idea can be followed by a consequent"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "contrasting idea",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "consequent basic idea",
+              "start": 4,
+              "end": 6
+            },
+            {
+              "name": "consequent contrasting idea",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.compound-basic-idea-cadential",
+      "kind": "theme-type",
+      "name": "hybrid: compound basic idea and cadential",
+      "content": {
+        "code": "compound-basic-idea-cadential",
+        "beginning": "omt.function.compound-basic-idea",
+        "ending": "omt.function.cadential",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential 1",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential 2",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "a compound basic idea can be followed by a cadential subphrase"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "contrasting idea",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "cadential 1",
+              "start": 4,
+              "end": 6
+            },
+            {
+              "name": "cadential 2",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.presentation-consequent",
+      "kind": "theme-type",
+      "name": "hybrid: presentation and consequent",
+      "content": {
+        "code": "presentation-consequent",
+        "beginning": "omt.function.presentation",
+        "ending": "omt.function.consequent",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "repetition",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "consequent basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "ending",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "consequent contrasting idea",
+            "function": "omt.function.contrasting-idea",
+            "slot": "contrasting",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "a presentation can be followed by a consequent"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "repetition",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "consequent basic idea",
+              "start": 4,
+              "end": 6
+            },
+            {
+              "name": "consequent contrasting idea",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.theme-type.presentation-cadential",
+      "kind": "theme-type",
+      "name": "hybrid: presentation and cadential",
+      "content": {
+        "code": "presentation-cadential",
+        "beginning": "omt.function.presentation",
+        "ending": "omt.function.cadential",
+        "ideas": [
+          {
+            "name": "basic idea",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "repetition",
+            "function": "omt.function.basic-idea",
+            "slot": "basic",
+            "half": "beginning",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential 1",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "none"
+          },
+          {
+            "name": "cadential 2",
+            "function": "omt.function.cadential-idea",
+            "slot": "cadential",
+            "half": "ending",
+            "units": 2,
+            "cadence": "final"
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 3,
+          "section": "Hybrid Possibilities and Examples",
+          "note": "a presentation can be followed by a cadential subphrase"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "bars": 8,
+          "ideas": [
+            {
+              "name": "basic idea",
+              "start": 0,
+              "end": 2
+            },
+            {
+              "name": "repetition",
+              "start": 2,
+              "end": 4
+            },
+            {
+              "name": "cadential 1",
+              "start": 4,
+              "end": 6
+            },
+            {
+              "name": "cadential 2",
+              "start": 6,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}
