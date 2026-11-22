@@ -16,11 +16,19 @@ ursatz_test(statics COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-statics.sh a
 ursatz_test(hearing_boundary COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-hearing.sh)
 ursatz_test(frontend_theory COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-frontend-theory.sh)
 ursatz_test(reach COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-reach.sh ${CMAKE_BINARY_DIR}/reach-scan LABELS slow)
+# The layer table and primitive checks, each on a temporary tree with a planted violation (tests/check_self_test.py): the check fails on it and passes without it.
+ursatz_test(check_layer_table_self_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_self_test.py layer ${CMAKE_SOURCE_DIR})
+ursatz_test(check_primitives_self_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_self_test.py primitives ${CMAKE_SOURCE_DIR})
 # Each application library exports only the names of its export file (R-640).
 if(URSATZ_NM AND URSATZ_LOCALIZE_EXPORTS)
     ursatz_test(app_exports COMMAND ${CMAKE_COMMAND} -DNM=${URSATZ_NM}
         "-DCHECKS=$<TARGET_FILE:ursatz_analyzer>|${CMAKE_SOURCE_DIR}/analyzer/src/exports.txt;$<TARGET_FILE:ursatz_composer>|${CMAKE_SOURCE_DIR}/composer/src/exports.txt;$<TARGET_FILE:ursatz_workshop>|${CMAKE_SOURCE_DIR}/workshop/src/exports.txt"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/check_exports.cmake)
+    # The check itself: a library with two functions, an export file that lists both, one that leaves one out and one that names another.
+    ursatz_test_library(exports_self_test SOURCES self_test/exports_self_test.c)
+    ursatz_test(check_exports_self_test COMMAND ${CMAKE_COMMAND} -DNM=${URSATZ_NM} -DLIBRARY=$<TARGET_FILE:exports_self_test>
+        -DSCRIPT=${CMAKE_CURRENT_SOURCE_DIR}/check_exports.cmake -DWORK=${CMAKE_CURRENT_BINARY_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_exports_self_test.cmake)
 else()
     message(STATUS "Ursatz tests: app_exports is not registered (needs nm and URSATZ_LOCALIZE_EXPORTS)")
 endif()
