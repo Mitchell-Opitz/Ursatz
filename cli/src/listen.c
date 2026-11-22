@@ -540,8 +540,9 @@ static cJSON *theme_request_from_motive(const Options *options, const cJSON *doc
 
 /* One theme: the request composed, with its MIDI, MusicXML and API response written. */
 static int make_theme(const Options *options, unsigned long index, unsigned long seed, const cJSON *preferences,
-                      const cJSON *motif_document, const cJSON *theme_request, Sample *sample) {
+                      const cJSON *motif_document, const cJSON *theme_request, cJSON *avoid, Sample *sample) {
     cJSON *request = NULL;
+    cJSON *kept = NULL; /* the generated motif, which a varied batch (R-722) hands to the themes after this one */
     if (theme_request) {
         request = cJSON_Duplicate(theme_request, true);
         if (request && !(add_brief(request, options) && add_sample(request, seed, preferences))) {
@@ -552,7 +553,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         request = theme_request_from_motive(options, motif_document, seed, preferences);
     } else {
         CliResponse drawn;
-        UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences, NULL), &drawn);
+        UrsatzStatus status = call("random_motive", random_motive_request(options, seed, preferences, avoid), &drawn);
         if (status != URSATZ_OK) {
             refuse(sample, status, &drawn.error);
             cli_response_destroy(&drawn);
@@ -561,12 +562,15 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         cJSON *document = cJSON_Parse(drawn.json);
         cli_response_destroy(&drawn);
         const cJSON *first = document ? cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0) : NULL;
+        const cJSON *drawn_motive = cJSON_GetObjectItemCaseSensitive(first, "motive");
+        kept = avoid && drawn_motive ? cJSON_Duplicate(drawn_motive, true) : NULL;
         CliResponse analyzed;
         status = analyze_motive(cJSON_GetObjectItemCaseSensitive(first, "motive"), &analyzed);
         cJSON_Delete(document);
         if (status != URSATZ_OK) {
             refuse(sample, status, &analyzed.error);
             cli_response_destroy(&analyzed);
+            cJSON_Delete(kept);
             return 0;
         }
         cJSON *analysis = cJSON_Parse(analyzed.json);
@@ -576,6 +580,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
     }
     if (!request) {
         snprintf(sample->status, sizeof sample->status, "refused: the theme request could not be built");
+        cJSON_Delete(kept);
         return 0;
     }
     CliResponse response;
@@ -583,6 +588,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
     if (status != URSATZ_OK) {
         refuse(sample, status, &response.error);
         cli_response_destroy(&response);
+        cJSON_Delete(kept);
         return 0;
     }
     int result = write_sample_file(options, index, ".mid", response.midi, response.midi_size, sample);
@@ -596,7 +602,16 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
     if (result == 0) {
         sample->ok = true;
         snprintf(sample->status, sizeof sample->status, "ok");
+        if (kept) {
+            while (cJSON_GetArraySize(avoid) >= LISTEN_AVOID_MAX) {
+                cJSON_DeleteItemFromArray(avoid, 0);
+            }
+            if (cJSON_AddItemToArray(avoid, kept)) {
+                kept = NULL;
+            }
+        }
     }
+    cJSON_Delete(kept);
     return result;
 }
 
@@ -885,7 +900,7 @@ int run_listen(const CliArgs *args) {
     }
     Manifest manifest = {file, &options, sent};
     unsigned long written = 0;
-    /* A varied batch (settings with candidates.variety above 0, R-673) collects its motives to hand to the samples after them. */
+    /* A varied batch (settings with candidates.variety above 0, R-673, themes R-722) collects its motives to hand to the samples after them. */
     cJSON *avoid = NULL;
     for (unsigned long i = 0; status == 0 && i < options.count; i++) {
         Sample sample;
@@ -900,11 +915,13 @@ int run_listen(const CliArgs *args) {
         }
         manifest.preferences = data.session ? sample_preferences : sent;
         const cJSON *variety = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(manifest.preferences, "candidates"), "variety");
-        if (status == 0 && !avoid && !options.themes && cJSON_IsNumber(variety) && variety->valuedouble > 0) {
+        /* Themes made from a motif or a request of the user have no generated motif to vary. */
+        bool generated = !options.themes || (!motif_document && !theme_request);
+        if (status == 0 && !avoid && generated && cJSON_IsNumber(variety) && variety->valuedouble > 0) {
             avoid = cJSON_CreateArray();
         }
         if (status == 0) {
-            status = options.themes ? make_theme(&options, i + 1, options.seed + i, sample_preferences, motif_document, theme_request, &sample)
+            status = options.themes ? make_theme(&options, i + 1, options.seed + i, sample_preferences, motif_document, theme_request, avoid, &sample)
                                     : make_motif(&options, i + 1, options.seed + i, sample_preferences, variety && avoid ? avoid : NULL, &sample);
         }
         if (status == 0) {
