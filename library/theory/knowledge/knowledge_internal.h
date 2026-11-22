@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 #include "theory/knowledge/instrument.h"
+#include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/knowledge/vocabulary_entry.h"
 
@@ -31,6 +32,15 @@ typedef struct {
     bool has_ensemble;
     VocabularyEntry vocabulary;
     bool has_vocabulary;
+    FormalFunction function;
+    bool has_function;
+    const char *harmony_targets[FORMAL_HARMONY_MAX]; /* the ids a formal function names, resolved once every entry is read */
+    const char *against_target;
+    ThemeType theme_type;
+    bool has_theme_type;
+    const char *beginning_target;
+    const char *ending_target;
+    const char *idea_targets[THEME_TYPE_IDEA_MAX];
     EnsembleSlot *ensemble_slots; /* the ensemble's slots: the template points into it */
     const char **aliases; /* the entry's aliases, in file order */
     size_t alias_count;
@@ -70,6 +80,34 @@ const char *knowledge_string_of(const cJSON *item);
 
 /* True for an integer item from `low` to `high`. */
 bool knowledge_in_range(const cJSON *item, int low, int high);
+
+/* True for lowercase letter words joined by single `separator` characters: "minor" (any separator), "harmonic minor" (' '). */
+bool knowledge_lowercase_words(const char *text, char separator);
+
+/* The slot of the entry with this id in a built snapshot (sorted by id), or NULL. */
+const Slot *knowledge_find_slot(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* Reads the non-empty string content.<name> into *out (owned by the slot), or refuses naming the field. */
+KnowledgeStatus knowledge_read_text(Slot *slot, const cJSON *content, const char *name, const char **out, const char *path,
+                                    char *message, size_t message_size);
+
+/* The index of `text` among `count` words, or -1 (also for NULL). */
+int knowledge_word_index(const char *text, const char *const *words, size_t count);
+
+/* Reads content.<name> as one of `words` into *index, or refuses naming the field with `problem` ("missing" when absent). */
+KnowledgeStatus knowledge_read_word(Slot *slot, const cJSON *content, const char *name, const char *const *words, size_t count,
+                                    const char *problem, int *index, const char *path, char *message, size_t message_size);
+
+/*
+ * knowledge_form.c: reads the fields of a `function` entry of subtype formal-function, or of a `theme-type` entry, into the slot
+ * (the caller sets the id and name first), keeping the ids they name; knowledge_form_link points them at the entries, once every
+ * entry is read and sorted, or refuses naming the field. Both do nothing for a slot of another kind.
+ */
+KnowledgeStatus knowledge_form_read_function(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
+                                             size_t message_size);
+KnowledgeStatus knowledge_form_read_theme_type(Slot *slot, const cJSON *entry, const char *path, char *message,
+                                               size_t message_size);
+KnowledgeStatus knowledge_form_link(const KnowledgeSnapshot *snapshot, Slot *slot, char *message, size_t message_size);
 
 /*
  * knowledge_vocabulary.c: reads the fields of a `vocabulary` entry of this subtype into slot->vocabulary (the caller sets its id and

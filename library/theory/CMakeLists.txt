@@ -13,6 +13,7 @@ add_library(ursatz_theory
     style/style_model_build.c
     rules/rule_table.c
     knowledge/instrument.c
+    knowledge/knowledge_form.c
     knowledge/knowledge_snapshot.c
     knowledge/knowledge_vocabulary.c
     vocabulary/applied_chord_kind.c
@@ -174,6 +175,7 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/subphrase_role.h
         theory/vocabulary/texture_rules.h
         theory/vocabulary/voice_part.h
+        theory/knowledge/form_entry.h
         theory/knowledge/instrument.h
         theory/knowledge/knowledge_snapshot.h
         theory/knowledge/relation.h

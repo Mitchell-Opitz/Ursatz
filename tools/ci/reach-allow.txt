@@ -18,6 +18,7 @@ library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-posit
 library/theory/harmony/harmony_cadence_kinds.c harmony_cadence_kind_at  # the vocabulary pin test walks the table; its tests call it
 library/theory/harmony/harmony_cadence_kinds.c harmony_cadence_kind_count  # the vocabulary pin test walks the table; its tests call it
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_theme_type_of  # B5 reads the theme types in grow; B5 deletes this row; its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_vocabulary  # B6 reads the progression types through the formal functions; its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 

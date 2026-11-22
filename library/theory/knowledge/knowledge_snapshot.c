@@ -127,7 +127,7 @@ const char *knowledge_string_of(const cJSON *item) {
 }
 
 /* Lowercase letter words joined by `separator`: "minor", "harmonic minor" (' ') or "neo-riemannian" ('-'). */
-static bool lowercase_words(const char *text, char separator) {
+bool knowledge_lowercase_words(const char *text, char separator) {
     size_t length = strlen(text);
     if (length == 0 || text[0] == separator || text[length - 1] == separator) {
         return false;
@@ -255,7 +255,7 @@ static KnowledgeStatus read_material_details(Slot *slot, const cJSON *entry, con
     material->key_word = slot->entry.name;
     if (key_word != NULL) {
         const char *text = knowledge_string_of(key_word);
-        if (text == NULL || !lowercase_words(text, ' ')) {
+        if (text == NULL || !knowledge_lowercase_words(text, ' ')) {
             knowledge_fail(message, message_size, path, id, "content.key_word", "not lowercase words");
             return KNOWLEDGE_ERR_FIELD;
         }
@@ -267,7 +267,7 @@ static KnowledgeStatus read_material_details(Slot *slot, const cJSON *entry, con
     const cJSON *family = knowledge_member(content, "family");
     if (family != NULL) {
         const char *text = knowledge_string_of(family);
-        if (text == NULL || !lowercase_words(text, '-')) {
+        if (text == NULL || !knowledge_lowercase_words(text, '-')) {
             knowledge_fail(message, message_size, path, id, "content.family", "not lowercase words joined by hyphens");
             return KNOWLEDGE_ERR_FIELD;
         }
@@ -392,6 +392,42 @@ static KnowledgeStatus read_anchor(Slot *slot, const cJSON *content, const char 
 
 bool knowledge_in_range(const cJSON *item, int low, int high) {
     return knowledge_is_integer(item) && item->valueint >= low && item->valueint <= high;
+}
+
+KnowledgeStatus knowledge_read_text(Slot *slot, const cJSON *content, const char *name, const char **out, const char *path,
+                                    char *message, size_t message_size) {
+    const char *text = knowledge_string_of(knowledge_member(content, name));
+    if (text == NULL) {
+        char field[64];
+        snprintf(field, sizeof(field), "content.%s", name);
+        knowledge_fail(message, message_size, path, slot->entry.id, field,
+                       knowledge_member(content, name) == NULL ? "missing" : "not a non-empty string");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    *out = knowledge_own(slot, text);
+    return *out != NULL ? KNOWLEDGE_OK : KNOWLEDGE_ERR_ALLOC;
+}
+
+int knowledge_word_index(const char *text, const char *const *words, size_t count) {
+    for (size_t i = 0; text != NULL && i < count; i++) {
+        if (strcmp(text, words[i]) == 0) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+KnowledgeStatus knowledge_read_word(Slot *slot, const cJSON *content, const char *name, const char *const *words, size_t count,
+                                    const char *problem, int *index, const char *path, char *message, size_t message_size) {
+    *index = knowledge_word_index(knowledge_string_of(knowledge_member(content, name)), words, count);
+    if (*index < 0) {
+        char field[64];
+        snprintf(field, sizeof(field), "content.%s", name);
+        knowledge_fail(message, message_size, path, slot->entry.id, field,
+                       knowledge_member(content, name) == NULL ? "missing" : problem);
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    return KNOWLEDGE_OK;
 }
 
 static KnowledgeStatus read_tonal(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
@@ -761,6 +797,16 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
     } else if (strcmp(kind, "instrument") == 0) {
         knowledge_fail(message, message_size, path, slot->entry.id, "subtype", "not instrument or ensemble");
         return KNOWLEDGE_ERR_FIELD;
+    } else if (strcmp(kind, "function") == 0) {
+        slot->function.id = slot->entry.id;
+        slot->function.name = slot->entry.name;
+        status = knowledge_form_read_function(slot, entry, subtype, path, message, message_size);
+        slot->has_function = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "theme-type") == 0) {
+        slot->theme_type.id = slot->entry.id;
+        slot->theme_type.name = slot->entry.name;
+        status = knowledge_form_read_theme_type(slot, entry, path, message, message_size);
+        slot->has_theme_type = status == KNOWLEDGE_OK;
     } else if (strcmp(kind, "vocabulary") == 0) {
         slot->vocabulary.id = slot->entry.id;
         slot->vocabulary.name = slot->entry.name;
@@ -911,12 +957,11 @@ static int compare_slots(const void *a, const void *b) {
     return strcmp(((const Slot *)a)->entry.id, ((const Slot *)b)->entry.id);
 }
 
-static const Slot *find_slot(const KnowledgeSnapshot *snapshot, const char *id);
 
 /* The material an entry names (a link or a relation's material): the slot's, or the problem. */
 static const PitchMaterial *linked_material(const KnowledgeSnapshot *snapshot, const char *target, const char *what,
                                             char *problem, size_t problem_size) {
-    const Slot *found = find_slot(snapshot, target);
+    const Slot *found = knowledge_find_slot(snapshot, target);
     if (found == NULL || !found->has_material) {
         snprintf(problem, problem_size, "%s %s is not a pitch material", what, target);
         return NULL;
@@ -965,8 +1010,12 @@ static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message,
             knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.category", "no texture entry has that code");
             return KNOWLEDGE_ERR_FIELD;
         }
+        KnowledgeStatus linked = knowledge_form_link(snapshot, slot, message, message_size);
+        if (linked != KNOWLEDGE_OK) {
+            return linked;
+        }
         for (size_t s = 0; slot->has_ensemble && s < slot->ensemble.slot_count; s++) {
-            const Slot *found = find_slot(snapshot, slot->ensemble_slots[s].instrument);
+            const Slot *found = knowledge_find_slot(snapshot, slot->ensemble_slots[s].instrument);
             if (found == NULL || !found->has_instrument) {
                 knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.slots", "an ensemble slot's instrument is not an instrument entry");
                 return KNOWLEDGE_ERR_FIELD;
@@ -1041,7 +1090,7 @@ const KnowledgeEntry *knowledge_snapshot_entry_at(const KnowledgeSnapshot *snaps
     return snapshot != NULL && index < snapshot->count ? &snapshot->slots[index].entry : NULL;
 }
 
-static const Slot *find_slot(const KnowledgeSnapshot *snapshot, const char *id) {
+const Slot *knowledge_find_slot(const KnowledgeSnapshot *snapshot, const char *id) {
     if (snapshot == NULL || id == NULL) {
         return NULL;
     }
@@ -1063,12 +1112,12 @@ static const Slot *find_slot(const KnowledgeSnapshot *snapshot, const char *id) 
 }
 
 const KnowledgeEntry *knowledge_snapshot_entry(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL ? &slot->entry : NULL;
 }
 
 const PitchMaterial *knowledge_snapshot_material(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_material ? &slot->material : NULL;
 }
 
@@ -1127,7 +1176,7 @@ const PitchMaterial *knowledge_snapshot_material_named(const KnowledgeSnapshot *
 }
 
 const ChordType *knowledge_snapshot_chord_type(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_chord_type ? &slot->chord_type : NULL;
 }
 
@@ -1153,7 +1202,7 @@ const ChordType *knowledge_snapshot_chord_type_of(const KnowledgeSnapshot *snaps
 }
 
 const Relation *knowledge_snapshot_relation(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_relation ? &slot->relation : NULL;
 }
 
@@ -1185,16 +1234,26 @@ const Relation *knowledge_snapshot_relation_named(const KnowledgeSnapshot *snaps
 }
 
 const Instrument *knowledge_snapshot_instrument(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_instrument ? &slot->instrument : NULL;
 }
 
 const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_ensemble ? &slot->ensemble : NULL;
 }
 
 const VocabularyEntry *knowledge_snapshot_vocabulary(const KnowledgeSnapshot *snapshot, const char *id) {
-    const Slot *slot = find_slot(snapshot, id);
+    const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_vocabulary ? &slot->vocabulary : NULL;
+}
+
+const ThemeType *knowledge_snapshot_theme_type_of(const KnowledgeSnapshot *snapshot, const char *beginning_code, const char *ending_code) {
+    for (size_t i = 0; snapshot != NULL && beginning_code != NULL && ending_code != NULL && i < snapshot->count; i++) {
+        const ThemeType *type = snapshot->slots[i].has_theme_type ? &snapshot->slots[i].theme_type : NULL;
+        if (type != NULL && strcmp(type->beginning->code, beginning_code) == 0 && strcmp(type->ending->code, ending_code) == 0) {
+            return type;
+        }
+    }
+    return NULL;
 }

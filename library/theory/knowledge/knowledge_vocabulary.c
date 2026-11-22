@@ -21,28 +21,14 @@ static bool code_text(const char *text) {
     return true;
 }
 
-static KnowledgeStatus read_text(Slot *slot, const cJSON *content, const char *name, const char **out, const char *path,
-                                 char *message, size_t message_size) {
-    const char *text = knowledge_string_of(knowledge_member(content, name));
-    if (text == NULL) {
-        char field[64];
-        snprintf(field, sizeof(field), "content.%s", name);
-        knowledge_fail(message, message_size, path, slot->entry.id, field,
-                       knowledge_member(content, name) == NULL ? "missing" : "not a non-empty string");
-        return KNOWLEDGE_ERR_FIELD;
-    }
-    *out = knowledge_own(slot, text);
-    return *out != NULL ? KNOWLEDGE_OK : KNOWLEDGE_ERR_ALLOC;
-}
-
 static KnowledgeStatus read_cadence_kind(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
     VocabularyCadence *cadence = &slot->vocabulary.cadence;
-    KnowledgeStatus status = read_text(slot, content, "label", &cadence->label, path, message, message_size);
+    KnowledgeStatus status = knowledge_read_text(slot, content, "label", &cadence->label, path, message, message_size);
     if (status == KNOWLEDGE_OK) {
-        status = read_text(slot, content, "abbreviation", &cadence->abbreviation, path, message, message_size);
+        status = knowledge_read_text(slot, content, "abbreviation", &cadence->abbreviation, path, message, message_size);
     }
     if (status == KNOWLEDGE_OK) {
-        status = read_text(slot, content, "core", &cadence->core, path, message, message_size);
+        status = knowledge_read_text(slot, content, "core", &cadence->core, path, message, message_size);
     }
     if (status != KNOWLEDGE_OK) {
         return status;
@@ -73,49 +59,26 @@ static KnowledgeStatus read_cadence_kind(Slot *slot, const cJSON *content, const
     return KNOWLEDGE_OK;
 }
 
-/* The index of `text` in `words` (count entries), or -1 when it is none of them. */
-static int word_index(const char *text, const char *const *words, size_t count) {
-    for (size_t i = 0; text != NULL && i < count; i++) {
-        if (strcmp(text, words[i]) == 0) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
-
-static KnowledgeStatus read_word(Slot *slot, const cJSON *content, const char *name, const char *const *words, size_t count,
-                                 const char *problem, int *index, const char *path, char *message, size_t message_size) {
-    *index = word_index(knowledge_string_of(knowledge_member(content, name)), words, count);
-    if (*index < 0) {
-        char field[64];
-        snprintf(field, sizeof(field), "content.%s", name);
-        knowledge_fail(message, message_size, path, slot->entry.id, field,
-                       knowledge_member(content, name) == NULL ? "missing" : problem);
-        return KNOWLEDGE_ERR_FIELD;
-    }
-    return KNOWLEDGE_OK;
-}
-
 static KnowledgeStatus read_embellishment(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
     static const char *const MOTIONS[] = {"step", "leap", "static", "none"};
     static const char *const DIRECTIONS[] = {"same", "opposite", "up", "down", "none"};
     static const char *const METRICS[] = {"strong", "weak", "any"};
     VocabularyEmbellishment *tone = &slot->vocabulary.embellishment;
     int index = 0;
-    KnowledgeStatus status = read_word(slot, content, "approach", MOTIONS, 4, "not step, leap, static or none", &index, path, message,
+    KnowledgeStatus status = knowledge_read_word(slot, content, "approach", MOTIONS, 4, "not step, leap, static or none", &index, path, message,
                                        message_size);
     tone->approach = (EmbellishmentMotion)index;
     if (status == KNOWLEDGE_OK) {
-        status = read_word(slot, content, "leave", MOTIONS, 4, "not step, leap, static or none", &index, path, message, message_size);
+        status = knowledge_read_word(slot, content, "leave", MOTIONS, 4, "not step, leap, static or none", &index, path, message, message_size);
         tone->leave = (EmbellishmentMotion)index;
     }
     if (status == KNOWLEDGE_OK) {
-        status = read_word(slot, content, "direction", DIRECTIONS, 5, "not same, opposite, up, down or none", &index, path, message,
+        status = knowledge_read_word(slot, content, "direction", DIRECTIONS, 5, "not same, opposite, up, down or none", &index, path, message,
                            message_size);
         tone->direction = (EmbellishmentDirection)index;
     }
     if (status == KNOWLEDGE_OK) {
-        status = read_word(slot, content, "metric", METRICS, 3, "not strong, weak or any", &index, path, message, message_size);
+        status = knowledge_read_word(slot, content, "metric", METRICS, 3, "not strong, weak or any", &index, path, message, message_size);
         tone->metric = (EmbellishmentMetric)index;
     }
     return status;
@@ -124,7 +87,7 @@ static KnowledgeStatus read_embellishment(Slot *slot, const cJSON *content, cons
 KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
                                           size_t message_size) {
     static const char *const SUBTYPES[] = {"cadence-kind", "embellishment", "texture", "progression-type", "function"};
-    int index = word_index(subtype, SUBTYPES, 5);
+    int index = knowledge_word_index(subtype, SUBTYPES, 5);
     if (index < 0) {
         knowledge_fail(message, message_size, path, slot->entry.id, "subtype",
                        subtype == NULL ? "missing" : "not cadence-kind, embellishment, texture, progression-type or function");
@@ -152,7 +115,7 @@ KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const 
     case VOCABULARY_EMBELLISHMENT:
         return read_embellishment(slot, content, path, message, message_size);
     case VOCABULARY_TEXTURE:
-        return read_text(slot, content, "category", &slot->vocabulary.texture.category, path, message, message_size);
+        return knowledge_read_text(slot, content, "category", &slot->vocabulary.texture.category, path, message, message_size);
     default:
         return KNOWLEDGE_OK;
     }

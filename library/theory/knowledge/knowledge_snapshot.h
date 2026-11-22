@@ -5,6 +5,7 @@
 
 #include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
+#include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/relation.h"
 #include "theory/knowledge/vocabulary_entry.h"
@@ -15,8 +16,8 @@
  * two snapshots built in one process are independent. The snapshot holds each entry's common fields and, for the pitch material,
  * chord type and relation kinds, what the entry says (every field the loader reads is checked, and a bad one refuses the build with
  * the file, the id and the field). The loaded kinds are the pitch material, the chord type, the relation, the instrument (its
- * two subtypes, instrument and ensemble) and the vocabulary (its five subtypes). Entries of other kinds are kept by their common
- * fields until their loaders exist.
+ * two subtypes, instrument and ensemble), the vocabulary (its five subtypes), the formal function (kind function, subtype
+ * formal-function) and the theme type. Entries of other kinds are kept by their common fields until their loaders exist.
  */
 
 typedef struct KnowledgeSnapshot KnowledgeSnapshot;
@@ -111,5 +112,11 @@ const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *sna
 
 /* The vocabulary entry (kind vocabulary, any of its five subtypes) with this id, or NULL when there is none or the entry is another kind. */
 const VocabularyEntry *knowledge_snapshot_vocabulary(const KnowledgeSnapshot *snapshot, const char *id);
+
+/*
+ * The theme type (kind theme-type) whose beginning and ending are the formal functions with these codes ("presentation" and
+ * "continuation": the library names of the theme shape table), or NULL when there is none.
+ */
+const ThemeType *knowledge_snapshot_theme_type_of(const KnowledgeSnapshot *snapshot, const char *beginning_code, const char *ending_code);
 
 #endif
