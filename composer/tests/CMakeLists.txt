@@ -96,6 +96,9 @@ add_dependencies(test_progression_cli ursatz)
 
 ursatz_test(test_motive LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# The motive tones: the base harmony, the tones constraint, the bar limit, the tone names and the chord numerals.
+ursatz_test(test_motive_tones LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_motive_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
