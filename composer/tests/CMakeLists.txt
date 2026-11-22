@@ -72,6 +72,8 @@ ursatz_test(test_render_plan LIBS ursatz_composer_engine composer_test_support D
 add_dependencies(test_render_plan ursatz)
 
 ursatz_test(test_fill_loop LIBS ursatz_composer_engine composer_test_support)
+# The registrations and the checkers of the operators the stages hand the fill loop.
+ursatz_test(test_operator_hooks LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test(test_candidate LIBS ursatz_composer_engine)
 
