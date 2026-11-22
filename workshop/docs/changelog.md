@@ -2,6 +2,10 @@
 
 Newest first. [Docs index](README.md).
 
+## P68 B6: the critic's judgments (2026-11)
+
+- **Critiques.** The format `ursatz-item-critiques` (`ratings/critiques/<item id>.json`); the commands `ratings.critique` and `ratings.verdict` (64 commands); the query `ratings.critiques`. A theme composed with `critic.rank` on keeps `result.critic` (the judgment and the rejected candidates) in its version's body. See [ratings](ratings.md).
+
 ## P66 B6: listening judgments (2026-11)
 
 - **Ratings.** The formats `ursatz-listening-session` and `ursatz-item-ratings`; the `ratings` commands (62 commands): `ratings.session`, `ratings.batch`, `ratings.rate`, `ratings.pick`, `ratings.rate-version` and `ratings.keep`; the queries `ratings.session`, `ratings.sessions` and `ratings.item`; the event `ratings-changed`. Keep as default sets a taste value only with the ids of the ratings and picks behind it. See [ratings](ratings.md).

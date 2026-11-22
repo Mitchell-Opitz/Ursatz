@@ -5,6 +5,8 @@ Judges candidates with the critic (R-721, [composer/docs/critic.md](../../compos
 ```
 ursatz critique <file>... [--settings <file>] [--format text|json]
 ursatz critique --rated <file> [--settings <file>] [--format text|json]
+ursatz critique item:<id>[@v<n>] [--settings <file>] [--note <text>] [--format text|json]
+ursatz critique --verdict <obs-id> agree|disagree item:<id> [--note <text>]
 ```
 
 ## Candidate files
@@ -45,6 +47,18 @@ today: match 2  miss 0  tie 27  of 29
 ```
 
 A verdict is `match` (the higher score is the one she rated higher), `miss`, `tie` (equal scores) or `unrated` (equal ratings; not counted in the totals). Today's ranking is a theme's own `score` when both files are themes, else a tie. `phases/P68-measure` in Claude Master holds the rated set of P68 and `make.sh`, which makes its files again.
+
+## An item of the data folder
+
+`ursatz --data <dir> critique item:<id>[@v<n>]` judges a version of a motif or a theme and keeps the judgment in the data folder (`ratings.critique`, R-723, [ratings](../../workshop/docs/ratings.md#the-critics-judgments-r-723)). The version is `@v<n>` or the item's current one; an older one is refused as changed since you read it (exit 2). The critic's settings are the item's resolved settings, or `--settings`; `--note` says why. It prints the critique's id with its score, then each observation with the id a verdict names:
+
+```
+crt-3f1a9c  score -73/66
+obs-0a77e2  bar -  rhythmic_monotony  bars 1 to 6 keep one rhythm
+obs-91c0b4  bar 3  open_ending  the last note (bar 3) is no longer than the line's mean note
+```
+
+`--format json` prints the answer (`{id, version, score, observations}`). `ursatz critique --verdict <obs-id> agree|disagree item:<id>` records whether you hear what the critic says, with `--note`, and prints the verdict's id (`vrd-...`); an observation the item's critiques do not hold exits 2. `ursatz --data <dir> history item:<id>` lists both.
 
 ## Exit status
 

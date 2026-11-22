@@ -5,6 +5,7 @@ Newest first. [Docs index](README.md).
 ## P68: the critic (2026-11)
 
 - **Critique.** `ursatz critique <file>...` judges candidate files (listen samples, plans, motives) as one set with the critic; `ursatz critique --rated <file>` judges a rated set pair by pair against her ratings and today's ranking ([cli-critique.md](cli-critique.md), R-721). New flag `--rated`. The command count is 32.
+- **Critique in the data folder.** `ursatz critique item:<id>[@v<n>]` keeps the critic's judgment of a version (`ratings.critique`); `ursatz critique --verdict <obs-id> agree|disagree item:<id>` records a verdict (`ratings.verdict`, R-723). New flag `--verdict`; `--note` also says why a critique.
 - **Listen plans.** `ursatz listen --what themes --plans` puts each theme's plan in its JSON. New flag `--plans`. A command line takes up to 16 inputs (it was 4).
 
 ## P66: ratings and exploring (2026-11)
