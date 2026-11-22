@@ -77,17 +77,17 @@ static void put_end(Track *track) {
 }
 
 static void write_file(const char *path, const Track *tracks, size_t track_count) {
-    FILE *file = fopen(path, "wb");
-    assert(file != NULL);
-    const unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 1, 0, (unsigned char)track_count, 0x01, 0xe0};
-    assert(fwrite(header, 1, sizeof header, file) == sizeof header);
+    const unsigned char *bodies[8];
+    size_t sizes[8];
+    unsigned char buf[8192];
+    assert(track_count <= 8);
     for (size_t t = 0; t < track_count; t++) {
-        const unsigned char chunk[] = {'M', 'T', 'r', 'k', 0, 0, (unsigned char)(tracks[t].size >> 8),
-                                       (unsigned char)(tracks[t].size & 0xff)};
-        assert(fwrite(chunk, 1, sizeof chunk, file) == sizeof chunk);
-        assert(fwrite(tracks[t].bytes, 1, tracks[t].size, file) == tracks[t].size);
+        bodies[t] = tracks[t].bytes;
+        sizes[t] = tracks[t].size;
     }
-    fclose(file);
+    size_t size = test_smf(buf, 1, 480, bodies, sizes, (uint16_t)track_count);
+    assert(size <= sizeof(buf));
+    assert(test_write_file(path, (const char *)buf, size));
 }
 
 static void expect_part(const ImportedScore *notes, size_t part, const char *id, const char *name, int program,

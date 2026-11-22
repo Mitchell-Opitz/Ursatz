@@ -277,16 +277,9 @@ static bool write_midi(const char *path, unsigned numerator, unsigned exponent, 
     const unsigned char end[] = {0x00, 0xFF, 0x2F, 0x00};
     memcpy(track + pos, end, sizeof(end));
     pos += sizeof(end);
-    unsigned char header[14] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, TICKS_PER_QUARTER >> 8, TICKS_PER_QUARTER & 0xff};
-    unsigned char chunk[8] = {'M', 'T', 'r', 'k', 0, 0, (unsigned char)(pos >> 8), (unsigned char)pos};
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fwrite(header, 1, sizeof(header), file) == sizeof(header) && fwrite(chunk, 1, sizeof(chunk), file) == sizeof(chunk) &&
-              fwrite(track, 1, pos, file) == pos;
-    fclose(file);
-    return ok;
+    unsigned char file_bytes[4096 + 64];
+    size_t file_size = test_smf_type0(file_bytes, TICKS_PER_QUARTER, track, pos);
+    return test_write_file(path, (const char *)file_bytes, file_size);
 }
 
 /* Four measures of 4/4: eighth-note triplets on the first two beats of the first, then quarter notes. */

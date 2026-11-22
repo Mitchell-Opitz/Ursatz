@@ -11,9 +11,6 @@
 #include <io/imported_score.h>
 #include <ursatz_analyzer_internal/analysis_document.h>
 
-/* A format 0 MIDI file with one track into buf; returns its size. */
-size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
-
 /* The member of an object; asserts that it exists. */
 const cJSON *test_json_require(const cJSON *object, const char *key);
 

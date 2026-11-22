@@ -1,3 +1,4 @@
+#include "ursatz_test.h"
 #include "io/midi_importer.h"
 
 #include <assert.h>
@@ -123,23 +124,14 @@ static void add_unmatched_note_on(TrackBuilder *t, uint32_t at, unsigned char ch
 
 static size_t build_smf(unsigned char *out, uint16_t format, uint16_t division, const TrackBuilder *tracks,
                         uint16_t track_count) {
-    size_t pos = 0;
-    const unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, (unsigned char)format,
-                                    (unsigned char)(track_count >> 8), (unsigned char)track_count,
-                                    (unsigned char)(division >> 8), (unsigned char)(division & 0xFF)};
-    memcpy(out + pos, header, sizeof(header));
-    pos += sizeof(header);
+    const unsigned char *bodies[16];
+    size_t sizes[16];
+    assert(track_count <= 16);
     for (uint16_t i = 0; i < track_count; i++) {
-        memcpy(out + pos, "MTrk", 4);
-        pos += 4;
-        out[pos++] = (unsigned char)(tracks[i].size >> 24);
-        out[pos++] = (unsigned char)(tracks[i].size >> 16);
-        out[pos++] = (unsigned char)(tracks[i].size >> 8);
-        out[pos++] = (unsigned char)tracks[i].size;
-        memcpy(out + pos, tracks[i].bytes, tracks[i].size);
-        pos += tracks[i].size;
+        bodies[i] = tracks[i].bytes;
+        sizes[i] = tracks[i].size;
     }
-    return pos;
+    return test_smf(out, format, division, bodies, sizes, track_count);
 }
 
 typedef struct {

@@ -6,6 +6,7 @@
 #include <io/imported_score.h>
 
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The tempo map on imported notes: a MIDI file with two tempos carries two regions, one with no tempo event carries

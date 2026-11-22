@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "ursatz_test.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/voice_reference.h"
 #include "model/identity/entity_id.h"
@@ -34,36 +35,6 @@ static bool same_pitch_identity(const PitchIdentity *a, const PitchIdentity *b) 
     const void *a_token = pitch_identity_token(a, &a_size);
     const void *b_token = pitch_identity_token(b, &b_size);
     return a_size == b_size && memcmp(a_token, b_token, a_size) == 0;
-}
-
-static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
-    memcpy(buf + *pos, bytes, len);
-    *pos += len;
-}
-
-static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                           (unsigned char)v};
-    append_bytes(buf, pos, b, 4);
-}
-
-static void append_u16(unsigned char *buf, size_t *pos, uint16_t v) {
-    unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
-    append_bytes(buf, pos, b, 2);
-}
-
-static size_t build_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body,
-                               size_t track_body_size) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 0);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, division);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track_body_size);
-    append_bytes(buf, &pos, track_body, track_body_size);
-    return pos;
 }
 
 static PitchIdentity *make_expected_pitch(uint8_t midi_note) {
@@ -131,7 +102,7 @@ static void test_spells_chromatic_scale_sharps_only(void) {
     assert(pos == sizeof(track));
 
     unsigned char buf[256];
-    size_t size = build_smf_type0(buf, 4, track, pos);
+    size_t size = test_smf_type0(buf, 4, track, pos);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -180,7 +151,7 @@ static void test_sequence_of_notes(void) {
     };
 
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -226,7 +197,7 @@ static void test_simultaneous_chord(void) {
     };
 
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -303,7 +274,7 @@ static void test_single_track_overlap_gets_interval_graph_colored_voices(void) {
         0x00, 0xFF, 0x2F, 0x00  /* end of track */
     };
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -342,7 +313,7 @@ static void test_multi_channel_import_gets_voices_by_track(void) {
         0x00, 0xFF, 0x2F, 0x00  /* end of track */
     };
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -362,24 +333,6 @@ static void test_multi_channel_import_gets_voices_by_track(void) {
     }
     free(events);
     free(pitch_values);
-}
-
-static size_t build_smf_type1_two_tracks(unsigned char *buf, uint16_t division, const unsigned char *track0_body,
-                                          size_t track0_size, const unsigned char *track1_body,
-                                          size_t track1_size) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, 2);
-    append_u16(buf, &pos, division);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track0_size);
-    append_bytes(buf, &pos, track0_body, track0_size);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track1_size);
-    append_bytes(buf, &pos, track1_body, track1_size);
-    return pos;
 }
 
 static void test_multi_track_single_channel_gets_per_track_voices(void) {
@@ -404,7 +357,9 @@ static void test_multi_track_single_channel_gets_per_track_voices(void) {
         0x00, 0xFF, 0x2F, 0x00  /* end of track */
     };
     unsigned char buf[256];
-    size_t size = build_smf_type1_two_tracks(buf, 96, rh_track, sizeof(rh_track), lh_track, sizeof(lh_track));
+    const unsigned char *tracks[2] = {rh_track, lh_track};
+    const size_t sizes[2] = {sizeof(rh_track), sizeof(lh_track)};
+    size_t size = test_smf(buf, 1, 96, tracks, sizes, 2);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -460,21 +415,9 @@ static void test_two_tracks_on_one_channel_each_get_voices_by_track(void) {
         0x00, 0xFF, 0x2F, 0x00  /* end of track */
     };
     unsigned char buf[256];
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, 3);
-    append_u16(buf, &pos, 96);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)sizeof(conductor));
-    append_bytes(buf, &pos, conductor, sizeof(conductor));
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)sizeof(melody));
-    append_bytes(buf, &pos, melody, sizeof(melody));
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)sizeof(bass));
-    append_bytes(buf, &pos, bass, sizeof(bass));
+    const unsigned char *tracks[3] = {conductor, melody, bass};
+    const size_t sizes[3] = {sizeof(conductor), sizeof(melody), sizeof(bass)};
+    size_t pos = test_smf(buf, 1, 96, tracks, sizes, 3);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -538,7 +481,7 @@ static void test_import_with_meter_defaults_to_four_four_without_a_time_signatur
         0x83, 0x60, 0x80, 0x3C, 0x40 /* delta 480: note-off at tick 480 */
     };
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 480, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -570,7 +513,7 @@ static void test_import_reads_time_signature(void) {
     memcpy(track + n, notes, sizeof(notes));
     n += sizeof(notes);
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, n);
+    size_t size = test_smf_type0(buf, 480, track, n);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -595,7 +538,7 @@ static void test_import_with_meter_reports_conflicting_time_signatures(void) {
     memcpy(track, TS_6_8, sizeof(TS_6_8));
     memcpy(track + sizeof(TS_6_8), TS_3_4, sizeof(TS_3_4));
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 480, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -636,7 +579,7 @@ static unsigned long first_region_tempo(const MidiTempoImport *tempo) {
 static void test_import_with_tempo_defaults_without_a_set_tempo(void) {
     unsigned char track[] = {0x00, 0x90, 0x3C, 0x64, 0x83, 0x60, 0x80, 0x3C, 0x40};
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 480, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -659,7 +602,7 @@ static void test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default(voi
     const unsigned char notes[] = {0x00, 0x90, 0x3C, 0x64, 0x83, 0x60, 0x80, 0x3C, 0x40};
     memcpy(track + sizeof(TEMPO_1000000), notes, sizeof(notes));
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 480, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -678,7 +621,7 @@ static void test_import_with_tempo_late_first_tempo_keeps_a_defaulted_start(void
     /* A tempo event at tick 480 (a quarter note): the default covers [0, 1/4). */
     unsigned char track[] = {0x83, 0x60, 0xFF, 0x51, 0x03, 0x0F, 0x42, 0x40};
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 480, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -706,7 +649,7 @@ static void test_import_tempo_leaves_note_times_unchanged(void) {
     memcpy(track + n, notes, sizeof(notes));
     n += sizeof(notes);
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, n);
+    size_t size = test_smf_type0(buf, 480, track, n);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
@@ -728,7 +671,7 @@ static void test_import_with_tempo_reports_conflicting_tempos(void) {
     memcpy(track, TEMPO_500000, sizeof(TEMPO_500000));
     memcpy(track + sizeof(TEMPO_500000), TEMPO_1000000, sizeof(TEMPO_1000000));
     unsigned char buf[128];
-    size_t size = build_smf_type0(buf, 480, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 480, track, sizeof(track));
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;

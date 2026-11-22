@@ -172,14 +172,13 @@ static bool write_midi(const Fixture *fixture, const char *path) {
     static const unsigned char end_of_track[] = {0x00, 0xff, 0x2f, 0x00};
     memcpy(track + t, end_of_track, sizeof(end_of_track));
     t += sizeof(end_of_track);
-    unsigned char head[22] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, (unsigned char)(division >> 8),
-                              (unsigned char)(division & 0xff), 'M', 'T', 'r', 'k', (unsigned char)(t >> 24),
-                              (unsigned char)(t >> 16), (unsigned char)(t >> 8), (unsigned char)t};
-    FILE *file = fopen(path, "wb");
-    bool ok = file && fwrite(head, 1, sizeof(head), file) == sizeof(head) && fwrite(track, 1, t, file) == t;
-    if (file) {
-        fclose(file);
+    unsigned char *file_bytes = malloc(t + 32);
+    bool ok = file_bytes != NULL;
+    if (ok) {
+        size_t file_size = test_smf_type0(file_bytes, (uint16_t)division, track, t);
+        ok = test_write_file(path, (const char *)file_bytes, file_size);
     }
+    free(file_bytes);
     free(track);
     free(events);
     return ok;

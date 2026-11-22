@@ -39,13 +39,9 @@ static bool write_motive_midi(const char *path) {
     static const unsigned char end[] = {0x00, 0xFF, 0x2F, 0x00};
     memcpy(track + n, end, sizeof end);
     n += sizeof end;
-    unsigned char header[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T', 'r', 'k', 0, 0, 0, (unsigned char)n};
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fwrite(header, 1, sizeof header, file) == sizeof header && fwrite(track, 1, n, file) == n;
-    return fclose(file) == 0 && ok;
+    unsigned char file[128];
+    size_t size = test_smf_type0(file, 480, track, n);
+    return test_write_file(path, (const char *)file, size);
 }
 
 /* Copies Bach 114 into a folder of its own and analyzes it into <name>_analyzed; the analyzed folder is the corpus. */

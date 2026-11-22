@@ -34,13 +34,6 @@ typedef struct {
     int pitch;
 } Note;
 
-static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                           (unsigned char)v};
-    memcpy(buf + *pos, b, 4);
-    *pos += 4;
-}
-
 /* Variable-length quantity; the fixtures stay under 2^14 ticks. */
 static size_t append_delta(unsigned char *track, size_t pos, int delta) {
     if (delta >= 128) {
@@ -91,21 +84,7 @@ static void write_fixture(const char *path, const Note *notes, size_t count) {
     pos += sizeof(end);
 
     unsigned char file[1100];
-    size_t size = 0;
-    memcpy(file + size, "MThd", 4);
-    size += 4;
-    append_u32(file, &size, 6);
-    file[size++] = 0;
-    file[size++] = 0;
-    file[size++] = 0;
-    file[size++] = 1;
-    file[size++] = 0;
-    file[size++] = BEAT;
-    memcpy(file + size, "MTrk", 4);
-    size += 4;
-    append_u32(file, &size, (uint32_t)pos);
-    memcpy(file + size, track, pos);
-    size += pos;
+    size_t size = test_smf_type0(file, BEAT, track, pos);
 
     FILE *out = fopen(path, "wb");
     assert(out != NULL);

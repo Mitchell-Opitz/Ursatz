@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <cJSON.h>
 
@@ -63,6 +64,16 @@ bool test_file_exists(const char *path);
 /* "<TMPDIR or /tmp>/ursatz_test_<pid>_<name>", a heap string the caller frees, so parallel test processes never
  * share a file. */
 char *test_temp_path(const char *name);
+
+/* ---- MIDI ------------------------------------------------------------------------------------------------- */
+
+/* A standard MIDI file into buf: the header (format, count tracks, division), then each track body behind its MTrk
+ * length. Returns its size; buf must hold 14 + 8 * count + the bodies. */
+size_t test_smf(unsigned char *buf, uint16_t format, uint16_t division, const unsigned char *const *tracks,
+                const size_t *sizes, uint16_t count);
+
+/* A format 0 file with one track: test_smf over one body. */
+size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
 
 /* ---- JSON ------------------------------------------------------------------------------------------------- */
 

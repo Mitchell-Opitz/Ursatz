@@ -102,6 +102,44 @@ bool test_write_file(const char *path, const char *data, size_t size) {
     return fclose(file) == 0 && ok;
 }
 
+static void smf_append(unsigned char *buf, size_t *pos, const void *bytes, size_t length) {
+    memcpy(buf + *pos, bytes, length);
+    *pos += length;
+}
+
+static void smf_append_u32(unsigned char *buf, size_t *pos, uint32_t value) {
+    const unsigned char bytes[4] = {(unsigned char)(value >> 24), (unsigned char)(value >> 16), (unsigned char)(value >> 8),
+                                    (unsigned char)value};
+    smf_append(buf, pos, bytes, 4);
+}
+
+static void smf_append_u16(unsigned char *buf, size_t *pos, uint16_t value) {
+    const unsigned char bytes[2] = {(unsigned char)(value >> 8), (unsigned char)value};
+    smf_append(buf, pos, bytes, 2);
+}
+
+size_t test_smf(unsigned char *buf, uint16_t format, uint16_t division, const unsigned char *const *tracks,
+                const size_t *sizes, uint16_t count) {
+    size_t pos = 0;
+    smf_append(buf, &pos, "MThd", 4);
+    smf_append_u32(buf, &pos, 6);
+    smf_append_u16(buf, &pos, format);
+    smf_append_u16(buf, &pos, count);
+    smf_append_u16(buf, &pos, division);
+    for (uint16_t t = 0; t < count; t++) {
+        smf_append(buf, &pos, "MTrk", 4);
+        smf_append_u32(buf, &pos, (uint32_t)sizes[t]);
+        smf_append(buf, &pos, tracks[t], sizes[t]);
+    }
+    return pos;
+}
+
+size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size) {
+    const unsigned char *tracks[1] = {track_body};
+    const size_t sizes[1] = {track_body_size};
+    return test_smf(buf, 0, division, tracks, sizes, 1);
+}
+
 bool test_file_exists(const char *path) {
     return access(path, F_OK) == 0;
 }
