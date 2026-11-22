@@ -55,10 +55,6 @@ void structure_destroy(Structure *structure) {
     free(structure);
 }
 
-const Entity *structure_entity(const Structure *structure) {
-    return structure->entity;
-}
-
 size_t structure_event_id_count(const Structure *structure) {
     return structure->event_id_count;
 }

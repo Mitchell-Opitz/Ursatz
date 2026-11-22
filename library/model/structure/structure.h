@@ -44,7 +44,6 @@ typedef enum {
 StructureResult structure_create(Entity *entity, EntityID **event_ids, size_t event_id_count, Structure **out);
 void structure_destroy(Structure *structure);
 
-const Entity *structure_entity(const Structure *structure);
 size_t structure_event_id_count(const Structure *structure);
 const EntityID *structure_event_id_at(const Structure *structure, size_t index);
 
