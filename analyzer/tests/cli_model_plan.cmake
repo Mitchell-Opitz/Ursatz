@@ -21,6 +21,8 @@ if(PYTHON)
     if(NOT bad EQUAL 0)
         message(FATAL_ERROR "the model plan does not match plan.v6.schema.json")
     endif()
+else()
+    message(STATUS "schema not checked: no python3 with jsonschema")
 endif()
 
 file(READ "${WORK}/model-plan.json" plan)
