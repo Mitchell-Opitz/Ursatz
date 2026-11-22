@@ -327,6 +327,7 @@ module tests-analysis-texture      library/analysis/tests/texture      root libr
 module tests-analysis-counterpoint library/analysis/tests/counterpoint root library/tests library/tests/support library
 module tests-analysis-galant       library/analysis/tests/galant       root library/tests library/tests/support library
 module tests-analysis-similarity   library/analysis/tests/similarity   root library/tests library/tests/support library
+module tests-analysis-dimension    library/analysis/tests/dimension    root library/tests library/tests/support library
 like tests-analysis-notes analysis-notes
 like tests-analysis-motive analysis-motive
 like tests-analysis-voices analysis-voices
@@ -337,6 +338,7 @@ like tests-analysis-texture analysis-texture
 like tests-analysis-counterpoint analysis-counterpoint
 like tests-analysis-galant analysis-galant
 like tests-analysis-similarity analysis-similarity
+like tests-analysis-dimension analysis-dimension
 uses tests-analysis-notes test-helpers
 uses tests-analysis-motive test-helpers
 uses tests-analysis-voices test-helpers
@@ -347,6 +349,7 @@ uses tests-analysis-texture test-helpers
 uses tests-analysis-counterpoint test-helpers
 uses tests-analysis-galant test-helpers
 uses tests-analysis-similarity test-helpers
+uses tests-analysis-dimension test-helpers
 uses tests-analysis-form chain -- form_test_util.h builds the chain's form input
 uses tests-analysis-meter io tests-io tests-theory-meter -- meter tests import MIDI and share the meter helpers
 uses tests-analysis-voices io tests-io tests-integration theory-meter -- the corpus voice separation imports MIDI and reads the beat grid
