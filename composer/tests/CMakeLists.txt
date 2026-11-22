@@ -157,6 +157,7 @@ ursatz_test(test_grow_half_cadence LIBS ursatz_composer_engine)
 # the test holds it to the baseline table in its source and prints the target (R-698).
 ursatz_test(test_grow_sentence_heard LIBS ursatz_composer_engine composer_test_support)
 ursatz_test(test_theme_shape LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_theme_shape_entries LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test(test_grow_layout LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test_executable(test_grow_uneven LIBS ursatz_composer_engine composer_test_support)
 # The fast case: seed 1 of each construction, the refusals and the plan round trip. The slow case grows seeds 1 to 10.
