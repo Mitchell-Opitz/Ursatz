@@ -372,6 +372,8 @@ add_dependencies(test_plan_cli ursatz)
 
 # Chords given at exact onsets (given.h plan_give_chords).
 ursatz_test(test_given_chords LIBS ursatz_composer_engine)
+# The regions and the given harmony of piece.h, and its name tables and basic idea.
+ursatz_test(test_piece_regions LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test_executable(test_middle_out LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Given material (given.h): the placing calls and a quick run are quick; the sweeps (seeds 1 to 10) fail when a share
