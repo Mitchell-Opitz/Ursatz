@@ -223,7 +223,7 @@ ursatz_test(workshop_settings_resolve SOURCES test_settings_resolve.c LIBS ursat
 # one of workshop_formats' (the files the commands leave validate).
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands)
 ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS ursatz_workshop_internal ursatz_test_support
-    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    DEFINITIONS SETTINGS_TASTE_NONE="${URSATZ_FIXTURES_DIR}/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_settings_commands
     PROPERTIES FIXTURES_SETUP settings_commands_files)
 
@@ -231,7 +231,7 @@ ursatz_test(workshop_settings_commands SOURCES test_settings_commands.c LIBS urs
 # settings. Composes several themes: slow if it passes a minute.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
 ursatz_test(workshop_compose_settings SOURCES test_compose_settings.c LIBS ursatz_workshop_internal ursatz_test_support
-    DEFINITIONS SETTINGS_TASTE_NONE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/settings/taste-none.json"
+    DEFINITIONS SETTINGS_TASTE_NONE="${URSATZ_FIXTURES_DIR}/settings/taste-none.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_compose_settings)
 
 # Listening sessions and ratings (P66 B6): a session with two batches, ratings and a pick, keep as default citing them, the refusals, ratings of an item version.

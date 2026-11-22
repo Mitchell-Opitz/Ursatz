@@ -154,7 +154,7 @@ static void test_variants(void) {
 static void test_recognize(void) {
     ComposerResponse response;
     cJSON *request = cJSON_CreateObject();
-    assert(cJSON_AddItemToObject(request, "source", input_object(GUI "recognize-source.txt", "degrees")));
+    assert(cJSON_AddItemToObject(request, "source", input_object(GUI "variants-source.txt", "degrees")));
     assert(cJSON_AddItemToObject(request, "target", input_object(GUI "recognize-target.txt", "degrees")));
     assert(cJSON_AddStringToObject(request, "meter", "4/4") && cJSON_AddStringToObject(request, "key", "C major") &&
            cJSON_AddNumberToObject(request, "pickup", 0));

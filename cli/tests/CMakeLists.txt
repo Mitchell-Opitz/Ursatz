@@ -32,5 +32,5 @@ ursatz_test(cli_text_apply COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursat
 
 # A listening round (P66 B7, R-674): the none profile imported, a session, two batches of listen --session, rate with a pick and keep as default citing it.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cli_listening_round)
-ursatz_test(cli_listening_round COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+ursatz_test(cli_listening_round COMMAND ${CMAKE_COMMAND} -DURSATZ=$<TARGET_FILE:ursatz> -DFIXTURES=${URSATZ_FIXTURES_DIR}/settings
     -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_listening_round/work -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listening_round.cmake TIMEOUT 300)

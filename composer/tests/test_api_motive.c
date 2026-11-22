@@ -70,7 +70,7 @@ static void expect_snapshot(const ComposerResponse *response, const char *snapsh
 
 static void test_gui_shapes(void) {
     ComposerResponse response;
-    char *request = request_with_input(COMPOSER_FIXTURE_DIR "/gui/motive-notes.txt", "notes", NULL,
+    char *request = request_with_input(COMPOSER_FIXTURE_DIR "/motive_d_minor.txt", "notes", NULL,
                                        "{\"meter\":\"4/4\",\"key\":\"D minor\",\"pickup\":\"0\",\"harmony\":\"I V@3\","
                                        "\"features\":[\"a:0-2\"],\"role\":\"melodic\",\"tones\":[\"2=passing\"],\"api_version\":4}");
     assert(composer_api_motive(test_context(), request, NULL, &response) == URSATZ_OK);

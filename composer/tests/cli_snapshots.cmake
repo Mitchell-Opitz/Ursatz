@@ -196,7 +196,7 @@ run_case(random-motive json random-motive --mode minor --meter 3/4 --strategy dr
 set(gui "${FIXTURES}/gui")
 
 # Motive analysis of notes: meter, key, pickup, own harmony, a feature, a role and one tone override.
-run_case(motive-notes json motive "${gui}/motive-notes.txt" --input-format notes --meter 4/4 --key "D minor" --pickup 0
+run_case(motive-notes json motive "${FIXTURES}/motive_d_minor.txt" --input-format notes --meter 4/4 --key "D minor" --pickup 0
          --harmony "I V@3" --feature a:0-2 --role melodic --tone 2=passing --format json)
 # Motive analysis of a rhythm.
 run_case(motive-form-rhythm json motive "${gui}/motive-rhythm.txt" --form rhythm --meter 3/4 --pickup 1/4 --format json)
@@ -215,7 +215,7 @@ run_case(variants-basic json variants "${gui}/variants-source.txt" --input-forma
          --basic "${gui}/variants-basic.txt" --basic-format degrees --function beginning --function continuation
          --distance medium --count 4 --seed 3 --format json)
 # Recognize: the target is the source moved up one step of the scale.
-run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recognize-target.txt" --input-format degrees
+run_case(recognize json recognize "${gui}/variants-source.txt" "${gui}/recognize-target.txt" --input-format degrees
          --target-format degrees --meter 4/4 --key "C major" --pickup 0 --format json)
 # Random motives with a role (the style variant is covered by the API tests).
 run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
@@ -264,7 +264,7 @@ function(run_error_case name expected_status)
 endfunction()
 
 # A bad meter to motive.
-run_error_case(error-motive-meter 1 motive "${gui}/motive-notes.txt" --input-format notes --meter 5/3 --format json)
+run_error_case(error-motive-meter 1 motive "${FIXTURES}/motive_d_minor.txt" --input-format notes --meter 5/3 --format json)
 # An unknown key in a theme request.
 run_error_case(error-theme-key 1 theme "${gui}/theme-unknown-key.json" --seed 1)
 # A request member of the wrong type in a piece request (beats as text).
