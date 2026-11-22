@@ -142,6 +142,7 @@ module composer-counterpoint composer/src/counterpoint composer/src/include/ursa
 module composer-material composer/src/material composer/src/include/ursatz_composer/form_figure.h composer/src/include/ursatz_composer/form_return.h composer/src/include/ursatz_composer/given.h root composer/src composer/src/include composer/include
 module composer-grow composer/src/grow composer/src/include/ursatz_composer/grow_form.h composer/src/include/ursatz_composer/grow_types.h root composer/src composer/src/include composer/include
 module composer-check composer/src/check composer/src/include/ursatz_composer/analyzer_check.h composer/src/include/ursatz_composer/form_hear.h composer/src/include/ursatz_composer/key_hear.h composer/src/include/ursatz_composer/return_hear.h root composer/src composer/src/include composer/include
+module composer-critic composer/src/critic composer/src/include/ursatz_composer/critic.h root composer/src composer/src/include composer/include
 module composer-piece composer/src/piece composer/src/include/ursatz_composer/compose.h composer/src/include/ursatz_composer/grow.h composer/src/include/ursatz_composer/piece.h composer/src/include/ursatz_composer/piece_perform.h composer/src/include/ursatz_composer/piece_plan_keys.h composer/src/include/ursatz_composer/piece_reopen.h composer/src/include/ursatz_composer/regenerate.h composer/src/include/ursatz_composer/rejection.h composer/src/include/ursatz_composer/texture_check.h root composer/src composer/src/include composer/include
 module composer-candidates composer/src/candidates composer/src/include/ursatz_composer/compose_candidates.h composer/src/include/ursatz_composer/variations.h root composer/src composer/src/include composer/include
 module composer-explain composer/src/explain composer/src/include/ursatz_composer/explain.h root composer/src composer/src/include composer/include
@@ -173,7 +174,7 @@ target ursatz_realization realization
 target ursatz_plan plan
 target ursatz_reading reading
 target ursatz_text text
-staged model theory analysis chain io realization plan reading text analyzer-api analyzer composer-core composer-operators composer-grow composer-check composer-piece composer-candidates composer-explain composer-request
+staged model theory analysis chain io realization plan reading text analyzer-api analyzer composer-core composer-operators composer-grow composer-check composer-critic composer-piece composer-candidates composer-explain composer-request
 generated analyzer ursatz_analyzer_internal/version.h ursatz_analyzer_internal/producer_key.h
 generated chain producer_key.h chain/producer_key.h
 generated composer-util composer/composition_key.h
@@ -201,6 +202,7 @@ uses composer-counterpoint model theory plan composer-harmony composer-core
 uses composer-material model theory plan composer-harmony composer-melody composer-core
 uses composer-grow model theory analysis plan composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
 uses composer-check model theory plan reading analysis chain io composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
+uses composer-critic model theory plan composer-motive composer-core
 uses composer-piece model theory plan cjson composer-api composer-check composer-operators composer-grow composer-core
 uses composer-candidates model plan composer-piece composer-core common
 uses composer-explain theory plan composer-piece composer-check composer-core common

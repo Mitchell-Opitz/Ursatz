@@ -33,3 +33,11 @@ analyzer/src/links/motive_links.c motive_link_scope_add_corpus  # kept by A20261
 analyzer/src/links/motive_links.c motive_link_scope_failed_piece  # kept by A20261115-607 for P77 (corpus runs as jobs): the front end of the old --link-motives named the failed piece with it
 analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_scope_add_corpus, kept with it by A20261115-607 for P77
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_rule  # B2's critic reads its evaluators' parameters; B4 deletes this row, when the critique entry reaches the critic
+composer/src/critic/critic_line.c add_pair  # a helper of critic_line_from_render, reached with it (B4)
+composer/src/critic/critic_line.c critic_line_destroy  # the critic's line; B4's critique entry reaches it, which deletes this row
+composer/src/critic/critic_line.c critic_line_from_motive  # the critic's line; B4's critique entry reaches it, which deletes this row
+composer/src/critic/critic_line.c critic_line_from_render  # the critic's line; B4's critique entry reaches it, which deletes this row
+composer/src/critic/critic_line.c find_pairs  # a helper of critic_line_from_render, reached with it (B4)
+composer/src/critic/critic_line.c idea_named  # a helper of critic_line_from_render, reached with it (B4)
+composer/src/critic/critic_line.c melody_part  # a helper of critic_line_from_render, reached with it (B4)
+composer/src/critic/critic_line.c note_run  # a helper of critic_line_from_render, reached with it (B4)

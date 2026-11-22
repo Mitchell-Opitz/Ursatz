@@ -48,6 +48,7 @@ add_library(ursatz_composer_engine STATIC
     check/analyzer_check.c
     check/hearing.c
     check/key_hear.c
+    critic/critic_line.c
     explain/explain.c
     render/render.c
     render/movement_build.c
