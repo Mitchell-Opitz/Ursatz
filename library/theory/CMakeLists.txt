@@ -19,6 +19,7 @@ add_library(ursatz_theory
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
+    vocabulary/contrast_aspect.c
     vocabulary/key_change_extent.c
     vocabulary/motive_occurrence_kind.c
     vocabulary/motive_relation_step.c
