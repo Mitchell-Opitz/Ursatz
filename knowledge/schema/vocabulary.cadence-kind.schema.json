@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K4 vocabulary: a cadence kind (the rows of the Composer's and the analyzer's cadence table)",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "abbreviation",
+        "core",
+        "strength",
+        "conclusive"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z]+([ _-][a-z]+)*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "abbreviation": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,3}$"
+        },
+        "core": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strength": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 10
+        },
+        "conclusive": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

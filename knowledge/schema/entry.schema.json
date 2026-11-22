@@ -185,6 +185,7 @@
           "kind": {
             "enum": [
               "material",
+              "vocabulary",
               "relation",
               "instrument"
             ]

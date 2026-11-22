@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K4 vocabulary: an embellishing (non-chord) tone and how it is approached and left",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "code",
+        "approach",
+        "leave",
+        "direction",
+        "metric"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z]+([ _-][a-z]+)*$"
+        },
+        "approach": {
+          "enum": [
+            "step",
+            "leap",
+            "static",
+            "none"
+          ]
+        },
+        "leave": {
+          "enum": [
+            "step",
+            "leap",
+            "static",
+            "none"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "same",
+            "opposite",
+            "up",
+            "down",
+            "none"
+          ]
+        },
+        "metric": {
+          "enum": [
+            "strong",
+            "weak",
+            "any"
+          ]
+        }
+      }
+    }
+  }
+}

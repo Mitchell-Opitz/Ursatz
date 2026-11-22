@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K4 vocabulary: a texture and the category it belongs to",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "code",
+        "category"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z]+([ _-][a-z]+)*$"
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
