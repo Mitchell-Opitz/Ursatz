@@ -11,14 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -153,11 +148,7 @@ int main(int argc, char **argv) {
     g_port = "18779";
   }
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache data 2> nul");
-#else
   system("rm -rf library settings cache data");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 

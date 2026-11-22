@@ -10,15 +10,9 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -298,15 +292,9 @@ static void test_runs(void) {
 
     char gone_dir[128];
     snprintf(gone_dir, sizeof(gone_dir), WORKSHOP_DIR_PIECES "/%s", g_ids[4]);
-#ifdef _WIN32
-    char command[256];
-    snprintf(command, sizeof(command), "rmdir /s /q %s", gone_dir);
-    system(command);
-#else
     char command[256];
     snprintf(command, sizeof(command), "rm -rf %s", gone_dir);
     system(command);
-#endif
 
     /* The first run: the four pieces, every pair compared. */
     char first_id[64] = "";
@@ -454,11 +442,7 @@ int main(void) {
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)time(NULL));
 
     /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-    system("rmdir /s /q library settings cache projects data materials_* subjects_* 2> nul");
-#else
     system("rm -rf library settings cache projects data materials_* subjects_*");
-#endif
     common_dir_make(WORKSHOP_DIR_PIECES, NULL);
     MKDIR("data");
 
@@ -485,10 +469,6 @@ int main(void) {
     workshop_subject_service_shutdown();
     workshop_material_service_shutdown();
     workshop_collection_service_shutdown();
-#ifdef _WIN32
-    system("rmdir /s /q library settings cache projects data materials_* subjects_* 2> nul");
-#else
     system("rm -rf library settings cache projects data materials_* subjects_*");
-#endif
     return test_finish("link_service");
 }

@@ -11,15 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -375,7 +370,6 @@ static cJSON *read_motif(const cJSON *saved) {
 }
 
 /* Rhythm and contour motifs are analyzed too, and every form stores its list as motif.degrees. */
-#ifndef _WIN32
 static const cJSON *saved_motif(const char *item_id, int version) {
   static cJSON *held = NULL;
   cJSON_Delete(held);
@@ -461,7 +455,6 @@ static void test_motif_analysis_error(void) {
   free(theme);
 }
 
-#endif
 
 static void test_motif_forms(void) {
   char project[64] = "";
@@ -858,7 +851,6 @@ static void test_served_playback(void) {
   {
     /* The MIDI file of an unsaved render is deleted once the Analyzer has read it. */
     int leftovers = 0;
-#ifndef _WIN32
     DIR *dir = opendir("cache/tmp");
     for (struct dirent *entry = dir ? readdir(dir) : NULL; entry; entry = readdir(dir)) {
       leftovers += entry->d_name[0] != '.';
@@ -866,7 +858,6 @@ static void test_served_playback(void) {
     if (dir) {
       closedir(dir);
     }
-#endif
     check(leftovers == 0, "no MIDI file of an unsaved render is left behind");
   }
 
@@ -1772,7 +1763,6 @@ static void test_body_limit(void) {
   free(big);
 }
 
-#ifndef _WIN32
 /* The text of a file, or "" when it cannot be read. */
 static const char *kToneBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q E4:q G4:q\","
@@ -1883,7 +1873,6 @@ static void test_segments(void) {
   free(plain);
   free(given);
 }
-#endif
 
 /* ---- the replies of the Composer routes (P27 B6) ---------------------------------------------------------------- */
 
@@ -2432,11 +2421,7 @@ static void test_material_export(void) {
 int main(void) {
     command_context_support_begin(); /* the route tests call some services directly: a write needs a command */
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache projects subjects data 2> nul");
-#else
   system("rm -rf library settings cache projects subjects data");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 
@@ -2452,9 +2437,7 @@ int main(void) {
   test_motif_analysis();
   test_version_notes();
   test_motif_refused();
-#ifndef _WIN32
   test_motif_analysis_error();
-#endif
   test_motif_forms();
   test_motif_import();
   test_motifs_in_c();
@@ -2482,10 +2465,8 @@ int main(void) {
 #ifdef URSATZ_GUI_TEST_EXPORT_FIXTURES
   test_material_export();
 #endif
-#ifndef _WIN32
   test_tones();
   test_segments();
-#endif
   test_body_limit();
 
   test_gui_server_stop(ctx);

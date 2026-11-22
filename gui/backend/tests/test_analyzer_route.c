@@ -12,17 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define strcasecmp _stricmp
-#define MKDIR(path) _mkdir(path)
-#else
 #include <dirent.h>
 #include <strings.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 #include <ursatz_analyzer/analyzer_api.h>
@@ -39,24 +33,13 @@ static const char *g_port = "18766";
 #define PORT g_port
 
 static bool is_directory(const char *path) {
-#ifdef _WIN32
-  DWORD attributes = GetFileAttributesA(path);
-  return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
   struct stat st;
   return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
 }
 
 /* The name of the lexicographically first directory in dir_path that holds
  * a score.musicxml. */
 static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size) {
-#ifdef _WIN32
-  (void)dir_path;
-  (void)out;
-  (void)out_size;
-  return false;
-#else
   DIR *dir = opendir(dir_path);
   if (!dir) {
     return false;
@@ -81,7 +64,6 @@ static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size
   }
   closedir(dir);
   return found;
-#endif
 }
 
 static bool piece_file_exists(const char *id, const char *name) {
@@ -904,11 +886,7 @@ int main(int argc, char **argv) {
     g_port = "18778";
   }
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache 2> nul");
-#else
   system("rm -rf library settings cache");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 

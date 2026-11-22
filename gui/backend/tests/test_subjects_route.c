@@ -11,14 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -266,11 +261,7 @@ static void test_links(const char *anna, const char *piece) {
 
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
-#ifdef _WIN32
-  system("rmdir /s /q library settings cache projects subjects data 2> nul");
-#else
   system("rm -rf library settings cache projects subjects data");
-#endif
   MKDIR("library");
   MKDIR("library/pieces");
 

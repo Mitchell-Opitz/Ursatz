@@ -9,15 +9,9 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#define MKDIR(path) _mkdir(path)
-#else
 #include <sys/stat.h>
 #include <unistd.h>
 #define MKDIR(path) mkdir(path, 0755)
-#endif
 
 #include <cJSON.h>
 
@@ -268,11 +262,7 @@ static void test_link(const char *id, const char *other) {
         if (!running) {
             break;
         }
-#ifdef _WIN32
-        Sleep(50);
-#else
         usleep(50 * 1000);
-#endif
     }
     free(run_id);
     check_quiet(!has_marker(id), "the link worker analyzed the stale piece again");
@@ -285,11 +275,7 @@ int main(void) {
     check_quiet(workshop_jobs_start(2), "the job queue starts");
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)time(NULL));
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)time(NULL));
-#ifdef _WIN32
-    system("rmdir /s /q pieces styles collections data links materials_* subjects_* 2> nul");
-#else
     system("rm -rf pieces styles collections data links materials_* subjects_*");
-#endif
     common_dir_make(WORKSHOP_DIR_PIECES, NULL);
     MKDIR("data");
     check_quiet(ursatz_gui_collection_service_init(), "init collections");
@@ -314,10 +300,6 @@ int main(void) {
     workshop_subject_service_shutdown();
     workshop_material_service_shutdown();
     workshop_collection_service_shutdown();
-#ifdef _WIN32
-    system("rmdir /s /q pieces styles collections data links materials_* subjects_* 2> nul");
-#else
     system("rm -rf pieces styles collections data links materials_* subjects_*");
-#endif
     return test_finish("stale_analysis");
 }
