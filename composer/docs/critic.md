@@ -1,6 +1,6 @@
 # The critic
 
-`<ursatz_composer/critic.h>`, `src/critic/` (module `critic`, between `check` and `piece`). The critic judges a candidate in Michelle's words (vision 4.7, R-716, R-719): it reads the candidate's melody line, eight evaluators each measure one thing she has said about a melody, and the score is minus the weighted sum of their penalties. Nothing composes with it yet: the entry that returns it comes in B4 and the ranking in B5. Back to the [docs index](README.md).
+`<ursatz_composer/critic.h>`, `src/critic/` (module `critic`, between `check` and `piece`). The critic judges a candidate in Michelle's words (vision 4.7, R-716, R-719): it reads the candidate's melody line, eight evaluators each measure one thing she has said about a melody, and the score is minus the weighted sum of their penalties. With `critic.rank` on it also chooses a theme among candidates ([ranking](#ranking-theme-candidates-r-722)); off, nothing composes with it. Back to the [docs index](README.md).
 
 ## The rules are data
 
@@ -63,3 +63,20 @@ None of them is scored. They say what was heard, in the words of the plan; wheth
 `candidates` holds 1 to 16 objects, each with a `plan` (the plan document of a theme or a piece) or a `motive` (a motive document, as the `motive` member of a listen sample), not both. `preferences` is optional and read as everywhere else (its `critic` group counts). Each plan is heard once (`hearing_create`) and its melody line read from that render; each motive is read with `critic_line_from_motive`. Every candidate is judged with the lines of all of them as the set, and a plan with a node named `theme` is also observed against the hearing.
 
 The response is `ursatz-critique` version 1 ([schema](../schema/api/critique.response.schema.json)): `candidates` has, in the order given, `index`, `score`, `evaluators` (each `rule`, `penalty`, `weight`, `reversed`) and `observations` (each `rule`, `scored`, `bar`, `beat`, `message`, with `bar` and `beat` null when there is no place). A rational is `{"numerator", "denominator"}`. Refusals: a candidate that is neither, an unreadable plan or motive and a request of more than 16 are `URSATZ_ERR_REQUEST` at `/candidates` or `/candidates/<i>` (`/plan`, `/motive`); a bad preference is refused at `/preferences/critic/...`.
+
+## Ranking theme candidates (R-722)
+
+With the preferences' `critic.rank` on (off by default) a theme request makes several themes for each one it keeps and lets the critic choose (`api_grow_run`, `rank_by_critic`). `critic.candidates` (2 to 8, default 4) is how many are drawn for each theme asked for (`suggest`), to the most a run holds (16).
+
+1. The run draws `candidates x suggest` distinct themes, trying up to 16 seeds for each, from the request's seed on (a seed that does not compose is passed over, as it is without ranking).
+2. Each theme is heard once (`hearing_create`) and its melody line read from that render. Every theme is judged with the lines of all of them as the set (`critic_judge`), so `one_rhythm` sees what the others open with, and observed against its own hearing (`critic_observe`).
+3. The `suggest` themes of highest score are kept, in that order. A tie keeps the order drawn (a stable sort), so with every score equal the first seeds win. A theme the hearing cannot read is not judged and ranks after the others.
+4. The rest are the **rejected** candidates: the seed, the score and each evaluator's finding of at most `critic.keep_rejected` of them (0 to 16, default 8, to the number of candidates not kept), best first. Their plans are dropped.
+
+A run that made fewer candidates than asked ranks what it made. The response of a theme request that ranked has `critic` in each kept theme (`score`, `evaluators`, `observations`, the shapes of the critique response) and `rejected` in the document (`seed`, `score`, `evaluators`); a request that did not has neither, and its output is the bytes it was. The same request with `rank` on and off differs only by the theme the critic chose (the first seed that composes without ranking is always among the candidates). `ursatz listen` writes both with the settings, and with `--plans` the plan, so `ursatz critique` can judge the pick.
+
+**Gate 3 (R-543, P68).** A `Listen Ursatz` round plays themes with `critic.rank` on against off: the first rejected candidate is the one the critic passed over, so a pair that plays the pick against it says whether she hears what the critic hears. Her ratings of the picks, on average, are the third gate. Whether the critic's score should also weigh the observations waits for her verdicts on them (B6).
+
+## Variety in theme sets
+
+`candidates.variety` above 0 ([preferences](preferences.md#the-candidates-group-r-673)) chooses each random motive for being unlike the ones before it. `ursatz listen --what themes` hands that choice the motifs of the themes before, as it has for a batch of motifs (R-722, [cli-listen.md](../../cli/docs/cli-listen.md)): the generated motif of each theme carries `avoid`, the motifs of the earlier themes that were written (the last 64). A theme made from a motif or a request the user gave has no generated motif and is as it was. A varied draw may be a motif a theme refuses (a pickup that makes it 3 bars); the sample is then reported as stuck.
