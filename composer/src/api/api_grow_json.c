@@ -20,6 +20,7 @@
 #include <ursatz_composer/theme_shape.h>
 
 #include "api_construction.h"
+#include "api_critique.h"
 #include "api_internal.h"
 #include "api_seed.h"
 #include "api_style.h"
@@ -744,6 +745,9 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
         cJSON_Delete(contrasts);
         ok = false;
     }
+    if (ok && theme->judged && setup->critic) {
+        ok = cJSON_AddItemToObject(object, "critic", api_critic_json(&theme->judgment, setup->critic));
+    }
     if (!ok) {
         cJSON_Delete(score);
         cJSON_Delete(object);
@@ -854,7 +858,21 @@ cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const Gr
             themes = NULL;
         }
     }
-    if (!themes) {
+    cJSON *rejected = themes && run->ranked && setup->critic ? cJSON_AddArrayToObject(root, "rejected") : NULL;
+    for (size_t k = 0; rejected && k < run->rejected_count; k++) {
+        const CriticRejected *candidate = &run->rejected[k];
+        cJSON *item = cJSON_CreateObject();
+        bool added = item && cJSON_AddItemToArray(rejected, item) && cJSON_AddNumberToObject(item, "seed", (double)candidate->seed) &&
+                     api_add(item, "score", api_critic_ratio_json(candidate->score)) &&
+                     api_add(item, "evaluators", api_critic_evaluators_json(candidate->findings, setup->critic));
+        if (!added) {
+            if (item && cJSON_GetArraySize(rejected) == (int)k) {
+                cJSON_Delete(item);
+            }
+            themes = NULL;
+        }
+    }
+    if (!themes || (run->ranked && setup->critic && !rejected)) {
         cJSON_Delete(root);
         return NULL;
     }

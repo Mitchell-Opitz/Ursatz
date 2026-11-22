@@ -12,4 +12,10 @@
  */
 cJSON *api_critic_json(const CriticJudgment *judgment, const CriticSettings *settings);
 
+/* {"numerator", "denominator"}; NULL when memory runs out. */
+cJSON *api_critic_ratio_json(Rational value);
+
+/* The evaluators of a judgment, [{"rule", "penalty", "weight", "reversed"}] in evaluator order; NULL when memory runs out. */
+cJSON *api_critic_evaluators_json(const CriticFinding findings[CRITIC_EVALUATOR_COUNT], const CriticSettings *settings);
+
 #endif

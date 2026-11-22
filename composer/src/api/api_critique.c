@@ -103,7 +103,7 @@ static UrsatzStatus read_motive_candidate(const ComposerContext *context, const 
     return URSATZ_OK;
 }
 
-static cJSON *ratio_json(Rational value) {
+cJSON *api_critic_ratio_json(Rational value) {
     cJSON *object = cJSON_CreateObject();
     if (!object || !cJSON_AddNumberToObject(object, "numerator", (double)value.num) || !cJSON_AddNumberToObject(object, "denominator", (double)value.den)) {
         cJSON_Delete(object);
@@ -112,27 +112,45 @@ static cJSON *ratio_json(Rational value) {
     return object;
 }
 
-cJSON *api_critic_json(const CriticJudgment *judgment, const CriticSettings *settings) {
-    cJSON *object = cJSON_CreateObject();
-    cJSON *evaluators = object ? cJSON_AddArrayToObject(object, "evaluators") : NULL;
-    cJSON *observations = evaluators ? cJSON_AddArrayToObject(object, "observations") : NULL;
-    bool ok = observations != NULL && api_add(object, "score", ratio_json(judgment->score));
+/* The evaluators of a judgment: [{"rule", "penalty", "weight", "reversed"}], one for each. */
+cJSON *api_critic_evaluators_json(const CriticFinding findings[CRITIC_EVALUATOR_COUNT], const CriticSettings *settings) {
+    cJSON *evaluators = cJSON_CreateArray();
+    bool ok = evaluators != NULL;
     for (int i = 0; ok && i < CRITIC_EVALUATOR_COUNT; i++) {
         cJSON *item = cJSON_CreateObject();
         ok = item && cJSON_AddItemToArray(evaluators, item) && cJSON_AddStringToObject(item, "rule", critic_evaluator_code((CriticEvaluator)i)) &&
-             api_add(item, "penalty", ratio_json(judgment->findings[i].penalty)) && cJSON_AddNumberToObject(item, "weight", settings->weights[i]) &&
+             api_add(item, "penalty", api_critic_ratio_json(findings[i].penalty)) && cJSON_AddNumberToObject(item, "weight", settings->weights[i]) &&
              cJSON_AddBoolToObject(item, "reversed", settings->reversed[i]);
+        if (!ok && item && cJSON_GetArraySize(evaluators) == i) {
+            cJSON_Delete(item);
+        }
     }
+    if (!ok) {
+        cJSON_Delete(evaluators);
+        return NULL;
+    }
+    return evaluators;
+}
+
+cJSON *api_critic_json(const CriticJudgment *judgment, const CriticSettings *settings) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *observations = object ? cJSON_CreateArray() : NULL;
+    bool ok = observations != NULL && api_add(object, "score", api_critic_ratio_json(judgment->score)) &&
+              api_add(object, "evaluators", api_critic_evaluators_json(judgment->findings, settings));
     for (size_t i = 0; ok && i < judgment->observation_count; i++) {
         const CriticObservation *observation = &judgment->observations[i];
         cJSON *item = cJSON_CreateObject();
         ok = item && cJSON_AddItemToArray(observations, item) && cJSON_AddStringToObject(item, "rule", observation->rule) &&
              cJSON_AddBoolToObject(item, "scored", observation->scored) &&
              api_add(item, "bar", observation->bar >= 0 ? cJSON_CreateNumber(observation->bar) : cJSON_CreateNull()) &&
-             api_add(item, "beat", observation->bar >= 0 && observation->beat.num > 0 ? ratio_json(observation->beat) : cJSON_CreateNull()) &&
+             api_add(item, "beat", observation->bar >= 0 && observation->beat.num > 0 ? api_critic_ratio_json(observation->beat) : cJSON_CreateNull()) &&
              cJSON_AddStringToObject(item, "message", observation->message);
     }
+    ok = ok && api_add(object, "observations", observations);
     if (!ok) {
+        if (observations && !cJSON_GetObjectItemCaseSensitive(object, "observations")) {
+            cJSON_Delete(observations);
+        }
         cJSON_Delete(object);
         return NULL;
     }

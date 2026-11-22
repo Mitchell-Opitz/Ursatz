@@ -256,6 +256,94 @@
     "reading": {
       "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/reading/schema/reading.v1.schema.json",
       "description": "The Composer's hearing of the result over that realization, with layers: true."
+    },
+    "rejected": {
+      "type": "array",
+      "description": "With preferences critic.rank: the candidates the critic passed over, best first, at most critic.keep_rejected of them.",
+      "items": {
+        "type": "object",
+        "required": [
+          "seed",
+          "score",
+          "evaluators"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "seed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "score": {
+            "type": "object",
+            "required": [
+              "numerator",
+              "denominator"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "numerator": {
+                "type": "integer"
+              },
+              "denominator": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "evaluators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "rule",
+                "penalty",
+                "weight",
+                "reversed"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "rule": {
+                  "enum": [
+                    "rhythmic_monotony",
+                    "contrast_distance",
+                    "leap_load",
+                    "open_ending",
+                    "stray_syncopation",
+                    "one_rhythm",
+                    "repeated_notes",
+                    "wide_range"
+                  ]
+                },
+                "penalty": {
+                  "type": "object",
+                  "required": [
+                    "numerator",
+                    "denominator"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "numerator": {
+                      "type": "integer"
+                    },
+                    "denominator": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "reversed": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -688,6 +776,142 @@
         "explanation": {
           "type": "string",
           "description": "The explanation of the theme, text or JSON text, with explain."
+        },
+        "critic": {
+          "type": "object",
+          "description": "The critic's judgment of the theme (preferences critic.rank): its score, each evaluator's penalty and the observations in plain words, as the critique entry gives them.",
+          "required": [
+            "score",
+            "evaluators",
+            "observations"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "score": {
+              "type": "object",
+              "required": [
+                "numerator",
+                "denominator"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "numerator": {
+                  "type": "integer"
+                },
+                "denominator": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "evaluators": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "rule",
+                  "penalty",
+                  "weight",
+                  "reversed"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "rule": {
+                    "enum": [
+                      "rhythmic_monotony",
+                      "contrast_distance",
+                      "leap_load",
+                      "open_ending",
+                      "stray_syncopation",
+                      "one_rhythm",
+                      "repeated_notes",
+                      "wide_range"
+                    ]
+                  },
+                  "penalty": {
+                    "type": "object",
+                    "required": [
+                      "numerator",
+                      "denominator"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "numerator": {
+                        "type": "integer"
+                      },
+                      "denominator": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  },
+                  "weight": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "reversed": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "observations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "rule",
+                  "scored",
+                  "bar",
+                  "beat",
+                  "message"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "rule": {
+                    "type": "string"
+                  },
+                  "scored": {
+                    "type": "boolean"
+                  },
+                  "bar": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "beat": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "numerator",
+                          "denominator"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "numerator": {
+                            "type": "integer"
+                          },
+                          "denominator": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
