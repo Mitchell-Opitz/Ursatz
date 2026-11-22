@@ -16,7 +16,7 @@
  * Themes and expansions: two constructed pieces the library hears as a sentence and as a period, a third as a compound
  * period, and the five reference pieces.
  *
- * The constructed pieces are eight (or sixteen) measures of block chords in C major (tests/fixtures/scores/README.md). What is
+ * The constructed pieces are eight (or sixteen) measures of block chords in C major (tests/fixtures/README.md, Scores). What is
  * checked in them is what the library says, field by field: the form, the names of the two parts, their measures and
  * the cadences that end them. In the reference pieces the library finds hybrids only (see the README, Known limits), so
  * what is checked there is structure, not counts the library cannot reach: the themes are in order, each lies inside its
@@ -145,7 +145,7 @@ static void check_period(const char *dir) {
         CHECK(strcmp(test_json_string(antecedent, "name"), "antecedent") == 0);
         CHECK(measures_are(test_json_member(antecedent, "measures"), 1, 4));
         /* the constructed antecedent ends on an imperfect authentic cadence: the block chords give no half cadence the
-           library accepts (V followed by I reads as an authentic cadence), see tests/fixtures/scores/README.md */
+           library accepts (V followed by I reads as an authentic cadence), see tests/fixtures/README.md, Scores */
         CHECK(strcmp(part_cadence(document, antecedent), "imperfect-authentic") == 0);
         CHECK(strcmp(test_json_string(consequent, "name"), "consequent") == 0);
         CHECK(measures_are(test_json_member(consequent, "measures"), 5, 8));

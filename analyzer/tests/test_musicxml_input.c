@@ -237,7 +237,7 @@ static void test_errors(void) {
     expect_failure(musicxml("timewise.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_FORMAT);
     expect_failure(musicxml("empty-score.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_EMPTY_SCORE);
     expect_failure(musicxml("pickup.mxl"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_COMPRESSED);
-    expect_failure(musicxml("README.md"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_UNKNOWN_FORMAT);
+    expect_failure(musicxml("../README.md"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_UNKNOWN_FORMAT);
     expect_failure("/nowhere/missing.musicxml", IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_IO);
     expect_failure("/nowhere/missing.mid", IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_IO);
 

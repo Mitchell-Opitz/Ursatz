@@ -14,7 +14,7 @@
 
 /*
  * The form plan: sections, thematic returns and the form tree, for the five reference pieces and the three constructed
- * ones (tests/fixtures/scores/README.md).
+ * ones (tests/fixtures/README.md, Scores).
  *
  * What is checked is the plan's structure, not music the library cannot reach: every phrase lies in exactly one section,
  * the sections follow each other and tile the phrases, the tree's levels are named form, section, phrase, subphrase and
