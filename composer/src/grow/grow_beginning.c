@@ -60,13 +60,17 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
                      : grow_shorten_source(spec, GROW_PLACE_CONTRAST) &&
                            grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST,
                                               grow_idea_source(spec, GROW_PLACE_CONTRAST), -1, NULL, &spec->contrast);
+    /* A contrast target (R-710): the function of the idea asks for a distant contrast that meets it, or the structure is dropped. */
+    bool targeted = drawn && !own && grow_contrast_target(request, spec, GROW_PLACE_CONTRAST);
     /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
     if (drawn && !own &&
-        (has_kind ? kind == GROW_CONTRAST_KIND_DISTANT
-                  : grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT) &&
+        (targeted || (has_kind ? kind == GROW_CONTRAST_KIND_DISTANT
+                               : grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT)) &&
         grow_make_distant(request, rng, spec, GROW_PLACE_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONTRAST),
                           &spec->contrast, -1)) {
         spec->contrast.kind = MOTIVE_RELATION_EXACT;
+    } else if (targeted) {
+        return false;
     }
     return drawn &&
            grow_idea_develop(spec, GROW_PLACE_CONTRAST, &spec->developed[GROW_PLACE_CONTRAST]) &&
@@ -276,6 +280,9 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
     if (result == PLAN_OK) {
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_CONTRAST],
                                build->layout.length[GROW_PLACE_CONTRAST], "contrasting idea", &ideas[1]);
+    }
+    if (result == PLAN_OK) {
+        result = grow_add_contrast_constraint(build, ideas[1], GROW_PLACE_CONTRAST);
     }
     for (size_t k = 0; k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         repeats[k] = PLAN_NODE_NONE;

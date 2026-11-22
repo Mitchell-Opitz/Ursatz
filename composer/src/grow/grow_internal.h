@@ -142,6 +142,12 @@ typedef struct {
     /* A distant contrast made for the idea: its own source, restated exact (R-475). */
     Motive distant[GROW_PLACE_COUNT];
     bool has_distant[GROW_PLACE_COUNT];
+    /*
+     * The idea's formal function when its motive is drawn to meet a contrast target (R-710, functions.contrast), and the name
+     * of the idea it contrasts against ("basic idea"); NULL for an idea with no target.
+     */
+    const FormalFunction *contrast_function[GROW_PLACE_COUNT];
+    const char *contrast_against[GROW_PLACE_COUNT];
     /* The contrasting slot's source was made here, new material (R-477): slot_source[GROW_SLOT_CONTRASTING], not a given motif. */
     bool has_new_material;
     /*
@@ -377,6 +383,19 @@ GrowContrastKind grow_draw_contrast_kind(const GrowThemeRequest *request, FillRn
 /* A distant contrast for the idea at `place` (R-475): the development `step` of source gives the pitches and a rhythm drawn
    from the motif generator the rhythm; the contour must differ from source's. want_pc is the pitch class its last note
    should land on (negative for any). True sets spec->distant[place] and has_distant[place]; false when none is made. */
+/*
+ * The contrast target of the idea at `place` (R-710): with functions.contrast on, a knowledge snapshot, no motive of the idea's own and
+ * a theme type for the pairing whose idea there has a formal function with a contrast, sets spec->contrast_function[place] and
+ * spec->contrast_against[place] and returns true. Draws no random number; false (and nothing set) otherwise.
+ */
+bool grow_contrast_target(const GrowThemeRequest *request, GrowThemeSpec *spec, GrowPlace place);
+
+/* Whether the motive contrasts with `against` (m0) by at least every amount of the function's contrast (dimension_contrast). */
+bool grow_contrast_met(const GrowThemeRequest *request, const Motive *against, const Motive *motive, const FormalFunction *function);
+
+/* Adds the idea's contrast constraint to its node when the spec has a target for the place; PLAN_OK with none. */
+PlanResult grow_add_contrast_constraint(GrowBuild *build, NodeId node, GrowPlace place);
+
 bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
                        const Motive *source, const MotiveRelationStep *step, int want_pc);
 /* New material for the contrasting slot (R-477): a motive of the key and the meter from the motif generator, up to two bars,

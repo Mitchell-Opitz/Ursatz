@@ -772,11 +772,15 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
                              &spec->consequent_contrast)))) {
         return false;
     }
+    /* A contrast target (R-710): the function of the idea asks for a distant contrast that meets it, or the structure is dropped. */
+    bool targeted = !own_contrast && grow_contrast_target(request, spec, GROW_PLACE_CONSEQUENT_CONTRAST);
     /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
-    if (!own_contrast && grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT &&
+    if (!own_contrast && (targeted || grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT) &&
         grow_make_distant(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST,
                           grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), &spec->consequent_contrast, want)) {
         spec->consequent_contrast.kind = MOTIVE_RELATION_EXACT;
+    } else if (targeted) {
+        return false;
     }
     if (!keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
         return false;
@@ -985,6 +989,9 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
         NodeId idea;
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[slot], build->layout.length[slot],
                                names[slot], &idea);
+        if (result == PLAN_OK) {
+            result = grow_add_contrast_constraint(build, idea, (GrowPlace)slot);
+        }
         parts[count].node = idea;
         parts[count].slot = slot;
         parts[count++].extension = SIZE_MAX;

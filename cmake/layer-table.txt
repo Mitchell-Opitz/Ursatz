@@ -199,7 +199,7 @@ uses composer-melody model theory plan analysis composer-harmony composer-motive
 uses composer-texture model theory plan analysis chain io composer-harmony composer-core
 uses composer-counterpoint model theory plan composer-harmony composer-core
 uses composer-material model theory plan composer-harmony composer-melody composer-core
-uses composer-grow model theory plan composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
+uses composer-grow model theory analysis plan composer-api composer-harmony composer-motive composer-melody composer-material composer-core common
 uses composer-check model theory plan reading analysis chain io composer-grow composer-harmony composer-melody composer-motive composer-texture composer-core
 uses composer-piece model theory plan cjson composer-api composer-check composer-operators composer-grow composer-core
 uses composer-candidates model plan composer-piece composer-core common

@@ -168,6 +168,7 @@ ursatz_public_headers(ursatz_analysis
         analysis/galant/galant_analysis_input.h
         analysis/galant/galant_analysis_match.h
         analysis/galant/scale_analysis_detect.h
+        analysis/dimension/dimension.h
         analysis/similarity/similarity_model.h
         analysis/similarity/similarity_scoring.h
 )

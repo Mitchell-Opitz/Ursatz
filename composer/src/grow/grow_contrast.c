@@ -8,6 +8,7 @@
 #include <theory/form/phrase_beginning.h>
 #include <theory/form/phrase_ending.h>
 #include <theory/form/phrase_level_form.h>
+#include <analysis/dimension/dimension.h>
 #include <theory/tonality/tonal_key.h>
 
 #include <ursatz_composer/form_return.h>
@@ -225,6 +226,90 @@ static bool move_into_contrast_range(Motive *motive, bool in_scale) {
     return false;
 }
 
+/* The motive as the span the dimension measures read: its notes from its start, its length, and a beat of 1/beat_unit (a dotted one in 6/8 and 12/8). */
+static bool motive_span(const GrowThemeRequest *request, const Motive *motive, DimensionNote *notes, DimensionSpan *out) {
+    if (motive->note_count == 0 || motive->note_count > MOTIVE_MAX_NOTES) {
+        return false;
+    }
+    for (size_t i = 0; i < motive->note_count; i++) {
+        notes[i].onset = motive->notes[i].onset;
+        notes[i].duration = motive->notes[i].duration;
+        notes[i].pitch = motive_pitch(motive, i);
+    }
+    bool compound = request->meter.beat_unit == 8 && request->meter.beats_per_bar >= 6 && request->meter.beats_per_bar % 3 == 0;
+    out->notes = notes;
+    out->count = motive->note_count;
+    out->length = motive->length;
+    out->beat = compound ? rational_ratio(3, 8) : rational_ratio(1, request->meter.beat_unit > 0 ? request->meter.beat_unit : 4);
+    return true;
+}
+
+bool grow_contrast_met(const GrowThemeRequest *request, const Motive *against, const Motive *motive, const FormalFunction *function) {
+    DimensionNote against_notes[MOTIVE_MAX_NOTES];
+    DimensionNote notes[MOTIVE_MAX_NOTES];
+    DimensionSpan first;
+    DimensionSpan second;
+    ContrastVector vector;
+    if (!motive_span(request, against, against_notes, &first) || !motive_span(request, motive, notes, &second) ||
+        dimension_contrast(&first, &second, &vector) != DIMENSION_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < function->aspect_count; i++) {
+        ContrastAspect aspect;
+        if (!contrast_aspect_from_name(function->aspects[i].aspect, &aspect) ||
+            rational_cmp(vector.distance[aspect], function->aspects[i].amount) < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool grow_contrast_target(const GrowThemeRequest *request, GrowThemeSpec *spec, GrowPlace place) {
+    if (!request->functions.contrast || request->knowledge == NULL || grow_idea_own(spec, place)) {
+        return false;
+    }
+    const ThemeShapeHalf *beginning = theme_shape_beginning(spec->pairing.beginning);
+    const ThemeShapeHalf *ending = theme_shape_ending(spec->pairing.ending);
+    const ThemeShapeIdea *row = theme_shape_place_in(&spec->pairing, (unsigned)place);
+    const ThemeType *type = beginning && ending
+                                ? knowledge_snapshot_theme_type_of(request->knowledge, beginning->library_name, ending->library_name)
+                                : NULL;
+    for (size_t i = 0; row && type && i < type->idea_count; i++) {
+        const FormalFunction *function = type->ideas[i].function;
+        if (strcmp(type->ideas[i].name, row->name) != 0 || function->contrast_against == NULL || function->aspect_count == 0) {
+            continue;
+        }
+        /* The idea it contrasts against is the nearest one before it of that function, in the same half. */
+        for (size_t before = i; before-- > 0;) {
+            if (type->ideas[before].function == function->contrast_against && type->ideas[before].in_beginning == type->ideas[i].in_beginning) {
+                spec->contrast_function[place] = function;
+                spec->contrast_against[place] = type->ideas[before].name;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+PlanResult grow_add_contrast_constraint(GrowBuild *build, NodeId node, GrowPlace place) {
+    const FormalFunction *function = build->spec->contrast_function[place];
+    if (function == NULL) {
+        return PLAN_OK;
+    }
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_CONTRAST;
+    snprintf(constraint.params.contrast.against, sizeof(constraint.params.contrast.against), "%s", build->spec->contrast_against[place]);
+    for (size_t i = 0; i < function->aspect_count && i < PLAN_CONTRAST_ASPECTS_MAX; i++) {
+        PlanContrastAspect *aspect = &constraint.params.contrast.aspects[constraint.params.contrast.aspect_count];
+        if (contrast_aspect_from_name(function->aspects[i].aspect, &aspect->aspect)) {
+            aspect->amount = function->aspects[i].amount;
+            constraint.params.contrast.aspect_count++;
+        }
+    }
+    return plan_node_add_constraint(build->plan, node, &constraint);
+}
+
 bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
                        const Motive *source, const MotiveRelationStep *step, int want_pc) {
     Motive developed;
@@ -275,6 +360,11 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
             continue;
         }
         if (!move_into_contrast_range(&result, in_scale)) {
+            continue;
+        }
+        /* A contrast target (R-710): a motive that falls short of it is not kept, so the draws go on. */
+        if (spec->contrast_function[place] &&
+            !grow_contrast_met(request, grow_idea_source(spec, GROW_PLACE_BASIC), &result, spec->contrast_function[place])) {
             continue;
         }
         if (lands_on(&result, want_pc)) {
