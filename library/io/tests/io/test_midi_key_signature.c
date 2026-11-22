@@ -420,7 +420,68 @@ static void test_corpus_key_signatures_in_time_order(void) {
     check_corpus_file("Field 5.mid");
 }
 
+/* ---- the collector the one track walk feeds ---- */
+
+static void test_collector(void) {
+    MidiKeySignatureEvents out = {NULL, 0};
+    midi_key_signature_collector_destroy(NULL); /* a no-op */
+
+    /* an empty collector finishes with no events */
+    MidiKeySignatureCollector *empty = midi_key_signature_collector_create();
+    assert(empty != NULL);
+    assert(midi_key_signature_collector_finish(empty, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 0 && out.events == NULL);
+    midi_key_signature_collector_destroy(empty);
+
+    /* a well-formed key signature is kept; another meta type, a bad length and an sf outside -7..7 are ignored */
+    MidiKeySignatureCollector *collector = midi_key_signature_collector_create();
+    assert(collector != NULL);
+    const unsigned char two_sharps[2] = {0x02, 0x00};
+    const unsigned char time_signature[3] = {4, 2, 24};
+    const unsigned char eight_sharps[2] = {0x08, 0x00};
+    const unsigned char eight_flats[2] = {0xF8, 0x00};
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, two_sharps, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x58, time_signature, 3) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, time_signature, 3) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, eight_sharps, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, eight_flats, 2) == 0);
+    assert(midi_key_signature_collector_finish(collector, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 1 && out.events[0].sharps_flats == 2 && out.events[0].mode_hint == MIDI_MODE_HINT_MAJOR);
+    assert(out.events[0].tick == 0 && out.events[0].key_signature != NULL);
+    midi_key_signature_events_destroy(&out);
+    assert(out.count == 0 && out.events == NULL);
+    midi_key_signature_collector_destroy(collector);
+
+    /* one flat, minor, at tick 480 of 480 to the quarter lands at 1/4 of a whole note */
+    collector = midi_key_signature_collector_create();
+    assert(collector != NULL);
+    const unsigned char f_minor[2] = {0xFF, 0x01};
+    assert(midi_key_signature_collector_meta(collector, 0, 480, 0x59, f_minor, 2) == 0);
+    assert(midi_key_signature_collector_finish(collector, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 1 && out.events[0].sharps_flats == -1 && out.events[0].mode_hint == MIDI_MODE_HINT_MINOR);
+    assert(out.events[0].position.value.num == 1 && out.events[0].position.value.den == 4);
+    midi_key_signature_events_destroy(&out);
+    midi_key_signature_collector_destroy(collector);
+
+    /* two identical events at one tick keep one; a later tick fed first still comes out second */
+    collector = midi_key_signature_collector_create();
+    assert(collector != NULL);
+    assert(midi_key_signature_collector_meta(collector, 0, 960, 0x59, f_minor, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, two_sharps, 2) == 0);
+    assert(midi_key_signature_collector_meta(collector, 0, 0, 0x59, two_sharps, 2) == 0);
+    assert(midi_key_signature_collector_finish(collector, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(out.count == 2 && out.events[0].tick == 0 && out.events[1].tick == 960);
+    midi_key_signature_events_destroy(&out);
+
+    /* a division of 0 and a missing collector or output are refused */
+    assert(midi_key_signature_collector_finish(collector, 0, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_UNSUPPORTED_DIVISION);
+    assert(midi_key_signature_collector_finish(NULL, 480, &out) == MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_NULL_BUFFER);
+    assert(midi_key_signature_collector_finish(collector, 480, NULL) == MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_NULL_BUFFER);
+    midi_key_signature_collector_destroy(collector);
+}
+
 int main(void) {
+    test_collector();
     test_finds_sharp_major_key_signature();
     test_finds_flat_key_signature();
     test_finds_minor_key_signature();
