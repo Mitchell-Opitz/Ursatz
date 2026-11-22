@@ -19,6 +19,9 @@ ursatz_test(reach COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-reach.sh ${CMA
 # The layer table and primitive checks, each on a temporary tree with a planted violation (tests/check_self_test.py): the check fails on it and passes without it.
 ursatz_test(check_layer_table_self_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_self_test.py layer ${CMAKE_SOURCE_DIR})
 ursatz_test(check_primitives_self_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_self_test.py primitives ${CMAKE_SOURCE_DIR})
+# The goldens update script (cmake/UpdateGoldens.cmake) fails when the goldens it wrote do not pass.
+ursatz_test(update_goldens_script COMMAND ${CMAKE_COMMAND} -DSCRIPT=${CMAKE_SOURCE_DIR}/cmake/UpdateGoldens.cmake
+    -DWORK=${CMAKE_CURRENT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/update_goldens_test.cmake)
 # Each application library exports only the names of its export file (R-640).
 if(URSATZ_NM AND URSATZ_LOCALIZE_EXPORTS)
     ursatz_test(app_exports COMMAND ${CMAKE_COMMAND} -DNM=${URSATZ_NM}
