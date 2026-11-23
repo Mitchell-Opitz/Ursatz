@@ -3,3 +3,4 @@ ursatz_test(instrument_entries SOURCES test_instrument_entries.c LIBS ursatz_the
 ursatz_test(vocabulary_entries SOURCES test_vocabulary_entries.c LIBS ursatz_theory VALGRIND)
 ursatz_test(form_entries SOURCES test_form_entries.c LIBS ursatz_theory VALGRIND)
 ursatz_test(rule_entries SOURCES test_rule_entries.c LIBS ursatz_theory VALGRIND)
+ursatz_test(mode_entries SOURCES test_mode_entries.c LIBS ursatz_theory VALGRIND)
