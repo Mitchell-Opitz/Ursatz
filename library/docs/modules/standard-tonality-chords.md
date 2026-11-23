@@ -51,3 +51,14 @@ Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md)
   chord fully diminished. The raised leading tone in the chords on do
   and me would give qualities outside the five, so they stay as in
   natural minor.
+- **Chords of a modal key** (`modal_chords.h`, P69, R-725): a seven-step
+  material that is neither the major nor the natural minor and names a
+  cadence kind (the five church modes) stacks its triad on a degree from
+  its own steps (`pitch_material_triad_on`: major, minor, diminished or
+  augmented; nothing is raised, there is no leading tone). The function
+  of a chord there (`modal_function_of`) is tonic on degree 1, dominant on
+  an approach degree of the mode's cadence kind, predominant on any other
+  major or minor triad the material does not avoid
+  (`pitch_material_avoids`, the entry's `chords_to_avoid`). The Composer
+  maps the three functions onto `HarmonicFunction`; the recognizer is not
+  asked about a modal key until P80.
