@@ -135,7 +135,7 @@ bool grow_liquidate_applies(const Plan *plan, FillTarget target) {
 /* ------------------------------------------------------------- the made motives */
 
 static bool minor_key(const SpelledKey *key) {
-    return composer_key_is_minor(key);
+    return composer_material_raises_seventh(key->material);
 }
 
 /* The pitch of the step `position` of the key's scale (7 to an octave), the seventh raised in minor (the harmonic minor). */

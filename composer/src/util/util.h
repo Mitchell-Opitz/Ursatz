@@ -47,7 +47,8 @@ bool util_scale_degree(int tonic_pitch_class, const PitchMaterial *material, int
 
 /*
  * The material's scale with its seventh degree raised to the leading tone (the semitone below the octave): the harmonic minor of a
- * natural minor, the major scale itself for a major. A minor key's scale over a chord that holds the leading tone.
+ * natural minor, the major scale itself for a major. A minor key's scale over a chord that holds the leading tone. The other
+ * modes keep their own seventh: the plain scale (R-725).
  */
 unsigned util_scale_mask_raised_seventh(int tonic_pitch_class, const PitchMaterial *material);
 

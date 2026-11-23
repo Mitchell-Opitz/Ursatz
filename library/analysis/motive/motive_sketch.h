@@ -215,6 +215,9 @@ bool motive_sketch_validate(const MotiveSketch *sketch);
 /* True when the sketch's scale has a minor third (the old `minor` flag); false without a scale or material. */
 bool motive_sketch_minor(const MotiveSketch *sketch);
 
+/* True when the sketch's scale is the natural minor, whose V has a raised third (the leading tone); the other modes raise nothing (R-725). */
+bool motive_sketch_raises_seventh(const MotiveSketch *sketch);
+
 /*
  * The sketch as its contour: the pitches are replaced by dense ranks over the distinct pitches (0 the
  * lowest, equal pitches equal ranks), rank r on the step r of the sketch's scale (C major without one) from

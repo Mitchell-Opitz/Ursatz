@@ -19,6 +19,10 @@ bool motive_sketch_minor(const MotiveSketch *sketch) {
     return sketch != NULL && pitch_material_third(sketch->material) == THIRD_MINOR;
 }
 
+bool motive_sketch_raises_seventh(const MotiveSketch *sketch) {
+    return sketch != NULL && pitch_material_is_natural_minor(sketch->material);
+}
+
 /* The semitones above the tonic of scale step `degree` (0 to 6) of the sketch's scale. */
 static int scale_step_semitone(const MotiveSketch *sketch, int degree) {
     return standard_tonality_material_degree_semitone(sketch->material, degree + 1);
@@ -295,7 +299,7 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     for (size_t i = 0; i < count; i++) {
         pcs[i] = (sketch->tonic_pc + scale_step_semitone(sketch, (root_index + 2 * (int)i) % 7)) % 12;
     }
-    if (motive_sketch_minor(sketch) && chord->degree == 5) {
+    if (motive_sketch_raises_seventh(sketch) && chord->degree == 5) {
         pcs[1] = (sketch->tonic_pc + 11) % 12;
     }
     return count;

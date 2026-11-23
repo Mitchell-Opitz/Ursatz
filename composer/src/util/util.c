@@ -78,9 +78,12 @@ unsigned util_scale_mask(int tonic_pitch_class, const PitchMaterial *material) {
 
 /* The scale with the raised sixth and seventh beside the natural ones, as counterpoint writes a minor key. */
 unsigned util_scale_mask_melodic(int tonic_pitch_class, const PitchMaterial *material) {
+    if (!composer_material_raises_seventh(material)) {
+        return util_scale_mask(tonic_pitch_class, material);
+    }
     unsigned mask = util_scale_mask_raised_seventh(tonic_pitch_class, material) | util_scale_mask(tonic_pitch_class, material);
     int sixth = pitch_material_step(material, 6);
-    if (composer_material_is_minor(material) && sixth >= 0) {
+    if (sixth >= 0) {
         mask |= 1u << util_pitch_class(tonic_pitch_class + sixth + 1);
     }
     return mask;
@@ -88,6 +91,9 @@ unsigned util_scale_mask_melodic(int tonic_pitch_class, const PitchMaterial *mat
 
 unsigned util_scale_mask_raised_seventh(int tonic_pitch_class, const PitchMaterial *material) {
     unsigned mask = util_scale_mask(tonic_pitch_class, material);
+    if (!composer_material_raises_seventh(material)) {
+        return mask;
+    }
     int seventh = pitch_material_step(material, 7);
     if (seventh >= 0) {
         mask &= ~(1u << util_pitch_class(tonic_pitch_class + seventh));

@@ -302,7 +302,7 @@ bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octav
 /* The scale a cell is figured in: the key's, with the raised seventh in minor over a chord that holds the leading tone. */
 static unsigned scale_pitch_classes(const SpelledKey *key, unsigned chord_mask) {
     int tonic = spelled_key_tonic_pitch_class(key);
-    if (!composer_key_is_minor(key)) {
+    if (!composer_material_raises_seventh(key->material)) {
         return util_scale_mask(tonic, key->material);
     }
     bool raised = (chord_mask >> ((tonic + 11) % 12)) & 1u;
