@@ -1,0 +1,50 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.voicing.shell",
+      "kind": "voicing",
+      "name": "shell",
+      "content": {
+        "members": [
+          {
+            "role": "root",
+            "semitones": 0
+          },
+          {
+            "role": "seventh",
+            "semitones": 10
+          },
+          {
+            "role": "third",
+            "semitones": 4
+          }
+        ],
+        "fits": [
+          "omt.chord-type.dominant-seventh"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 3,
+          "note": "root, third and seventh"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "root": "C",
+          "pitches": [
+            "C",
+            "Bb",
+            "E"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+'omt.chord-type.nothing' is not a chord-type entry

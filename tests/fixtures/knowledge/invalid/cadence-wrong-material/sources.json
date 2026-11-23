@@ -1,0 +1,14 @@
+{
+  "schema": "ursatz-knowledge-sources",
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "omt",
+      "title": "Open Music Theory, version 2"
+    },
+    {
+      "id": "persichetti",
+      "title": "Persichetti, Twentieth-Century Harmony: Creative Aspects and Practice"
+    }
+  ]
+}

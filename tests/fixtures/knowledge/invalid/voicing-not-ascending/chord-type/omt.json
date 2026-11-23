@@ -1,0 +1,57 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.chord-type.dominant-seventh",
+      "kind": "chord-type",
+      "name": "dominant seventh",
+      "content": {
+        "construction": "tertian",
+        "members": [
+          {
+            "role": "root",
+            "semitones": 0
+          },
+          {
+            "role": "third",
+            "semitones": 4
+          },
+          {
+            "role": "fifth",
+            "semitones": 7
+          },
+          {
+            "role": "seventh",
+            "semitones": 10
+          }
+        ],
+        "symbols": [
+          "C7"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 18,
+          "note": "a major triad with a minor seventh above the root"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "root": "C",
+          "pitches": [
+            "C",
+            "E",
+            "G",
+            "Bb"
+          ],
+          "symbol": "C7"
+        }
+      ],
+      "version": 1
+    }
+  ]
+}
