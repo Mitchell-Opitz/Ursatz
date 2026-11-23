@@ -84,6 +84,8 @@ ursatz_test(test_harmony_phrase LIBS ursatz_composer_engine)
 
 ursatz_test(test_harmony_roman LIBS ursatz_composer_engine composer_test_support)
 
+ursatz_test(test_modal_harmony LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
+
 ursatz_test(test_harmony_embellish LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test(test_harmony_bass LIBS ursatz_composer_engine composer_test_support)
