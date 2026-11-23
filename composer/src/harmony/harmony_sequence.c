@@ -51,11 +51,15 @@ static bool stage_chord(HarmonyMode mode, int bass, unsigned intervals, PhraseCh
     return harmony_make_chord(mode, root, first_inversion ? 1 : 0, false, false, 1, out);
 }
 
-/* A diminished triad is not written in root position. */
-static bool bad_root_position(const ComposerChords *tones, HarmonyMode mode, const PhraseChord *chord) {
+/* A diminished triad is not written in root position, except the tonic of a mode that has one (locrian, R-725). */
+static bool bad_root_position(const ComposerChords *tones, HarmonyMode mode, const PitchMaterial *modal, const PhraseChord *chord) {
     int intervals[4];
+    int root;
     size_t count;
-    return chord->chord.inversion == 0 && harmony_diatonic_intervals(tones, mode, &chord->chord, intervals, &count) &&
+    if (modal != NULL && chord->chord.degree == 1) {
+        return false;
+    }
+    return chord->chord.inversion == 0 && composer_chord_intervals(tones, mode, modal, &chord->chord, &root, intervals, &count) &&
            count == 3 && intervals[1] == 3 && intervals[2] == 6;
 }
 
@@ -64,7 +68,7 @@ static bool bad_root_position(const ComposerChords *tones, HarmonyMode mode, con
  * -1): at a stage where the bass moves it steps first, then the stage's chord sounds for a cell. A stage
  * that is the same bass and chord as the one before it (a suspension and its resolution) is one chord.
  */
-static bool build_chords(const ComposerChords *tones, HarmonyMode mode, const ScalePattern *pattern, int direction, int start, size_t repeats,
+static bool build_chords(const ComposerChords *tones, HarmonyMode mode, const PitchMaterial *modal, const ScalePattern *pattern, int direction, int start, size_t repeats,
                          PhraseChord *chords, size_t *count) {
     PhraseChord stages[MAX_STAGES];
     int basses[MAX_STAGES];
@@ -81,7 +85,7 @@ static bool build_chords(const ComposerChords *tones, HarmonyMode mode, const Sc
         basses[s] = bass;
         /* A suspended stage sounds the chord it resolves to. */
         const ScalePatternStage *chosen = stage->suspended ? &pattern->unit[(s + 1) % pattern->unit_length] : stage;
-        if (!stage_chord(mode, bass, chosen->intervals, &stages[s]) || bad_root_position(tones, mode, &stages[s])) {
+        if (!stage_chord(mode, bass, chosen->intervals, &stages[s]) || bad_root_position(tones, mode, modal, &stages[s])) {
             return false;
         }
     }
@@ -128,7 +132,7 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
     for (unsigned repeats = drawn; repeats >= low; repeats--) {
         size_t count;
         size_t total = 0;
-        if (!build_chords(read->composer_chords, mode, pattern, direction, start, repeats, skeleton->chords, &count)) {
+        if (!build_chords(read->composer_chords, mode, composer_chords_modal(read->composer_chords, &read->key), pattern, direction, start, repeats, skeleton->chords, &count)) {
             return true;
         }
         for (size_t i = 0; i < count; i++) {

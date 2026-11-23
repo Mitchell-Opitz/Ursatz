@@ -188,10 +188,11 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
         snprintf(set->ids[i], sizeof(set->ids[i]), "c%zu", i);
         snprintf(set->key_refs[i], sizeof(set->key_refs[i]), phrase->chord_keys ? "key%u" : HEARD_KEY_REF,
                  phrase->chord_keys ? phrase->chord_keys[i] : 0u);
+        int root_semitones;
         bool intervals_ok = chord->applied ? harmony_applied_intervals(&chord->applied_chord, input->intervals,
                                                                &input->interval_count)
-                                           : harmony_diatonic_intervals(phrase->composer_chords, mode, &chord->chord, input->intervals,
-                                                                &input->interval_count);
+                                           : composer_chord_intervals(phrase->composer_chords, mode, phrase->modal, &chord->chord,
+                                                                      &root_semitones, input->intervals, &input->interval_count);
         if (!intervals_ok || !times_create(phrase, first_cell, chord->cells, &set->times[i])) {
             harmony_segments_destroy(set);
             return NULL;
@@ -329,7 +330,7 @@ bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, Cad
     if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false, NULL, NULL, false, &metre, NULL};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false, NULL, NULL, false, &metre, NULL, NULL};
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 

@@ -191,6 +191,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_materials.h
         theory/tonality/interval.h
+        theory/tonality/modal_chords.h
         theory/tonality/key_vocabulary.h
         theory/tonality/region_relation.h
         theory/tonality/roman_numeral_analysis_rules.h

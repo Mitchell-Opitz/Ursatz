@@ -42,5 +42,3 @@ library/theory/tonality/chord_vocabulary.c common_practice_triad_intervals  # th
 library/theory/tonality/chord_vocabulary_seventh.c common_practice_seventh_intervals  # the no-snapshot fallback of common_practice_seventh_intervals_with (R-728); its tests call it
 library/theory/tonality/modal_chords.c modal_function_of  # no app reads a modal function until P69 B3 commit 3 (the phrase checker); its tests call it
 library/theory/tonality/modal_chords.c pitch_material_avoids  # no app tests an avoided degree until P69 B3 commit 4 (the phrase model); its tests call it
-library/theory/tonality/modal_chords.c pitch_material_is_modal_key  # no app asks for a modal key until P69 B3 commit 2 (composer_chord_tones); its tests call it
-library/theory/tonality/modal_chords.c pitch_material_triad_on  # no app stacks a material's triad until P69 B3 commit 2 (composer_chord_tones); its tests call it

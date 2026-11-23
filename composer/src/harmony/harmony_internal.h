@@ -194,6 +194,8 @@ typedef struct {
     const PhraseMetre *metre;
     /* The chord types the recognizer's intervals are read with (R-728); NULL: the fallback tables. */
     const ComposerChords *composer_chords;
+    /* The material of a modal key the phrase is in (R-725), whose chords are stacked from it; NULL for a major or minor key. */
+    const PitchMaterial *modal;
 } HeardPhrase;
 
 

@@ -174,7 +174,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
     HeardPhrase phrase = {all, total, harmony_key_mode(&context->key), context->has_cadence ? context->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC,
-                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL, NULL};
+                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL, NULL, NULL};
     phrase.composer_chords = context->composer_chords;
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);

@@ -16,22 +16,17 @@ bool melody_chord_mask(const ComposerChords *chords, const SpelledKey *key, cons
             return false;
         }
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
-    } else {
-        if (!harmony_diatonic_intervals(chords, harmony_key_mode(key), &chord->chord, intervals, &count)) {
+        if (root < 0) {
             return false;
         }
-        /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = composer_key_is_minor(key) && chord->chord.leading_tone
-                   ? 11
-                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
-    }
-    if (root < 0) {
+        root = (spelled_key_tonic_pitch_class(key) + root) % 12;
+    } else if (!composer_chord_tones(chords, key, &chord->chord, &root, intervals, &count)) {
         return false;
     }
     *mask = 0;
     *seventh = 0;
     for (size_t k = 0; k < count; k++) {
-        unsigned bit = 1u << ((spelled_key_tonic_pitch_class(key) + root + intervals[k]) % 12);
+        unsigned bit = 1u << ((root + intervals[k]) % 12);
         *mask |= bit;
         if (k == 3) {
             *seventh = bit;

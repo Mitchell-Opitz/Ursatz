@@ -463,7 +463,7 @@ static bool whole_fits(const PhraseRequest *request, const PhraseChord *chords, 
         CadenceType heard;
         bool at_end;
         HeardPhrase phrase = {chords, count, request->mode, request->cadence, request->cells_per_bar, request->cell_length,
-                              false, NULL, true, false, NULL, NULL, false, &request->metre, NULL};
+                              false, NULL, true, false, NULL, NULL, false, &request->metre, NULL, NULL};
         phrase.composer_chords = request->composer_chords;
         if (!harmony_hear_phrase(&phrase, &heard, &at_end) || !at_end || heard != request->cadence) {
             return false;

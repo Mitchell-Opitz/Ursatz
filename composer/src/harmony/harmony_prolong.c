@@ -369,7 +369,7 @@ bool harmony_prolong_checker(const Plan *plan, FillTarget target, const FillOper
        heard from the harmony and the beats alone. */
     HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
-                          !motive_prolongation, NULL, NULL, false, &progression->request.metre, NULL};
+                          !motive_prolongation, NULL, NULL, false, &progression->request.metre, NULL, NULL};
     phrase.composer_chords = progression->request.composer_chords;
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));

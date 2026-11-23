@@ -48,20 +48,20 @@ bool harmony_chord_bass_pc(const ComposerChords *chords, const SpelledKey *key, 
         }
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
         member = chord->applied_inversion;
-    } else {
-        if (!harmony_diatonic_intervals(chords, harmony_key_mode(key), &chord->chord, intervals, &count)) {
+        if (root < 0) {
             return false;
         }
-        /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = composer_key_is_minor(key) && chord->chord.leading_tone
-                   ? 11
-                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
+        root = (spelled_key_tonic_pitch_class(key) + root) % 12;
+    } else {
+        if (!composer_chord_tones(chords, key, &chord->chord, &root, intervals, &count)) {
+            return false;
+        }
         member = chord->chord.inversion;
     }
-    if (root < 0 || member < 0 || (size_t)member >= count) {
+    if (member < 0 || (size_t)member >= count) {
         return false;
     }
-    *pc = (spelled_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
+    *pc = (root + intervals[member]) % 12;
     return true;
 }
 

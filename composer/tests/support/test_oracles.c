@@ -22,7 +22,7 @@ bool harmony_check_lane_without_cadence(const Plan *plan, PlanSpan span, Harmony
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre, NULL};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre, NULL, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -50,7 +50,7 @@ bool harmony_check_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, Caden
         return false;
     }
     mark_schema_chords(plan, span, count, exempt);
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL, false, &metre, NULL};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL, false, &metre, NULL, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -71,7 +71,7 @@ bool harmony_hear_lane_cadences(const Plan *plan, PlanSpan span, HarmonyMode mod
         found != count) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre, NULL};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre, NULL, NULL};
     SegmentSet *set = harmony_segments_create_heard(&phrase, soprano);
     if (!set) {
         return false;
