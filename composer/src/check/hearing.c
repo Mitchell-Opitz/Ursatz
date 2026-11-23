@@ -222,8 +222,10 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
                               .streams = heard.streams,
                               .has_key = true};
     if (!key_signature_of(spelled_key_tonic_pitch_class(&key),
-                          common_practice_material(&materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR
-                                                                                           : COMMON_PRACTICE_KEY_MAJOR),
+                          pitch_material_is_modal_key(&materials, key.material)
+                              ? key.material
+                              : common_practice_material(&materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR
+                                                                                                 : COMMON_PRACTICE_KEY_MAJOR),
                           &view.key_fifths, &view.key_minor)) {
         heard_span_release(&heard);
         return HEARING_ERR_ANALYSIS;

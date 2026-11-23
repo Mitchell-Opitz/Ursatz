@@ -326,8 +326,8 @@ static void key_text(const SpelledKey *key, char *out, size_t size) {
     /* The minor key's tonic is named as a minor key is written (key_tonic_name_minor, R-582: Eb minor, not D# minor). */
     int tonic = spelled_key_tonic_pitch_class(key);
     snprintf(out, size, "%s %s",
-             composer_key_is_minor(key) ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
-             composer_key_is_minor(key) ? "minor" : "major");
+             composer_key_is_minor(key) && !pitch_material_is_modal_key(NULL, key->material) ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
+             composer_key_word(key));
 }
 
 static const char *key_source_name(MotiveSketchKeySource source) {

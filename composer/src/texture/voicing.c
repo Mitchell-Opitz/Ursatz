@@ -172,7 +172,7 @@ static bool read_lead_in(const Plan *plan, VoicingContext *out, Rational cell_le
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
         !harmony_read_chord_for(plan, before, &kind_before, cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
-         (spelled_key_tonic_pitch_class(&key) != spelled_key_tonic_pitch_class(&out->key) || composer_key_is_minor(&key) != composer_key_is_minor(&out->key))) ||
+         (spelled_key_tonic_pitch_class(&key) != spelled_key_tonic_pitch_class(&out->key) || !composer_key_same_mode(&key, &out->key))) ||
         !position_is_positive(before_span.length)) {
         return true;
     }

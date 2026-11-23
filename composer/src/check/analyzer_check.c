@@ -198,7 +198,7 @@ static void compare_key(const Reading *reading, SpelledKey key, Items *items) {
         if (common_practice_key_mode_of(region->material, &mode)) {
             util_key_name(region->center, region->material, heard, sizeof(heard));
             agreed = region->center == spelled_key_tonic_pitch_class(&key) &&
-                     (mode == COMMON_PRACTICE_KEY_MAJOR) == (!composer_key_is_minor(&key));
+                     composer_material_same_mode(region->material, key.material);
         }
     }
     add_item(items, ANALYZER_CHECK_KEY, 0, planned, heard, agreed);

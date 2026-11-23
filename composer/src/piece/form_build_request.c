@@ -323,7 +323,7 @@ static bool theme_motive(const PieceRequest *request, const PieceSection *sectio
     }
     span = plan_node_span(theme_plan, theme);
     if (!return_meter_over(theme_plan, span, &meter) || !key_over(theme_plan, span, &key) ||
-        composer_key_is_minor(&key) != composer_key_is_minor(&request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
+        !composer_key_same_mode(&key, &request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
     int shift = pitch_class_step(spelled_key_tonic_pitch_class(&key), spelled_key_tonic_pitch_class(&request->key), true);
@@ -382,7 +382,7 @@ static bool loop_motive(const PieceRequest *request, const Plan *loop_plan, Moti
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           composer_key_is_minor(&key) == composer_key_is_minor(&request->key) && spelled_key_tonic_pitch_class(&key) == spelled_key_tonic_pitch_class(&request->key) &&
+           composer_key_same_mode(&key, &request->key) && spelled_key_tonic_pitch_class(&key) == spelled_key_tonic_pitch_class(&request->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 

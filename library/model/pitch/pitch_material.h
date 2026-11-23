@@ -60,6 +60,13 @@ int pitch_material_third(const PitchMaterial *material);
 /* True for a material of family "diatonic" with 7 steps. */
 bool pitch_material_is_diatonic(const PitchMaterial *material);
 
+/*
+ * The degree (1 to 7) of the major scale from which the major steps rotate into this material's steps: dorian 2, phrygian 3, lydian 4,
+ * mixolydian 5, natural minor 6, locrian 7, major 1. 0 for a material that is no rotation of the major scale (and for NULL). Computed
+ * from the steps, so it holds for the natural minor, which names no rotation.
+ */
+int pitch_material_major_rotation(const PitchMaterial *material);
+
 /* True for the natural minor: a diatonic material of brightness rank 3 (the aeolian). False for NULL and for the other modes. */
 bool pitch_material_is_natural_minor(const PitchMaterial *material);
 

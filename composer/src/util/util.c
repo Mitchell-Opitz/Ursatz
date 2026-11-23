@@ -56,8 +56,38 @@ bool composer_material_supported(const CommonPracticeMaterials *materials, const
            (material == materials->major || material == materials->natural_minor || pitch_material_is_modal_key(materials, material));
 }
 
-bool composer_material_is_modal(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
-    return pitch_material_is_modal_key(materials, material);
+bool composer_material_same_mode(const PitchMaterial *a, const PitchMaterial *b) {
+    if (a == b) {
+        return true;
+    }
+    if (pitch_material_is_modal_key(NULL, a) || pitch_material_is_modal_key(NULL, b)) {
+        return false;
+    }
+    return composer_material_is_minor(a) == composer_material_is_minor(b);
+}
+
+bool composer_key_same_mode(const SpelledKey *a, const SpelledKey *b) {
+    return composer_material_same_mode(a != NULL ? a->material : NULL, b != NULL ? b->material : NULL);
+}
+
+bool composer_material_counts_as_minor(const PitchMaterial *material) {
+    return composer_material_is_minor(material) || pitch_material_is_modal_key(NULL, material);
+}
+
+const char *composer_key_word(const SpelledKey *key) {
+    const PitchMaterial *material = key != NULL ? key->material : NULL;
+    if (material != NULL && pitch_material_is_modal_key(NULL, material)) {
+        return material->key_word != NULL ? material->key_word : material->name;
+    }
+    return composer_key_is_minor(key) ? "minor" : "major";
+}
+
+int composer_material_default_tonic(const PitchMaterial *material) {
+    int rotation = pitch_material_major_rotation(material);
+    if (rotation > 0) {
+        return standard_tonality_natural_degree_semitone(rotation);
+    }
+    return composer_material_is_minor(material) ? 9 : 0;
 }
 
 bool composer_material_raises_seventh(const PitchMaterial *material) {

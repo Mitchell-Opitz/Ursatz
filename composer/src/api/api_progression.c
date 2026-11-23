@@ -134,7 +134,7 @@ static UrsatzStatus read_request(const cJSON *request, const KnowledgeSnapshot *
         options->has_schema = true;
         if (!harmony_schema_available(options->schema, options->key.material)) {
             return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/schema", "the schema '%s' cannot be written in a %s key",
-                            options->schema_text, composer_key_is_minor(&options->key) ? "minor" : "major");
+                            options->schema_text, composer_key_word(&options->key));
         }
     }
     if (options->sequence_text) {
@@ -220,7 +220,13 @@ static bool build_plan(const Options *options, Built *built) {
 
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
     PlanSpan region = built->span;
-    const char *tonic = composer_key_is_minor(&options->key) ? "i" : "I";
+    HarmonyKind tonic_kind = harmony_kind(NULL, &options->key);
+    HarmonyChord tonic_chord = {1, 0, false, false, false, false};
+    char tonic_text[PLAN_ROMAN_NUMERAL_MAX];
+    if (!harmony_roman_format_in(&tonic_kind, &tonic_chord, tonic_text)) {
+        snprintf(tonic_text, sizeof(tonic_text), "%s", composer_key_is_minor(&options->key) ? "i" : "I");
+    }
+    const char *tonic = tonic_text;
     if (needs_lead(options)) {
         PlanSpan lead = {built->span.start, built->bar_length};
         region.start = built->bar_length;

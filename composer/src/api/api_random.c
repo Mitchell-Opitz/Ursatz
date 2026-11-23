@@ -98,7 +98,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
                             "for example \"D minor\"",
                             key_text);
         }
-        if (composer_key_is_minor(&out->key) != composer_material_is_minor(out->material)) {
+        if (!composer_material_same_mode(out->key.material, out->material)) {
             return api_fail(error, URSATZ_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
                             mode_text);
         }

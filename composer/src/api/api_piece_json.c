@@ -319,7 +319,7 @@ static cJSON *changes_json(const ApiPieceRow *row) {
     const PitchMaterial *to_material = NULL;
     bool mapped = form_return_mode_change(row->plan, row->node, &to_material);
     const char *material_id = mapped && to_material ? to_material->id : NULL;
-    const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
+    const char *mode = mapped ? (pitch_material_is_modal_key(NULL, to_material) ? to_material->key_word : composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
               cJSON_AddStringToObject(entry, "variation", section_return_variation_name(spec->variation)) &&
               api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "material", string_or_null(material_id));

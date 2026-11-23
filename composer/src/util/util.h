@@ -7,6 +7,7 @@
 #include <theory/tonality/spelled_key.h>
 #include <theory/harmony/harmonic_function.h>
 #include <theory/tonality/common_practice_materials.h>
+#include <theory/tonality/modal_chords.h>
 
 /* Small helpers the sources share. Private: not installed, not part of the API. */
 
@@ -71,8 +72,21 @@ bool composer_material_valid(const PitchMaterial *material);
  */
 bool composer_material_supported(const CommonPracticeMaterials *materials, const PitchMaterial *material);
 
-/* Whether the material is a modal key (a church mode) of the materials; false for the major, the natural minor and NULL. */
-bool composer_material_is_modal(const CommonPracticeMaterials *materials, const PitchMaterial *material);
+/*
+ * Whether two materials are the same mode of a key: the same material, or both major or natural minor read by their third (a D natural
+ * minor motive is not a D dorian one). NULL reads as major, as the zero key does. composer_key_same_mode is the same for keys.
+ */
+bool composer_material_same_mode(const PitchMaterial *a, const PitchMaterial *b);
+bool composer_key_same_mode(const SpelledKey *a, const SpelledKey *b);
+
+/* Whether a counting by mode (the predominants a mode has, the cells a phrase needs) reads the material as minor: a minor third, or any modal key (a run of one). */
+bool composer_material_counts_as_minor(const PitchMaterial *material);
+
+/* The word after the tonic of the key's name: "major", "minor", or the church mode ("dorian"). */
+const char *composer_key_word(const SpelledKey *key);
+
+/* The pitch class of the default tonic of a material: that of the major degree from which the major steps rotate into it (dorian D, natural minor A), C for the rest. */
+int composer_material_default_tonic(const PitchMaterial *material);
 
 /*
  * Whether a key of the material raises its seventh degree to a leading tone where a chord holds it: the natural minor only

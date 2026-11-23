@@ -404,7 +404,7 @@ static const char *motive_reason(const GrowRequest *request, const Motive *motiv
     }
     if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
         (motive->tonic_pc != spelled_key_tonic_pitch_class(&request->key) ||
-         motive_sketch_minor(motive) != (composer_key_is_minor(&request->key)))) {
+         !composer_material_same_mode(motive->material, request->key.material))) {
         return "is not in the theme's key";
     }
     /* The idea has units eighths of the theme; the longest motive is as long as that idea. */

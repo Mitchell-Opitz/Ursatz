@@ -256,7 +256,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
 /* The pitch moved from the other mode of the tonic into `to` (R-499). */
 int return_map_pitch(int tonic, const PitchMaterial *to, int pitch) {
     int degree = util_pitch_class(pitch - tonic);
-    if (composer_material_is_minor(to)) {
+    if (composer_material_counts_as_minor(to)) {
         return degree == 4 || degree == 9 ? pitch - 1 : pitch;
     }
     return degree == 3 || degree == 8 || degree == 10 ? pitch + 1 : pitch;
@@ -281,7 +281,7 @@ bool return_copy_change_mode(ReturnCopy *copy, SpelledKey home, const PitchMater
         for (size_t c = 0; c < span->constraint_count; c++) {
             map_key(&span->constraints[c], to);
             /* The minor phrase model has one predominant: a half-cadence phrase of four bars deals a chord over two bars. */
-            if (composer_material_is_minor(to) && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
+            if (composer_material_counts_as_minor(to) && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
                 span->constraints[c].params.harmony_shape.split_at_bars = false;
             }
         }
@@ -440,7 +440,7 @@ bool return_key_shift(const Plan *source_plan, PlanSpan source, const Plan *targ
     for (size_t i = 0; i < na; i++) {
         int step = util_pitch_class(spelled_key_tonic_pitch_class(&b[i].key) - spelled_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            composer_key_is_minor(&a[i].key) != composer_key_is_minor(&b[i].key) || (difference >= 0 && difference != step)) {
+            !composer_key_same_mode(&a[i].key, &b[i].key) || (difference >= 0 && difference != step)) {
             return false;
         }
         difference = step;
@@ -462,7 +462,7 @@ bool return_mode_shift_by(const Plan *source_plan, PlanSpan source, const Plan *
     for (size_t i = 0; i < na; i++) {
         int step = util_pitch_class(spelled_key_tonic_pitch_class(&b[i].key) - spelled_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            composer_key_is_minor(&a[i].key) == composer_key_is_minor(&b[i].key) || composer_key_is_minor(&b[i].key) != composer_key_is_minor(&b[0].key) || (difference >= 0 && difference != step)) {
+            composer_key_same_mode(&a[i].key, &b[i].key) || !composer_key_same_mode(&b[i].key, &b[0].key) || (difference >= 0 && difference != step)) {
             return false;
         }
         difference = step;
