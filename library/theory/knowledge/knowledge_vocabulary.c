@@ -21,6 +21,42 @@ static bool code_text(const char *text) {
     return true;
 }
 
+/* A modal cadence kind: content.material, content.approach (1 to 3 numerals) and content.arrival, all three or none. The degrees are checked against the material's steps when it is linked. */
+static KnowledgeStatus read_cadence_degrees(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    VocabularyCadence *cadence = &slot->vocabulary.cadence;
+    const cJSON *material = knowledge_member(content, "material");
+    const cJSON *approach = knowledge_member(content, "approach");
+    const cJSON *arrival = knowledge_member(content, "arrival");
+    if (material == NULL && approach == NULL && arrival == NULL) {
+        return KNOWLEDGE_OK;
+    }
+    const char *target = knowledge_string_of(material);
+    if (target == NULL || approach == NULL || arrival == NULL) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.material",
+                       "material, approach and arrival come together: one is missing or the material is not an id");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    int size = cJSON_IsArray(approach) ? cJSON_GetArraySize(approach) : -1;
+    if (size < 1 || size > 3) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.approach", "not an array of 1 to 3 chord numerals");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, approach) {
+        if (!knowledge_read_numeral(knowledge_string_of(item), &cadence->approach_degrees[cadence->approach_count])) {
+            knowledge_fail(message, message_size, path, slot->entry.id, "content.approach", "not a chord numeral without alteration");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        cadence->approach_count++;
+    }
+    if (!knowledge_read_numeral(knowledge_string_of(arrival), &cadence->arrival_degree)) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.arrival", "not a chord numeral without alteration");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    slot->cadence_material_target = knowledge_own(slot, target);
+    return slot->cadence_material_target != NULL ? KNOWLEDGE_OK : KNOWLEDGE_ERR_ALLOC;
+}
+
 static KnowledgeStatus read_cadence_kind(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
     VocabularyCadence *cadence = &slot->vocabulary.cadence;
     KnowledgeStatus status = knowledge_read_text(slot, content, "label", &cadence->label, path, message, message_size);
@@ -56,7 +92,7 @@ static KnowledgeStatus read_cadence_kind(Slot *slot, const cJSON *content, const
         return KNOWLEDGE_ERR_FIELD;
     }
     cadence->conclusive = cJSON_IsTrue(conclusive);
-    return KNOWLEDGE_OK;
+    return read_cadence_degrees(slot, content, path, message, message_size);
 }
 
 static KnowledgeStatus read_embellishment(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {

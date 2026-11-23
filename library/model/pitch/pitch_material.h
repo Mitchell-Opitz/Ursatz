@@ -11,7 +11,10 @@
  * tonic in a key name ("C minor"; the entry's name when it gives none). `family` is NULL when the entry gives none; `has_brightness`
  * says `brightness_rank` is set (only a diatonic family has one). A color note is a scale degree and the alteration against major
  * (degree 3, alteration -1 for "b3"; the 7 and the #4 likewise). `variant_of` and `rotation_of` point at the material the entry
- * relates to, or are NULL. A snapshot owns it; the strings and the pointed-to materials live as long as the snapshot.
+ * relates to, or are NULL. The primary and avoided chords are the degrees of the entry's chord numerals ("ii" is degree 2; the case
+ * and a trailing "o" are read from the stacked triad, not kept), the characteristic degrees the steps that give the mode its color
+ * (2 to 7), `cadence` the id of the cadence-kind entry the mode closes with (NULL for none); each count is 0 when the entry gives none.
+ * A snapshot owns it; the strings and the pointed-to materials live as long as the snapshot.
  */
 typedef struct PitchMaterial PitchMaterial;
 
@@ -33,6 +36,13 @@ struct PitchMaterial {
     int descending_steps[12];
     const PitchMaterial *variant_of;
     const PitchMaterial *rotation_of;
+    size_t primary_count;
+    int primary_degrees[7];
+    size_t avoided_count;
+    int avoided_degrees[7];
+    size_t characteristic_count;
+    int characteristic_degrees[7];
+    const char *cadence;
 };
 
 /* The semitones above the center of degree `degree` (1 to step_count), or -1 for another degree or a NULL material. */

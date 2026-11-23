@@ -21,6 +21,18 @@ typedef enum {
     CHORD_MEMBER_SUSPENDED_FOURTH
 } ChordMemberRole;
 
+/* How the members are built up: stacked thirds, fourths or seconds, a triad with added notes, two chords, a mix, a cluster, a power chord. */
+typedef enum {
+    CHORD_CONSTRUCTION_TERTIAN = 0,
+    CHORD_CONSTRUCTION_QUARTAL,
+    CHORD_CONSTRUCTION_SECUNDAL,
+    CHORD_CONSTRUCTION_ADDED_NOTE,
+    CHORD_CONSTRUCTION_POLYCHORD,
+    CHORD_CONSTRUCTION_COMPOUND,
+    CHORD_CONSTRUCTION_CLUSTER,
+    CHORD_CONSTRUCTION_POWER
+} ChordConstruction;
+
 #define CHORD_TYPE_MEMBER_MAX 8
 
 typedef struct {
@@ -31,6 +43,7 @@ typedef struct {
         ChordMemberRole role;
         int semitones;
     } members[CHORD_TYPE_MEMBER_MAX];
+    ChordConstruction construction; /* the entry's content.construction (tertian when it gives none) */
 } ChordType;
 
 #endif

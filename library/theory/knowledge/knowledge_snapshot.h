@@ -10,6 +10,7 @@
 #include "theory/knowledge/relation.h"
 #include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
+#include "theory/knowledge/voicing_entry.h"
 
 /*
  * The knowledge snapshot (target architecture 5): every entry of knowledge/ as the build embedded it, plus the entries of a user's
@@ -18,7 +19,7 @@
  * chord type and relation kinds, what the entry says (every field the loader reads is checked, and a bad one refuses the build with
  * the file, the id and the field). The loaded kinds are the pitch material, the chord type, the relation, the instrument (its
  * two subtypes, instrument and ensemble), the vocabulary (its five subtypes), the formal function (kind function, subtype
- * formal-function) and the theme type. Entries of other kinds are kept by their common fields until their loaders exist.
+ * formal-function), the theme type and the voicing. Entries of other kinds are kept by their common fields until their loaders exist.
  */
 
 typedef struct KnowledgeSnapshot KnowledgeSnapshot;
@@ -91,6 +92,17 @@ const PitchMaterial *knowledge_snapshot_material_at(const KnowledgeSnapshot *sna
 
 /* The chord type (kind chord-type) with this id, or NULL when there is none or the entry is another kind. */
 const ChordType *knowledge_snapshot_chord_type(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The chord types in id order: how many, and the one at `index` (NULL out of range). */
+size_t knowledge_snapshot_chord_type_count(const KnowledgeSnapshot *snapshot);
+const ChordType *knowledge_snapshot_chord_type_at(const KnowledgeSnapshot *snapshot, size_t index);
+
+/* The voicing (kind voicing) with this id, or NULL when there is none or the entry is another kind. */
+const VoicingEntry *knowledge_snapshot_voicing(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The voicings in id order: how many, and the one at `index` (NULL out of range). */
+size_t knowledge_snapshot_voicing_count(const KnowledgeSnapshot *snapshot);
+const VoicingEntry *knowledge_snapshot_voicing_at(const KnowledgeSnapshot *snapshot, size_t index);
 
 /*
  * The first chord type, in id order and not retired, whose members above the root make `mask_above_root`: bit n is a member n
