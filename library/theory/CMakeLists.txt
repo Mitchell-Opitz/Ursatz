@@ -33,6 +33,7 @@ add_library(ursatz_theory
     tonality/chord_vocabulary_seventh.c
     tonality/common_practice_materials.c
     tonality/interval.c
+    tonality/modal_chords.c
     tonality/key_vocabulary.c
     tonality/region_relation.c
     tonality/roman_numeral_analysis_rules.c
