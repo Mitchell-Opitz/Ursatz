@@ -215,6 +215,8 @@ typedef struct {
     int tonic_offset;           /* the root's semitones above the tonic, 0..11 */
     int form_rank;              /* 0: preferred form on a tie; 1: the other form of the same root (minor only) */
     int applied_target_degree;  /* 0 for a diatonic chord; else 1..7: the degree of the key an applied chord tonicizes */
+    int intervals[4];           /* the chord's semitones above its root, read from the snapshot's chord type (R-728) */
+    size_t interval_count;      /* 0 for a chord built by hand: common_practice_ranked_chord_intervals then computes them */
 } CommonPracticeRankedChord;
 
 /* Ranks the eligible candidates (root sounding) for weights in a key on tonic_pitch_class (0..11) in the

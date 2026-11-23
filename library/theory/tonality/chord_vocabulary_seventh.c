@@ -30,6 +30,13 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
     return standard_tonality_seventh_quality_semitones(SEVENTH_QUALITIES[seventh], out);
 }
 
+bool common_practice_seventh_intervals_with(const CommonPracticeMaterials *materials, CommonPracticeSeventh seventh, int out[4]) {
+    if (!valid_seventh(seventh) || out == NULL) {
+        return false;
+    }
+    return common_practice_seventh_semitones(materials, SEVENTH_QUALITIES[seventh], out);
+}
+
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh) {
     if (!valid_seventh(seventh)) {
         return NULL;

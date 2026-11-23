@@ -38,6 +38,5 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_coun
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing  # no app looks a voicing up by id until P69 B9 (voicings); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_at  # no app lists the voicings until P69 B9 (voicings); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_count  # no app lists the voicings until P69 B9 (voicings); its tests call it
-library/theory/tonality/common_practice_materials.c common_practice_seventh_semitones  # no caller until P69 B2 commit 2 (the ranking reads the types through it); the next commit deletes this row
-library/theory/tonality/common_practice_materials.c common_practice_triad_semitones  # no caller until P69 B2 commit 2 (the ranking reads the types through it); the next commit deletes this row
-library/theory/tonality/common_practice_materials.c type_semitones  # no caller until P69 B2 commit 2 (the ranking reads the types through it); the next commit deletes this row
+library/theory/tonality/chord_vocabulary.c common_practice_triad_intervals  # the no-snapshot fallback of common_practice_triad_intervals_with (R-728); its tests call it
+library/theory/tonality/chord_vocabulary_seventh.c common_practice_seventh_intervals  # the no-snapshot fallback of common_practice_seventh_intervals_with (R-728); its tests call it

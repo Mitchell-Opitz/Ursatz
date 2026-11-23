@@ -1,6 +1,7 @@
 #include "analysis/harmony/weighted_identification.h"
 
 #include <math.h>
+#include <string.h>
 
 #include "model/core/rational.h"
 #include "model/pitch/midi_pitch.h"
@@ -213,14 +214,26 @@ static const WeightedVocabularyEntry MINOR_APPLIED[COMMON_PRACTICE_MINOR_APPLIED
 #undef HDIM7
 #undef DIM7
 
+/* The intervals of a vocabulary entry's chord with the chord types of `materials` (NULL: the fallback tables). */
+static size_t entry_intervals(const CommonPracticeMaterials *materials, bool is_seventh, CommonPracticeTriad triad,
+                              CommonPracticeSeventh seventh, int out[4]) {
+    if (is_seventh) {
+        return common_practice_seventh_intervals_with(materials, seventh, out) ? 4 : 0;
+    }
+    return common_practice_triad_intervals_with(materials, triad, out) ? 3 : 0;
+}
+
 size_t common_practice_ranked_chord_intervals(const CommonPracticeRankedChord *chord, int out[4]) {
     if (chord == NULL || out == NULL) {
         return 0;
     }
-    if (chord->is_seventh) {
-        return common_practice_seventh_intervals(chord->seventh, out) ? 4 : 0;
+    if (chord->interval_count > 0) {
+        for (size_t i = 0; i < chord->interval_count; i++) {
+            out[i] = chord->intervals[i];
+        }
+        return chord->interval_count;
     }
-    return common_practice_triad_intervals(chord->triad, out) ? 3 : 0;
+    return entry_intervals(NULL, chord->is_seventh, chord->triad, chord->seventh, out);
 }
 
 /* True when `a` ranks ahead of `b` for a segment whose bass has pitch class bass_pitch_class. */
@@ -250,13 +263,9 @@ static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPractice
 }
 
 /* True when the chord of `entry`, rooted at pitch class `root`, has a tone on `pitch_class`. */
-static bool entry_holds(const WeightedVocabularyEntry *entry, int root, int pitch_class) {
-    CommonPracticeRankedChord chord;
-    chord.is_seventh = entry->is_seventh;
-    chord.triad = entry->triad;
-    chord.seventh = entry->seventh;
+static bool entry_holds(const WeightedVocabularyEntry *entry, int root, int pitch_class, const CommonPracticeMaterials *materials) {
     int intervals[4];
-    size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
+    size_t count = entry_intervals(materials, entry->is_seventh, entry->triad, entry->seventh, intervals);
     for (size_t i = 0; i < count; i++) {
         if ((root + intervals[i]) % 12 == pitch_class) {
             return true;
@@ -285,12 +294,8 @@ static bool entry_eligible(const WeightedVocabularyEntry *entry, int root, int t
     if (entry->applied_target == 0) {
         return true;
     }
-    CommonPracticeRankedChord chord;
-    chord.is_seventh = entry->is_seventh;
-    chord.triad = entry->triad;
-    chord.seventh = entry->seventh;
     int intervals[4];
-    size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
+    size_t count = entry_intervals(materials, entry->is_seventh, entry->triad, entry->seventh, intervals);
     unsigned scale = key_scale_mask(materials, mode);
     for (size_t i = 0; i < count; i++) {
         int pitch_class = (root + intervals[i]) % 12;
@@ -339,7 +344,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
             const WeightedVocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
             int root = (tonic_pitch_class + entry->offset) % 12;
             bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials) &&
-                            entry_holds(entry, root, weights->bass_pitch_class);
+                            entry_holds(entry, root, weights->bass_pitch_class, materials);
         }
     }
 
@@ -351,11 +356,12 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials)) {
             continue; /* the root does not sound (or no tone outside the key does, for an applied chord) */
         }
-        if (bass_required && !entry_holds(entry, root, weights->bass_pitch_class)) {
+        if (bass_required && !entry_holds(entry, root, weights->bass_pitch_class, materials)) {
             continue; /* the chord must hold the bass */
         }
 
         CommonPracticeRankedChord chord;
+        memset(&chord, 0, sizeof(chord));
         chord.degree = entry->degree;
         chord.is_seventh = entry->is_seventh;
         chord.triad = entry->triad;
@@ -366,8 +372,9 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         chord.form_rank = entry->form_rank;
         chord.applied_target_degree = entry->applied_target;
 
-        int intervals[4];
-        size_t interval_count = common_practice_ranked_chord_intervals(&chord, intervals);
+        size_t interval_count = entry_intervals(materials, chord.is_seventh, chord.triad, chord.seventh, chord.intervals);
+        chord.interval_count = interval_count;
+        const int *intervals = chord.intervals;
         int third = (root + intervals[1]) % 12;
         double in_chord = 0.0;
         bool bass_is_chord_tone = false;
