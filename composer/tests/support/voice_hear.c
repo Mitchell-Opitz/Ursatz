@@ -4,6 +4,7 @@
  * written music is heard through the Analyzer once per run (check/hearing.h).
  */
 #include "voice_hear.h"
+#include "test_knowledge.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,7 +88,7 @@ static PitchSpelling *spell_over(const SpelledKey *key, const PhraseChord *chord
     int pcs[4];
     size_t count;
     int root_degree;
-    if (accomp_chord_tones(key, chord, pcs, &count)) {
+    if (accomp_chord_tones(test_composer_chords(), key, chord, pcs, &count)) {
         root_degree = chord->applied ? harmony_applied_root_degree(harmony_key_mode(key), &chord->applied_chord)
                                      : chord->chord.degree;
         for (size_t k = 0; root_degree >= 1 && root_degree <= 7 && k < count; k++) {
@@ -226,7 +227,7 @@ VoiceHearResult voice_hear(const Plan *plan, PlanSpan span, VoiceHeard *out) {
         StandardCounterpointVoiceGrid counterpoint = {count, VOICES, grid->row_id_ptrs, grid->counterpoint_cells};
         HarmonyVoiceGrid harmony_grid = {count, VOICES, grid->segment_id_ptrs, grid->harmony_cells};
         HeardPhrase phrase = {chords, count, harmony_key_mode(&key), CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, false, NULL,
-                              false,  false, NULL, NULL, false, &metre};
+                              false,  false, NULL, NULL, false, &metre, NULL};
         result = count_violations(&counterpoint, &harmony_grid, &phrase, out);
         out->rows = count;
     }

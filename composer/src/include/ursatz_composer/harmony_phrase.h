@@ -9,6 +9,7 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan_lanes.h>
 #include "structure/plan_util.h"
 
@@ -61,7 +62,7 @@ size_t harmony_phrase_min_cells(CadenceType cadence, const PlanMeter *meter);
 size_t harmony_phrase_min_bars(CadenceType cadence, const PlanMeter *meter);
 
 /* Registers the operator. FILL_OK, or the registry's error. */
-FillResult harmony_phrase_register(FillOperatorRegistry *registry);
+FillResult harmony_phrase_register(FillOperatorRegistry *registry, const ComposerChords *chords);
 
 /*
  * The same operator for a plan with Given material in it (R-071): a Given bass under the span does not refuse the span
@@ -70,7 +71,7 @@ FillResult harmony_phrase_register(FillOperatorRegistry *registry);
  * there); and the chords are heard with the Given chords at either end, so that no cadence arises across the join that
  * the plan does not ask for. A target with no Given material around it is written as harmony_phrase_register does.
  */
-FillResult harmony_phrase_register_given(FillOperatorRegistry *registry);
+FillResult harmony_phrase_register_given(FillOperatorRegistry *registry, const ComposerChords *chords);
 
 /*
  * The checker for this operator's candidates; pass it as FillConfig.checker.

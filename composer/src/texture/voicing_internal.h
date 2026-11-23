@@ -68,6 +68,7 @@ typedef struct {
     /* The pitch classes a soprano the voicing writes may take, as a bit mask: all but over the last chord of a cadence. */
     unsigned soprano_mask[VOICING_MAX_CHORDS];
     bool chord_ok[VOICING_MAX_CHORDS]; /* the bass (and a written soprano) are tones of the chord */
+    const ComposerChords *composer_chords; /* the chord types the tones are read with (R-728); NULL: the fallback tables */
 } VoicingContext;
 
 /* A candidate's payload: the soprano, alto and tenor of each chord, held for the chord. */
@@ -83,7 +84,7 @@ typedef struct {
 } VoicingOption;
 
 /* Reads a target; false when it is not one the operator applies to. The caller frees it with voicing_context_free. */
-bool voicing_read(const Plan *plan, LaneSpanId target, VoicingContext *out);
+bool voicing_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, VoicingContext *out);
 void voicing_context_free(VoicingContext *context);
 
 /* Whether standard-voicing holds for the voicing (soprano, alto, tenor) of the chord over its bass. */

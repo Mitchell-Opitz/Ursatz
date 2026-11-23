@@ -281,9 +281,11 @@ typedef struct {
     HarmonyBassParams bass;
     HarmonySchemaParams schema;
     HarmonySequenceParams sequence;
+    const ComposerChords *chords; /* the run's chord types (R-728), set by the caller */
 } Parameters;
 
 static void parameters_for(const Options *options, Parameters *parameters) {
+    parameters->chords = NULL;
     parameters->embellish = harmony_embellish_params_default();
     switch (options->embellish) {
     case EMBELLISH_LOW:
@@ -324,20 +326,20 @@ static FillOperatorRegistry *registry_for(const Options *options, const Paramete
     switch (stage) {
     case STAGE_HARMONY:
         if (options->has_schema) {
-            registered = harmony_schema_register(registry, &parameters->schema);
+            registered = harmony_schema_register(registry, &parameters->schema, parameters->chords);
         }
         if (registered == FILL_OK && options->has_sequence) {
-            registered = harmony_sequence_register(registry, &parameters->sequence);
+            registered = harmony_sequence_register(registry, &parameters->sequence, parameters->chords);
         }
         if (registered == FILL_OK) {
-            registered = harmony_phrase_register(registry);
+            registered = harmony_phrase_register(registry, parameters->chords);
         }
         break;
     case STAGE_EMBELLISH:
-        registered = harmony_embellish_register(registry, &parameters->embellish);
+        registered = harmony_embellish_register(registry, &parameters->embellish, parameters->chords);
         break;
     case STAGE_BASS:
-        registered = harmony_bass_register(registry, &parameters->bass);
+        registered = harmony_bass_register(registry, &parameters->bass, parameters->chords);
         break;
     }
     if (registered != FILL_OK) {
@@ -720,6 +722,7 @@ UrsatzStatus composer_api_progression(const ComposerContext *context, const char
     Options options;
     ApiOutputs outputs;
     Parameters parameters;
+    ComposerChords chords;
     Built built[MAX_SUGGESTIONS];
     size_t made = 0;
     unsigned long seed = 0;
@@ -753,6 +756,7 @@ UrsatzStatus composer_api_progression(const ComposerContext *context, const char
     }
     if (status == URSATZ_OK) {
         parameters_for(&options, &parameters);
+        parameters.chords = composer_chords_init(&chords, context->knowledge, NULL, 0) ? &chords : NULL;
         if (options.suggest > 0) {
             /* The alternatives are the candidates the harmony stage proposes, each taken through the other stages. */
             size_t proposed = count_suggestions(&options, &parameters, seed);

@@ -7,6 +7,7 @@
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 
 /*
  * The four-part voicing operator: a Fill operator that voices a written progression in soprano, alto, tenor and bass
@@ -59,6 +60,6 @@ bool voicing_checker(const Plan *plan, FillTarget target, const FillOperator *op
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must outlive
  * it (NULL means the defaults).
  */
-FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams *params);
+FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams *params, const ComposerChords *chords);
 
 #endif

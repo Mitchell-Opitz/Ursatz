@@ -7,7 +7,7 @@
 
 /* The chord masks and the melodic rule count the melody, the accompaniment and the counterpoint read through the harmony. */
 
-bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
+bool melody_chord_mask(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
     int intervals[4];
     size_t count;
     int root;
@@ -17,7 +17,7 @@ bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned
         }
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
     } else {
-        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, &count)) {
+        if (!harmony_diatonic_intervals(chords, harmony_key_mode(key), &chord->chord, intervals, &count)) {
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */

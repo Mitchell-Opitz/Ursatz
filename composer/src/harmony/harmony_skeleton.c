@@ -9,7 +9,7 @@
 
 #define PREFERENCE_SCALE 1000
 
-bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext *out) {
+bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, SkeletonContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
         plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) != NULL) {
@@ -17,6 +17,7 @@ bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext 
     }
     SkeletonContext context;
     memset(&context, 0, sizeof(context));
+    context.composer_chords = chords;
     context.target = target;
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
@@ -173,7 +174,8 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
     HeardPhrase phrase = {all, total, harmony_key_mode(&context->key), context->has_cadence ? context->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC,
-                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL};
+                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL, NULL};
+    phrase.composer_chords = context->composer_chords;
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);
     if (!ok) {
@@ -350,7 +352,7 @@ PlanResult harmony_skeleton_apply(Plan *plan, const SkeletonCandidate *skeleton)
     if (!plan || !skeleton || skeleton->count == 0) {
         return PLAN_ERR_NULL;
     }
-    if (!harmony_skeleton_read(plan, skeleton->context.target, &read) ||
+    if (!harmony_skeleton_read(plan, skeleton->context.target, skeleton->context.composer_chords, &read) ||
         read.metre.cells != skeleton->context.metre.cells || read.metre.first_cell != skeleton->context.metre.first_cell ||
         read.bass_placeholder != skeleton->context.bass_placeholder) {
         return PLAN_ERR_BAD_PAYLOAD;

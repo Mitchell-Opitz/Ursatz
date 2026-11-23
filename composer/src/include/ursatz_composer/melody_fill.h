@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan_lanes.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/style.h>
@@ -235,6 +236,6 @@ bool melody_candidate_realized(const FillCandidate *candidate, LaneSpanId *targe
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must
  * outlive it (NULL means the defaults).
  */
-FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFillParams *params);
+FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFillParams *params, const ComposerChords *chords);
 
 #endif

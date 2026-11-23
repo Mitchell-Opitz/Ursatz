@@ -53,7 +53,7 @@ size_t accomp_chord_at(const AccompContext *context, Rational position) {
 }
 
 /* The pitch classes of a chord in the key, root first. */
-bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
+bool accomp_chord_tones(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
     int intervals[4];
     int root;
     if (chord->applied) {
@@ -62,7 +62,7 @@ bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs
         }
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
     } else {
-        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, count)) {
+        if (!harmony_diatonic_intervals(chords, harmony_key_mode(key), &chord->chord, intervals, count)) {
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
@@ -148,7 +148,7 @@ static Rational liquidation_start(const Plan *plan, const AccompContext *context
     return position_sub(position_sub(end, origin), context->bar);
 }
 
-bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out) {
+bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *composer_chords, AccompContext *out) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
@@ -163,6 +163,7 @@ bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out) {
         return false;
     }
     accomp_context_zero(out);
+    out->composer_chords = composer_chords;
     out->target = target;
     out->owner = plan_lane_span_owner(plan, target);
     out->span = plan_lane_span_span(plan, target);
@@ -215,8 +216,8 @@ bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out) {
         Rational chord_from;
         Rational chord_length;
         if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
-            !accomp_chord_tones(&out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||
-            !melody_chord_mask(&out->key, &chords[i], &out->chord_mask[i], &seventh) ||
+            !accomp_chord_tones(out->composer_chords, &out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||
+            !melody_chord_mask(out->composer_chords, &out->key, &chords[i], &out->chord_mask[i], &seventh) ||
             !harmony_cells_of_span(&metre, cells, chords[i].cells, &chord_from, &chord_length) ||
             !position_is_positive(chord_length)) {
             return false;
@@ -316,12 +317,11 @@ void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowled
 static bool operator_applies(const Plan *plan, FillTarget target, void *context) {
     AccompContext *read;
     bool applies = false;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN) {
         return false;
     }
     read = malloc(sizeof(*read));
-    if (read && accomp_read(plan, (LaneSpanId)target.id, read)) {
+    if (read && accomp_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read)) {
         /* A pattern the meter does not allow, or the texture does not, is one the operator cannot write. */
         for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; !applies && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
             applies = accomp_pattern_allowed(read, p);
@@ -361,7 +361,7 @@ static void candidate_label(const AccompCandidate *candidate, char *label, size_
 
 static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    const AccompanimentParams *params = context;
+    const AccompanimentParams *params = composer_context_params(context);
     size_t wanted = params && params->candidates > 0 ? params->candidates : ACCOMPANIMENT_DEFAULT_CANDIDATES;
     AccompContext *read = malloc(sizeof(*read));
     AccompCandidate *scratch = malloc(sizeof(*scratch));
@@ -373,7 +373,7 @@ static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng,
     if (wanted > 16) {
         wanted = 16;
     }
-    if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !accomp_read(plan, (LaneSpanId)target.id, read))) {
+    if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !accomp_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read))) {
         ok = false;
     }
     for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; ok && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
@@ -439,7 +439,6 @@ static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandid
     AccompContext *read;
     PlanNote *notes;
     PlanResult result = PLAN_OK;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !accompaniment || accompaniment->magic != ACCOMP_PAYLOAD_MAGIC) {
         return PLAN_ERR_NULL;
     }
@@ -451,7 +450,7 @@ static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandid
         return PLAN_ERR_ALLOC;
     }
     /* The plan must still be what the accompaniment was made for. */
-    if (!accomp_read(plan, (LaneSpanId)target.id, read) || !accomp_pattern_allowed(read, accompaniment->pattern)) {
+    if (!accomp_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read) || !accomp_pattern_allowed(read, accompaniment->pattern)) {
         result = PLAN_ERR_BAD_PAYLOAD;
     }
     for (size_t voice = 0; result == PLAN_OK && voice < ACCOMP_VOICES; voice++) {
@@ -487,11 +486,11 @@ bool accompaniment_checker(const Plan *plan, FillTarget target, const FillOperat
     AccompContext *read = malloc(sizeof(*read));
     AccompVerdict verdict;
     bool ok = read && accompaniment && accompaniment->magic == ACCOMP_PAYLOAD_MAGIC && target.kind == FILL_TARGET_LANE_SPAN &&
-              accomp_read(plan, (LaneSpanId)target.id, read);
+              accomp_read(plan, (LaneSpanId)target.id, composer_context_chords(operator_->context), read);
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
     if (ok) {
-        const AccompanimentParams *params = operator_->context;
+        const AccompanimentParams *params = composer_context_params(operator_->context);
         accomp_judge(read, params ? params->knowledge : NULL, accompaniment, &verdict);
         out->hard_violation = verdict.hard != NULL;
         if (verdict.hard) {
@@ -505,7 +504,7 @@ bool accompaniment_checker(const Plan *plan, FillTarget target, const FillOperat
     return ok;
 }
 
-FillResult accompaniment_register(FillOperatorRegistry *registry, const AccompanimentParams *params) {
+FillResult accompaniment_register(FillOperatorRegistry *registry, const AccompanimentParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = ACCOMPANIMENT_OPERATOR_NAME;
@@ -519,6 +518,5 @@ FillResult accompaniment_register(FillOperatorRegistry *registry, const Accompan
     operator_.applies = operator_applies;
     operator_.generate = operator_generate;
     operator_.apply = operator_apply;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

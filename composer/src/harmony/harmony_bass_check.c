@@ -62,7 +62,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
     for (size_t i = 0; ok && !verdict->hard && i < line->note_count; i++) {
         const BassNote *note = &line->notes[i];
         int pc;
-        if (note->chord >= context->count || !harmony_chord_bass_pc(&context->key, &context->chords[note->chord], &pc)) {
+        if (note->chord >= context->count || !harmony_chord_bass_pc(context->composer_chords, &context->key, &context->chords[note->chord], &pc)) {
             verdict->hard = "bass note without a chord";
         } else if (note->pitch < line->params.range_low || note->pitch > line->params.range_high) {
             verdict->hard = "outside the bass range";

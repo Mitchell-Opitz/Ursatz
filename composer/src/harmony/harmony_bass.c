@@ -27,17 +27,17 @@ HarmonyBassParams harmony_bass_params_default(void) {
     return params;
 }
 
-static const HarmonyBassParams *params_of(void *context) {
+static const HarmonyBassParams *params_of(const void *params) {
     static const HarmonyBassParams defaults = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_SUBDIVISION,
                                                DEFAULT_STEPWISE};
-    return context ? context : &defaults;
+    return params ? params : &defaults;
 }
 
 static unsigned chance_of(unsigned value) {
     return value > CHANCE_SCALE ? CHANCE_SCALE : value;
 }
 
-bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int *pc) {
+bool harmony_chord_bass_pc(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int *pc) {
     int intervals[4];
     size_t count;
     int root;
@@ -49,7 +49,7 @@ bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int 
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
         member = chord->applied_inversion;
     } else {
-        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, &count)) {
+        if (!harmony_diatonic_intervals(chords, harmony_key_mode(key), &chord->chord, intervals, &count)) {
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
@@ -65,13 +65,14 @@ bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int 
     return true;
 }
 
-bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, BassContext *out) {
+bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, BassContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_BASS ||
         plan_lane_span_voice(plan, target) != 0) {
         return false;
     }
     BassContext context;
     memset(&context, 0, sizeof(context));
+    context.composer_chords = chords;
     context.target = target;
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
@@ -151,7 +152,7 @@ static bool build_line(const BassContext *context, const HarmonyBassParams *para
         const PhraseChord *chord = &context->chords[i];
         int pc;
         int options[16];
-        if (!harmony_chord_bass_pc(&context->key, chord, &pc)) {
+        if (!harmony_chord_bass_pc(context->composer_chords, &context->key, chord, &pc)) {
             return false;
         }
         size_t option_count = pitches_in_range(pc, params->range_low, params->range_high, options, 16);
@@ -236,15 +237,16 @@ static void line_label(const BassCandidate *line, char *label, size_t size) {
 
 static bool bass_applies(const Plan *plan, FillTarget target, void *context) {
     BassContext read;
-    (void)context;
-    return target.kind == FILL_TARGET_LANE_SPAN && harmony_bass_context_read(plan, (LaneSpanId)target.id, &read);
+    return target.kind == FILL_TARGET_LANE_SPAN &&
+           harmony_bass_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read);
 }
 
 static bool bass_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                           FillCandidateList *out) {
-    const HarmonyBassParams *params = params_of(context);
+    const HarmonyBassParams *params = params_of(composer_context_params(context));
     BassContext read;
-    if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_bass_context_read(plan, (LaneSpanId)target.id, &read)) {
+    if (target.kind != FILL_TARGET_LANE_SPAN ||
+        !harmony_bass_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read)) {
         return false;
     }
     BassCandidate *kept[BASS_KEEP];
@@ -343,12 +345,11 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
 static PlanResult bass_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const BassCandidate *line = candidate ? candidate->payload : NULL;
     BassContext read;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !line || line->note_count == 0) {
         return PLAN_ERR_NULL;
     }
     LaneSpanId first = (LaneSpanId)target.id;
-    if (!harmony_bass_context_read(plan, first, &read) || read.count != line->context.count) {
+    if (!harmony_bass_context_read(plan, first, composer_context_chords(context), &read) || read.count != line->context.count) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     for (size_t i = 0; i < read.count; i++) {
@@ -395,7 +396,7 @@ static PlanResult bass_apply(Plan *plan, FillTarget target, const FillCandidate 
     return result;
 }
 
-FillResult harmony_bass_register(FillOperatorRegistry *registry, const HarmonyBassParams *params) {
+FillResult harmony_bass_register(FillOperatorRegistry *registry, const HarmonyBassParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_BASS_OPERATOR_NAME;
@@ -409,6 +410,5 @@ FillResult harmony_bass_register(FillOperatorRegistry *registry, const HarmonyBa
     operator_.applies = bass_applies;
     operator_.generate = bass_generate;
     operator_.apply = bass_apply;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

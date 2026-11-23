@@ -9,6 +9,7 @@
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 
 /*
  * The accompaniment operator: a Fill operator for the inner voice lanes (R-065). It reads a harmony lane, a bass lane
@@ -58,6 +59,6 @@ bool accompaniment_checker(const Plan *plan, FillTarget target, const FillOperat
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must outlive
  * it (NULL means the defaults).
  */
-FillResult accompaniment_register(FillOperatorRegistry *registry, const AccompanimentParams *params);
+FillResult accompaniment_register(FillOperatorRegistry *registry, const AccompanimentParams *params, const ComposerChords *chords);
 
 #endif

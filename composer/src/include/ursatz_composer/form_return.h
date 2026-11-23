@@ -2,6 +2,7 @@
 #define URSATZ_COMPOSER_FORM_RETURN_H
 
 #include <stdbool.h>
+#include <ursatz_composer/harmony_chords.h>
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/fill_loop.h>
@@ -65,7 +66,7 @@ bool form_return_source(const Plan *plan, NodeId section, NodeId *source, Sectio
  * the section is a tone of the chord under it. A section whose key lane has more than one span is not judged: true.
  * False when the harmony or the melody cannot be read.
  */
-bool form_return_melody_fits(const Plan *plan, NodeId section);
+bool form_return_melody_fits(const Plan *plan, const ComposerChords *chords, NodeId section);
 
 /*
  * How many of the chords of a section that returns another (a RETURN constraint) are not the chords of the other at the
@@ -120,7 +121,7 @@ bool form_return_mode_change(const Plan *plan, NodeId section, const PitchMateri
  * Registers form-return. melody gives the range a re-registered melody keeps to (NULL for the defaults); the registry
  * keeps the pointer, so it must outlive the registry.
  */
-FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody);
+FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody, const ComposerChords *chords);
 
 /*
  * The checker for form-return's candidates; pass it as FillConfig.checker. Hard rules reject a candidate that does not

@@ -62,6 +62,7 @@ typedef struct {
     Rational motive_length;  /* where the motive's last note ends */
     Rational liquidate_from; /* from the target's start: the motive is liquidated from here (the last bar of the
                                 section); at or past length when the target does not end the section */
+    const ComposerChords *composer_chords; /* the chord types the chords are read with (R-728); NULL: the fallback tables */
 } AccompContext;
 
 typedef struct {
@@ -92,10 +93,10 @@ typedef struct {
 } AccompCandidate;
 
 /* Reads a target; false when it is not one the operator applies to. */
-bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out);
+bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, AccompContext *out);
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
-bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
+bool accomp_chord_tones(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
 /* The span of an inner voice (2 or 3) that is to be written with a target: none, or an open one over the same time. */
 bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out);
 

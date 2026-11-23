@@ -191,15 +191,16 @@ typedef struct {
     Fill fills[FILLS_PER_RUN];
 } RunFills;
 
-static bool motive_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return (harmony_prolong_read_request_given(plan, target, out) || harmony_phrase_read_request_given(plan, target, out)) &&
+static bool motive_read_request(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return (harmony_prolong_read_request_given(plan, target, chords, out) ||
+            harmony_phrase_read_request_given(plan, target, chords, out)) &&
            out->has_motive && out->lead.num == 0 && out->tail.num == 0;
 }
 
 static bool motive_applies(const Plan *plan, FillTarget target, void *context) {
     PhraseRequest *request = malloc(sizeof(*request));
-    (void)context;
-    bool applies = request && harmony_is_target(target) && motive_read_request(plan, (LaneSpanId)target.id, request);
+    bool applies = request && harmony_is_target(target) &&
+                   motive_read_request(plan, (LaneSpanId)target.id, composer_context_chords(context), request);
     free(request);
     return applies;
 }
@@ -462,7 +463,8 @@ static bool whole_fits(const PhraseRequest *request, const PhraseChord *chords, 
         CadenceType heard;
         bool at_end;
         HeardPhrase phrase = {chords, count, request->mode, request->cadence, request->cells_per_bar, request->cell_length,
-                              false, NULL, true, false, NULL, NULL, false, &request->metre};
+                              false, NULL, true, false, NULL, NULL, false, &request->metre, NULL};
+        phrase.composer_chords = request->composer_chords;
         if (!harmony_hear_phrase(&phrase, &heard, &at_end) || !at_end || heard != request->cadence) {
             return false;
         }
@@ -476,8 +478,8 @@ static bool motive_generate(const Plan *plan, FillTarget target, FillRng *rng, v
     RunFills *runs = malloc(MAX_RUNS * sizeof(*runs));
     PhraseProgression *kept[HARMONY_MOTIVE_CANDIDATES];
     size_t kept_count = 0;
-    bool ok = request && runs && harmony_is_target(target) && motive_read_request(plan, (LaneSpanId)target.id, request);
-    (void)context;
+    bool ok = request && runs && harmony_is_target(target) &&
+              motive_read_request(plan, (LaneSpanId)target.id, composer_context_chords(context), request);
     Run spans[MAX_RUNS];
     size_t run_count = ok ? free_runs(request, spans) : 0;
     ok = ok && run_count <= MAX_RUNS;
@@ -542,11 +544,10 @@ static bool motive_generate(const Plan *plan, FillTarget target, FillRng *rng, v
 }
 
 static PlanResult motive_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    (void)context;
-    return harmony_progression_apply(plan, target, candidate, motive_read_request);
+    return harmony_progression_apply(plan, target, candidate, composer_context_chords(context), motive_read_request);
 }
 
-FillResult harmony_motive_register(FillOperatorRegistry *registry) {
+FillResult harmony_motive_register(FillOperatorRegistry *registry, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_MOTIVE_OPERATOR_NAME;
@@ -560,5 +561,5 @@ FillResult harmony_motive_register(FillOperatorRegistry *registry) {
     operator_.applies = motive_applies;
     operator_.generate = motive_generate;
     operator_.apply = motive_apply;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, NULL, chords);
 }

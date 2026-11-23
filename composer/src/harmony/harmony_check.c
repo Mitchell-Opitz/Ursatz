@@ -354,7 +354,8 @@ bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOpera
                               short_phrase ? progression->request.before_count + 1 : progression->count,
                               progression->request.mode, progression->request.cadence,
                               progression->request.cells_per_bar, progression->request.cell_length, false, NULL, false,
-                              false, NULL, NULL, false, short_phrase ? &joined : &progression->request.metre};
+                              false, NULL, NULL, false, short_phrase ? &joined : &progression->request.metre, NULL};
+        phrase.composer_chords = progression->request.composer_chords;
         /* A phrase joined to Given chords begins in the middle of what they make: no opening tonic is asked. */
         phrase.no_opening_tonic = short_phrase || (progression->request.has_shape &&
                                   progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
@@ -395,7 +396,8 @@ bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOpera
             return false;
         }
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
-                              edit->cell_length, false, NULL, false, false, NULL, NULL, false, &edit->metre};
+                              edit->cell_length, false, NULL, false, false, NULL, NULL, false, &edit->metre, NULL};
+        phrase.composer_chords = edit->composer_chords;
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {

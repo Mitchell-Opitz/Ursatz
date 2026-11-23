@@ -305,7 +305,7 @@ static unsigned long pattern_halves(PlanAccompanimentPattern pattern, Rational b
  * beat and d the style's. False when the style has no density or the run did not leave the pattern to the operator.
  */
 static bool accompaniment_closeness(const ComposerStyle *style, const Plan *plan, FillTarget target,
-                                    const FillCandidate *candidate, Rational *out) {
+                                    const FillCandidate *candidate, const ComposerChords *chords, Rational *out) {
     Rational density;
     const AccompCandidate *accompaniment = candidate->payload;
     AccompContext *read = calloc(1, sizeof(*read));
@@ -313,7 +313,7 @@ static bool accompaniment_closeness(const ComposerStyle *style, const Plan *plan
         return false;
     }
     bool found = accompaniment && accompaniment->magic == ACCOMP_PAYLOAD_MAGIC &&
-                 composer_style_density(style, &density) && accomp_read(plan, (LaneSpanId)target.id, read) &&
+                 composer_style_density(style, &density) && accomp_read(plan, (LaneSpanId)target.id, chords, read) &&
                  read->pattern == PLAN_ACCOMPANIMENT_ANY;
     if (found) {
         unsigned long rate = pattern_halves(accompaniment->pattern, read->beat);
@@ -347,7 +347,7 @@ bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator
     if (style->texture) {
         Rational closeness;
         if (strcmp(name, ACCOMPANIMENT_OPERATOR_NAME) == 0 &&
-            accompaniment_closeness(style->style, plan, target, candidate, &closeness)) {
+            accompaniment_closeness(style->style, plan, target, candidate, composer_context_chords(operator_->context), &closeness)) {
             style_term(closeness, style->weight, out);
             style_add_to_score(out, closeness, style->weight);
         }

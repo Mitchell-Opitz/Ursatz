@@ -8,6 +8,7 @@
 #include <theory/tonality/spelled_key.h>
 #include <ursatz_composer/composer_api.h>
 #include <theory/harmony/harmony_chord.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
@@ -19,6 +20,18 @@ static inline const ComposerContext *test_context(void) {
     static ComposerContext context;
     context.knowledge = test_knowledge();
     return &context;
+}
+
+/* The chord types of test_knowledge(), built once: the chords argument the harmony, bass, melody and texture operators are registered with. */
+static inline const ComposerChords *test_composer_chords(void) {
+    static ComposerChords chords;
+    static int built;
+    if (!built) {
+        char message[256];
+        assert(composer_chords_init(&chords, test_knowledge(), message, sizeof(message)));
+        built = 1;
+    }
+    return &chords;
 }
 
 /* The material of test_knowledge() a word names (its key word, name, id or alias: "major", "minor", "dorian"); the test stops for a word it does not know. */

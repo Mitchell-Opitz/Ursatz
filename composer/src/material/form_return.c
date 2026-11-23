@@ -599,7 +599,7 @@ static bool on_cell(Rational time, Rational cell, size_t *index) {
     return true;
 }
 
-bool form_return_melody_fits(const Plan *plan, NodeId section) {
+bool form_return_melody_fits(const Plan *plan, const ComposerChords *tones, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     KeyPiece pieces[MAX_KEY_PIECES];
     size_t piece_count;
@@ -647,7 +647,7 @@ bool form_return_melody_fits(const Plan *plan, NodeId section) {
                 unsigned mask;
                 unsigned seventh;
                 int pitch_class = util_pitch_class(notes->notes[n].midi);
-                fits = cell < starts[chord_count] && melody_chord_mask(&key, &chords[c], &mask, &seventh) &&
+                fits = cell < starts[chord_count] && melody_chord_mask(tones, &key, &chords[c], &mask, &seventh) &&
                        ((mask >> pitch_class) & 1u);
             }
         }
@@ -894,7 +894,7 @@ static bool add_payload(FillCandidateList *out, const char *label, ReturnPayload
 
 static bool return_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    const MelodyFillParams *range = context;
+    const MelodyFillParams *range = composer_context_params(context);
     MelodyFillParams defaults = melody_fill_params_default();
     NodeId source;
     SectionReturnVariation variation;
@@ -964,7 +964,7 @@ static PlanResult return_apply(Plan *plan, FillTarget target, const FillCandidat
     return return_copy_write(plan, target.id, &payload->result, PLAN_NOTE_FROM_RETURN);
 }
 
-FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody) {
+FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody, const ComposerChords *chords) {
     FillOperator operator_;
     if (!registry) {
         return FILL_ERR_NULL;
@@ -981,8 +981,7 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.applies = return_applies;
     operator_.generate = return_generate;
     operator_.apply = return_apply;
-    operator_.context = (void *)melody;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, melody, chords);
 }
 
 /* ------------------------------------------------------------- the checker */

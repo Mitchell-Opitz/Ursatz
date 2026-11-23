@@ -22,8 +22,8 @@ HarmonySequenceParams harmony_sequence_params_default(void) {
     return params;
 }
 
-static HarmonySequenceParams params_of(void *context) {
-    return context ? *(const HarmonySequenceParams *)context : harmony_sequence_params_default();
+static HarmonySequenceParams params_of(const void *params) {
+    return params ? *(const HarmonySequenceParams *)params : harmony_sequence_params_default();
 }
 
 bool harmony_sequence_find(const char *name, ScalePatternId *id) {
@@ -52,10 +52,10 @@ static bool stage_chord(HarmonyMode mode, int bass, unsigned intervals, PhraseCh
 }
 
 /* A diminished triad is not written in root position. */
-static bool bad_root_position(HarmonyMode mode, const PhraseChord *chord) {
+static bool bad_root_position(const ComposerChords *tones, HarmonyMode mode, const PhraseChord *chord) {
     int intervals[4];
     size_t count;
-    return chord->chord.inversion == 0 && harmony_diatonic_intervals(mode, &chord->chord, intervals, &count) &&
+    return chord->chord.inversion == 0 && harmony_diatonic_intervals(tones, mode, &chord->chord, intervals, &count) &&
            count == 3 && intervals[1] == 3 && intervals[2] == 6;
 }
 
@@ -64,7 +64,7 @@ static bool bad_root_position(HarmonyMode mode, const PhraseChord *chord) {
  * -1): at a stage where the bass moves it steps first, then the stage's chord sounds for a cell. A stage
  * that is the same bass and chord as the one before it (a suspension and its resolution) is one chord.
  */
-static bool build_chords(HarmonyMode mode, const ScalePattern *pattern, int direction, int start, size_t repeats,
+static bool build_chords(const ComposerChords *tones, HarmonyMode mode, const ScalePattern *pattern, int direction, int start, size_t repeats,
                          PhraseChord *chords, size_t *count) {
     PhraseChord stages[MAX_STAGES];
     int basses[MAX_STAGES];
@@ -81,7 +81,7 @@ static bool build_chords(HarmonyMode mode, const ScalePattern *pattern, int dire
         basses[s] = bass;
         /* A suspended stage sounds the chord it resolves to. */
         const ScalePatternStage *chosen = stage->suspended ? &pattern->unit[(s + 1) % pattern->unit_length] : stage;
-        if (!stage_chord(mode, bass, chosen->intervals, &stages[s]) || bad_root_position(mode, &stages[s])) {
+        if (!stage_chord(mode, bass, chosen->intervals, &stages[s]) || bad_root_position(tones, mode, &stages[s])) {
             return false;
         }
     }
@@ -99,9 +99,8 @@ static bool build_chords(HarmonyMode mode, const ScalePattern *pattern, int dire
 
 static bool sequence_applies(const Plan *plan, FillTarget target, void *context) {
     SkeletonContext read;
-    (void)context;
-    return target.kind == FILL_TARGET_LANE_SPAN && harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) &&
-           !read.at_start;
+    return target.kind == FILL_TARGET_LANE_SPAN &&
+           harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read) && !read.at_start;
 }
 
 static void sequence_label(const ScalePattern *pattern, int direction, char *label, size_t size) {
@@ -129,7 +128,7 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
     for (unsigned repeats = drawn; repeats >= low; repeats--) {
         size_t count;
         size_t total = 0;
-        if (!build_chords(mode, pattern, direction, start, repeats, skeleton->chords, &count)) {
+        if (!build_chords(read->composer_chords, mode, pattern, direction, start, repeats, skeleton->chords, &count)) {
             return true;
         }
         for (size_t i = 0; i < count; i++) {
@@ -176,11 +175,11 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
 
 static bool sequence_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    HarmonySequenceParams params_value = params_of(context);
+    HarmonySequenceParams params_value = params_of(composer_context_params(context));
     const HarmonySequenceParams *params = &params_value;
     SkeletonContext read;
-    if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) ||
-        read.at_start) {
+    if (target.kind != FILL_TARGET_LANE_SPAN ||
+        !harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read) || read.at_start) {
         return false;
     }
     SkeletonCandidate *skeleton = malloc(sizeof(*skeleton));
@@ -204,7 +203,7 @@ static bool sequence_generate(const Plan *plan, FillTarget target, FillRng *rng,
     return ok;
 }
 
-FillResult harmony_sequence_register(FillOperatorRegistry *registry, const HarmonySequenceParams *params) {
+FillResult harmony_sequence_register(FillOperatorRegistry *registry, const HarmonySequenceParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_SEQUENCE_OPERATOR_NAME;
@@ -218,6 +217,5 @@ FillResult harmony_sequence_register(FillOperatorRegistry *registry, const Harmo
     operator_.applies = sequence_applies;
     operator_.generate = sequence_generate;
     operator_.apply = harmony_skeleton_apply_target;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

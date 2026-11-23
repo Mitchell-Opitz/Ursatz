@@ -14,6 +14,7 @@
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_bass.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_lanes.h>
@@ -110,6 +111,8 @@ typedef struct {
     bool has_motive;
     PhraseChord motive_chord[HARMONY_GIVEN_CELLS];
     bool motive_fixed[HARMONY_GIVEN_CELLS];
+    /* The chord types the request is judged with (R-728); NULL: the fallback tables. */
+    const ComposerChords *composer_chords;
 } PhraseRequest;
 
 /* A candidate's payload. */
@@ -142,13 +145,14 @@ typedef struct {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     PhraseChord chords[HARMONY_MAX_CHORDS];
     size_t target; /* the index of the marked chord */
+    const ComposerChords *composer_chords; /* R-728; NULL: the fallback tables */
 } PhraseContext;
 
 /*
  * The chord as the recognizer wants it: a set of intervals above the root, in semitones, by the
  * quality the chord has in the key. False for a chord this module does not write.
  */
-bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count);
+bool harmony_diatonic_intervals(const ComposerChords *chords, HarmonyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count);
 bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals[4], size_t *count);
 
 /*
@@ -188,6 +192,8 @@ typedef struct {
      * NULL for a phrase of whole bars from a barline, which is every cell of cell_length from cell 0.
      */
     const PhraseMetre *metre;
+    /* The chord types the recognizer's intervals are read with (R-728); NULL: the fallback tables. */
+    const ComposerChords *composer_chords;
 } HeardPhrase;
 
 
@@ -269,15 +275,15 @@ size_t harmony_metre_last_cell(const PhraseMetre *metre);
 PlanResult harmony_cells_span(Rational start, Rational cell_length, size_t first_cell, size_t cells, PlanSpan *out);
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
-bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out);
+bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out);
 /*
  * The phrase reader for an operator registered to work around Given material (harmony_phrase_register_given): a Given
  * bass over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at
  * the ends (harmony_given_read). The prolongation reader, harmony_prolong_read_request_given, does the same for a
  * PROLONGATION shape, whole bars, a key, and no cadence asked for.
  */
-bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out);
-bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out);
+bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out);
+bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out);
 
 /* Reads into the request what the Given bass, the Given melody and the Given chords around the target ask of it. */
 void harmony_given_read(const Plan *plan, PhraseRequest *request);
@@ -298,10 +304,10 @@ bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords,
 bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords, size_t count, bool cadence_planned,
                         const char **why);
 
-typedef bool (*ReadRequestFn)(const Plan *plan, LaneSpanId target, PhraseRequest *out);
+typedef bool (*ReadRequestFn)(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out);
 /* Writes a progression candidate over its target span, one chord span each; the first keeps the target's id. */
 PlanResult harmony_progression_apply(Plan *plan, FillTarget target, const FillCandidate *candidate,
-                                     ReadRequestFn read_request);
+                                     const ComposerChords *chords, ReadRequestFn read_request);
 
 /*
  * Whether chords of the given lengths in cells, from cell 0 of a metre, keep to the shape: none over max_cells_per_chord
@@ -345,7 +351,7 @@ bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, co
  * holds a chord it cannot read or an open span that is not marked, or the phrase
  * has no meter, key or cadence.
  */
-bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *out);
+bool harmony_context_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseContext *out);
 
 /* The segments the recognizer reads, one per chord of a phrase. */
 typedef struct SegmentSet SegmentSet;
@@ -403,6 +409,7 @@ typedef struct {
     PhraseMetre metre; /* the cells the phrase sits on */
     PhraseChord chords[HARMONY_MAX_CHORDS]; /* the whole phrase after the edit */
     size_t count;
+    const ComposerChords *composer_chords; /* R-728; NULL: the fallback tables */
 } EmbellishCandidate;
 
 /* The options a family offers for the marked chord. */
@@ -461,6 +468,7 @@ typedef struct {
     PhraseMetre metre;
     size_t count;
     PhraseChord chords[HARMONY_MAX_CHORDS];
+    const ComposerChords *composer_chords; /* R-728; NULL: the fallback tables */
 } BassContext;
 
 /* One note of a bass candidate: its MIDI pitch, its length in cells, and the chord it sounds under. */
@@ -484,7 +492,7 @@ typedef struct {
  * of them open, with a meter and a key over it. False when the span is not one the bass operator
  * applies to.
  */
-bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, BassContext *out);
+bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, BassContext *out);
 
 /*
  * Judges a bass line: every note in range and the bass member of its chord, then standard-counterpoint's
@@ -517,7 +525,7 @@ PitchSpelling *harmony_spell_pitch(const SpelledKey *key, int degree, int pitch)
 PitchSpelling *harmony_spell_tonic(const SpelledKey *key, int octave);
 
 /* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
-bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int *pc);
+bool harmony_chord_bass_pc(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int *pc);
 
 
 /*
@@ -536,6 +544,7 @@ typedef struct {
     size_t before_count; /* the written chords that lead up to the span, from the start of the owner node */
     PhraseChord before[HARMONY_MAX_CHORDS];
     LaneSpanId bass_placeholder; /* the Constrained bass span equal to the target, or PLAN_LANE_SPAN_NONE for none */
+    const ComposerChords *composer_chords; /* R-728; NULL: the fallback tables */
 } SkeletonContext;
 
 /* A skeleton candidate: the chords and bass it writes at the start of the span. */
@@ -550,7 +559,7 @@ typedef struct {
 } SkeletonCandidate;
 
 /* Reads a Constrained harmony target for a skeleton; false when it is not one (see harmony_schema.h). */
-bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext *out);
+bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, SkeletonContext *out);
 
 /*
  * Judges the skeleton in its phrase: the chords before it and its own, the schema's chords needing no
@@ -573,7 +582,7 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
 PlanResult harmony_skeleton_apply(Plan *plan, const SkeletonCandidate *skeleton);
 
 /* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
-bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
+bool melody_chord_mask(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
 /* How many of the standard counterpoint melodic rules have a soft preference. */
 unsigned melody_melodic_soft_rules(void);
 

@@ -147,7 +147,7 @@ static void check_plan(Plan *plan, const ComposeOutcome *outcome, Counts *counts
             assert(false);
         }
         assert(same_shape(plan, theme, sections[v], theme, sections[v]));
-        assert(form_return_melody_fits(plan, sections[v]));
+        assert(form_return_melody_fits(plan, test_composer_chords(), sections[v]));
         assert(form_return_chords_changed(plan, sections[v], &changed, &total));
         if (v == 1) {
             assert(changed == 0);
@@ -222,7 +222,7 @@ static void check_parallel_plan(Plan *plan) {
         assert(false);
     }
     assert(form_figure_check(plan, sections[2], reason, sizeof(reason)));
-    assert(form_return_melody_fits(plan, sections[1]));
+    assert(form_return_melody_fits(plan, test_composer_chords(), sections[1]));
     assert(melody_in_scale(plan, sections[1], other));
     PieceKeyCheck keys;
     memset(&keys, 0, sizeof(keys));
@@ -350,7 +350,7 @@ static void check_skeleton_and_write(const FormSpec *form) {
         FormSkeleton skeleton;
         for (size_t v = 1; v < 4; v++) {
             memset(&skeleton, 0, sizeof(skeleton));
-            assert(form_figure_skeleton(plan, sections[v], &skeleton));
+            assert(form_figure_skeleton(plan, test_composer_chords(), sections[v], &skeleton));
             assert(skeleton.count == 16);
             for (size_t cell = 0; cell < skeleton.count; cell++) {
                 assert(equal(skeleton.onset[cell], (Rational){(long)cell, 4}));
@@ -361,19 +361,19 @@ static void check_skeleton_and_write(const FormSpec *form) {
                     assert(note && note->midi % 12 == skeleton.pitch[cell] % 12);
                 }
             }
-            assert(form_return_melody_fits(plan, sections[v]));
+            assert(form_return_melody_fits(plan, test_composer_chords(), sections[v]));
         }
         /* The theme returns nothing, and NULL has no room. */
-        assert(!form_figure_skeleton(plan, sections[0], &skeleton));
-        assert(!form_figure_skeleton(plan, sections[1], NULL));
+        assert(!form_figure_skeleton(plan, test_composer_chords(), sections[0], &skeleton));
+        assert(!form_figure_skeleton(plan, test_composer_chords(), sections[1], NULL));
         /* Written again with another seed: the section still keeps to its figure; the theme and a missing rng are refused. */
         FillRng rng;
         char reason[256] = "";
         fill_rng_seed(&rng, 99);
-        assert(form_figure_write(plan, sections[1], NULL, &rng));
+        assert(form_figure_write(plan, test_composer_chords(), sections[1], NULL, &rng));
         assert(form_figure_check(plan, sections[1], reason, sizeof(reason)));
-        assert(!form_figure_write(plan, sections[0], NULL, &rng));
-        assert(!form_figure_write(plan, sections[1], NULL, NULL));
+        assert(!form_figure_write(plan, test_composer_chords(), sections[0], NULL, &rng));
+        assert(!form_figure_write(plan, test_composer_chords(), sections[1], NULL, NULL));
         plan_destroy(plan);
         return;
     }

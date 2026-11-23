@@ -270,7 +270,7 @@ bool voicing_checker(const Plan *plan, FillTarget target, const FillOperator *op
     VoicingContext *read = calloc(1, sizeof(*read));
     VoicingVerdict verdict;
     bool ok = read && voicing && voicing->magic == VOICING_PAYLOAD_MAGIC && target.kind == FILL_TARGET_LANE_SPAN &&
-              voicing_read(plan, (LaneSpanId)target.id, read);
+              voicing_read(plan, (LaneSpanId)target.id, composer_context_chords(operator_->context), read);
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
     if (ok) {

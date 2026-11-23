@@ -94,9 +94,9 @@ static const Figure PEDAL_FIGURES[] = {
 #define PEDAL_FIGURE_COUNT (sizeof(PEDAL_FIGURES) / sizeof(PEDAL_FIGURES[0]))
 
 static bool prolong_applies(const Plan *plan, FillTarget target, void *context) {
-    (void)context;
     PhraseRequest request;
-    return harmony_is_target(target) && harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request);
+    return harmony_is_target(target) &&
+           harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, composer_context_chords(context), &request);
 }
 
 static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
@@ -221,9 +221,9 @@ static bool previous_chords(const Plan *plan, const PhraseRequest *request, Phra
 
 static bool prolong_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
-    (void)context;
     PhraseRequest request;
-    if (!harmony_is_target(target) || !harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request)) {
+    if (!harmony_is_target(target) ||
+        !harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, composer_context_chords(context), &request)) {
         return false;
     }
     const Figure *table = request.shape.pedal ? PEDAL_FIGURES : FIGURES;
@@ -302,11 +302,10 @@ static bool prolong_generate(const Plan *plan, FillTarget target, FillRng *rng, 
 }
 
 static PlanResult prolong_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    (void)context;
-    return harmony_progression_apply(plan, target, candidate, harmony_prolong_read_request_given);
+    return harmony_progression_apply(plan, target, candidate, composer_context_chords(context), harmony_prolong_read_request_given);
 }
 
-FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
+FillResult harmony_prolong_register_given(FillOperatorRegistry *registry, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PROLONG_OPERATOR_NAME;
@@ -320,7 +319,7 @@ FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
     operator_.applies = prolong_applies;
     operator_.generate = prolong_generate;
     operator_.apply = prolong_apply;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, NULL, chords);
 }
 
 /* The first cell whose fixed motive chord the progression changes, or the request's cell count when it keeps them all. */
@@ -370,7 +369,8 @@ bool harmony_prolong_checker(const Plan *plan, FillTarget target, const FillOper
        heard from the harmony and the beats alone. */
     HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
-                          !motive_prolongation, NULL, NULL, false, &progression->request.metre};
+                          !motive_prolongation, NULL, NULL, false, &progression->request.metre, NULL};
+    phrase.composer_chords = progression->request.composer_chords;
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;

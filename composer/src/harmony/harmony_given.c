@@ -200,7 +200,7 @@ bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords,
     for (size_t i = 0; i < count; i++) {
         int pc;
         if (cell < request->cells && request->bass_pc[cell] >= 0 &&
-            (!harmony_chord_bass_pc(&request->key, &chords[i], &pc) || pc != request->bass_pc[cell])) {
+            (!harmony_chord_bass_pc(request->composer_chords, &request->key, &chords[i], &pc) || pc != request->bass_pc[cell])) {
             if (why) {
                 *why = "chord does not stand on the given bass";
             }
@@ -210,7 +210,7 @@ bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords,
             unsigned mask;
             unsigned seventh;
             if (request->melody_pc[c] >= 0 &&
-                (!melody_chord_mask(&request->key, &chords[i], &mask, &seventh) ||
+                (!melody_chord_mask(request->composer_chords, &request->key, &chords[i], &mask, &seventh) ||
                  !((mask >> request->melody_pc[c]) & 1u))) {
                 if (why) {
                     *why = "strong-beat note of the given melody is not a tone of the chord";
@@ -304,7 +304,8 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
         joined.offset = (Rational){0, 1};
     }
     HeardPhrase phrase = {sequence, total, request->mode, CADENCE_TYPE_HALF, request->cells_per_bar, request->cell_length,
-                          true, NULL, true, false, NULL, NULL, false, &joined};
+                          true, NULL, true, false, NULL, NULL, false, &joined, NULL};
+    phrase.composer_chords = request->composer_chords;
     SegmentSet *set = harmony_segments_create(&phrase);
     bool ok = set != NULL;
     HarmonyCadences found = {NULL, 0};

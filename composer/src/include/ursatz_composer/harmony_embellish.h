@@ -2,6 +2,7 @@
 #define URSATZ_COMPOSER_HARMONY_EMBELLISH_H
 
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan.h>
 
 /*
@@ -55,7 +56,7 @@ HarmonyEmbellishParams harmony_embellish_params_default(void);
  * Registers the operator with these parameters. The registry keeps the pointer,
  * not a copy, so params must outlive it (NULL means the defaults).
  */
-FillResult harmony_embellish_register(FillOperatorRegistry *registry, const HarmonyEmbellishParams *params);
+FillResult harmony_embellish_register(FillOperatorRegistry *registry, const HarmonyEmbellishParams *params, const ComposerChords *chords);
 
 /*
  * Marks a progression for embellishment: every Realized harmony lane span that

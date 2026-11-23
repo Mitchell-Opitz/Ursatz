@@ -86,6 +86,8 @@ typedef struct {
     /* Adds constraints to the target's relatives (its parent, children and neighbours) after apply. May be NULL. */
     void (*propagate)(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
     void *context; /* passed to every hook; may be NULL */
+    /* Called with `context` when the registry is destroyed, for an operator whose context the registry owns. May be NULL. */
+    void (*destroy_context)(void *context);
 } FillOperator;
 
 /* --- registry ---------------------------------------------------------- */

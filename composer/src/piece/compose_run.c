@@ -310,7 +310,7 @@ static bool motif_has_harmony(const MotiveDevelopContext *motives) {
 
 static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage stage, const GrowContext *grow,
                                  const MotiveDevelopContext *motives, const MelodyFillParams *melody,
-                                 const AccompanimentParams *accompaniment, const VoicingParams *voicing) {
+                                 const AccompanimentParams *accompaniment, const VoicingParams *voicing, const ComposerChords *chords) {
     FillResult result = FILL_OK;
     switch (stage) {
     case COMPOSE_STAGE_INVENT:
@@ -325,18 +325,18 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
         /* The harmony operators write chords that stand on a Given bass, carry a Given melody and join Given chords. */
         /* A motif with no harmony of its own gets chords proposed from its notes: those are not held, the stage writes the
            chords as it does for a phrase without motives. */
-        result = motif_has_harmony(motives) ? harmony_motive_register(registry) : FILL_OK;
-        result = result == FILL_OK ? harmony_prolong_register_given(registry) : result;
-        return result == FILL_OK ? harmony_phrase_register_given(registry) : result;
+        result = motif_has_harmony(motives) ? harmony_motive_register(registry, chords) : FILL_OK;
+        result = result == FILL_OK ? harmony_prolong_register_given(registry, chords) : result;
+        return result == FILL_OK ? harmony_phrase_register_given(registry, chords) : result;
     case COMPOSE_STAGE_BASS:
-        return harmony_bass_register(registry, NULL);
+        return harmony_bass_register(registry, NULL, chords);
     case COMPOSE_STAGE_MELODY:
-        return melody_fill_register(registry, melody);
+        return melody_fill_register(registry, melody, chords);
     case COMPOSE_STAGE_TEXTURE:
-        result = accompaniment_register(registry, accompaniment);
-        return result == FILL_OK ? voicing_register(registry, voicing) : result;
+        result = accompaniment_register(registry, accompaniment, chords);
+        return result == FILL_OK ? voicing_register(registry, voicing, chords) : result;
     case COMPOSE_STAGE_RETURNS:
-        return form_return_register(registry, melody);
+        return form_return_register(registry, melody, chords);
     case COMPOSE_STAGE_SEAM: /* run as the stages above, for the held sections */
     case COMPOSE_STAGE_COUNT:
         break;
@@ -577,6 +577,8 @@ typedef struct {
     bool seam;      /* the stages are the seam's: their records are kept under the seam stage */
     MotiveDevelopContext motives;
     CommonPracticeMaterials materials; /* the snapshot's, which motives.materials points to */
+    ComposerChords chords;             /* the snapshot's chord types, lent to every operator (R-728) */
+    bool has_chords;
     AccompanimentParams accompaniment;
     VoicingParams voicing;
     ComposeOutcome *outcome;
@@ -700,7 +702,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         grow.basic = run->motives.basic;
         grow.knowledge = config->knowledge;
         FillResult registered = register_stage(registry, stage, &grow, &run->motives, &melody, &run->accompaniment,
-                                               &run->voicing);
+                                               &run->voicing, run->has_chords ? &run->chords : NULL);
         FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
         fill_registry_destroy(registry);
         free(fidelity_cache);
@@ -818,7 +820,7 @@ static PieceResult run_returns(Run *run) {
             bool cadence = false;
             SectionReturnVariation variation = SECTION_RETURN_REHARMONIZE;
             SectionFigure figure = {0};
-            fits = fits && form_return_melody_fits(plan, pending[i]);
+            fits = fits && form_return_melody_fits(plan, run->has_chords ? &run->chords : NULL, pending[i]);
             form_return_source(plan, pending[i], NULL, &variation);
             if (attempt < attempts / 2 && variation == SECTION_RETURN_VARIED) {
                 fits = fits && form_return_cadence_changed(plan, pending[i], &cadence) && cadence;
@@ -840,7 +842,7 @@ static PieceResult run_returns(Run *run) {
             }
             fill_rng_seed(&rng, run->config->seed + run->offset + COMPOSE_RETURN_STRIDE * (unsigned long)attempt +
                                     7919UL * (unsigned long)index);
-            fits = !form_return_copies(plan, figured[i]) || form_figure_write(plan, figured[i], range, &rng);
+            fits = !form_return_copies(plan, figured[i]) || form_figure_write(plan, run->has_chords ? &run->chords : NULL, figured[i], range, &rng);
         }
         if (result == PIECE_OK && !fits) {
             run->outcome->stuck = true;
@@ -988,6 +990,7 @@ static PieceResult run_once(Plan *plan, const ComposeConfig *config, unsigned ch
     if (common_practice_materials_resolve(config->knowledge, &run.materials, NULL, 0)) {
         run.motives.materials = &run.materials;
     }
+    run.has_chords = composer_chords_init(&run.chords, config->knowledge, NULL, 0);
     run.motives.min_length = 1;
     run.motives.basic = config->basic;
     run.motives.pool = config->pool;

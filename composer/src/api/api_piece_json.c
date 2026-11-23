@@ -438,7 +438,7 @@ static void figure_text(const SectionDescription *spec, bool raised, const char 
 static cJSON *figure_json(const ApiPieceRow *row) {
     const SectionDescription *spec = row->spec;
     FormSkeleton *skeleton = (spec->has_figure && form_return_copies(row->plan, row->node)) ? calloc(1, sizeof(*skeleton)) : NULL;
-    if (!skeleton || !form_figure_skeleton(row->plan, row->node, skeleton)) {
+    if (!skeleton || !form_figure_skeleton(row->plan, NULL, row->node, skeleton) /* only the masks are read: the fallback tables give the same */) {
         free(skeleton);
         return cJSON_CreateNull();
     }

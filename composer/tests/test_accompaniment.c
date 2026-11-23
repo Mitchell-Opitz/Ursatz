@@ -220,7 +220,7 @@ static FillOutcome accompany(Plan *plan, unsigned long seed) {
     config.checker = accompaniment_checker;
     AccompanimentParams params = accompaniment_params_default();
     params.knowledge = test_knowledge();
-    assert(registry && accompaniment_register(registry, &params) == FILL_OK);
+    assert(registry && accompaniment_register(registry, &params, test_composer_chords()) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;

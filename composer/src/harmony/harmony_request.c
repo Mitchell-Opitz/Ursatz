@@ -387,13 +387,14 @@ size_t harmony_metre_last_cell(const PhraseMetre *metre) {
 }
 
 static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation, bool around_given,
-                         PhraseRequest *out) {
+                         const ComposerChords *chords, PhraseRequest *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY) {
         return false;
     }
     PhraseRequest request;
     PhraseMetre metre;
     memset(&request, 0, sizeof(request));
+    request.composer_chords = chords;
     request.target = target;
     request.owner = plan_lane_span_owner(plan, target);
     request.span = plan_lane_span_span(plan, target);
@@ -464,16 +465,16 @@ static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation,
     return true;
 }
 
-bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, false, false, out);
+bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return read_request(plan, target, false, false, chords, out);
 }
 
-bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, false, true, out);
+bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return read_request(plan, target, false, true, chords, out);
 }
 
-bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, true, true, out);
+bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return read_request(plan, target, true, true, chords, out);
 }
 
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out) {

@@ -6,6 +6,7 @@
 #include <theory/galant/scale_patterns.h>
 
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/harmony_bass.h>
 
 /*
@@ -58,6 +59,6 @@ HarmonySequenceParams harmony_sequence_params_default(void);
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params
  * must outlive it (NULL means the defaults).
  */
-FillResult harmony_sequence_register(FillOperatorRegistry *registry, const HarmonySequenceParams *params);
+FillResult harmony_sequence_register(FillOperatorRegistry *registry, const HarmonySequenceParams *params, const ComposerChords *chords);
 
 #endif

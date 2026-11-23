@@ -32,7 +32,7 @@ bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, co
            harmony_metre_find_cells(metre, plan_lane_span_span(plan, id), &first, &out->cells);
 }
 
-bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *out) {
+bool harmony_context_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
         plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) == NULL) {
@@ -83,6 +83,7 @@ bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *ou
 
     PhraseContext context;
     memset(&context, 0, sizeof(context));
+    context.composer_chords = chords;
     context.owner = owner;
     context.count = high - low + 1;
     context.target = at - low;

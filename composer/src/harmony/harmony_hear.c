@@ -27,7 +27,8 @@
  * triad on each degree, and the seventh chord built on it (the dominant seventh on V, a fully
  * diminished seventh on the leading tone).
  */
-bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
+bool harmony_diatonic_intervals(const ComposerChords *chords, HarmonyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
+    const CommonPracticeMaterials *materials = chords != NULL ? &chords->materials : NULL;
     bool is_minor = mode == HARMONY_MODE_MINOR;
     /* A minor key's chords are the natural scale's, but the dominant is major and the leading-tone chord diminished. */
     bool raised = is_minor && (chord->degree == 5 || (chord->degree == 7 && chord->leading_tone));
@@ -38,7 +39,7 @@ bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int
                                        : raised ? STANDARD_TONALITY_TRIAD_KEY_MINOR_HARMONIC
                                                 : STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL;
         if (!standard_tonality_triad_quality_in_key(key, chord->degree, &triad) ||
-            !standard_tonality_triad_quality_semitones(triad, intervals)) {
+            !common_practice_triad_semitones(materials, triad, intervals)) {
             return false;
         }
         *count = 3;
@@ -55,7 +56,7 @@ bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int
     } else if (!standard_tonality_seventh_quality_in_key(key, chord->degree, &seventh)) {
         return false;
     }
-    if (!standard_tonality_seventh_quality_semitones(seventh, intervals)) {
+    if (!common_practice_seventh_semitones(materials, seventh, intervals)) {
         return false;
     }
     *count = 4;
@@ -189,7 +190,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
                  phrase->chord_keys ? phrase->chord_keys[i] : 0u);
         bool intervals_ok = chord->applied ? harmony_applied_intervals(&chord->applied_chord, input->intervals,
                                                                &input->interval_count)
-                                           : harmony_diatonic_intervals(mode, &chord->chord, input->intervals,
+                                           : harmony_diatonic_intervals(phrase->composer_chords, mode, &chord->chord, input->intervals,
                                                                 &input->interval_count);
         if (!intervals_ok || !times_create(phrase, first_cell, chord->cells, &set->times[i])) {
             harmony_segments_destroy(set);
@@ -216,6 +217,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
         input->mode = mode;
         input->uncertainty = 0.0;
         input->has_beat_length = false;
+        input->materials = phrase->composer_chords != NULL ? &phrase->composer_chords->materials : NULL;
         /* A part cell of a beat or more is long enough to arrive on, whatever the meter's beat is in whole notes. */
         if (phrase->metre && harmony_metre_cell_is_part(phrase->metre, first_cell) &&
             duration_make(1, (long long)phrase->metre->meter.beat_unit, &set->times[i].beat_length) == DURATION_OK) {
@@ -327,7 +329,7 @@ bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, Cad
     if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false, NULL, NULL, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false, NULL, NULL, false, &metre, NULL};
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 

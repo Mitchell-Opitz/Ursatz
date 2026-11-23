@@ -162,10 +162,10 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed, bool with_bas
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = harmony_phrase_checker;
-    assert(harmony_phrase_register(registry) == FILL_OK);
+    assert(harmony_phrase_register(registry, test_composer_chords()) == FILL_OK);
     HarmonyBassParams params = harmony_bass_params_default();
     if (with_bass) {
-        assert(harmony_bass_register(registry, &params) == FILL_OK);
+        assert(harmony_bass_register(registry, &params, test_composer_chords()) == FILL_OK);
     }
     assert(fill_run(fixture->plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
@@ -496,7 +496,7 @@ static void test_embellish_part_cells(void) {
             memset(&config, 0, sizeof(config));
             config.seed = seed;
             config.checker = harmony_phrase_checker;
-            assert(harmony_embellish_register(registry, &params) == FILL_OK);
+            assert(harmony_embellish_register(registry, &params, test_composer_chords()) == FILL_OK);
             assert(fill_run(fixture.plan, registry, &config, &outcome, NULL) == FILL_OK);
             assert(outcome.status == FILL_STATUS_COMPLETE);
             fill_outcome_destroy(&outcome);
@@ -536,7 +536,7 @@ static void test_prolongation_part_cells(void) {
                 memset(&config, 0, sizeof(config));
                 config.seed = seed;
                 config.checker = harmony_prolong_checker;
-                assert(harmony_prolong_register_given(registry) == FILL_OK);
+                assert(harmony_prolong_register_given(registry, test_composer_chords()) == FILL_OK);
                 assert(fill_run(fixture.plan, registry, &config, &outcome, NULL) == FILL_OK);
                 if (outcome.status == FILL_STATUS_COMPLETE) {
                     LaneSpanId ids[MAX_CHORDS];
@@ -563,8 +563,8 @@ static void test_schemas_skip_part_cells(void) {
         FillOutcome outcome;
         memset(&config, 0, sizeof(config));
         config.checker = harmony_phrase_checker;
-        assert(harmony_schema_register(registry, NULL) == FILL_OK);
-        assert(harmony_sequence_register(registry, NULL) == FILL_OK);
+        assert(harmony_schema_register(registry, NULL, test_composer_chords()) == FILL_OK);
+        assert(harmony_sequence_register(registry, NULL, test_composer_chords()) == FILL_OK);
         assert(fill_run(fixture.plan, registry, &config, &outcome, NULL) == FILL_OK);
         assert(outcome.status == FILL_STATUS_STUCK);
         assert(outcome.stuck_count >= 1);

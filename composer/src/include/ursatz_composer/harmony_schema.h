@@ -6,6 +6,7 @@
 #include <theory/galant/galant_prototypes.h>
 
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/harmony_bass.h>
 
 /*
@@ -90,6 +91,6 @@ HarmonySchemaParams harmony_schema_params_default(void);
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params
  * must outlive it (NULL means the defaults).
  */
-FillResult harmony_schema_register(FillOperatorRegistry *registry, const HarmonySchemaParams *params);
+FillResult harmony_schema_register(FillOperatorRegistry *registry, const HarmonySchemaParams *params, const ComposerChords *chords);
 
 #endif

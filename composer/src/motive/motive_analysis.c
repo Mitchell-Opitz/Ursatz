@@ -164,7 +164,8 @@ static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, co
     }
     int intervals[4];
     size_t interval_count;
-    if (!harmony_diatonic_intervals(mode, &chord.chord, intervals, &interval_count)) {
+    /* A Motive carries no snapshot: its chord tones are read from the fallback tables (R-728), which are the entries' own semitones. */
+    if (!harmony_diatonic_intervals(NULL, mode, &chord.chord, intervals, &interval_count)) {
         return false;
     }
     int root = spec->leading_tone ? 11 : harmony_applied_scale_semitone(mode, spec->degree);
