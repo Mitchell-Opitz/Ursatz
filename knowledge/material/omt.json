@@ -51,63 +51,73 @@
     },
     {
       "id": "omt.material.lydian", "kind": "material", "subtype": "unordered", "name": "lydian",
-      "content": { "steps": [0, 2, 4, 6, 7, 9, 11], "family": "diatonic", "brightness_rank": 7, "color_notes": ["#4"] },
+      "content": { "steps": [0, 2, 4, 6, 7, 9, 11], "family": "diatonic", "brightness_rank": 7, "color_notes": ["#4"], "primary_chords": ["I", "II", "vii"], "chords_to_avoid": ["ivo"], "characteristic_degrees": [4], "cadence": "persichetti.vocabulary.lydian-cadence" },
       "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
       "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
                       "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
                     { "source": "omt", "part": "I", "chapter": 14, "example": 2,
-                      "note": "the lydian mode: the major scale with a raised fourth degree; the only mode with a brighter color than major" }],
+                      "note": "the lydian mode: the major scale with a raised fourth degree; the only mode with a brighter color than major" },
+                    { "source": "persichetti", "chapter": 2,
+                      "note": "the lydian paragraph: the tonic and the major chord on the second step are its primary chords, the raised fourth is the mode's color and the chord on it is avoided" }],
       "status": "active",
       "examples": [{ "center": "C", "pitches": ["C", "D", "E", "F#", "G", "A", "B"] }],
-      "version": 1
+      "version": 2
     },
     {
       "id": "omt.material.mixolydian", "kind": "material", "subtype": "unordered", "name": "mixolydian",
-      "content": { "steps": [0, 2, 4, 5, 7, 9, 10], "family": "diatonic", "brightness_rank": 5, "color_notes": ["b7"] },
+      "content": { "steps": [0, 2, 4, 5, 7, 9, 10], "family": "diatonic", "brightness_rank": 5, "color_notes": ["b7"], "primary_chords": ["I", "v", "VII"], "chords_to_avoid": ["iiio"], "characteristic_degrees": [7], "cadence": "persichetti.vocabulary.mixolydian-cadence" },
       "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
       "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
                       "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
                     { "source": "omt", "part": "I", "chapter": 14, "example": 4,
-                      "note": "the mixolydian mode: the major scale with a lowered seventh degree" }],
+                      "note": "the mixolydian mode: the major scale with a lowered seventh degree" },
+                    { "source": "persichetti", "chapter": 2,
+                      "note": "the mixolydian paragraph: the tonic, the minor chord on the fifth and the major chord on the lowered seventh are its primary chords, the lowered seventh is the color and the diminished chord on the third is avoided" }],
       "status": "active",
       "examples": [{ "center": "C", "pitches": ["C", "D", "E", "F", "G", "A", "Bb"] }],
-      "version": 1
+      "version": 2
     },
     {
       "id": "omt.material.dorian", "kind": "material", "subtype": "unordered", "name": "dorian",
-      "content": { "steps": [0, 2, 3, 5, 7, 9, 10], "family": "diatonic", "brightness_rank": 4, "color_notes": ["b3", "b7"] },
+      "content": { "steps": [0, 2, 3, 5, 7, 9, 10], "family": "diatonic", "brightness_rank": 4, "color_notes": ["b3", "b7"], "primary_chords": ["i", "ii", "IV"], "chords_to_avoid": ["vio"], "characteristic_degrees": [6], "cadence": "persichetti.vocabulary.dorian-cadence" },
       "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
       "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
                       "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
                     { "source": "omt", "part": "I", "chapter": 14, "example": 5,
-                      "note": "the dorian mode: the major scale with lowered third and seventh degrees" }],
+                      "note": "the dorian mode: the major scale with lowered third and seventh degrees" },
+                    { "source": "persichetti", "chapter": 2,
+                      "note": "the dorian paragraph: the tonic, the minor chord on the second and the major chord on the fourth are its primary chords, the raised sixth is the color and the diminished chord on the sixth is avoided" }],
       "status": "active",
       "examples": [{ "center": "C", "pitches": ["C", "D", "Eb", "F", "G", "A", "Bb"] }],
-      "version": 1
+      "version": 2
     },
     {
       "id": "omt.material.phrygian", "kind": "material", "subtype": "unordered", "name": "phrygian",
-      "content": { "steps": [0, 1, 3, 5, 7, 8, 10], "family": "diatonic", "brightness_rank": 2, "color_notes": ["b2", "b3", "b6", "b7"] },
+      "content": { "steps": [0, 1, 3, 5, 7, 8, 10], "family": "diatonic", "brightness_rank": 2, "color_notes": ["b2", "b3", "b6", "b7"], "primary_chords": ["i", "II", "vii"], "chords_to_avoid": ["vo"], "characteristic_degrees": [2], "cadence": "persichetti.vocabulary.phrygian-cadence" },
       "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
       "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
                       "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
                     { "source": "omt", "part": "I", "chapter": 14, "example": 7,
-                      "note": "the phrygian mode: the major scale with lowered second, third, sixth and seventh degrees" }],
+                      "note": "the phrygian mode: the major scale with lowered second, third, sixth and seventh degrees" },
+                    { "source": "persichetti", "chapter": 2,
+                      "note": "the phrygian paragraph: the tonic, the major chord on the lowered second and the minor chord on the seventh are its primary chords, the lowered second is the color and the diminished chord on the fifth is avoided" }],
       "status": "active",
       "examples": [{ "center": "C", "pitches": ["C", "Db", "Eb", "F", "G", "Ab", "Bb"] }],
-      "version": 1
+      "version": 2
     },
     {
       "id": "omt.material.locrian", "kind": "material", "subtype": "unordered", "name": "locrian",
-      "content": { "steps": [0, 1, 3, 5, 6, 8, 10], "family": "diatonic", "brightness_rank": 1, "color_notes": ["b2", "b3", "b5", "b6", "b7"] },
+      "content": { "steps": [0, 1, 3, 5, 6, 8, 10], "family": "diatonic", "brightness_rank": 1, "color_notes": ["b2", "b3", "b5", "b6", "b7"], "primary_chords": ["io", "II", "V"], "characteristic_degrees": [2, 5], "cadence": "persichetti.vocabulary.locrian-cadence" },
       "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
       "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
                       "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
                     { "source": "omt", "part": "I", "chapter": 14, "example": 8,
-                      "note": "the locrian mode: the major scale with every degree but the first, fourth and fifth lowered, the darkest of the seven" }],
+                      "note": "the locrian mode: the major scale with every degree but the first, fourth and fifth lowered, the darkest of the seven" },
+                    { "source": "persichetti", "chapter": 2,
+                      "note": "the locrian paragraph: the diminished tonic, the major chord on the second and the major chord on the fifth are its primary chords, the lowered second and fifth are its color" }],
       "status": "active",
       "examples": [{ "center": "C", "pitches": ["C", "Db", "Eb", "F", "Gb", "Ab", "Bb"] }],
-      "version": 1
+      "version": 2
     }
   ]
 }
