@@ -40,4 +40,3 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_at  # n
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_count  # no app lists the voicings until P69 B9 (voicings); its tests call it
 library/theory/tonality/chord_vocabulary.c common_practice_triad_intervals  # the no-snapshot fallback of common_practice_triad_intervals_with (R-728); its tests call it
 library/theory/tonality/chord_vocabulary_seventh.c common_practice_seventh_intervals  # the no-snapshot fallback of common_practice_seventh_intervals_with (R-728); its tests call it
-library/theory/tonality/modal_chords.c pitch_material_avoids  # no app tests an avoided degree until P69 B3 commit 4 (the phrase model); its tests call it

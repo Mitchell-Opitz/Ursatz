@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include <theory/harmony/harmonic_function.h>
@@ -80,6 +81,10 @@ bool harmony_key_before(const Plan *plan, Rational start, SpelledKey *out) {
 
 /* The closely related key of `from` that is the key `to`. */
 static bool related_key_of(SpelledKey from, SpelledKey to, HarmonyMode *home, HarmonyRelatedKey *out) {
+    /* The closely related keys are those of major and minor: a modal key changes key in a later phase (R-725). */
+    if (pitch_material_is_modal_key(NULL, from.material) || pitch_material_is_modal_key(NULL, to.material)) {
+        return false;
+    }
     *home = composer_key_is_minor(&from) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     int semitone = util_pitch_class(spelled_key_tonic_pitch_class(&to) - spelled_key_tonic_pitch_class(&from));
     HarmonyMode mode = composer_key_is_minor(&to) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
@@ -161,6 +166,19 @@ bool harmony_find_mode(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan s
     }
     *out = harmony_key_mode(&key);
     return true;
+}
+
+bool harmony_cadence_allowed(const ComposerChords *chords, const SpelledKey *key, CadenceType cadence, char *message, size_t size) {
+    const PitchMaterial *modal = composer_chords_modal(chords, key);
+    if (modal == NULL || (cadence != CADENCE_TYPE_DECEPTIVE && cadence != CADENCE_TYPE_PLAGAL)) {
+        return true;
+    }
+    if (message != NULL && size > 0) {
+        char name[48];
+        util_key_name(spelled_key_tonic_pitch_class(key), modal, name, sizeof(name));
+        snprintf(message, size, "the %s cadence is the only one written in %s; DC and PC need a dominant", modal->key_word != NULL ? modal->key_word : modal->name, name);
+    }
+    return false;
 }
 
 bool harmony_find_kind(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, const ComposerChords *chords, HarmonyMode *mode,
@@ -453,6 +471,9 @@ static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation,
     }
     request.mode = harmony_key_mode(&request.key);
     request.modal = composer_chords_modal(chords, &request.key);
+    if (!harmony_cadence_allowed(chords, &request.key, request.cadence, NULL, 0)) {
+        return false;
+    }
     if (request.has_shape && request.shape.starts_on == PLAN_HARMONY_ANCHOR_PIVOT) {
         /* A pivot opens a phrase model on a key change; a prolongation does not open one. */
         request.pivot = true;

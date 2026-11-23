@@ -124,6 +124,12 @@ typedef struct {
     const VocabularyCadence *cadence;
 } HarmonyKind;
 
+/*
+ * False for a cadence a modal key cannot write: a deceptive or plagal one needs a dominant (R-725). `message` (when not NULL, with size
+ * above 0) then says "the <mode> cadence is the only one written in <key>; DC and PC need a dominant". True for a major or minor key.
+ */
+bool harmony_cadence_allowed(const ComposerChords *chords, const SpelledKey *key, CadenceType cadence, char *message, size_t size);
+
 HarmonyKind harmony_kind_of(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal);
 HarmonyKind harmony_kind(const ComposerChords *chords, const SpelledKey *key);
 

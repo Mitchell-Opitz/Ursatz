@@ -35,6 +35,10 @@ static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 static bool make_from(const HarmonyKind *kind, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
     memset(out, 0, sizeof(*out));
+    /* A modal key has no leading tone and keeps out the chord its mode avoids (R-725). */
+    if (kind->modal != NULL && (chord.leading_tone || pitch_material_avoids(kind->modal, chord.degree))) {
+        return false;
+    }
     if (!harmony_chord_valid(&chord) || !harmony_function_in(kind, &chord, &function) ||
         !harmony_roman_format_in(kind, &chord, out->roman)) {
         return false;
@@ -147,7 +151,15 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     size_t cap = request->has_shape && request->shape.max_cells_per_chord > 0
                      ? (size_t)request->shape.max_cells_per_chord
                      : 0;
-    size_t fixed = (opening_tonic ? 1 : 0) + (confirm ? 2 : 0) + (half ? 0 : 1) + (plagal ? 2 : 0);
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
+    if (kind.modal != NULL && (kind.cadence == NULL || request->cadence == CADENCE_TYPE_DECEPTIVE || plagal)) {
+        return false;
+    }
+    /* The dominant chords before the last: V unless the phrase ends on it; a modal cadence's approach chords (all of them, or
+       all but the last for a half cadence, which ends on it). */
+    size_t approach = kind.modal != NULL ? kind.cadence->approach_count : 1;
+    size_t dominants = half ? approach - 1 : approach;
+    size_t fixed = (opening_tonic ? 1 : 0) + (confirm ? 2 : 0) + dominants + (plagal ? 2 : 0);
     size_t last_cell = harmony_metre_last_cell(&request->metre);
     size_t last_cells = request->cells - last_cell;
     size_t room = last_cell;
@@ -155,7 +167,6 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         return false;
     }
 
-    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     ChordSpec opening = {pivot > 0 ? pivot : 1, false};
     PhraseChord probe;
     bool pivot_predominant = pivot > 0 && make_chord(&kind, opening, 1, &probe) &&
@@ -180,6 +191,30 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     }
     const PredominantRun *run = fitting_count ? &runs[fitting[fill_rng_below(rng, fitting_count)]] : NULL;
     bool seventh = fill_rng_below(rng, 2) == 1;
+    /* A modal key's predominant is one chord drawn from the mode's primary chords that are neither the tonic nor an approach chord
+       (none when none remains); it has no seventh chords. */
+    PredominantRun modal_run = {0, {0, 0}};
+    if (kind.modal != NULL) {
+        int pool[7];
+        size_t pool_count = 0;
+        seventh = false;
+        for (size_t i = 0; i < kind.modal->primary_count; i++) {
+            int degree = kind.modal->primary_degrees[i];
+            bool is_approach = false;
+            for (size_t a = 0; a < kind.cadence->approach_count; a++) {
+                is_approach = is_approach || kind.cadence->approach_degrees[a] == degree;
+            }
+            if (degree != 1 && !is_approach) {
+                pool[pool_count++] = degree;
+            }
+        }
+        run = NULL;
+        if (pool_count > 0 && fixed + 1 <= room) {
+            modal_run.count = 1;
+            modal_run.degrees[0] = pool[fill_rng_below(rng, pool_count)];
+            run = &modal_run;
+        }
+    }
 
     ChordSpec before[MAX_BEFORE_FINAL];
     size_t before_count = 0;
@@ -194,14 +229,19 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         before[before_count++] = (ChordSpec){run->degrees[i], false};
     }
     size_t dominant = before_count;
-    if (!half) {
+    if (kind.modal != NULL) {
+        for (size_t a = 0; a < dominants; a++) {
+            before[before_count++] = (ChordSpec){kind.cadence->approach_degrees[a], false};
+        }
+    } else if (!half) {
         before[before_count++] = (ChordSpec){5, seventh};
     }
     if (plagal) {
         before[before_count++] = (ChordSpec){1, false};
         before[before_count++] = (ChordSpec){4, false};
     }
-    ChordSpec last = half ? (ChordSpec){5, seventh} : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false};
+    ChordSpec last = half ? (ChordSpec){kind.modal != NULL ? kind.cadence->approach_degrees[approach - 1] : 5, seventh}
+                          : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false};
 
     size_t cells[MAX_BEFORE_FINAL];
     for (size_t i = 0; i < before_count; i++) {

@@ -243,8 +243,9 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
 }
 
 size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
-    /* A tonic, the predominants the mode has (two in a major key, one in a minor), a dominant unless the cadence is half. */
-    return (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (composer_key_is_minor(&request->key) ? 1 : 2) +
+    /* A tonic, the predominants the mode has (two in a major key, one in a minor or modal key), a dominant unless the cadence is half. */
+    return (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) +
+           (composer_key_is_minor(&request->key) || pitch_material_is_modal_key(NULL, request->key.material) ? 1 : 2) +
            (cadence == CADENCE_TYPE_HALF ? 0 : 1);
 }
 
